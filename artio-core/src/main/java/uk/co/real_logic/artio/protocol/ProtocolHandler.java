@@ -34,7 +34,10 @@ public interface ProtocolHandler
         long timestamp,
         MessageStatus status,
         int sequenceNumber,
-        long position);
+        long position,
+        int metaDataLength);
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);
+
+    Action onILinkMessage(long connectionId, DirectBuffer buffer, int offset);
 }

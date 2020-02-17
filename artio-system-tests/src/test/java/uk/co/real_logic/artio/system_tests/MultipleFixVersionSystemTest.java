@@ -15,8 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.agrona.CloseHelper;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
@@ -30,43 +28,27 @@ import uk.co.real_logic.artio.fixt.ApplVerID;
 import uk.co.real_logic.artio.fixt.FixDictionaryImpl;
 import uk.co.real_logic.artio.fixt.builder.HeaderEncoder;
 import uk.co.real_logic.artio.fixt.builder.LogonEncoder;
-import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
-import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.fixt.ApplVerID.FIX50;
 import static uk.co.real_logic.artio.fixt.Constants.APPL_VER_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGatewaySystemTest
+public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final String FIXT_ACCEPTOR_LOGS = "fixt-acceptor-logs";
     private static final String FIXT_ACCEPTOR_ID = "fixt-acceptor";
 
-    private static final int FIXT_INBOUND_LIBRARY_STREAM = 11;
-    private static final int FIXT_OUTBOUND_LIBRARY_STREAM = 12;
-    private static final int FIXT_OUTBOUND_REPLAY_STREAM = 13;
-    private static final int FIXT_ARCHIVE_REPLAY_STREAM = 14;
-
-    private int fixtPort = unusedPort();
-
-    private FixEngine fixtAcceptingEngine;
-    private FixLibrary fixtAcceptingLibrary;
-
-    private FakeOtfAcceptor fixtAcceptingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeHandler fixtAcceptingHandler = new FakeHandler(fixtAcceptingOtfAcceptor);
-
     private Session fixtInitiatingSession;
+    private Session fixtAcceptingSession;
 
     @Before
     public void launch()
@@ -76,70 +58,49 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
 
         mediaDriver = launchMediaDriver();
 
-        launchAcceptingEngine();
-        launchFixTAcceptingEngine();
+        launchMultiVersionAcceptingEngine();
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
-        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler));
-        connectFixTAcceptingLibrary();
+        connectMultiVersionAcceptingLibrary();
 
         final LibraryConfiguration configuration = initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
         configuration.sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));
         initiatingLibrary = connect(configuration);
 
-        testSystem = new TestSystem(acceptingLibrary, fixtAcceptingLibrary, initiatingLibrary);
+        testSystem = new TestSystem(acceptingLibrary, acceptingLibrary, initiatingLibrary);
     }
 
-    @After
-    public void closeFixT()
-    {
-        CloseHelper.close(fixtAcceptingLibrary);
-        CloseHelper.close(fixtAcceptingEngine);
-    }
-
-    private void connectFixTAcceptingLibrary()
+    private void connectMultiVersionAcceptingLibrary()
     {
         final LibraryConfiguration configuration = new LibraryConfiguration();
-        setupCommonConfig(FIXT_ACCEPTOR_ID, INITIATOR_ID, configuration);
 
         configuration
-            .sessionExistsHandler(fixtAcceptingHandler)
-            .sessionAcquireHandler(fixtAcceptingHandler)
-            .sentPositionHandler(fixtAcceptingHandler)
+            .sessionExistsHandler(acceptingHandler)
+            .sessionAcquireHandler(acceptingHandler)
+            .sentPositionHandler(acceptingHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .libraryName("fixtAccepting")
-            .inboundLibraryStream(FIXT_INBOUND_LIBRARY_STREAM)
-            .outboundLibraryStream(FIXT_OUTBOUND_LIBRARY_STREAM)
+            .libraryName("accepting")
             .sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));
 
-        fixtAcceptingLibrary = connect(configuration);
+        acceptingLibrary = connect(configuration);
     }
 
-    private void launchFixTAcceptingEngine()
+    private void launchMultiVersionAcceptingEngine()
     {
         final EngineConfiguration configuration = new EngineConfiguration();
-        final MessageValidationStrategy validationStrategy = setupCommonConfig(
-            FIXT_ACCEPTOR_ID,
-            INITIATOR_ID, configuration);
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-        configuration.authenticationStrategy(authenticationStrategy);
-
-        final EngineConfiguration fixtAcceptingConfiguration = configuration
-            .bindTo("localhost", fixtPort)
+        final EngineConfiguration acceptingConfiguration = configuration
+            .bindTo("localhost", port)
             .libraryAeronChannel(IPC_CHANNEL)
-            .monitoringFile(acceptorMonitoringFile("fixtEngineCounters"))
-            .inboundLibraryStream(FIXT_INBOUND_LIBRARY_STREAM)
-            .outboundLibraryStream(FIXT_OUTBOUND_LIBRARY_STREAM)
-            .outboundReplayStream(FIXT_OUTBOUND_REPLAY_STREAM)
-            .archiveReplayStream(FIXT_ARCHIVE_REPLAY_STREAM)
+            .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(FIXT_ACCEPTOR_LOGS)
-            .scheduler(new LowResourceEngineScheduler());
+            .scheduler(new LowResourceEngineScheduler())
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
 
-        fixtAcceptingConfiguration
-            .acceptorfixDictionary(FixDictionaryImpl.class)
+        acceptingConfiguration
+            .overrideAcceptorFixDictionary(FixDictionaryImpl.class)
             .sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));
 
-        fixtAcceptingEngine = FixEngine.launch(fixtAcceptingConfiguration);
+        acceptingEngine = FixEngine.launch(acceptingConfiguration);
     }
 
     @Test
@@ -157,12 +118,19 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
         connectSessions();
         acquireAcceptingSession();
 
+        acceptingHandler.clearSessionExistsInfos();
+
         connectFixTSessions();
         acquireFixTSession();
 
         bothSessionsCanExchangeMessages();
 
-        assertHeaderHasApplVerId(fixtAcceptingOtfAcceptor);
+        assertEquals(2, acceptingSession.lastReceivedMsgSeqNum());
+        assertEquals(2, fixtAcceptingSession.lastReceivedMsgSeqNum());
+        assertEquals("FIX.4.4", acceptingSession.beginString());
+        assertEquals("FIXT.1.1", fixtAcceptingSession.beginString());
+
+        assertHeaderHasApplVerId(acceptingOtfAcceptor);
     }
 
     private void bothSessionsCanExchangeMessages()
@@ -187,19 +155,19 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
 
     private void acquireFixTSession()
     {
-        final long sessionId = fixtAcceptingHandler.awaitSessionId(testSystem::poll);
+        final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
-        final Session fixtAcceptingSession = acquireSession(
-            fixtAcceptingHandler, fixtAcceptingLibrary, sessionId, testSystem);
-        assertEquals(INITIATOR_ID, fixtAcceptingHandler.lastInitiatorCompId());
-        assertEquals(FIXT_ACCEPTOR_ID, fixtAcceptingHandler.lastAcceptorCompId());
+        fixtAcceptingSession = acquireSession(
+            acceptingHandler, acceptingLibrary, sessionId, testSystem);
+        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(FIXT_ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", fixtAcceptingSession);
     }
 
     private void connectFixTSessions()
     {
         final SessionConfiguration config = SessionConfiguration.builder()
-            .address("localhost", fixtPort)
+            .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
             .senderCompId(INITIATOR_ID)
             .targetCompId(FIXT_ACCEPTOR_ID)

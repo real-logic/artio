@@ -79,25 +79,26 @@ public class DirectSessionProxy implements SessionProxy
     }
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private final AbstractLogonEncoder logon;
-    private final AbstractResendRequestEncoder resendRequest;
-    private final AbstractLogoutEncoder logout;
-    private final AbstractHeartbeatEncoder heartbeat;
-    private final AbstractRejectEncoder reject;
-    private final AbstractTestRequestEncoder testRequest;
-    private final AbstractSequenceResetEncoder sequenceReset;
-    private final List<SessionHeaderEncoder> headers;
+
+    private FixDictionary dictionary;
+    private AbstractLogonEncoder logon;
+    private AbstractResendRequestEncoder resendRequest;
+    private AbstractLogoutEncoder logout;
+    private AbstractHeartbeatEncoder heartbeat;
+    private AbstractRejectEncoder reject;
+    private AbstractTestRequestEncoder testRequest;
+    private AbstractSequenceResetEncoder sequenceReset;
+    private List<SessionHeaderEncoder> headers;
 
     private final AsciiFormatter lowSequenceNumber;
     private final MutableAsciiBuffer buffer;
-    private final FixDictionary dictionary;
     private final ErrorHandler errorHandler;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
     private final EpochClock clock;
-    private final long connectionId;
     private final int libraryId;
+    private long connectionId;
     private long sessionId;
     private boolean libraryConnected = true;
     private boolean seqNumResetRequested = false;
@@ -110,7 +111,6 @@ public class DirectSessionProxy implements SessionProxy
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final FixDictionary dictionary,
         final ErrorHandler errorHandler)
     {
         this.gatewayPublication = gatewayPublication;
@@ -120,10 +120,14 @@ public class DirectSessionProxy implements SessionProxy
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.buffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        this.dictionary = dictionary;
         this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder.initialise(clock.time());
+    }
+
+    public void fixDictionary(final FixDictionary dictionary)
+    {
+        this.dictionary = dictionary;
 
         logon = dictionary.makeLogonEncoder();
         resendRequest = dictionary.makeResendRequestEncoder();
@@ -153,6 +157,11 @@ public class DirectSessionProxy implements SessionProxy
             sessionIdStrategy.setupSession(sessionKey, header);
             customisationStrategy.configureHeader(header, sessionId);
         }
+    }
+
+    public void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
     }
 
     public long sendResendRequest(
@@ -438,7 +447,7 @@ public class DirectSessionProxy implements SessionProxy
 
         if (position > 0)
         {
-            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Sent ", buffer, offset, length);
         }
 
         return position;

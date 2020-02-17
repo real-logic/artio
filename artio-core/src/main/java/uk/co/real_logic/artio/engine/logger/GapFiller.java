@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.RESEND_REQUEST_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 
@@ -86,14 +87,15 @@ public class GapFiller implements ProtocolHandler, Agent
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (messageType == RESEND_REQUEST_MESSAGE_TYPE && status == MessageStatus.OK)
         {
             decoderBuffer.wrap(buffer);
-            final FixSessionCodecs fixSessionCodecs = fixSessionCodecsFactory.get(sessionId);
-            final AbstractResendRequestDecoder resendRequest = fixSessionCodecs.resendRequest();
-            final GapFillEncoder encoder = fixSessionCodecs.gapFillEncoder();
+            final FixReplayerCodecs fixReplayerCodecs = fixSessionCodecsFactory.get(sessionId);
+            final AbstractResendRequestDecoder resendRequest = fixReplayerCodecs.resendRequest();
+            final GapFillEncoder encoder = fixReplayerCodecs.gapFillEncoder();
 
             resendRequest.decode(decoderBuffer, offset, length);
 
@@ -122,6 +124,11 @@ public class GapFiller implements ProtocolHandler, Agent
         }
 
         return Action.CONTINUE;
+    }
+
+    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    {
+        return CONTINUE;
     }
 
     private int newSeqNo(final long connectionId)

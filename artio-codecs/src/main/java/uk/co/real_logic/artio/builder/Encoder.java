@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.builder;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public interface Encoder
+public interface Encoder extends CharAppender
 {
     int BITS_IN_INT = 32;
 
@@ -58,4 +58,5 @@ public interface Encoder
     SessionHeaderEncoder header();
 
     void resetMessage();
+
 }

@@ -81,7 +81,7 @@ public final class SampleServer
             // You register the new session handler - which is your application hook
             // that receives messages for new sessions
             libraryConfiguration
-                .sessionAcquireHandler(SampleServer::onConnect)
+                .sessionAcquireHandler((session, acquiredInfo) -> onConnect(session))
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
                 .libraryAeronChannels(singletonList(aeronChannel));
 
@@ -112,7 +112,7 @@ public final class SampleServer
         IoUtil.delete(new File(configuration.logFileDir()), true);
     }
 
-    private static SessionHandler onConnect(final Session session, final boolean isSlow)
+    private static SessionHandler onConnect(final Session session)
     {
         SampleServer.session = session;
 

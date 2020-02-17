@@ -66,7 +66,7 @@ public class FixLibraryCleanupTest
     {
         return new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .sessionAcquireHandler((session, isSlow) -> null);
+            .sessionAcquireHandler((session, acquiredInfo) -> null);
     }
 
     @Test

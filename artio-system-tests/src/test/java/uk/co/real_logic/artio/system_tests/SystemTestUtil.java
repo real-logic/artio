@@ -67,7 +67,7 @@ public final class SystemTestUtil
 
     static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
     static final String INITIATOR_ID2 = "initiator2";
-    static final String CLIENT_LOGS = "client-logs";
+    public static final String CLIENT_LOGS = "client-logs";
     static final long TIMEOUT_IN_MS = 100;
     static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;
@@ -118,8 +118,13 @@ public final class SystemTestUtil
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
+        return alwaysSendTestRequest(session, testReqID, fixDictionary);
+    }
+
+    static long alwaysSendTestRequest(
+        final Session session, final String testReqID, final FixDictionary fixDictionary)
+    {
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
-        //final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);
@@ -190,7 +195,7 @@ public final class SystemTestUtil
             });
     }
 
-    static SessionReplyStatus releaseToGateway(
+    static SessionReplyStatus releaseToEngine(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = testSystem.awaitReply(
@@ -298,6 +303,14 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
 
         return validationStrategy;
+    }
+
+    static SessionReplyStatus requestSession(
+        final FixLibrary library,
+        final long sessionId,
+        final TestSystem testSystem)
+    {
+        return requestSession(library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, testSystem);
     }
 
     static SessionReplyStatus requestSession(

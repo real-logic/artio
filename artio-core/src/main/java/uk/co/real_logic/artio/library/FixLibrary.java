@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
 import io.aeron.exceptions.ConductorServiceTimeoutException;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
@@ -26,6 +27,9 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.ilink.ILink3Session;
+import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -338,6 +342,9 @@ public class FixLibrary extends GatewayProcess
      * If this library instance is unknown to the gateway, for example if its heartbeating
      * mechanism has timed out due to {@link #poll(int)} not being called often enough.
      *
+     * If you request a session that exists in the engine but which is not connected then an offline session will be
+     * returned. This is a session whose state is disconnected and has no connection id, connectedHost or connectedPort.
+     *
      * @param sessionId the id of the session to acquire.
      * @param resendFromSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream
@@ -400,9 +407,59 @@ public class FixLibrary extends GatewayProcess
         return poller.followerSession(headerEncoder, timeoutInMs);
     }
 
+    /**
+     * Write meta data associated with a session. Session meta-data is a sequence of bytes that application can
+     * associate with a session. It shares it's lifecycle with the current session - so whenever sequence numbers or
+     * seession ids are reset the old meta-data will be reset as well. If the session is persistent then the metadata
+     * persists over restarts.
+     *
+     * You can use session meta data to store information like ids for internal systems that correspond to
+     * FIX sessions.
+     *
+     * This method can be used both to update existing metadata and to initialise the sessions'
+     * metadata. When updating any metadata before the <code>metaDataOffset</code> position within the metadata buffer
+     * or after <code>metaDataOffset + length</code> will be left as previous. When i
+     *
+     * This is an asynchronous operation and the returned reply object should be checked for completion.
+     *
+     * @param sessionId the session id of the session that meta data is written to.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer. <code>0</code> should be used for
+     *                       initialization.
+     * @param buffer the buffer where the meta data to be written is stored.
+     * @param offset the offset within the buffer
+     * @param length the length of the data within the buffer.
+     * @return a Reply to indicate completion or an error code.
+     */
+    public Reply<MetaDataStatus> writeMetaData(
+        final long sessionId,
+        final int metaDataUpdateOffset,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        return poller.writeMetaData(sessionId, metaDataUpdateOffset, buffer, offset, length);
+    }
+
+    /**
+     * Read the meta data associated with a session.
+     *
+     * @param sessionId the id of the session that meta data is read from.
+     * @param handler the callback that has the returned metadata.
+     */
+    public void readMetaData(
+        final long sessionId, final MetadataHandler handler)
+    {
+        poller.readMetaData(sessionId, handler);
+    }
+
     public String currentAeronChannel()
     {
         return poller.currentAeronChannel();
     }
 
+    // NB: This is an experimental API and is subject to change or potentially removal.
+    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    {
+        return poller.initiate(configuration);
+    }
 }

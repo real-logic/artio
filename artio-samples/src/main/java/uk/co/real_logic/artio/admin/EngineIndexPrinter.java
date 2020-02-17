@@ -27,7 +27,7 @@ public final class EngineIndexPrinter
             System.out.printf("Inspecting %s%n", receivedSequenceNumberIndex.file().getAbsolutePath());
 
             final SequenceNumberIndexReader reader = new SequenceNumberIndexReader(
-                receivedSequenceNumberIndex.buffer(), Throwable::printStackTrace);
+                receivedSequenceNumberIndex.buffer(), Throwable::printStackTrace, null);
 
             for (long sessionId = 0; sessionId < Long.MAX_VALUE; sessionId++)
             {

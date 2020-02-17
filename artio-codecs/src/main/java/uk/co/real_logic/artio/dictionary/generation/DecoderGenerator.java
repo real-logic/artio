@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -215,7 +215,7 @@ public class DecoderGenerator extends Generator
         generateGetters(out, className, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
-        out.append(toString(aggregate, isMessage));
+        out.append(appendTo(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
     }
@@ -257,7 +257,6 @@ public class DecoderGenerator extends Generator
         return Decoder.class;
     }
 
-    @Override
     protected String resetGroup(final Entry entry)
     {
         final Group group = (Group)entry.element();
@@ -314,20 +313,6 @@ public class DecoderGenerator extends Generator
     protected String resetRequiredInt(final Field field)
     {
         return resetFieldValue(field, "MISSING_INT");
-    }
-
-    protected String toStringGroupParameters()
-    {
-        return "";
-    }
-
-    protected String toStringGroupSuffix()
-    {
-        return
-            "        if (next != null)\n" +
-            "        {\n" +
-            "            entries += \",\\n\" + next.toString();\n" +
-            "        }\n";
     }
 
     private String additionalReset(final boolean isGroup)
@@ -1432,13 +1417,13 @@ public class DecoderGenerator extends Generator
             .collect(joining("\n", "", "\n"));
     }
 
-    protected String componentToString(final Component component)
+    protected String componentAppendTo(final Component component)
     {
         return component
             .entries()
             .stream()
-            .map(this::entryToString)
-            .collect(joining(" + \n"));
+            .map(this::entryAppendTo)
+            .collect(joining("\n"));
     }
 
     private String decodeGroup(final Entry entry)
@@ -1603,9 +1588,31 @@ public class DecoderGenerator extends Generator
         return prefix + decodeMethod + ";\n";
     }
 
-    protected String stringToString(final String fieldName)
+    protected String stringAppendTo(final String fieldName)
     {
-        return String.format("%1$sAsString()", fieldName);
+        return String.format("builder.append(%1$s(), 0, %1$sLength())", fieldName);
+    }
+
+    protected String dataAppendTo(final Field field, final String fieldName)
+    {
+        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+
+        if (flyweightsEnabled)
+        {
+            return String.format("appendData(builder, %1$s(), %2$s())", fieldName, lengthName);
+        }
+
+        return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
+    }
+
+    protected String timeAppendTo(final String fieldName)
+    {
+        if (flyweightsEnabled)
+        {
+            return String.format("appendData(builder, %1$s(), %1$sLength())", fieldName);
+        }
+
+        return String.format("appendData(builder, %1$s, %1$sLength)", fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)
@@ -1627,7 +1634,6 @@ public class DecoderGenerator extends Generator
             .collect(joining());
     }
 
-    @Override
     protected String resetStringBasedData(final String name)
     {
         return String.format(
@@ -1640,16 +1646,31 @@ public class DecoderGenerator extends Generator
             formatPropertyName(name));
     }
 
-    protected String groupEntryToString(final Group element, final String name)
+    protected String groupEntryAppendTo(final Group group, final String name)
     {
         return String.format(
-            "                (has%3$s ? String.format(\"  \\\"%1$s\\\": [\\n" +
-            "  %%s" +
-            "\\n  ]" +
-            "\\n\", %2$s.toString().replace(\"\\n\", \"\\n  \")" + ") : \"\")",
+            "    if (has%2$s)\n" +
+            "    {\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "    for (final %3$s %4$s : %5$s.iterator())\n" +
+            "    {\n" +
+            "        indent(builder, level);\n" +
+            "        %4$s.appendTo(builder, level + 1);" +
+            "        if (%4$s.next() != null)\n" +
+            "        {\n" +
+            "            builder.append(',');\n" +
+            "        }\n" +
+            "        builder.append('\\n');\n" +
+            "    }\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"],\\n\");\n" +
+            "    }\n",
             name,
-            formatPropertyName(name),
-            element.numberField().name());
+            group.numberField().name(),
+            decoderClassName(name),
+            formatPropertyName(decoderClassName(name)),
+            iteratorFieldName(group));
     }
 
     protected String optionalReset(final Field field, final String name)
@@ -1657,7 +1678,7 @@ public class DecoderGenerator extends Generator
         return resetByFlag(name);
     }
 
-    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field);
     }

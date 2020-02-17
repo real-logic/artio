@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.session.SessionIdStrategy;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.HashMap;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -79,7 +80,7 @@ public class ReceiverEndPointTest
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
-    private ReceiverEndPoint endPoint;
+    private FixReceiverEndPoint endPoint;
     private Clock mockClock = mock(Clock.class);
 
     private AcceptorLogonResult createSuccessfulPendingAuth()
@@ -124,7 +125,9 @@ public class ReceiverEndPointTest
             any(),
             anyLong(),
             eq(gatewaySession),
-            any()))
+            any(),
+            any(),
+            eq(framer)))
             .thenReturn(logonResult);
     }
 
@@ -140,13 +143,13 @@ public class ReceiverEndPointTest
 
     private void givenReceiverEndPoint(final long sessionId)
     {
-        endPoint = new ReceiverEndPoint(
+        endPoint = new FixReceiverEndPoint(
             mockChannel, BUFFER_SIZE, publication,
             CONNECTION_ID, sessionId, SEQUENCE_INDEX, mockSessionContexts,
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,
-            FixDictionary.of(FixDictionary.findDefault()));
+            new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()));
         endPoint.gatewaySession(gatewaySession);
     }
 
@@ -718,19 +721,19 @@ public class ReceiverEndPointTest
     private void sessionReceivedCountIs(final int numberOfMessages)
     {
         verify(gatewaySession, times(numberOfMessages))
-            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong(), anyLong());
     }
 
     private void sessionReceivesMessageAt(final int offset, final int length, final VerificationMode mode)
     {
         verify(gatewaySession, mode)
-            .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
+            .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID), anyLong());
     }
 
     private void sessionReceivesNoMessages()
     {
         verify(gatewaySession, never())
-            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong(), anyLong());
     }
 
     private void pollWithNoData(final int expected)

@@ -18,9 +18,11 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
 
@@ -30,7 +32,7 @@ import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
-class GatewaySession implements SessionInfo
+class GatewaySession implements SessionInfo, SessionProcessHandler
 {
     private static final int NO_TIMEOUT = -1;
 
@@ -42,10 +44,10 @@ class GatewaySession implements SessionInfo
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
-    private final FixDictionary fixDictionary;
     private final long authenticationTimeoutInMs;
 
-    private ReceiverEndPoint receiverEndPoint;
+    private FixDictionary fixDictionary;
+    private FixReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
 
     private long sessionId;
@@ -58,11 +60,16 @@ class GatewaySession implements SessionInfo
     private long disconnectTimeInMs = NO_TIMEOUT;
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
-    private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
     private boolean hasStartedAuthentication = false;
     private int logonReceivedSequenceNumber;
     private int logonSequenceIndex;
+    // lastLogonTime is set when the logon message is processed
+    // when we process the logon, the lastSequenceResetTime is set if it does reset the sequence.
+    // Otherwise this is updated when we handover the session.
+    private long lastSequenceResetTime = Session.UNKNOWN_TIME;
+    private long lastLogonTime = Session.UNKNOWN_TIME;
+    private int libraryId;
 
     GatewaySession(
         final long connectionId,
@@ -70,7 +77,7 @@ class GatewaySession implements SessionInfo
         final String address,
         final ConnectionType connectionType,
         final CompositeKey sessionKey,
-        final ReceiverEndPoint receiverEndPoint,
+        final FixReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
         final Consumer<GatewaySession> onGatewaySessionLogon,
         final boolean closedResendInterval,
@@ -124,7 +131,7 @@ class GatewaySession implements SessionInfo
     {
         this.sessionParser = sessionParser;
         this.session = session;
-        this.session.logonListener(logonListener);
+        this.session.sessionProcessHandler(this);
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
@@ -137,7 +144,7 @@ class GatewaySession implements SessionInfo
         setManagementTo(libraryId, blockablePosition);
 
         sessionParser = null;
-        session.logonListener(null);
+        session.sessionProcessHandler(null);
         context.updateAndSaveFrom(session);
         session.close();
         session = null;
@@ -145,6 +152,7 @@ class GatewaySession implements SessionInfo
 
     void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
     {
+        libraryId(libraryId);
         receiverEndPoint.libraryId(libraryId);
         receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId, blockablePosition);
@@ -152,7 +160,10 @@ class GatewaySession implements SessionInfo
 
     void play()
     {
-        receiverEndPoint.play();
+        if (receiverEndPoint != null)
+        {
+            receiverEndPoint.play();
+        }
     }
 
     int poll(final long timeInMs)
@@ -195,10 +206,21 @@ class GatewaySession implements SessionInfo
         disconnectTimeInMs = NO_TIMEOUT;
     }
 
-    private void onSessionLogon(final Session session)
+    public void onLogon(final Session session)
     {
         context.updateFrom(session);
         onGatewaySessionLogon.accept(this);
+    }
+
+    public Reply<ReplayMessagesStatus> replayReceivedMessages(
+        final long sessionId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long timeout)
+    {
+        throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
     }
 
     InternalSession session()
@@ -216,13 +238,14 @@ class GatewaySession implements SessionInfo
         final int offset,
         final int length,
         final long messageType,
-        final long sessionId)
+        final long sessionId,
+        final long position)
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received ", buffer, offset, length);
 
-            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
+            sessionParser.onMessage(buffer, offset, length, messageType, sessionId, position);
         }
     }
 
@@ -238,7 +261,7 @@ class GatewaySession implements SessionInfo
         {
             session.setupSession(sessionId, sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
-            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s%n", sessionKey.localCompId());
+            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());
         }
         senderEndPoint.sessionId(sessionId);
     }
@@ -281,8 +304,14 @@ class GatewaySession implements SessionInfo
         if (session != null)
         {
             session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
-            session.initialLastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
+            final int lastReceivedMsgSeqNum = adjustLastSequenceNumber(retrievedReceivedSequenceNumber);
+            session.initialLastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
         }
+    }
+
+    void lastLogonWasSequenceReset()
+    {
+        lastSequenceResetTime(lastLogonTime);
     }
 
     static int adjustLastSequenceNumber(final int lastSequenceNumber)
@@ -368,6 +397,11 @@ class GatewaySession implements SessionInfo
         return fixDictionary;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        this.fixDictionary = fixDictionary;
+    }
+
     public int logonReceivedSequenceNumber()
     {
         return logonReceivedSequenceNumber;
@@ -376,5 +410,62 @@ class GatewaySession implements SessionInfo
     public int logonSequenceIndex()
     {
         return logonSequenceIndex;
+    }
+
+    void updateSessionDictionary()
+    {
+        if (session != null)
+        {
+            session.fixDictionary(fixDictionary);
+            sessionParser.fixDictionary(fixDictionary);
+        }
+    }
+
+    long lastSequenceResetTime()
+    {
+        return lastSequenceResetTime;
+    }
+
+    void lastSequenceResetTime(final long lastSequenceResetTime)
+    {
+        this.lastSequenceResetTime = lastSequenceResetTime;
+        if (session != null)
+        {
+            session.lastSequenceResetTime(lastSequenceResetTime);
+        }
+    }
+
+    long lastLogonTime()
+    {
+        return lastLogonTime;
+    }
+
+    void lastLogonTime(final long lastLogonTime)
+    {
+        this.lastLogonTime = lastLogonTime;
+        if (session != null)
+        {
+            session.lastLogonTime(lastLogonTime);
+        }
+    }
+
+    public void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
+    }
+
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
+    public void consumeOfflineSession(final GatewaySession oldGatewaySession)
+    {
+        libraryId(oldGatewaySession.libraryId());
+    }
+
+    public boolean isOffline()
+    {
+        return receiverEndPoint == null;
     }
 }

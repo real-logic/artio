@@ -149,7 +149,8 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         if (messageType == ExecutionReportDecoder.MESSAGE_TYPE)
         {
@@ -185,7 +186,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
     {
     }
 
-    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+    public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo isSlow)
     {
         return this;
     }

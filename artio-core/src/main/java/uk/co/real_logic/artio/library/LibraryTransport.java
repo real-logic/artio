@@ -16,7 +16,9 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
@@ -35,6 +37,7 @@ class LibraryTransport
 
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
+    private GatewayPublication inboundPublication;
 
     LibraryTransport(
         final LibraryConfiguration configuration,
@@ -49,14 +52,19 @@ class LibraryTransport
 
     void initStreams(final String aeronChannel)
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Directed streams at ", aeronChannel);
+
+        final int inboundLibraryStream = configuration.inboundLibraryStream();
+        final int outboundLibraryStream = configuration.outboundLibraryStream();
+        final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
+        final IdleStrategy idleStrategy = configuration.libraryIdleStrategy();
 
         final Streams outboundLibraryStreams = new Streams(
             aeron,
             aeronChannel,
-            configuration.printAeronStreamIdentifiers(),
+            printAeronStreamIdentifiers,
             fixCounters.failedOutboundPublications(),
-            configuration.outboundLibraryStream(),
+            outboundLibraryStream,
             clock,
             configuration.outboundMaxClaimAttempts(),
             null);
@@ -65,13 +73,25 @@ class LibraryTransport
         {
             inboundSubscription.close();
             outboundPublication.close();
+            inboundPublication.close();
         }
 
-        inboundSubscription = aeron.addSubscription(aeronChannel, configuration.inboundLibraryStream());
+
+        inboundSubscription = aeron.addSubscription(aeronChannel, inboundLibraryStream);
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
+
         outboundPublication = outboundLibraryStreams.gatewayPublication(
-            configuration.libraryIdleStrategy(), "outboundPublication");
+            idleStrategy, "outboundPublication");
+
+        final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, inboundLibraryStream);
+        StreamInformation.print("inboundPublication", publication, printAeronStreamIdentifiers);
+        inboundPublication = new GatewayPublication(
+            publication,
+            fixCounters.failedInboundPublications(),
+            idleStrategy,
+            clock,
+            configuration.inboundMaxClaimAttempts());
     }
 
     Subscription inboundSubscription()
@@ -82,6 +102,11 @@ class LibraryTransport
     GatewayPublication outboundPublication()
     {
         return outboundPublication;
+    }
+
+    GatewayPublication inboundPublication()
+    {
+        return inboundPublication;
     }
 
     boolean isReconnect()

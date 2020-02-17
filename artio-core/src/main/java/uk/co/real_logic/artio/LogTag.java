@@ -45,5 +45,17 @@ public enum LogTag
     REPLAY,
     REPLAY_ATTEMPT,
     INDEX,
-    LIBRARY_MANAGEMENT
+    LIBRARY_MANAGEMENT;
+
+    private final String logStr;
+
+    LogTag()
+    {
+        logStr = "[" + name() + "]";
+    }
+
+    public String logStr()
+    {
+        return logStr;
+    }
 }

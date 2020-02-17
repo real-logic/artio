@@ -26,11 +26,16 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
+    private static final int READ_META_DATA_META_DATA_PREFIX =
+        ReadMetaDataReplyDecoder.BLOCK_LENGTH + ReadMetaDataReplyDecoder.metaDataHeaderLength();
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
+    private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
+    private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
@@ -39,6 +44,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
     private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
     private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
+    private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
+    private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -108,9 +115,29 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
                 return onFollowerSessionReply(buffer, offset, blockLength, version);
             }
 
+            case WriteMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onWriteMetaDataReply(buffer, offset, blockLength, version);
+            }
+
+            case ReadMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onReadMetaDataReply(buffer, offset, blockLength, version);
+            }
+
             case EndOfDayDecoder.TEMPLATE_ID:
             {
                 return onEndOfDay(buffer, offset, blockLength, version);
+            }
+
+            case ReplayMessagesReplyDecoder.TEMPLATE_ID:
+            {
+                return onReplayMessagesReply(buffer, offset, blockLength, version);
+            }
+
+            case ILinkConnectDecoder.TEMPLATE_ID:
+            {
+                return onILinkConnectDecoder(buffer, offset, blockLength, version);
             }
         }
 
@@ -239,6 +266,77 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             requestSessionReply.status());
     }
 
+    private Action onWriteMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        writeMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = writeMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onWriteMetaDataReply(
+            libraryId,
+            writeMetaDataReply.replyToId(),
+            writeMetaDataReply.status());
+    }
+
+    private Action onReadMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        readMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = readMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onReadMetaDataReply(
+            libraryId,
+            readMetaDataReply.replyToId(),
+            readMetaDataReply.status(),
+            buffer,
+            offset + READ_META_DATA_META_DATA_PREFIX,
+            readMetaDataReply.metaDataLength());
+    }
+
+    private Action onILinkConnectDecoder(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        iLinkConnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = iLinkConnect.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onILinkConnect(
+            libraryId,
+            iLinkConnect.correlationId(),
+            iLinkConnect.connection());
+    }
+
+    private Action onReplayMessagesReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        replayMessagesReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = replayMessagesReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onReplayMessagesReply(
+            libraryId,
+            replayMessagesReply.replyToId(),
+            replayMessagesReply.status());
+    }
+
     private Action onError(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
@@ -288,7 +386,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.session(),
             manageSession.lastSentSequenceNumber(),
             manageSession.lastReceivedSequenceNumber(),
-            manageSession.logonTime(),
             manageSession.sessionStatus(),
             manageSession.slowStatus(),
             manageSession.connectionType(),
@@ -307,6 +404,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.awaitingHeartbeat() == Bool.TRUE,
             manageSession.logonReceivedSequenceNumber(),
             manageSession.logonSequenceIndex(),
+            manageSession.lastLogonTime(),
+            manageSession.lastSequenceResetTime(),
             manageSession.localCompId(),
             manageSession.localSubId(),
             manageSession.localLocationId(),
@@ -316,7 +415,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.address(),
             manageSession.username(),
             manageSession.password(),
-            FixDictionary.find(manageSession.fixDictionary()));
+            FixDictionary.find(manageSession.fixDictionary()),
+            manageSession.metaDataStatus(),
+            buffer,
+            manageSession.limit() + ManageSessionDecoder.metaDataHeaderLength(),
+            manageSession.metaDataLength());
     }
 
     private Action onEndOfDay(

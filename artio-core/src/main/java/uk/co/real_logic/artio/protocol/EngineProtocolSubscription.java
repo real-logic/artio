@@ -26,7 +26,9 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 public final class EngineProtocolSubscription implements ControlledFragmentHandler
 {
     private static final int FOLLOWER_SESSION_REQUEST_LENGTH =
-        FollowerSessionRequestEncoder.BLOCK_LENGTH + FollowerSessionRequestEncoder.headerHeaderLength();
+        FollowerSessionRequestDecoder.BLOCK_LENGTH + FollowerSessionRequestDecoder.headerHeaderLength();
+    private static final int WRITE_META_DATA_DATA_LENGTH =
+        WriteMetaDataDecoder.BLOCK_LENGTH + WriteMetaDataDecoder.metaDataHeaderLength();
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
@@ -37,6 +39,10 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
     private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
     private final FollowerSessionRequestDecoder followerSessionRequest = new FollowerSessionRequestDecoder();
+    private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
+    private final ReadMetaDataDecoder readMetaData = new ReadMetaDataDecoder();
+    private final ReplayMessagesDecoder replayMessages = new ReplayMessagesDecoder();
+    private final InitiateILinkConnectionDecoder initiateILinkConnection = new InitiateILinkConnectionDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -94,6 +100,26 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case FollowerSessionRequestDecoder.TEMPLATE_ID:
             {
                 return onFollowerSessionRequest(buffer, offset, blockLength, version, header);
+            }
+
+            case WriteMetaDataDecoder.TEMPLATE_ID:
+            {
+                return onWriteMetaData(buffer, offset, blockLength, version, header);
+            }
+
+            case ReadMetaDataDecoder.TEMPLATE_ID:
+            {
+                return onReadMetaData(buffer, offset, blockLength, version, header);
+            }
+
+            case ReplayMessagesDecoder.TEMPLATE_ID:
+            {
+                return onReplayMessages(buffer, offset, blockLength, version, header);
+            }
+
+            case InitiateILinkConnectionDecoder.TEMPLATE_ID:
+            {
+                return onInitiateILinkConnection(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -285,4 +311,96 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             offset + FOLLOWER_SESSION_REQUEST_LENGTH,
             messageLength);
     }
+
+    private Action onWriteMetaData(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        writeMetaData.wrap(buffer, offset, blockLength, version);
+        final int libraryId = writeMetaData.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        final int metaDataLength = writeMetaData.metaDataLength();
+        return handler.onWriteMetaData(
+            libraryId,
+            writeMetaData.session(),
+            writeMetaData.correlationId(),
+            writeMetaData.metaDataOffset(),
+            buffer,
+            offset + WRITE_META_DATA_DATA_LENGTH,
+            metaDataLength);
+    }
+
+    private Action onReadMetaData(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        readMetaData.wrap(buffer, offset, blockLength, version);
+        final int libraryId = readMetaData.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onReadMetaData(
+            libraryId,
+            readMetaData.session(),
+            readMetaData.correlationId());
+    }
+
+    private Action onReplayMessages(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        replayMessages.wrap(buffer, offset, blockLength, version);
+        final int libraryId = replayMessages.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onReplayMessages(
+            libraryId,
+            replayMessages.session(),
+            replayMessages.correlationId(),
+            replayMessages.replayFromSequenceNumber(),
+            replayMessages.replayToSequenceIndex(),
+            replayMessages.replayToSequenceNumber(),
+            replayMessages.replayToSequenceIndex(),
+            replayMessages.latestReplyArrivalTimeInMs());
+    }
+
+    private Action onInitiateILinkConnection(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        initiateILinkConnection.wrap(buffer, offset, blockLength, version);
+        final int libraryId = initiateILinkConnection.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onInitiateILinkConnection(
+            libraryId,
+            initiateILinkConnection.port(),
+            initiateILinkConnection.correlationId(),
+            initiateILinkConnection.host());
+    }
+
 }

@@ -93,6 +93,11 @@ public class CommonConfiguration
      */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
     /**
+     * Property name for the implementation of {@link AbstractDebugAppender} to use in order
+     * print debug logging. If none set then defaults to {@link PrintingDebugAppender}
+     */
+    public static final String APPENDER_CLASS_PROPERTY = "fix.core.debug.appender";
+    /**
      * Property name for the period at which histogram intervals are polled and logged
      */
     public static final String HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY = "fix.benchmark.histogram_poll_period";
@@ -171,6 +176,7 @@ public class CommonConfiguration
     }
 
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
+    public static final String APPENDER_CLASS = System.getProperty(APPENDER_CLASS_PROPERTY);
     public static final boolean TIME_MESSAGES = Boolean.getBoolean(TIME_MESSAGES_PROPERTY);
     public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);
 
@@ -233,6 +239,7 @@ public class CommonConfiguration
     private int inboundLibraryStream = DEFAULT_INBOUND_LIBRARY_STREAM;
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     private boolean gracefulShutdown = true;
+    private boolean validateCompIdsOnEveryMessage = true;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -513,6 +520,19 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Set to true in order to check that the sender, target comp ids (including sub and location) are the same on
+     * every message as the logon message. This can be disabled for performance reasons.
+     *
+     * @param validateCompIdsOnEveryMessage true to validate comp ids
+     * @return this
+     */
+    public CommonConfiguration setValidateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
+    {
+        this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+        return this;
+    }
+
     public boolean gracefulShutdown()
     {
         return gracefulShutdown;
@@ -606,6 +626,11 @@ public class CommonConfiguration
     public boolean printAeronStreamIdentifiers()
     {
         return printAeronStreamIdentifiers;
+    }
+
+    public boolean validateCompIdsOnEveryMessage()
+    {
+        return validateCompIdsOnEveryMessage;
     }
 
     protected void conclude(final String fixSuffix)

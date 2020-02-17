@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Adaptive Financial Consulting Ltd.
+ * Copyright 2019 Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,12 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.SystemUtil;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.decoder.NewOrderSingleDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -34,6 +32,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -41,7 +40,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
@@ -53,19 +51,14 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 @RunWith(Parameterized.class)
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
     private static final boolean PRINT_ERROR_MESSAGES = false;
 
     {
         acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
         {
             private final NewOrderSingleDecoder newOrderSingle = new NewOrderSingleDecoder();
-            private final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
             private final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-
-            private final byte[] encodeBuffer = new byte[SIZE_OF_ASCII_LONG];
-            private int encodedLength;
-            private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
+            private final ReportFactory reportFactory = new ReportFactory();
 
             public Action onMessage(
                 final DirectBuffer buffer,
@@ -76,7 +69,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 final int sequenceIndex,
                 final long messageType,
                 final long timestampInNs,
-                final long position)
+                final long position,
+                final OnMessageInfo messageInfo)
             {
                 asciiBuffer.wrap(buffer, offset, length);
 
@@ -84,7 +78,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 {
                     newOrderSingle.decode(asciiBuffer, 0, length);
 
-                    final Action action = fillOrder(session);
+                    final Action action = reportFactory.sendReport(session, newOrderSingle.sideAsEnum());
                     if (action == ABORT)
                     {
                         return action;
@@ -92,25 +86,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 }
 
                 return super.onMessage(
-                    buffer, offset, length, libraryId, session, sequenceIndex, messageType, timestampInNs, position);
-            }
-
-            private Action fillOrder(final Session session)
-            {
-                final Side side = newOrderSingle.sideAsEnum();
-
-                encodedLength = encoder.putLongAscii(0, session.lastSentMsgSeqNum());
-
-                executionReport.orderID(encodeBuffer, encodedLength)
-                    .execID(encodeBuffer, encodedLength);
-
-                executionReport.execType(ExecType.FILL)
-                    .ordStatus(OrdStatus.FILLED)
-                    .side(side);
-
-                executionReport.instrument().symbol("MSFT".getBytes(US_ASCII));
-
-                return Pressure.apply(session.send(executionReport));
+                    buffer, offset, length, libraryId, session, sequenceIndex, messageType, timestampInNs, position,
+                    messageInfo);
             }
         };
     }
@@ -133,7 +110,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         else
         {
             return Arrays.asList(new Object[][]{
-                {true}, {false}
+                {true}, // disable this test until it can be made to run consistently: {false}
             });
         }
     }
@@ -155,7 +132,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
-        launchMediaDriverWithDirs();
+        mediaDriver = TestFixtures.launchMediaDriver();
 
         // 1. setup a session
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
@@ -182,6 +159,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             CloseHelper.close(initiatingEngine);
             CloseHelper.close(acceptingEngine);
         }
+
         clearMessages();
         if (shutdownCleanly)
         {

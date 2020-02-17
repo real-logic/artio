@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,15 @@ import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -41,6 +41,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
@@ -50,41 +51,16 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.session.InternalSession.*;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
  * <p>
  * Should only be accessed on a single thread.
- *
- * <h1>State Transitions</h1>
- * <p>
- * Successful Login: CONNECTED -&gt; ACTIVE
- * Login with high sequence number: CONNECTED -&gt; AWAITING_RESEND
- * Login with low sequence number: CONNECTED -&gt; DISCONNECTED
- * Login with wrong credentials: CONNECTED -&gt; DISCONNECTED or CONNECTED -&gt; DISABLED
- * depending on authentication plugin
- * <p>
- * Successful Hijack: * -&gt; ACTIVE (same as regular login)
- * Hijack with high sequence number: * -&gt; AWAITING_RESEND (same as regular login)
- * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
- * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
- * <p>
- * Successful resend: AWAITING_RESEND -&gt; ACTIVE
- * <p>
- * Send test request: ACTIVE -&gt; ACTIVE - but alter the timeout for the next expected heartbeat.
- * Successful Heartbeat: ACTIVE -&gt; ACTIVE - updates the timeout time.
- * Heartbeat Timeout: ACTIVE -&gt; DISCONNECTED
- * <p>
- * Logout request: ACTIVE -&gt; AWAITING_LOGOUT
- * Logout acknowledgement: AWAITING_LOGOUT -&gt; DISCONNECTED
- * <p>
- * Manual disable: * -&gt; DISABLED
  */
-public class Session implements AutoCloseable
+public class Session
 {
     public static final long UNKNOWN = -1;
-    public static final long NO_LOGON_TIME = -1;
+    public static final long UNKNOWN_TIME = -1;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
@@ -107,24 +83,25 @@ public class Session implements AutoCloseable
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
-    protected final long connectionId;
     protected final SessionIdStrategy sessionIdStrategy;
-    protected final GatewayPublication publication;
+    protected final GatewayPublication outboundPublication;
     protected final MutableAsciiBuffer asciiBuffer;
     protected final int libraryId;
     protected final SessionProxy proxy;
 
     private final EpochClock epochClock;
+    private final Clock clock;
     private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
-    private final boolean enableLastMsgSeqNumProcessed;
-    private final String beginString;
+    private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
     private SessionState state;
+    private String beginString;
+
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
     private boolean awaitingResend = INITIAL_AWAITING_RESEND;
     // Equivalent of receivedMsgSeqNo for resent messages
@@ -136,6 +113,9 @@ public class Session implements AutoCloseable
 
     private boolean awaitingHeartbeat = INITIAL_AWAITING_HEARTBEAT;
 
+    private boolean enableLastMsgSeqNumProcessed;
+
+    protected long connectionId;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum;
     private int lastMsgSeqNumProcessed;
@@ -151,14 +131,15 @@ public class Session implements AutoCloseable
     private String password;
     private String connectedHost;
     private int connectedPort;
-    private long logonTime = NO_LOGON_TIME;
+    private long lastLogonTime = UNKNOWN_TIME;
+    private long lastSequenceResetTime = UNKNOWN_TIME;
     private boolean closedResendInterval;
     private int resendRequestChunkSize;
     private boolean sendRedundantResendRequests;
 
     private boolean incorrectBeginString = false;
 
-    private SessionLogonListener logonListener;
+    private SessionProcessHandler sessionProcessHandler;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
 
@@ -166,9 +147,11 @@ public class Session implements AutoCloseable
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
+        final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
@@ -179,22 +162,19 @@ public class Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
-        this.customisationStrategy = customisationStrategy;
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
-        Verify.notNull(publication, "publication");
+        Verify.notNull(outboundPublication, "outboundPublication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
-        Verify.notNull(beginString, "beginString");
 
         this.epochClock = epochClock;
         this.proxy = proxy;
         this.connectionId = connectionId;
-        this.publication = publication;
+        this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
@@ -204,8 +184,10 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
-        this.beginString = beginString;
         this.asciiBuffer = asciiBuffer;
+        this.clock = clock;
+        this.inboundPublication = inboundPublication;
+        this.customisationStrategy = customisationStrategy;
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
@@ -319,6 +301,8 @@ public class Session implements AutoCloseable
     /**
      * Get the address of the remote host that your session is connected to.
      *
+     * If this is an offline session then this method will return <code>""</code>.
+     *
      * @return the address of the remote host that your session is connected to.
      * @see Session#connectedPort()
      */
@@ -330,6 +314,8 @@ public class Session implements AutoCloseable
     /**
      * Get the id of the connection associated with this session. Sessions always
      * have a connection id.
+     *
+     * If this is an offline session then this method will return {@link GatewayProcess#NO_CONNECTION_ID}
      *
      * @return the id of the connection associated with this session.
      * @see Session#id()
@@ -364,6 +350,8 @@ public class Session implements AutoCloseable
 
     /**
      * Get the port of the remote host that your session is connected to.
+     *
+     * If this is an offline session then this method will return {@link #UNKNOWN}
      *
      * @return the port of the remote host that your session is connected to.
      * @see Session#connectedHost()
@@ -488,6 +476,26 @@ public class Session implements AutoCloseable
      */
     public long send(final Encoder encoder)
     {
+        return send(encoder, null, 0);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param encoder the encoder of the message to be sent
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
+     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
+     */
+    public long send(
+        final Encoder encoder,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
         validateCanSendMessage();
 
         final int sentSeqNum = prepare(encoder.header());
@@ -495,8 +503,9 @@ public class Session implements AutoCloseable
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
+        final long type = encoder.messageType();
 
-        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
+        return send(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
     }
 
     /**
@@ -513,16 +522,43 @@ public class Session implements AutoCloseable
     public long send(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
+        return send(messageBuffer, offset, length, seqNum, messageType, null, 0);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset the offset within the messageBuffer where the message starts
+     * @param length the length of the message within the messageBuffer
+     * @param seqNum the sequence number of the sent message
+     * @param messageType the long encoded message type.
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
+     */
+    public long send(
+        final DirectBuffer messageBuffer,
+        final int offset,
+        final int length,
+        final int seqNum,
+        final long messageType,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
         validateCanSendMessage();
 
-        final long position = publication.saveMessage(
-            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum);
+        final long position = outboundPublication.saveMessage(
+            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
+            metaDataBuffer, metaDataUpdateOffset);
 
         if (position > 0)
         {
             lastSentMsgSeqNum(seqNum, position);
 
-            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", messageBuffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Sent ", messageBuffer, offset, length);
         }
 
         return position;
@@ -531,11 +567,15 @@ public class Session implements AutoCloseable
     /**
      * Check if the session is in a state where it can send a message.
      *
+     * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
+     * session reconnects it can read through sending a resend request.
+     *
      * @return true if the session is in a state where it can send a message, false otherwise.
      */
     public boolean canSendMessage()
     {
-        return state == ACTIVE;
+        final SessionState state = this.state;
+        return state == ACTIVE || state == DISCONNECTED;
     }
 
     /**
@@ -553,7 +593,7 @@ public class Session implements AutoCloseable
     public long sendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        nextSequenceIndex();
+        nextSequenceIndex(clock.time());
         final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
@@ -580,9 +620,10 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    private void nextSequenceIndex()
+    private void nextSequenceIndex(final long messageTime)
     {
         sequenceIndex++;
+        lastSequenceResetTime(messageTime);
     }
 
     /**
@@ -597,7 +638,7 @@ public class Session implements AutoCloseable
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
-        nextSequenceIndex();
+        nextSequenceIndex(clock.time());
         final long position = proxy.sendLogon(
             sentSeqNum,
             heartbeatIntervalInS,
@@ -633,28 +674,97 @@ public class Session implements AutoCloseable
         return sequenceIndex;
     }
 
-    /**
-     * Close the session object and release its resources.
-     * <p>
-     * API users should never have to call this method.
-     */
-    public void close()
-    {
-        sentMsgSeqNo.close();
-        receivedMsgSeqNo.close();
-    }
-
-    // ---------- Event Handlers & Logic ----------
-
-    Action onInvalidFixDisconnect()
-    {
-        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
-    }
-
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+    }
+
+    // Also checks the sequence index
+    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
+        {
+            nextSequenceIndex(clock.time());
+        }
+
+        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
+
+        return this;
+    }
+
+    /**
+     * This returns the time of the last received logon message for the current session. The source
+     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * This defaults to nanoseconds but it can be any precision that you configure.
+     *
+     * @return the time of the last received logon message for the current session.
+     */
+    public long lastLogonTime()
+    {
+        return lastLogonTime;
+    }
+
+    /**
+     * This returns the time of the last sequence number reset. The source
+     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * This defaults to nanoseconds but it can be any precision that you configure.
+     *
+     * @return the time of the last sequence number reset.
+     */
+    public long lastSequenceResetTime()
+    {
+        return lastSequenceResetTime;
+    }
+
+    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
+    {
+        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
+        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
+        incNextHeartbeatTime();
+
+        return lastSentMsgSeqNum;
+    }
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+            "connectionId=" + connectionId +
+            ", sessionId=" + id +
+            ", state=" + state +
+            ", sequenceIndex=" + sequenceIndex +
+            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+            '}';
+    }
+
+    public String beginString()
+    {
+        return beginString;
+    }
+
+    public Reply<ReplayMessagesStatus> replayReceivedMessages(
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long timeout)
+    {
+        return sessionProcessHandler.replayReceivedMessages(
+            id,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            replayToSequenceNumber,
+            replayToSequenceIndex,
+            timeout);
+    }
+
+    // ---------- END OF PUBLIC API ----------
+
+    // ---------- Event Handlers & Logic ----------
+    Action onInvalidFixDisconnect()
+    {
+        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
     }
 
     private void lastSentMsgSeqNum(final int sentSeqNum, final long position)
@@ -680,9 +790,11 @@ public class Session implements AutoCloseable
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
-        return onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+        return onMessage(
+            msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend, possDup, position);
     }
 
     Action onMessage(
@@ -692,7 +804,8 @@ public class Session implements AutoCloseable
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (state() == SessionState.CONNECTED)
         {
@@ -703,13 +816,13 @@ public class Session implements AutoCloseable
         {
             final long time = time();
             final Action action = validateRequiredFieldsAndCodec(
-                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup);
+                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
             if (action != null)
             {
                 return action;
             }
 
-            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend);
+            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend, position);
         }
     }
 
@@ -720,7 +833,8 @@ public class Session implements AutoCloseable
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (msgSeqNo == MISSING_INT)
         {
@@ -733,7 +847,7 @@ public class Session implements AutoCloseable
         if (CODEC_VALIDATION_ENABLED)
         {
             final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
-                origSendingTime, possDup);
+                origSendingTime, possDup, position);
             if (validationResult != null)
             {
                 return validationResult;
@@ -751,12 +865,18 @@ public class Session implements AutoCloseable
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (possDup)
         {
             if (origSendingTime == UNKNOWN)
             {
+                if (redact(position))
+                {
+                    return ABORT;
+                }
+
                 return checkPosition(proxy.sendReject(
                     newSentSeqNum(),
                     msgSeqNum,
@@ -769,13 +889,13 @@ public class Session implements AutoCloseable
             }
             else if (origSendingTime > sendingTime)
             {
-                return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
+                return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             }
         }
 
         if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
         {
-            final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
+            final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             if (action != ABORT)
             {
                 logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
@@ -788,10 +908,13 @@ public class Session implements AutoCloseable
         return null;
     }
 
-    private Action checkSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkSeqNoChange(
+        final int msgSeqNum, final long time, final boolean isPossDupOrResend, final long position)
     {
         if (awaitingResend)
         {
+            incNextReceivedInboundMessageTime(time);
+
             if (msgSeqNum == endOfResendMsgSeqNum())
             {
                 awaitingResend = false;
@@ -819,7 +942,7 @@ public class Session implements AutoCloseable
                 }
                 else
                 {
-                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
                 }
             }
             else
@@ -829,13 +952,14 @@ public class Session implements AutoCloseable
         }
         else
         {
-            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
         }
 
         return CONTINUE;
     }
 
-    private Action checkNormalSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkNormalSeqNoChange(
+        final int msgSeqNum, final long time, final boolean isPossDupOrResend, final long position)
     {
         final int expectedSeqNo = expectedReceivedSeqNum();
         if (expectedSeqNo == msgSeqNum)
@@ -849,7 +973,7 @@ public class Session implements AutoCloseable
         }
         else if (/* expectedSeqNo > msgSeqNo && */ !isPossDupOrResend)
         {
-            return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
+            return msgSeqNumTooLow(msgSeqNum, expectedSeqNo, position);
         }
         return CONTINUE;
     }
@@ -903,12 +1027,22 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
+    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPositionAndDisconnect(
             proxy.sendLowSequenceNumberLogout(
                 newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex(), lastMsgSeqNumProcessed),
             MSG_SEQ_NO_TOO_LOW);
+    }
+
+    private boolean redact(final long position)
+    {
+        return inboundPublication.saveRedactSequenceUpdate(id, lastReceivedMsgSeqNum, position) < 0;
     }
 
     private Action checkPosition(final long position)
@@ -924,8 +1058,14 @@ public class Session implements AutoCloseable
         }
     }
 
-    private Action rejectDueToSendingTime(final int msgSeqNo, final char[] msgType, final int msgTypeLength)
+    private Action rejectDueToSendingTime(
+        final int msgSeqNo, final char[] msgType, final int msgTypeLength, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNo,
@@ -951,7 +1091,8 @@ public class Session implements AutoCloseable
         final String password,
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -961,13 +1102,13 @@ public class Session implements AutoCloseable
             return action;
         }
 
-        action = validateOrRejectSendingTime(sendingTime);
+        action = validateOrRejectSendingTime(sendingTime, position);
         if (action != null)
         {
             return action;
         }
 
-        final long logonTime = sendingTime(sendingTime, origSendingTime);
+        final long logonTime = clock.time();
 
         if (resetSeqNumFlag)
         {
@@ -988,7 +1129,14 @@ public class Session implements AutoCloseable
                 }
 
                 // Don't configure this session as active until successful outbound publication
-                setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
+                setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
+                // If this is the first logon message this session has received, even if sequence
+                // index doesn't need incrementing we need to track the lastSequenceResetTime.
+                // Other cases handled by nextSequenceIndex()
+                if (lastReceivedMsgSeqNum == 0)
+                {
+                    lastSequenceResetTime(logonTime);
+                }
                 lastReceivedMsgSeqNum(msgSeqNum);
 
                 return CONTINUE;
@@ -1012,7 +1160,7 @@ public class Session implements AutoCloseable
                 }
                 else
                 {
-                    setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
+                    setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
                     action = requestResend(expectedMsgSeqNo, msgSeqNum);
 
                     return action;
@@ -1020,14 +1168,15 @@ public class Session implements AutoCloseable
             }
             else // (msgSeqNo < expectedMsgSeqNo)
             {
-                return msgSeqNumTooLow(msgSeqNum, expectedMsgSeqNo);
+                return msgSeqNumTooLow(msgSeqNum, expectedMsgSeqNo, position);
             }
         }
         else
         {
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
             return onMessage(
-                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+                position);
         }
     }
 
@@ -1065,6 +1214,8 @@ public class Session implements AutoCloseable
 
             lastSentMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
             lastReceivedMsgSeqNum(msgSeqNo);
+            lastLogonTime(logonTime);
+            lastSequenceResetTime(logonTime);
         }
         else
         {
@@ -1077,21 +1228,6 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private void setupCompleteLogonState(
-        final long logonTime,
-        final int heartbeatInterval,
-        final int msgSeqNum,
-        final String username,
-        final String password,
-        final long currentTime)
-    {
-        if (msgSeqNum == INITIAL_SEQUENCE_NUMBER)
-        {
-            logonTime(logonTime);
-        }
-        setupLogonState(heartbeatInterval, username, password, currentTime);
-    }
-
     private void setupCompleteLogonStateReset(
         final long logonTime,
         final int heartbeatInterval,
@@ -1099,7 +1235,18 @@ public class Session implements AutoCloseable
         final String password,
         final long currentTime)
     {
-        logonTime(logonTime);
+        setupCompleteLogonState(logonTime, heartbeatInterval, username, password, currentTime);
+        lastSequenceResetTime(logonTime);
+    }
+
+    private void setupCompleteLogonState(
+        final long logonTime,
+        final int heartbeatInterval,
+        final String username,
+        final String password,
+        final long currentTime)
+    {
+        lastLogonTime(logonTime);
         setupLogonState(heartbeatInterval, username, password, currentTime);
     }
 
@@ -1112,13 +1259,13 @@ public class Session implements AutoCloseable
         username(username);
         password(password);
 
-        if (logonListener != null)
+        if (sessionProcessHandler != null)
         {
-            logonListener.onLogon(this);
+            sessionProcessHandler.onLogon(this);
         }
     }
 
-    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         id(sessionId);
         this.sessionKey = sessionKey;
@@ -1131,7 +1278,7 @@ public class Session implements AutoCloseable
             newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
-    private Action validateOrRejectSendingTime(final long sendingTime)
+    private Action validateOrRejectSendingTime(final long sendingTime, final long position)
     {
         if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
         {
@@ -1142,6 +1289,11 @@ public class Session implements AutoCloseable
         if ((sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs)))
         {
             return null;
+        }
+
+        if (redact(position))
+        {
+            return ABORT;
         }
 
         return checkPositionAndDisconnect(
@@ -1184,7 +1336,8 @@ public class Session implements AutoCloseable
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         final long time = time();
         final Action action = validateRequiredFieldsAndCodec(
@@ -1193,7 +1346,8 @@ public class Session implements AutoCloseable
             LOGON_MESSAGE_TYPE_CHARS.length,
             sendingTime,
             origSendingTime,
-            possDup);
+            possDup,
+            position);
         if (action == ABORT)
         {
             return ABORT;
@@ -1219,14 +1373,15 @@ public class Session implements AutoCloseable
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (msgSeqNo == expectedReceivedSeqNum())
         {
             final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.sendHeartbeat(
+            final long sentPosition = proxy.sendHeartbeat(
                 sentSeqNum, testReqId, testReqIdLength, sequenceIndex(), lastMsgSeqNumProcessed);
-            if (position < 0)
+            if (sentPosition < 0)
             {
                 return ABORT;
             }
@@ -1237,30 +1392,32 @@ public class Session implements AutoCloseable
         }
 
         return onMessage(
-            msgSeqNo, TEST_REQUEST_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            msgSeqNo, TEST_REQUEST_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+            position);
     }
 
     Action onSequenceReset(
         final int msgSeqNo,
         final int newSeqNo,
         final boolean gapFillFlag,
-        final boolean possDupFlag)
+        final boolean possDupFlag,
+        final long position)
     {
         if (!gapFillFlag)
         {
-            return applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo, position);
         }
         else if (newSeqNo > msgSeqNo)
         {
-            return onGapFill(msgSeqNo, newSeqNo, possDupFlag);
+            return onGapFill(msgSeqNo, newSeqNo, possDupFlag, position);
         }
         else
         {
-            return applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo, position);
         }
     }
 
-    private Action applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
+    private Action applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo, final long position)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
 
@@ -1270,6 +1427,11 @@ public class Session implements AutoCloseable
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
+            if (redact(position))
+            {
+                return ABORT;
+            }
+
             return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
@@ -1284,7 +1446,8 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private Action onGapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    private Action onGapFill(
+        final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag, final long position)
     {
         final int expectedMsgSeqNo = awaitingResend ? lastResentMsgSeqNo + 1 : expectedReceivedSeqNum();
         // The gapfill has the wrong sequence number.
@@ -1309,7 +1472,7 @@ public class Session implements AutoCloseable
             // Ignore the gapfill if it's a possibly a duplicate
             if (!possDupFlag)
             {
-                return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo);
+                return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo, position);
             }
         }
         else // receivedMsgSeqNo == expectedMsgSeqNo
@@ -1357,10 +1520,11 @@ public class Session implements AutoCloseable
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         return onMessage(msgSeqNo, REJECT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend,
-            possDup);
+            possDup, position);
     }
 
     boolean onBeginString(final char[] value, final int length, final boolean isLogon)
@@ -1412,7 +1576,7 @@ public class Session implements AutoCloseable
 
     // ---------- Setters ----------
 
-    private void heartbeatIntervalInS(final int heartbeatIntervalInS)
+    void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
 
@@ -1428,10 +1592,9 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public Session id(final long id)
+    void id(final long id)
     {
         this.id = id;
-        return this;
     }
 
     protected long time()
@@ -1439,21 +1602,8 @@ public class Session implements AutoCloseable
         return epochClock.time();
     }
 
-    // Also checks the sequence index
-    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
-    {
-        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
-        {
-            nextSequenceIndex();
-        }
-
-        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
-
-        return this;
-    }
-
     // Does not check the sequence index
-    private void lastReceivedMsgSeqNumOnly(final int value)
+    void lastReceivedMsgSeqNumOnly(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
@@ -1469,29 +1619,15 @@ public class Session implements AutoCloseable
         return lastSentMsgSeqNum + 1;
     }
 
-    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
-    {
-        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
-        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
-        incNextHeartbeatTime();
-
-        return lastSentMsgSeqNum;
-    }
-
     private void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
         receivedMsgSeqNo.increment();
     }
 
-    public long logonTime()
+    void lastSequenceResetTime(final long lastSequenceResetTime)
     {
-        return this.logonTime;
-    }
-
-    public boolean hasLogonTime()
-    {
-        return logonTime != NO_LOGON_TIME;
+        this.lastSequenceResetTime = lastSequenceResetTime;
     }
 
     Action onInvalidMessage(
@@ -1499,8 +1635,14 @@ public class Session implements AutoCloseable
         final int refTagId,
         final char[] refMsgType,
         final int refMsgTypeLength,
-        final int rejectReason)
+        final int rejectReason,
+        final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
             refSeqNum,
@@ -1525,7 +1667,9 @@ public class Session implements AutoCloseable
         final int testReqIDLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend, final boolean possDup)
+        final boolean isPossDupOrResend,
+        final boolean possDup,
+        final long position)
     {
         if (awaitingHeartbeat && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
@@ -1533,11 +1677,18 @@ public class Session implements AutoCloseable
         }
 
         return onMessage(
-            msgSeqNum, HEARTBEAT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            msgSeqNum, HEARTBEAT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+            position);
     }
 
-    Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
+    Action onInvalidMessageType(
+        final int msgSeqNum, final char[] msgType, final int msgTypeLength, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNum,
@@ -1547,18 +1698,6 @@ public class Session implements AutoCloseable
             INVALID_MSGTYPE.representation(),
             sequenceIndex(),
             lastMsgSeqNumProcessed));
-    }
-
-    public String toString()
-    {
-        return getClass().getSimpleName() + "{" +
-               "connectionId=" + connectionId +
-               ", sessionId=" + id +
-               ", state=" + state +
-               ", sequenceIndex=" + sequenceIndex +
-               ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
-               ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
-               '}';
     }
 
     void disable()
@@ -1665,9 +1804,9 @@ public class Session implements AutoCloseable
         return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }
 
-    void logonListener(final SessionLogonListener logonListener)
+    void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
     {
-        this.logonListener = logonListener;
+        this.sessionProcessHandler = sessionProcessHandler;
     }
 
     void logoutRejectReason(final int logoutRejectReason)
@@ -1691,9 +1830,9 @@ public class Session implements AutoCloseable
         this.password = password;
     }
 
-    void logonTime(final long logonTime)
+    void lastLogonTime(final long logonTime)
     {
-        this.logonTime = logonTime;
+        this.lastLogonTime = logonTime;
     }
 
     void awaitingResend(final boolean awaitingResend)
@@ -1770,4 +1909,31 @@ public class Session implements AutoCloseable
         this.awaitingHeartbeat = awaitingHeartbeat;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        proxy.fixDictionary(fixDictionary);
+        this.beginString = fixDictionary.beginString();
+    }
+
+    void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
+        proxy.connectionId(connectionId);
+    }
+
+    void enableLastMsgSeqNumProcessed(final boolean enableLastMsgSeqNumProcessed)
+    {
+        this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+    }
+
+    /**
+     * Close the session object and release its resources.
+     * <p>
+     * API users should never have to call this method.
+     */
+    void close()
+    {
+        sentMsgSeqNo.close();
+        receivedMsgSeqNo.close();
+    }
 }

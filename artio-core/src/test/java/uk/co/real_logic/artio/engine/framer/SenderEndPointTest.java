@@ -443,7 +443,7 @@ public class SenderEndPointTest
 
     private void onSlowReplayMessage(final long timeInMs, final long position)
     {
-        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position);
+        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position, 0);
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
@@ -488,7 +488,8 @@ public class SenderEndPointTest
             POSITION,
             BODY_LENGTH,
             LIBRARY_ID,
-            timeInMs);
+            timeInMs,
+            0);
         assertEquals(CONTINUE, action);
     }
 

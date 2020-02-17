@@ -111,6 +111,7 @@ public class EnumGeneratorTest
 
         assertEquals(values[0], decode.invoke(null, 1));
         assertEquals(values[1], decode.invoke(null, 12));
+        assertEquals(values[2], decode.invoke(null, 99));
     }
 
     @Test

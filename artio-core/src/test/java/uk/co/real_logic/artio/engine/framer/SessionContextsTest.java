@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.builder.LogonEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -46,6 +47,7 @@ public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
 
+    private long time = System.currentTimeMillis();
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
     private MappedFile mappedFile = mock(MappedFile.class);
@@ -53,6 +55,7 @@ public class SessionContextsTest
     private SessionContexts sessionContexts = newSessionContexts(buffer);
     private MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(ByteBuffer.allocate(BUFFER_SIZE));
     private LogonEncoder logonEncoder = new LogonEncoder();
+    private FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
 
     private CompositeKey aSession = idStrategy.onInitiateLogon("a", null, null, "b", null, null);
     private CompositeKey bSession = idStrategy.onInitiateLogon("b", null, null, "a", null, null);
@@ -61,49 +64,56 @@ public class SessionContextsTest
     @Test
     public void sessionContextsAreUnique()
     {
-        assertNotEquals(sessionContexts.onLogon(aSession), sessionContexts.onLogon(bSession));
+        assertNotEquals(sessionContexts.onLogon(aSession, fixDictionary), sessionContexts.onLogon(bSession,
+            fixDictionary));
     }
 
     @Test
     public void findsDuplicateSessions()
     {
-        sessionContexts.onLogon(aSession);
+        sessionContexts.onLogon(aSession, fixDictionary);
 
-        assertEquals(SessionContexts.DUPLICATE_SESSION, sessionContexts.onLogon(aSession));
+        assertEquals(SessionContexts.DUPLICATE_SESSION, sessionContexts.onLogon(aSession, fixDictionary));
     }
 
     @Test
     public void handsOutSameSessionContextAfterDisconnect()
     {
-        final SessionContext sessionContext = sessionContexts.onLogon(aSession);
+        final SessionContext sessionContext = sessionContexts.onLogon(aSession, fixDictionary);
         sessionContexts.onDisconnect(sessionContext.sessionId());
 
-        assertValuesEqual(sessionContext, sessionContexts.onLogon(aSession));
+        assertValuesEqual(sessionContext, sessionContexts.onLogon(aSession, fixDictionary));
     }
 
     @Test
     public void persistsSessionContextsOverARestart()
     {
-        final SessionContext bContext = sessionContexts.onLogon(bSession);
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        final SessionContext bContext = sessionContexts.onLogon(bSession, fixDictionary);
+        final SessionContext aContext = sessionContexts.onLogon(aSession, fixDictionary);
 
-        bContext.onSequenceReset();
-        aContext.onSequenceReset();
+        bContext.onSequenceReset(time);
+        aContext.onSequenceReset(time);
 
         final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
-        assertValuesEqual(aContext, sessionContextsAfterRestart.onLogon(aSession));
-        assertValuesEqual(bContext, sessionContextsAfterRestart.onLogon(bSession));
+        final SessionContext reloadedAContext = sessionContextsAfterRestart.onLogon(aSession, fixDictionary);
+        final SessionContext reloadedBContext = sessionContextsAfterRestart.onLogon(bSession, fixDictionary);
+
+        assertValuesEqual(aContext, reloadedAContext);
+        assertValuesEqual(bContext, reloadedBContext);
+
+        assertEquals(time, reloadedAContext.lastSequenceResetTime());
+        assertEquals(time, reloadedBContext.lastSequenceResetTime());
     }
 
     @Test
     public void continuesIncrementingSessionContextsAfterRestart()
     {
-        final SessionContext bContext = sessionContexts.onLogon(bSession);
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        final SessionContext bContext = sessionContexts.onLogon(bSession, fixDictionary);
+        final SessionContext aContext = sessionContexts.onLogon(aSession, fixDictionary);
 
         final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
 
-        final SessionContext cContext = sessionContextsAfterRestart.onLogon(cSession);
+        final SessionContext cContext = sessionContextsAfterRestart.onLogon(cSession, fixDictionary);
         assertValidSessionId(cContext.sessionId());
         assertNotEquals("C is a duplicate of A", aContext, cContext);
         assertNotEquals("C is a duplicate of B", bContext, cContext);
@@ -112,8 +122,8 @@ public class SessionContextsTest
     @Test
     public void checksFileCorruption()
     {
-        sessionContexts.onLogon(bSession);
-        sessionContexts.onLogon(aSession);
+        sessionContexts.onLogon(bSession, fixDictionary);
+        sessionContexts.onLogon(aSession, fixDictionary);
 
         // corrupt buffer
         buffer.putBytes(8, new byte[1024]);
@@ -133,7 +143,7 @@ public class SessionContextsTest
     @Test
     public void wrapsOverSectorBoundaries()
     {
-        final int requiredNumberOfWritesToSpanSector = 232;
+        final int requiredNumberOfWritesToSpanSector = 45;
 
         final List<CompositeKey> keys = IntStream
             .range(0, requiredNumberOfWritesToSpanSector)
@@ -142,24 +152,25 @@ public class SessionContextsTest
 
         final List<SessionContext> contexts = keys
             .stream()
-            .map(sessionContexts::onLogon)
-            .peek(SessionContext::onSequenceReset)
+            .map(compositeKey -> sessionContexts.onLogon(compositeKey, fixDictionary))
+            .peek(sessionContext -> sessionContext.onSequenceReset(time))
             .collect(toList());
 
         // Test an update of something not at the tail of the buffer.
         final SessionContext firstContext = contexts.get(0);
-        firstContext.onSequenceReset();
+        firstContext.onSequenceReset(time);
 
         final SessionContexts contextsAfterRestart = newSessionContexts(buffer);
         IntStream
             .range(0, requiredNumberOfWritesToSpanSector)
-            .forEach((i) -> assertValuesEqual(contexts.get(i), contextsAfterRestart.onLogon(keys.get(i))));
+            .forEach((i) -> assertValuesEqual(contexts.get(i),
+            contextsAfterRestart.onLogon(keys.get(i), fixDictionary)));
     }
 
     @Test
     public void resetsSessionContexts()
     {
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        final SessionContext aContext = sessionContexts.onLogon(aSession, fixDictionary);
         sessionContexts.onDisconnect(aContext.sessionId());
 
         sessionContexts.reset(null);
@@ -172,7 +183,7 @@ public class SessionContextsTest
     @Test
     public void resetsSessionContextsFile()
     {
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        final SessionContext aContext = sessionContexts.onLogon(aSession, fixDictionary);
         sessionContexts.onDisconnect(aContext.sessionId());
 
         sessionContexts.reset(null);
@@ -190,7 +201,7 @@ public class SessionContextsTest
         final File backupLocation = File.createTempFile("sessionContexts", "tmp");
         try
         {
-            final SessionContext aContext = sessionContexts.onLogon(aSession);
+            final SessionContext aContext = sessionContexts.onLogon(aSession, fixDictionary);
             sessionContexts.onDisconnect(aContext.sessionId());
 
             final byte[] oldData = new byte[BUFFER_SIZE];
@@ -209,12 +220,12 @@ public class SessionContextsTest
     @Test
     public void doesNotReuseExistingSessionIdsForDistinctCompositeKeys()
     {
-        sessionContexts.onLogon(aSession);
-        sessionContexts.onLogon(bSession); // bump counter
+        sessionContexts.onLogon(aSession, fixDictionary);
+        sessionContexts.onLogon(bSession, fixDictionary); // bump counter
 
         logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
 
-        final SessionContext cContext = sessionContexts.onLogon(cSession);
+        final SessionContext cContext = sessionContexts.onLogon(cSession, fixDictionary);
 
         assertNotEquals(DUPLICATE_SESSION, cContext);
         assertEquals(3, cContext.sessionId());
@@ -227,8 +238,8 @@ public class SessionContextsTest
 
     private void assertSessionContextsReset(final SessionContext aContext, final SessionContexts sessionContexts)
     {
-        final SessionContext bContext = sessionContexts.onLogon(bSession);
-        final SessionContext newAContext = sessionContexts.onLogon(aSession);
+        final SessionContext bContext = sessionContexts.onLogon(bSession, fixDictionary);
+        final SessionContext newAContext = sessionContexts.onLogon(aSession, fixDictionary);
         assertValidSessionId(bContext.sessionId());
         assertValidSessionId(newAContext.sessionId());
         assertEquals("Session Contexts haven't been reset", aContext, bContext);

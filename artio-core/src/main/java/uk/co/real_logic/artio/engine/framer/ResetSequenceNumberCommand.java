@@ -41,6 +41,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
+    private final long resetTime;
     private Session session;
     private LongToIntFunction libraryLookup;
     private long waitSequence = 1;
@@ -87,7 +88,8 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final GatewayPublication inboundPublication,
-        final GatewayPublication outboundPublication)
+        final GatewayPublication outboundPublication,
+        final long resetTime)
     {
         this.sessionId = sessionId;
         this.gatewaySessions = gatewaySessions;
@@ -96,6 +98,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.inboundPublication = inboundPublication;
         this.outboundPublication = outboundPublication;
+        this.resetTime = resetTime;
     }
 
     public Exception error()
@@ -154,7 +157,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 // Not logged in
                 else
                 {
-                    sessionContexts.sequenceReset(sessionId);
+                    sessionContexts.sequenceReset(sessionId, resetTime);
                     step = Step.RESET_RECV;
                 }
 

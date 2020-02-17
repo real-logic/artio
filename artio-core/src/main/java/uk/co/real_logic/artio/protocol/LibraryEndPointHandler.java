@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -44,7 +45,6 @@ public interface LibraryEndPointHandler
         long session,
         int lastSentSeqNum,
         int lastRecvSeqNum,
-        long logonTime,
         SessionStatus sessionStatus,
         SlowStatus slowStatus,
         ConnectionType connectionType,
@@ -61,7 +61,11 @@ public interface LibraryEndPointHandler
         int lastResendChunkMsgSeqNum,
         int endOfResendRequestRange,
         boolean awaitingHeartbeat,
-        int logonReceivedSequenceNumber, int logonSequenceIndex, String localCompId,
+        int logonReceivedSequenceNumber,
+        int logonSequenceIndex,
+        long lastLogonTime,
+        long lastSequenceResetTime,
+        String localCompId,
         String localSubId,
         String localLocationId,
         String remoteCompId,
@@ -70,9 +74,27 @@ public interface LibraryEndPointHandler
         String address,
         String username,
         String password,
-        Class<? extends FixDictionary> fixDictionary);
+        Class<? extends FixDictionary> fixDictionary,
+        MetaDataStatus metaDataStatus,
+        DirectBuffer metaDataBuffer,
+        int metaDataOffset,
+        int metaDataLength);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 
     Action onEngineClose(int libraryId);
+
+    Action onWriteMetaDataReply(int libraryId, long replyToId, MetaDataStatus status);
+
+    Action onReadMetaDataReply(
+        int libraryId,
+        long replyToId,
+        MetaDataStatus status,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength);
+
+    Action onReplayMessagesReply(int libraryId, long replyToId, ReplayMessagesStatus status);
+
+    Action onILinkConnect(int libraryId, long correlationId, long connection);
 }

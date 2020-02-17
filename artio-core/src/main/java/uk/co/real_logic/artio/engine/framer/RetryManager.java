@@ -60,7 +60,10 @@ class RetryManager implements AutoCloseable
 
     void schedule(final Continuation continuation)
     {
-        continuations.add(continuation);
+        if (continuation.attemptToAction() != CONTINUE)
+        {
+            continuations.add(continuation);
+        }
     }
 
     int attemptSteps()

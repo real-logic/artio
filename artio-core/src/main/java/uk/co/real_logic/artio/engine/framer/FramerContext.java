@@ -43,9 +43,10 @@ import java.util.List;
  */
 public class FramerContext
 {
-    private static final int ADMIN_COMMAND_CAPACITY = 16;
+    private static final int ADMIN_COMMAND_CAPACITY = 64;
 
     private final QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(ADMIN_COMMAND_CAPACITY);
+    private final SystemEpochClock epochClock = new SystemEpochClock();
 
     private final Framer framer;
 
@@ -75,8 +76,6 @@ public class FramerContext
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
-        final SystemEpochClock epochClock = new SystemEpochClock();
-
         this.sessionContexts = new SessionContexts(
             configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
 
@@ -84,28 +83,23 @@ public class FramerContext
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler);
+            configuration.sentSequenceNumberBuffer(), errorHandler, configuration.logFileDir());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler);
+            configuration.receivedSequenceNumberBuffer(), errorHandler, null);
 
         gatewaySessions = new GatewaySessions(
             epochClock,
+            inboundPublication,
             outboundPublication,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
             fixCounters,
-            configuration.authenticationStrategy(),
-            configuration.messageValidationStrategy(),
-            configuration.sessionBufferSize(),
-            configuration.sendingTimeWindowInMs(),
-            configuration.reasonableTransmissionTimeInMs(),
-            configuration.logAllMessages(),
+            configuration,
             errorHandler,
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex
-        );
+            receivedSequenceNumberIndex);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -114,8 +108,7 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers()
-        );
+            engineContext.senderSequenceNumbers());
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
@@ -175,7 +168,8 @@ public class FramerContext
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
             inboundPublication,
-            outboundPublication);
+            outboundPublication,
+            epochClock.time());
 
         if (adminCommands.offer(reply))
         {
@@ -273,5 +267,10 @@ public class FramerContext
         }
 
         return null;
+    }
+
+    public boolean offer(final WriteMetaDataResponse response)
+    {
+        return adminCommands.offer(response);
     }
 }

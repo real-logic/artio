@@ -51,7 +51,7 @@ class EndPointFactory
         this.senderSequenceNumbers = senderSequenceNumbers;
     }
 
-    ReceiverEndPoint receiverEndPoint(
+    FixReceiverEndPoint receiverEndPoint(
         final TcpChannel channel,
         final long connectionId,
         final long sessionId,
@@ -59,7 +59,7 @@ class EndPointFactory
         final int libraryId,
         final Framer framer)
     {
-        return new ReceiverEndPoint(
+        return new FixReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
             inboundLibraryPublication,
@@ -73,7 +73,7 @@ class EndPointFactory
             libraryId,
             gatewaySessions,
             configuration.clock(),
-            configuration.acceptorfixDictionary());
+            framer.acceptorFixDictionaryLookup());
     }
 
     SenderEndPoint senderEndPoint(

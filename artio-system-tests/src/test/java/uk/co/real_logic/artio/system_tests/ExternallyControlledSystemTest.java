@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.SessionAcquiredInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -54,15 +55,14 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     private SessionWriter acceptingSessionWriter = null;
     private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
     {
-        @Override
-        public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+        public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
         {
             acceptingSessionWriter = acceptingLibrary.sessionWriter(
                 session.id(),
                 session.connectionId(),
                 session.sequenceIndex());
 
-            return super.onSessionAcquired(session, isSlow);
+            return super.onSessionAcquired(session, acquiredInfo);
         }
     };
 
@@ -120,7 +120,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         awaitForwardingOfAcceptingSession();
         messagesCanBeExchanged();
 
-        assertEquals(2, sessionProxyRequests);
+        assertEquals(1, sessionProxyRequests);
         assertEquals(2, fakeSessionProxy.sentHeartbeats);
         assertEquals(2, fakeSessionProxy.sentLogons);
         assertEquals(0, fakeSessionProxy.sentResendRequests);
@@ -243,7 +243,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final FixDictionary fixDictionary,
         final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;
@@ -267,6 +266,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         private boolean seqNumResetRequested = false;
 
+        public void fixDictionary(final FixDictionary dictionary)
+        {
+        }
+
         public void setupSession(final long sessionId, final CompositeKey sessionKey)
         {
             requireNonNull(sessionKey, "sessionKey");
@@ -275,6 +278,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             {
                 sessionIdStrategy.setupSession(sessionKey, header);
             }
+        }
+
+        public void connectionId(final long connectionId)
+        {
         }
 
         public long sendResendRequest(

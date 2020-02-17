@@ -25,8 +25,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class UnitOfWork implements Continuation
 {
-    private List<Continuation> workList;
-
+    List<Continuation> workList;
     private int index = 0;
 
     UnitOfWork(final Continuation... work)

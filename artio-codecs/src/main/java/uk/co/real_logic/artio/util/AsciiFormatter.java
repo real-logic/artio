@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.util;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
+import static uk.co.real_logic.artio.util.AsciiBuffer.LONGEST_LONG_LENGTH;
 
 /**
  * String formatting class with low garbage creation.
@@ -29,7 +29,7 @@ public class AsciiFormatter
     private static final Pattern PATTERN = Pattern.compile("%s");
 
     private final byte[][] segments;
-    private final byte[] numberBuffer = new byte[LONGEST_INT_LENGTH + 1];
+    private final byte[] numberBuffer = new byte[LONGEST_LONG_LENGTH + 1];
     private final MutableAsciiBuffer numberFlyweight = new MutableAsciiBuffer(numberBuffer);
 
     private byte[] value = new byte[DEFAULT_LENGTH];
@@ -67,6 +67,12 @@ public class AsciiFormatter
     public AsciiFormatter with(final int number)
     {
         final int length = numberFlyweight.putIntAscii(0, number);
+        return with(numberBuffer, length);
+    }
+
+    public AsciiFormatter with(final long number)
+    {
+        final int length = numberFlyweight.putLongAscii(0, number);
         return with(numberBuffer, length);
     }
 

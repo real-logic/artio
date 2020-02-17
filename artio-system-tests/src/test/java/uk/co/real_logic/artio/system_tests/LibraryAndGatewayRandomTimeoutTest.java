@@ -22,6 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -108,6 +109,9 @@ public class LibraryAndGatewayRandomTimeoutTest
 
     private void launchEngine()
     {
-        initiatingEngine = launchInitiatingEngine(aeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(aeronPort);
+        initiatingConfig.printErrorMessages(false);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
     }
 }

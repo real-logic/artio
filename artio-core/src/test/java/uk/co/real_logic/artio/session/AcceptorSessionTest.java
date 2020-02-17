@@ -16,7 +16,8 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
@@ -25,8 +26,8 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
@@ -34,10 +35,13 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private AcceptorSession newAcceptorSession()
     {
-        final AcceptorSession acceptorSession = new AcceptorSession(HEARTBEAT_INTERVAL,
+        final AcceptorSession acceptorSession = new AcceptorSession(
+            HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
+            Clock.systemNanoTime(),
             sessionProxy,
+            mock(GatewayPublication.class),
             mockPublication,
             idStrategy,
             SENDING_TIME_WINDOW,
@@ -50,9 +54,9 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
-            Constants.VERSION,
             SessionCustomisationStrategy.none());
-        acceptorSession.logonListener(mockLogonListener);
+        acceptorSession.fixDictionary(makeDictionary());
+        acceptorSession.sessionProcessHandler(mockLogonListener);
         return acceptorSession;
     }
 

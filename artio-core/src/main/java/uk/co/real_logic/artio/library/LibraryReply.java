@@ -31,7 +31,7 @@ abstract class LibraryReply<T> implements Reply<T>
 {
     final LibraryPoller libraryPoller;
 
-    private final long latestReplyArrivalTimeInMs;
+    final long latestReplyArrivalTimeInMs;
 
     boolean requiresResend;
     long correlationId;

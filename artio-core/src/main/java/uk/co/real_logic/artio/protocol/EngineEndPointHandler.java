@@ -89,4 +89,30 @@ public interface EngineEndPointHandler
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
+
+    Action onWriteMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        int metaDataOffset,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength);
+
+    Action onReadMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId);
+
+    Action onReplayMessages(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        int replayFromSequenceNumber,
+        int replayFromSequenceIndex,
+        int replayToSequenceNumber,
+        int replayToSequenceIndex,
+        long latestReplyArrivalTimeInMs);
+
+    Action onInitiateILinkConnection(int libraryId, int port, long correlationId, String host);
 }

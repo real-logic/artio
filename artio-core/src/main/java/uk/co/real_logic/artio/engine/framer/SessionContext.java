@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.session.Session;
 
 /**
@@ -26,53 +27,82 @@ class SessionContext
 
     private final long sessionId;
     private final SessionContexts sessionContexts;
+
     private final int filePosition;
 
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
     private int sequenceIndex;
 
-    private long logonTime;
+    private long lastLogonTime;
+    private long lastSequenceResetTime;
+    private FixDictionary lastFixDictionary;
 
     SessionContext(
         final long sessionId,
         final int sequenceIndex,
-        final long logonTime,
+        final long lastLogonTime,
+        final long lastSequenceResetTime,
         final SessionContexts sessionContexts,
-        final int filePosition)
+        final int filePosition,
+        final FixDictionary lastFixDictionary)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
-        this.logonTime = logonTime;
+        lastLogonTime(lastLogonTime);
+        this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
+        this.lastFixDictionary = lastFixDictionary;
     }
 
-    void onSequenceReset()
+    private void lastLogonTime(final long lastLogonTime)
     {
+        this.lastLogonTime = lastLogonTime;
+    }
+
+    void onSequenceReset(final long resetTime)
+    {
+        lastSequenceResetTime = resetTime;
         sequenceIndex++;
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
+        save();
     }
 
     void updateAndSaveFrom(final Session session)
     {
         updateFrom(session);
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
+        save();
+    }
+
+    private void save()
+    {
+        // NB: we deliberately don't update the fix dictionary as this can't change within
+        // a connection
+        sessionContexts.updateSavedData(
+            filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
     }
 
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
-        logonTime = session.logonTime();
+        lastLogonTime(session.lastLogonTime());
+        lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
-    void onLogon(final boolean resetSeqNum)
+    void onLogon(final boolean resetSeqNum, final long time, final FixDictionary fixDictionary)
     {
+        lastFixDictionary = fixDictionary;
+        lastLogonTime(time);
         // increment if we're going to reset the sequence number or if it's persistent
         // sequence numbers and it's the first time we're logging on.
         if (resetSeqNum || sequenceIndex == SessionContext.UNKNOWN_SEQUENCE_INDEX)
         {
-            onSequenceReset();
+            onSequenceReset(time);
+        }
+        else
+        {
+            // onSequenceReset also saves.
+            save();
         }
     }
 
@@ -84,6 +114,21 @@ class SessionContext
     long sessionId()
     {
         return sessionId;
+    }
+
+    public long lastSequenceResetTime()
+    {
+        return lastSequenceResetTime;
+    }
+
+    public long lastLogonTime()
+    {
+        return lastLogonTime;
+    }
+
+    public FixDictionary lastFixDictionary()
+    {
+        return lastFixDictionary;
     }
 
     public boolean equals(final Object o)

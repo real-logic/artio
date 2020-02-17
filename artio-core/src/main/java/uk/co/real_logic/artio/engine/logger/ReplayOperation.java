@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.List;
 
@@ -45,6 +46,25 @@ import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
  */
 public class ReplayOperation
 {
+    private static final ThreadLocal<CharFormatter> FOUND_REPLAY_MESSAGE =
+        ThreadLocal.withInitial(() -> new CharFormatter("Found Replay Message [%s]%n"));
+    private static final ThreadLocal<CharFormatter> RECORDING_RANGE_FORMATTER =
+        ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Attempting Recording Range:" +
+        " RecordingRange{" +
+        "recordingId=%s" +
+        ", sessionId=%s" +
+        ", position=%s" +
+        ", length=%s" +
+        ", count=%s" +
+        "}%n"));
+    private static final ThreadLocal<CharFormatter> POLLING_REPLAY_FORMATTER =
+        ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s%n"));
+    private static final ThreadLocal<CharFormatter> FINISHED_FORMATTER =
+        ThreadLocal.withInitial(() -> new CharFormatter("Finished with Image @ pos=%s, closed=%s, eos=%s%n"));
+    private static final ThreadLocal<CharFormatter> MESSAGE_REPLAY_COUNT_FORMATTER =
+        ThreadLocal.withInitial(() -> new CharFormatter(
+        "Finished with messageTrackerCount=%s, recordingRangeCount=%s%n"));
+
     private final MessageTracker messageTracker;
     private final ControlledFragmentAssembler assembler;
 
@@ -95,19 +115,14 @@ public class ReplayOperation
         if (recordingRange == null)
         {
             DebugLogger.log(logTag, "Acquiring Recording Range");
-
             if (ranges.isEmpty())
             {
                 return true;
             }
 
             recordingRange = ranges.get(0);
-            DebugLogger.log(logTag,
-                "ReplayOperation : Attempting Recording Range: %s%n",
-                recordingRange);
-
+            logRange();
             messageTracker.sessionId = recordingRange.sessionId;
-
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
             final long endPosition = beginPosition + length;
@@ -161,7 +176,10 @@ public class ReplayOperation
         }
         else
         {
-            DebugLogger.log(logTag, "Polling Replay Image pos=%d%n", image.position());
+            if (DebugLogger.isEnabled(logTag))
+            {
+                DebugLogger.log(logTag, POLLING_REPLAY_FORMATTER.get().clear().with(image.position()));
+            }
 
             image.controlledPoll(assembler, Integer.MAX_VALUE);
 
@@ -187,11 +205,28 @@ public class ReplayOperation
         }
     }
 
+    private void logRange()
+    {
+        final LogTag logTag = this.logTag;
+
+        if (DebugLogger.isEnabled(logTag))
+        {
+            final RecordingRange recordingRange = this.recordingRange;
+            DebugLogger.log(logTag, ReplayOperation.RECORDING_RANGE_FORMATTER.get()
+                .clear()
+                .with(recordingRange.recordingId)
+                .with(recordingRange.sessionId)
+                .with(recordingRange.position)
+                .with(recordingRange.length)
+                .with(recordingRange.count));
+        }
+    }
+
     private boolean onReachedMessageReplayCount(final int messageTrackerCount, final int recordingRangeCount)
     {
         DebugLogger.log(
             logTag,
-            "Finished with messageTrackerCount=%d, recordingRangeCount=%d%n",
+            MESSAGE_REPLAY_COUNT_FORMATTER.get(),
             messageTrackerCount,
             recordingRangeCount);
 
@@ -203,12 +238,11 @@ public class ReplayOperation
 
     private boolean onEndOfImage(final int recordingRangeCount, final boolean closed, final boolean endOfStream)
     {
-        DebugLogger.log(
-            logTag,
-            "Finished with Image @ pos=%d, closed=%s, eos=%s%n",
-            image.position(),
-            Boolean.valueOf(closed),
-            Boolean.valueOf(endOfStream));
+        if (DebugLogger.isEnabled(logTag))
+        {
+            DebugLogger.log(logTag, FINISHED_FORMATTER.get().clear()
+                .with(image.position()).with(closed).with(endOfStream));
+        }
 
         aeronSessionId = 0;
         replayedMessages += recordingRangeCount;
@@ -278,7 +312,12 @@ public class ReplayOperation
 
                 if (DebugLogger.isEnabled(logTag))
                 {
-                    DebugLogger.log(logTag, "Found Replay Message [%s]%n", messageDecoder.body());
+                    messageDecoder.skipMetaData();
+                    final int bodyLength = messageDecoder.bodyLength();
+                    final int bodyOffset = messageDecoder.limit();
+                    final CharFormatter formatter = FOUND_REPLAY_MESSAGE.get();
+                    formatter.clear();
+                    DebugLogger.log(logTag, formatter, buffer, bodyOffset, bodyLength);
                 }
 
                 final Action action = messageHandler.onFragment(buffer, offset, length, header);
