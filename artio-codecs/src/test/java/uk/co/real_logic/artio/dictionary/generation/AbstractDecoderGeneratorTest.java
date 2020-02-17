@@ -622,17 +622,32 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void shouldLeaveDecoderInUsableIfValidationFailsDuringRepeatingGroup() throws Exception
     {
-        //Given
         final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_TWICE_IN_MESSAGE);
 
-        //When
         assertFalse("Failed validation when it should have passed", decoder.validate());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
 
-        //Then
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
         assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldSupportGroupNumbersGreaterThanTheNumberOfElementsInTheGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
+    }
+
+    @Test
+    public void shouldReasonablyValidateGroupNumbersLessThanTheNumberOfElementsInTheGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            REPEATING_GROUP_MESSAGE_WITH_TOO_LOW_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
     }
 
     @Test
@@ -640,9 +655,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
-        assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertInvalid(decoder, INVALID_TAG_NUMBER, 1000);
 
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
@@ -1735,6 +1748,18 @@ public abstract class AbstractDecoderGeneratorTest
         assertFalse(String.format(
             "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
             isValid);
+    }
+
+    private void assertInvalid(final Decoder decoder, final int rejectReason, final int invalidTagId)
+    {
+        final boolean isValid = decoder.validate();
+        assertFalse(String.format(
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
+        assertEquals("Wrong reject reason with invalidTagId=" + decoder.invalidTagId(),
+            rejectReason, decoder.rejectReason());
+        assertEquals("Wrong tag id with rejectReason=" + decoder.rejectReason(),
+            invalidTagId, decoder.invalidTagId());
     }
 
     private <T extends Exception> void assertThrows(

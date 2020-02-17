@@ -55,7 +55,6 @@ public abstract class Generator
     public static final String BEGIN_STRING = "BeginString";
     public static final String BODY_LENGTH = "BodyLength";
 
-    public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
