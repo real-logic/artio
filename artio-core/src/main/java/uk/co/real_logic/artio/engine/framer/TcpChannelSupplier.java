@@ -23,15 +23,15 @@ import java.net.InetSocketAddress;
  */
 public abstract class TcpChannelSupplier implements AutoCloseable
 {
-    abstract void open(InetSocketAddress address, InitiatedChannelHandler channelHandler) throws IOException;
+    public abstract void open(InetSocketAddress address, InitiatedChannelHandler channelHandler) throws IOException;
 
-    abstract void stopConnecting(InetSocketAddress address) throws IOException;
+    public abstract void stopConnecting(InetSocketAddress address) throws IOException;
 
-    abstract int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
+    public abstract int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
 
-    abstract void unbind() throws IOException;
+    public abstract void unbind() throws IOException;
 
-    abstract void bind() throws IOException;
+    public abstract void bind() throws IOException;
 
     @FunctionalInterface
     public interface InitiatedChannelHandler
