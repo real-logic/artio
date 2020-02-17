@@ -362,11 +362,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseSessionToEngine(session, library, engine);
         handler.resetSession();
 
+        assertCountersClosed(true, session);
+
         final long sessionId = session.id();
         assertEquals(OK, requestSession(library, sessionId, testSystem));
 
         final Session reAcquiredSession = handler.lastSession();
         assertSame(session, reAcquiredSession);
+        assertCountersClosed(false, reAcquiredSession);
     }
 
     @Test

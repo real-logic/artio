@@ -938,11 +938,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     private void onHandoverSession(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int lastSentSeqNum,
-        final int lastRecvSeqNum,
+        final int libraryId, final long connectionId, final long sessionId,
+        final int lastSentSeqNum, final int lastRecvSeqNum,
         final ConnectionType connectionType,
         final SessionState sessionState,
         final int heartbeatIntervalInS,
@@ -967,7 +964,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         InternalSession session;
         InitiateSessionReply reply = null;
-        session = checkExistingSessions(sessionId, connectionId, sessionState, heartbeatIntervalInS,
+        session = checkReconnect(sessionId, connectionId, sessionState, heartbeatIntervalInS,
             sequenceIndex, enableLastMsgSeqNumProcessed, fixDictionary, connectionType, address);
         final boolean isNewConnect = session == null;
 
@@ -1066,7 +1063,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     // Either a reconnect of an offline session, or the cache.
-    private InternalSession checkExistingSessions(
+    private InternalSession checkReconnect(
         final long sessionId,
         final long connectionId,
         final SessionState sessionState,
@@ -1091,7 +1088,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     sequenceIndex,
                     enableLastMsgSeqNumProcessed,
                     fixDictionary,
-                    address);
+                    address,
+                    fixCounters);
                 return session;
             }
         }
@@ -1110,7 +1108,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     sequenceIndex,
                     enableLastMsgSeqNumProcessed,
                     fixDictionary,
-                    address);
+                    address,
+                    fixCounters);
             }
             return session;
         }

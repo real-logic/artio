@@ -93,8 +93,6 @@ public class Session
     private final EpochClock epochClock;
     private final Clock clock;
     private final long sendingTimeWindowInMs;
-    private final AtomicCounter receivedMsgSeqNo;
-    private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -103,6 +101,8 @@ public class Session
     private CompositeKey sessionKey;
     private SessionState state;
     private String beginString;
+    private AtomicCounter receivedMsgSeqNo;
+    private AtomicCounter sentMsgSeqNo;
 
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
     private boolean awaitingResend = INITIAL_AWAITING_RESEND;
@@ -1940,6 +1940,13 @@ public class Session
         return messageInfo;
     }
 
+    void refreshSequenceNumberCounters(final FixCounters counters)
+    {
+        closeCounters();
+        receivedMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
+        sentMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
+    }
+
     /**
      * Close the session object and release its resources.
      * <p>
@@ -1947,7 +1954,17 @@ public class Session
      */
     void close()
     {
+        closeCounters();
+    }
+
+    private void closeCounters()
+    {
         sentMsgSeqNo.close();
         receivedMsgSeqNo.close();
+    }
+
+    boolean areCountersClosed()
+    {
+        return sentMsgSeqNo.isClosed() || receivedMsgSeqNo.isClosed();
     }
 }

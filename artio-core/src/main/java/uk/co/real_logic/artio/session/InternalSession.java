@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -233,7 +234,8 @@ public class InternalSession extends Session implements AutoCloseable
         final int sequenceIndex,
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary,
-        final String address)
+        final String address,
+        final FixCounters counters)
     {
         connectionId(connectionId);
         state(sessionState);
@@ -242,6 +244,8 @@ public class InternalSession extends Session implements AutoCloseable
         enableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed);
         fixDictionary(fixDictionary);
         address(address);
+        refreshSequenceNumberCounters(counters);
+
     }
 
     public void lastReceivedMsgSeqNumOnly(final int value)
@@ -258,5 +262,10 @@ public class InternalSession extends Session implements AutoCloseable
     public OnMessageInfo messageInfo()
     {
         return super.messageInfo();
+    }
+
+    public boolean areCountersClosed()
+    {
+        return super.areCountersClosed();
     }
 }

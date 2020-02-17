@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 
 import java.util.ArrayList;
@@ -403,6 +404,11 @@ public class AbstractGatewayToGatewaySystemTest
         assertThat(sessions, contains(allOf(
             hasConnectionId(connectionId),
             hasSessionId(sessionId))));
+    }
+
+    void assertCountersClosed(final boolean expectedClosed, final Session session)
+    {
+        assertEquals(expectedClosed, ((InternalSession)session).areCountersClosed());
     }
 
     void engineShouldManageSession(
