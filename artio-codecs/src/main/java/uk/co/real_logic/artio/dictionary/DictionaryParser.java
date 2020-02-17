@@ -449,7 +449,7 @@ public final class DictionaryParser
             if (!allowDuplicates)
             {
                 throw new IllegalStateException(String.format(
-                        "%sUse -D%s=true to allow duplicated fields (Dangerous. May broke parser).",
+                        "%sUse -D%s=true to allow duplicated fields (Dangerous. May break parser).",
                         errorMessage,
                         CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS));
             }

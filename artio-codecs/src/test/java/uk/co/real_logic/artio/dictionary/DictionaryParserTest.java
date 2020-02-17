@@ -242,7 +242,7 @@ public class DictionaryParserTest
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
             "Message: DedupeFieldsTest Field : MemberSubID (104)\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May broke parser)."
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
         );
     }
 
@@ -254,7 +254,7 @@ public class DictionaryParserTest
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
             "Message: DuplicatedFieldMessage Field : MemberID (100) Through Path: [MemberIDsGroup, Members]\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May broke parser)."
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
         );
         parseDictionary("example_duplicate_dictionary.xml", true);
     }
@@ -269,7 +269,7 @@ public class DictionaryParserTest
             "Details to follow:\n" +
             "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent, Members]\n" +
             "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May broke parser).");
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser).");
     }
 
     @Test

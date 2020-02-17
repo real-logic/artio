@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,9 +36,9 @@ public final class CodecGenerationTool
      * A tag number (field) should only appear in a message once. If it appears more than once in the message it should
      * be considered an error with the specification document.
      * <p>
-     * Turn this option on may broke parser.
-     * <br>
-     * Option should be used for support fix specification with error only.
+     * Turning this option on may break parsing: this option should be used for support fix specification with error
+     * only. It is recommended, where possible, to correct your FIX XML file instead of using this option in order
+     * to support an invalid XML file.
      * <br>
      * The duplicated fields is allowed in the following case:
      * <pre>
@@ -48,7 +48,6 @@ public final class CodecGenerationTool
      * the_other_field+
      * field;
      * </pre>
-     *
      */
     public static final String FIX_CODECS_ALLOW_DUPLICATE_FIELDS = "fix.codecs.allow_duplicate_fields";
 
