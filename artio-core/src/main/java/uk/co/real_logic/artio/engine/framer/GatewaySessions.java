@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -155,6 +156,7 @@ class GatewaySessions
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final OnMessageInfo messageInfo = new OnMessageInfo();
 
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
@@ -186,7 +188,8 @@ class GatewaySessions
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
-            customisationStrategy);
+            customisationStrategy,
+            messageInfo);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -197,7 +200,8 @@ class GatewaySessions
             session,
             validationStrategy,
             errorHandler,
-            validateCompIdsOnEveryMessage);
+            validateCompIdsOnEveryMessage,
+            messageInfo);
 
         if (!sessions.contains(gatewaySession))
         {

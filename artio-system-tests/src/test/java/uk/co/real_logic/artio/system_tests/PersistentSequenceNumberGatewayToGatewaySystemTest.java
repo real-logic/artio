@@ -316,6 +316,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int initiatorSequenceNumber = initiatingSession.lastSentMsgSeqNum() + 1;
         int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
 
+        assertTrue(acceptingOtfAcceptor.messages().get(0).isValid());
+
         clearMessages();
         initiatingSession = null;
         acceptingSession = null;

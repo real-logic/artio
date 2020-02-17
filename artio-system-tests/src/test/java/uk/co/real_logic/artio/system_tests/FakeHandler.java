@@ -95,6 +95,7 @@ public class FakeHandler
         final FixMessage parsedMessage = acceptor.lastReceivedMessage();
         parsedMessage.sequenceIndex(sequenceIndex);
         parsedMessage.status(messageInfo.status());
+        parsedMessage.isValid(messageInfo.isValid());
         acceptor.forSession(session);
 
         if (copyMessages)

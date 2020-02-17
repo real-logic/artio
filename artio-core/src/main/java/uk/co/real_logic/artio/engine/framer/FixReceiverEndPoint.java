@@ -500,7 +500,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         }
         else
         {
-            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId, position);
+            gatewaySession.onMessage(buffer, offset, length, messageType, position);
             return true;
         }
     }

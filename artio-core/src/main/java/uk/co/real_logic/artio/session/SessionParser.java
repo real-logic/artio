@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -59,6 +60,7 @@ public class SessionParser
     private AbstractHeartbeatDecoder heartbeat;
 
     private final boolean validateCompIdsOnEveryMessage;
+    private final OnMessageInfo messageInfo;
     private char[] firstSenderCompId;
     private char[] firstSenderSubId;
     private char[] firstSenderLocationId;
@@ -74,13 +76,14 @@ public class SessionParser
         final Session session,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler, // nullable
-        final boolean validateCompIdsOnEveryMessage)
+        final boolean validateCompIdsOnEveryMessage,
+        final OnMessageInfo messageInfo)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
-
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+        this.messageInfo = messageInfo;
     }
 
     public void fixDictionary(final FixDictionary fixDictionary)
@@ -109,7 +112,6 @@ public class SessionParser
         final int offset,
         final int length,
         final long messageType,
-        final long sessionId,
         final long position)
     {
         asciiBuffer.wrap(buffer);
@@ -287,6 +289,10 @@ public class SessionParser
             if (!isDisconnectedOrAwaitingLogout())
             {
                 return session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength, position);
+            }
+            else
+            {
+                messageInfo.isValid(false);
             }
         }
         else
@@ -658,6 +664,10 @@ public class SessionParser
             }
 
             return action;
+        }
+        else
+        {
+            messageInfo.isValid(false);
         }
 
         if (requestDisconnect)

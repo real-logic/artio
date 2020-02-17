@@ -859,9 +859,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixMessage gapFill = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
         assertEquals(1, gapFill.messageSequenceNumber());
         assertEquals(4, Integer.parseInt(gapFill.get(NEW_SEQ_NO)));
+        assertTrue(gapFill.isValid());
 
         final FixMessage execReport = testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
         assertEquals(4, execReport.messageSequenceNumber());
+        assertTrue(execReport.isValid());
 
         clearMessages();
 

@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 public class OnMessageInfo
 {
     private MessageStatus status;
+    private boolean isValid;
 
     public OnMessageInfo status(final MessageStatus status)
     {
@@ -27,8 +28,19 @@ public class OnMessageInfo
         return this;
     }
 
+    public OnMessageInfo isValid(final boolean valid)
+    {
+        isValid = valid;
+        return this;
+    }
+
     public MessageStatus status()
     {
         return status;
+    }
+
+    public boolean isValid()
+    {
+        return isValid;
     }
 }

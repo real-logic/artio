@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -97,6 +98,7 @@ public class Session
     private final long reasonableTransmissionTimeInMs;
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
+    private final OnMessageInfo messageInfo;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -162,7 +164,8 @@ public class Session
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final SessionCustomisationStrategy customisationStrategy)
+        final SessionCustomisationStrategy customisationStrategy,
+        final OnMessageInfo messageInfo)
     {
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
@@ -170,7 +173,9 @@ public class Session
         Verify.notNull(outboundPublication, "outboundPublication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
+        Verify.notNull(messageInfo, "messageInfo");
 
+        this.messageInfo = messageInfo;
         this.epochClock = epochClock;
         this.proxy = proxy;
         this.connectionId = connectionId;
@@ -1042,6 +1047,8 @@ public class Session
 
     private boolean redact(final long position)
     {
+        messageInfo.isValid(false);
+
         return inboundPublication.saveRedactSequenceUpdate(id, lastReceivedMsgSeqNum, position) < 0;
     }
 
@@ -1306,6 +1313,8 @@ public class Session
     {
         if (heartbeatInterval < 0)
         {
+            messageInfo.isValid(false);
+
             return checkPositionAndDisconnect(
                 proxy.sendNegativeHeartbeatLogout(newSentSeqNum(), sequenceIndex(), lastMsgSeqNumProcessed),
                 NEGATIVE_HEARTBEAT_INTERVAL);
@@ -1924,6 +1933,11 @@ public class Session
     void enableLastMsgSeqNumProcessed(final boolean enableLastMsgSeqNumProcessed)
     {
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+    }
+
+    OnMessageInfo messageInfo()
+    {
+        return messageInfo;
     }
 
     /**

@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -74,6 +75,7 @@ public abstract class AbstractSessionTest
 
     static final long POSITION = 1024;
 
+    OnMessageInfo messageInfo = mock(OnMessageInfo.class);
     DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();

@@ -20,6 +20,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -55,7 +56,8 @@ public class InternalSession extends Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final SessionCustomisationStrategy customisationStrategy)
+        final SessionCustomisationStrategy customisationStrategy,
+        final OnMessageInfo messageInfo)
     {
         super(
             heartbeatIntervalInS,
@@ -76,7 +78,8 @@ public class InternalSession extends Session implements AutoCloseable
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            customisationStrategy);
+            customisationStrategy,
+            messageInfo);
     }
 
     public int poll(final long time)
@@ -250,5 +253,10 @@ public class InternalSession extends Session implements AutoCloseable
     {
         close();
         super.finalize();
+    }
+
+    public OnMessageInfo messageInfo()
+    {
+        return super.messageInfo();
     }
 }

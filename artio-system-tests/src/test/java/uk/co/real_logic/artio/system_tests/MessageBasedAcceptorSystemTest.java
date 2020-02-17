@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.CloseHelper;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
@@ -40,11 +42,12 @@ import java.util.concurrent.locks.LockSupport;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.TestFixtures.*;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.SENDER_COMP_ID;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.TEST_REQUEST_MESSAGE_TYPE_STR;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -57,6 +60,10 @@ public class MessageBasedAcceptorSystemTest
 
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
+    private FakeOtfAcceptor otfAcceptor;
+    private FakeHandler handler;
+    private FixLibrary library;
+    private TestSystem testSystem;
 
     // Trying to reproduce
     // > [8=FIX.4.4|9=0079|35=A|49=initiator|56=acceptor|34=1|52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
@@ -319,9 +326,14 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
+        setupLibrary();
+
         try (FixConnection connection = FixConnection.initiate(port))
         {
             logon(connection);
+
+            final long sessionId = handler.awaitSessionId(testSystem::poll);
+            final Session session = acquireSession(handler, library, sessionId, testSystem);
 
             final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
             connection.setupHeader(testRequestEncoder.header(), connection.acquireMsgSeqNum(), false);
@@ -329,12 +341,29 @@ public class MessageBasedAcceptorSystemTest
             testRequestEncoder.testReqID("ABC");
             connection.send(testRequestEncoder);
 
+            Timing.assertEventuallyTrue("", () ->
+            {
+                testSystem.poll();
+
+                return session.lastSentMsgSeqNum() >= 2;
+            });
+
             final RejectDecoder rejectDecoder = connection.readMessage(new RejectDecoder());
             assertEquals(2, rejectDecoder.refSeqNum());
             assertEquals(TEST_REQUEST_MESSAGE_TYPE_STR, rejectDecoder.refMsgTypeAsString());
             assertEquals(COMPID_PROBLEM, rejectDecoder.sessionRejectReasonAsEnum());
-            assertEquals(SENDER_COMP_ID, rejectDecoder.refTagID());
+
+            MatcherAssert.assertThat(rejectDecoder.refTagID(), either(is(SENDER_COMP_ID)).or(is(TARGET_COMP_ID)));
+            assertFalse(otfAcceptor.lastReceivedMessage().isValid());
         }
+    }
+
+    private void setupLibrary()
+    {
+        otfAcceptor = new FakeOtfAcceptor();
+        handler = new FakeHandler(otfAcceptor);
+        library = SystemTestUtil.newAcceptingLibrary(handler);
+        testSystem = new TestSystem(library);
     }
 
     private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
@@ -483,7 +512,17 @@ public class MessageBasedAcceptorSystemTest
     @After
     public void tearDown()
     {
-        close(engine);
+        if (testSystem == null)
+        {
+            close(engine);
+        }
+        else
+        {
+            testSystem.awaitBlocking(() -> CloseHelper.close(engine));
+        }
+
+        close(library);
+
         cleanupMediaDriver(mediaDriver);
     }
 }
