@@ -571,7 +571,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
+        final Decoder decoder = newHeartbeat();
         final Object allFieldsField = getRequiredFields(decoder);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
@@ -589,12 +589,30 @@ public abstract class AbstractDecoderGeneratorTest
         assertInvalid(decoder, REQUIRED_TAG_MISSING, INT_FIELD_TAG);
     }
 
+    // heartbeatWithoutEnumValueValidation
+
     @Test
     public void shouldValidateMissingRequiredPriceFields() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE);
+        final Decoder decoder = newHeartbeat();
+        assertFloatFieldIsNan(decoder);
+
+        decode(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE, decoder);
 
         assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
+    }
+
+    @Test
+    public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE);
+        assertFloatFieldIsNan(decoder);
+    }
+
+    private void assertFloatFieldIsNan(final Decoder decoder) throws Exception
+    {
+        final DecimalFloat floatField = (DecimalFloat)getFloatField(decoder);
+        assertTrue(floatField.toString(), floatField.isNaNValue());
     }
 
     @Test
@@ -1631,9 +1649,15 @@ public abstract class AbstractDecoderGeneratorTest
 
     private Decoder decodeHeartbeat(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
+        final Decoder decoder = newHeartbeat();
         decode(example, decoder);
         return decoder;
+    }
+
+    private Decoder newHeartbeat()
+        throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException
+    {
+        return (Decoder)heartbeat.getConstructor().newInstance();
     }
 
     private Decoder decodeHeartbeatWithoutEnumValue(final String example) throws Exception

@@ -75,7 +75,7 @@
             <field name="TransactTime" required="Y"/>
             <component name="OrderQtyData" required="Y"/>
             <field name="OrdType" required="Y"/>
-            <field name="Price" required="N"/>
+            <field name="Price" required="Y"/>
         </message>
         <message name="ExecutionReport" msgtype="8" msgcat="app">
             <field name="OrderID" required="Y"/>

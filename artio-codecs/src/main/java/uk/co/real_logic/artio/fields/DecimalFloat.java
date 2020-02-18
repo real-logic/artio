@@ -65,7 +65,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat MIN_VALUE = new DecimalFloat(VALUE_MIN_VAL, 0);
     public static final DecimalFloat MAX_VALUE = new DecimalFloat(VALUE_MAX_VAL, 0);
     public static final DecimalFloat ZERO = new DecimalFloat();
-    public static final DecimalFloat NAN = getNaN();
+    public static final DecimalFloat NAN = newNaNValue();
     public static final DecimalFloat MISSING_FLOAT = NAN;
 
     // FRACTION_LOWER_THRESHOLD and FRACTION_UPPER_THRESHOLD are used when converting
@@ -329,7 +329,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return value == VALUE_NAN_VALUE && scale == SCALE_NAN_VALUE;
     }
 
-    private static DecimalFloat getNaN()
+    public static DecimalFloat newNaNValue()
     {
         final DecimalFloat nanFloat = new DecimalFloat();
         nanFloat.value = VALUE_NAN_VALUE;

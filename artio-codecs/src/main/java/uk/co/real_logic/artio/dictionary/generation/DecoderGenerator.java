@@ -1140,7 +1140,7 @@ public class DecoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return " = new DecimalFloat()";
+                return " = DecimalFloat.newNaNValue()";
 
             case BOOLEAN:
             case INT:
