@@ -47,14 +47,14 @@ public enum LogTag
     INDEX,
     LIBRARY_MANAGEMENT;
 
-    private final String logStr;
+    private final char[] logStr;
 
     LogTag()
     {
-        logStr = "[" + name() + "]";
+        logStr = ("[" + name() + "]").toCharArray();
     }
 
-    public String logStr()
+    public char[] logStr()
     {
         return logStr;
     }

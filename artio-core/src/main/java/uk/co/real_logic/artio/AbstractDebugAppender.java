@@ -23,7 +23,7 @@ public abstract class AbstractDebugAppender
 {
     public abstract class ThreadLocalAppender
     {
-        public abstract void log(StringBuilder stringBuilder);
+        public abstract void log(LogTag logTag, StringBuilder stringBuilder);
     }
 
     public abstract ThreadLocalAppender makeLocalAppender();

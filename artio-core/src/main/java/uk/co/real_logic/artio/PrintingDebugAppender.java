@@ -55,15 +55,39 @@ public class PrintingDebugAppender extends AbstractDebugAppender
 
     class PrintingThreadLocalAppender extends ThreadLocalAppender
     {
-        private char[] buffer = new char[DEFAULT_BUFFER_SIZE];
+        private final StringBuilder builder = new StringBuilder();
+        private final char[] threadName;
+        private char[] buffer;
 
-        public void log(final StringBuilder stringBuilder)
+        PrintingThreadLocalAppender()
         {
-            final int length = stringBuilder.length();
-            final char[] buffer = acquireBuffer(length);
-            stringBuilder.getChars(0, length, buffer, 0);
-            output.write(buffer, 0, length);
+            this.threadName = (":" + DebugLogger.threadName()).toCharArray();
+            buffer = new char[threadName.length + DEFAULT_BUFFER_SIZE];
+        }
+
+        public void log(final LogTag tag, final StringBuilder stringBuilder)
+        {
+            final int messageLength = stringBuilder.length();
+            final int prefixLength = appendStart(tag, messageLength);
+            final char[] buffer = this.buffer;
+            stringBuilder.getChars(0, messageLength, buffer, prefixLength);
+            output.write(buffer, 0, prefixLength + messageLength);
             output.flush();
+        }
+
+        private int appendStart(final LogTag tag, final int messageLength)
+        {
+            final StringBuilder builder = this.builder;
+            builder.setLength(0);
+            builder.append(System.currentTimeMillis());
+            builder.append(threadName);
+            builder.append(tag.logStr());
+
+            final int prefixLength = builder.length();
+
+            final char[] buffer = acquireBuffer(prefixLength + messageLength);
+            builder.getChars(0, prefixLength, buffer, 0);
+            return prefixLength;
         }
 
         private char[] acquireBuffer(final int length)
@@ -72,6 +96,7 @@ public class PrintingDebugAppender extends AbstractDebugAppender
             if (buffer.length < length)
             {
                 buffer = new char[length];
+                this.buffer = buffer;
             }
             return buffer;
         }

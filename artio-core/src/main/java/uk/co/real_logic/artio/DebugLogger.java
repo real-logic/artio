@@ -557,7 +557,7 @@ public final class DebugLogger
         }
     }
 
-    private static String threadName()
+    static String threadName()
     {
         return Thread.currentThread().getName();
     }
@@ -628,7 +628,6 @@ public final class DebugLogger
         private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
 
         private final StringBuilder builder = new StringBuilder();
-        private final char[] threadName;
 
         private byte[] bytes = new byte[0];
         private final AsciiSequenceView asciiView = new AsciiSequenceView();
@@ -641,433 +640,429 @@ public final class DebugLogger
         {
             final String threadName = threadName();
             isThreadEnabled = DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
-            this.threadName = (":" + threadName).toCharArray();
             appender = APPENDER.makeLocalAppender();
         }
 
         public void logSbeMessage(final LogTag tag, final RedactSequenceUpdateEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             redactSequenceUpdate.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 RedactSequenceUpdateEncoder.BLOCK_LENGTH,
                 RedactSequenceUpdateEncoder.SCHEMA_VERSION);
             redactSequenceUpdate.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(final LogTag tag, final ManageSessionEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             manageSession.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ManageSessionEncoder.BLOCK_LENGTH,
                 ManageSessionEncoder.SCHEMA_VERSION);
             manageSession.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final DisconnectEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             disconnect.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 DisconnectEncoder.BLOCK_LENGTH,
                 DisconnectEncoder.SCHEMA_VERSION);
             disconnect.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ConnectEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             connect.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ConnectEncoder.BLOCK_LENGTH,
                 ConnectEncoder.SCHEMA_VERSION);
             connect.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ResetSessionIdsEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             resetSessionIds.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ResetSessionIdsEncoder.BLOCK_LENGTH,
                 ResetSessionIdsEncoder.SCHEMA_VERSION);
             resetSessionIds.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ResetSequenceNumberEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             resetSequenceNumber.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ResetSequenceNumberEncoder.BLOCK_LENGTH,
                 ResetSequenceNumberEncoder.SCHEMA_VERSION);
             resetSequenceNumber.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ResetLibrarySequenceNumberEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             resetLibrarySequenceNumber.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ResetLibrarySequenceNumberEncoder.BLOCK_LENGTH,
                 ResetLibrarySequenceNumberEncoder.SCHEMA_VERSION);
             resetLibrarySequenceNumber.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final RequestDisconnectEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             requestDisconnect.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 RequestDisconnectEncoder.BLOCK_LENGTH,
                 RequestDisconnectEncoder.SCHEMA_VERSION);
             requestDisconnect.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final MidConnectionDisconnectEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             midConnectionDisconnect.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 MidConnectionDisconnectEncoder.BLOCK_LENGTH,
                 MidConnectionDisconnectEncoder.SCHEMA_VERSION);
             midConnectionDisconnect.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final InitiateConnectionEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             initiateConnection.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 InitiateConnectionEncoder.BLOCK_LENGTH,
                 InitiateConnectionEncoder.SCHEMA_VERSION);
             initiateConnection.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ErrorEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             error.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ErrorEncoder.BLOCK_LENGTH,
                 ErrorEncoder.SCHEMA_VERSION);
             error.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ApplicationHeartbeatEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             applicationHeartbeat.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ApplicationHeartbeatEncoder.BLOCK_LENGTH,
                 ApplicationHeartbeatEncoder.SCHEMA_VERSION);
             applicationHeartbeat.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final LibraryConnectEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             libraryConnect.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 LibraryConnectEncoder.BLOCK_LENGTH,
                 LibraryConnectEncoder.SCHEMA_VERSION);
             libraryConnect.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReleaseSessionEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             releaseSession.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReleaseSessionEncoder.BLOCK_LENGTH,
                 ReleaseSessionEncoder.SCHEMA_VERSION);
             releaseSession.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReleaseSessionReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             releaseSessionReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReleaseSessionReplyEncoder.BLOCK_LENGTH,
                 ReleaseSessionReplyEncoder.SCHEMA_VERSION);
             releaseSessionReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final RequestSessionEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             requestSession.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 RequestSessionEncoder.BLOCK_LENGTH,
                 RequestSessionEncoder.SCHEMA_VERSION);
             requestSession.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final RequestSessionReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             requestSessionReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 RequestSessionReplyEncoder.BLOCK_LENGTH,
                 RequestSessionReplyEncoder.SCHEMA_VERSION);
             requestSessionReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final NewSentPositionEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             newSentPosition.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 NewSentPositionEncoder.BLOCK_LENGTH,
                 NewSentPositionEncoder.SCHEMA_VERSION);
             newSentPosition.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final LibraryTimeoutEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             libraryTimeout.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 LibraryTimeoutEncoder.BLOCK_LENGTH,
                 LibraryTimeoutEncoder.SCHEMA_VERSION);
             libraryTimeout.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ControlNotificationEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             controlNotification.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ControlNotificationEncoder.BLOCK_LENGTH,
                 ControlNotificationEncoder.SCHEMA_VERSION);
             controlNotification.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final SlowStatusNotificationEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             slowStatusNotification.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 SlowStatusNotificationEncoder.BLOCK_LENGTH,
                 SlowStatusNotificationEncoder.SCHEMA_VERSION);
             slowStatusNotification.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final FollowerSessionRequestEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             followerSessionRequest.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 FollowerSessionRequestEncoder.BLOCK_LENGTH,
                 FollowerSessionRequestEncoder.SCHEMA_VERSION);
             followerSessionRequest.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final FollowerSessionReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             followerSessionReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 FollowerSessionReplyEncoder.BLOCK_LENGTH,
                 FollowerSessionReplyEncoder.SCHEMA_VERSION);
             followerSessionReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final EndOfDayEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             endOfDay.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 EndOfDayEncoder.BLOCK_LENGTH,
                 EndOfDayEncoder.SCHEMA_VERSION);
             endOfDay.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final WriteMetaDataEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             writeMetaData.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 WriteMetaDataEncoder.BLOCK_LENGTH,
                 WriteMetaDataEncoder.SCHEMA_VERSION);
             writeMetaData.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final WriteMetaDataReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             writeMetaDataReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 WriteMetaDataReplyEncoder.BLOCK_LENGTH,
                 WriteMetaDataReplyEncoder.SCHEMA_VERSION);
             writeMetaDataReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReadMetaDataEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             readMetaData.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReadMetaDataEncoder.BLOCK_LENGTH,
                 ReadMetaDataEncoder.SCHEMA_VERSION);
             readMetaData.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReadMetaDataReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             readMetaDataReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReadMetaDataReplyEncoder.BLOCK_LENGTH,
                 ReadMetaDataReplyEncoder.SCHEMA_VERSION);
             readMetaDataReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReplayMessagesEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             replayMessages.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReplayMessagesEncoder.BLOCK_LENGTH,
                 ReplayMessagesEncoder.SCHEMA_VERSION);
             replayMessages.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
         public void logSbeMessage(
             final LogTag tag,
             final ReplayMessagesReplyEncoder encoder)
         {
-            appendStart(tag);
+            appendStart();
             replayMessagesReply.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ReplayMessagesReplyEncoder.BLOCK_LENGTH,
                 ReplayMessagesReplyEncoder.SCHEMA_VERSION);
             replayMessagesReply.appendTo(builder);
-            finish();
+            finish(tag);
         }
 
-        private void appendStart(final LogTag tag)
+        private void appendStart()
         {
             final StringBuilder builder = this.builder;
             builder.setLength(0);
-            builder.append(System.currentTimeMillis());
-            builder.append(threadName);
-            builder.append(tag.logStr());
         }
 
         public void log(final LogTag tag, final String prefixString, final ByteBuffer byteBuffer, final int length)
@@ -1076,13 +1071,13 @@ public final class DebugLogger
             byteBuffer.get(data, 0, length);
             substituteSeparator(data);
 
-            appendStart(tag);
+            appendStart();
             final StringBuilder builder = this.builder;
             builder.append(prefixString);
             final AsciiSequenceView asciiView = this.asciiView;
             asciiView.wrap(buffer, 0, length);
             builder.append(asciiView);
-            finish();
+            finish(tag);
         }
 
         private byte[] getByteArray(final int length)
@@ -1099,15 +1094,15 @@ public final class DebugLogger
         public void log(
             final LogTag tag, final String message)
         {
-            appendStart(tag);
+            appendStart();
             builder.append(message);
-            finish();
+            finish(tag);
         }
 
         public void log(
             final LogTag tag, final String prefixString, final DirectBuffer buffer, final int offset, final int length)
         {
-            appendStart(tag);
+            appendStart();
             builder.append(prefixString);
 
             if (needsSeparatorSubstitution())
@@ -1123,7 +1118,7 @@ public final class DebugLogger
             }
 
             builder.append(asciiView);
-            finish();
+            finish(tag);
         }
 
         public void log(
@@ -1147,7 +1142,7 @@ public final class DebugLogger
             final String prefixString,
             final String suffixString)
         {
-            appendStart(tag);
+            appendStart();
             final StringBuilder builder = this.builder;
             builder.append(prefixString);
             builder.append(suffixString);
@@ -1157,16 +1152,16 @@ public final class DebugLogger
             final LogTag tag,
             final CharFormatter formatter)
         {
-            appendStart(tag);
+            appendStart();
             formatter.appendTo(builder);
         }
 
 
-        private void finish()
+        private void finish(final LogTag tag)
         {
             final StringBuilder builder = this.builder;
             builder.append(System.lineSeparator());
-            appender.log(builder);
+            appender.log(tag, builder);
         }
     }
 }
