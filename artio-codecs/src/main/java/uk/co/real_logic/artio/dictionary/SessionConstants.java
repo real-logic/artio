@@ -68,6 +68,7 @@ public final class SessionConstants
     public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = TEST_REQUEST_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] REJECT_MESSAGE_TYPE_CHARS = REJECT_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] SEQUENCE_RESET_MESSAGE_TYPE_CHARS = SEQUENCE_RESET_TYPE_STR.toCharArray();
+    public static final char[] RESEND_REQUEST_MESSAGE_TYPE_CHARS = RESEND_REQUEST_MESSAGE_TYPE_STR.toCharArray();
 
     public static final int INCORRECT_DATA_FORMAT_FOR_VALUE = 6;
 

@@ -112,7 +112,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void gatewayProcessesResendRequests()
+    public void shouldProcessResendRequests()
     {
         final String testReqID = "AAA";
 
@@ -120,7 +120,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void gatewayProcessesDuplicateResendRequests()
+    public void shouldProcessDuplicateResendRequests()
     {
         final String testReqID = "AAA";
 

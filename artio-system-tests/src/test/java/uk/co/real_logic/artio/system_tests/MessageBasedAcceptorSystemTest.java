@@ -22,10 +22,7 @@ import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
-import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
@@ -325,7 +322,6 @@ public class MessageBasedAcceptorSystemTest
     public void shouldRejectMessageWithInvalidSenderAndTargetCompIds() throws IOException
     {
         setup(true, true);
-
         setupLibrary();
 
         try (FixConnection connection = FixConnection.initiate(port))
@@ -348,13 +344,55 @@ public class MessageBasedAcceptorSystemTest
                 return session.lastSentMsgSeqNum() >= 2;
             });
 
-            final RejectDecoder rejectDecoder = connection.readMessage(new RejectDecoder());
+            final RejectDecoder rejectDecoder = connection.readReject();
             assertEquals(2, rejectDecoder.refSeqNum());
             assertEquals(TEST_REQUEST_MESSAGE_TYPE_STR, rejectDecoder.refMsgTypeAsString());
             assertEquals(COMPID_PROBLEM, rejectDecoder.sessionRejectReasonAsEnum());
 
             MatcherAssert.assertThat(rejectDecoder.refTagID(), either(is(SENDER_COMP_ID)).or(is(TARGET_COMP_ID)));
             assertFalse(otfAcceptor.lastReceivedMessage().isValid());
+        }
+    }
+
+    @Test
+    public void shouldRejectInvalidResendRequests() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final String testReqId = "ABC";
+            connection.sendTestRequest(testReqId);
+            final int headerSeqNum = connection.readHeartbeat(testReqId).header().msgSeqNum();
+
+            // Send an invalid resend request
+            final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+            resendRequest.beginSeqNo(headerSeqNum).endSeqNo(headerSeqNum);
+            connection.setupHeader(resendRequest.header(), 1, false);
+            resendRequest.header().targetCompID(" ");
+            connection.send(resendRequest);
+
+            connection.readReject();
+            connection.readLogout();
+
+            sleepToAwaitResend();
+
+            connection.logout();
+            assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
+        }
+    }
+
+    private void sleepToAwaitResend()
+    {
+        try
+        {
+            Thread.sleep(200);
+        }
+        catch (final InterruptedException e)
+        {
+            e.printStackTrace();
         }
     }
 

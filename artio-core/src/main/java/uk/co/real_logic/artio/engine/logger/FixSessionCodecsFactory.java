@@ -50,15 +50,15 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
             manageSession.wrap(buffer, offset + ENCODED_LENGTH, blockLength, version);
 
             // Skip over variable length fields
-            manageSession.localCompId();
-            manageSession.localSubId();
-            manageSession.localLocationId();
-            manageSession.remoteCompId();
-            manageSession.remoteSubId();
-            manageSession.remoteLocationId();
-            manageSession.address();
-            manageSession.username();
-            manageSession.password();
+            manageSession.skipLocalCompId();
+            manageSession.skipLocalSubId();
+            manageSession.skipLocalLocationId();
+            manageSession.skipRemoteCompId();
+            manageSession.skipRemoteSubId();
+            manageSession.skipRemoteLocationId();
+            manageSession.skipAddress();
+            manageSession.skipUsername();
+            manageSession.skipPassword();
 
             onDictionary(manageSession.session(), manageSession.fixDictionary());
         }

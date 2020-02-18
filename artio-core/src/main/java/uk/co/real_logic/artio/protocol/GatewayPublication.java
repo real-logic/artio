@@ -96,10 +96,15 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesEncoder.BLOCK_LENGTH;
     private static final int REPLAY_MESSAGES_REPLY_LENGTH =
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
-    private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
-        HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
+
     public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength();
+
+    private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
+        HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
+
+    private static final int VALID_RESEND_REQUEST_LENGTH =
+        HEADER_LENGTH + ValidResendRequestEncoder.BLOCK_LENGTH + ValidResendRequestEncoder.bodyHeaderLength();
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -132,7 +137,10 @@ public class GatewayPublication extends ClaimablePublication
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
+
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
+    private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
+
     private final InitiateILinkConnectionEncoder initiateILinkConnection = new InitiateILinkConnectionEncoder();
     private final ILinkConnectEncoder iLinkConnect = new ILinkConnectEncoder();
 
@@ -1284,6 +1292,41 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, redactSequenceUpdate);
+
+        return position;
+    }
+
+    public long saveValidResendRequest(
+        final long sessionId,
+        final long connectionId,
+        final int beginSequenceNumber,
+        final int endSequenceNumber,
+        final int sequenceIndex,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
+    {
+        final long position = claim(VALID_RESEND_REQUEST_LENGTH + bodyLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        validResendRequest
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId)
+            .connection(connectionId)
+            .beginSequenceNumber(beginSequenceNumber)
+            .endSequenceNumber(endSequenceNumber)
+            .sequenceIndex(sequenceIndex)
+            .putBody(bodyBuffer, bodyOffset, bodyLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, validResendRequest);
 
         return position;
     }

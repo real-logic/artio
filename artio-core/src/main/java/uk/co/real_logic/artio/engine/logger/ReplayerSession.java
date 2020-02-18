@@ -52,8 +52,6 @@ class ReplayerSession implements ControlledFragmentHandler
 {
     static class Formatters
     {
-        private final CharFormatter completeRecentFormatter = new CharFormatter(
-            "ReplayerSession: completeReplay-upToMostRecent replayedMessages=%s%n");
         private final CharFormatter completeNotRecentFormatter = new CharFormatter(
             "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
             "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
@@ -99,7 +97,6 @@ class ReplayerSession implements ControlledFragmentHandler
 
     private int beginSeqNo;
     private int endSeqNo;
-    private boolean upToMostRecent;
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
@@ -122,7 +119,6 @@ class ReplayerSession implements ControlledFragmentHandler
         final EpochClock clock,
         final int beginSeqNo,
         final int endSeqNo,
-        final boolean upToMostRecent,
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
@@ -141,7 +137,6 @@ class ReplayerSession implements ControlledFragmentHandler
         this.publication = publication;
         this.beginSeqNo = beginSeqNo;
         this.endSeqNo = endSeqNo;
-        this.upToMostRecent = upToMostRecent;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -366,8 +361,7 @@ class ReplayerSession implements ControlledFragmentHandler
         // after the replay query has run.
         if (beginGapFillSeqNum != NONE)
         {
-            final int newSequenceNumber =
-                upToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
+            final int newSequenceNumber = endSeqNo + 1;
             final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
 
             DebugLogger.log(
@@ -385,42 +379,30 @@ class ReplayerSession implements ControlledFragmentHandler
             // Validate that we've replayed the correct number of messages.
             // If we have missing messages for some reason then just gap fill them.
 
-            if (!upToMostRecent)
-            {
-                // We know precisely what number to gap fill up to.
-                final int expectedCount = endSeqNo - beginSeqNo + 1;
-                DebugLogger.log(
-                    REPLAY,
-                    formatters.completeNotRecentFormatter,
-                    replayedMessages,
-                    endSeqNo,
-                    beginSeqNo,
-                    expectedCount);
+            // We know precisely what number to gap fill up to.
+            final int expectedCount = endSeqNo - beginSeqNo + 1;
+            DebugLogger.log(
+                REPLAY,
+                formatters.completeNotRecentFormatter,
+                replayedMessages,
+                endSeqNo,
+                beginSeqNo,
+                expectedCount);
 
-                if (replayedMessages != expectedCount)
+            if (replayedMessages != expectedCount)
+            {
+                if (replayedMessages == 0)
                 {
-                    if (replayedMessages == 0)
+                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                    if (action == ABORT)
                     {
-                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
-                        if (action == ABORT)
-                        {
-                            return false;
-                        }
+                        return false;
                     }
+                }
 
-                    onIllegalState(
-                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                        message, replayedMessages, expectedCount);
-                }
-            }
-            else
-            {
-                if (DebugLogger.isEnabled(REPLAY))
-                {
-                    DebugLogger.log(
-                        REPLAY,
-                        formatters.completeRecentFormatter.clear().with(replayedMessages));
-                }
+                onIllegalState(
+                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                    message, replayedMessages, expectedCount);
             }
         }
 

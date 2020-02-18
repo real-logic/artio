@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="8"
+                   version="9"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -302,13 +302,6 @@
         <field name="latestReplyArrivalTimeInMs" id="8" type="Timestamp" />
     </sbe:message>
 
-    <sbe:message name="RedactSequenceUpdate" id="55"
-                 description="" sinceVersion="7">
-        <field name="session" id="1" type="FixSessionId"/>
-        <field name="correctSequenceNumber" id="2" type="int32"/>
-        <field name="position" id="3" type="int64"/>
-    </sbe:message>
-
     <sbe:message name="InitiateILinkConnection" id="56" description="Outbound ilink3 connection"
         sinceVersion="8">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -506,6 +499,24 @@
     <sbe:message name="ILinkMessage" id="58" description="ILink3 Message Header"
                  sinceVersion="8">
         <field name="connection" id="1" type="ConnectionId"/>
+    </sbe:message>
+
+    <!-- Messages From either Library or Engine outbound -->
+    <sbe:message name="RedactSequenceUpdate" id="55"
+                 description="" sinceVersion="7">
+        <field name="session" id="1" type="FixSessionId"/>
+        <field name="correctSequenceNumber" id="2" type="int32"/>
+        <field name="position" id="3" type="int64"/>
+    </sbe:message>
+
+    <sbe:message name="ValidResendRequest" id="59" description="Notifies the replayer to resend messages"
+        sinceVersion="9">
+        <field name="session" id="1" type="FixSessionId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="beginSequenceNumber" id="3" type="int32"/>
+        <field name="endSequenceNumber" id="4" type="int32"/>
+        <field name="SequenceIndex" id="5" type="int32"/>
+        <data name="body" id="6" type="AsciiString"/>
     </sbe:message>
 
 </sbe:messageSchema>

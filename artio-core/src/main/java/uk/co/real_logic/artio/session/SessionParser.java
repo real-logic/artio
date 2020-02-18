@@ -57,6 +57,7 @@ public class SessionParser
     private AbstractTestRequestDecoder testRequest;
     private SessionHeaderDecoder header;
     private AbstractSequenceResetDecoder sequenceReset;
+    private AbstractResendRequestDecoder resendRequest;
     private AbstractHeartbeatDecoder heartbeat;
 
     private final boolean validateCompIdsOnEveryMessage;
@@ -95,6 +96,7 @@ public class SessionParser
         header = fixDictionary.makeHeaderDecoder();
         sequenceReset = fixDictionary.makeSequenceResetDecoder();
         heartbeat = fixDictionary.makeHeartbeatDecoder();
+        resendRequest = fixDictionary.makeResendRequestDecoder();
     }
 
     public static String username(final AbstractLogonDecoder logon)
@@ -143,6 +145,10 @@ public class SessionParser
             else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
             {
                 action = onSequenceReset(offset, length, position);
+            }
+            else if (messageType == RESEND_REQUEST_MESSAGE_TYPE)
+            {
+                action = onResendRequest(offset, length, position);
             }
             else
             {
@@ -322,6 +328,39 @@ public class SessionParser
     private long origSendingTime(final SessionHeaderDecoder header)
     {
         return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
+    }
+
+    private Action onResendRequest(final int offset, final int length, final long position)
+    {
+        final AbstractResendRequestDecoder resendRequest = this.resendRequest;
+
+        resendRequest.reset();
+        resendRequest.decode(asciiBuffer, offset, length);
+        final SessionHeaderDecoder header = resendRequest.header();
+        if (CODEC_VALIDATION_ENABLED && (!resendRequest.validate() || !validateHeader(header, position)))
+        {
+            return onCodecInvalidMessage(resendRequest, header, false, position);
+        }
+        else
+        {
+            final long origSendingTime = origSendingTime(header);
+            final long sendingTime = sendingTime(header);
+            final int beginSeqNo = resendRequest.beginSeqNo();
+            final int endSeqNo = resendRequest.endSeqNo();
+            final boolean possDup = isPossDup(header);
+            return session.onResendRequest(
+                header.msgSeqNum(),
+                beginSeqNo,
+                endSeqNo,
+                isPossDupOrResend(possDup, header),
+                possDup,
+                sendingTime,
+                origSendingTime,
+                position,
+                asciiBuffer,
+                offset,
+                length);
+        }
     }
 
     private Action onSequenceReset(final int offset, final int length, final long position)

@@ -66,7 +66,7 @@ public class TestRequestOutOfSequenceShouldNotTriggerHeartbeatBeforeResendReques
             assertEquals(1, logonReply.header().msgSeqNum());
 
             connection.msgSeqNum(3);
-            connection.testRequest("firstRequest");
+            connection.sendTestRequest("firstRequest");
 
             // await resend request
             final ResendRequestDecoder resendRequest = connection.readMessage(new ResendRequestDecoder());

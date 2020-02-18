@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.engine.logger.Replayer;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -32,6 +33,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -1522,6 +1524,56 @@ public class Session
         }
 
         return CONTINUE;
+    }
+
+    Action onResendRequest(
+        final int msgSeqNum,
+        final int beginSeqNum,
+        final int endSeqNum,
+        final boolean isPossDupOrResend,
+        final boolean possDup,
+        final long sendingTime,
+        final long origSendingTime,
+        final long position,
+        final AsciiBuffer messageBuffer,
+        final int messageOffset,
+        final int messageLength)
+    {
+        final Action action = onMessage(msgSeqNum,
+            RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+            sendingTime,
+            origSendingTime,
+            isPossDupOrResend,
+            possDup,
+            position);
+
+        if (action == ABORT || !messageInfo.isValid())
+        {
+            return action;
+        }
+
+        final boolean replayUpToMostRecent = endSeqNum == Replayer.MOST_RECENT_MESSAGE;
+        // Validate endSeqNo
+        if (!replayUpToMostRecent && endSeqNum < beginSeqNum)
+        {
+            final String message = messageBuffer.getAscii(messageOffset, messageLength);
+            throw new IllegalStateException(String.format(
+                "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
+                message,
+                endSeqNum,
+                beginSeqNum));
+        }
+
+        final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : endSeqNum;
+        return Pressure.apply(inboundPublication.saveValidResendRequest(
+            id,
+            connectionId,
+            beginSeqNum,
+            correctedEndSeqNo,
+            sequenceIndex,
+            messageBuffer,
+            messageOffset,
+            messageLength));
     }
 
     Action onReject(

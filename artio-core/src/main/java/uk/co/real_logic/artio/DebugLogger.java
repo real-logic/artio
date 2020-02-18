@@ -400,6 +400,15 @@ public final class DebugLogger
         // TODO
     }
 
+    public static void logSbeMessage(
+        final LogTag tag, final ValidResendRequestEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
     public static void log(
         final LogTag tag,
         final String prefixString,
@@ -621,6 +630,7 @@ public final class DebugLogger
         private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
         private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
         private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
+        private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
 
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -1056,6 +1066,20 @@ public final class DebugLogger
                 ReplayMessagesReplyEncoder.BLOCK_LENGTH,
                 ReplayMessagesReplyEncoder.SCHEMA_VERSION);
             replayMessagesReply.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(
+            final LogTag tag,
+            final ValidResendRequestEncoder encoder)
+        {
+            appendStart();
+            validResendRequest.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ValidResendRequestEncoder.BLOCK_LENGTH,
+                ValidResendRequestEncoder.SCHEMA_VERSION);
+            validResendRequest.appendTo(builder);
             finish(tag);
         }
 

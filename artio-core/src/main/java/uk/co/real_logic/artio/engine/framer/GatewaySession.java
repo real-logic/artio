@@ -244,6 +244,8 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         {
             DebugLogger.log(FIX_MESSAGE, "Gateway Received ", buffer, offset, length);
 
+            session.messageInfo().isValid(true);
+
             sessionParser.onMessage(buffer, offset, length, messageType, position);
         }
     }
