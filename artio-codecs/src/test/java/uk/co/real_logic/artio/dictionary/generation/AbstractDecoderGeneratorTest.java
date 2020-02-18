@@ -586,9 +586,15 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_MESSAGE);
 
-        assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+        assertInvalid(decoder, REQUIRED_TAG_MISSING, INT_FIELD_TAG);
+    }
+
+    @Test
+    public void shouldValidateMissingRequiredPriceFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE);
+
+        assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
     }
 
     @Test
