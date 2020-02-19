@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.admin;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 
 import java.util.List;
@@ -54,7 +54,7 @@ public class LibraryAndSessionDumper
             System.out.printf("Library %d%n", library.libraryId());
             System.out.println("--------------------------------%n");
             System.out.println("| Id   | Remote Address %n");
-            for (final SessionInfo session : library.sessions())
+            for (final ConnectedSessionInfo session : library.sessions())
             {
                 System.out.printf("| %4d | %s", session.connectionId(), session.address());
             }

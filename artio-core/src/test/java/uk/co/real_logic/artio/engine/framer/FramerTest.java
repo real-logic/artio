@@ -37,7 +37,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -127,7 +127,7 @@ public class FramerTest
     private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
     @SuppressWarnings("unchecked")
-    private final ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
+    private final ArgumentCaptor<List<ConnectedSessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
 
     private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -200,7 +200,9 @@ public class FramerTest
             mock(AgentInvoker.class),
             mock(RecordingCoordinator.class));
 
-        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(SESSION_ID,
+        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
+            sessionKey,
+            SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
             Session.UNKNOWN_TIME,
             System.currentTimeMillis(),
@@ -672,7 +674,7 @@ public class FramerTest
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
         saveControlNotification(times(2));
 
-        final List<SessionInfo> sessions = sessionCaptor.getValue();
+        final List<ConnectedSessionInfo> sessions = sessionCaptor.getValue();
         assertThat(sessions, sessionMatcher);
     }
 

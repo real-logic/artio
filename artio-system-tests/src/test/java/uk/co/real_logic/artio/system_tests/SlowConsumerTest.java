@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -81,7 +81,7 @@ public class SlowConsumerTest
 
         final long sessionId = handler.awaitSessionId(testSystem::poll);
         session = acquireSession(handler, library, sessionId, testSystem);
-        final SessionInfo sessionInfo = getSessionInfo();
+        final ConnectedSessionInfo sessionInfo = getSessionInfo();
 
         while (!socketIsConnected())
         {
@@ -115,7 +115,7 @@ public class SlowConsumerTest
     @Test(timeout = TEST_TIMEOUT)
     public void shouldRestoreConnectionFromSlowGroupWhenItCatchesUp() throws IOException
     {
-        final SessionInfo sessionInfo = sessionBecomesSlow();
+        final ConnectedSessionInfo sessionInfo = sessionBecomesSlow();
         socket.configureBlocking(false);
 
         testSystem.poll();
@@ -154,7 +154,7 @@ public class SlowConsumerTest
         assertTrue("Session not slow", handler.lastSessionWasSlow());
     }
 
-    private SessionInfo sessionBecomesSlow() throws IOException
+    private ConnectedSessionInfo sessionBecomesSlow() throws IOException
     {
         setup(DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
 
@@ -162,7 +162,7 @@ public class SlowConsumerTest
 
         final long sessionId = handler.awaitSessionId(testSystem::poll);
         session = acquireSession(handler, library, sessionId, testSystem);
-        final SessionInfo sessionInfo = getSessionInfo();
+        final ConnectedSessionInfo sessionInfo = getSessionInfo();
 
         assertNotSlow();
 
@@ -191,7 +191,7 @@ public class SlowConsumerTest
         assertFalse(handler.isSlow(session));
     }
 
-    private void bytesInBufferAtLeast(final SessionInfo sessionInfo, final long bytesInBuffer)
+    private void bytesInBufferAtLeast(final ConnectedSessionInfo sessionInfo, final long bytesInBuffer)
     {
         Timing.assertEventuallyTrue("Buffer doesn't have enough bytes in", () ->
         {
@@ -207,12 +207,12 @@ public class SlowConsumerTest
         return testRequest;
     }
 
-    private SessionInfo getSessionInfo()
+    private ConnectedSessionInfo getSessionInfo()
     {
         final List<LibraryInfo> libraries = libraries(engine, testSystem);
         assertThat(libraries, hasSize(2));
         final LibraryInfo libraryInfo = libraries.get(0);
-        final List<SessionInfo> sessions = libraryInfo.sessions();
+        final List<ConnectedSessionInfo> sessions = libraryInfo.sessions();
         assertThat(sessions, hasSize(1));
         return sessions.get(0);
     }
