@@ -604,4 +604,9 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(NO_CONNECTION_ID, session.connectionId());
         assertEquals(SessionState.DISCONNECTED, session.state());
     }
+
+    Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+    }
 }

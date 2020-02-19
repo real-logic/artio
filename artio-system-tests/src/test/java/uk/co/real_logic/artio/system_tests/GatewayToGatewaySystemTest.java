@@ -22,9 +22,9 @@ import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -818,11 +818,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertTrue(message, message.contains("Unknown sessionId: 400"));
 
         assertInitSeqNum(2, 2, 0);
-    }
-
-    private Reply<?> resetSequenceNumber(final long sessionId)
-    {
-        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
     }
 
     private void replyCompleted(final Reply<?> resetSequenceNumber)

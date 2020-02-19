@@ -403,6 +403,28 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("Y", executionReport.possDup());
     }
 
+    @Test
+    public void shouldResetSequenceNumbersOfOfflineSessions()
+    {
+        printErrorMessages = false;
+
+        launch(this::nothing);
+        connectPersistingSessions();
+        disconnectSessions();
+        clearMessages();
+
+        acquireAcceptingSession();
+
+        final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
+        cannotConnectWithSequence(acceptorSequenceNumber, 1);
+
+        assertThat(acceptingSession.sendSequenceReset(1, 1),
+            greaterThan(0L));
+
+        onAcquireSession = this::nothing;
+        connectPersistingSessions(1, 1, false);
+    }
+
     private void connectPersistingSessions()
     {
         connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
