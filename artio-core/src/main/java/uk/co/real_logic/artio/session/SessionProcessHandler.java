@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.session;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 
+import java.util.function.BooleanSupplier;
+
 /**
  * Decouples Session logic from either the Library or Engine process, used
  * to boostrap callbacks into either the Engine or the Library.
@@ -33,4 +35,6 @@ public interface SessionProcessHandler
         int replayToSequenceNumber,
         int replayToSequenceIndex,
         long timeout);
+
+    void enqueueTask(BooleanSupplier task);
 }

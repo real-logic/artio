@@ -1748,4 +1748,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return outboundPublication.saveInitiateILinkConnection(
             libraryId, configuration.port(), correlationId, configuration.host());
     }
+
+    void enqueueTask(final BooleanSupplier task)
+    {
+        tasks.add(task);
+    }
 }
