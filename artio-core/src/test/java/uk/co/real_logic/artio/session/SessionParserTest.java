@@ -40,7 +40,7 @@ public class SessionParserTest
     private OnMessageInfo messageInfo = mock(OnMessageInfo.class);
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, false, messageInfo);
+        mockSession, validationStrategy, null, false, messageInfo, null);
 
     @Before
     public void setUp()

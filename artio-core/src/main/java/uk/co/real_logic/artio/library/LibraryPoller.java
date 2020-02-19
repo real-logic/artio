@@ -1051,7 +1051,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session.lastSequenceResetTime(lastSequenceResetTime);
         }
 
-        createSessionSubscriber(connectionId, session, reply, fixDictionary, messageInfo);
+        createSessionSubscriber(connectionId, session, reply, fixDictionary, messageInfo, compositeKey);
         if (isNewConnect)
         {
             insertSession(session, connectionType, sessionState);
@@ -1556,11 +1556,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final InternalSession session,
         final InitiateSessionReply reply,
-        final FixDictionary fixDictionary, final OnMessageInfo messageInfo)
+        final FixDictionary fixDictionary,
+        final OnMessageInfo messageInfo,
+        final CompositeKey compositeKey)
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, validationStrategy, null, configuration.validateCompIdsOnEveryMessage(), messageInfo);
+            session, validationStrategy,
+            null, configuration.validateCompIdsOnEveryMessage(), messageInfo, sessionIdStrategy);
+        parser.sessionKey(compositeKey);
         parser.fixDictionary(fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
             messageInfo,

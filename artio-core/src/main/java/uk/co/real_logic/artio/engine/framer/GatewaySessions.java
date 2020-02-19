@@ -201,7 +201,8 @@ class GatewaySessions
             validationStrategy,
             errorHandler,
             validateCompIdsOnEveryMessage,
-            messageInfo);
+            messageInfo,
+            sessionIdStrategy);
 
         if (!sessions.contains(gatewaySession))
         {
@@ -209,11 +210,11 @@ class GatewaySessions
         }
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
-        final CompositeKey sessionKey = gatewaySession.sessionKey();
         if (DebugLogger.isEnabled(FIX_CONNECTION))
         {
             DebugLogger.log(FIX_CONNECTION, acquiredConnection.clear().with(connectionId));
         }
+        final CompositeKey sessionKey = gatewaySession.sessionKey();
         if (sessionKey != null)
         {
             gatewaySession.updateSessionDictionary();

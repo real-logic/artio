@@ -30,7 +30,9 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -400,7 +402,9 @@ public class MessageBasedAcceptorSystemTest
     {
         otfAcceptor = new FakeOtfAcceptor();
         handler = new FakeHandler(otfAcceptor);
-        library = SystemTestUtil.newAcceptingLibrary(handler);
+        final LibraryConfiguration configuration = acceptingLibraryConfig(handler);
+        configuration.messageValidationStrategy(MessageValidationStrategy.none());
+        library = connect(configuration);
         testSystem = new TestSystem(library);
     }
 

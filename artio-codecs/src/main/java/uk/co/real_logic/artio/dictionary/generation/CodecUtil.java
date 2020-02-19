@@ -85,6 +85,19 @@ public final class CodecUtil
     }
 
     // NB: only valid for ASCII bytes.
+    public static char[] fromBytes(final byte[] value)
+    {
+        final int length = value.length;
+        final char[] buffer = new char[length];
+        for (int i = 0; i < length; i++)
+        {
+            buffer[i] = (char)value[i];
+        }
+
+        return buffer;
+    }
+
+    // NB: only valid for ASCII bytes.
     public static void toBytes(final CharSequence value, final MutableDirectBuffer buffer)
     {
         final int length = value.length();

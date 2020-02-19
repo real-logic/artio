@@ -104,4 +104,13 @@ public interface SessionIdStrategy
      * @return the loaded key or null if there was a failure.
      */
     CompositeKey load(DirectBuffer buffer, int offset, int length);
+
+    /**
+     * Check that the header of a message matches the expected composite key of the session.
+     *
+     * @param compositeKey the expected key.
+     * @param header the header of the message that is to be validated.
+     * @return the tag number that is invalid or 0 if everything is valid.
+     */
+    int validateCompIds(CompositeKey compositeKey, SessionHeaderDecoder header);
 }

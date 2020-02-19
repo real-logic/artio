@@ -267,6 +267,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
+            sessionParser.sessionKey(sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());
         }

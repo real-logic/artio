@@ -25,7 +25,6 @@ import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -33,8 +32,6 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
-
-import java.util.Arrays;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -62,29 +59,27 @@ public class SessionParser
 
     private final boolean validateCompIdsOnEveryMessage;
     private final OnMessageInfo messageInfo;
-    private char[] firstSenderCompId;
-    private char[] firstSenderSubId;
-    private char[] firstSenderLocationId;
-    private char[] firstTargetCompId;
-    private char[] firstTargetSubId;
-    private char[] firstTargetLocationId;
+    private final SessionIdStrategy sessionIdStrategy;
 
     private final Session session;
     private final MessageValidationStrategy validationStrategy;
     private ErrorHandler errorHandler;
+    private CompositeKey compositeKey;
 
     public SessionParser(
         final Session session,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler, // nullable
         final boolean validateCompIdsOnEveryMessage,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final SessionIdStrategy sessionIdStrategy)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
         this.messageInfo = messageInfo;
+        this.sessionIdStrategy = sessionIdStrategy;
     }
 
     public void fixDictionary(final FixDictionary fixDictionary)
@@ -488,11 +483,6 @@ public class SessionParser
             final String password = password(logon);
             final boolean possDup = isPossDup(header);
 
-            if (validateCompIdsOnEveryMessage)
-            {
-                initialiseFirstIds(header);
-            }
-
             return session.onLogon(
                 logon.heartBtInt(),
                 header.msgSeqNum(),
@@ -504,28 +494,6 @@ public class SessionParser
                 resetSeqNumFlag(logon),
                 possDup,
                 position);
-        }
-    }
-
-    private void initialiseFirstIds(final SessionHeaderDecoder header)
-    {
-        firstSenderCompId = Arrays.copyOf(header.senderCompID(), header.senderCompIDLength());
-        firstTargetCompId = Arrays.copyOf(header.targetCompID(), header.targetCompIDLength());
-        if (header.hasSenderSubID())
-        {
-            firstSenderSubId = Arrays.copyOf(header.senderSubID(), header.senderSubIDLength());
-        }
-        if (header.hasSenderLocationID())
-        {
-            firstSenderLocationId = Arrays.copyOf(header.senderLocationID(), header.senderLocationIDLength());
-        }
-        if (header.hasTargetSubID())
-        {
-            firstTargetSubId = Arrays.copyOf(header.targetSubID(), header.targetSubIDLength());
-        }
-        if (header.hasTargetLocationID())
-        {
-            firstTargetLocationId = Arrays.copyOf(header.targetLocationID(), header.targetLocationIDLength());
         }
     }
 
@@ -621,53 +589,7 @@ public class SessionParser
         }
 
         // Case can happen when switching control of the Session between Library and Engine.
-        if (firstSenderCompId == null)
-        {
-            initialiseFirstIds(header);
-            return 0;
-        }
-
-        if (!CodecUtil.equals(firstSenderCompId, header.senderCompID(), header.senderCompIDLength()))
-        {
-            return SENDER_COMP_ID;
-        }
-
-        if (!CodecUtil.equals(firstTargetCompId, header.targetCompID(), header.targetCompIDLength()))
-        {
-            return TARGET_COMP_ID;
-        }
-
-        // Optional cases are a bit goofy on account of getters throwing if the has method returns false.
-
-        final boolean hasSenderSubID = header.hasSenderSubID();
-        if (!(firstSenderSubId == null ? !hasSenderSubID : hasSenderSubID &&
-            CodecUtil.equals(firstSenderSubId, header.senderSubID(), header.senderSubIDLength())))
-        {
-            return SENDER_SUB_ID;
-        }
-
-        final boolean hasSenderLocationID = header.hasSenderLocationID();
-        if (!(firstSenderLocationId == null ? !hasSenderLocationID : hasSenderLocationID &&
-            CodecUtil.equals(firstSenderLocationId, header.senderLocationID(), header.senderLocationIDLength())))
-        {
-            return SENDER_LOCATION_ID;
-        }
-
-        final boolean hasTargetSubID = header.hasTargetSubID();
-        if (!(firstTargetSubId == null ? !hasTargetSubID : hasTargetSubID &&
-            CodecUtil.equals(firstTargetSubId, header.targetSubID(), header.targetSubIDLength())))
-        {
-            return TARGET_SUB_ID;
-        }
-
-        final boolean hasTargetLocationID = header.hasTargetLocationID();
-        if (!(firstTargetLocationId == null ? !hasTargetLocationID : hasTargetLocationID &&
-            CodecUtil.equals(firstTargetLocationId, header.targetLocationID(), header.targetLocationIDLength())))
-        {
-            return TARGET_LOCATION_ID;
-        }
-
-        return 0;
+        return sessionIdStrategy.validateCompIds(compositeKey, header);
     }
 
     private Action onCodecInvalidMessage(
@@ -741,5 +663,10 @@ public class SessionParser
     public void sequenceIndex(final int sequenceIndex)
     {
         session.sequenceIndex(sequenceIndex);
+    }
+
+    public void sessionKey(final CompositeKey sessionKey)
+    {
+        this.compositeKey = sessionKey;
     }
 }
