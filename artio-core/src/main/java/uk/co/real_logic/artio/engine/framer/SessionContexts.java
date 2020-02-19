@@ -115,6 +115,7 @@ public class SessionContexts
         this.idStrategy = idStrategy;
         this.errorHandler = errorHandler;
         loadBuffer();
+        allSessions.addAll(compositeToContext.values());
     }
 
     private void loadBuffer()
@@ -166,7 +167,6 @@ public class SessionContexts
                 sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
                 FixDictionary.of(FixDictionary.find(lastFixDictionary)));
             compositeToContext.put(compositeKey, sessionContext);
-            allSessions.add(sessionContext);
 
             counter = Math.max(counter, sessionId + 1);
 
