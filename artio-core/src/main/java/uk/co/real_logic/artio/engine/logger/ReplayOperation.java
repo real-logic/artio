@@ -37,7 +37,7 @@ import java.util.List;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
+import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 
 /**
  * A continuable replay operation that can retried.

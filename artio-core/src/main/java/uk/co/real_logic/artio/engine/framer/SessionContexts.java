@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SectorFramer;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
@@ -35,8 +36,10 @@ import uk.co.real_logic.artio.storage.messages.SessionIdEncoder;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
@@ -53,7 +56,9 @@ import static uk.co.real_logic.artio.storage.messages.SessionIdEncoder.BLOCK_LEN
 public class SessionContexts
 {
 
-    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(
+        null,
+        -3,
         -3,
         Session.UNKNOWN_TIME,
         Session.UNKNOWN_TIME,
@@ -61,6 +66,7 @@ public class SessionContexts
         OUT_OF_SPACE,
         null);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
+        null,
         Session.UNKNOWN,
         (int)Session.UNKNOWN,
         Session.UNKNOWN_TIME,
@@ -82,6 +88,7 @@ public class SessionContexts
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
     private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet();
+    private final CopyOnWriteArrayList<SessionInfo> allSessions = new CopyOnWriteArrayList<>();
     private final Map<CompositeKey, SessionContext> compositeToContext = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
@@ -155,10 +162,12 @@ public class SessionContexts
                 return;
             }
 
-            compositeToContext.put(compositeKey,
-                new SessionContext(
+            final SessionContext sessionContext = new SessionContext(compositeKey,
                 sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
-                FixDictionary.of(FixDictionary.find(lastFixDictionary))));
+                FixDictionary.of(FixDictionary.find(lastFixDictionary)));
+            compositeToContext.put(compositeKey, sessionContext);
+            allSessions.add(sessionContext);
+
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += compositeKeyLength;
@@ -237,7 +246,13 @@ public class SessionContexts
     private SessionContext onNewLogon(final CompositeKey compositeKey, final FixDictionary fixDictionary)
     {
         final long sessionId = counter++;
-        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX, fixDictionary);
+        final SessionContext sessionContext = assignSessionId(
+            compositeKey,
+            sessionId,
+            SessionContext.UNKNOWN_SEQUENCE_INDEX,
+            fixDictionary);
+        allSessions.add(sessionContext);
+        return sessionContext;
     }
 
     private SessionContext assignSessionId(
@@ -256,6 +271,7 @@ public class SessionContexts
                 sessionId,
                 compositeKey)));
             return new SessionContext(
+                compositeKey,
                 sessionId,
                 sequenceIndex,
                 Session.UNKNOWN_TIME,
@@ -295,7 +311,7 @@ public class SessionContexts
             }
 
             return new SessionContext(
-                sessionId,
+                compositeKey, sessionId,
                 sequenceIndex,
                 Session.UNKNOWN_TIME,
                 Session.UNKNOWN_TIME,
@@ -355,8 +371,8 @@ public class SessionContexts
         }
 
         counter = LOWEST_VALID_SESSION_ID;
-        currentlyAuthenticatedSessionIds.clear();
         compositeToContext.clear();
+        allSessions.clear();
 
         if (backupLocation != null)
         {
@@ -404,5 +420,10 @@ public class SessionContexts
     boolean isKnownSessionId(final long sessionId)
     {
         return lookupById(sessionId) != null;
+    }
+
+    public List<SessionInfo> allSessions()
+    {
+        return allSessions;
     }
 }

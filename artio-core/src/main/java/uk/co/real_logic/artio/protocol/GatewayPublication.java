@@ -25,7 +25,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
@@ -959,7 +959,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveControlNotification(final int libraryId, final List<SessionInfo> sessions)
+    public long saveControlNotification(final int libraryId, final List<ConnectedSessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(CONTROL_NOTIFICATION_LENGTH +

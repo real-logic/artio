@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.LivenessDetector;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 
 import java.util.List;
@@ -33,7 +33,7 @@ final class LiveLibraryInfo implements LibraryInfo
     private final int aeronSessionId;
     private final LibrarySlowPeeker librarySlowPeeker;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
-    private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
+    private final List<ConnectedSessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
     private final Long2ObjectHashMap<ConnectingSession> correlationIdToConnectingSession = new Long2ObjectHashMap<>();
 
     private long acquireAtPosition;
@@ -62,7 +62,7 @@ final class LiveLibraryInfo implements LibraryInfo
         return libraryName;
     }
 
-    public List<SessionInfo> sessions()
+    public List<ConnectedSessionInfo> sessions()
     {
         return unmodifiableAllSessions;
     }

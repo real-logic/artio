@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -400,7 +400,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(SessionState.DISABLED, session.state());
         assertThat(library.sessions(), hasSize(0));
 
-        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
+        final List<ConnectedSessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
         assertThat(sessions, contains(allOf(
             hasConnectionId(connectionId),
             hasSessionId(sessionId))));

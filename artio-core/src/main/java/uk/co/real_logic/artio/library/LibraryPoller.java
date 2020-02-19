@@ -31,7 +31,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -1641,7 +1641,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             return initialSequenceNumber;
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNK_SESSION)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != ConnectedSessionInfo.UNK_SESSION)
         {
             return newSequenceNumber;
         }
