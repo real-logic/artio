@@ -16,15 +16,18 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
 /**
  * Context information about a FIX session, that persists across restarts.
  */
-class SessionContext
+class SessionContext implements SessionInfo
 {
     static final int UNKNOWN_SEQUENCE_INDEX = -1;
 
+    private final CompositeKey compositeKey;
     private final long sessionId;
     private final SessionContexts sessionContexts;
 
@@ -39,6 +42,7 @@ class SessionContext
     private FixDictionary lastFixDictionary;
 
     SessionContext(
+        final CompositeKey compositeKey,
         final long sessionId,
         final int sequenceIndex,
         final long lastLogonTime,
@@ -47,6 +51,7 @@ class SessionContext
         final int filePosition,
         final FixDictionary lastFixDictionary)
     {
+        this.compositeKey = compositeKey;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         lastLogonTime(lastLogonTime);
@@ -111,9 +116,14 @@ class SessionContext
         return sequenceIndex;
     }
 
-    long sessionId()
+    public long sessionId()
     {
         return sessionId;
+    }
+
+    public CompositeKey sessionKey()
+    {
+        return compositeKey;
     }
 
     public long lastSequenceResetTime()

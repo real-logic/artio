@@ -13,35 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine.framer;
-
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-
-import java.util.List;
+package uk.co.real_logic.artio.engine;
 
 /**
- * Engine managed model of a library instance.
+ * Class represents information that a gateway is aware of about a session.
  */
-public interface LibraryInfo
+public interface ConnectedSessionInfo extends SessionInfo
 {
     /**
-     * Get the id of the library.
+     * Get the identification number of the connection in question.
      *
-     * @return the id of the library.
+     * @return the identification number of the connection in question.
      */
-    int libraryId();
+    long connectionId();
 
     /**
-     * Get the debug name of the library.
+     * Get the remove address to which this session is connected.
      *
-     * @return the debug name of the library. May be null.
+     * @return the remove address to which this session is connected.
      */
-    String libraryName();
+    String address();
 
     /**
-     * Get an unmodifiable list of the current sessions connected to this library.
+     * Returns the number of bytes outstanding in the quarantine buffer to send.
      *
-     * @return an unmodifiable list of the current sessions connected to this library.
+     * @return number of bytes outstanding in the quarantine buffer to send.
      */
-    List<ConnectedSessionInfo> sessions();
+    long bytesInBuffer();
 }

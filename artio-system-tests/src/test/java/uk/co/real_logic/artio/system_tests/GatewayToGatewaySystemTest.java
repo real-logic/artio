@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.UserRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -246,13 +247,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final LibraryInfo library = libraries.get(0);
         assertEquals(initiatingLibrary.libraryId(), library.libraryId());
 
-        final List<SessionInfo> sessions = library.sessions();
+        final List<ConnectedSessionInfo> sessions = library.sessions();
         assertThat(sessions, hasSize(1));
 
-        final SessionInfo sessionInfo = sessions.get(0);
-        assertThat(sessionInfo.address(), containsString("localhost"));
-        assertThat(sessionInfo.address(), containsString(String.valueOf(port)));
-        assertEquals(initiatingSession.connectionId(), sessionInfo.connectionId());
+        final ConnectedSessionInfo connectedSessionInfo = sessions.get(0);
+        assertThat(connectedSessionInfo.address(), containsString("localhost"));
+        assertThat(connectedSessionInfo.address(), containsString(String.valueOf(port)));
+        assertEquals(initiatingSession.connectionId(), connectedSessionInfo.connectionId());
 
         assertEquals(initiatingSession.connectedPort(), port);
         assertEquals(initiatingSession.connectedHost(), "localhost");
@@ -260,6 +261,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final LibraryInfo gatewayLibraryInfo = libraries.get(1);
         assertEquals(ENGINE_LIBRARY_ID, gatewayLibraryInfo.libraryId());
         assertThat(gatewayLibraryInfo.sessions(), hasSize(0));
+
+        assertAllSessionsOnlyContains(initiatingEngine, initiatingSession);
+    }
+
+    private void assertAllSessionsOnlyContains(final FixEngine engine, final Session session)
+    {
+        final List<SessionInfo> allSessions = engine.allSessions();
+        assertThat(allSessions, hasSize(1));
+
+        final SessionInfo sessionInfo = allSessions.get(0);
+        assertThat(sessionInfo.sessionId(), is(session.id()));
+        assertThat(sessionInfo.sessionKey(), is(session.compositeKey()));
     }
 
     @Test
@@ -984,6 +997,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertOfflineSession(sessionId, acceptingSession);
         assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTime());
         assertEquals(lastLogonTime, acceptingSession.lastLogonTime());
+
+        assertAllSessionsOnlyContains(acceptingEngine, acceptingSession);
 
         assertReplayReceivedMessages();
 

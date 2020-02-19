@@ -33,7 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 
 import java.io.File;
@@ -131,7 +131,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SESSION_ID_2, SessionInfo.UNK_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, ConnectedSessionInfo.UNK_SESSION);
     }
 
     @Test
@@ -338,7 +338,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void assertUnknownSession()
     {
-        assertLastKnownSequenceNumberIs(SESSION_ID, SessionInfo.UNK_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID, ConnectedSessionInfo.UNK_SESSION);
     }
 
     private void indexFixMessage()

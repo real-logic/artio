@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +24,7 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 class EngineLibraryInfo implements LibraryInfo
 {
-    private final ArrayList<SessionInfo> sessions;
+    private final ArrayList<ConnectedSessionInfo> sessions;
     private final GatewaySessions gatewaySessions;
 
     EngineLibraryInfo(final GatewaySessions gatewaySessions)
@@ -43,7 +43,7 @@ class EngineLibraryInfo implements LibraryInfo
         return "Gateway Library";
     }
 
-    public List<SessionInfo> sessions()
+    public List<ConnectedSessionInfo> sessions()
     {
         return sessions;
     }
