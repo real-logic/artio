@@ -1143,13 +1143,17 @@ public class DecoderGenerator extends Generator
                 return " = DecimalFloat.newNaNValue()";
 
             case BOOLEAN:
+                return "";
+
+            case CHAR:
+                return " = MISSING_CHAR";
+
             case INT:
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-            case CHAR:
-                return "";
+                return " = MISSING_INT";
 
             case DATA:
             case XMLDATA:
