@@ -47,6 +47,7 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
@@ -307,7 +308,7 @@ public class Session
 
     /**
      * Get the address of the remote host that your session is connected to.
-     *
+     * <p>
      * If this is an offline session then this method will return <code>""</code>.
      *
      * @return the address of the remote host that your session is connected to.
@@ -321,7 +322,7 @@ public class Session
     /**
      * Get the id of the connection associated with this session. Sessions always
      * have a connection id.
-     *
+     * <p>
      * If this is an offline session then this method will return {@link GatewayProcess#NO_CONNECTION_ID}
      *
      * @return the id of the connection associated with this session.
@@ -357,7 +358,7 @@ public class Session
 
     /**
      * Get the port of the remote host that your session is connected to.
-     *
+     * <p>
      * If this is an offline session then this method will return {@link #UNKNOWN}
      *
      * @return the port of the remote host that your session is connected to.
@@ -370,7 +371,7 @@ public class Session
 
     /**
      * Sends a logout message and puts the session into the awaiting logout state.
-     *
+     * <p>
      * This method will eventually also disconnect the Session, but it won't disconnect the session until you
      * receive a logout message from your counter-party. That's the difference between this and
      * <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
@@ -388,8 +389,8 @@ public class Session
     /**
      * Request the session be disconnected.
      *
-     * @see Session#logoutAndDisconnect()
      * @return the position within the Aeron stream where the disconnect is encoded.
+     * @see Session#logoutAndDisconnect()
      */
     public long requestDisconnect()
     {
@@ -417,8 +418,8 @@ public class Session
      * message. This should only be used when you want to rapidly disconnect the session and are willing
      * to take the risk that the logout message is not received.
      *
-     * @see Session#startLogout()
      * @return the position within the Aeron stream where the disconnect is encoded.
+     * @see Session#startLogout()
      */
     public long logoutAndDisconnect()
     {
@@ -489,8 +490,8 @@ public class Session
     /**
      * Send a message on this session.
      *
-     * @param encoder the encoder of the message to be sent
-     * @param metaDataBuffer the metadata to associate with this message.
+     * @param encoder              the encoder of the message to be sent
+     * @param metaDataBuffer       the metadata to associate with this message.
      * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
@@ -519,10 +520,10 @@ public class Session
      * Send a message on this session.
      *
      * @param messageBuffer the buffer with the FIX message in to send
-     * @param offset the offset within the messageBuffer where the message starts
-     * @param length the length of the message within the messageBuffer
-     * @param seqNum the sequence number of the sent message
-     * @param messageType the long encoded message type.
+     * @param offset        the offset within the messageBuffer where the message starts
+     * @param length        the length of the message within the messageBuffer
+     * @param seqNum        the sequence number of the sent message
+     * @param messageType   the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
@@ -535,12 +536,12 @@ public class Session
     /**
      * Send a message on this session.
      *
-     * @param messageBuffer the buffer with the FIX message in to send
-     * @param offset the offset within the messageBuffer where the message starts
-     * @param length the length of the message within the messageBuffer
-     * @param seqNum the sequence number of the sent message
-     * @param messageType the long encoded message type.
-     * @param metaDataBuffer the metadata to associate with this message.
+     * @param messageBuffer        the buffer with the FIX message in to send
+     * @param offset               the offset within the messageBuffer where the message starts
+     * @param length               the length of the message within the messageBuffer
+     * @param seqNum               the sequence number of the sent message
+     * @param messageType          the long encoded message type.
+     * @param metaDataBuffer       the metadata to associate with this message.
      * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
@@ -573,7 +574,7 @@ public class Session
 
     /**
      * Check if the session is in a state where it can send a message.
-     *
+     * <p>
      * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
      * session reconnects it can read through sending a resend request.
      *
@@ -611,8 +612,8 @@ public class Session
     /**
      * Acts like {@link #sendSequenceReset(int, int)} but also resets the received sequence number.
      *
-     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
-     *                                      sent.
+     * @param nextSentMessageSequenceNumber     the new sequence number of the next message to be
+     *                                          sent.
      * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
      *                                          received.
      * @return the position in the stream that corresponds to the end of this message.
@@ -623,6 +624,10 @@ public class Session
     {
         final long position = sendSequenceReset(nextSentMessageSequenceNumber);
         lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
+        if (!redact(NO_REQUIRED_POSITION))
+        {
+            this.sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+        }
 
         return position;
     }
@@ -1539,7 +1544,8 @@ public class Session
         final int messageOffset,
         final int messageLength)
     {
-        final Action action = onMessage(msgSeqNum,
+        final Action action = onMessage(
+            msgSeqNum,
             RESEND_REQUEST_MESSAGE_TYPE_CHARS,
             sendingTime,
             origSendingTime,

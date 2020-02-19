@@ -62,7 +62,7 @@ public class SequenceNumberIndexWriter implements Index
 
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
-    private static final long NO_REQUIRED_POSITION = -1000;
+    public static final long NO_REQUIRED_POSITION = -1000;
 
     static final int SEQUENCE_NUMBER_OFFSET = LastKnownSequenceNumberEncoder.sequenceNumberEncodingOffset();
     static final int MESSAGE_POSITION_OFFSET = LastKnownSequenceNumberEncoder.messagePositionEncodingOffset();

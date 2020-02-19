@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
@@ -219,6 +220,11 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         final int replayToSequenceNumber,
         final int replayToSequenceIndex,
         final long timeout)
+    {
+        throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
+    }
+
+    public void enqueueTask(final BooleanSupplier task)
     {
         throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
     }
