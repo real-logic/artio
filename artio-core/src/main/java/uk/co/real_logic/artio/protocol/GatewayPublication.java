@@ -51,7 +51,7 @@ public class GatewayPublication extends ClaimablePublication
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.metaDataHeaderLength() +
         FixMessageDecoder.bodyHeaderLength();
 
-    private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
+    public static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
     private static final DirectBuffer NO_METADATA = new UnsafeBuffer(NO_BYTES);

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import org.agrona.concurrent.status.AtomicCounter;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -26,12 +28,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SenderSequenceNumber
 {
     private final long connectionId;
+    private final AtomicCounter bytesInBuffer;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final AtomicInteger lastSentSequenceNumber = new AtomicInteger();
 
-    SenderSequenceNumber(final long connectionId, final SenderSequenceNumbers senderSequenceNumbers)
+    SenderSequenceNumber(
+        final long connectionId, final AtomicCounter bytesInBuffer, final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.connectionId = connectionId;
+        this.bytesInBuffer = bytesInBuffer;
         this.senderSequenceNumbers = senderSequenceNumbers;
     }
 
@@ -48,6 +53,11 @@ public class SenderSequenceNumber
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public AtomicCounter bytesInBuffer()
+    {
+        return bytesInBuffer;
     }
 
     public void close()

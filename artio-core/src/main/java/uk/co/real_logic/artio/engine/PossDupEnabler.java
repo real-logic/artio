@@ -29,10 +29,10 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.otf.OtfParser;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.function.Consumer;
-import java.util.function.IntPredicate;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -62,7 +62,7 @@ public class PossDupEnabler
     private final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
 
     private final BufferClaim bufferClaim;
-    private final IntPredicate claimer;
+    private final Claimer claimer;
     private final PreCommit onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
@@ -72,9 +72,14 @@ public class PossDupEnabler
 
     private int fragmentedMessageLength;
 
+    public interface Claimer
+    {
+        boolean claim(int totalLength, int messageLength);
+    }
+
     public PossDupEnabler(
         final BufferClaim bufferClaim,
-        final IntPredicate claimer,
+        final Claimer claimer,
         final PreCommit onPreCommit,
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
@@ -199,7 +204,8 @@ public class PossDupEnabler
         }
         else
         {
-            return claimer.test(newLength);
+            final int messageLength = newLength - GatewayPublication.FRAMED_MESSAGE_SIZE;
+            return claimer.claim(newLength, messageLength);
         }
     }
 
@@ -221,7 +227,8 @@ public class PossDupEnabler
             while (fragmentedMessageLength > 0)
             {
                 final int fragmentLength = Math.min(maxPayloadLength, fragmentedMessageLength);
-                if (claimer.test(fragmentLength))
+                final int messageLength = fragmentLength - GatewayPublication.FRAMED_MESSAGE_SIZE;
+                if (claimer.claim(fragmentLength, messageLength))
                 {
                     if (fragmentOffset == FRAGMENTED_MESSAGE_BUFFER_OFFSET)
                     {

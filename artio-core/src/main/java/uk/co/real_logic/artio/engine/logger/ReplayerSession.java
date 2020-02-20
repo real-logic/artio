@@ -25,13 +25,13 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
-import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.*;
@@ -58,7 +58,6 @@ class ReplayerSession implements ControlledFragmentHandler
         private final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
             "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
             "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
-
     }
 
     private static final int NONE = -1;
@@ -88,12 +87,13 @@ class ReplayerSession implements ControlledFragmentHandler
     private final ReplayHandler replayHandler;
     private final int maxClaimAttempts;
     private final LongHashSet gapFillMessageTypes;
-    private final SenderSequenceNumbers senderSequenceNumbers;
     private final ExclusivePublication publication;
     private final ReplayQuery replayQuery;
     private final ErrorHandler errorHandler;
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private final Formatters formatters;
+    private final AtomicCounter bytesInBuffer;
+    private final int maxBytesInBuffer;
 
     private int beginSeqNo;
     private int endSeqNo;
@@ -114,7 +114,6 @@ class ReplayerSession implements ControlledFragmentHandler
         final ReplayHandler replayHandler,
         final int maxClaimAttempts,
         final LongHashSet gapFillMessageTypes,
-        final SenderSequenceNumbers senderSequenceNumbers,
         final ExclusivePublication publication,
         final EpochClock clock,
         final int beginSeqNo,
@@ -126,14 +125,15 @@ class ReplayerSession implements ControlledFragmentHandler
         final String message,
         final ErrorHandler errorHandler,
         final GapFillEncoder gapFillEncoder,
-        final Formatters formatters)
+        final Formatters formatters,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer)
     {
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
         this.replayHandler = replayHandler;
         this.maxClaimAttempts = maxClaimAttempts;
         this.gapFillMessageTypes = gapFillMessageTypes;
-        this.senderSequenceNumbers = senderSequenceNumbers;
         this.publication = publication;
         this.beginSeqNo = beginSeqNo;
         this.endSeqNo = endSeqNo;
@@ -145,6 +145,8 @@ class ReplayerSession implements ControlledFragmentHandler
         this.replayQuery = replayQuery;
         this.gapFillEncoder = gapFillEncoder;
         this.formatters = formatters;
+        this.maxBytesInBuffer = maxBytesInBuffer;
+        this.bytesInBuffer = bytesInBuffer;
 
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
@@ -152,7 +154,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
-            this::claimBuffer,
+            this::claimMessageBuffer,
             this::onPreCommit,
             this::onIllegalState,
             this::onException,
@@ -266,7 +268,8 @@ class ReplayerSession implements ControlledFragmentHandler
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
 
-        if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength()))
+        if (claimMessageBuffer(
+            MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength(), gapFillLength))
         {
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
@@ -298,6 +301,16 @@ class ReplayerSession implements ControlledFragmentHandler
 
             return ABORT;
         }
+    }
+
+    private boolean claimMessageBuffer(final int newLength, final int messageLength)
+    {
+        if (maxBytesInBuffer > (bytesInBuffer.get() + messageLength))
+        {
+            return claimBuffer(newLength);
+        }
+
+        return false;
     }
 
     private boolean claimBuffer(final int newLength)
@@ -427,11 +440,6 @@ class ReplayerSession implements ControlledFragmentHandler
         {
             return false;
         }
-    }
-
-    private int newSeqNo(final long connectionId)
-    {
-        return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
     }
 
     public void close()

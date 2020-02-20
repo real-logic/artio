@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -84,20 +85,21 @@ class EndPointFactory
         final Framer framer)
     {
         final String remoteAddress = channel.remoteAddress();
+        final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, remoteAddress);
         return new SenderEndPoint(
             connectionId,
             libraryId,
             libraryBlockablePosition,
             replaySlowPeeker,
             channel,
-            fixCounters.bytesInBuffer(connectionId, remoteAddress),
+            bytesInBuffer,
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
             errorHandler,
             framer,
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
             System.currentTimeMillis(),
-            senderSequenceNumbers.onNewSender(connectionId));
+            senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer));
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

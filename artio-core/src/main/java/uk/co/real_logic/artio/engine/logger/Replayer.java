@@ -26,6 +26,7 @@ import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
@@ -41,7 +42,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.util.ArrayList;
 import java.util.Set;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 
@@ -65,9 +66,12 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     private final BufferClaim bufferClaim;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
+    private final int maxBytesInBuffer;
     private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
     private final CharFormatter receivedResendFormatter = new CharFormatter(
         "Received Resend Request for range: [%s, %s]%n");
+    private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
+        "Not processing Resend Request for %s because it has already disconnected %n");
     private final ReplayerSession.Formatters formatters = new ReplayerSession.Formatters();
 
     private final ReplayQuery replayQuery;
@@ -98,7 +102,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final Set<String> gapfillOnReplayMessageTypes,
         final ReplayHandler replayHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
-        final FixSessionCodecsFactory fixSessionCodecsFactory)
+        final FixSessionCodecsFactory fixSessionCodecsFactory,
+        final int maxBytesInBuffer)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -112,6 +117,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.replayHandler = replayHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
+        this.maxBytesInBuffer = maxBytesInBuffer;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -153,6 +159,21 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final int sequenceIndex,
         final AsciiBuffer asciiBuffer)
     {
+        if (senderSequenceNumbers.hasDisconnected(connectionId))
+        {
+            DebugLogger.log(REPLAY,
+                alreadyDisconnectedFormatter,
+                connectionId);
+
+            return CONTINUE;
+        }
+
+        final AtomicCounter bytesInBuffer = senderSequenceNumbers.bytesInBufferCounter(connectionId);
+        if (bytesInBuffer == null)
+        {
+            return ABORT;
+        }
+
         final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
         final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
         resendRequest.reset();
@@ -173,7 +194,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
             replayHandler,
             maxClaimAttempts,
             gapFillMessageTypes,
-            senderSequenceNumbers,
             publication,
             clock,
             beginSeqNo,
@@ -185,7 +205,9 @@ public class Replayer implements Agent, ControlledFragmentHandler
             message,
             errorHandler,
             encoder,
-            formatters);
+            formatters,
+            bytesInBuffer,
+            maxBytesInBuffer);
 
         replayerSession.query();
 
@@ -228,4 +250,5 @@ public class Replayer implements Agent, ControlledFragmentHandler
     {
         return agentNamePrefix + "Replayer";
     }
+
 }
