@@ -49,7 +49,6 @@ public final class ExampleDictionary
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
     public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
-    public static final String MULTI_STRING_VALUE_ENUM = PARENT_PACKAGE + "." + "multiStringValueEnum";
 
     public static final String TEST_PARENT_PACKAGE = PARENT_PACKAGE;
 
@@ -129,7 +128,7 @@ public final class ExampleDictionary
         "  \"FloatField\": \"1.1\",\n" +
         "  \"BooleanField\": \"true\",\n" +
         "  \"DataFieldLength\": \"3\",\n" +
-        "  \"DataField\": \"[49, 50, 51]\",\n" +
+        "  \"DataField\": \"123\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
     public static final String STRING_GROUP_TWO_ELEMENTS =
@@ -178,7 +177,7 @@ public final class ExampleDictionary
         STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String COMPONENT_TO_STRING =
-        "  \"EgComponent\":  {\n" +
+        "  \"EgComponent\": {\n" +
         "    \"MessageName\": \"EgComponent\",\n" +
         "    \"ComponentField\": \"2\",\n" +
         "    \"ComponentGroupGroup\": [\n" +
@@ -192,8 +191,8 @@ public final class ExampleDictionary
         "      \"ComponentGroupField\": \"2\",\n" +
         "      \"RequiredComponentGroupField\": \"20\",\n" +
         "    }\n" +
-        "    ]\n" +
-        "    \"EgNestedComponent\":  {\n" +
+        "    ],\n" +
+        "    \"EgNestedComponent\": {\n" +
         "      \"MessageName\": \"EgNestedComponent\",\n" +
         "    }\n" +
         "  }";
@@ -220,6 +219,10 @@ public final class ExampleDictionary
 
     public static final String MISSING_REQUIRED_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=161\001";
+
+    public static final String MISSING_REQUIRED_PRICE_FIELDS_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001127=19700101-00:00:00.001" +
         "\00110=161\001";
 
     public static final String MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
@@ -288,6 +291,10 @@ public final class ExampleDictionary
 
     public static final String TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=10\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=161\001";
+
+    public static final String TAG_SPECIFIED_WHERE_INT_VALUE_IS_LARGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=99\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=161\001";
 
     public static final String TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE =
@@ -423,14 +430,24 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
         "\001118=Y\001200=3\001119=a\001c\001127=19700101-00:00:00.001\00110=199\001";
 
+    public static final String REPEATING_GROUP_MESSAGE_WITH_TOO_LOW_NUMBER_FIELD =
+        "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=1\001121=1\001121=2\00110=053\001";
+
+    public static final String REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD =
+        "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=3\001121=1\001121=2\00110=053\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
     public static final long OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    public static final int INT_FIELD_TAG = 116;
+
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
     private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
-    public static final String DATA_FIELD_LENGTH = "DataFieldLength";
+    static final String DATA_FIELD_LENGTH = "DataFieldLength";
 
     static
     {
@@ -469,9 +486,10 @@ public final class ExampleDictionary
             .addValue("def", "def");
 
         final Field testReqID = registerField(messageEgFields, TEST_REQ_ID_TAG, "TestReqID", Type.STRING);
-        final Field intField = registerField(messageEgFields, 116, "IntField", Type.LENGTH)
+        final Field intField = registerField(messageEgFields, INT_FIELD_TAG, "IntField", Type.LENGTH)
             .addValue("1", "ONE")
-            .addValue("2", "TWO");
+            .addValue("2", "TWO")
+            .addValue("99", "NINETYNINE");
 
         final Field floatField = registerField(messageEgFields, 117, "FloatField", Type.PRICE);
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
@@ -641,7 +659,8 @@ public final class ExampleDictionary
 
         final Field otherEnum = new Field(124, "OtherEnum", INT)
             .addValue("1", "AnEntry")
-            .addValue("12", "AnotherEntry");
+            .addValue("12", "AnotherEntry")
+            .addValue("99", "ThirdEntry");
 
         final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
             .addValue("0", "_0")

@@ -96,6 +96,11 @@ class ClaimablePublication implements AutoCloseable
         return dataPublication.offer(buffer, offset, length);
     }
 
+    public ExclusivePublication dataPublication()
+    {
+        return dataPublication;
+    }
+
     public void close()
     {
         dataPublication.close();

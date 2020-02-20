@@ -447,7 +447,7 @@ public class DirectSessionProxy implements SessionProxy
 
         if (position > 0)
         {
-            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Sent ", buffer, offset, length);
         }
 
         return position;

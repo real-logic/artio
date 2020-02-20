@@ -1,2 +1,2 @@
 include 'artio-core', 'artio-samples', 'artio-system-tests', 'artio-codecs', 'artio-session-codecs'
-include 'artio-session-fixt-codecs'
+include 'artio-session-fixt-codecs', 'artio-ilink3-codecs', 'artio-ilink3-impl', 'artio-ilink-system-tests'

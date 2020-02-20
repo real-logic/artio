@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.messages.MetaDataStatus;
 class WriteMetaDataReply extends LibraryReply<MetaDataStatus>
 {
     private final long sessionId;
+    private final int metaDataOffset;
     private final DirectBuffer buffer;
     private final int offset;
     private final int length;
@@ -29,12 +30,14 @@ class WriteMetaDataReply extends LibraryReply<MetaDataStatus>
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTime,
         final long sessionId,
+        final int metaDataOffset,
         final DirectBuffer buffer,
         final int offset,
         final int length)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.sessionId = sessionId;
+        this.metaDataOffset = metaDataOffset;
         this.buffer = buffer;
         this.offset = offset;
         this.length = length;
@@ -46,7 +49,8 @@ class WriteMetaDataReply extends LibraryReply<MetaDataStatus>
 
     protected void sendMessage()
     {
-        final long position = libraryPoller.saveWriteMetaData(sessionId, buffer, offset, length, correlationId);
+        final long position = libraryPoller.saveWriteMetaData(
+            sessionId, metaDataOffset, buffer, offset, length, correlationId);
 
         requiresResend = position < 0;
     }

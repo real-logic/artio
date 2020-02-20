@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.builder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
-public interface Decoder
+public interface Decoder extends CharAppender
 {
     int NO_ERROR = -1;
 
@@ -55,4 +55,6 @@ public interface Decoder
     int rejectReason();
 
     SessionHeaderDecoder header();
+
+    StringBuilder appendTo(StringBuilder builder, int level);
 }

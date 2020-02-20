@@ -19,36 +19,32 @@ import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
-import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageStatus;
-import uk.co.real_logic.artio.protocol.ProtocolHandler;
-import uk.co.real_logic.artio.protocol.ProtocolSubscription;
+import uk.co.real_logic.artio.messages.ValidResendRequestDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
 import java.util.Set;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
-import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
  * The replayer responds to resend requests with data from the log of sent messages.
@@ -57,20 +53,26 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-public class Replayer implements ProtocolHandler, Agent
+public class Replayer implements Agent, ControlledFragmentHandler
 {
+    public static final int MOST_RECENT_MESSAGE = 0;
+
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     static final int SIZE_OF_LENGTH_FIELD = FixMessageDecoder.bodyHeaderLength();
-    static final int MOST_RECENT_MESSAGE = 0;
     private static final int POLL_LIMIT = 10;
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final BufferClaim bufferClaim;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
-    private final ControlledFragmentHandler protocolSubscription;
+    private final int maxBytesInBuffer;
     private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
+    private final CharFormatter receivedResendFormatter = new CharFormatter(
+        "Received Resend Request for range: [%s, %s]%n");
+    private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
+        "Not processing Resend Request for %s because it has already disconnected %n");
+    private final ReplayerSession.Formatters formatters = new ReplayerSession.Formatters();
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -83,6 +85,9 @@ public class Replayer implements ProtocolHandler, Agent
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
+
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -97,7 +102,8 @@ public class Replayer implements ProtocolHandler, Agent
         final Set<String> gapfillOnReplayMessageTypes,
         final ReplayHandler replayHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
-        final FixSessionCodecsFactory fixSessionCodecsFactory)
+        final FixSessionCodecsFactory fixSessionCodecsFactory,
+        final int maxBytesInBuffer)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -111,104 +117,110 @@ public class Replayer implements ProtocolHandler, Agent
         this.replayHandler = replayHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
+        this.maxBytesInBuffer = maxBytesInBuffer;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
             gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
-
-        protocolSubscription = ProtocolSubscription.of(this, this.fixSessionCodecsFactory);
     }
 
-    public Action onMessage(
-        final DirectBuffer srcBuffer,
-        final int srcOffset,
-        final int length,
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int sequenceIndex,
-        final long messageType,
-        final long timestamp,
-        final MessageStatus status,
-        final int sequenceNumber,
-        final long position,
-        final int metaDataLength)
+    public Action onFragment(
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        if (messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE && status == OK)
+        messageHeader.wrap(buffer, offset);
+        if (messageHeader.templateId() == ValidResendRequestDecoder.TEMPLATE_ID)
         {
-            final int limit = Math.min(length, srcBuffer.capacity() - srcOffset);
+            validResendRequest.wrap(
+                buffer,
+                offset + MessageHeaderDecoder.ENCODED_LENGTH,
+                messageHeader.blockLength(),
+                messageHeader.version());
 
-            asciiBuffer.wrap(srcBuffer);
+            final long sessionId = validResendRequest.session();
+            final long connectionId = validResendRequest.connection();
+            final int beginSeqNo = validResendRequest.beginSequenceNumber();
+            final int endSeqNo = validResendRequest.endSequenceNumber();
+            final int sequenceIndex = validResendRequest.sequenceIndex();
+            validResendRequest.wrapBody(asciiBuffer);
 
-            final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
-            final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
-            resendRequest.reset();
-            resendRequest.decode(asciiBuffer, srcOffset, limit);
+            return onResendRequest(sessionId, connectionId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
+        }
+        else
+        {
+            return fixSessionCodecsFactory.onFragment(buffer, offset, length, header);
+        }
+    }
 
-            final int beginSeqNo = resendRequest.beginSeqNo();
-            final int endSeqNo = resendRequest.endSeqNo();
-
+    Action onResendRequest(
+        final long sessionId,
+        final long connectionId,
+        final int beginSeqNo,
+        final int endSeqNo,
+        final int sequenceIndex,
+        final AsciiBuffer asciiBuffer)
+    {
+        if (senderSequenceNumbers.hasDisconnected(connectionId))
+        {
             DebugLogger.log(REPLAY,
-                "Received Resend Request for range: [%d, %d]%n",
-                beginSeqNo,
-                endSeqNo);
+                alreadyDisconnectedFormatter,
+                connectionId);
 
-            final boolean replayUpToMostRecent = endSeqNo == MOST_RECENT_MESSAGE;
-            final String message = asciiBuffer.getAscii(srcOffset, limit);
-            // Validate endSeqNo
-            if (!replayUpToMostRecent && endSeqNo < beginSeqNo)
-            {
-                errorHandler.onError(new IllegalStateException(String.format(
-                    "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
-                    message,
-                    endSeqNo,
-                    beginSeqNo)));
-                return CONTINUE;
-            }
-
-            final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
-            encoder.setupMessage(resendRequest.header());
-
-            final ReplayerSession replayerSession = new ReplayerSession(
-                bufferClaim,
-                idleStrategy,
-                replayHandler,
-                maxClaimAttempts,
-                gapFillMessageTypes,
-                senderSequenceNumbers,
-                publication,
-                clock,
-                beginSeqNo,
-                endSeqNo,
-                replayUpToMostRecent,
-                connectionId,
-                sessionId,
-                sequenceIndex,
-                replayQuery,
-                message,
-                errorHandler,
-                encoder);
-
-            replayerSession.query();
-
-            replayerSessions.add(replayerSession);
-
-            return COMMIT;
+            return CONTINUE;
         }
 
-        return CONTINUE;
-    }
+        final AtomicCounter bytesInBuffer = senderSequenceNumbers.bytesInBufferCounter(connectionId);
+        if (bytesInBuffer == null)
+        {
+            return ABORT;
+        }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-    {
-        return CONTINUE;
+        final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
+        final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
+        resendRequest.reset();
+        resendRequest.decode(asciiBuffer, 0, asciiBuffer.capacity());
+
+        DebugLogger.log(REPLAY,
+            receivedResendFormatter,
+            beginSeqNo,
+            endSeqNo);
+
+        final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
+        encoder.setupMessage(resendRequest.header());
+
+        final String message = asciiBuffer.getAscii(0, asciiBuffer.capacity());
+        final ReplayerSession replayerSession = new ReplayerSession(
+            bufferClaim,
+            idleStrategy,
+            replayHandler,
+            maxClaimAttempts,
+            gapFillMessageTypes,
+            publication,
+            clock,
+            beginSeqNo,
+            endSeqNo,
+            connectionId,
+            sessionId,
+            sequenceIndex,
+            replayQuery,
+            message,
+            errorHandler,
+            encoder,
+            formatters,
+            bytesInBuffer,
+            maxBytesInBuffer);
+
+        replayerSession.query();
+
+        replayerSessions.add(replayerSession);
+
+        return COMMIT;
     }
 
     public int doWork()
     {
         int work = senderSequenceNumbers.poll();
         work += pollReplayerSessions();
-        return work + inboundSubscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        return work + inboundSubscription.controlledPoll(this, POLL_LIMIT);
     }
 
     private int pollReplayerSessions()
@@ -238,4 +250,5 @@ public class Replayer implements ProtocolHandler, Agent
     {
         return agentNamePrefix + "Replayer";
     }
+
 }

@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -30,7 +31,8 @@ public class AcceptorSession extends InternalSession
         final EpochClock epochClock,
         final Clock clock,
         final SessionProxy proxy,
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
@@ -42,7 +44,8 @@ public class AcceptorSession extends InternalSession
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final SessionCustomisationStrategy customisationStrategy)
+        final SessionCustomisationStrategy customisationStrategy,
+        final OnMessageInfo messageInfo)
     {
         super(
             defaultInterval,
@@ -51,7 +54,8 @@ public class AcceptorSession extends InternalSession
             clock,
             state,
             proxy,
-            publication,
+            inboundPublication,
+            outboundPublication,
             sessionIdStrategy,
             sendingTimeWindow,
             receivedMsgSeqNo,
@@ -62,6 +66,7 @@ public class AcceptorSession extends InternalSession
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            customisationStrategy);
+            customisationStrategy,
+            messageInfo);
     }
 }

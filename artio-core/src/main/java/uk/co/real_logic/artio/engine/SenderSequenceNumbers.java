@@ -16,8 +16,10 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import org.agrona.concurrent.status.AtomicCounter;
 
 import java.util.function.Consumer;
 
@@ -40,6 +42,7 @@ public class SenderSequenceNumbers
     // Indexer State
     private final Long2ObjectHashMap<SenderSequenceNumber> connectionIdToSequencePosition
         = new Long2ObjectHashMap<>();
+    private final LongHashSet oldConnectionIds = new LongHashSet();
     private final Consumer<SenderSequenceNumber> onSenderSequenceNumberFunc
         = this::onSenderSequenceNumber;
 
@@ -49,9 +52,10 @@ public class SenderSequenceNumbers
     }
 
     // Called on Framer Thread
-    public SenderSequenceNumber onNewSender(final long connectionId)
+    public SenderSequenceNumber onNewSender(final long connectionId, final AtomicCounter bytesInBuffer)
     {
-        final SenderSequenceNumber position = new SenderSequenceNumber(connectionId, this);
+        final SenderSequenceNumber position = new SenderSequenceNumber(
+            connectionId, bytesInBuffer, this);
         enqueue(position);
         return position;
     }
@@ -91,12 +95,29 @@ public class SenderSequenceNumbers
     }
 
     // Called on Indexer Thread
+    public AtomicCounter bytesInBufferCounter(final long connectionId)
+    {
+        final SenderSequenceNumber senderSequenceNumber = connectionIdToSequencePosition.get(connectionId);
+        return senderSequenceNumber == null ? null : senderSequenceNumber.bytesInBuffer();
+    }
+
+    // Called on Indexer Thread
+    public boolean hasDisconnected(final long connectionId)
+    {
+        return oldConnectionIds.contains(connectionId);
+    }
+
+    // Called on Indexer Thread
     private void onSenderSequenceNumber(final SenderSequenceNumber senderSequenceNumber)
     {
         final long connectionId = senderSequenceNumber.connectionId();
         if (connectionIdToSequencePosition.remove(connectionId) == null)
         {
             connectionIdToSequencePosition.put(connectionId, senderSequenceNumber);
+        }
+        else
+        {
+            oldConnectionIds.add(connectionId);
         }
     }
 }

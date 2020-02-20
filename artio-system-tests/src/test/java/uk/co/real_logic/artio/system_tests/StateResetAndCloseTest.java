@@ -119,7 +119,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final File archiveDir = mediaDriver.archive().context().archiveDir();
         final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
         final int numberOfRecordings = Objects.requireNonNull(recordings).length;
-        assertEquals(4, numberOfRecordings);
+        assertEquals(5, numberOfRecordings);
     }
 
     private void assertRecordingsTruncated()

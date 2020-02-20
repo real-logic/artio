@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="7"
+                   version="9"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -179,8 +179,8 @@
             <validValue name="OK">0</validValue>
             <validValue name="UNKNOWN_SESSION">1</validValue>
             <validValue name="FILE_ERROR">2</validValue>
-            <validValue name="INVALID_CHECKSUM">3</validValue>
             <validValue name="NO_META_DATA">4</validValue>
+            <validValue name="INVALID_OFFSET" sinceVersion="7">5</validValue>
         </enum>
 
         <enum name="ReplayMessagesStatus" encodingType="uint8">
@@ -280,6 +280,7 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="metaDataOffset" id="5" type="int32"/>
         <data name="metaData" id="4" type="Utf8String"/>
     </sbe:message>
 
@@ -299,6 +300,14 @@
         <field name="replayToSequenceNumber" id="6" type="int32"/>
         <field name="replayToSequenceIndex" id="7" type="SequenceIndex"/>
         <field name="latestReplyArrivalTimeInMs" id="8" type="Timestamp" />
+    </sbe:message>
+
+    <sbe:message name="InitiateILinkConnection" id="56" description="Outbound ilink3 connection"
+        sinceVersion="8">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="port" id="2" type="int32"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <data name="host" id="4" type="Utf8String"/>
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -433,6 +442,13 @@
         <field name="status" id="3" type="ReplayMessagesStatus"/>
     </sbe:message>
 
+    <sbe:message name="ILinkConnect" id="57" description="ILink TCP Connection established"
+                 sinceVersion="8">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+    </sbe:message>
+
     <!-- Messages In Either Direction -->
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field deprecated="3" name="deprecatedMessageType" id="1" type="DeprecatedMessageType"/>
@@ -443,6 +459,7 @@
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
+        <field name="metaDataUpdateOffset" id="13" type="int32" />
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
         <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
@@ -477,6 +494,29 @@
     <sbe:message name="ReplayComplete" id="45"
                  description="Replayer tells SenderEndPoint that the current replay is complete">
         <field name="connection" id="1" type="ConnectionId"/>
+    </sbe:message>
+
+    <sbe:message name="ILinkMessage" id="58" description="ILink3 Message Header"
+                 sinceVersion="8">
+        <field name="connection" id="1" type="ConnectionId"/>
+    </sbe:message>
+
+    <!-- Messages From either Library or Engine outbound -->
+    <sbe:message name="RedactSequenceUpdate" id="55"
+                 description="" sinceVersion="7">
+        <field name="session" id="1" type="FixSessionId"/>
+        <field name="correctSequenceNumber" id="2" type="int32"/>
+        <field name="position" id="3" type="int64"/>
+    </sbe:message>
+
+    <sbe:message name="ValidResendRequest" id="59" description="Notifies the replayer to resend messages"
+        sinceVersion="9">
+        <field name="session" id="1" type="FixSessionId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="beginSequenceNumber" id="3" type="int32"/>
+        <field name="endSequenceNumber" id="4" type="int32"/>
+        <field name="SequenceIndex" id="5" type="int32"/>
+        <data name="body" id="6" type="AsciiString"/>
     </sbe:message>
 
 </sbe:messageSchema>

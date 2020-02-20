@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
@@ -32,12 +33,14 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 
 public class SessionParserTest
 {
+    private static final long POSITION = 64;
     private Session mockSession = mock(Session.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
+    private OnMessageInfo messageInfo = mock(OnMessageInfo.class);
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, false);
+        mockSession, validationStrategy, null, false, messageInfo, null);
 
     @Before
     public void setUp()
@@ -54,10 +57,10 @@ public class SessionParserTest
         final UnsafeBuffer buffer = bufferOf(
             "8=FIX.4.4\00135=B\00149=abc\00152=00000101-00:00:00.000\00156=das\001");
 
-        parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
+        parser.onMessage(buffer, 0, buffer.capacity(), 'B', POSITION);
 
         verify(mockSession).onMessage(
-            eq(MISSING_INT), any(), anyInt(), anyLong(), anyLong(), eq(false), eq(false));
+            eq(MISSING_INT), any(), anyInt(), anyLong(), anyLong(), eq(false), eq(false), eq(POSITION));
     }
 
     @Test
@@ -66,9 +69,9 @@ public class SessionParserTest
         final UnsafeBuffer buffer = bufferOf(
             "8=FIX.4.4\00135=*\00134=2\00149=abc\00152=00000101-00:00:00.000\00156=das\001");
 
-        parser.onMessage(buffer, 0, buffer.capacity(), '*', 1);
+        parser.onMessage(buffer, 0, buffer.capacity(), '*', POSITION);
 
-        verify(mockSession).onInvalidMessageType(eq(2), any(char[].class), anyInt());
+        verify(mockSession).onInvalidMessageType(eq(2), any(char[].class), anyInt(), eq(POSITION));
     }
 
     @Test
@@ -81,17 +84,17 @@ public class SessionParserTest
 
         when(mockSession.state()).thenReturn(SessionState.AWAITING_LOGOUT);
 
-        parser.onMessage(buffer, 0, buffer.capacity(), 'D', 1);
+        parser.onMessage(buffer, 0, buffer.capacity(), 'D', POSITION);
 
         verify(mockSession).onInvalidMessage(
             4,
             TARGET_COMP_ID,
             "D".toCharArray(),
             "D".length(),
-            RejectReason.COMPID_PROBLEM.representation());
+            RejectReason.COMPID_PROBLEM.representation(), POSITION);
 
         verify(mockSession).startLogout();
-        verify(mockSession, never()).onInvalidMessageType(anyInt(), any(), anyInt());
+        verify(mockSession, never()).onInvalidMessageType(anyInt(), any(), anyInt(), eq(POSITION));
     }
 
     private UnsafeBuffer bufferOf(final String str)

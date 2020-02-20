@@ -71,7 +71,7 @@ public class ResendRedundantResendRequestTest
             // exchange test request / heartbeat
             final String testReqId = "thisIsATest";
             connection.msgSeqNum(5);
-            connection.testRequest(testReqId);
+            connection.sendTestRequest(testReqId);
             connection.readHeartbeat(testReqId);
 
             LockSupport.parkNanos(500);

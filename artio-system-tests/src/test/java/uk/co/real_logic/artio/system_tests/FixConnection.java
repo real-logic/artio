@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
+import uk.co.real_logic.artio.decoder.RejectDecoder;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -107,7 +108,16 @@ final class FixConnection implements AutoCloseable
     {
         try
         {
-            return socket.read(readBuffer) != -1;
+            final int read = socket.read(readBuffer);
+            final boolean isConnected = read != -1;
+
+            if (isConnected)
+            {
+                final String ascii = asciiReadBuffer.getAscii(readBuffer.position() - read, read);
+                DebugLogger.log(FIX_TEST, "< [" + ascii + "] for isConnected()");
+            }
+
+            return isConnected;
         }
         catch (final IOException e)
         {
@@ -249,18 +259,24 @@ final class FixConnection implements AutoCloseable
         return readMessage(new LogonDecoder());
     }
 
-    void testRequest(final String testReqID)
+    RejectDecoder readReject()
+    {
+        return readMessage(new RejectDecoder());
+    }
+
+    void sendTestRequest(final String testReqID)
     {
         setupHeader(testRequestEncoder.header(), msgSeqNum++, false);
         testRequestEncoder.testReqID(testReqID);
         send(testRequestEncoder);
     }
 
-    void readHeartbeat(final String testReqID)
+    HeartbeatDecoder readHeartbeat(final String testReqID)
     {
         final HeartbeatDecoder heartbeat = readMessage(new HeartbeatDecoder());
         assertTrue(heartbeat.hasTestReqID());
         assertEquals(testReqID, heartbeat.testReqIDAsString());
+        return heartbeat;
     }
 
     public void close()
@@ -272,11 +288,15 @@ final class FixConnection implements AutoCloseable
     {
         logout();
 
-        final LogoutDecoder logout = readMessage(new LogoutDecoder());
-
+        final LogoutDecoder logout = readLogout();
         assertFalse(logout.textAsString(), logout.hasText());
 
         return logout;
+    }
+
+    public LogoutDecoder readLogout()
+    {
+        return readMessage(new LogoutDecoder());
     }
 
     public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)

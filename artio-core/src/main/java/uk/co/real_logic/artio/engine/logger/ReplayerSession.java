@@ -25,17 +25,18 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
-import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -49,6 +50,16 @@ import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVer
 
 class ReplayerSession implements ControlledFragmentHandler
 {
+    static class Formatters
+    {
+        private final CharFormatter completeNotRecentFormatter = new CharFormatter(
+            "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
+            "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
+        private final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
+            "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
+            "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
+    }
+
     private static final int NONE = -1;
     private static final byte[] NO_BYTES = new byte[0];
 
@@ -76,15 +87,16 @@ class ReplayerSession implements ControlledFragmentHandler
     private final ReplayHandler replayHandler;
     private final int maxClaimAttempts;
     private final LongHashSet gapFillMessageTypes;
-    private final SenderSequenceNumbers senderSequenceNumbers;
     private final ExclusivePublication publication;
     private final ReplayQuery replayQuery;
     private final ErrorHandler errorHandler;
     private final SequenceNumberExtractor sequenceNumberExtractor;
+    private final Formatters formatters;
+    private final AtomicCounter bytesInBuffer;
+    private final int maxBytesInBuffer;
 
     private int beginSeqNo;
     private int endSeqNo;
-    private boolean upToMostRecent;
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
@@ -102,30 +114,29 @@ class ReplayerSession implements ControlledFragmentHandler
         final ReplayHandler replayHandler,
         final int maxClaimAttempts,
         final LongHashSet gapFillMessageTypes,
-        final SenderSequenceNumbers senderSequenceNumbers,
         final ExclusivePublication publication,
         final EpochClock clock,
         final int beginSeqNo,
         final int endSeqNo,
-        final boolean upToMostRecent,
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
         final ReplayQuery replayQuery,
         final String message,
         final ErrorHandler errorHandler,
-        final GapFillEncoder gapFillEncoder)
+        final GapFillEncoder gapFillEncoder,
+        final Formatters formatters,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer)
     {
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
         this.replayHandler = replayHandler;
         this.maxClaimAttempts = maxClaimAttempts;
         this.gapFillMessageTypes = gapFillMessageTypes;
-        this.senderSequenceNumbers = senderSequenceNumbers;
         this.publication = publication;
         this.beginSeqNo = beginSeqNo;
         this.endSeqNo = endSeqNo;
-        this.upToMostRecent = upToMostRecent;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -133,6 +144,9 @@ class ReplayerSession implements ControlledFragmentHandler
         this.errorHandler = errorHandler;
         this.replayQuery = replayQuery;
         this.gapFillEncoder = gapFillEncoder;
+        this.formatters = formatters;
+        this.maxBytesInBuffer = maxBytesInBuffer;
+        this.bytesInBuffer = bytesInBuffer;
 
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
@@ -140,7 +154,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
-            this::claimBuffer,
+            this::claimMessageBuffer,
             this::onPreCommit,
             this::onIllegalState,
             this::onException,
@@ -254,7 +268,8 @@ class ReplayerSession implements ControlledFragmentHandler
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
 
-        if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength()))
+        if (claimMessageBuffer(
+            MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength(), gapFillLength))
         {
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
@@ -274,7 +289,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
             bufferClaim.commit();
 
-            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: %s%n", gapFillBuffer, gapFillOffset, gapFillLength);
+            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: ", gapFillBuffer, gapFillOffset, gapFillLength);
 
             this.beginGapFillSeqNum = NONE;
 
@@ -286,6 +301,16 @@ class ReplayerSession implements ControlledFragmentHandler
 
             return ABORT;
         }
+    }
+
+    private boolean claimMessageBuffer(final int newLength, final int messageLength)
+    {
+        if (maxBytesInBuffer > (bytesInBuffer.get() + messageLength))
+        {
+            return claimBuffer(newLength);
+        }
+
+        return false;
     }
 
     private boolean claimBuffer(final int newLength)
@@ -349,15 +374,13 @@ class ReplayerSession implements ControlledFragmentHandler
         // after the replay query has run.
         if (beginGapFillSeqNum != NONE)
         {
-            final int newSequenceNumber =
-                upToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
+            final int newSequenceNumber = endSeqNo + 1;
             final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
 
             DebugLogger.log(
                 REPLAY,
-                "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%d, " +
-                "beginGapFillSeqNum=%d, newSequenceNumber=%d%n",
-                action,
+                formatters.completeReplayGapfillFormatter,
+                action.name(),
                 replayedMessages,
                 beginGapFillSeqNum,
                 newSequenceNumber);
@@ -369,41 +392,30 @@ class ReplayerSession implements ControlledFragmentHandler
             // Validate that we've replayed the correct number of messages.
             // If we have missing messages for some reason then just gap fill them.
 
-            if (!upToMostRecent)
-            {
-                // We know precisely what number to gap fill up to.
-                final int expectedCount = endSeqNo - beginSeqNo + 1;
-                DebugLogger.log(
-                    REPLAY,
-                    "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%d endSeqNo=%d " +
-                    "beginSeqNo=%d expectedCount=%d%n",
-                    replayedMessages,
-                    endSeqNo,
-                    beginSeqNo,
-                    expectedCount);
+            // We know precisely what number to gap fill up to.
+            final int expectedCount = endSeqNo - beginSeqNo + 1;
+            DebugLogger.log(
+                REPLAY,
+                formatters.completeNotRecentFormatter,
+                replayedMessages,
+                endSeqNo,
+                beginSeqNo,
+                expectedCount);
 
-                if (replayedMessages != expectedCount)
+            if (replayedMessages != expectedCount)
+            {
+                if (replayedMessages == 0)
                 {
-                    if (replayedMessages == 0)
+                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                    if (action == ABORT)
                     {
-                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
-                        if (action == ABORT)
-                        {
-                            return false;
-                        }
+                        return false;
                     }
-
-                    onIllegalState(
-                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                        message, replayedMessages, expectedCount);
                 }
-            }
-            else
-            {
-                DebugLogger.log(
-                    REPLAY,
-                    "ReplayerSession: completeReplay-upToMostRecent replayedMessages=%d%n",
-                    replayedMessages);
+
+                onIllegalState(
+                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                    message, replayedMessages, expectedCount);
             }
         }
 
@@ -428,11 +440,6 @@ class ReplayerSession implements ControlledFragmentHandler
         {
             return false;
         }
-    }
-
-    private int newSeqNo(final long connectionId)
-    {
-        return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
     }
 
     public void close()

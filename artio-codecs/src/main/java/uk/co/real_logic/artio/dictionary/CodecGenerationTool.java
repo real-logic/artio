@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.generation.PackageOutputManager;
-
-
 import uk.co.real_logic.artio.builder.RejectUnknownEnumValue;
 import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
@@ -31,6 +29,28 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class CodecGenerationTool
 {
+    /**
+     * Boolean system property to turn on or off duplicated fields validation. Defaults to false.
+     * <p>
+     * Fix specification vol 1:
+     * A tag number (field) should only appear in a message once. If it appears more than once in the message it should
+     * be considered an error with the specification document.
+     * <p>
+     * Turning this option on may break parsing: this option should be used for support fix specification with error
+     * only. It is recommended, where possible, to correct your FIX XML file instead of using this option in order
+     * to support an invalid XML file.
+     * <br>
+     * The duplicated fields is allowed in the following case:
+     * <pre>
+     * message body:
+     * field;
+     * repeating group:
+     * the_other_field+
+     * field;
+     * </pre>
+     */
+    public static final String FIX_CODECS_ALLOW_DUPLICATE_FIELDS = "fix.codecs.allow_duplicate_fields";
+
     public static void main(final String[] args) throws Exception
     {
         if (args.length < 2)
@@ -127,7 +147,8 @@ public final class CodecGenerationTool
 
     private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception
     {
-        final DictionaryParser parser = new DictionaryParser();
+        final DictionaryParser parser = new DictionaryParser(
+            Boolean.getBoolean(CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS));
         if (!xmlFile.exists())
         {
             System.err.println("xmlFile does not exist: " + xmlFile.getAbsolutePath());

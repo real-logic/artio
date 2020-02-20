@@ -19,7 +19,9 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -43,7 +45,8 @@ public class InternalSession extends Session implements AutoCloseable
         final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
@@ -54,7 +57,8 @@ public class InternalSession extends Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final SessionCustomisationStrategy customisationStrategy)
+        final SessionCustomisationStrategy customisationStrategy,
+        final OnMessageInfo messageInfo)
     {
         super(
             heartbeatIntervalInS,
@@ -63,7 +67,8 @@ public class InternalSession extends Session implements AutoCloseable
             clock,
             state,
             proxy,
-            publication,
+            inboundPublication,
+            outboundPublication,
             sessionIdStrategy,
             sendingTimeWindowInMs,
             receivedMsgSeqNo,
@@ -74,7 +79,8 @@ public class InternalSession extends Session implements AutoCloseable
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            customisationStrategy);
+            customisationStrategy,
+            messageInfo);
     }
 
     public int poll(final long time)
@@ -161,9 +167,9 @@ public class InternalSession extends Session implements AutoCloseable
         final int refTagId,
         final char[] refMsgType,
         final int refMsgTypeLength,
-        final int rejectReason)
+        final int rejectReason, final long position)
     {
-        return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason);
+        return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason, position);
     }
 
     public void lastResentMsgSeqNo(final int lastResentMsgSeqNo)
@@ -227,7 +233,9 @@ public class InternalSession extends Session implements AutoCloseable
         final int heartbeatIntervalInS,
         final int sequenceIndex,
         final boolean enableLastMsgSeqNumProcessed,
-        final FixDictionary fixDictionary)
+        final FixDictionary fixDictionary,
+        final String address,
+        final FixCounters counters)
     {
         connectionId(connectionId);
         state(sessionState);
@@ -235,6 +243,29 @@ public class InternalSession extends Session implements AutoCloseable
         sequenceIndex(sequenceIndex);
         enableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed);
         fixDictionary(fixDictionary);
+        address(address);
+        refreshSequenceNumberCounters(counters);
+
     }
 
+    public void lastReceivedMsgSeqNumOnly(final int value)
+    {
+        super.lastReceivedMsgSeqNumOnly(value);
+    }
+
+    protected void finalize() throws Throwable
+    {
+        close();
+        super.finalize();
+    }
+
+    public OnMessageInfo messageInfo()
+    {
+        return super.messageInfo();
+    }
+
+    public boolean areCountersClosed()
+    {
+        return super.areCountersClosed();
+    }
 }

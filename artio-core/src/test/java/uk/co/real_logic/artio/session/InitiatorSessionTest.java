@@ -17,13 +17,13 @@ package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -39,6 +39,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             fakeClock,
             Clock.systemNanoTime(),
             sessionProxy,
+            mock(GatewayPublication.class),
             mockPublication,
             idStrategy,
             SENDING_TIME_WINDOW,
@@ -52,7 +53,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             false,
-            SessionCustomisationStrategy.none());
+            SessionCustomisationStrategy.none(),
+            messageInfo);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(mockLogonListener);
     }

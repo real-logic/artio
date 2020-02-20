@@ -34,6 +34,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
     private Session session;
     private int sequenceIndex;
     private MessageStatus status;
+    private boolean valid;
 
     public FixMessage()
     {
@@ -104,6 +105,16 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return Integer.parseInt(get(Constants.LAST_MSG_SEQ_NUM_PROCESSED));
     }
 
+    public void isValid(final boolean valid)
+    {
+        this.valid = valid;
+    }
+
+    public boolean isValid()
+    {
+        return valid;
+    }
+
     public FixMessage clone()
     {
         final FixMessage theClone = new FixMessage();
@@ -121,6 +132,17 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
         put(Constants.TARGET_COMP_ID, oldSenderCompId);
         put(Constants.SENDER_COMP_ID, oldTargetCompId);
+    }
+
+    public String toString()
+    {
+        return "FixMessage{" +
+            "session=" + session +
+            ", sequenceIndex=" + sequenceIndex +
+            ", status=" + status +
+            ", valid=" + valid +
+            ", " + super.toString() +
+            '}';
     }
 
     static Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)

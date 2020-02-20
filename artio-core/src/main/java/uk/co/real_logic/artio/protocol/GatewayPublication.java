@@ -25,7 +25,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
@@ -51,7 +51,7 @@ public class GatewayPublication extends ClaimablePublication
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.metaDataHeaderLength() +
         FixMessageDecoder.bodyHeaderLength();
 
-    private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
+    public static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
     private static final DirectBuffer NO_METADATA = new UnsafeBuffer(NO_BYTES);
@@ -97,6 +97,15 @@ public class GatewayPublication extends ClaimablePublication
     private static final int REPLAY_MESSAGES_REPLY_LENGTH =
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
 
+    public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
+        InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength();
+
+    private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
+        HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
+
+    private static final int VALID_RESEND_REQUEST_LENGTH =
+        HEADER_LENGTH + ValidResendRequestEncoder.BLOCK_LENGTH + ValidResendRequestEncoder.bodyHeaderLength();
+
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
@@ -128,6 +137,12 @@ public class GatewayPublication extends ClaimablePublication
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
+
+    private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
+    private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
+
+    private final InitiateILinkConnectionEncoder initiateILinkConnection = new InitiateILinkConnectionEncoder();
+    private final ILinkConnectEncoder iLinkConnect = new ILinkConnectEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -183,7 +198,8 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final MessageStatus status,
         final int sequenceNumber,
-        final DirectBuffer metaDataBuffer)
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         return saveMessage(
             srcBuffer,
@@ -197,7 +213,8 @@ public class GatewayPublication extends ClaimablePublication
             status,
             sequenceNumber,
             clock.time(),
-            metaDataBuffer);
+            metaDataBuffer,
+            metaDataUpdateOffset);
     }
 
     public long saveMessage(
@@ -225,7 +242,8 @@ public class GatewayPublication extends ClaimablePublication
             status,
             sequenceNumber,
             timestamp,
-            null);
+            null,
+            0);
     }
 
     public long saveMessage(
@@ -240,7 +258,8 @@ public class GatewayPublication extends ClaimablePublication
         final MessageStatus status,
         final int sequenceNumber,
         final long timestamp,
-        final DirectBuffer srcMetaDataBuffer)
+        final DirectBuffer srcMetaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         final DirectBuffer metaDataBuffer = srcMetaDataBuffer == null ? NO_METADATA : srcMetaDataBuffer;
         final int metaDataLength = metaDataBuffer.capacity();
@@ -301,6 +320,7 @@ public class GatewayPublication extends ClaimablePublication
             .timestamp(timestamp)
             .status(status)
             .sequenceNumber(sequenceNumber)
+            .metaDataUpdateOffset(metaDataUpdateOffset)
             .putMetaData(metaDataBuffer, 0, metaDataLength)
             .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
@@ -334,7 +354,7 @@ public class GatewayPublication extends ClaimablePublication
             }
         }
 
-        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
+        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued ", srcBuffer, srcOffset, srcLength);
 
         return position;
     }
@@ -537,7 +557,9 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        resetSequenceNumber.wrapAndApplyHeader(buffer, offset, header).session(sessionId);
+        resetSequenceNumber
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId);
 
         bufferClaim.commit();
 
@@ -820,7 +842,7 @@ public class GatewayPublication extends ClaimablePublication
         return awaitingResend ? AwaitingResend.YES : AwaitingResend.NO;
     }
 
-    public long saveReleaseSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)
+    public long saveReleaseSessionReply(final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
         if (position < 0)
@@ -937,7 +959,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveControlNotification(final int libraryId, final List<SessionInfo> sessions)
+    public long saveControlNotification(final int libraryId, final List<ConnectedSessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(CONTROL_NOTIFICATION_LENGTH +
@@ -1072,6 +1094,7 @@ public class GatewayPublication extends ClaimablePublication
     public long saveWriteMetaData(
         final int libraryId,
         final long sessionId,
+        final int metaDataOffset,
         final long correlationId,
         final DirectBuffer srcBuffer,
         final int srcOffset,
@@ -1091,6 +1114,7 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .session(sessionId)
             .correlationId(correlationId)
+            .metaDataOffset(metaDataOffset)
             .putMetaData(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();
@@ -1247,6 +1271,121 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveRedactSequenceUpdate(
+        final long sessionId, final int correctSequenceNumber, final long messagePosition)
+    {
+        final long position = claim(REDACT_SEQUENCE_NUMBER_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        redactSequenceUpdate
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId)
+            .correctSequenceNumber(correctSequenceNumber)
+            .position(messagePosition);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, redactSequenceUpdate);
+
+        return position;
+    }
+
+    public long saveValidResendRequest(
+        final long sessionId,
+        final long connectionId,
+        final int beginSequenceNumber,
+        final int endSequenceNumber,
+        final int sequenceIndex,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
+    {
+        final long position = claim(VALID_RESEND_REQUEST_LENGTH + bodyLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        validResendRequest
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId)
+            .connection(connectionId)
+            .beginSequenceNumber(beginSequenceNumber)
+            .endSequenceNumber(endSequenceNumber)
+            .sequenceIndex(sequenceIndex)
+            .putBody(bodyBuffer, bodyOffset, bodyLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, validResendRequest);
+
+        return position;
+    }
+
+    public long saveInitiateILinkConnection(
+        final int libraryId, final int port, final long correlationId, final String host)
+    {
+        final byte[] hostBytes = bytes(host);
+        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        initiateILinkConnection
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .port(port)
+            .correlationId(correlationId)
+            .putHost(hostBytes, 0, hostBytes.length);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, initiateILinkConnection);
+
+        return position;
+    }
+
+    public long saveILinkConnect(
+        final int libraryId,
+        final long correlationId,
+        final long connectionId)
+    {
+        final long position = claim(
+            MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        iLinkConnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .connection(connectionId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, iLinkConnect);
+
+        return position;
+    }
+
     public int id()
     {
         return dataPublication.sessionId();
@@ -1271,4 +1410,6 @@ public class GatewayPublication extends ClaimablePublication
     {
         return maxPayloadLength;
     }
+
+
 }

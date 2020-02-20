@@ -123,4 +123,9 @@ public class OrderSingleEncoder implements Encoder
     {
 
     }
+
+    public StringBuilder appendTo(final StringBuilder builder)
+    {
+        return builder;
+    }
 }

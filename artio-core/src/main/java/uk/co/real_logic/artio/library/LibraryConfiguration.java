@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.library;
 
-import org.agrona.Verify;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.session.DirectSessionProxy;
@@ -253,8 +252,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     void conclude()
     {
         super.conclude("library-" + libraryId());
-
-        Verify.notNull(sessionAcquireHandler, "sessionAcquireHandler");
 
         if (libraryAeronChannels.isEmpty())
         {

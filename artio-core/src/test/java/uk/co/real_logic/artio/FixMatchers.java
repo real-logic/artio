@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio;
 
 import org.hamcrest.Matcher;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.session.Session;
@@ -32,14 +32,14 @@ public final class FixMatchers
     {
     }
 
-    public static Matcher<SessionInfo> hasConnectionId(final long connectionId)
+    public static Matcher<ConnectedSessionInfo> hasConnectionId(final long connectionId)
     {
-        return hasResult("connectionId", SessionInfo::connectionId, equalTo(connectionId));
+        return hasResult("connectionId", ConnectedSessionInfo::connectionId, equalTo(connectionId));
     }
 
-    public static Matcher<SessionInfo> hasSessionId(final long sessionId)
+    public static Matcher<ConnectedSessionInfo> hasSessionId(final long sessionId)
     {
-        return hasResult("sessionId", SessionInfo::sessionId, equalTo(sessionId));
+        return hasResult("sessionId", ConnectedSessionInfo::sessionId, equalTo(sessionId));
     }
 
     public static Matcher<FixLibrary> isConnected()

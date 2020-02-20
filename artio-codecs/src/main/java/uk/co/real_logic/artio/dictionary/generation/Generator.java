@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,8 +39,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+import static java.util.regex.Pattern.MULTILINE;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
@@ -53,10 +55,10 @@ public abstract class Generator
     public static final String BEGIN_STRING = "BeginString";
     public static final String BODY_LENGTH = "BodyLength";
 
-    public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
+    public static final Pattern NEWLINE = Pattern.compile("^", MULTILINE);
     final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
@@ -456,58 +458,59 @@ public abstract class Generator
             resetValue);
     }
 
-    protected String toString(final Aggregate aggregate, final boolean hasCommonCompounds)
+    protected String appendTo(final Aggregate aggregate, final boolean hasCommonCompounds)
     {
         final String entriesToString = aggregate
             .entries()
             .stream()
-            .map(this::entryToString)
-            .collect(joining(" + \n"));
+            .map(this::entryAppendTo)
+            .collect(joining("\n"));
 
-        final String prefix = !hasCommonCompounds ?
-            "" : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
-
-        final String suffix;
-        final String parameters;
-        if (aggregate instanceof Group)
+        final String prefix;
+        if (hasCommonCompounds)
         {
-            suffix = toStringGroupSuffix();
-
-            parameters = toStringGroupParameters();
+            prefix =
+                "    builder.append(\"  \\\"header\\\": \");\n" +
+                "    header.appendTo(builder, level + 1);\n" +
+                "    builder.append(\"\\n\");\n";
         }
         else
         {
-            suffix = "";
-            parameters = "";
+            prefix = "";
         }
 
         return String.format(
-            "    public String toString(%5$s)\n" +
+            "    public String toString()\n" +
             "    {\n" +
-            "        String entries = %1$s\n" +
-            "%2$s;\n\n" +
-            "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
+            "        return appendTo(new StringBuilder()).toString();\n" +
+            "    }\n\n" +
+            "    public StringBuilder appendTo(final StringBuilder builder)\n" +
+            "    {\n" +
+            "        return appendTo(builder, 1);\n" +
+            "    }\n\n" +
+            "    public StringBuilder appendTo(final StringBuilder builder, final int level)\n" +
+            "    {\n" +
+            "        builder.append(\"{\\n\");" +
+            "        indent(builder, level);\n" +
+            "        builder.append(\"\\\"MessageName\\\": \\\"%1$s\\\",\\n\");\n" +
+            "%2$s" +
             "%3$s" +
-            "        return entries;\n" +
+            "        indent(builder, level - 1);\n" +
+            "        builder.append(\"}\");\n" +
+            "        return builder;\n" +
             "    }\n\n",
-            prefix,
-            entriesToString,
-            suffix,
             aggregate.name(),
-            parameters);
+            prefix,
+            entriesToString);
     }
 
-    protected abstract String toStringGroupParameters();
-
-    protected abstract String toStringGroupSuffix();
-
-    protected String entryToString(final Entry entry)
+    protected String entryAppendTo(final Entry entry)
     {
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 
         if (isBodyLength(entry))
         {
-            return "\"\"";
+            return "";
         }
 
         final Element element = entry.element();
@@ -515,32 +518,49 @@ public abstract class Generator
         if (element instanceof Field)
         {
             final Field field = (Field)element;
-            final String value = fieldToString(field);
+            final String value = fieldAppendTo(field);
 
-            final String formatter = String.format(
-                "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
+            final String fieldAppender = String.format(
+                "        indent(builder, level);\n" +
+                "        builder.append(\"\\\"%1$s\\\": \\\"\");\n" +
+                "        %2$s;\n" +
+                "        builder.append(\"\\\",\\n\");\n",
                 name,
                 value);
 
-            final boolean hasFlag = toStringChecksHasGetter(entry, field);
-            return "             " +
-                (hasFlag ? String.format("(has%s() ? %s : \"\")", name, formatter) : formatter);
+            if (appendToChecksHasGetter(entry, field))
+            {
+                final String indentedFieldAppender = NEWLINE
+                    .matcher(fieldAppender)
+                    .replaceAll("    ");
+                return String.format(
+                    "        if (has%1$s())\n" +
+                        "        {\n" +
+                        "%2$s" +
+                        "        }\n",
+                    name,
+                    indentedFieldAppender);
+            }
+            else
+            {
+                return fieldAppender;
+            }
         }
         else if (element instanceof Group)
         {
-            return groupEntryToString((Group)element, name);
+            return groupEntryAppendTo((Group)element, name);
         }
         else if (element instanceof Component)
         {
-            return componentToString((Component)element);
+            return componentAppendTo((Component)element);
         }
 
-        return "\"\"";
+        return "";
     }
 
-    protected abstract boolean toStringChecksHasGetter(Entry entry, Field field);
+    protected abstract boolean appendToChecksHasGetter(Entry entry, Field field);
 
-    protected abstract String groupEntryToString(Group element, String name);
+    protected abstract String groupEntryAppendTo(Group element, String name);
 
     protected abstract boolean hasFlag(Entry entry, Field field);
 
@@ -554,9 +574,9 @@ public abstract class Generator
             name);
     }
 
-    protected abstract String componentToString(Component component);
+    protected abstract String componentAppendTo(Component component);
 
-    protected String fieldToString(final Field field)
+    protected String fieldAppendTo(final Field field)
     {
         final String fieldName = formatPropertyName(field.name());
         switch (field.type())
@@ -569,6 +589,9 @@ public abstract class Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
+                return stringAppendTo(fieldName);
+
+            // Call the getter for other choices in order to ensure that the flyweight version is populated
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case UTCTIMESTAMP:
@@ -576,28 +599,25 @@ public abstract class Generator
             case MONTHYEAR:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return stringToString(fieldName);
-
-            // Call the getter for other choices in order to ensure that the flyweight version is populated
+                return timeAppendTo(fieldName);
 
             case DATA:
             case XMLDATA:
-                if (flyweightsEnabled)
-                {
-                    return String.format("Arrays.toString(%1$s())", fieldName);
-                }
-
-                return String.format("Arrays.toString(%1$s)", fieldName);
+                return dataAppendTo(field, fieldName);
 
             default:
                 if (flyweightsEnabled)
                 {
-                    return String.format("%1$s()", fieldName);
+                    return String.format("builder.append(%1$s())", fieldName);
                 }
 
-                return fieldName;
+                return String.format("builder.append(%1$s)", fieldName);
         }
     }
+
+    protected abstract String timeAppendTo(String fieldName);
+
+    protected abstract String dataAppendTo(Field field, String fieldName);
 
     protected boolean isCheckSum(final Entry entry)
     {
@@ -645,7 +665,7 @@ public abstract class Generator
         }
     }
 
-    protected abstract String stringToString(String fieldName);
+    protected abstract String stringAppendTo(String fieldName);
 
     protected String indent(final int times, final String suffix)
     {

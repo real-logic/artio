@@ -56,8 +56,11 @@ public final class DictionaryParser
     private final XPathExpression findHeader;
     private final XPathExpression findTrailer;
 
-    public DictionaryParser()
+    private final boolean allowDuplicates;
+
+    public DictionaryParser(final boolean allowDuplicates)
     {
+        this.allowDuplicates = allowDuplicates;
         try
         {
             documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -443,7 +446,13 @@ public final class DictionaryParser
 
         if (errorMessage.length() > 0)
         {
-            throw new IllegalStateException(errorMessage.toString());
+            if (!allowDuplicates)
+            {
+                throw new IllegalStateException(String.format(
+                        "%sUse -D%s=true to allow duplicated fields (Dangerous. May break parser).",
+                        errorMessage,
+                        CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS));
+            }
         }
     }
 

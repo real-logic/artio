@@ -241,8 +241,24 @@ public class DictionaryParserTest
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
-            "Message: DedupeFieldsTest Field : MemberSubID (104)\n");
+            "Message: DedupeFieldsTest Field : MemberSubID (104)\n" +
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
+        );
     }
+
+    @Test
+    public void shouldDedupeFieldsIncludedTwiceTurnOn() throws Exception
+    {
+        shouldThrow(() -> parseDictionary("example_duplicate_dictionary.xml"),
+            IllegalStateException.class,
+            "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
+            "Details to follow:\n" +
+            "Message: DuplicatedFieldMessage Field : MemberID (100) Through Path: [MemberIDsGroup, Members]\n" +
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
+        );
+        parseDictionary("example_duplicate_dictionary.xml", true);
+    }
+
 
     @Test
     public void shouldFailIfTwoFieldsAppearInSameMessage()
@@ -252,7 +268,8 @@ public class DictionaryParserTest
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
             "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent, Members]\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n");
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n" +
+            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser).");
     }
 
     @Test
@@ -296,8 +313,13 @@ public class DictionaryParserTest
 
     private static Dictionary parseDictionary(final String name) throws Exception
     {
-        return new DictionaryParser()
-            .parse(DictionaryParserTest.class.getResourceAsStream(name), null);
+        return parseDictionary(name, false);
+    }
+
+    private static Dictionary parseDictionary(final String name, final boolean allowDuplicates) throws Exception
+    {
+        return new DictionaryParser(allowDuplicates)
+                .parse(DictionaryParserTest.class.getResourceAsStream(name), null);
     }
 
     private <T> Matcher<T> withElement(final Matcher<?> valueMatcher)

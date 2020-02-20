@@ -25,6 +25,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +35,9 @@ import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
+import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -57,11 +60,10 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.artio.decoder.ExampleMessageDecoder.MESSAGE_TYPE;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.artio.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
-import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
-import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 public class ReplayerTest extends AbstractLogTest
@@ -87,6 +89,7 @@ public class ReplayerTest extends AbstractLogTest
     private ReplayHandler replayHandler = mock(ReplayHandler.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
     private ReplayOperation replayOperation = mock(ReplayOperation.class);
+    private AtomicCounter counter = mock(AtomicCounter.class);
 
     private Replayer replayer;
 
@@ -101,6 +104,8 @@ public class ReplayerTest extends AbstractLogTest
         when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any()))
             .thenReturn(replayOperation);
         when(replayOperation.attemptReplay()).thenReturn(true);
+        when(senderSequenceNumbers.hasDisconnected(anyLong())).thenReturn(false);
+        when(senderSequenceNumbers.bytesInBufferCounter(anyLong())).thenReturn(counter);
 
         setReplayedMessages(1);
 
@@ -117,7 +122,8 @@ public class ReplayerTest extends AbstractLogTest
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             replayHandler,
             senderSequenceNumbers,
-            new FakeFixSessionCodecsFactory());
+            new FakeFixSessionCodecsFactory(),
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     }
 
     private void setReplayedMessages(final int replayedMessages)
@@ -134,19 +140,9 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldParseResendRequest()
     {
         final long result = bufferHasResendRequest(END_SEQ_NO);
-        onRequestResendMessage(result);
+        onRequestResendMessage(result, END_SEQ_NO);
 
         verifyQueriedService(END_SEQ_NO);
-        verifyPublicationOnlyPayloadQueried();
-    }
-
-    @Test
-    public void shouldPublishAllRemainingMessages()
-    {
-        final long result = bufferHasResendRequest(MOST_RECENT_MESSAGE);
-        onRequestResendMessage(result);
-
-        verifyQueriedService(MOST_RECENT_MESSAGE);
         verifyPublicationOnlyPayloadQueried();
     }
 
@@ -262,7 +258,7 @@ public class ReplayerTest extends AbstractLogTest
 
         // try to send the gap fill, but get back pressured
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, endSeqNo);
         replayer.doWork(); // receives the callback with the two test requests
 
         replayer.doWork(); // attempts the replay and get's back pressured
@@ -374,7 +370,7 @@ public class ReplayerTest extends AbstractLogTest
         });
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, endSeqNo);
 
         replayer.doWork();
 
@@ -418,7 +414,7 @@ public class ReplayerTest extends AbstractLogTest
 
         // Processes the resend request
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, endSeqNo);
 
         // Processes the back pressured try claim
         replayer.doWork();
@@ -447,7 +443,7 @@ public class ReplayerTest extends AbstractLogTest
         setReplayedMessages(0);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onRequestResendMessage(result);
+        onRequestResendMessage(result, endSeqNo);
 
         replayer.doWork();
 
@@ -464,7 +460,7 @@ public class ReplayerTest extends AbstractLogTest
         setReplayedMessages(0);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, endSeqNo);
 
         replayer.doWork();
 
@@ -538,7 +534,7 @@ public class ReplayerTest extends AbstractLogTest
         });
 
         final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, END_SEQ_NO);
 
         verifyPublicationOnlyPayloadQueried();
         verifyNoMoreInteractions(claim);
@@ -571,24 +567,6 @@ public class ReplayerTest extends AbstractLogTest
 
             return true;
         });
-    }
-
-    @Test
-    public void shouldIgnoreIrrelevantFixMessages()
-    {
-        onMessage(LogonDecoder.MESSAGE_TYPE, buffer.capacity(), CONTINUE);
-
-        verifyNoMoreInteractions(replayQuery, publication);
-    }
-
-    @Test
-    public void shouldValidateResendRequestMessageSequenceNumbers()
-    {
-        final long result = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, CONTINUE);
-
-        verify(errorHandler).onError(any());
-        verifyNoMoreInteractions(replayQuery, publication);
     }
 
     @After
@@ -651,7 +629,7 @@ public class ReplayerTest extends AbstractLogTest
         whenReplayQueried().then(answer);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessage(result, endSeqNo);
     }
 
     private void onReplayOtherSession(final int endSeqNo)
@@ -659,7 +637,7 @@ public class ReplayerTest extends AbstractLogTest
         whenReplayQueried().thenReturn(true);
 
         final long result = bufferHasResendRequest(endSeqNo, RESEND_TARGET_2);
-        onMessageWithSession(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT, SESSION_ID_2, CONNECTION_ID_2);
+        onRequestResendMessageWithSession(result, COMMIT, SESSION_ID_2, CONNECTION_ID_2, BEGIN_SEQ_NO, endSeqNo);
     }
 
     private void onFragment(final int length, final Action expectedAction, final ControlledFragmentHandler handler)
@@ -769,28 +747,26 @@ public class ReplayerTest extends AbstractLogTest
             containsString("52=" + DATE_TIME_STR + '\001'));
     }
 
-    private void onRequestResendMessage(final long result)
+    private void onRequestResendMessage(final long result, final int endSeqNo)
     {
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        onRequestResendMessageWithSession(result, Action.COMMIT, SESSION_ID, CONNECTION_ID, BEGIN_SEQ_NO, endSeqNo);
     }
 
-    private void onMessage(final long messageType, final long result, final Action expectedAction)
-    {
-        onMessageWithSession(messageType, result, expectedAction, SESSION_ID, CONNECTION_ID);
-    }
-
-    private void onMessageWithSession(
-        final long messageType,
+    private void onRequestResendMessageWithSession(
         final long result,
         final Action expectedAction,
         final long sessionId,
-        final long connectionId)
+        final long connectionId,
+        final int beginSeqNo,
+        final int endSeqNo)
     {
-        final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
-        final Action action = replayer.onMessage(
-            buffer, offset, length,
-            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L, 0);
+        final int length = Encoder.length(result);
+
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer();
+        buffer.wrap(this.buffer, offset, length);
+        final Action action = replayer.onResendRequest(
+            sessionId, connectionId, beginSeqNo, endSeqNo, SEQUENCE_INDEX, buffer);
         assertEquals(expectedAction, action);
     }
 

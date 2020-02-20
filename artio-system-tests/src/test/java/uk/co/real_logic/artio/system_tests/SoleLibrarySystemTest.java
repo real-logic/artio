@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.session.Session;
 
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -62,5 +63,23 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
             acceptingHandler.hasSeenSession());
 
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
+    }
+
+    @Test
+    public void shouldSupportOfflineSessionsInSoleLibraryMode()
+    {
+        connectSessions();
+        acceptingSession = acceptingHandler.lastSession();
+        disconnectSessions();
+        final long sessionId = acceptingSession.id();
+        final Session oldAcceptingSession = acceptingSession;
+        assertCountersClosed(true, oldAcceptingSession);
+
+
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+
+        assertOfflineSession(sessionId, acceptingSession);
+        assertSame(oldAcceptingSession, acceptingSession);
+        assertCountersClosed(false, acceptingSession);
     }
 }

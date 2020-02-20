@@ -27,10 +27,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -168,8 +165,17 @@ public class TestSystem
 
     public void awaitBlocking(final Runnable operation)
     {
+        awaitBlocking(() ->
+        {
+            operation.run();
+            return null;
+        });
+    }
+
+    public <T> T awaitBlocking(final Callable<T> operation)
+    {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
-        final Future<?> future = executor.submit(operation);
+        final Future<T> future = executor.submit(operation);
 
         while (!future.isDone())
         {
@@ -180,11 +186,13 @@ public class TestSystem
 
         try
         {
-            future.get();
+            return future.get();
         }
         catch (final InterruptedException | ExecutionException e)
         {
             LangUtil.rethrowUnchecked(e);
         }
+
+        return null;
     }
 }

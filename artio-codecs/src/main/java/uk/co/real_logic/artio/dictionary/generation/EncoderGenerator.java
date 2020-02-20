@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,7 +222,6 @@ public class EncoderGenerator extends Generator
         return Encoder.class;
     }
 
-    @Override
     protected String resetGroup(final Entry entry)
     {
         final Group group = (Group)entry.element();
@@ -287,14 +286,13 @@ public class EncoderGenerator extends Generator
                 "    private static final byte[] DEFAULT_BEGIN_STRING=\"%s\".getBytes(StandardCharsets.US_ASCII);" +
                 "\n\n",
                 beginString));
-
         }
 
         precomputedHeaders(out, aggregate.entries());
         generateSetters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
-        out.append(toString(aggregate, isMessage));
+        out.append(appendTo(aggregate, isMessage));
         out.append("}\n");
     }
 
@@ -984,16 +982,30 @@ public class EncoderGenerator extends Generator
             bytes));
     }
 
-    protected String stringToString(final String fieldName)
+    protected String stringAppendTo(final String fieldName)
     {
-        return String.format("%1$s.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)", fieldName);
+        return String.format("appendBuffer(builder, %1$s, %1$sOffset, %1$sLength)", fieldName);
     }
 
-    protected String componentToString(final Component component)
+    protected String timeAppendTo(final String fieldName)
+    {
+        return stringAppendTo(fieldName);
+    }
+
+    protected String dataAppendTo(final Field field, final String fieldName)
+    {
+        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+        return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
+    }
+
+    protected String componentAppendTo(final Component component)
     {
         final String name = component.name();
         return String.format(
-            "                String.format(\"  \\\"%1$s\\\":  %%s\\n\", %2$s" + EXPAND_INDENT + ")",
+            "    indent(builder, level);\n" +
+            "    builder.append(\"\\\"%1$s\\\": \");\n" +
+            "    %2$s.appendTo(builder, level + 1);\n" +
+            "    builder.append(\"\\n\");\n",
             name,
             formatPropertyName(name));
     }
@@ -1022,20 +1034,6 @@ public class EncoderGenerator extends Generator
         return resetByFlag(field.name());
     }
 
-    protected String toStringGroupParameters()
-    {
-        return "final int remainingEntries";
-    }
-
-    protected String toStringGroupSuffix()
-    {
-        return
-            "        if (remainingEntries > 1)\n" +
-            "        {\n" +
-            "            entries += \",\\n\" + next.toString(remainingEntries - 1);\n" +
-            "        }\n";
-    }
-
     protected boolean hasFlag(final Entry entry, final Field field)
     {
         final Type type = field.type();
@@ -1057,23 +1055,41 @@ public class EncoderGenerator extends Generator
             .collect(joining());
     }
 
-    @Override
     protected String resetStringBasedData(final String name)
     {
         return resetLength(name);
     }
 
-    protected String groupEntryToString(final Group element, final String name)
+    protected String groupEntryAppendTo(final Group group, final String name)
     {
-        final Entry numberField = element.numberField();
+        final Entry numberField = group.numberField();
+
         return String.format(
-            "                (%3$s > 0 ? String.format(\"  \\\"%1$s\\\": [\\n" +
-            "  %%s" +
-            "\\n  ]" +
-            "\\n\", %2$s.toString(%3$s).replace(\"\\n\", \"\\n  \")" + ") : \"\")",
+            "    if (has%2$s)\n" +
+            "    {\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "    final int %3$s = this.%3$s;\n" +
+            "    %5$s %4$s = this.%4$s;\n" +
+            "    for (int i = 0; i < %3$s; i++)\n" +
+            "    {\n" +
+            "        indent(builder, level);\n" +
+            "        %4$s.appendTo(builder, level + 1);" +
+            "        if (i < (%3$s - 1))\n" +
+            "        {\n" +
+            "            builder.append(',');\n" +
+            "        }\n" +
+            "        builder.append('\\n');\n" +
+            "        %4$s = %4$s.next();\n" +
+            "    }\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"],\\n\");\n" +
+            "    }\n",
             name,
+            group.numberField().name(),
+            formatPropertyName(numberField.name()),
             formatPropertyName(name),
-            formatPropertyName(numberField.name()));
+            encoderClassName(name));
     }
 
     protected String optionalReset(final Field field, final String name)
@@ -1081,7 +1097,7 @@ public class EncoderGenerator extends Generator
         return field.type().hasLengthField(false) ? resetLength(name) : resetByFlag(name);
     }
 
-    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field) || field.type().hasLengthField(false);
     }

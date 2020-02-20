@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,7 @@ import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
     private final List<FixMessage> receivedMessages = new ArrayList<>();
+    private final CharFormatter formatter = new CharFormatter("Field: %s=%s%n");
 
     private ValidationError error;
     private boolean isCompleted;
@@ -68,7 +70,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public synchronized MessageControl onField(
         final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
-        DebugLogger.log(FIX_TEST, "Field: %s=%s%n", tag, buffer, offset, length);
+        DebugLogger.log(FIX_TEST, formatter, tag, buffer, offset, length);
         if (tag == Constants.SENDER_COMP_ID)
         {
             senderCompId = buffer.getAscii(offset, length);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
@@ -388,21 +390,64 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateHumanReadableToString() throws Exception
+    public void shouldToString() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
 
-        assertThat(decoder.toString(), containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
 
         assertValid(decoder);
     }
 
     @Test
-    public void shouldIncludeOptionalFieldsInToString() throws Exception
+    public void shouldToStringIncludeOptionalFields() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
-        assertThat(decoder.toString(), containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
+    }
+
+    @Test
+    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
+
+        decode(SHORTER_STRING_MESSAGE, decoder);
+
+        assertToStringAndAppendToMatches(decoder, containsString("\"OnBehalfOfCompID\": \"ab\","));
+    }
+
+    @Test
+    public void shouldToStringComponent() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
+
+        assertToStringAndAppendToMatches(decoder, containsString("  \"ComponentField\": \"2\""));
+    }
+
+    @Test
+    public void shouldToStringRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_GROUP_TWO_ELEMENTS));
+    }
+
+    private void assertToStringAndAppendToMatches(final Decoder decoder, final Matcher<String> matcher)
+    {
+        assertThat(decoder.toString(), matcher);
+
+        assertAppendToMatches(decoder::appendTo, matcher);
+    }
+
+    static void assertAppendToMatches(
+        final Function<StringBuilder, StringBuilder> appendTo, final Matcher<String> matcher)
+    {
+        final StringBuilder builder = new StringBuilder();
+        final StringBuilder newBuilder = appendTo.apply(builder);
+        final String builderString = builder.toString();
+        assertThat(builderString, matcher);
+        assertSame(builder, newBuilder);
     }
 
     @Test
@@ -415,16 +460,6 @@ public abstract class AbstractDecoderGeneratorTest
         decode(SHORTER_STRING_MESSAGE, decoder);
 
         assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
-    }
-
-    @Test
-    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
-
-        decode(SHORTER_STRING_MESSAGE, decoder);
-
-        assertThat(decoder.toString(), containsString("\"OnBehalfOfCompID\": \"ab\","));
     }
 
     @Test
@@ -497,14 +532,6 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void shouldToStringRepeatingGroups() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
-
-        assertThat(decoder, hasToString(containsString(STRING_GROUP_TWO_ELEMENTS)));
-    }
-
-    @Test
     public void shouldDecodeComponents() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
@@ -532,14 +559,6 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateComponentToString() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
-
-        assertThat(decoder.toString(), containsString("  \"ComponentField\": \"2\""));
-    }
-
-    @Test
     public void shouldGenerateComponentInterface() throws Exception
     {
         assertTrue(
@@ -552,12 +571,12 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
+        final Decoder decoder = newHeartbeat();
         final Object allFieldsField = getRequiredFields(decoder);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
         @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
-        assertThat(allFields, hasItem(116));
+        assertThat(allFields, hasItem(INT_FIELD_TAG));
         assertThat(allFields, not(hasItem(112)));
         assertThat(allFields, not(hasItem(999)));
     }
@@ -567,9 +586,33 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_MESSAGE);
 
-        assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+        assertInvalid(decoder, REQUIRED_TAG_MISSING, INT_FIELD_TAG);
+    }
+
+    // heartbeatWithoutEnumValueValidation
+
+    @Test
+    public void shouldValidateMissingRequiredPriceFields() throws Exception
+    {
+        final Decoder decoder = newHeartbeat();
+        assertFloatFieldIsNan(decoder);
+
+        decode(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE, decoder);
+
+        assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
+    }
+
+    @Test
+    public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE);
+        assertFloatFieldIsNan(decoder);
+    }
+
+    private void assertFloatFieldIsNan(final Decoder decoder) throws Exception
+    {
+        final DecimalFloat floatField = (DecimalFloat)getFloatField(decoder);
+        assertTrue(floatField.toString(), floatField.isNaNValue());
     }
 
     @Test
@@ -603,17 +646,32 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void shouldLeaveDecoderInUsableIfValidationFailsDuringRepeatingGroup() throws Exception
     {
-        //Given
         final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_TWICE_IN_MESSAGE);
 
-        //When
         assertFalse("Failed validation when it should have passed", decoder.validate());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
 
-        //Then
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
         assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldSupportGroupNumbersGreaterThanTheNumberOfElementsInTheGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
+    }
+
+    @Test
+    public void shouldReasonablyValidateGroupNumbersLessThanTheNumberOfElementsInTheGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            REPEATING_GROUP_MESSAGE_WITH_TOO_LOW_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
     }
 
     @Test
@@ -621,9 +679,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
-        assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertInvalid(decoder, INVALID_TAG_NUMBER, 1000);
 
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
@@ -755,7 +811,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
 
         assertFalse("Passed validation with missing value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
     }
 
@@ -765,8 +821,17 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldSupportLargerIntBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_LARGE);
+
+        assertTrue(decoder.validate());
+        assertEquals(99, getIntField(decoder));
     }
 
     @Test
@@ -785,7 +850,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
 
         assertFalse("Passed validation with missing value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
     }
 
@@ -815,7 +880,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_APPEARS_MORE_THAN_ONCE_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
     }
 
@@ -1584,9 +1649,15 @@ public abstract class AbstractDecoderGeneratorTest
 
     private Decoder decodeHeartbeat(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
+        final Decoder decoder = newHeartbeat();
         decode(example, decoder);
         return decoder;
+    }
+
+    private Decoder newHeartbeat()
+        throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException
+    {
+        return (Decoder)heartbeat.getConstructor().newInstance();
     }
 
     private Decoder decodeHeartbeatWithoutEnumValue(final String example) throws Exception
@@ -1707,6 +1778,18 @@ public abstract class AbstractDecoderGeneratorTest
         assertFalse(String.format(
             "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
             isValid);
+    }
+
+    private void assertInvalid(final Decoder decoder, final int rejectReason, final int invalidTagId)
+    {
+        final boolean isValid = decoder.validate();
+        assertFalse(String.format(
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
+        assertEquals("Wrong reject reason with invalidTagId=" + decoder.invalidTagId(),
+            rejectReason, decoder.rejectReason());
+        assertEquals("Wrong tag id with rejectReason=" + decoder.rejectReason(),
+            invalidTagId, decoder.invalidTagId());
     }
 
     private <T extends Exception> void assertThrows(

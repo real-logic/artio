@@ -24,7 +24,6 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
@@ -252,10 +251,6 @@ public class ReplayQuery implements AutoCloseable
                 replaySubscription = aeronArchive.context().aeron().addSubscription(
                     IPC_CHANNEL, archiveReplayStream);
             }
-
-            DebugLogger.log(logTag,
-                "ReplayQuery : Built new replay operation with Recording Ranges: %s%n",
-                ranges);
 
             return new ReplayOperation(
                 handler,

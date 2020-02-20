@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -163,6 +165,16 @@ public class AbstractGatewayToGatewaySystemTest
                 testSystem.poll();
                 assertNotSession(acceptingHandler, acceptingSession);
                 assertNotSession(initiatingHandler, initiatingSession);
+            });
+    }
+
+    void sessionNoLongerManaged(final FakeHandler handler, final Session session)
+    {
+        assertEventuallyTrue("libraries receive disconnect messages",
+            () ->
+            {
+                testSystem.poll();
+                assertNotSession(handler, session);
             });
     }
 
@@ -388,10 +400,15 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(SessionState.DISABLED, session.state());
         assertThat(library.sessions(), hasSize(0));
 
-        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
+        final List<ConnectedSessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
         assertThat(sessions, contains(allOf(
             hasConnectionId(connectionId),
             hasSessionId(sessionId))));
+    }
+
+    void assertCountersClosed(final boolean expectedClosed, final Session session)
+    {
+        assertEquals(expectedClosed, ((InternalSession)session).areCountersClosed());
     }
 
     void engineShouldManageSession(
@@ -439,8 +456,6 @@ public class AbstractGatewayToGatewaySystemTest
         final List<Session> sessions = library.sessions();
         assertThat(sessions, hasSize(1));
 
-        final Session newSession = sessions.get(0);
-        assertNotSame(session, newSession);
         return lastReceivedMsgSeqNum;
     }
 
@@ -541,8 +556,14 @@ public class AbstractGatewayToGatewaySystemTest
 
     Reply<MetaDataStatus> writeMetaData(final UnsafeBuffer writeBuffer, final long sessionId)
     {
+        return writeMetaData(writeBuffer, sessionId, 0);
+    }
+
+    Reply<MetaDataStatus> writeMetaData(
+        final UnsafeBuffer writeBuffer, final long sessionId, final int metaDataOffset)
+    {
         final Reply<MetaDataStatus> reply = acceptingLibrary.writeMetaData(
-            sessionId, writeBuffer, 0, writeBuffer.capacity());
+            sessionId, metaDataOffset, writeBuffer, 0, writeBuffer.capacity());
 
         testSystem.awaitCompletedReplies(reply);
 
@@ -573,5 +594,19 @@ public class AbstractGatewayToGatewaySystemTest
         });
 
         return handler;
+    }
+
+    void assertOfflineSession(final long sessionId, final Session session)
+    {
+        assertEquals(sessionId, session.id());
+        assertEquals("", session.connectedHost());
+        assertEquals(Session.UNKNOWN, session.connectedPort());
+        assertEquals(NO_CONNECTION_ID, session.connectionId());
+        assertEquals(SessionState.DISCONNECTED, session.state());
+    }
+
+    Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
     }
 }

@@ -20,19 +20,20 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
-class GatewaySession implements SessionInfo, SessionProcessHandler
+class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 {
     private static final int NO_TIMEOUT = -1;
 
@@ -47,7 +48,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
     private final long authenticationTimeoutInMs;
 
     private FixDictionary fixDictionary;
-    private ReceiverEndPoint receiverEndPoint;
+    private FixReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
 
     private long sessionId;
@@ -77,7 +78,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         final String address,
         final ConnectionType connectionType,
         final CompositeKey sessionKey,
-        final ReceiverEndPoint receiverEndPoint,
+        final FixReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
         final Consumer<GatewaySession> onGatewaySessionLogon,
         final boolean closedResendInterval,
@@ -223,6 +224,11 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
     }
 
+    public void enqueueTask(final BooleanSupplier task)
+    {
+        throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
+    }
+
     InternalSession session()
     {
         return session;
@@ -238,13 +244,15 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         final int offset,
         final int length,
         final long messageType,
-        final long sessionId)
+        final long position)
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received ", buffer, offset, length);
 
-            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
+            session.messageInfo().isValid(true);
+
+            sessionParser.onMessage(buffer, offset, length, messageType, position);
         }
     }
 
@@ -259,8 +267,9 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
+            sessionParser.sessionKey(sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
-            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s%n", sessionKey.localCompId());
+            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());
         }
         senderEndPoint.sessionId(sessionId);
     }

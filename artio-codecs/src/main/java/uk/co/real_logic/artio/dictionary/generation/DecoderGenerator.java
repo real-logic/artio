@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +63,7 @@ public class DecoderGenerator extends Generator
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     private static final String GROUP_FIELDS = "GROUP_FIELDS";
+    private static final String ALL_GROUP_FIELDS = "ALL_GROUP_FIELDS";
 
     // Has to be generated everytime since HeaderDecoder and TrailerDecoder are generated.
     private static final String MESSAGE_DECODER =
@@ -75,6 +76,8 @@ public class DecoderGenerator extends Generator
         "    TrailerDecoder trailer();\n" +
         "}";
 
+    public static final int INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP =
+        RejectReason.INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP.representation();
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
     public static final int REQUIRED_TAG_MISSING =
@@ -215,7 +218,7 @@ public class DecoderGenerator extends Generator
         generateGetters(out, className, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
-        out.append(toString(aggregate, isMessage));
+        out.append(appendTo(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
     }
@@ -257,7 +260,6 @@ public class DecoderGenerator extends Generator
         return Decoder.class;
     }
 
-    @Override
     protected String resetGroup(final Entry entry)
     {
         final Group group = (Group)entry.element();
@@ -316,20 +318,6 @@ public class DecoderGenerator extends Generator
         return resetFieldValue(field, "MISSING_INT");
     }
 
-    protected String toStringGroupParameters()
-    {
-        return "";
-    }
-
-    protected String toStringGroupSuffix()
-    {
-        return
-            "        if (next != null)\n" +
-            "        {\n" +
-            "            entries += \",\\n\" + next.toString();\n" +
-            "        }\n";
-    }
-
     private String additionalReset(final boolean isGroup)
     {
         return
@@ -365,13 +353,13 @@ public class DecoderGenerator extends Generator
         final String enumValidation = aggregate
             .allFieldsIncludingComponents()
             .filter((entry) -> entry.element().isEnumField())
-            .map((entry) -> validateEnum(entry, out))
+            .map(this::generateEnumValidation)
             .collect(joining("\n"));
 
         //maybe this should look at groups on components too?
         final String groupValidation = aggregate
             .allGroupsIncludingComponents()
-            .map((entry) -> generateGroupValidation(entry, out))
+            .map(this::generateGroupValidation)
             .collect(joining("\n"));
 
         final boolean isMessage = type == MESSAGE;
@@ -399,7 +387,7 @@ public class DecoderGenerator extends Generator
             "";
 
         out.append(String.format(
-            (isGroup ? "" :
+            (isGroup ? generateAllGroupFields(aggregate) :
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
             "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
@@ -438,6 +426,15 @@ public class DecoderGenerator extends Generator
             enumValidation,
             groupValidation,
             2 * aggregate.allFieldsIncludingComponents().count()));
+    }
+
+    private String generateAllGroupFields(final Aggregate groupAggregate)
+    {
+        final List<Field> allGroupFields = groupAggregate
+            .fieldEntries()
+            .map(entry -> (Field)entry.element())
+            .collect(toList());
+        return generateFieldDictionary(allGroupFields, ALL_GROUP_FIELDS, true);
     }
 
     private String generateFieldDictionary(final Collection<Field> fields, final String name,
@@ -482,7 +479,7 @@ public class DecoderGenerator extends Generator
             constantName(field.name()));
     }
 
-    private CharSequence validateEnum(final Entry entry, final Writer out)
+    private CharSequence generateEnumValidation(final Entry entry)
     {
         final Field field = (Field)entry.element();
         if (!EnumGenerator.hasEnumGenerated(field))
@@ -553,24 +550,41 @@ public class DecoderGenerator extends Generator
             );
     }
 
-    private CharSequence generateGroupValidation(final Entry entry, final Writer out)
+    private CharSequence generateGroupValidation(final Entry entry)
     {
         final Group group = (Group)entry.element();
-        final String numberFieldName = group.numberField().name();
+        final Entry numberField = group.numberField();
+        final String numberFieldName = numberField.name();
+        final boolean required = entry.required();
         final String validationCode = String.format(
-            "        for (final %1$s iterator : %2$s.iterator())\n" +
-            "        {\n" +
-            "            if (!iterator.validate())\n" +
-            "            {\n" +
-            "                invalidTagId = iterator.invalidTagId();\n" +
-            "                rejectReason = iterator.rejectReason();\n" +
-            "                return false;\n" +
-            "            }\n" +
-            "        }\n",
+            "%3$s        {\n" +
+            "%3$s            int count = 0;\n" +
+            "%3$s            final %4$s iterator = %2$s.iterator();" +
+            "%3$s            for (final %1$s group : iterator)\n" +
+            "%3$s            {\n" +
+            "%3$s                count++;" +
+            "%3$s                if (!group.validate())\n" +
+            "%3$s                {\n" +
+            "%3$s                    invalidTagId = group.invalidTagId();\n" +
+            "%3$s                    rejectReason = group.rejectReason();\n" +
+            "%3$s                    return false;\n" +
+            "%3$s                }\n" +
+            "%3$s            }\n" +
+            "%3$s            if (count != iterator.numberFieldValue())\n" +
+            "%3$s            {\n" +
+            "%3$s                invalidTagId = %5$s;\n" +
+            "%3$s                rejectReason = %6$s;\n" +
+            "%3$s                return false;\n" +
+            "%3$s            }\n" +
+            "%3$s        }\n",
             decoderClassName(group),
-            iteratorFieldName(group));
+            iteratorFieldName(group),
+            required ? "" : "    ",
+            iteratorClassName(group),
+            numberField.number(),
+            INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP);
 
-        if (entry.required())
+        if (required)
         {
             return validationCode;
         }
@@ -579,7 +593,7 @@ public class DecoderGenerator extends Generator
             return String.format(
                 "        if (has%1$s)\n" +
                 "        {\n" +
-                "            %2$s" +
+                "%2$s" +
                 "        }\n",
                 numberFieldName,
                 validationCode
@@ -647,7 +661,7 @@ public class DecoderGenerator extends Generator
             });
     }
 
-    private void interfaceGetter(final Aggregate parent, final Entry entry, final Writer out) throws IOException
+    private void interfaceGetter(final Aggregate parent, final Entry entry, final Writer out)
     {
         entry.forEach(
             (field) -> out.append(fieldInterfaceGetter(entry, field)),
@@ -879,12 +893,12 @@ public class DecoderGenerator extends Generator
             "        private int remainder;\n" +
             "        private %2$s current;\n\n" +
             "        public %1$s(final %3$s parent)\n" +
-            "        {\n\n" +
+            "        {\n" +
             "            this.parent = parent;\n" +
             "        }\n\n" +
             "        public boolean hasNext()\n" +
             "        {\n" +
-            "            return remainder > 0;\n" +
+            "            return remainder > 0 && current != null;\n" +
             "        }\n" +
             "        public %2$s next()\n" +
             "        {\n" +
@@ -893,9 +907,13 @@ public class DecoderGenerator extends Generator
             "            current = current.next();\n" +
             "            return value;\n" +
             "        }\n" +
+            "        public int numberFieldValue()\n" +
+            "        {\n" +
+            "            return %4$s;\n" +
+            "        }\n" +
             "        public void reset()\n" +
             "        {\n" +
-            "            remainder = %4$s;\n" +
+            "            remainder = numberFieldValue();\n" +
             "            current = parent.%5$s();\n" +
             "        }\n" +
             "        public %1$s iterator()\n" +
@@ -1122,16 +1140,20 @@ public class DecoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return " = new DecimalFloat()";
+                return " = DecimalFloat.newNaNValue()";
 
             case BOOLEAN:
+                return "";
+
+            case CHAR:
+                return " = MISSING_CHAR";
+
             case INT:
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-            case CHAR:
-                return "";
+                return " = MISSING_INT";
 
             case DATA:
             case XMLDATA:
@@ -1432,13 +1454,13 @@ public class DecoderGenerator extends Generator
             .collect(joining("\n", "", "\n"));
     }
 
-    protected String componentToString(final Component component)
+    protected String componentAppendTo(final Component component)
     {
         return component
             .entries()
             .stream()
-            .map(this::entryToString)
-            .collect(joining(" + \n"));
+            .map(this::entryAppendTo)
+            .collect(joining("\n"));
     }
 
     private String decodeGroup(final Entry entry)
@@ -1461,13 +1483,28 @@ public class DecoderGenerator extends Generator
             "                        position += %1$sCurrent.decode(buffer, position, end - position);\n" +
             "                        %1$sCurrent = %1$sCurrent.next();\n" +
             "                    }\n" +
+            "                }\n" +
+            "                if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "                {\n" +
+            "                    final int checkEqualsPosition = buffer.scan(position, end, '=');\n" +
+            "                    if (checkEqualsPosition != AsciiBuffer.UNKNOWN_INDEX)\n" +
+            "                    {\n" +
+            "                        final int checkTag = buffer.getInt(position, checkEqualsPosition);\n" +
+            "                        if (%1$s." + ALL_GROUP_FIELDS + ".contains(checkTag))\n" +
+            "                        {\n" +
+            "                            invalidTagId = tag;\n" +
+            "                            rejectReason = %6$s;\n" +
+            "                            return position;\n" +
+            "                        }\n" +
+            "                    }\n" +
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
             groupNumberField,
             // Have to make a call to initialise the group number at this point when flyweighting.
             flyweightsEnabled ? groupNumberField + "()" : "this." + groupNumberField,
-            MESSAGE_FIELDS);
+            MESSAGE_FIELDS,
+            INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP);
 
         return decodeField(group.numberField(), parseGroup);
     }
@@ -1603,9 +1640,31 @@ public class DecoderGenerator extends Generator
         return prefix + decodeMethod + ";\n";
     }
 
-    protected String stringToString(final String fieldName)
+    protected String stringAppendTo(final String fieldName)
     {
-        return String.format("%1$sAsString()", fieldName);
+        return String.format("builder.append(%1$s(), 0, %1$sLength())", fieldName);
+    }
+
+    protected String dataAppendTo(final Field field, final String fieldName)
+    {
+        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+
+        if (flyweightsEnabled)
+        {
+            return String.format("appendData(builder, %1$s(), %2$s())", fieldName, lengthName);
+        }
+
+        return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
+    }
+
+    protected String timeAppendTo(final String fieldName)
+    {
+        if (flyweightsEnabled)
+        {
+            return String.format("appendData(builder, %1$s(), %1$sLength())", fieldName);
+        }
+
+        return String.format("appendData(builder, %1$s, %1$sLength)", fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)
@@ -1627,7 +1686,6 @@ public class DecoderGenerator extends Generator
             .collect(joining());
     }
 
-    @Override
     protected String resetStringBasedData(final String name)
     {
         return String.format(
@@ -1640,16 +1698,31 @@ public class DecoderGenerator extends Generator
             formatPropertyName(name));
     }
 
-    protected String groupEntryToString(final Group element, final String name)
+    protected String groupEntryAppendTo(final Group group, final String name)
     {
         return String.format(
-            "                (has%3$s ? String.format(\"  \\\"%1$s\\\": [\\n" +
-            "  %%s" +
-            "\\n  ]" +
-            "\\n\", %2$s.toString().replace(\"\\n\", \"\\n  \")" + ") : \"\")",
+            "    if (has%2$s)\n" +
+            "    {\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "    for (final %3$s %4$s : %5$s.iterator())\n" +
+            "    {\n" +
+            "        indent(builder, level);\n" +
+            "        %4$s.appendTo(builder, level + 1);" +
+            "        if (%4$s.next() != null)\n" +
+            "        {\n" +
+            "            builder.append(',');\n" +
+            "        }\n" +
+            "        builder.append('\\n');\n" +
+            "    }\n" +
+            "    indent(builder, level);\n" +
+            "    builder.append(\"],\\n\");\n" +
+            "    }\n",
             name,
-            formatPropertyName(name),
-            element.numberField().name());
+            group.numberField().name(),
+            decoderClassName(name),
+            formatPropertyName(decoderClassName(name)),
+            iteratorFieldName(group));
     }
 
     protected String optionalReset(final Field field, final String name)
@@ -1657,7 +1730,7 @@ public class DecoderGenerator extends Generator
         return resetByFlag(name);
     }
 
-    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field);
     }

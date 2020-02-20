@@ -27,6 +27,8 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.ilink.ILink3Session;
+import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
@@ -411,12 +413,18 @@ public class FixLibrary extends GatewayProcess
      * seession ids are reset the old meta-data will be reset as well. If the session is persistent then the metadata
      * persists over restarts.
      *
-     * You might want to use session meta data to store information like ids for internal systems that correspond to
+     * You can use session meta data to store information like ids for internal systems that correspond to
      * FIX sessions.
+     *
+     * This method can be used both to update existing metadata and to initialise the sessions'
+     * metadata. When updating any metadata before the <code>metaDataOffset</code> position within the metadata buffer
+     * or after <code>metaDataOffset + length</code> will be left as previous. When i
      *
      * This is an asynchronous operation and the returned reply object should be checked for completion.
      *
      * @param sessionId the session id of the session that meta data is written to.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer. <code>0</code> should be used for
+     *                       initialization.
      * @param buffer the buffer where the meta data to be written is stored.
      * @param offset the offset within the buffer
      * @param length the length of the data within the buffer.
@@ -424,11 +432,12 @@ public class FixLibrary extends GatewayProcess
      */
     public Reply<MetaDataStatus> writeMetaData(
         final long sessionId,
+        final int metaDataUpdateOffset,
         final DirectBuffer buffer,
         final int offset,
         final int length)
     {
-        return poller.writeMetaData(sessionId, buffer, offset, length);
+        return poller.writeMetaData(sessionId, metaDataUpdateOffset, buffer, offset, length);
     }
 
     /**
@@ -448,4 +457,9 @@ public class FixLibrary extends GatewayProcess
         return poller.currentAeronChannel();
     }
 
+    // NB: This is an experimental API and is subject to change or potentially removal.
+    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    {
+        return poller.initiate(configuration);
+    }
 }

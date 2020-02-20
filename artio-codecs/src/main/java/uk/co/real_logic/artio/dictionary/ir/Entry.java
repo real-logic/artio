@@ -156,6 +156,11 @@ public final class Entry
         return element().name();
     }
 
+    public int number()
+    {
+        return ((Field)element()).number();
+    }
+
     public interface Element
     {
         default boolean isEnumField()

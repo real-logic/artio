@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
@@ -40,6 +41,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             fakeClock,
             Clock.systemNanoTime(),
             sessionProxy,
+            mock(GatewayPublication.class),
             mockPublication,
             idStrategy,
             SENDING_TIME_WINDOW,
@@ -52,7 +54,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
-            SessionCustomisationStrategy.none());
+            SessionCustomisationStrategy.none(),
+            messageInfo);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(mockLogonListener);
         return acceptorSession;

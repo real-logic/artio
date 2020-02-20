@@ -94,6 +94,7 @@ public interface EngineEndPointHandler
         int libraryId,
         long sessionId,
         long correlationId,
+        int metaDataOffset,
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
@@ -112,4 +113,6 @@ public interface EngineEndPointHandler
         int replayToSequenceNumber,
         int replayToSequenceIndex,
         long latestReplyArrivalTimeInMs);
+
+    Action onInitiateILinkConnection(int libraryId, int port, long correlationId, String host);
 }

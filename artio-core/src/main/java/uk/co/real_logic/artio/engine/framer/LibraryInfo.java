@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 
 import java.util.List;
 
@@ -43,5 +43,5 @@ public interface LibraryInfo
      *
      * @return an unmodifiable list of the current sessions connected to this library.
      */
-    List<SessionInfo> sessions();
+    List<ConnectedSessionInfo> sessions();
 }

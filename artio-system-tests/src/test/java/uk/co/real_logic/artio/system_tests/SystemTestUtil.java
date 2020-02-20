@@ -67,7 +67,7 @@ public final class SystemTestUtil
 
     static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
     static final String INITIATOR_ID2 = "initiator2";
-    static final String CLIENT_LOGS = "client-logs";
+    public static final String CLIENT_LOGS = "client-logs";
     static final long TIMEOUT_IN_MS = 100;
     static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;
@@ -118,6 +118,12 @@ public final class SystemTestUtil
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
+        return alwaysSendTestRequest(session, testReqID, fixDictionary);
+    }
+
+    static long alwaysSendTestRequest(
+        final Session session, final String testReqID, final FixDictionary fixDictionary)
+    {
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
         testRequest.testReqID(testReqID);
 
@@ -455,7 +461,7 @@ public final class SystemTestUtil
 
                 return acceptor
                     .receivedMessage("0")
-                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
+                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)) && message.isValid());
             });
     }
 

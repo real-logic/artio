@@ -207,12 +207,21 @@ class SenderEndPoint
         throws IOException
     {
         final ByteBuffer buffer = directBuffer.byteBuffer();
+        final int startLimit = buffer.limit();
+        final int startPosition = buffer.position();
+
         ByteBufferUtil.limit(buffer, offset + length);
         ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
-        DebugLogger.log(FIX_MESSAGE_TCP, "Written  %s%n", buffer, written);
-        updateSendingTimeoutTimeInMs(timeInMs, written);
+        if (written > 0)
+        {
+            ByteBufferUtil.position(buffer, offset);
+            DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
+            updateSendingTimeoutTimeInMs(timeInMs, written);
+
+            buffer.limit(startLimit).position(startPosition);
+        }
 
         return written;
     }

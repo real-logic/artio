@@ -42,6 +42,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
     private final ReadMetaDataDecoder readMetaData = new ReadMetaDataDecoder();
     private final ReplayMessagesDecoder replayMessages = new ReplayMessagesDecoder();
+    private final InitiateILinkConnectionDecoder initiateILinkConnection = new InitiateILinkConnectionDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -114,6 +115,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case ReplayMessagesDecoder.TEMPLATE_ID:
             {
                 return onReplayMessages(buffer, offset, blockLength, version, header);
+            }
+
+            case InitiateILinkConnectionDecoder.TEMPLATE_ID:
+            {
+                return onInitiateILinkConnection(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -325,6 +331,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             writeMetaData.session(),
             writeMetaData.correlationId(),
+            writeMetaData.metaDataOffset(),
             buffer,
             offset + WRITE_META_DATA_DATA_LENGTH,
             metaDataLength);
@@ -373,6 +380,27 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             replayMessages.replayToSequenceNumber(),
             replayMessages.replayToSequenceIndex(),
             replayMessages.latestReplyArrivalTimeInMs());
+    }
+
+    private Action onInitiateILinkConnection(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        initiateILinkConnection.wrap(buffer, offset, blockLength, version);
+        final int libraryId = initiateILinkConnection.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onInitiateILinkConnection(
+            libraryId,
+            initiateILinkConnection.port(),
+            initiateILinkConnection.correlationId(),
+            initiateILinkConnection.host());
     }
 
 }

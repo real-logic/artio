@@ -181,7 +181,7 @@ public class MessageBasedInitiatorSystemTest
             sendExecutionReport(connection, 2, true);
             sendExecutionReport(connection, 3, true);
 
-            connection.msgSeqNum(5).testRequest(testReqID);
+            connection.msgSeqNum(5).sendTestRequest(testReqID);
 
             Timing.assertEventuallyTrue("Session has caught up", () ->
             {
