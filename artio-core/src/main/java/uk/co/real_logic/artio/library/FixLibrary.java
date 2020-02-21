@@ -27,8 +27,6 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.ilink.ILink3Session;
-import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;

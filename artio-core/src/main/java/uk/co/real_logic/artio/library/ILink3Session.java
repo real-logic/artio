@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.library;
 
 import org.agrona.LangUtil;
 import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
@@ -25,7 +26,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -45,12 +45,14 @@ public class ILink3Session
         CONNECTED,
         /** Negotiate sent but no reply received */
         SENT_NEGOTIATE,
+        RETRY_NEGOTIATE,
 
         NEGOTIATE_REJECTED,
         /** Negotiate accepted, Establish not sent */
         NEGOTIATED,
         /** Negotiate accepted, Establish sent */
         SENT_ESTABLISH,
+        RETRY_ESTABLISH,
         ESTABLISH_REJECTED,
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
@@ -62,28 +64,30 @@ public class ILink3Session
     private final AbstractILink3Proxy proxy;
     private final ILink3SessionConfiguration configuration;
     private final long connectionId;
-    private final Consumer<ILink3Session> onEstablished;
+    private InitiateILink3SessionReply initiateReply;
     private final GatewayPublication outboundPublication;
     private final int libraryId;
-    private final ILink3SessionOwner owner;
+    private final LibraryPoller owner;
 
     private final long uuid;
     private State state;
     private int nextSentSeqNo;
 
+    private long resendTime;
+
     ILink3Session(
         final AbstractILink3Proxy proxy,
         final ILink3SessionConfiguration configuration,
         final long connectionId,
-        final Consumer<ILink3Session> onEstablished,
+        final InitiateILink3SessionReply initiateReply,
         final GatewayPublication outboundPublication,
         final int libraryId,
-        final ILink3SessionOwner owner)
+        final LibraryPoller owner)
     {
         this.proxy = proxy;
         this.configuration = configuration;
         this.connectionId = connectionId;
-        this.onEstablished = onEstablished;
+        this.initiateReply = initiateReply;
         this.outboundPublication = outboundPublication;
         this.libraryId = libraryId;
         this.owner = owner;
@@ -185,7 +189,7 @@ public class ILink3Session
         return System.currentTimeMillis() * NANOS_IN_MILLIS + nanoseconds;
     }
 
-    private void sendNegotiate()
+    private boolean sendNegotiate()
     {
         final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
@@ -199,10 +203,14 @@ public class ILink3Session
         if (position > 0)
         {
             state = State.SENT_NEGOTIATE;
+            resendTime = nextTimeout();
+            return true;
         }
+
+        return false;
     }
 
-    private void sendEstablish()
+    private boolean sendEstablish()
     {
         final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
@@ -210,7 +218,7 @@ public class ILink3Session
         final String tradingSystemName = configuration.tradingSystemName();
         final String tradingSystemVersion = configuration.tradingSystemVersion();
         final String tradingSystemVendor = configuration.tradingSystemVendor();
-        final int keepAliveInterval = configuration.requestedKeepAliveInterval();
+        final int keepAliveInterval = configuration.requestedKeepAliveIntervalInMs();
         final String accessKeyId = configuration.accessKeyId();
 
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId +
@@ -218,9 +226,31 @@ public class ILink3Session
             '\n' + nextSentSeqNo + '\n' + keepAliveInterval;
         final byte[] hMACSignature = calculateHMAC(canonicalMsg);
 
+        final long position = proxy.sendEstablish(hMACSignature,
+            accessKeyId,
+            tradingSystemName,
+            tradingSystemVendor,
+            tradingSystemVersion,
+            uuid,
+            requestTimestamp,
+            nextSentSeqNo,
+            sessionId,
+            firmId,
+            keepAliveInterval);
 
-        proxy.sendEstablish(hMACSignature, accessKeyId, tradingSystemName, tradingSystemVendor, tradingSystemVersion,
-            uuid, requestTimestamp, nextSentSeqNo, sessionId, firmId, keepAliveInterval);
+        if (position > 0)
+        {
+            resendTime = nextTimeout();
+            state = State.SENT_ESTABLISH;
+            return true;
+        }
+
+        return false;
+    }
+
+    private long nextTimeout()
+    {
+        return System.currentTimeMillis() + configuration.requestedKeepAliveIntervalInMs();
     }
 
     private byte[] calculateHMAC(final String canonicalRequest)
@@ -261,7 +291,49 @@ public class ILink3Session
 
     int poll(final long timeInMs)
     {
-        // TODO: sending retries for backpressure scenarios
+        final State state = this.state;
+        switch (state)
+        {
+            case SENT_NEGOTIATE:
+                if (timeInMs > resendTime)
+                {
+                    if (sendNegotiate())
+                    {
+                        this.state = State.RETRY_NEGOTIATE;
+                        return 1;
+                    }
+                }
+                break;
+
+            case RETRY_NEGOTIATE:
+                if (timeInMs > resendTime)
+                {
+                    initiateReply.onNegotiateFailure();
+                    fullyUnbind();
+                    return 1;
+                }
+                break;
+
+            case RETRY_ESTABLISH:
+                if (timeInMs > resendTime)
+                {
+                    initiateReply.onEstablishFailure();
+                    fullyUnbind();
+                    return 1;
+                }
+                break;
+
+            case SENT_ESTABLISH:
+                if (timeInMs > resendTime)
+                {
+                    if (sendEstablish())
+                    {
+                        this.state = State.RETRY_ESTABLISH;
+                        return 1;
+                    }
+                }
+                break;
+        }
         return 0;
     }
 
@@ -308,7 +380,8 @@ public class ILink3Session
         // TODO: check gap with previous sequence number and uuid
 
         state = State.ESTABLISHED;
-        onEstablished.accept(ILink3Session.this);
+        initiateReply.onComplete(this);
+        initiateReply = null;
 
         return 1;
     }
@@ -325,20 +398,20 @@ public class ILink3Session
         // We initiated termination
         if (state == State.UNBINDING)
         {
-            unbind();
+            fullyUnbind();
         }
         // The exchange initiated termination
         else
         {
             // TODO: handle backpressure properly
             sendTerminate(reason, errorCodes);
-            unbind();
+            fullyUnbind();
         }
 
         return 1;
     }
 
-    private void unbind()
+    private void fullyUnbind()
     {
         // TODO: linger state = State.SENT_TERMINATE;
         state = State.UNBOUND;

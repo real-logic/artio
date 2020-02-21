@@ -66,7 +66,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
-final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable, ILink3SessionOwner
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
     /**
      * Has connected to an engine instance
@@ -1313,7 +1313,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
                 final InternalILink3Session session = new InternalILink3Session(
-                    proxy, configuration, connectionId, reply::onComplete, outboundPublication, libraryId, this);
+                    proxy, configuration, connectionId, reply, outboundPublication, libraryId, this);
                 final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);

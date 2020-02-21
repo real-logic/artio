@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.library;
 
+import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.ILink3EndpointHandler;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-
-import java.util.function.Consumer;
 
 /**
  * External users should never rely on this API.
@@ -28,12 +28,12 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
         final AbstractILink3Proxy proxy,
         final ILink3SessionConfiguration configuration,
         final long connectionId,
-        final Consumer<ILink3Session> onEstablished,
+        final InitiateILink3SessionReply initiateReply,
         final GatewayPublication outboundPublication,
         final int libraryId,
-        final ILink3SessionOwner owner)
+        final LibraryPoller owner)
     {
-        super(proxy, configuration, connectionId, onEstablished, outboundPublication, libraryId, owner);
+        super(proxy, configuration, connectionId, initiateReply, outboundPublication, libraryId, owner);
     }
 
     public long onNegotiationResponse(

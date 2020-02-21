@@ -15,9 +15,8 @@
  */
 package uk.co.real_logic.artio.library;
 
+import io.aeron.exceptions.TimeoutException;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.ilink.ILink3Session;
-import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.messages.GatewayError;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
@@ -59,7 +58,7 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
 
     protected boolean onTimeout()
     {
-        // TODO: do we need this?
+        // TODO: we need an equivalent of this.
 //        libraryPoller.onInitiatorSessionTimeout(correlationId, connectionId);
 
         return super.onTimeout();
@@ -76,5 +75,15 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
     ILink3SessionConfiguration configuration()
     {
         return configuration;
+    }
+
+    void onNegotiateFailure()
+    {
+        onError(new TimeoutException("Timed out: no reply for Negotiate"));
+    }
+
+    public void onEstablishFailure()
+    {
+        onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 }

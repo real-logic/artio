@@ -20,7 +20,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
-import uk.co.real_logic.artio.ilink.ILink3Session;
+import uk.co.real_logic.artio.library.ILink3Session;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;

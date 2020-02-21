@@ -13,9 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.library;
 
-public interface ILink3SessionOwner
+import org.agrona.DirectBuffer;
+
+// NB: This is an experimental API and is subject to change or potentially removal.
+public interface ILink3SessionHandler
 {
-    void onUnbind(ILink3Session iLink3Session);
+    void onMessage(
+        DirectBuffer buffer,
+        int offset,
+        int length,
+        int libraryId,
+        ILink3Session session);
 }

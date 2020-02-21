@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.library;
 
 import org.agrona.Verify;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.library.SessionConfiguration;
 
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 
@@ -33,7 +32,7 @@ public class ILink3SessionConfiguration
     private String tradingSystemName = "";
     private String tradingSystemVersion = "";
     private String tradingSystemVendor = "";
-    private int requestedKeepAliveInterval = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
+    private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
     private String userKey;
     private int initialSentSequenceNumber = SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
@@ -116,15 +115,15 @@ public class ILink3SessionConfiguration
         return tradingSystemVendor;
     }
 
-    public ILink3SessionConfiguration requestedKeepAliveInterval(final int requestedKeepAliveInterval)
+    public ILink3SessionConfiguration requestedKeepAliveIntervalInMs(final int requestedKeepAliveIntervalInMs)
     {
-        this.requestedKeepAliveInterval = requestedKeepAliveInterval;
+        this.requestedKeepAliveIntervalInMs = requestedKeepAliveIntervalInMs;
         return this;
     }
 
-    public int requestedKeepAliveInterval()
+    public int requestedKeepAliveIntervalInMs()
     {
-        return requestedKeepAliveInterval;
+        return requestedKeepAliveIntervalInMs;
     }
 
     public ILink3SessionConfiguration userKey(final String userKey)
@@ -180,10 +179,10 @@ public class ILink3SessionConfiguration
         Verify.notNull(userKey, "userKey");
         Verify.notNull(accessKeyId, "accessKeyId");
 
-        if (requestedKeepAliveInterval <= 0)
+        if (requestedKeepAliveIntervalInMs <= 0)
         {
             throw new IllegalArgumentException("requestedKeepAliveInterval must be positive, but is: " +
-                requestedKeepAliveInterval);
+                requestedKeepAliveIntervalInMs);
         }
 
         if (port <= 0)
@@ -202,7 +201,7 @@ public class ILink3SessionConfiguration
             ", tradingSystemName='" + tradingSystemName + '\'' +
             ", tradingSystemVersion='" + tradingSystemVersion + '\'' +
             ", tradingSystemVendor='" + tradingSystemVendor + '\'' +
-            ", keepAliveInterval=" + requestedKeepAliveInterval +
+            ", keepAliveInterval=" + requestedKeepAliveIntervalInMs +
             ", userKey='" + userKey + '\'' +
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
             ", timeoutInMs=" + timeoutInMs +

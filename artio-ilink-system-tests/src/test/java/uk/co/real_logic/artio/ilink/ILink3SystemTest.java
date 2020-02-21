@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.ilink;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
@@ -24,6 +25,8 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.ILink3Session;
+import uk.co.real_logic.artio.library.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
@@ -37,11 +40,11 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.*;
-import static uk.co.real_logic.artio.ilink.ILink3SessionConfiguration.DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-public class Ilink3SystemTest
+public class ILink3SystemTest
 {
+    private static final int TEST_KEEP_ALIVE_INTERVAL_IN_MS = 500;
     private static final String ACCESS_KEY_ID = "12345678901234567890";
     private static final String SESSION_ID = "ABC";
     private static final String FIRM_ID = "DEFGH";
@@ -95,10 +98,10 @@ public class Ilink3SystemTest
 
         testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
 
-        testServer.readNegotiate(ACCESS_KEY_ID, FIRM_ID);
+        readNegotiate();
         testServer.writeNegotiateResponse();
 
-        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL);
+        readEstablish();
         testServer.writeEstablishAck();
 
         testSystem.awaitCompletedReplies(reply);
@@ -146,9 +149,62 @@ public class Ilink3SystemTest
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
         reply = library.initiate(sessionConfiguration);
+        assertConnectError(containsString("UNABLE_TO_CONNECT"));
+    }
+
+    @Test
+    public void shouldResendNegotiateAndEstablishOnTimeout() throws IOException
+    {
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+
+        readNegotiate();
+        readNegotiate();
+
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
+        readEstablish();
+        testServer.writeEstablishAck();
+
+        testSystem.awaitCompletedReplies(reply);
+        session = reply.resultIfPresent();
+        assertNotNull(session);
+    }
+
+    @Test
+    public void shouldDisconnectIfNegotiateNotRespondedTo() throws IOException
+    {
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+
+        readNegotiate();
+        readNegotiate();
+        assertConnectError(containsString(""));
+        assertDisconnected();
+    }
+
+    private void assertConnectError(final Matcher<String> messageMatcher)
+    {
         testSystem.awaitReply(reply);
         assertEquals(Reply.State.ERRORED, reply.state());
-        assertThat(reply.error().getMessage(), containsString("UNABLE_TO_CONNECT"));
+        assertThat(reply.error().getMessage(), messageMatcher);
+    }
+
+    private void readEstablish()
+    {
+        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, TEST_KEEP_ALIVE_INTERVAL_IN_MS);
+    }
+
+    private void readNegotiate()
+    {
+        testServer.readNegotiate(ACCESS_KEY_ID, FIRM_ID);
     }
 
     private void startTerminate()
@@ -165,7 +221,8 @@ public class Ilink3SystemTest
             .sessionId(SESSION_ID)
             .firmId(FIRM_ID)
             .userKey(USER_KEY)
-            .accessKeyId(ACCESS_KEY_ID);
+            .accessKeyId(ACCESS_KEY_ID)
+            .requestedKeepAliveIntervalInMs(TEST_KEEP_ALIVE_INTERVAL_IN_MS);
     }
 
     private void assertDisconnected()
