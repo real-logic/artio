@@ -1318,7 +1318,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final ILink3Session session = new ILink3Session(
+                final InternalILink3Session session = new InternalILink3Session(
                     proxy, configuration, connectionId, reply::onComplete, outboundPublication, libraryId);
                 final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
@@ -1328,7 +1328,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    private AbstractILink3Parser makeILink3Parser(final ILink3Session session)
+    private AbstractILink3Parser makeILink3Parser(final InternalILink3Session session)
     {
         try
         {

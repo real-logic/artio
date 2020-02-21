@@ -32,7 +32,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
-public class ILink3Session implements ILink3EndpointHandler
+public class ILink3Session
 {
     private static final long MICROS_IN_MILLIS = 1000;
 
@@ -60,7 +60,7 @@ public class ILink3Session implements ILink3EndpointHandler
     private State state;
     private int nextSentSeqNo;
 
-    public ILink3Session(
+    ILink3Session(
         final AbstractILink3Proxy proxy,
         final ILink3SessionConfiguration configuration,
         final long connectionId,
@@ -82,6 +82,25 @@ public class ILink3Session implements ILink3EndpointHandler
         sendNegotiate();
     }
 
+    // PUBLIC API
+
+    public long requestDisconnect(final DisconnectReason reason)
+    {
+        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, reason);
+    }
+
+    public long uuid()
+    {
+        return uuid;
+    }
+
+    public long connectionId()
+    {
+        return connectionId;
+    }
+
+    // END PUBLIC API
+
     private int calculateInitialSentSequenceNumber(final ILink3SessionConfiguration configuration)
     {
         final int initialSentSequenceNumber = configuration.initialSentSequenceNumber();
@@ -96,11 +115,6 @@ public class ILink3Session implements ILink3EndpointHandler
     {
         final long microseconds = NANOSECONDS.toMicros(System.nanoTime()) % MICROS_IN_MILLIS;
         return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
-    }
-
-    public long requestDisconnect(final DisconnectReason reason)
-    {
-        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
     private void sendNegotiate()
@@ -141,11 +155,6 @@ public class ILink3Session implements ILink3EndpointHandler
             uuid, requestTimestamp, nextSentSeqNo, sessionId, firmId, keepAliveInterval);
     }
 
-    public long uuid()
-    {
-        return uuid;
-    }
-
     private byte[] calculateHMAC(final String canonicalRequest)
     {
         final String userKey = configuration.userKey();
@@ -182,16 +191,18 @@ public class ILink3Session implements ILink3EndpointHandler
         }
     }
 
+    // TODO: poll() with sending retries for backpressure scenarios
+
     // EVENT HANDLERS
 
-    public long onNegotiationResponse(
+    long onNegotiationResponse(
         final long uUID,
         final long requestTimestamp,
         final int secretKeySecureIDExpiration,
         final long previousSeqNo,
         final long previousUUID)
     {
-        if (uUID != this.uuid)
+        if (uUID != uuid())
         {
             // TODO: error
         }
@@ -206,7 +217,7 @@ public class ILink3Session implements ILink3EndpointHandler
         return 1; // TODO: move to action
     }
 
-    public long onEstablishmentAck(
+    long onEstablishmentAck(
         final long uUID,
         final long requestTimestamp,
         final long nextSeqNo,
@@ -215,7 +226,7 @@ public class ILink3Session implements ILink3EndpointHandler
         final int keepAliveInterval,
         final int secretKeySecureIDExpiration)
     {
-        if (uUID != this.uuid)
+        if (uUID != uuid())
         {
             // TODO: error
         }
@@ -225,11 +236,9 @@ public class ILink3Session implements ILink3EndpointHandler
         // TODO: check gap with previous sequence number and uuid
 
         state = State.ESTABLISHED;
-        onEstablished.accept(this);
+        onEstablished.accept(ILink3Session.this);
 
         return 1;
     }
-
-    // TODO: poll() with sending retries for backpressure scenarios
 
 }

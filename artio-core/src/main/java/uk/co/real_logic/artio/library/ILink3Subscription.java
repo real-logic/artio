@@ -18,14 +18,15 @@ package uk.co.real_logic.artio.library;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.ilink.ILink3Session;
+import uk.co.real_logic.artio.ilink.InternalILink3Session;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 class ILink3Subscription
 {
     private final AbstractILink3Parser parser;
-    private final ILink3Session session;
+    private final InternalILink3Session session;
 
-    ILink3Subscription(final AbstractILink3Parser parser, final ILink3Session session)
+    ILink3Subscription(final AbstractILink3Parser parser, final InternalILink3Session session)
     {
         this.parser = parser;
         this.session = session;
