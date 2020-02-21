@@ -51,6 +51,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
@@ -65,7 +66,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
-final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable, ILink3SessionOwner
 {
     /**
      * Has connected to an engine instance
@@ -100,21 +101,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
+    private InternalILink3Session[] iLink3Sessions = new InternalILink3Session[0];
+    private final List<ILink3Session> unmodifiableILink3Sessions = new UnmodifiableWrapper<>(() -> iLink3Sessions);
+
     private InternalSession[] sessions = new InternalSession[0];
     private InternalSession[] pendingInitiatorSessions = new InternalSession[0];
-
-    private final List<Session> unmodifiableSessions = new AbstractList<Session>()
-    {
-        public Session get(final int index)
-        {
-            return sessions[index];
-        }
-
-        public int size()
-        {
-            return sessions.length;
-        }
-    };
+    private final List<Session> unmodifiableSessions = new UnmodifiableWrapper<>(() -> sessions);
 
     private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
 
@@ -222,11 +214,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     int libraryId()
     {
         return libraryId;
-    }
-
-    long connectCorrelationId()
-    {
-        return connectCorrelationId;
     }
 
     List<Session> sessions()
@@ -743,6 +730,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         for (int i = 0, size = sessions.length; i < size; i++)
         {
             final InternalSession session = sessions[i];
+            total += session.poll(timeInMs);
+        }
+
+        final InternalILink3Session[] iLink3Sessions = this.iLink3Sessions;
+        for (int i = 0, size = iLink3Sessions.length; i < size; i++)
+        {
+            final InternalILink3Session session = iLink3Sessions[i];
             total += session.poll(timeInMs);
         }
 
@@ -1319,9 +1313,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
                 final InternalILink3Session session = new InternalILink3Session(
-                    proxy, configuration, connectionId, reply::onComplete, outboundPublication, libraryId);
+                    proxy, configuration, connectionId, reply::onComplete, outboundPublication, libraryId, this);
                 final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
+                iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
             }
         }
 
@@ -1756,5 +1751,35 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     void enqueueTask(final BooleanSupplier task)
     {
         tasks.add(task);
+    }
+
+    public List<ILink3Session> iLink3Sessions()
+    {
+        return unmodifiableILink3Sessions;
+    }
+
+    public void onUnbind(final ILink3Session session)
+    {
+        iLink3Sessions = ArrayUtil.remove(iLink3Sessions, (InternalILink3Session)session);
+    }
+}
+
+class UnmodifiableWrapper<T> extends AbstractList<T>
+{
+    private final Supplier<T[]> sessions;
+
+    UnmodifiableWrapper(final Supplier<T[]> sessions)
+    {
+        this.sessions = sessions;
+    }
+
+    public T get(final int index)
+    {
+        return sessions.get()[index];
+    }
+
+    public int size()
+    {
+        return sessions.get().length;
     }
 }

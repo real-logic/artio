@@ -34,6 +34,7 @@ import static iLinkBinary.NegotiationResponse501Encoder.credentialsHeaderLength;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
@@ -233,5 +234,45 @@ public class ILink3TestServer
             .splitMsg(SplitMsg.NULL_VAL);
 
         write();
+    }
+
+    public void readTerminate()
+    {
+        final Terminate507Decoder terminate = read(new Terminate507Decoder());
+//        terminate.reason();
+        assertEquals(uuid, terminate.uUID());
+//        terminate.requestTimestamp();
+//        terminate.errorCodes();
+    }
+
+    public void writeTerminate()
+    {
+        final Terminate507Encoder terminate = new Terminate507Encoder();
+        wrap(terminate, Terminate507Encoder.BLOCK_LENGTH);
+
+        terminate
+            .uUID(uuid)
+            .requestTimestamp(0)
+            .errorCodes(0)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
+    public void assertDisconnected()
+    {
+        final boolean disconnected = testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                return socket.read(readBuffer) == -1;
+            }
+            catch (final IOException e)
+            {
+                return true;
+            }
+        });
+
+        assertTrue(disconnected);
     }
 }

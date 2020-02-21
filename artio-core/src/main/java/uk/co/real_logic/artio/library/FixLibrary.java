@@ -462,4 +462,9 @@ public class FixLibrary extends GatewayProcess
     {
         return poller.initiate(configuration);
     }
+
+    public List<ILink3Session> iLink3Sessions()
+    {
+        return poller.iLink3Sessions();
+    }
 }

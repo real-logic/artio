@@ -15,23 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-public interface ILink3EndpointHandler
+public interface ILink3SessionOwner
 {
-    long onNegotiationResponse(
-        long uUID,
-        long requestTimestamp,
-        int secretKeySecureIDExpiration,
-        long previousSeqNo,
-        long previousUUID);
-
-    long onEstablishmentAck(
-        long uUID,
-        long requestTimestamp,
-        long nextSeqNo,
-        long previousSeqNo,
-        long previousUUID,
-        int keepAliveInterval,
-        int secretKeySecureIDExpiration);
-
-    long onTerminate(String reason, long uUID, long requestTimestamp, int errorCodes);
+    void onUnbind(ILink3Session iLink3Session);
 }

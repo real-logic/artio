@@ -15,10 +15,13 @@
  */
 package uk.co.real_logic.artio.library;
 
+import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.ilink.ILink3Session;
 import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
+import uk.co.real_logic.artio.messages.GatewayError;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
+import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 
 /**
  * .
@@ -60,6 +63,14 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
 //        libraryPoller.onInitiatorSessionTimeout(correlationId, connectionId);
 
         return super.onTimeout();
+    }
+
+    void onError(final GatewayError errorType, final String errorMessage)
+    {
+        if (errorType == UNABLE_TO_CONNECT)
+        {
+            onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
+        }
     }
 
     ILink3SessionConfiguration configuration()

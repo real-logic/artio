@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.LangUtil;
+import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
@@ -28,25 +29,34 @@ import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
 public class ILink3Session
 {
-    private static final long MICROS_IN_MILLIS = 1000;
+    private static final long MICROS_IN_MILLIS = 1_000;
+    private static final long NANOS_IN_MICROS = 1_000;
+    private static final long NANOS_IN_MILLIS = MICROS_IN_MILLIS * NANOS_IN_MICROS;
 
     public enum State
     {
+        /** TCP connection established, negotiate not sent.*/
         CONNECTED,
+        /** Negotiate sent but no reply received */
         SENT_NEGOTIATE,
+
         NEGOTIATE_REJECTED,
+        /** Negotiate accepted, Establish not sent */
         NEGOTIATED,
+        /** Negotiate accepted, Establish sent */
         SENT_ESTABLISH,
         ESTABLISH_REJECTED,
+        /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
         UNBINDING,
-        DISCONNECTED
+        SENT_TERMINATE,
+        UNBOUND
     }
 
     private final AbstractILink3Proxy proxy;
@@ -55,6 +65,7 @@ public class ILink3Session
     private final Consumer<ILink3Session> onEstablished;
     private final GatewayPublication outboundPublication;
     private final int libraryId;
+    private final ILink3SessionOwner owner;
 
     private final long uuid;
     private State state;
@@ -66,7 +77,8 @@ public class ILink3Session
         final long connectionId,
         final Consumer<ILink3Session> onEstablished,
         final GatewayPublication outboundPublication,
-        final int libraryId)
+        final int libraryId,
+        final ILink3SessionOwner owner)
     {
         this.proxy = proxy;
         this.configuration = configuration;
@@ -74,6 +86,7 @@ public class ILink3Session
         this.onEstablished = onEstablished;
         this.outboundPublication = outboundPublication;
         this.libraryId = libraryId;
+        this.owner = owner;
 
         uuid = microSecondTimestamp();
         state = State.CONNECTED;
@@ -83,6 +96,50 @@ public class ILink3Session
     }
 
     // PUBLIC API
+
+    public long claimMessage(
+        final MessageEncoderFlyweight message)
+    {
+        // TODO: set the sequence number appropriately message.sbeTemplateId();
+        return proxy.claimILinkMessage(message.sbeBlockLength(), message);
+    }
+
+    public void commit()
+    {
+        proxy.commit();
+    }
+
+    public long terminate(final String reason, final int errorCodes)
+    {
+        validateCanSend();
+
+        final long position = sendTerminate(reason, errorCodes);
+
+        if (position > 0)
+        {
+            state = State.UNBINDING;
+        }
+
+        return position;
+    }
+
+    private long sendTerminate(final String reason, final int errorCodes)
+    {
+        final long requestTimestamp = requestTimestamp();
+        return proxy.sendTerminate(
+            reason,
+            uuid,
+            requestTimestamp,
+            errorCodes);
+    }
+
+    private void validateCanSend()
+    {
+        if (state != State.ESTABLISHED)
+        {
+            throw new IllegalStateException("State should be ESTABLISHED in order to send but is " + state);
+        }
+    }
 
     public long requestDisconnect(final DisconnectReason reason)
     {
@@ -99,6 +156,11 @@ public class ILink3Session
         return connectionId;
     }
 
+    public State state()
+    {
+        return state;
+    }
+
     // END PUBLIC API
 
     private int calculateInitialSentSequenceNumber(final ILink3SessionConfiguration configuration)
@@ -113,13 +175,19 @@ public class ILink3Session
 
     private long microSecondTimestamp()
     {
-        final long microseconds = NANOSECONDS.toMicros(System.nanoTime()) % MICROS_IN_MILLIS;
+        final long microseconds = (NANOS_IN_MICROS * System.nanoTime()) % MICROS_IN_MILLIS;
         return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
+    }
+
+    private long requestTimestamp()
+    {
+        final long nanoseconds = System.nanoTime() % NANOS_IN_MILLIS;
+        return System.currentTimeMillis() * NANOS_IN_MILLIS + nanoseconds;
     }
 
     private void sendNegotiate()
     {
-        final long requestTimestamp = microSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
@@ -136,7 +204,7 @@ public class ILink3Session
 
     private void sendEstablish()
     {
-        final long requestTimestamp = microSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String tradingSystemName = configuration.tradingSystemName();
@@ -191,7 +259,11 @@ public class ILink3Session
         }
     }
 
-    // TODO: poll() with sending retries for backpressure scenarios
+    int poll(final long timeInMs)
+    {
+        // TODO: sending retries for backpressure scenarios
+        return 0;
+    }
 
     // EVENT HANDLERS
 
@@ -239,6 +311,39 @@ public class ILink3Session
         onEstablished.accept(ILink3Session.this);
 
         return 1;
+    }
+
+    long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    {
+        if (uUID != uuid())
+        {
+            // TODO: error
+        }
+
+        // TODO: validate request timestamp
+
+        // We initiated termination
+        if (state == State.UNBINDING)
+        {
+            unbind();
+        }
+        // The exchange initiated termination
+        else
+        {
+            // TODO: handle backpressure properly
+            sendTerminate(reason, errorCodes);
+            unbind();
+        }
+
+        return 1;
+    }
+
+    private void unbind()
+    {
+        // TODO: linger state = State.SENT_TERMINATE;
+        state = State.UNBOUND;
+        requestDisconnect(LOGOUT);
+        owner.onUnbind(this);
     }
 
 }

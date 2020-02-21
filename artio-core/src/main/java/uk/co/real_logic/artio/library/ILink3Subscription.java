@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.library;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.ilink.ILink3Session;
 import uk.co.real_logic.artio.ilink.InternalILink3Session;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 

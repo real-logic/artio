@@ -966,6 +966,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
+    {
+        super.printErrorMessages(printErrorMessages);
+        return this;
+    }
+
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;

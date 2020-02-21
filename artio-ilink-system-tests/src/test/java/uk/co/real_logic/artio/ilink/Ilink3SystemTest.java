@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.ilink;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -32,6 +31,9 @@ import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -54,8 +56,7 @@ public class Ilink3SystemTest
     private Reply<ILink3Session> reply;
     private ILink3Session session;
 
-    @Before
-    public void setUp()
+    public void launch(final boolean printErrorMessages)
     {
         delete(CLIENT_LOGS);
 
@@ -65,7 +66,8 @@ public class Ilink3SystemTest
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .libraryAeronChannel(IPC_CHANNEL);
+            .libraryAeronChannel(IPC_CHANNEL)
+            .printErrorMessages(printErrorMessages);
         engine = FixEngine.launch(engineConfig);
 
         testSystem = new TestSystem();
@@ -85,15 +87,11 @@ public class Ilink3SystemTest
     }
 
     @Test
-    public void shouldEstablishConnection() throws IOException
+    public void shouldEstablishConnectionAtBeginningOfWeek() throws IOException
     {
-        final ILink3SessionConfiguration sessionConfiguration = new ILink3SessionConfiguration()
-            .host("localhost")
-            .port(port)
-            .sessionId(SESSION_ID)
-            .firmId(FIRM_ID)
-            .userKey(USER_KEY)
-            .accessKeyId(ACCESS_KEY_ID);
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
         testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
 
@@ -107,16 +105,72 @@ public class Ilink3SystemTest
         session = reply.resultIfPresent();
         assertNotNull(session);
 
+        assertEquals(session.state(), ILink3Session.State.ESTABLISHED);
         assertEquals(testServer.uuid(), session.uuid());
-
-        // TODO: remove dependency on FIX dictionary
     }
 
-    // TODO: mid connection disconnect
-    // TODO: timeout on connection
-    // TODO: failure cases of negotiate / establish
-    // TODO: persistent sequence numbers / reconnects
-        // Needs some kind of session information in the connect + lookup
-    // TODO: exchanging orders / fills
-    // TODO: library disconnect and reconnect
+    @Test
+    public void shouldTerminateConnection() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        startTerminate();
+
+        testServer.readTerminate();
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(session);
+
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldExchangeInitiatedTerminateConnection() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(session);
+
+        testServer.readTerminate();
+
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldProvideErrorUponConnectionFailure()
+    {
+        launch(false);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+
+        reply = library.initiate(sessionConfiguration);
+        testSystem.awaitReply(reply);
+        assertEquals(Reply.State.ERRORED, reply.state());
+        assertThat(reply.error().getMessage(), containsString("UNABLE_TO_CONNECT"));
+    }
+
+    private void startTerminate()
+    {
+        testSystem.awaitSend(
+            "Failed to send terminate", () -> session.terminate("shutdown", 0));
+    }
+
+    private ILink3SessionConfiguration sessionConfiguration()
+    {
+        return new ILink3SessionConfiguration()
+            .host("localhost")
+            .port(port)
+            .sessionId(SESSION_ID)
+            .firmId(FIRM_ID)
+            .userKey(USER_KEY)
+            .accessKeyId(ACCESS_KEY_ID);
+    }
+
+    private void assertDisconnected()
+    {
+        testServer.assertDisconnected();
+        assertThat(library.iLink3Sessions(), hasSize(0));
+    }
 }

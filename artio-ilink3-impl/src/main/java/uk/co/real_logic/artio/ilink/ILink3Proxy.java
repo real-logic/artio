@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.Establish503Encoder;
 import iLinkBinary.Negotiate500Encoder;
+import iLinkBinary.SplitMsg;
+import iLinkBinary.Terminate507Encoder;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
@@ -24,7 +26,6 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
-import static iLinkBinary.Negotiate500Encoder.credentialsHeaderLength;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
@@ -49,6 +50,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
     private final Negotiate500Encoder negotiate = new Negotiate500Encoder();
     private final Establish503Encoder establish = new Establish503Encoder();
+    private final Terminate507Encoder terminate = new Terminate507Encoder();
 
     public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
     {
@@ -81,7 +83,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
             .session(sessionId)
             .firm(firmId);
 
-        bufferClaim.commit();
+        commit();
 
         return position;
     }
@@ -120,7 +122,29 @@ public class ILink3Proxy extends AbstractILink3Proxy
             .firm(firmId)
             .keepAliveInterval(keepAliveInterval);
 
-        bufferClaim.commit();
+        commit();
+
+        return position;
+    }
+
+    public long sendTerminate(final String reason, final long uuid, final long requestTimestamp, final int errorCodes)
+    {
+        final Terminate507Encoder terminate = this.terminate;
+
+        final long position = claimILinkMessage(Terminate507Encoder.BLOCK_LENGTH, terminate);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        terminate
+            .reason(reason)
+            .uUID(uuid)
+            .requestTimestamp(requestTimestamp)
+            .errorCodes(errorCodes)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        commit();
 
         return position;
     }
@@ -160,6 +184,11 @@ public class ILink3Proxy extends AbstractILink3Proxy
         message.wrap(buffer, offset);
 
         return position;
+    }
+
+    public void commit()
+    {
+        bufferClaim.commit();
     }
 
 }

@@ -15,10 +15,6 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
-import uk.co.real_logic.artio.ilink.ILink3EndpointHandler;
-import uk.co.real_logic.artio.ilink.ILink3Session;
-import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.util.function.Consumer;
@@ -34,9 +30,10 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
         final long connectionId,
         final Consumer<ILink3Session> onEstablished,
         final GatewayPublication outboundPublication,
-        final int libraryId)
+        final int libraryId,
+        final ILink3SessionOwner owner)
     {
-        super(proxy, configuration, connectionId, onEstablished, outboundPublication, libraryId);
+        super(proxy, configuration, connectionId, onEstablished, outboundPublication, libraryId, owner);
     }
 
     public long onNegotiationResponse(
@@ -67,5 +64,15 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
             previousUUID,
             keepAliveInterval,
             secretKeySecureIDExpiration);
+    }
+
+    public long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    {
+        return super.onTerminate(reason, uUID, requestTimestamp, errorCodes);
+    }
+
+    public int poll(final long timeInMs)
+    {
+        return super.poll(timeInMs);
     }
 }
