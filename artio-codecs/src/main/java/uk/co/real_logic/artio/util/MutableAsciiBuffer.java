@@ -199,7 +199,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int scanBack(final int startInclusive, final int endExclusive, final byte terminator)
     {
-        for (int index = startInclusive; index >= endExclusive; index--)
+        for (int index = startInclusive; index > endExclusive; index--)
         {
             final byte value = getByte(index);
             if (value == terminator)
@@ -211,15 +211,15 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return UNKNOWN_INDEX;
     }
 
-    public int scan(final int startInclusive, final int endInclusive, final char terminatingCharacter)
+    public int scan(final int startInclusive, final int endExclusive, final char terminatingCharacter)
     {
-        return scan(startInclusive, endInclusive, (byte)terminatingCharacter);
+        return scan(startInclusive, endExclusive, (byte)terminatingCharacter);
     }
 
-    public int scan(final int startInclusive, final int endInclusive, final byte terminator)
+    public int scan(final int startInclusive, final int endExclusive, final byte terminator)
     {
         int indexValue = UNKNOWN_INDEX;
-        for (int i = startInclusive; i <= endInclusive; i++)
+        for (int i = startInclusive; i < endExclusive; i++)
         {
             final byte value = getByte(i);
             if (value == terminator)
@@ -232,10 +232,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return indexValue;
     }
 
-    public int computeChecksum(final int offset, final int end)
+    public int computeChecksum(final int startInclusive, final int endExclusive)
     {
         int total = 0;
-        for (int index = offset; index < end; index++)
+        for (int index = startInclusive; index < endExclusive; index++)
         {
             total += getByte(index);
         }

@@ -1326,7 +1326,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertThat(decoder4.validate(), is(false));
 
         assertRejectReason(decoder1, RejectReason.VALUE_IS_INCORRECT);
-        assertRejectReason(decoder2, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder2, RejectReason.REQUIRED_TAG_MISSING);
         assertRejectReason(decoder3, RejectReason.VALUE_IS_INCORRECT);
         assertRejectReason(decoder4, RejectReason.REQUIRED_TAG_MISSING);
     }
