@@ -24,6 +24,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import static iLinkBinary.Negotiate500Encoder.credentialsHeaderLength;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
@@ -32,6 +33,11 @@ public class ILink3Proxy extends AbstractILink3Proxy
     public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
 
     private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
+
+    private static final int NEGOTIATE_LENGTH =
+        Negotiate500Encoder.BLOCK_LENGTH + Negotiate500Encoder.credentialsHeaderLength();
+    private static final int ESTABLISH_LENGTH =
+        Establish503Encoder.BLOCK_LENGTH + Establish503Encoder.credentialsHeaderLength();
 
     private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
@@ -61,7 +67,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Negotiate500Encoder negotiate = this.negotiate;
 
-        final long position = claimILinkMessage(Negotiate500Encoder.BLOCK_LENGTH, negotiate);
+        final long position = claimILinkMessage(NEGOTIATE_LENGTH, negotiate);
         if (position < 0)
         {
             return position;
@@ -95,7 +101,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Establish503Encoder establish = this.establish;
 
-        final long position = claimILinkMessage(Establish503Encoder.BLOCK_LENGTH, establish);
+        final long position = claimILinkMessage(ESTABLISH_LENGTH, establish);
         if (position < 0)
         {
             return position;

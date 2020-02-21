@@ -112,7 +112,6 @@ public class Ilink3SystemTest
         // TODO: remove dependency on FIX dictionary
     }
 
-    // TODO: fix credentials header length being ignored
     // TODO: mid connection disconnect
     // TODO: timeout on connection
     // TODO: failure cases of negotiate / establish
