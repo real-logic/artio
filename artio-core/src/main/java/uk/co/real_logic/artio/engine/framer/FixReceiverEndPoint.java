@@ -371,7 +371,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private int scanEndOfMessage(final int startOfChecksumValue)
     {
-        return buffer.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
+        return buffer.scan(startOfChecksumValue, usedBufferData, START_OF_HEADER);
     }
 
     private int scanForBodyLength(final int offset, final long readTimestamp)
@@ -401,12 +401,12 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private int scanEndOfBodyLength(final int startOfBodyLength)
     {
-        return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
+        return buffer.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
     }
 
     private int scanNextField(final int startScan)
     {
-        return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
+        return buffer.scan(startScan + 1, usedBufferData, START_OF_HEADER);
     }
 
     private void startAuthenticationFlow(final int offset, final int length, final long messageType)

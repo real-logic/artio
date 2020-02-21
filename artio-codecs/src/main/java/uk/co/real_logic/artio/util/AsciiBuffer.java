@@ -81,9 +81,9 @@ public interface AsciiBuffer extends DirectBuffer
 
     int scanBack(int startInclusive, int endExclusive, byte terminator);
 
-    int scan(int startInclusive, int endInclusive, char terminatingCharacter);
+    int scan(int startInclusive, int endExclusive, char terminatingCharacter);
 
-    int scan(int startInclusive, int endInclusive, byte terminator);
+    int scan(int startInclusive, int endExclusive, byte terminator);
 
-    int computeChecksum(int offset, int end);
+    int computeChecksum(int startInclusive, int endExclusive);
 }
