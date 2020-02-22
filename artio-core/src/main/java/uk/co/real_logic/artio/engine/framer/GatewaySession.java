@@ -350,7 +350,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         CloseHelper.close(session);
     }
 
-    int sequenceIndex()
+    public int sequenceIndex()
     {
         return context.sequenceIndex();
     }

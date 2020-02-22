@@ -164,6 +164,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
     public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
 
+    public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
+
     private String host = null;
     private int port;
     private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
@@ -226,6 +228,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
     private boolean bindAtStartup = true;
+    private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -892,6 +895,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long authenticationTimeoutInMs()
     {
         return authenticationTimeoutInMs;
+    }
+
+    public int initialSequenceIndex()
+    {
+        return initialSequenceIndex;
+    }
+
+    /**
+     * Sets the initial sequenceIndex for the new session.
+     * Doesnt affects existing session.
+     *
+     * @param initialSequenceIndex initial sequence index
+     * @return this
+     */
+    public EngineConfiguration initialSequenceIndex(final int initialSequenceIndex)
+    {
+        this.initialSequenceIndex = initialSequenceIndex;
+        return this;
     }
 
     /**
