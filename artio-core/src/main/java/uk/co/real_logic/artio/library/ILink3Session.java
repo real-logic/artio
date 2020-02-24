@@ -316,7 +316,7 @@ public class ILink3Session
                     return 1;
                 }
                 break;
-    
+
             case NEGOTIATED:
                 return sendEstablish() ? 1 : 0;
 
