@@ -247,6 +247,7 @@ project(':artio-codecs') {
 project(':artio-ilink3-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
+    def outputClasses = 'out/generated/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
@@ -261,7 +262,7 @@ project(':artio-ilink3-codecs') {
 
     if (iLink3Enabled) {
         compileGeneratedJava {
-            dependsOn 'generateMessages'
+            dependsOn 'generateMessages', 'copySbeIr'
             sourceCompatibility = artioJavaVersion
             targetCompatibility = artioJavaVersion
             options.deprecation = true
@@ -278,11 +279,20 @@ project(':artio-ilink3-codecs') {
                 'sbe.generate.ir': 'true')
             args = [ sbePath ]
         }
+
+        task copySbeIr (type: Copy) {
+            from generatedDir.absolutePath
+            include 'ilinkbinary.sbeir'
+            into outputClasses + '/iLinkBinary'
+        }
     }
 
     jar {
         from(sourceSets.generated.output) {
             include '**/*.class'
+        }
+        from(outputClasses) {
+            include 'iLinkBinary/ilinkbinary.sbeir'
         }
     }
 
