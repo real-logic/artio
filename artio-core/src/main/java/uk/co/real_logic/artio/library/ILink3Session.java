@@ -294,6 +294,9 @@ public class ILink3Session
         final State state = this.state;
         switch (state)
         {
+            case CONNECTED:
+                return sendNegotiate() ? 1 : 0;
+
             case SENT_NEGOTIATE:
                 if (timeInMs > resendTime)
                 {
@@ -313,6 +316,9 @@ public class ILink3Session
                     return 1;
                 }
                 break;
+    
+            case NEGOTIATED:
+                return sendEstablish() ? 1 : 0;
 
             case RETRY_ESTABLISH:
                 if (timeInMs > resendTime)
