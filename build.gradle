@@ -82,6 +82,10 @@ allprojects {
             downloadSources = true
         }
     }
+
+    tasks.withType(Sign) {
+        onlyIf { isReleaseVersion }
+    }
 }
 
 subprojects {
@@ -242,6 +246,8 @@ project(':artio-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
+
+    checkstyleGenerated.enabled = false
 }
 
 project(':artio-ilink3-codecs') {
@@ -297,6 +303,8 @@ project(':artio-ilink3-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
+    
+    checkstyleGenerated.enabled = false
 }
 
 
