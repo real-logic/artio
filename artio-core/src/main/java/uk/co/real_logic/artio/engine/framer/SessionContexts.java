@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.CRC32;
 
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 import static uk.co.real_logic.artio.storage.messages.SessionIdEncoder.BLOCK_LENGTH;
@@ -64,6 +65,7 @@ public class SessionContexts
         Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE,
+        DEFAULT_INITIAL_SEQUENCE_INDEX,
         null);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         null,
@@ -73,6 +75,7 @@ public class SessionContexts
         Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE,
+        DEFAULT_INITIAL_SEQUENCE_INDEX,
         null);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
@@ -99,6 +102,7 @@ public class SessionContexts
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
+    private final int initialSequenceIndex;
 
     private int filePosition;
     private long counter = LOWEST_VALID_SESSION_ID;
@@ -106,6 +110,7 @@ public class SessionContexts
     public SessionContexts(
         final MappedFile mappedFile,
         final SessionIdStrategy idStrategy,
+        final int initialSequenceIndex,
         final ErrorHandler errorHandler)
     {
         this.mappedFile = mappedFile;
@@ -113,6 +118,7 @@ public class SessionContexts
         this.byteBuffer = this.buffer.byteBuffer();
         sectorFramer = new SectorFramer(buffer.capacity());
         this.idStrategy = idStrategy;
+        this.initialSequenceIndex = initialSequenceIndex;
         this.errorHandler = errorHandler;
         loadBuffer();
         allSessions.addAll(compositeToContext.values());
@@ -165,7 +171,7 @@ public class SessionContexts
 
             final SessionContext sessionContext = new SessionContext(compositeKey,
                 sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
-                FixDictionary.of(FixDictionary.find(lastFixDictionary)));
+                initialSequenceIndex, FixDictionary.of(FixDictionary.find(lastFixDictionary)));
             compositeToContext.put(compositeKey, sessionContext);
 
             counter = Math.max(counter, sessionId + 1);
@@ -249,7 +255,7 @@ public class SessionContexts
         final SessionContext sessionContext = assignSessionId(
             compositeKey,
             sessionId,
-            SessionContext.UNKNOWN_SEQUENCE_INDEX,
+            SessionInfo.UNKNOWN_SEQUENCE_INDEX,
             fixDictionary);
         allSessions.add(sessionContext);
         return sessionContext;
@@ -278,6 +284,7 @@ public class SessionContexts
                 Session.UNKNOWN_TIME,
                 this,
                 OUT_OF_SPACE,
+                initialSequenceIndex,
                 fixDictionary);
         }
         else
@@ -317,6 +324,7 @@ public class SessionContexts
                 Session.UNKNOWN_TIME,
                 this,
                 keyPosition,
+                initialSequenceIndex,
                 fixDictionary);
         }
     }

@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -203,11 +204,12 @@ public class FramerTest
         when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,
             SESSION_ID,
-            SessionContext.UNKNOWN_SEQUENCE_INDEX,
+            SessionInfo.UNKNOWN_SEQUENCE_INDEX,
             Session.UNKNOWN_TIME,
             System.currentTimeMillis(),
             sessionContexts,
             0,
+            EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX,
             fixDictionary));
     }
 

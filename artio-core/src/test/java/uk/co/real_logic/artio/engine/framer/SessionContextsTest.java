@@ -40,12 +40,14 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_SESSION_ID;
 
 public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
+    private static final int TEST_INITIAL_SEQUENCE = 721;
 
     private long time = System.currentTimeMillis();
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
@@ -117,6 +119,17 @@ public class SessionContextsTest
         assertValidSessionId(cContext.sessionId());
         assertNotEquals("C is a duplicate of A", aContext, cContext);
         assertNotEquals("C is a duplicate of B", bContext, cContext);
+    }
+
+    @Test
+    public void initialSequenceIndex()
+    {
+        final SessionContexts contexts = newSessionContexts(buffer, TEST_INITIAL_SEQUENCE);
+        final SessionContext context = contexts.onLogon(aSession, fixDictionary);
+        context.onLogon(false, time, fixDictionary);
+        assertEquals(TEST_INITIAL_SEQUENCE, context.sequenceIndex());
+        context.onSequenceReset(time);
+        assertEquals(TEST_INITIAL_SEQUENCE + 1, context.sequenceIndex());
     }
 
     @Test
@@ -253,8 +266,13 @@ public class SessionContextsTest
 
     private SessionContexts newSessionContexts(final AtomicBuffer buffer)
     {
+        return newSessionContexts(buffer, DEFAULT_INITIAL_SEQUENCE_INDEX);
+    }
+
+    private SessionContexts newSessionContexts(final AtomicBuffer buffer, final int initialSequenceIndex)
+    {
         when(mappedFile.buffer()).thenReturn(buffer);
-        return new SessionContexts(mappedFile, idStrategy, errorHandler);
+        return new SessionContexts(mappedFile, idStrategy, initialSequenceIndex, errorHandler);
     }
 
     private void assertValuesEqual(
