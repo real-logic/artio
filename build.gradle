@@ -307,6 +307,8 @@ project(':artio-ilink3-impl') {
     }
 
     compileJava.enabled = iLink3Enabled
+    compileTestJava.enabled = iLink3Enabled
+    test.enabled = iLink3Enabled
     javadoc.enabled = iLink3Enabled
 }
 
