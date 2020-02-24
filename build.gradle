@@ -274,7 +274,8 @@ project(':artio-ilink3-codecs') {
             systemProperties(
                 'sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
-                'sbe.java.generate.interfaces': 'true')
+                'sbe.java.generate.interfaces': 'true',
+                'sbe.generate.ir': 'true')
             args = [ sbePath ]
         }
     }
@@ -463,7 +464,6 @@ project(':artio-ilink-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(path: ':artio-system-tests', configuration: 'tests')
-        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
 
         compile project(':artio-session-codecs')
         compile project(path: ':artio-core')
@@ -472,7 +472,6 @@ project(':artio-ilink-system-tests') {
         idea {
             dependencies {
                 compile project(':artio-ilink3-codecs').sourceSets.generated.output
-                compile project(':artio-session-codecs').sourceSets.generated.output
             }
         }
     }

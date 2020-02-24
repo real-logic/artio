@@ -224,6 +224,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
+    private boolean lookupDefaultAcceptorfixDictionary = true;
     private Map<String, FixDictionary> acceptorFixDictionaryOverrides = new HashMap<>();
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
@@ -677,6 +678,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
+     * Can be used to disable the automated lookup of an acceptorFixDictionary. This is useful when you're not
+     * using regular FIX as your protocol but something else for example - Artio's iLink3 support.
+     *
+     * @param lookupDefaultAcceptorfixDictionary true if you want to lookup a default acceptor fix dictionary (the
+     *                                           default), false otherwise.
+     * @return this
+     */
+    public EngineConfiguration lookupDefaultAcceptorfixDictionary(final boolean lookupDefaultAcceptorfixDictionary)
+    {
+        this.lookupDefaultAcceptorfixDictionary = lookupDefaultAcceptorfixDictionary;
+        return this;
+    }
+
+    /**
      * Override the acceptor FIX Dictionary for a given beginString. The beginString to use is extracted from the
      * Provided FIX Dictionary.
      *
@@ -1098,7 +1113,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             sessionPersistenceStrategy(alwaysTransient());
         }
 
-        if (acceptorfixDictionary() == null)
+        if (lookupDefaultAcceptorfixDictionary && acceptorfixDictionary() == null)
         {
             acceptorfixDictionary(FixDictionary.findDefault());
         }

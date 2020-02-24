@@ -70,7 +70,8 @@ public class ILink3SystemTest
             .scheduler(new LowResourceEngineScheduler())
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
-            .printErrorMessages(printErrorMessages);
+            .printErrorMessages(printErrorMessages)
+            .lookupDefaultAcceptorfixDictionary(false);
         engine = FixEngine.launch(engineConfig);
 
         testSystem = new TestSystem();
