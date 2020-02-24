@@ -33,7 +33,9 @@ class SessionContext implements SessionInfo
 
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
-    private int sequenceIndex;
+    // Variable only written to on the Framer thread but can be read on other threads via the
+    // SessionInfo interface.
+    private volatile int sequenceIndex;
     private int initialSequenceIndex;
 
     private long lastLogonTime;
