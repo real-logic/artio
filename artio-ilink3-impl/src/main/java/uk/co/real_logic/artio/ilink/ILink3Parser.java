@@ -16,10 +16,7 @@
 
 package uk.co.real_logic.artio.ilink;
 
-import iLinkBinary.EstablishmentAck504Decoder;
-import iLinkBinary.MessageHeaderDecoder;
-import iLinkBinary.NegotiationResponse501Decoder;
-import iLinkBinary.Terminate507Decoder;
+import iLinkBinary.*;
 import org.agrona.DirectBuffer;
 
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
@@ -28,7 +25,9 @@ public class ILink3Parser extends AbstractILink3Parser
 {
     private final MessageHeaderDecoder header = new MessageHeaderDecoder();
     private final NegotiationResponse501Decoder negotiationResponse = new NegotiationResponse501Decoder();
+    private final NegotiationReject502Decoder negotiationReject = new NegotiationReject502Decoder();
     private final EstablishmentAck504Decoder establishmentAck = new EstablishmentAck504Decoder();
+    private final EstablishmentReject505Decoder establishmentReject = new EstablishmentReject505Decoder();
     private final Terminate507Decoder terminate = new Terminate507Decoder();
     private final ILink3EndpointHandler handler;
 
@@ -52,9 +51,19 @@ public class ILink3Parser extends AbstractILink3Parser
                 return onNegotiationResponse(buffer, offset, blockLength, version);
             }
 
+            case NegotiationReject502Decoder.TEMPLATE_ID:
+            {
+                return onNegotiationReject(buffer, offset, blockLength, version);
+            }
+
             case EstablishmentAck504Decoder.TEMPLATE_ID:
             {
                 return onEstablishmentAck(buffer, offset, blockLength, version);
+            }
+
+            case EstablishmentReject505Decoder.TEMPLATE_ID:
+            {
+                return onEstablishmentReject(buffer, offset, blockLength, version);
             }
 
             case Terminate507Decoder.TEMPLATE_ID:
@@ -79,6 +88,19 @@ public class ILink3Parser extends AbstractILink3Parser
             negotiationResponse.previousUUID());
     }
 
+    private long onNegotiationReject(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        negotiationReject.wrap(buffer, offset, blockLength, version);
+        return handler.onNegotiationReject(
+            negotiationReject.reason(),
+            negotiationReject.uUID(),
+            negotiationReject.requestTimestamp(),
+            negotiationReject.errorCodes());
+            // negotiationResponse.faultToleranceIndicator()
+            // negotiationResponse.splitMsg());
+    }
+
     private long onEstablishmentAck(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
@@ -91,8 +113,22 @@ public class ILink3Parser extends AbstractILink3Parser
             establishmentAck.previousUUID(),
             establishmentAck.keepAliveInterval(),
             establishmentAck.secretKeySecureIDExpiration());
-            // negotiationResponse.faultToleranceIndicator()
-            // negotiationResponse.splitMsg()
+            // establishmentAck.faultToleranceIndicator()
+            // establishmentAck.splitMsg()
+    }
+
+    private long onEstablishmentReject(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        establishmentReject.wrap(buffer, offset, blockLength, version);
+        return handler.onEstablishmentReject(
+            establishmentReject.reason(),
+            establishmentReject.uUID(),
+            establishmentReject.requestTimestamp(),
+            establishmentReject.nextSeqNo(),
+            establishmentReject.errorCodes());
+        // establishmentReject.faultToleranceIndicator()
+        // establishmentReject.splitMsg()
     }
 
     private long onTerminate(

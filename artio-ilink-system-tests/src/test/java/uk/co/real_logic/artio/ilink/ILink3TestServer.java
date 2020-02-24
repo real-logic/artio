@@ -41,6 +41,8 @@ import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 public class ILink3TestServer
 {
     private static final int BUFFER_SIZE = 8 * 1024;
+    public static final String REJECT_REASON = "Invalid Logon";
+    public static final int ESTABLISHMENT_REJECT_SEQ_NO = 2;
 
     private final SocketChannel socket;
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -194,6 +196,22 @@ public class ILink3TestServer
         write();
     }
 
+    public void writeNegotiateReject()
+    {
+        final NegotiationReject502Encoder negotiateReject = new NegotiationReject502Encoder();
+        wrap(negotiateReject, NegotiationReject502Encoder.BLOCK_LENGTH);
+
+        negotiateReject
+            .uUID(uuid)
+            .reason(REJECT_REASON)
+            .requestTimestamp(negotiateRequestTimestamp)
+            .errorCodes(0)
+            .faultToleranceIndicator(FTI.Primary)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
     public void readEstablish(
         final String expectedAccessKeyID, final String expectedFirmId, final String expectedSessionId,
         final int expectedKeepAliveInterval)
@@ -217,7 +235,7 @@ public class ILink3TestServer
         assertEquals(expectedKeepAliveInterval, requestedKeepAliveInterval);
     }
 
-    public void writeEstablishAck()
+    public void writeEstablishmentAck()
     {
         final EstablishmentAck504Encoder establishmentAck = new EstablishmentAck504Encoder();
         wrap(establishmentAck, EstablishmentAck504Encoder.BLOCK_LENGTH);
@@ -230,6 +248,23 @@ public class ILink3TestServer
             .previousUUID(0)
             .keepAliveInterval(requestedKeepAliveInterval + 100)
             .secretKeySecureIDExpiration(1)
+            .faultToleranceIndicator(FTI.Primary)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
+    public void writeEstablishmentReject()
+    {
+        final EstablishmentReject505Encoder establishmentReject = new EstablishmentReject505Encoder();
+        wrap(establishmentReject, EstablishmentReject505Encoder.BLOCK_LENGTH);
+
+        establishmentReject
+            .reason(REJECT_REASON)
+            .uUID(uuid)
+            .requestTimestamp(establishRequestTimestamp)
+            .nextSeqNo(ESTABLISHMENT_REJECT_SEQ_NO)
+            .errorCodes(1)
             .faultToleranceIndicator(FTI.Primary)
             .splitMsg(SplitMsg.NULL_VAL);
 

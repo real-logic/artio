@@ -102,7 +102,7 @@ public class ILink3SystemTest
         testServer.writeNegotiateResponse();
 
         readEstablish();
-        testServer.writeEstablishAck();
+        testServer.writeEstablishmentAck();
 
         testSystem.awaitCompletedReplies(reply);
         session = reply.resultIfPresent();
@@ -168,7 +168,7 @@ public class ILink3SystemTest
 
         readEstablish();
         readEstablish();
-        testServer.writeEstablishAck();
+        testServer.writeEstablishmentAck();
 
         testSystem.awaitCompletedReplies(reply);
         session = reply.resultIfPresent();
@@ -187,6 +187,40 @@ public class ILink3SystemTest
         readNegotiate();
         readNegotiate();
         assertConnectError(containsString(""));
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldSupportNegotiationReject() throws IOException
+    {
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+
+        readNegotiate();
+
+        testServer.writeNegotiateReject();
+
+        assertConnectError(containsString("Negotiate rejected"));
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldSupportEstablishmentReject() throws IOException
+    {
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+
+        readNegotiate();
+
+        testServer.writeEstablishmentReject();
+
+        assertConnectError(containsString("Establishment rejected"));
         assertDisconnected();
     }
 

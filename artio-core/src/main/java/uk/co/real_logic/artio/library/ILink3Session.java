@@ -30,6 +30,7 @@ import java.util.Base64;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
@@ -367,6 +368,29 @@ public class ILink3Session
         return 1; // TODO: move to action
     }
 
+    long onNegotiationReject(
+        final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    {
+        if (uUID != uuid())
+        {
+            // TODO: error
+        }
+
+        // TODO: validate request timestamp
+        state = State.NEGOTIATE_REJECTED;
+        connectionError(new RuntimeException("Negotiate rejected: " + reason + ",errorCodes=" + errorCodes));
+
+        return 1;
+    }
+
+    private void connectionError(final Exception error)
+    {
+        initiateReply.onError(error);
+        initiateReply = null;
+        requestDisconnect(FAILED_AUTHENTICATION);
+        owner.onUnbind(this);
+    }
+
     long onEstablishmentAck(
         final long uUID,
         final long requestTimestamp,
@@ -388,6 +412,23 @@ public class ILink3Session
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
         initiateReply = null;
+
+        return 1;
+    }
+
+    long onEstablishmentReject(
+        final String reason, final long uUID, final long requestTimestamp, final long nextSeqNo, final int errorCodes)
+    {
+        if (uUID != uuid())
+        {
+            // TODO: error
+        }
+
+        // TODO: validate request timestamp
+
+        state = State.ESTABLISH_REJECTED;
+        connectionError(new RuntimeException(
+            "Establishment rejected: " + reason + ",nextSeqNo=" + nextSeqNo + ",errorCodes=" + errorCodes));
 
         return 1;
     }
