@@ -1312,8 +1312,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
+                final AbstractILink3Offsets offsets = makeILink3Offsets();
                 final InternalILink3Session session = new InternalILink3Session(
-                    proxy, configuration, connectionId, reply, outboundPublication, libraryId, this);
+                    proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this);
                 final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
@@ -1321,6 +1322,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    private AbstractILink3Offsets makeILink3Offsets()
+    {
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Offsets");
+            return (AbstractILink3Offsets)cls.getConstructor().newInstance();
+        }
+        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     private AbstractILink3Parser makeILink3Parser(final InternalILink3Session session)

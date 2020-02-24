@@ -16,7 +16,9 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.LangUtil;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
 import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -27,8 +29,10 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
@@ -63,6 +67,7 @@ public class ILink3Session
     }
 
     private final AbstractILink3Proxy proxy;
+    private final AbstractILink3Offsets offsets;
     private final ILink3SessionConfiguration configuration;
     private final long connectionId;
     private InitiateILink3SessionReply initiateReply;
@@ -78,6 +83,7 @@ public class ILink3Session
 
     ILink3Session(
         final AbstractILink3Proxy proxy,
+        final AbstractILink3Offsets offsets,
         final ILink3SessionConfiguration configuration,
         final long connectionId,
         final InitiateILink3SessionReply initiateReply,
@@ -86,6 +92,7 @@ public class ILink3Session
         final LibraryPoller owner)
     {
         this.proxy = proxy;
+        this.offsets = offsets;
         this.configuration = configuration;
         this.connectionId = connectionId;
         this.initiateReply = initiateReply;
@@ -105,8 +112,25 @@ public class ILink3Session
     public long claimMessage(
         final MessageEncoderFlyweight message)
     {
-        // TODO: set the sequence number appropriately message.sbeTemplateId();
-        return proxy.claimILinkMessage(message.sbeBlockLength(), message);
+        final long position = proxy.claimILinkMessage(message.sbeBlockLength(), message);
+
+        if (position > 0)
+        {
+            final int templateId = message.sbeTemplateId();
+            final MutableDirectBuffer buffer = message.buffer();
+            final int messageOffset = message.offset();
+
+            final int seqNumOffset = offsets.seqNumOffset(templateId);
+            if (seqNumOffset != MISSING_OFFSET)
+            {
+                buffer.putInt(messageOffset + seqNumOffset, nextSentSeqNo++, LITTLE_ENDIAN);
+            }
+
+            // NB: possRetrans field does not need to be set because it is always false in this claim API
+            // and the false byte is 0, which is what Aeron buffers are initialised to.
+        }
+
+        return position;
     }
 
     public void commit()

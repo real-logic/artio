@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
 import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.ilink.ILink3EndpointHandler;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -26,6 +27,7 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
 {
     public InternalILink3Session(
         final AbstractILink3Proxy proxy,
+        final AbstractILink3Offsets offsets,
         final ILink3SessionConfiguration configuration,
         final long connectionId,
         final InitiateILink3SessionReply initiateReply,
@@ -33,7 +35,7 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
         final int libraryId,
         final LibraryPoller owner)
     {
-        super(proxy, configuration, connectionId, initiateReply, outboundPublication, libraryId, owner);
+        super(proxy, offsets, configuration, connectionId, initiateReply, outboundPublication, libraryId, owner);
     }
 
     public long onNegotiationResponse(
