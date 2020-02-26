@@ -40,7 +40,7 @@ public class FixCounters implements AutoCloseable
 
         final int id;
 
-        FixCountersId(int id)
+        FixCountersId(final int id)
         {
             this.id = id;
         }
