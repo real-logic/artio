@@ -27,7 +27,8 @@ public class FixCounters implements AutoCloseable
 {
     private static final int MINIMUM_ARTIO_TYPE_ID = 10_000;
 
-    public enum FixCountersId {
+    public enum FixCountersId
+    {
         FAILED_INBOUND_TYPE_ID(MINIMUM_ARTIO_TYPE_ID),
         FAILED_OUTBOUND_TYPE_ID(10_001),
         FAILED_REPLAY_TYPE_ID(10_002),
@@ -37,13 +38,15 @@ public class FixCounters implements AutoCloseable
         SENT_MSG_SEQ_NO_TYPE_ID(10_006),
         RECV_MSG_SEQ_NO_TYPE_ID(10_007);
 
-        int id;
+        final int id;
 
-        FixCountersId(int id) {
+        FixCountersId(int id)
+        {
             this.id = id;
         }
 
-        int getId() {
+        int getId()
+        {
             return id;
         }
     }
@@ -82,12 +85,14 @@ public class FixCounters implements AutoCloseable
 
     public AtomicCounter messagesRead(final long connectionId, final String address)
     {
-        return newCounter(FixCountersId.MESSAGES_READ_TYPE_ID.getId(), "Messages Read from " + address + " id = " + connectionId);
+        return newCounter(FixCountersId.MESSAGES_READ_TYPE_ID.getId(),
+                "Messages Read from " + address + " id = " + connectionId);
     }
 
     public AtomicCounter bytesInBuffer(final long connectionId, final String address)
     {
-        return newCounter(FixCountersId.BYTES_IN_BUFFER_TYPE_ID.getId(), "Quarantined bytes for " + address + " id = " + connectionId);
+        return newCounter(FixCountersId.BYTES_IN_BUFFER_TYPE_ID.getId(),
+                "Quarantined bytes for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter invalidLibraryAttempts(final long connectionId, final String address)
