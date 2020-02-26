@@ -165,12 +165,12 @@ subprojects {
     }
 
     task javadocJar(type: Jar) {
-        archiveClassifier.set 'javadoc'
+        archiveClassifier.set('javadoc')
         from javadoc
     }
 
     task sourcesJar(type: Jar) {
-        archiveClassifier.set 'sources'
+        archiveClassifier.set('sources')
         from sourceSets.main.allSource
     }
 
@@ -183,8 +183,8 @@ subprojects {
     }
 
     task testJar(type: Jar, dependsOn: testClasses) {
-        archiveClassifier.set 'tests'
-        archiveBaseName.set "test-${project.archivesBaseName}"
+        archiveClassifier.set('tests')
+        archiveBaseName.set("test-${project.archivesBaseName}")
         from sourceSets.test.output
     }
 
@@ -462,7 +462,7 @@ project(':artio-system-tests') {
 
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
-            archiveClassifier.set "benchmarks"
+            archiveClassifier.set("benchmarks")
 
             from sourceSets.main.output
             from sourceSets.perf.output
@@ -590,6 +590,6 @@ task uploadToMavenRepository {
 }
 
 wrapper {
-    gradleVersion = '6.1.1'
+    gradleVersion = '6.2.1'
     distributionType = 'ALL'
 }
