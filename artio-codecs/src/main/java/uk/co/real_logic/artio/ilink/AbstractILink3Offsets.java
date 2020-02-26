@@ -38,5 +38,7 @@ public abstract class AbstractILink3Offsets
     public abstract int seqNumOffset(int templateId);
 
     public abstract int possRetransOffset(int templateId);
+
+    public abstract int sendingTimeEpochOffset(int templateId);
 }
 

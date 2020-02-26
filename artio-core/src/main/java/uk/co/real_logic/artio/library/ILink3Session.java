@@ -137,6 +137,12 @@ public class ILink3Session
 
             // NB: possRetrans field does not need to be set because it is always false in this claim API
             // and the false byte is 0, which is what Aeron buffers are initialised to.
+
+            final int sendingTimeEpochOffset = offsets.sendingTimeEpochOffset(templateId);
+            if (sendingTimeEpochOffset != MISSING_OFFSET)
+            {
+                buffer.putLong(messageOffset + sendingTimeEpochOffset, requestTimestamp(), LITTLE_ENDIAN);
+            }
         }
 
         return position;

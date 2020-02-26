@@ -56,4 +56,19 @@ public class ILink3OffsetsTest
             ILink3Offsets.MISSING_OFFSET,
             offsets.possRetransOffset(NewOrderSingle514Decoder.TEMPLATE_ID));
     }
+
+    @Test
+    public void shouldLoadSendingTimeOffset()
+    {
+        assertEquals(PartyDetailsDefinitionRequestAck519Decoder.sendingTimeEpochEncodingOffset(),
+            offsets.sendingTimeEpochOffset(PartyDetailsDefinitionRequestAck519Decoder.TEMPLATE_ID));
+    }
+
+    @Test
+    public void shouldSupportMissingSendingTimeOffset()
+    {
+        assertEquals(
+            ILink3Offsets.MISSING_OFFSET,
+            offsets.sendingTimeEpochOffset(NotApplied513Decoder.TEMPLATE_ID));
+    }
 }

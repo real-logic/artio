@@ -31,11 +31,13 @@ public class ILink3Offsets extends AbstractILink3Offsets
 {
     private final Int2IntHashMap templateIdToSeqNumOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToPossRetransOffset = new Int2IntHashMap(MISSING_OFFSET);
+    private final Int2IntHashMap templateIdToSendingTimeEpochOffset = new Int2IntHashMap(MISSING_OFFSET);
 
     public static final String SBE_IR_FILE = "ilinkbinary.sbeir";
 
     public static final int SEQ_NUM_ID = 9726;
     public static final int POSS_RETRANS_ID = 9765;
+    public static final int SENDING_TIME_EPOCH_ID = 5297;
 
     public ILink3Offsets()
     {
@@ -58,6 +60,7 @@ public class ILink3Offsets extends AbstractILink3Offsets
                     final int templateId = beginMessage.id();
                     findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
                     findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
+                    findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
                 });
             }
         }
@@ -89,5 +92,10 @@ public class ILink3Offsets extends AbstractILink3Offsets
     public int possRetransOffset(final int templateId)
     {
         return templateIdToPossRetransOffset.get(templateId);
+    }
+
+    public int sendingTimeEpochOffset(final int templateId)
+    {
+        return templateIdToSendingTimeEpochOffset.get(templateId);
     }
 }
