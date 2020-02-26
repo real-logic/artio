@@ -36,6 +36,12 @@ public class ILink3Parser extends AbstractILink3Parser
         this.handler = handler;
     }
 
+    public int templateId(final DirectBuffer buffer, final int offset)
+    {
+        header.wrap(buffer, offset);
+        return header.templateId();
+    }
+
     public long onMessage(final DirectBuffer buffer, final int start)
     {
         final int offset = start + SOFH_LENGTH;

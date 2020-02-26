@@ -17,7 +17,28 @@ package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
 
+import java.lang.reflect.InvocationTargetException;
+
 public abstract class AbstractILink3Parser
 {
+    public static final int ILINK_MESSAGE_HEADER_LENGTH = 8;
+    public static final int BOOLEAN_FLAG_TRUE = 1;
+
+    public static AbstractILink3Parser make(final ILink3EndpointHandler session)
+    {
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Parser");
+            return (AbstractILink3Parser)cls.getConstructor(ILink3EndpointHandler.class).newInstance(session);
+        }
+        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            return null;
+        }
+    }
+
     public abstract long onMessage(DirectBuffer buffer, int offset);
+
+    public abstract int templateId(DirectBuffer buffer, int offset);
 }

@@ -22,6 +22,7 @@ import io.aeron.UnavailableImageHandler;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
@@ -37,6 +38,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 public class EngineContext implements AutoCloseable
 {
@@ -86,6 +88,7 @@ public class EngineContext implements AutoCloseable
         try
         {
             final EpochClock epochClock = new SystemEpochClock();
+            final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
@@ -94,7 +97,8 @@ public class EngineContext implements AutoCloseable
                 recordingCoordinator.outboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
-                configuration.logFileDir());
+                configuration.logFileDir(),
+                connectionIdToILinkUuid);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -103,7 +107,8 @@ public class EngineContext implements AutoCloseable
                 recordingCoordinator.inboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
-                null);
+                null,
+                connectionIdToILinkUuid);
 
             newStreams();
             newArchivingAgent();

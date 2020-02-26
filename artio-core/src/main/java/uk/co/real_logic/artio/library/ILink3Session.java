@@ -31,7 +31,6 @@ import java.util.Base64;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
@@ -40,8 +39,8 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 // NB: This is an experimental API and is subject to change or potentially removal.
 public class ILink3Session
 {
-    private static final long MICROS_IN_MILLIS = 1_000;
-    private static final long NANOS_IN_MICROS = 1_000;
+    public static final long MICROS_IN_MILLIS = 1_000;
+    public static final long NANOS_IN_MICROS = 1_000;
     private static final long NANOS_IN_MILLIS = MICROS_IN_MILLIS * NANOS_IN_MICROS;
 
     public enum State
@@ -89,7 +88,10 @@ public class ILink3Session
         final InitiateILink3SessionReply initiateReply,
         final GatewayPublication outboundPublication,
         final int libraryId,
-        final LibraryPoller owner)
+        final LibraryPoller owner,
+        final long uuid,
+        final int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber)
     {
         this.proxy = proxy;
         this.offsets = offsets;
@@ -100,11 +102,18 @@ public class ILink3Session
         this.libraryId = libraryId;
         this.owner = owner;
 
-        uuid = microSecondTimestamp();
+        nextSentSeqNo = calculateInitialSentSequenceNumber(configuration, lastSentSequenceNumber);
         state = State.CONNECTED;
-        nextSentSeqNo = calculateInitialSentSequenceNumber(configuration);
+        this.uuid = uuid;
 
-        sendNegotiate();
+        if (configuration.reestablishLastSession())
+        {
+            sendEstablish();
+        }
+        else
+        {
+            sendNegotiate();
+        }
     }
 
     // PUBLIC API
@@ -192,20 +201,20 @@ public class ILink3Session
 
     // END PUBLIC API
 
-    private int calculateInitialSentSequenceNumber(final ILink3SessionConfiguration configuration)
+    private int calculateInitialSentSequenceNumber(
+        final ILink3SessionConfiguration configuration, final int lastSentSequenceNumber)
     {
+        if (!configuration.reestablishLastSession())
+        {
+            return 1;
+        }
+
         final int initialSentSequenceNumber = configuration.initialSentSequenceNumber();
         if (initialSentSequenceNumber == AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
         {
-            return 1; // TODO: persistent sequence numbers
+            return lastSentSequenceNumber + 1;
         }
         return initialSentSequenceNumber;
-    }
-
-    private long microSecondTimestamp()
-    {
-        final long microseconds = (NANOS_IN_MICROS * System.nanoTime()) % MICROS_IN_MILLIS;
-        return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
     }
 
     private long requestTimestamp()

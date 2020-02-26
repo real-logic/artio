@@ -23,6 +23,7 @@ import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matchers;
@@ -33,7 +34,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 
 import java.io.File;
@@ -48,9 +48,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
+import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.SEQUENCE_NUMBER_OFFSET;
@@ -131,7 +133,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SESSION_ID_2, ConnectedSessionInfo.UNK_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, UNK_SESSION);
     }
 
     @Test
@@ -323,7 +325,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final MappedFile indexFile = newIndexFile();
         return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
-            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null);
+            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null,
+            new Long2LongHashMap(UNK_SESSION));
     }
 
     private MappedFile newIndexFile()
@@ -338,7 +341,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void assertUnknownSession()
     {
-        assertLastKnownSequenceNumberIs(SESSION_ID, ConnectedSessionInfo.UNK_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID, UNK_SESSION);
     }
 
     private void indexFixMessage()

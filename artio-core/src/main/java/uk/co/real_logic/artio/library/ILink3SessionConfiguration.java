@@ -16,9 +16,6 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.Verify;
-import uk.co.real_logic.artio.CommonConfiguration;
-
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
 public class ILink3SessionConfiguration
@@ -35,8 +32,8 @@ public class ILink3SessionConfiguration
     private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
     private String userKey;
     private int initialSentSequenceNumber = SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-    private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private String accessKeyId;
+    private boolean reestablishLastSession = false;
 
     public ILink3SessionConfiguration host(final String host)
     {
@@ -148,18 +145,6 @@ public class ILink3SessionConfiguration
         return initialSentSequenceNumber;
     }
 
-    public ILink3SessionConfiguration timeoutInMs(final long timeoutInMs)
-    {
-        CommonConfiguration.validateTimeout(timeoutInMs);
-        this.timeoutInMs = timeoutInMs;
-        return this;
-    }
-
-    public long timeoutInMs()
-    {
-        return timeoutInMs;
-    }
-
     public ILink3SessionConfiguration accessKeyId(final String accessKeyId)
     {
         this.accessKeyId = accessKeyId;
@@ -169,6 +154,17 @@ public class ILink3SessionConfiguration
     public String accessKeyId()
     {
         return accessKeyId;
+    }
+
+    public ILink3SessionConfiguration reestablishLastSession(final boolean reestablishLastSession)
+    {
+        this.reestablishLastSession = reestablishLastSession;
+        return this;
+    }
+
+    public boolean reestablishLastSession()
+    {
+        return reestablishLastSession;
     }
 
     public void validate()
@@ -204,7 +200,6 @@ public class ILink3SessionConfiguration
             ", keepAliveInterval=" + requestedKeepAliveIntervalInMs +
             ", userKey='" + userKey + '\'' +
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
-            ", timeoutInMs=" + timeoutInMs +
             ", accessKeyId=" + accessKeyId +
             '}';
     }

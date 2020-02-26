@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.NewOrderSingle514Encoder;
+import iLinkBinary.SideReq;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.hamcrest.Matcher;
@@ -35,8 +37,7 @@ import java.io.IOException;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -97,7 +98,7 @@ public class ILink3SystemTest
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        connectToTestServer(sessionConfiguration);
 
         readNegotiate();
         testServer.writeNegotiateResponse();
@@ -118,6 +119,40 @@ public class ILink3SystemTest
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldExchangeBusinessMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+
+        testServer.readNewOrderSingle(1);
+
+        terminateAndDisconnect();
+    }
+
+    private void sendNewOrderSingle()
+    {
+        final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
+        assertThat(session.claimMessage(newOrderSingle), greaterThan(0L));
+        newOrderSingle
+            .partyDetailsListReqID(1)
+            .orderQty(1)
+            .senderID("IBM")
+            .side(SideReq.Buy)
+            .senderID("ABC")
+            .clOrdID("123")
+            .partyDetailsListReqID(1)
+            .orderRequestID(1);
+
+        session.commit();
+    }
+
+    private void terminateAndDisconnect()
+    {
         startTerminate();
 
         testServer.readTerminate();
@@ -160,7 +195,7 @@ public class ILink3SystemTest
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        connectToTestServer(sessionConfiguration);
 
         readNegotiate();
         readNegotiate();
@@ -176,6 +211,11 @@ public class ILink3SystemTest
         assertNotNull(session);
     }
 
+    private void connectToTestServer(final ILink3SessionConfiguration sessionConfiguration) throws IOException
+    {
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+    }
+
     @Test
     public void shouldDisconnectIfNegotiateNotRespondedTo() throws IOException
     {
@@ -183,7 +223,7 @@ public class ILink3SystemTest
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        connectToTestServer(sessionConfiguration);
 
         readNegotiate();
         readNegotiate();
@@ -198,7 +238,7 @@ public class ILink3SystemTest
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        connectToTestServer(sessionConfiguration);
 
         readNegotiate();
 
@@ -214,8 +254,7 @@ public class ILink3SystemTest
         launch(true);
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        connectToTestServer(sessionConfiguration);
 
         readNegotiate();
 
@@ -223,6 +262,23 @@ public class ILink3SystemTest
 
         assertConnectError(containsString("Establishment rejected"));
         assertDisconnected();
+    }
+
+    @Test
+    public void shouldSupportReestablishingConnections() throws IOException
+    {
+        shouldExchangeBusinessMessage();
+
+        final long lastUuid = session.uuid();
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+            .reestablishLastSession(true);
+        connectToTestServer(sessionConfiguration);
+
+        testServer.expectedUuid(lastUuid);
+
+        readEstablish(2);
+        testServer.writeEstablishmentAck();
     }
 
     private void assertConnectError(final Matcher<String> messageMatcher)
@@ -234,7 +290,12 @@ public class ILink3SystemTest
 
     private void readEstablish()
     {
-        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, TEST_KEEP_ALIVE_INTERVAL_IN_MS);
+        readEstablish(1L);
+    }
+
+    private void readEstablish(final long expectedNextSeqNo)
+    {
+        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, TEST_KEEP_ALIVE_INTERVAL_IN_MS, expectedNextSeqNo);
     }
 
     private void readNegotiate()

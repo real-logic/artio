@@ -400,7 +400,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             initiateILinkConnection.port(),
             initiateILinkConnection.correlationId(),
-            initiateILinkConnection.host());
+            initiateILinkConnection.reestablishConnection() == Bool.TRUE,
+            initiateILinkConnection.host(),
+            initiateILinkConnection.accessKeyId());
     }
 
 }

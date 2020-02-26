@@ -33,9 +33,13 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
         final InitiateILink3SessionReply initiateReply,
         final GatewayPublication outboundPublication,
         final int libraryId,
-        final LibraryPoller owner)
+        final LibraryPoller owner,
+        final long uuid,
+        final int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber)
     {
-        super(proxy, offsets, configuration, connectionId, initiateReply, outboundPublication, libraryId, owner);
+        super(proxy, offsets, configuration, connectionId, initiateReply, outboundPublication, libraryId, owner,
+            uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
     }
 
     public long onNegotiationResponse(

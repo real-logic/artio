@@ -214,7 +214,7 @@ public class ILink3TestServer
 
     public void readEstablish(
         final String expectedAccessKeyID, final String expectedFirmId, final String expectedSessionId,
-        final int expectedKeepAliveInterval)
+        final int expectedKeepAliveInterval, final long expectedNextSeqNo)
     {
         final Establish503Decoder establish = read(new Establish503Decoder());
         //  establish.hMACSignature()
@@ -227,7 +227,7 @@ public class ILink3TestServer
         establishRequestTimestamp = establish.requestTimestamp();
         assertThat(establishRequestTimestamp, greaterThanOrEqualTo(negotiateRequestTimestamp));
         final long nextSeqNo = establish.nextSeqNo();
-        assertThat(nextSeqNo, greaterThanOrEqualTo(1L));
+        assertEquals(expectedNextSeqNo, nextSeqNo);
 
         assertEquals(expectedSessionId, establish.session());
         assertEquals(expectedFirmId, establish.firm());
@@ -294,6 +294,14 @@ public class ILink3TestServer
         write();
     }
 
+    public void readNewOrderSingle(final int expectedSeqNum)
+    {
+        final NewOrderSingle514Decoder newOrderSingle = new NewOrderSingle514Decoder();
+        read(newOrderSingle);
+        assertEquals(expectedSeqNum, newOrderSingle.seqNum());
+        // TODO: newOrderSingle.sendingTimeEpoch()
+    }
+
     public void assertDisconnected()
     {
         final boolean disconnected = testSystem.awaitBlocking(() ->
@@ -309,5 +317,10 @@ public class ILink3TestServer
         });
 
         assertTrue(disconnected);
+    }
+
+    public void expectedUuid(final long lastUuid)
+    {
+        this.uuid = lastUuid;
     }
 }

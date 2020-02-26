@@ -15,9 +15,25 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import java.lang.reflect.InvocationTargetException;
+
 public abstract class AbstractILink3Offsets
 {
     public static final int MISSING_OFFSET = -1;
+
+    public static AbstractILink3Offsets make()
+    {
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Offsets");
+            return (AbstractILink3Offsets)cls.getConstructor().newInstance();
+        }
+        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            return null;
+        }
+    }
 
     public abstract int seqNumOffset(int templateId);
 

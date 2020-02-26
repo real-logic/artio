@@ -32,7 +32,9 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.ilink.*;
+import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -236,7 +238,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         configuration.validate();
 
         return new InitiateILink3SessionReply(
-            this, timeInMs() + configuration.timeoutInMs(), configuration);
+            this, timeInMs() + configuration.requestedKeepAliveIntervalInMs(), configuration);
     }
 
     Reply<SessionReplyStatus> releaseToGateway(final Session session, final long timeoutInMs)
@@ -1301,7 +1303,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onILinkConnect(final int libraryId, final long correlationId, final long connectionId)
+    public Action onILinkConnect(
+        final int libraryId,
+        final long correlationId,
+        final long connectionId,
+        final long uuid,
+        final int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber)
     {
         if (libraryId == this.libraryId)
         {
@@ -1312,46 +1320,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final AbstractILink3Offsets offsets = makeILink3Offsets();
+                final AbstractILink3Offsets offsets = AbstractILink3Offsets.make();
                 final InternalILink3Session session = new InternalILink3Session(
-                    proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this);
-                final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
+                    proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this,
+                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
+                final ILink3Subscription subscription = new ILink3Subscription(
+                    AbstractILink3Parser.make(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
             }
         }
 
         return CONTINUE;
-    }
-
-    private AbstractILink3Offsets makeILink3Offsets()
-    {
-        try
-        {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Offsets");
-            return (AbstractILink3Offsets)cls.getConstructor().newInstance();
-        }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
-    }
-
-    private AbstractILink3Parser makeILink3Parser(final InternalILink3Session session)
-    {
-        try
-        {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Parser");
-            return (AbstractILink3Parser)cls.getConstructor(ILink3EndpointHandler.class).newInstance(session);
-        }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
     }
 
     private AbstractILink3Proxy makeILink3Proxy(final long connectionId)
@@ -1761,7 +1741,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public long saveInitiateILink(final long correlationId, final ILink3SessionConfiguration configuration)
     {
         return outboundPublication.saveInitiateILinkConnection(
-            libraryId, configuration.port(), correlationId, configuration.host());
+            libraryId, configuration.port(), correlationId, configuration.reestablishLastSession(),
+            configuration.host(), configuration.accessKeyId());
     }
 
     void enqueueTask(final BooleanSupplier task)
