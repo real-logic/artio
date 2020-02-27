@@ -398,6 +398,7 @@ project(':artio-core') {
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(':artio-session-codecs')
+        testCompile project(':artio-session-fixt-codecs')
         compile project(':artio-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
@@ -413,6 +414,7 @@ project(':artio-core') {
     idea {
         dependencies {
             testCompile project(':artio-session-codecs').sourceSets.generated.output
+            testCompile project(':artio-session-fixt-codecs').sourceSets.generated.output
             compile project(':artio-codecs').sourceSets.generated.output
         }
     }

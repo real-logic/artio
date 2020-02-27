@@ -135,7 +135,7 @@ public class ILink3Contexts
 
     private long microSecondTimestamp()
     {
-        final long microseconds = (NANOS_IN_MICROS * System.nanoTime()) % MICROS_IN_MILLIS;
+        final long microseconds = (System.nanoTime() / NANOS_IN_MICROS) % MICROS_IN_MILLIS;
         return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
     }
 

@@ -78,6 +78,7 @@ public class SessionContexts
         DEFAULT_INITIAL_SEQUENCE_INDEX,
         null);
     static final long LOWEST_VALID_SESSION_ID = 1L;
+    static final int VERSION_WITHOUT_FIX_DICTIONARY = 2;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -87,6 +88,7 @@ public class SessionContexts
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final SessionIdEncoder sessionIdEncoder = new SessionIdEncoder();
+    private final SessionIdDecoder sessionIdDecoder = new SessionIdDecoder();
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
@@ -129,8 +131,23 @@ public class SessionContexts
         checkByteBuffer();
         initialiseBuffer();
 
-        final SessionIdDecoder sessionIdDecoder = new SessionIdDecoder();
+        headerDecoder.wrap(buffer, 0);
+        final boolean needsUpgrading = headerDecoder.version() <= VERSION_WITHOUT_FIX_DICTIONARY;
+        final FixDictionary dictionary = needsUpgrading ? FixDictionary.of(FixDictionary.findDefault()) : null;
+        final boolean requiresCompaction = readFileSessionInfos(dictionary);
 
+        if (needsUpgrading || requiresCompaction)
+        {
+            resetBuffer();
+            filePosition = HEADER_SIZE;
+
+            compositeToContext.values().forEach(this::allocateNewSlot);
+        }
+    }
+
+    private boolean readFileSessionInfos(final FixDictionary dictionary)
+    {
+        boolean requiresCompaction = false;
         int sectorEnd = 0;
         filePosition = HEADER_SIZE;
         final int lastRecordStart = buffer.capacity() - BLOCK_LENGTH;
@@ -143,46 +160,60 @@ public class SessionContexts
                 final int nextSectorPeekPosition = sectorEnd;
                 if (nextSectorPeekPosition > lastRecordStart)
                 {
-                    return;
+                    return requiresCompaction;
                 }
 
                 sessionId = wrap(sessionIdDecoder, nextSectorPeekPosition);
                 if (sessionId == 0)
                 {
-                    return;
+                    return requiresCompaction;
                 }
                 else
                 {
                     filePosition = nextSectorPeekPosition;
                 }
             }
-            final int sequenceIndex = sessionIdDecoder.sequenceIndex();
-            final long lastLogonTime = sessionIdDecoder.logonTime();
-            final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
-            final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
-            final String lastFixDictionary = sessionIdDecoder.lastFixDictionary();
-            filePosition = sessionIdDecoder.limit();
-            final CompositeKey compositeKey = idStrategy.load(
-                buffer, filePosition, compositeKeyLength);
-            if (compositeKey == null)
+            else if (sessionId == Session.UNKNOWN)
             {
-                return;
+                // relocated session slot, skip
+                final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
+                sessionIdDecoder.skipLastFixDictionary();
+                filePosition = sessionIdDecoder.limit() + compositeKeyLength;
+                requiresCompaction = true;
             }
+            else
+            {
+                final int sequenceIndex = sessionIdDecoder.sequenceIndex();
+                final long lastLogonTime = sessionIdDecoder.logonTime();
+                final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
+                final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
+                final String lastFixDictionary = sessionIdDecoder.lastFixDictionary();
+                filePosition = sessionIdDecoder.limit();
+                final CompositeKey compositeKey = idStrategy.load(
+                    buffer, filePosition, compositeKeyLength);
+                if (compositeKey == null)
+                {
+                    return requiresCompaction;
+                }
 
-            final SessionContext sessionContext = new SessionContext(compositeKey,
-                sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
-                initialSequenceIndex, FixDictionary.of(FixDictionary.find(lastFixDictionary)));
-            compositeToContext.put(compositeKey, sessionContext);
+                final FixDictionary thisDictionary = (dictionary == null) ?
+                    FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
+                final SessionContext sessionContext = new SessionContext(compositeKey,
+                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
+                    initialSequenceIndex, thisDictionary);
+                compositeToContext.put(compositeKey, sessionContext);
 
-            counter = Math.max(counter, sessionId + 1);
+                counter = Math.max(counter, sessionId + 1);
 
-            filePosition += compositeKeyLength;
+                filePosition += compositeKeyLength;
+            }
         }
+        return requiresCompaction;
     }
 
     private long wrap(final SessionIdDecoder sessionIdDecoder, final int nextSectorPeekPosition)
     {
-        sessionIdDecoder.wrap(buffer, nextSectorPeekPosition, actingBlockLength, actingVersion);
+        sessionIdDecoder.wrap(buffer, nextSectorPeekPosition, headerDecoder.blockLength(), headerDecoder.version());
         return sessionIdDecoder.sessionId();
     }
 
@@ -246,7 +277,14 @@ public class SessionContexts
 
     SessionContext newSessionContext(final CompositeKey compositeKey, final FixDictionary fixDictionary)
     {
-        return compositeToContext.computeIfAbsent(compositeKey, key -> onNewLogon(key, fixDictionary));
+        final SessionContext context = compositeToContext.computeIfAbsent(
+            compositeKey,
+            key -> onNewLogon(key, fixDictionary));
+        if (context.lastFixDictionary() != fixDictionary)
+        {
+            context.ensureFixDictionary(fixDictionary);
+        }
+        return context;
     }
 
     private SessionContext onNewLogon(final CompositeKey compositeKey, final FixDictionary fixDictionary)
@@ -267,7 +305,29 @@ public class SessionContexts
         final int sequenceIndex,
         final FixDictionary fixDictionary)
     {
-        final String fixDictionaryName = fixDictionary.getClass().getName();
+        final SessionContext context = new SessionContext(
+            compositeKey, sessionId,
+            sequenceIndex,
+            Session.UNKNOWN_TIME,
+            Session.UNKNOWN_TIME,
+            this,
+            0,
+            initialSequenceIndex,
+            fixDictionary);
+
+        allocateNewSlot(context);
+
+        return context;
+    }
+
+    private void allocateNewSlot(final SessionContext context)
+    {
+        final CompositeKey compositeKey = context.sessionKey();
+        final long sessionId = context.sessionId();
+        final int sequenceIndex = context.sequenceIndex();
+        final FixDictionary fixDictionary = context.lastFixDictionary();
+
+        final String fixDictionaryName = nameOf(fixDictionary);
         int keyPosition = OUT_OF_SPACE;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
@@ -276,16 +336,8 @@ public class SessionContexts
                 "Unable to save record session id %d for %s, because the buffer is too small",
                 sessionId,
                 compositeKey)));
-            return new SessionContext(
-                compositeKey,
-                sessionId,
-                sequenceIndex,
-                Session.UNKNOWN_TIME,
-                Session.UNKNOWN_TIME,
-                this,
-                OUT_OF_SPACE,
-                initialSequenceIndex,
-                fixDictionary);
+            context.filePosition(OUT_OF_SPACE);
+
         }
         else
         {
@@ -304,7 +356,8 @@ public class SessionContexts
                         .wrap(buffer, filePosition)
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
-                        .logonTime(Session.UNKNOWN_TIME)
+                        .logonTime(context.lastLogonTime())
+                        .lastSequenceResetTime(context.lastSequenceResetTime())
                         .compositeKeyLength(compositeKeyLength)
                         .lastFixDictionary(fixDictionaryName);
                     filePosition = sessionIdEncoder.limit();
@@ -316,17 +369,14 @@ public class SessionContexts
                     mappedFile.force();
                 }
             }
-
-            return new SessionContext(
-                compositeKey, sessionId,
-                sequenceIndex,
-                Session.UNKNOWN_TIME,
-                Session.UNKNOWN_TIME,
-                this,
-                keyPosition,
-                initialSequenceIndex,
-                fixDictionary);
         }
+
+        context.filePosition(keyPosition);
+    }
+
+    private String nameOf(final FixDictionary fixDictionary)
+    {
+        return fixDictionary.getClass().getName();
     }
 
     void sequenceReset(final long sessionId, final long resetTime)
@@ -387,22 +437,47 @@ public class SessionContexts
             mappedFile.transferTo(backupLocation);
         }
 
+        resetBuffer();
+    }
+
+    private void resetBuffer()
+    {
         buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
     }
 
-    void updateSavedData(
-        final int filePosition,
-        final int sequenceIndex,
-        final long logonTime,
-        final long lastSequenceResetTime)
+    void updateSavedData(final SessionContext context, final int filePosition)
     {
-        sessionIdEncoder
-            .wrap(buffer, filePosition)
-            .sequenceIndex(sequenceIndex)
-            .logonTime(logonTime)
-            .lastSequenceResetTime(lastSequenceResetTime);
+        final String fixDictionaryName = nameOf(context.lastFixDictionary());
 
+        sessionIdDecoder.wrap(buffer, filePosition, actingBlockLength, actingVersion);
+        sessionIdEncoder.wrap(buffer, filePosition);
+        if (sessionIdDecoder.lastFixDictionaryLength() != fixDictionaryName.length())
+        {
+            // delete old slot
+            sessionIdEncoder.sessionId(Session.UNKNOWN);
+
+            allocateNewSlot(context);
+
+            // Recalculate checksum from delete if needed
+            if (nextSectorStart(filePosition) != nextSectorStart(this.filePosition))
+            {
+                updateSectorChecksum(filePosition);
+            }
+        }
+        else
+        {
+            sessionIdEncoder
+                .sequenceIndex(context.sequenceIndex())
+                .logonTime(context.lastLogonTime())
+                .lastSequenceResetTime(context.lastSequenceResetTime());
+
+            updateSectorChecksum(filePosition);
+        }
+    }
+
+    private void updateSectorChecksum(final int filePosition)
+    {
         final int start = nextSectorStart(filePosition) - SECTOR_SIZE;
         final int checksumOffset = start + SECTOR_DATA_LENGTH;
         updateChecksum(start, checksumOffset);
@@ -433,5 +508,10 @@ public class SessionContexts
     public List<SessionInfo> allSessions()
     {
         return allSessions;
+    }
+
+    int filePosition()
+    {
+        return filePosition;
     }
 }

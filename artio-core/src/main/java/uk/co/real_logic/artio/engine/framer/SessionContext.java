@@ -29,8 +29,6 @@ class SessionContext implements SessionInfo
     private final long sessionId;
     private final SessionContexts sessionContexts;
 
-    private final int filePosition;
-
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
     // Variable only written to on the Framer thread but can be read on other threads via the
@@ -41,6 +39,7 @@ class SessionContext implements SessionInfo
     private long lastLogonTime;
     private long lastSequenceResetTime;
     private FixDictionary lastFixDictionary;
+    private int filePosition;
 
     SessionContext(
         final CompositeKey compositeKey,
@@ -82,12 +81,23 @@ class SessionContext implements SessionInfo
         save();
     }
 
+    void ensureFixDictionary(final FixDictionary fixDictionary)
+    {
+        if (lastFixDictionary != fixDictionary)
+        {
+            this.lastFixDictionary = fixDictionary;
+            save();
+        }
+    }
+
     private void save()
     {
-        // NB: we deliberately don't update the fix dictionary as this can't change within
-        // a connection
-        sessionContexts.updateSavedData(
-            filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
+        sessionContexts.updateSavedData(this, filePosition);
+    }
+
+    void filePosition(final int filePosition)
+    {
+        this.filePosition = filePosition;
     }
 
     void updateFrom(final Session session)
