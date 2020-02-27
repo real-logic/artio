@@ -685,7 +685,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (iLink3Contexts == null)
         {
-            iLink3Contexts = new ILink3Contexts();
+            iLink3Contexts = new ILink3Contexts(
+                configuration.iLink3IdBuffer(),
+                errorHandler);
         }
 
         return iLink3Contexts;

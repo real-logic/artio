@@ -135,6 +135,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 4 * 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int)SECONDS.toMillis(5);
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
+    public static final String DEFAULT_ILINK3_ID_FILE = "ilink3_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
@@ -182,6 +183,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
+    private MappedFile iLink3IdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
     private AeronArchive.Context archiveContextClone;
@@ -842,6 +844,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return sessionIdBuffer;
     }
 
+    public MappedFile iLink3IdBuffer()
+    {
+        if (iLink3IdBuffer == null)
+        {
+            iLink3IdBuffer = mapFile(DEFAULT_ILINK3_ID_FILE, sessionIdBufferSize);
+        }
+        return iLink3IdBuffer;
+    }
+
     public Set<String> gapfillOnReplayMessageTypes()
     {
         return gapfillOnReplayMessageTypes;
@@ -1150,6 +1161,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(sentSequenceNumberIndex);
         CloseHelper.close(receivedSequenceNumberIndex);
         CloseHelper.close(sessionIdBuffer);
+        CloseHelper.close(iLink3IdBuffer);
     }
 
 }
