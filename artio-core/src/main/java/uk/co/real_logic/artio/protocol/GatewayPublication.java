@@ -98,7 +98,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
 
     public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength();
+        InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength() +
+        InitiateILinkConnectionEncoder.accessKeyIdHeaderLength();
 
     private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
         HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
@@ -1332,10 +1333,16 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveInitiateILinkConnection(
-        final int libraryId, final int port, final long correlationId, final String host)
+        final int libraryId,
+        final int port,
+        final long correlationId,
+        final boolean reestablishConnection,
+        final String host,
+        final String accessKeyId)
     {
         final byte[] hostBytes = bytes(host);
-        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length);
+        final byte[] accessKeyIdBytes = bytes(accessKeyId);
+        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length + accessKeyIdBytes.length);
         if (position < 0)
         {
             return position;
@@ -1349,7 +1356,9 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .port(port)
             .correlationId(correlationId)
-            .putHost(hostBytes, 0, hostBytes.length);
+            .reestablishConnection(toBool(reestablishConnection))
+            .putHost(hostBytes, 0, hostBytes.length)
+            .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length);
 
         bufferClaim.commit();
 
@@ -1361,7 +1370,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveILinkConnect(
         final int libraryId,
         final long correlationId,
-        final long connectionId)
+        final long connectionId,
+        final long lastUuid,
+        final int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber)
     {
         final long position = claim(
             MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);
@@ -1377,7 +1389,10 @@ public class GatewayPublication extends ClaimablePublication
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .correlationId(correlationId)
-            .connection(connectionId);
+            .connection(connectionId)
+            .lastUuid(lastUuid)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .lastSentSequenceNumber(lastSentSequenceNumber);
 
         bufferClaim.commit();
 

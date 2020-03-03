@@ -78,7 +78,7 @@ public class FramerContext
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
         this.sessionContexts = new SessionContexts(
-            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+            configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
 
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");

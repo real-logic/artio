@@ -33,4 +33,9 @@ public interface ILink3EndpointHandler
         int keepAliveInterval,
         int secretKeySecureIDExpiration);
 
+    long onTerminate(String reason, long uUID, long requestTimestamp, int errorCodes);
+
+    long onNegotiationReject(String reason, long uUID, long requestTimestamp, int errorCodes);
+
+    long onEstablishmentReject(String reason, long uUID, long requestTimestamp, long nextSeqNo, int errorCodes);
 }

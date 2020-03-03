@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
+import uk.co.real_logic.artio.library.ILink3Session;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -154,12 +157,22 @@ public class TestSystem
 
     public void send(final Session session, final Encoder encoder)
     {
+        awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.send(encoder));
+    }
+
+    public void awaitSend(final String message, final LongSupplier operation)
+    {
+        await(message, () -> operation.getAsLong() > 0);
+    }
+
+    public void await(final String message, final BooleanSupplier predicate)
+    {
         assertEventuallyTrue(
-            "Unable to send " + encoder.getClass().getSimpleName(),
+            message,
             () ->
             {
                 poll();
-                return session.send(encoder) > 0;
+                return predicate.getAsBoolean();
             });
     }
 
@@ -194,5 +207,10 @@ public class TestSystem
         }
 
         return null;
+    }
+
+    public void awaitUnbind(final ILink3Session session)
+    {
+        await("Failed to unbind session", () -> session.state() == ILink3Session.State.UNBOUND);
     }
 }

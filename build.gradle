@@ -24,13 +24,13 @@ buildscript {
 plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
     id 'net.researchgate.release' version '2.8.1'
-    id "com.github.ben-manes.versions" version "0.27.0"
+    id "com.github.ben-manes.versions" version "0.28.0"
 }
 
 def checkstyleVersion = '8.28'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13'
-def mockitoVersion = '3.2.4'
+def mockitoVersion = '3.3.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.23'
 
@@ -82,6 +82,10 @@ allprojects {
             downloadSources = true
         }
     }
+
+    tasks.withType(Sign) {
+        onlyIf { isReleaseVersion }
+    }
 }
 
 subprojects {
@@ -102,14 +106,7 @@ subprojects {
     group = artioGroup
     version = version
 
-    compileJava {
-        sourceCompatibility = artioJavaVersion
-        targetCompatibility = artioJavaVersion
-        options.encoding = 'UTF-8'
-        options.deprecation = true
-    }
-
-    compileTestJava {
+    tasks.withType(JavaCompile) {
         sourceCompatibility = artioJavaVersion
         targetCompatibility = artioJavaVersion
         options.encoding = 'UTF-8'
@@ -125,7 +122,7 @@ subprojects {
     checkstyle.toolVersion = "${checkstyleVersion}"
 
     test {
-        if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_9.ordinal()) {
+        if (JavaVersion.current().isJava9Compatible()) {
             jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
         }
 
@@ -162,18 +159,18 @@ subprojects {
     javadoc {
         title = '<h1>Artio</h1>'
         options.bottom = '<i>Copyright &#169; 2015-2020 Real Logic Limited. All Rights Reserved.</i>'
-        if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_10.ordinal()) {
+        if (JavaVersion.current().isJava10Compatible()) {
             options.addBooleanOption 'html5', true
         }
     }
 
     task javadocJar(type: Jar) {
-        archiveClassifier.set 'javadoc'
+        archiveClassifier.set('javadoc')
         from javadoc
     }
 
     task sourcesJar(type: Jar) {
-        archiveClassifier.set 'sources'
+        archiveClassifier.set('sources')
         from sourceSets.main.allSource
     }
 
@@ -186,8 +183,8 @@ subprojects {
     }
 
     task testJar(type: Jar, dependsOn: testClasses) {
-        archiveClassifier.set 'tests'
-        archiveBaseName.set "test-${project.archivesBaseName}"
+        archiveClassifier.set('tests')
+        archiveBaseName.set("test-${project.archivesBaseName}")
         from sourceSets.test.output
     }
 
@@ -226,9 +223,6 @@ project(':artio-codecs') {
 
     compileGeneratedJava {
         dependsOn 'generateMessages'
-        sourceCompatibility = artioJavaVersion
-        targetCompatibility = artioJavaVersion
-        options.deprecation = true
         classpath += sourceSets.main.runtimeClasspath
     }
 
@@ -252,11 +246,14 @@ project(':artio-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
+
+    checkstyleGenerated.enabled = false
 }
 
 project(':artio-ilink3-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
+    def outputClasses = 'out/generated/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
@@ -271,7 +268,7 @@ project(':artio-ilink3-codecs') {
 
     if (iLink3Enabled) {
         compileGeneratedJava {
-            dependsOn 'generateMessages'
+            dependsOn 'generateMessages', 'copySbeIr'
             sourceCompatibility = artioJavaVersion
             targetCompatibility = artioJavaVersion
             options.deprecation = true
@@ -284,8 +281,15 @@ project(':artio-ilink3-codecs') {
             systemProperties(
                 'sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
-                'sbe.java.generate.interfaces': 'true')
+                'sbe.java.generate.interfaces': 'true',
+                'sbe.generate.ir': 'true')
             args = [ sbePath ]
+        }
+
+        task copySbeIr (type: Copy) {
+            from generatedDir.absolutePath
+            include 'ilinkbinary.sbeir'
+            into outputClasses + '/iLinkBinary'
         }
     }
 
@@ -293,9 +297,14 @@ project(':artio-ilink3-codecs') {
         from(sourceSets.generated.output) {
             include '**/*.class'
         }
+        from(outputClasses) {
+            include 'iLinkBinary/ilinkbinary.sbeir'
+        }
     }
 
     jar.dependsOn compileGeneratedJava
+    
+    checkstyleGenerated.enabled = false
 }
 
 
@@ -316,6 +325,8 @@ project(':artio-ilink3-impl') {
     }
 
     compileJava.enabled = iLink3Enabled
+    compileTestJava.enabled = iLink3Enabled
+    test.enabled = iLink3Enabled
     javadoc.enabled = iLink3Enabled
 }
 
@@ -331,9 +342,6 @@ project(':artio-session-codecs') {
 
     compileGeneratedJava {
         dependsOn 'generateCodecs'
-        sourceCompatibility = artioJavaVersion
-        targetCompatibility = artioJavaVersion
-        options.deprecation = true
         classpath += sourceSets.main.runtimeClasspath
     }
 
@@ -366,9 +374,6 @@ project(':artio-session-fixt-codecs') {
 
     compileGeneratedJava {
         dependsOn 'generateCodecs'
-        sourceCompatibility = artioJavaVersion
-        targetCompatibility = artioJavaVersion
-        options.deprecation = true
         classpath += sourceSets.main.runtimeClasspath
     }
 
@@ -393,6 +398,7 @@ project(':artio-core') {
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(':artio-session-codecs')
+        testCompile project(':artio-session-fixt-codecs')
         compile project(':artio-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
@@ -408,6 +414,7 @@ project(':artio-core') {
     idea {
         dependencies {
             testCompile project(':artio-session-codecs').sourceSets.generated.output
+            testCompile project(':artio-session-fixt-codecs').sourceSets.generated.output
             compile project(':artio-codecs').sourceSets.generated.output
         }
     }
@@ -457,7 +464,7 @@ project(':artio-system-tests') {
 
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
-            archiveClassifier.set "benchmarks"
+            archiveClassifier.set("benchmarks")
 
             from sourceSets.main.output
             from sourceSets.perf.output
@@ -479,7 +486,6 @@ project(':artio-ilink-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(path: ':artio-system-tests', configuration: 'tests')
-        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
 
         compile project(':artio-session-codecs')
         compile project(path: ':artio-core')
@@ -488,7 +494,6 @@ project(':artio-ilink-system-tests') {
         idea {
             dependencies {
                 compile project(':artio-ilink3-codecs').sourceSets.generated.output
-                compile project(':artio-session-codecs').sourceSets.generated.output
             }
         }
     }
@@ -500,9 +505,9 @@ project(':artio-ilink-system-tests') {
     test {
         onlyIf { iLink3Enabled }
         systemProperties(
-                'aeron.dir.warn.if.exists': 'false',
-                'aeron.use.windows.high.res.timer': 'true',
-                'aeron.term.buffer.sparse.file': 'true')
+            'aeron.dir.warn.if.exists': 'false',
+            'aeron.use.windows.high.res.timer': 'true',
+            'aeron.term.buffer.sparse.file': 'true')
     }
 }
 
@@ -587,6 +592,6 @@ task uploadToMavenRepository {
 }
 
 wrapper {
-    gradleVersion = '6.1.1'
+    gradleVersion = '6.2.1'
     distributionType = 'ALL'
 }

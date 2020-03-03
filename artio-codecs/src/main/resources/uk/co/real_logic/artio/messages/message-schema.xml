@@ -307,7 +307,9 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="port" id="2" type="int32"/>
         <field name="correlationId" id="3" type="CorrelationId"/>
-        <data name="host" id="4" type="Utf8String"/>
+        <field name="reestablishConnection" id="4" type="Bool"/>
+        <data name="host" id="5" type="Utf8String"/>
+        <data name="accessKeyId" id="6" type="Utf8String"/>
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -447,6 +449,9 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
         <field name="connection" id="3" type="ConnectionId"/>
+        <field name="lastUuid" id="4" type="uint64"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="lastSentSequenceNumber" id="6" type="int32"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

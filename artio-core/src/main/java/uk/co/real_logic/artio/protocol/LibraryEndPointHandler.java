@@ -96,5 +96,11 @@ public interface LibraryEndPointHandler
 
     Action onReplayMessagesReply(int libraryId, long replyToId, ReplayMessagesStatus status);
 
-    Action onILinkConnect(int libraryId, long correlationId, long connection);
+    Action onILinkConnect(
+        int libraryId,
+        long correlationId,
+        long connection,
+        long lastUuid,
+        int lastReceivedSequenceNumber,
+        int lastSentSequenceNumber);
 }

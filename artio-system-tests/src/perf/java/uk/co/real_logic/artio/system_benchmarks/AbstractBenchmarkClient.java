@@ -159,7 +159,7 @@ public abstract class AbstractBenchmarkClient
 
             while (index < length)
             {
-                index = readFlyweight.scan(index, length - 1, NINE);
+                index = readFlyweight.scan(index, length, NINE);
 
                 if (index == UNKNOWN_INDEX)
                 {

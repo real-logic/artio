@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import org.agrona.sbe.MessageEncoderFlyweight;
+
 public abstract class AbstractILink3Proxy
 {
 
@@ -40,4 +42,13 @@ public abstract class AbstractILink3Proxy
         String sessionId,
         String firmId,
         int keepAliveInterval);
+
+    public abstract long sendTerminate(
+        String reason, long uuid, long requestTimestamp, int errorCodes);
+
+    public abstract long claimILinkMessage(
+        int messageLength,
+        MessageEncoderFlyweight message);
+
+    public abstract void commit();
 }

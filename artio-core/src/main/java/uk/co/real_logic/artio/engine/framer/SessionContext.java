@@ -25,21 +25,21 @@ import uk.co.real_logic.artio.session.Session;
  */
 class SessionContext implements SessionInfo
 {
-    static final int UNKNOWN_SEQUENCE_INDEX = -1;
-
     private final CompositeKey compositeKey;
     private final long sessionId;
     private final SessionContexts sessionContexts;
 
-    private final int filePosition;
-
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
-    private int sequenceIndex;
+    // Variable only written to on the Framer thread but can be read on other threads via the
+    // SessionInfo interface.
+    private volatile int sequenceIndex;
+    private int initialSequenceIndex;
 
     private long lastLogonTime;
     private long lastSequenceResetTime;
     private FixDictionary lastFixDictionary;
+    private int filePosition;
 
     SessionContext(
         final CompositeKey compositeKey,
@@ -49,11 +49,13 @@ class SessionContext implements SessionInfo
         final long lastSequenceResetTime,
         final SessionContexts sessionContexts,
         final int filePosition,
+        final int initialSequenceIndex,
         final FixDictionary lastFixDictionary)
     {
         this.compositeKey = compositeKey;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
+        this.initialSequenceIndex = initialSequenceIndex;
         lastLogonTime(lastLogonTime);
         this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
@@ -69,7 +71,7 @@ class SessionContext implements SessionInfo
     void onSequenceReset(final long resetTime)
     {
         lastSequenceResetTime = resetTime;
-        sequenceIndex++;
+        sequenceIndex = sequenceIndex == UNKNOWN_SEQUENCE_INDEX ? initialSequenceIndex : sequenceIndex + 1;
         save();
     }
 
@@ -79,12 +81,23 @@ class SessionContext implements SessionInfo
         save();
     }
 
+    void ensureFixDictionary(final FixDictionary fixDictionary)
+    {
+        if (lastFixDictionary != fixDictionary)
+        {
+            this.lastFixDictionary = fixDictionary;
+            save();
+        }
+    }
+
     private void save()
     {
-        // NB: we deliberately don't update the fix dictionary as this can't change within
-        // a connection
-        sessionContexts.updateSavedData(
-            filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
+        sessionContexts.updateSavedData(this, filePosition);
+    }
+
+    void filePosition(final int filePosition)
+    {
+        this.filePosition = filePosition;
     }
 
     void updateFrom(final Session session)
@@ -111,7 +124,7 @@ class SessionContext implements SessionInfo
         }
     }
 
-    int sequenceIndex()
+    public int sequenceIndex()
     {
         return sequenceIndex;
     }

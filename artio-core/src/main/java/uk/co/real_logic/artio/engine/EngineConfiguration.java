@@ -135,6 +135,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 4 * 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int)SECONDS.toMillis(5);
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
+    public static final String DEFAULT_ILINK3_ID_FILE = "ilink3_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
@@ -164,6 +165,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
     public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
 
+    public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
+
     private String host = null;
     private int port;
     private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
@@ -180,6 +183,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
+    private MappedFile iLink3IdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
     private AeronArchive.Context archiveContextClone;
@@ -222,10 +226,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
+    private boolean lookupDefaultAcceptorfixDictionary = true;
     private Map<String, FixDictionary> acceptorFixDictionaryOverrides = new HashMap<>();
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
     private boolean bindAtStartup = true;
+    private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -674,6 +680,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
+     * Can be used to disable the automated lookup of an acceptorFixDictionary. This is useful when you're not
+     * using regular FIX as your protocol but something else for example - Artio's iLink3 support.
+     *
+     * @param lookupDefaultAcceptorfixDictionary true if you want to lookup a default acceptor fix dictionary (the
+     *                                           default), false otherwise.
+     * @return this
+     */
+    public EngineConfiguration lookupDefaultAcceptorfixDictionary(final boolean lookupDefaultAcceptorfixDictionary)
+    {
+        this.lookupDefaultAcceptorfixDictionary = lookupDefaultAcceptorfixDictionary;
+        return this;
+    }
+
+    /**
      * Override the acceptor FIX Dictionary for a given beginString. The beginString to use is extracted from the
      * Provided FIX Dictionary.
      *
@@ -824,6 +844,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return sessionIdBuffer;
     }
 
+    public MappedFile iLink3IdBuffer()
+    {
+        if (iLink3IdBuffer == null)
+        {
+            iLink3IdBuffer = mapFile(DEFAULT_ILINK3_ID_FILE, sessionIdBufferSize);
+        }
+        return iLink3IdBuffer;
+    }
+
     public Set<String> gapfillOnReplayMessageTypes()
     {
         return gapfillOnReplayMessageTypes;
@@ -892,6 +921,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long authenticationTimeoutInMs()
     {
         return authenticationTimeoutInMs;
+    }
+
+    public int initialSequenceIndex()
+    {
+        return initialSequenceIndex;
+    }
+
+    /**
+     * Sets the initial sequenceIndex for the new session.
+     * Doesnt affects existing session.
+     *
+     * @param initialSequenceIndex initial sequence index
+     * @return this
+     */
+    public EngineConfiguration initialSequenceIndex(final int initialSequenceIndex)
+    {
+        this.initialSequenceIndex = initialSequenceIndex;
+        return this;
     }
 
     /**
@@ -963,6 +1010,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
     {
         super.outboundLibraryStream(outboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
+    {
+        super.printErrorMessages(printErrorMessages);
         return this;
     }
 
@@ -1068,7 +1124,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             sessionPersistenceStrategy(alwaysTransient());
         }
 
-        if (acceptorfixDictionary() == null)
+        if (lookupDefaultAcceptorfixDictionary && acceptorfixDictionary() == null)
         {
             acceptorfixDictionary(FixDictionary.findDefault());
         }
@@ -1105,6 +1161,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(sentSequenceNumberIndex);
         CloseHelper.close(receivedSequenceNumberIndex);
         CloseHelper.close(sessionIdBuffer);
+        CloseHelper.close(iLink3IdBuffer);
     }
 
 }

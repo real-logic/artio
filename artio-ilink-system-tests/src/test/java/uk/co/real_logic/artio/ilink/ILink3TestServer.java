@@ -34,12 +34,15 @@ import static iLinkBinary.NegotiationResponse501Encoder.credentialsHeaderLength;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
 public class ILink3TestServer
 {
     private static final int BUFFER_SIZE = 8 * 1024;
+    public static final String REJECT_REASON = "Invalid Logon";
+    public static final int ESTABLISHMENT_REJECT_SEQ_NO = 2;
 
     private final SocketChannel socket;
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -193,9 +196,25 @@ public class ILink3TestServer
         write();
     }
 
+    public void writeNegotiateReject()
+    {
+        final NegotiationReject502Encoder negotiateReject = new NegotiationReject502Encoder();
+        wrap(negotiateReject, NegotiationReject502Encoder.BLOCK_LENGTH);
+
+        negotiateReject
+            .uUID(uuid)
+            .reason(REJECT_REASON)
+            .requestTimestamp(negotiateRequestTimestamp)
+            .errorCodes(0)
+            .faultToleranceIndicator(FTI.Primary)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
     public void readEstablish(
         final String expectedAccessKeyID, final String expectedFirmId, final String expectedSessionId,
-        final int expectedKeepAliveInterval)
+        final int expectedKeepAliveInterval, final long expectedNextSeqNo)
     {
         final Establish503Decoder establish = read(new Establish503Decoder());
         //  establish.hMACSignature()
@@ -208,7 +227,7 @@ public class ILink3TestServer
         establishRequestTimestamp = establish.requestTimestamp();
         assertThat(establishRequestTimestamp, greaterThanOrEqualTo(negotiateRequestTimestamp));
         final long nextSeqNo = establish.nextSeqNo();
-        assertThat(nextSeqNo, greaterThanOrEqualTo(1L));
+        assertEquals(expectedNextSeqNo, nextSeqNo);
 
         assertEquals(expectedSessionId, establish.session());
         assertEquals(expectedFirmId, establish.firm());
@@ -216,7 +235,7 @@ public class ILink3TestServer
         assertEquals(expectedKeepAliveInterval, requestedKeepAliveInterval);
     }
 
-    public void writeEstablishAck()
+    public void writeEstablishmentAck()
     {
         final EstablishmentAck504Encoder establishmentAck = new EstablishmentAck504Encoder();
         wrap(establishmentAck, EstablishmentAck504Encoder.BLOCK_LENGTH);
@@ -233,5 +252,75 @@ public class ILink3TestServer
             .splitMsg(SplitMsg.NULL_VAL);
 
         write();
+    }
+
+    public void writeEstablishmentReject()
+    {
+        final EstablishmentReject505Encoder establishmentReject = new EstablishmentReject505Encoder();
+        wrap(establishmentReject, EstablishmentReject505Encoder.BLOCK_LENGTH);
+
+        establishmentReject
+            .reason(REJECT_REASON)
+            .uUID(uuid)
+            .requestTimestamp(establishRequestTimestamp)
+            .nextSeqNo(ESTABLISHMENT_REJECT_SEQ_NO)
+            .errorCodes(1)
+            .faultToleranceIndicator(FTI.Primary)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
+    public void readTerminate()
+    {
+        final Terminate507Decoder terminate = read(new Terminate507Decoder());
+//        terminate.reason();
+        assertEquals(uuid, terminate.uUID());
+//        terminate.requestTimestamp();
+//        terminate.errorCodes();
+    }
+
+    public void writeTerminate()
+    {
+        final Terminate507Encoder terminate = new Terminate507Encoder();
+        wrap(terminate, Terminate507Encoder.BLOCK_LENGTH);
+
+        terminate
+            .uUID(uuid)
+            .requestTimestamp(0)
+            .errorCodes(0)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
+
+    public void readNewOrderSingle(final int expectedSeqNum)
+    {
+        final NewOrderSingle514Decoder newOrderSingle = new NewOrderSingle514Decoder();
+        read(newOrderSingle);
+        assertEquals(expectedSeqNum, newOrderSingle.seqNum());
+        // TODO: newOrderSingle.sendingTimeEpoch()
+    }
+
+    public void assertDisconnected()
+    {
+        final boolean disconnected = testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                return socket.read(readBuffer) == -1;
+            }
+            catch (final IOException e)
+            {
+                return true;
+            }
+        });
+
+        assertTrue(disconnected);
+    }
+
+    public void expectedUuid(final long lastUuid)
+    {
+        this.uuid = lastUuid;
     }
 }

@@ -25,6 +25,11 @@ public interface SessionInfo
     int UNK_SESSION = -1;
 
     /**
+     * The used to identify a sequenceIndex that hasn't yet been identified
+     */
+    int UNKNOWN_SEQUENCE_INDEX = -1;
+
+    /**
      * Get the identification number of the session in question or {@link #UNK_SESSION}
      * if the session hasn't completed its logon yet.
      *
@@ -39,4 +44,12 @@ public interface SessionInfo
      * @return the full identifying key of the session in question.
      */
     CompositeKey sessionKey();
+
+    /**
+     * Get the sesssion sequence index or {@link #UNKNOWN_SEQUENCE_INDEX}
+     * if the session hasn't completed its logon yet.
+     *
+     * @return the sequenceIndex
+     */
+    int sequenceIndex();
 }

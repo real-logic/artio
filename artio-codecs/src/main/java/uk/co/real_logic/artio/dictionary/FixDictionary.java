@@ -57,7 +57,8 @@ public interface FixDictionary
         }
         catch (final ClassNotFoundException e)
         {
-            throw new IllegalStateException("No FIX Dictionary specified and default found on the classpath", e);
+            throw new IllegalStateException("No FIX Dictionary specified and default found on the classpath: '" +
+                name + "'", e);
         }
     }
 

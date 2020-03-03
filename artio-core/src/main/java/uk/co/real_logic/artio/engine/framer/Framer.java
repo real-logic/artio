@@ -34,10 +34,7 @@ import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.PositionSender;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -174,6 +171,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final boolean soleLibraryMode;
+    private ILink3Contexts iLink3Contexts;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -606,7 +604,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     public Action onInitiateILinkConnection(
-        final int libraryId, final int port, final long correlationId, final String host)
+        final int libraryId, final int port, final long correlationId,
+        final boolean reestablishConnection, final String host, final String accessKeyId)
     {
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
@@ -620,6 +619,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         // TODO: re-add this
         /*final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
         library.connectionStartsConnecting(correlationId, connectingSession);*/
+
+        final ILink3Contexts iLink3Contexts = iLink3Contexts();
+        final long uuid = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
+        final int aeronSessionId = library.aeronSessionId();
+        final Image image = librarySubscription.imageBySessionId(aeronSessionId);
+        final long position = image.position();
+        final ILink3LookupConnectOperation lookupInformation = new ILink3LookupConnectOperation(
+            libraryId,
+            correlationId,
+            uuid,
+            aeronSessionId,
+            position,
+            reestablishConnection);
+        schedule(lookupInformation);
+
         try
         {
             DebugLogger.log(
@@ -643,8 +657,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         initiatingSessionFormatter, 0, library.libraryId());
                     final long connectionId = newConnectionId();
 
-                    schedule(() -> inboundPublication.saveILinkConnect(
-                        libraryId, correlationId, connectionId));
+                    lookupInformation.connected(connectionId);
 
                     iLink3SenderEndPoints.add(new ILink3SenderEndPoint(connectionId, channel, errorHandler));
                     receiverEndPoints.add(new ILink3ReceiverEndPoint(
@@ -666,6 +679,91 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    private ILink3Contexts iLink3Contexts()
+    {
+        if (iLink3Contexts == null)
+        {
+            iLink3Contexts = new ILink3Contexts(
+                configuration.iLink3IdBuffer(),
+                errorHandler);
+        }
+
+        return iLink3Contexts;
+    }
+
+    private final class ILink3LookupConnectOperation implements Continuation
+    {
+        private final int libraryId;
+        private final long correlationId;
+        private final long lastUuid;
+        private final int aeronSessionId;
+        private final long position;
+
+        private boolean hasConnected = false;
+        private boolean hasScannedIndex = false;
+
+        private long connectionId;
+        private int lastReceivedSequenceNumber;
+        private int lastSentSequenceNumber;
+
+        private ILink3LookupConnectOperation(
+            final int libraryId,
+            final long correlationId,
+            final long lastUuid,
+            final int aeronSessionId,
+            final long position,
+            final boolean reestablishConnection)
+        {
+            this.libraryId = libraryId;
+            this.correlationId = correlationId;
+            this.lastUuid = lastUuid;
+            this.aeronSessionId = aeronSessionId;
+            this.position = position;
+
+            if (!reestablishConnection)
+            {
+                lastSentSequenceNumber = UNK_SESSION;
+                lastReceivedSequenceNumber = UNK_SESSION;
+                hasScannedIndex = true;
+            }
+        }
+
+        public long attempt()
+        {
+            if (!hasScannedIndex)
+            {
+                scanIndex();
+
+                return BACK_PRESSURED;
+            }
+
+            if (!hasConnected)
+            {
+                return BACK_PRESSURED;
+            }
+
+            return inboundPublication.saveILinkConnect(
+                libraryId, correlationId, connectionId, lastUuid, lastReceivedSequenceNumber,
+                lastSentSequenceNumber);
+        }
+
+        private void scanIndex()
+        {
+            if (sentSequenceNumberIndex.indexedPosition(aeronSessionId) > position)
+            {
+                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(lastUuid);
+                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(lastUuid);
+                hasScannedIndex = true;
+            }
+        }
+
+        public void connected(final long connectionId)
+        {
+            hasConnected = true;
+            this.connectionId = connectionId;
+        }
     }
 
     public Action onInitiateConnection(
