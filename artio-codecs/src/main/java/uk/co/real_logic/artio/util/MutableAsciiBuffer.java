@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.util;
 
+import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.fields.*;
@@ -106,7 +107,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     {
         if (value < 0x30 || value > 0x39)
         {
-            throw new NumberFormatException("'" + ((char)value) + "' isn't a valid digit @ " + index);
+            throw new AsciiNumberFormatException("'" + ((char)value) + "' isn't a valid digit @ " + index);
         }
 
         return value - 0x30;
