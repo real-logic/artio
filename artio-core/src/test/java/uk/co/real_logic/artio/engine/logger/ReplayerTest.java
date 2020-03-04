@@ -40,6 +40,7 @@ import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.ReplayHandler;
+import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
@@ -123,7 +124,8 @@ public class ReplayerTest extends AbstractLogTest
             replayHandler,
             senderSequenceNumbers,
             new FakeFixSessionCodecsFactory(),
-            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER,
+            mock(ReplayerCommandQueue.class));
     }
 
     private void setReplayedMessages(final int replayedMessages)

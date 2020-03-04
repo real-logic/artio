@@ -40,7 +40,8 @@ import java.util.List;
  * Context that injects all the necessary information into different Framer classes.
  *
  * This enables many classes in the framer package to be package scoped as they don't
- * need the Fix Engine itself to touch them.
+ * need the Fix Engine itself to touch them. This isn't considered part of the public API
+ * and shouldn't be relied upon by Artio users.
  */
 public class FramerContext
 {
@@ -128,7 +129,7 @@ public class FramerContext
             engineContext.inboundReplayQuery(),
             outboundPublication,
             inboundPublication,
-            adminCommands,
+            this.adminCommands,
             sessionIdStrategy,
             sessionContexts,
             sentSequenceNumberIndex,
@@ -270,13 +271,14 @@ public class FramerContext
         return null;
     }
 
-    public boolean offer(final WriteMetaDataResponse response)
+    public boolean offer(final AdminCommand command)
     {
-        return adminCommands.offer(response);
+        return adminCommands.offer(command);
     }
 
     public List<SessionInfo> allSessions()
     {
         return sessionContexts.allSessions();
     }
+
 }

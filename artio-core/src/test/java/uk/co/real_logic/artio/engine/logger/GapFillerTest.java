@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -42,7 +43,7 @@ public class GapFillerTest extends AbstractLogTest
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
     private GapFiller gapFiller = new GapFiller(
         subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers,
-        new FakeFixSessionCodecsFactory());
+        mock(ReplayerCommandQueue.class), new FakeFixSessionCodecsFactory());
 
     @Test
     public void shouldGapFillInResponseToResendRequest()

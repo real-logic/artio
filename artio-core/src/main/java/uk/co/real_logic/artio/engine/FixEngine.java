@@ -19,6 +19,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.GatewayProcess;
@@ -375,6 +376,17 @@ public final class FixEngine extends GatewayProcess
     public boolean isClosed()
     {
         return isClosed;
+    }
+
+    /**
+     * Cleans up storage from Aeron archive.
+     *
+     * @param minimumPrunePositions the minimum position.
+     * @return the position pruned up to.
+     */
+    public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap minimumPrunePositions)
+    {
+        return engineContext.pruneArchive(minimumPrunePositions);
     }
 
     public EngineConfiguration configuration()

@@ -21,6 +21,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -114,6 +115,11 @@ public class ReplayQuery implements AutoCloseable
         fixSessionToIndex.clear();
 
         CloseHelper.close(replaySubscription);
+    }
+
+    public void queryStartPositions(final Long2LongHashMap newStartPositions)
+    {
+
     }
 
     private final class SessionQuery implements AutoCloseable

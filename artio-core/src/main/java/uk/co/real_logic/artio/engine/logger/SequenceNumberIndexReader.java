@@ -31,8 +31,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
+import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;

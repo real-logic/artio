@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
+import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -67,6 +68,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final BufferClaim bufferClaim;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final int maxBytesInBuffer;
+    private final ReplayerCommandQueue replayerCommandQueue;
     private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
     private final CharFormatter receivedResendFormatter = new CharFormatter(
         "Received Resend Request for range: [%s, %s]%n");
@@ -74,7 +76,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         "Not processing Resend Request for %s because it has already disconnected %n");
     private final ReplayerSession.Formatters formatters = new ReplayerSession.Formatters();
 
-    private final ReplayQuery replayQuery;
+    private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
@@ -90,7 +92,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
 
     public Replayer(
-        final ReplayQuery replayQuery,
+        final ReplayQuery outboundReplayQuery,
         final ExclusivePublication publication,
         final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
@@ -103,9 +105,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final ReplayHandler replayHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
-        final int maxBytesInBuffer)
+        final int maxBytesInBuffer,
+        final ReplayerCommandQueue replayerCommandQueue)
     {
-        this.replayQuery = replayQuery;
+        this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
@@ -118,6 +121,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.maxBytesInBuffer = maxBytesInBuffer;
+        this.replayerCommandQueue = replayerCommandQueue;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -201,7 +205,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             connectionId,
             sessionId,
             sequenceIndex,
-            replayQuery,
+            outboundReplayQuery,
             message,
             errorHandler,
             encoder,
@@ -218,7 +222,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     public int doWork()
     {
-        int work = senderSequenceNumbers.poll();
+        int work = replayerCommandQueue.poll();
         work += pollReplayerSessions();
         return work + inboundSubscription.controlledPoll(this, POLL_LIMIT);
     }
@@ -243,7 +247,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     {
         replayerSessions.forEach(ReplayerSession::close);
         publication.close();
-        replayQuery.close();
+        outboundReplayQuery.close();
     }
 
     public String roleName()
