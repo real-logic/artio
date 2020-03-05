@@ -116,6 +116,19 @@ public class SessionContextsTest
     }
 
     @Test
+    public void sessionPersistedCorrectlyAfterARestart()
+    {
+        sessionContexts.onLogon(aSession, fixDictionary);
+        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
+        final SessionContext reloadedAContext = sessionContextsAfterRestart.onLogon(aSession, fixDictionary);
+        reloadedAContext.onSequenceReset(time + 1);
+
+        final SessionContexts sessionContextsAfterSecondRestart = newSessionContexts(buffer);
+        final SessionContext reloadedAgainContext = sessionContextsAfterSecondRestart.onLogon(aSession, fixDictionary);
+        assertEquals(time + 1, reloadedAgainContext.lastSequenceResetTime());
+    }
+
+    @Test
     public void continuesIncrementingSessionContextsAfterRestart()
     {
         final SessionContext bContext = sessionContexts.onLogon(bSession, fixDictionary);

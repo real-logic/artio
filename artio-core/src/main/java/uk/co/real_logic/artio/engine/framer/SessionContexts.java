@@ -199,7 +199,8 @@ public class SessionContexts
                 final FixDictionary thisDictionary = (dictionary == null) ?
                     FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
                 final SessionContext sessionContext = new SessionContext(compositeKey,
-                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
+                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
+                    sessionIdDecoder.initialOffset(),
                     initialSequenceIndex, thisDictionary);
                 compositeToContext.put(compositeKey, sessionContext);
 
