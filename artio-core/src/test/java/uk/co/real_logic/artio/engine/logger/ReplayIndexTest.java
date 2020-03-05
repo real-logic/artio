@@ -25,6 +25,7 @@ import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
+import static io.aeron.Aeron.NULL_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -323,9 +325,24 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID_2);
     }
 
-    private void indexExampleMessage()
+    // TODO: find all the sessions
+    // TODO: find the current sequence index.
+    // TODO: find the first message in that sequence index.
+
+    @Test(timeout = 20_000L)
+    public void shouldQueryStartPositions()
     {
-        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        indexExampleMessage();
+
+        final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
+        query.queryStartPositions(startPositions);
+
+        System.out.println(startPositions);
+    }
+
+    private long indexExampleMessage()
+    {
+        return indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
     }
 
     private void verifyNoMessageRead()
@@ -384,21 +401,25 @@ public class ReplayIndexTest extends AbstractLogTest
         }
     }
 
-    private void indexExampleMessage(final long sessionId, final int sequenceNumber, final int sequenceIndex)
+    private long indexExampleMessage(final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
         bufferContainsExampleMessage(true, sessionId, sequenceNumber, sequenceIndex);
 
-        publishBuffer();
+        final long position = publishBuffer();
 
         indexRecord();
+
+        return position;
     }
 
-    private void publishBuffer()
+    private long publishBuffer()
     {
-        while (publication.offer(buffer, START, logEntryLength + PREFIX_LENGTH) <= 0)
+        long position = 0;
+        while ((position = publication.offer(buffer, START, logEntryLength + PREFIX_LENGTH)) <= 0)
         {
             Thread.yield();
         }
+        return position;
     }
 
     private int query()
