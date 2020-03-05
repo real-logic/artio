@@ -264,7 +264,8 @@ public class ReplayOperation
         // wait if the recording is active - otherwise assume that the recording has complete.
         if (counterId != CountersReader.NULL_COUNTER_ID)
         {
-            return countersReader.getCounterValue(counterId) < endPosition;
+            final long counterPosition = countersReader.getCounterValue(counterId);
+            return counterPosition < endPosition;
         }
 
         return false;
