@@ -59,9 +59,9 @@ public final class ReplayIndexDescriptor
             final String fileName = file.getName();
             if (fileName.startsWith(prefix))
             {
-                final int suffixIndex = fileName.lastIndexOf(suffix);
-                if (suffixIndex != -1)
+                if (fileName.endsWith(suffix))
                 {
+                    final int suffixIndex = fileName.length() - suffix.length();
                     final String sessionIdString = fileName.substring(prefix.length(), suffixIndex);
                     final long sessionId = Long.parseLong(sessionIdString);
                     sessionIds.add(sessionId);

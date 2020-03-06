@@ -146,4 +146,15 @@ public class PruneOperation implements AdminCommand, ReplayerCommand, Reply<Long
         result = newStartPositions;
         replyState = State.ERRORED;
     }
+
+    public String toString()
+    {
+        return "PruneOperation{" +
+            "newStartPositions=" + newStartPositions +
+            ", minimumPrunePositions=" + minimumPrunePositions +
+            ", replyState=" + replyState +
+            ", result=" + result +
+            ", error=" + error +
+            '}';
+    }
 }
