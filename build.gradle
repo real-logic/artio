@@ -43,6 +43,42 @@ def iLink3Enabled = false
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
 
+def projectPom = {
+    name = 'artio'
+    packaging = 'jar'
+    description = 'High-Performance FIX Gateway'
+
+    url = 'https://github.com/real-logic/artio'
+
+    scm {
+        connection = 'scm:git:https://github.com/real-logic/artio.git'
+        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
+        url = 'https://github.com/real-logic/artio.git'
+    }
+
+    licenses {
+        license {
+            name = 'The Apache License, Version 2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+        }
+    }
+
+    developers {
+        developer {
+            id = 'RichardWarburton'
+            name = 'Richard Warburton'
+            email = 'richard.warburton@gmail.com'
+            url = 'https://github.com/RichardWarburton'
+        }
+        developer {
+            id = 'mjpt777'
+            name = 'Martin Thompson'
+            email = 'mjpt777@gmail.com'
+            url = 'https://github.com/mjpt777'
+        }
+    }
+}
+
 ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
@@ -66,7 +102,7 @@ ext {
 }
 
 allprojects {
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
     apply plugin: 'signing'
     apply plugin: 'eclipse'
     apply plugin: 'idea'
@@ -89,7 +125,7 @@ allprojects {
 }
 
 subprojects {
-    apply plugin: 'java'
+    apply plugin: 'java-library'
     apply plugin: 'checkstyle'
 
     // Make sure that we use the correct JDK in Eclipse
@@ -114,9 +150,9 @@ subprojects {
     }
 
     dependencies {
-        testCompile "org.hamcrest:hamcrest:${hamcrestVersion}"
-        testCompile "org.mockito:mockito-core:${mockitoVersion}"
-        testCompile "junit:junit:${junitVersion}"
+        testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
+        testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+        testImplementation "junit:junit:${junitVersion}"
     }
 
     checkstyle.toolVersion = "${checkstyleVersion}"
@@ -177,7 +213,7 @@ subprojects {
     jar {
         manifest.attributes(
             'Implementation-Title': 'Artio',
-            'Implementation-Version': "${version}",
+            'Implementation-Version': "${archiveVersion}",
             'Implementation-Vendor': 'Real Logic Limited'
         )
     }
@@ -210,25 +246,33 @@ def validationXsdPath = project(':artio-codecs').projectDir.toString() + '/src/m
 project(':artio-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
+    configurations {
+        codecGeneration
+    }
+
+    dependencies {
+        api "org.agrona:agrona:${agronaVersion}"
+        codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
+        api "uk.co.real-logic:sbe-tool:${sbeVersion}"
+        api files('build/classes/java/generated')
+        testImplementation files('build/classes/java/generated')
+    }
+
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
         generated.java.srcDir generatedDir
     }
 
-    dependencies {
-        compile "org.agrona:agrona:${agronaVersion}"
-        compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
-        testCompile sourceSets.generated.output
-    }
+    compileJava.dependsOn 'compileGeneratedJava'
 
     compileGeneratedJava {
         dependsOn 'generateMessages'
-        classpath += sourceSets.main.runtimeClasspath
+        classpath += configurations.codecGeneration
     }
 
     task generateMessages(type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
-        classpath = sourceSets.main.runtimeClasspath
+        classpath = configurations.codecGeneration
         systemProperties('sbe.output.dir': generatedDir,
             'sbe.target.language': 'Java',
             'sbe.validation.stop.on.error': 'true',
@@ -240,18 +284,38 @@ project(':artio-codecs') {
     }
 
     jar {
-        from(sourceSets.generated.output) {
-            include '**/*.class'
+        from sourceSets.generated.output
+    }
+
+    checkstyleGenerated.enabled = false
+
+    publishing {
+        publications {
+            artioCodecs(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
         }
     }
 
-    jar.dependsOn compileGeneratedJava
-
-    checkstyleGenerated.enabled = false
+    signing {
+        sign publishing.publications.artioCodecs
+    }
 }
 
 project(':artio-ilink3-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
+
+    configurations {
+        codecGeneration
+    }
+
+    dependencies {
+        api "org.agrona:agrona:${agronaVersion}"
+        codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
+        api files('build/classes/java/generated')
+        testImplementation files('build/classes/java/generated')
+    }
 
     def outputClasses = 'out/generated/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
@@ -260,24 +324,20 @@ project(':artio-ilink3-codecs') {
         generated.java.srcDir generatedDir
     }
 
-    dependencies {
-        compile "org.agrona:agrona:${agronaVersion}"
-        compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
-        testCompile sourceSets.generated.output
-    }
-
     if (iLink3Enabled) {
+        compileJava.dependsOn 'compileGeneratedJava'
+
         compileGeneratedJava {
             dependsOn 'generateMessages', 'copySbeIr'
             sourceCompatibility = artioJavaVersion
             targetCompatibility = artioJavaVersion
             options.deprecation = true
-            classpath += sourceSets.main.runtimeClasspath
+            classpath += configurations.codecGeneration
         }
 
         task generateMessages(type: JavaExec) {
             main = 'uk.co.real_logic.sbe.SbeTool'
-            classpath = sourceSets.main.runtimeClasspath
+            classpath = configurations.codecGeneration
             systemProperties(
                 'sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
@@ -294,17 +354,29 @@ project(':artio-ilink3-codecs') {
     }
 
     jar {
-        from(sourceSets.generated.output) {
-            include '**/*.class'
-        }
+        from sourceSets.generated.output
+
         from(outputClasses) {
             include 'iLinkBinary/ilinkbinary.sbeir'
         }
     }
 
     jar.dependsOn compileGeneratedJava
-    
+
     checkstyleGenerated.enabled = false
+
+    publishing {
+        publications {
+            artioILink3Codecs(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioILink3Codecs
+    }
 }
 
 
@@ -312,27 +384,40 @@ project(':artio-ilink3-impl') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile project(':artio-ilink3-codecs')
-        compile project(':artio-codecs')
-        compile "io.aeron:aeron-client:${aeronVersion}"
-    }
-
-    idea {
-        dependencies {
-            compile project(':artio-ilink3-codecs').sourceSets.generated.output
-            compile project(':artio-codecs').sourceSets.generated.output
-        }
+        api project(':artio-ilink3-codecs')
+        api project(':artio-codecs')
+        api "io.aeron:aeron-client:${aeronVersion}"
     }
 
     compileJava.enabled = iLink3Enabled
     compileTestJava.enabled = iLink3Enabled
     test.enabled = iLink3Enabled
     javadoc.enabled = iLink3Enabled
+
+    publishing {
+        publications {
+            artioIlink3Impl(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioIlink3Impl
+    }
 }
 
 project(':artio-session-codecs') {
+
+    configurations {
+        codecGeneration
+    }
+
     dependencies {
-        compile project(path: ':artio-codecs')
+        api project(':artio-codecs')
+        codecGeneration project(':artio-codecs')
+        api files('build/classes/java/generated')
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -340,31 +425,49 @@ project(':artio-session-codecs') {
         generated.java.srcDir generatedDir
     }
 
+    compileJava.dependsOn 'compileGeneratedJava'
+
     compileGeneratedJava {
         dependsOn 'generateCodecs'
-        classpath += sourceSets.main.runtimeClasspath
+        classpath += configurations.codecGeneration
     }
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
-        classpath = sourceSets.main.runtimeClasspath
+        classpath = configurations.codecGeneration
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
         outputs.dir generatedDir
         systemProperty("fix.codecs.flyweight", "true")
     }
 
     jar {
-        from(sourceSets.generated.output) {
-            include '**/*.class'
+        from sourceSets.generated.output
+    }
+
+    publishing {
+        publications {
+            artioSessionCodecs(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
         }
     }
 
-    jar.dependsOn compileGeneratedJava
+    signing {
+        sign publishing.publications.artioSessionCodecs
+    }
 }
 
 project(':artio-session-fixt-codecs') {
+
+    configurations {
+        codecGeneration
+    }
+
     dependencies {
-        compile project(path: ':artio-codecs')
+        api project(path: ':artio-codecs')
+        codecGeneration project(':artio-codecs')
+        api files('build/classes/java/generated')
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -372,51 +475,54 @@ project(':artio-session-fixt-codecs') {
         generated.java.srcDir generatedDir
     }
 
+    compileJava.dependsOn 'compileGeneratedJava'
+
     compileGeneratedJava {
         dependsOn 'generateCodecs'
-        classpath += sourceSets.main.runtimeClasspath
+        classpath += configurations.codecGeneration
     }
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
-        classpath = sourceSets.main.runtimeClasspath
+        classpath = configurations.codecGeneration
         systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
         args = [generatedDir, 'src/main/resources/FIXT11.xml']
         outputs.dir generatedDir
     }
 
     jar {
-        from(sourceSets.generated.output) {
-            include '**/*.class'
+        from sourceSets.generated.output
+    }
+
+    publishing {
+        publications {
+            artioSessionFixtCodecs(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
         }
     }
 
-    jar.dependsOn compileGeneratedJava
+    signing {
+        sign publishing.publications.artioSessionFixtCodecs
+    }
 }
 
 project(':artio-core') {
     dependencies {
-        testCompile project(path: ':artio-codecs', configuration: 'tests')
-        testCompile project(':artio-session-codecs')
-        testCompile project(':artio-session-fixt-codecs')
-        compile project(':artio-codecs')
+        testImplementation project(path: ':artio-codecs', configuration: 'tests')
+        testImplementation project(':artio-session-codecs')
+        testImplementation project(':artio-session-fixt-codecs')
+        api project(':artio-codecs')
 
-        compile "io.aeron:aeron-client:${aeronVersion}"
-        compile "io.aeron:aeron-driver:${aeronVersion}"
-        compile "io.aeron:aeron-archive:${aeronVersion}"
-        compile "org.hdrhistogram:HdrHistogram:${hdrHistogramVersion}"
+        api "io.aeron:aeron-client:${aeronVersion}"
+        api "io.aeron:aeron-driver:${aeronVersion}"
+        api "io.aeron:aeron-archive:${aeronVersion}"
+        api "org.hdrhistogram:HdrHistogram:${hdrHistogramVersion}"
     }
 
     test {
         systemProperties('java.net.preferIPv4Stack': true)
-    }
-
-    idea {
-        dependencies {
-            testCompile project(':artio-session-codecs').sourceSets.generated.output
-            testCompile project(':artio-session-fixt-codecs').sourceSets.generated.output
-            compile project(':artio-codecs').sourceSets.generated.output
-        }
     }
 }
 
@@ -428,27 +534,20 @@ project(':artio-system-tests') {
     }
 
     dependencies {
-        testCompile project(path: ':artio-core', configuration: 'tests')
-        testCompile project(path: ':artio-codecs', configuration: 'tests')
+        testImplementation project(path: ':artio-core', configuration: 'tests')
+        testImplementation project(path: ':artio-codecs', configuration: 'tests')
 
-        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
-        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+        testImplementation project(path: ':artio-session-codecs', configuration: 'tests')
+        testImplementation project(path: ':artio-session-fixt-codecs', configuration: 'tests')
 
-        compile project(':artio-session-codecs')
-        compile project(':artio-session-fixt-codecs')
+        api project(':artio-session-codecs')
+        api project(':artio-session-fixt-codecs')
 
-        compile project(path: ':artio-core')
+        api project(path: ':artio-core')
 
-        perfCompile project
-        perfCompile "org.openjdk.jmh:jmh-core:${jmhVersion}"
+        perfImplementation project
+        perfImplementation "org.openjdk.jmh:jmh-core:${jmhVersion}"
         annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:${jmhVersion}"
-
-        idea {
-            dependencies {
-                compile project(':artio-session-codecs').sourceSets.generated.output
-                compile project(':artio-session-fixt-codecs').sourceSets.generated.output
-            }
-        }
     }
 
     idea.module {
@@ -477,25 +576,32 @@ project(':artio-system-tests') {
             shadowJar
         }
     }
+
+    publishing {
+        publications {
+            artioCore(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioCore
+    }
 }
 
 project(':artio-ilink-system-tests') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        testCompile project(path: ':artio-core', configuration: 'tests')
-        testCompile project(path: ':artio-codecs', configuration: 'tests')
-        testCompile project(path: ':artio-system-tests', configuration: 'tests')
+        testImplementation project(path: ':artio-core', configuration: 'tests')
+        testImplementation project(path: ':artio-codecs', configuration: 'tests')
+        testImplementation project(path: ':artio-system-tests', configuration: 'tests')
 
-        compile project(':artio-session-codecs')
-        compile project(path: ':artio-core')
-        compile project(path: ':artio-ilink3-impl')
-
-        idea {
-            dependencies {
-                compile project(':artio-ilink3-codecs').sourceSets.generated.output
-            }
-        }
+        api project(':artio-session-codecs')
+        api project(path: ':artio-core')
+        api project(path: ':artio-ilink3-impl')
     }
 
     compileJava.enabled = iLink3Enabled
@@ -509,14 +615,27 @@ project(':artio-ilink-system-tests') {
             'aeron.use.windows.high.res.timer': 'true',
             'aeron.term.buffer.sparse.file': 'true')
     }
+
+    publishing {
+        publications {
+            artioILink3SystemTests(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioILink3SystemTests
+    }
 }
 
 project(':artio-samples') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile project(':artio-core')
-        compile project(':artio-session-codecs')
+        api project(':artio-core')
+        api project(':artio-session-codecs')
     }
 
     shadowJar {
@@ -526,56 +645,29 @@ project(':artio-samples') {
     build.doLast {
         shadowJar
     }
+
+    publishing {
+        publications {
+            artioSamples(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioSamples
+    }
 }
 
 subprojects {
-    uploadArchives {
+    publishing {
         repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: repoUrl) {
-                    authentication(userName: repoUsername, password: repoPassword)
-                }
-
-                snapshotRepository(url: snapshotUrl) {
-                    authentication(userName: repoUsername, password: repoPassword)
-                }
-
-                pom.project {
-                    name = 'artio'
-                    packaging = 'jar'
-                    description = 'High-Performance FIX Gateway'
-
-                    url = 'https://github.com/real-logic/artio'
-
-                    scm {
-                        connection = 'scm:git:https://github.com/real-logic/artio.git'
-                        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
-                        url = 'https://github.com/real-logic/artio.git'
-                    }
-
-                    licenses {
-                        license {
-                            name = 'The Apache License, Version 2.0'
-                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id = 'RichardWarburton'
-                            name = 'Richard Warburton'
-                            email = 'richard.warburton@gmail.com'
-                            url = 'https://github.com/RichardWarburton'
-                        }
-                        developer {
-                            id = 'mjpt777'
-                            name = 'Martin Thompson'
-                            email = 'mjpt777@gmail.com'
-                            url = 'https://github.com/mjpt777'
-                        }
-                    }
+            maven {
+                url = !isReleaseVersion ? snapshotUrl : repoUrl
+                credentials {
+                    username = repoUsername
+                    password = repoPassword
                 }
             }
         }
