@@ -66,7 +66,7 @@ public class CodecValidationInspector
         System.out.println("CODEC_VALIDATION_ENABLED = " + Validation.CODEC_VALIDATION_ENABLED);
         final URLClassLoader classLoader = new URLClassLoader(new URL[]{outputDir.toURI().toURL()});
         final Class<?> decoderClass = classLoader.loadClass(codecName);
-        final Decoder decoder = (Decoder)decoderClass.newInstance();
+        final Decoder decoder = (Decoder)decoderClass.getConstructor().newInstance();
         final MutableAsciiBuffer buffer = new MutableAsciiBuffer(message.getBytes(US_ASCII));
         final int length = buffer.capacity();
         final int decodedLength;
