@@ -41,7 +41,7 @@ def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
 
-defaultTasks 'clean', 'build', 'javadoc', 'install'
+defaultTasks 'clean', 'build', 'javadoc', 'publishToMavenLocal'
 
 def projectPom = {
     name = 'artio'
