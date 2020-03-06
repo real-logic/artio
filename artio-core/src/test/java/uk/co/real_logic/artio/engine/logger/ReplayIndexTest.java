@@ -30,14 +30,17 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,8 +50,10 @@ import java.util.stream.IntStream;
 import static io.aeron.Aeron.NULL_VALUE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
@@ -168,7 +173,7 @@ public class ReplayIndexTest extends AbstractLogTest
         final String testReqId = largeTestReqId();
 
         bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
-        publishBuffer();
+        publishBuffer(publication);
         indexRecord(11);
 
         final int msgCount = query();
@@ -315,42 +320,71 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID_2);
     }
 
-    // TODO: test the reset sequence number case.
-    // TODO: test with multiple publications / recordings
     // TODO: deleting old recordings.
 
     @Test(timeout = 20_000L)
     public void shouldQueryStartPositions()
     {
+        final ExclusivePublication otherPublication = aeron().addExclusivePublication(CHANNEL, STREAM_ID);
+        final GatewayPublication gatewayPublication = newGatewayPublication(otherPublication);
+
         final int newSequenceIndex = SEQUENCE_INDEX + 1;
         final int newSequenceNumber = SEQUENCE_NUMBER + 1;
 
         indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
         indexExampleMessage(SESSION_ID, newSequenceNumber, SEQUENCE_INDEX);
 
-        final long endPosition = indexExampleMessage(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
-        final long prunePosition = endPosition - alignedEndPosition();
+        final long prunePosition = indexExampleMessage(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
 
         indexExampleMessage(SESSION_ID_2, newSequenceNumber, SEQUENCE_INDEX);
 
-        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, newSequenceIndex);
-        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, newSequenceIndex);
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, newSequenceIndex, otherPublication);
+        assertThat(gatewayPublication.saveResetSequenceNumber(SESSION_ID), greaterThan(0L));
+        indexRecord();
+        final long otherPrunePosition = indexExampleMessage(
+            SESSION_ID, SEQUENCE_NUMBER, newSequenceIndex, otherPublication);
 
         final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
         query.queryStartPositions(startPositions);
 
-        final int recordingCount = aeronArchive.listRecording(0,
+        captureRecordingIds();
+
+        assertThat(startPositions, aMapWithSize(2));
+        assertEquals(prunePosition, startPositions.get(recordingId));
+        assertEquals(otherPrunePosition, startPositions.get(otherRecordingId));
+    }
+
+    private void captureRecordingIds()
+    {
+        final int recordingCount = aeronArchive.listRecordings(0, 2,
             (controlSessionId, correlationId, recordingId,
             startTimestamp, stopTimestamp, startPosition, stopPosition, initialTermId, segmentFileLength,
             termBufferLength, mtuLength, sessionId, streamId, strippedChannel, originalChannel, sourceIdentity) ->
-            this.recordingId = recordingId);
-
-        assertEquals(1, recordingCount);
-        assertThat(startPositions, aMapWithSize(1));
-        assertEquals(prunePosition, startPositions.get(recordingId));
+            {
+                if (sessionId == publication.sessionId())
+                {
+                    this.recordingId = recordingId;
+                }
+                else
+                {
+                    this.otherRecordingId = recordingId;
+                }
+            });
+        assertEquals(2, recordingCount);
     }
 
     private long recordingId;
+    private long otherRecordingId;
+
+    private GatewayPublication newGatewayPublication(final ExclusivePublication otherPublication)
+    {
+        return new GatewayPublication(
+            otherPublication,
+            mock(AtomicCounter.class),
+            new YieldingIdleStrategy(),
+            Clock.systemNanoTime(),
+            DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
+    }
 
     private long indexExampleMessage()
     {
@@ -409,18 +443,27 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private long indexExampleMessage(final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
+        return indexExampleMessage(sessionId, sequenceNumber, sequenceIndex, publication);
+    }
+
+    private long indexExampleMessage(
+        final long sessionId,
+        final int sequenceNumber,
+        final int sequenceIndex,
+        final ExclusivePublication publication)
+    {
         bufferContainsExampleMessage(true, sessionId, sequenceNumber, sequenceIndex);
 
-        final long position = publishBuffer();
+        final long position = publishBuffer(publication);
 
         indexRecord();
 
-        return position;
+        return position - alignedEndPosition();
     }
 
-    private long publishBuffer()
+    private long publishBuffer(final ExclusivePublication publication)
     {
-        long position = 0;
+        long position;
         while ((position = publication.offer(buffer, START, logEntryLength + PREFIX_LENGTH)) <= 0)
         {
             Thread.yield();

@@ -24,13 +24,11 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.FixMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
@@ -58,6 +56,7 @@ public class ReplayIndex implements Index
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
@@ -72,6 +71,7 @@ public class ReplayIndex implements Index
     private final int indexFileSize;
     private final BufferFactory bufferFactory;
     private final AtomicBuffer positionBuffer;
+    private final ErrorHandler errorHandler;
     private final RecordingIdLookup recordingIdLookup;
 
     public ReplayIndex(
@@ -90,6 +90,7 @@ public class ReplayIndex implements Index
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
+        this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
@@ -126,16 +127,17 @@ public class ReplayIndex implements Index
         {
             int offset = srcOffset;
             frameHeaderDecoder.wrap(srcBuffer, offset);
-            if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
-            {
-                final int actingBlockLength = frameHeaderDecoder.blockLength();
-                offset += frameHeaderDecoder.encodedLength();
+            final int templateId = frameHeaderDecoder.templateId();
+            final int blockLength = frameHeaderDecoder.blockLength();
+            final int version = frameHeaderDecoder.version();
+            offset += frameHeaderDecoder.encodedLength();
 
-                final int version = frameHeaderDecoder.version();
-                messageFrame.wrap(srcBuffer, offset, actingBlockLength, version);
+            if (templateId == FixMessageEncoder.TEMPLATE_ID)
+            {
+                messageFrame.wrap(srcBuffer, offset, blockLength, version);
                 if (messageFrame.status() == OK)
                 {
-                    offset += actingBlockLength;
+                    offset += blockLength;
                     if (version >= metaDataSinceVersion())
                     {
                         offset += metaDataHeaderLength() + messageFrame.metaDataLength();
@@ -160,6 +162,25 @@ public class ReplayIndex implements Index
                         fixSessionIdToIndex
                             .computeIfAbsent(fixSessionId, newSessionIndex)
                             .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
+                    }
+                }
+            }
+            else if (templateId == ResetSequenceNumberDecoder.TEMPLATE_ID)
+            {
+                resetSequenceNumber.wrap(srcBuffer, offset, blockLength, version);
+                final long fixSessionId = resetSequenceNumber.session();
+                final SessionIndex index = fixSessionIdToIndex.remove(fixSessionId);
+                if (index != null)
+                {
+                    index.reset();
+                }
+                else
+                {
+                    // File might be present but not within the cache.
+                    final File replayIndexFile = replayIndexFile(fixSessionId);
+                    if (replayIndexFile.exists())
+                    {
+                        deleteFile(replayIndexFile);
                     }
                 }
             }
@@ -194,12 +215,13 @@ public class ReplayIndex implements Index
         private final ByteBuffer wrappedBuffer;
         private final AtomicBuffer buffer;
         private final int recordCapacity;
+        private final File replayIndexFile;
 
         SessionIndex(final long fixSessionId)
         {
-            final File logFile = replayIndexFile(logFileDir, fixSessionId, requiredStreamId);
-            final boolean exists = logFile.exists();
-            this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
+            replayIndexFile = replayIndexFile(fixSessionId);
+            final boolean exists = replayIndexFile.exists();
+            this.wrappedBuffer = bufferFactory.map(replayIndexFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
 
             recordCapacity = recordCapacity(buffer.capacity());
@@ -249,9 +271,28 @@ public class ReplayIndex implements Index
             endChangeOrdered(buffer, changePosition);
         }
 
+        void reset()
+        {
+            close();
+            deleteFile(replayIndexFile);
+        }
+
         public void close()
         {
             IoUtil.unmap(wrappedBuffer);
+        }
+    }
+
+    private File replayIndexFile(final long fixSessionId)
+    {
+        return ReplayIndexDescriptor.replayIndexFile(logFileDir, fixSessionId, requiredStreamId);
+    }
+
+    private void deleteFile(final File replayIndexFile)
+    {
+        if (!replayIndexFile.delete())
+        {
+            errorHandler.onError(new IOException("Unable to delete replay index file: " + replayIndexFile));
         }
     }
 }
