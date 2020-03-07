@@ -109,7 +109,9 @@ public class ILink3Contexts
 
     private long allocateUuid(final ILink3Key key)
     {
-        return newUuid(key).uuid;
+        final ILink3Context context = newUuid(key);
+        keyToContext.put(key, context);
+        return context.uuid;
     }
 
     private ILink3Context newUuid(final ILink3Key key)
@@ -124,7 +126,6 @@ public class ILink3Contexts
 
         final ILink3Context context = new ILink3Context(newUuid, offset);
         offset = contextEncoder.limit();
-        keyToContext.put(key, context);
         return context;
     }
 
