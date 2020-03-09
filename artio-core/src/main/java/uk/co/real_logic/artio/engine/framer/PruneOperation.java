@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.RecordingDescriptorConsumer;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Reply;
@@ -25,12 +26,15 @@ import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 
 import java.util.function.Predicate;
 
+import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
+
 /**
  * PruneOperation is sent to the replayer in order to find the outbound replay query positions.
  * Then it get's sent to the Framer to query the inbound replay positions, then it delegates to
  * aeron archiver to prune the archive
  */
-public class PruneOperation implements AdminCommand, ReplayerCommand, Reply<Long2LongHashMap>
+public class PruneOperation
+    implements AdminCommand, ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer
 {
     private final Predicate<AdminCommand> adminCommands;
     private final ReplayQuery outboundReplayQuery;
@@ -44,6 +48,10 @@ public class PruneOperation implements AdminCommand, ReplayerCommand, Reply<Long
 
     private Long2LongHashMap result;
     private Exception error;
+
+    private long requestedNewStartPosition;
+    private long segmentStartPosition;
+    private long lowerBoundPrunePosition;
 
     public PruneOperation(
         final Long2LongHashMap minimumPrunePositions,
@@ -121,16 +129,46 @@ public class PruneOperation implements AdminCommand, ReplayerCommand, Reply<Long
 
             try
             {
-                aeronArchive.purgeSegments(recordingId, newStartPosition);
+                requestedNewStartPosition = newStartPosition;
+                final int count = aeronArchive.listRecording(recordingId, this);
+                if (count != 1)
+                {
+                    throw new IllegalStateException("Unable to list the recording: " + recordingId);
+                }
+
+                final long segmentStartPosition = this.segmentStartPosition;
+                // Don't prune if you're < a segment away from the start of the stream.
+                if (segmentStartPosition < lowerBoundPrunePosition)
+                {
+                    it.remove();
+                }
+                else
+                {
+                    aeronArchive.purgeSegments(recordingId, segmentStartPosition);
+                    newStartPositions.put(recordingId, segmentStartPosition);
+                }
             }
             catch (final Exception e)
             {
+                e.printStackTrace();
                 onPruneError(e, it);
                 return;
             }
         }
         result = newStartPositions;
         replyState = State.COMPLETED;
+    }
+
+    public void onRecordingDescriptor(
+        final long controlSessionId, final long correlationId, final long recordingId, final long startTimestamp,
+        final long stopTimestamp, final long startPosition, final long stopPosition, final int initialTermId,
+        final int segmentFileLength, final int termBufferLength, final int mtuLength, final int sessionId,
+        final int streamId, final String strippedChannel, final String originalChannel, final String sourceIdentity)
+    {
+        segmentStartPosition = segmentFileBasePosition(
+            startPosition, requestedNewStartPosition, termBufferLength, segmentFileLength);
+        lowerBoundPrunePosition = segmentFileBasePosition(
+            startPosition, startPosition, termBufferLength, segmentFileLength) + segmentFileLength;
     }
 
     private void onPruneError(final Exception e, final Long2LongHashMap.EntryIterator it)

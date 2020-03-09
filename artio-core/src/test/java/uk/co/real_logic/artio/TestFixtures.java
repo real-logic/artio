@@ -70,7 +70,8 @@ public final class TestFixtures
     public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
         final Archive.Context archiveCtx = new Archive.Context()
-            .deleteArchiveOnStart(context.dirDeleteOnStart());
+            .deleteArchiveOnStart(context.dirDeleteOnStart())
+            .segmentFileLength(context.ipcTermBufferLength());
 
         final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, archiveCtx);
         archiveCtx.threadingMode(ArchiveThreadingMode.INVOKER);

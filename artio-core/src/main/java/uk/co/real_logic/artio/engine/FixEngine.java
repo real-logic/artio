@@ -379,14 +379,26 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Cleans up storage from Aeron archive.
+     * Frees up space from the Aeron archive of messages. This operation does not remove all entries from the Aeron
+     * archive logs: only entries that are not part of the latest sequence index. That means that resend requests for
+     * the current sequence index can still be processed.
      *
-     * @param minimumPrunePositions the minimum position.
-     * @return the position pruned up to.
+     * Archive logs are pruned in chunks called segments - see the Aeron Archiver documentation for
+     * details. This means that if there are less than a segment's worth of messages that can be
+     * freed up then no space is pruned.
+     *
+     * @param recordingIdToMinimumPrunePositions the minimum positions to prune or <code>null</code> otherwise.
+     *                                           If you're archiving segments of the
+     *                                           Aeron archive log then this parameter can be used in order to stop
+     *                                           those segments from being removed. The hashmap should be initialised
+     *                                           with <code>new Long2LongHashMap(Aeron.NULL_VALUE)</code>.
+     * @return the positions pruned up to. This is a map from recording id to a pruned position if pruning has occurred.
+     *         It may be empty if no recordings have been pruned. <code>Aeron.NULL_VALUE</code> is used to denote
+     *         missing values in the map.
      */
-    public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap minimumPrunePositions)
+    public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap recordingIdToMinimumPrunePositions)
     {
-        return engineContext.pruneArchive(minimumPrunePositions);
+        return engineContext.pruneArchive(recordingIdToMinimumPrunePositions);
     }
 
     public EngineConfiguration configuration()
