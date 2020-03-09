@@ -49,7 +49,7 @@ public class MappedFile implements AutoCloseable
             }
             else
             {
-                fileChannel = IoUtil.createEmptyFile(bufferFile, (long)size);
+                fileChannel = IoUtil.createEmptyFile(bufferFile, size);
             }
 
             final MappedByteBuffer mappedBuffer = fileChannel.map(READ_WRITE, 0, fileChannel.size());

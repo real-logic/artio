@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.storage.messages"
                    id="666"
-                   version="4"
+                   version="5"
                    semanticVersion="0.1"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -76,5 +76,15 @@
         <field name="port" id="2" type="int32"/>
         <data name="host" id="3" type="Utf8String"/>
         <data name="accessKeyId" id="4" type="Utf8String"/>
+    </sbe:message>
+
+    <!-- Recording Id Coordinator -->
+    <sbe:message name="PreviousRecording" id="30" description="" sinceVersion="5">
+        <group name="inboundRecordings" id="1" dimensionType="groupSizeEncoding">
+            <field name="recordingId" id="10" type="int64"/>
+        </group>
+        <group name="outboundRecordings" id="2" dimensionType="groupSizeEncoding">
+            <field name="recordingId" id="11" type="int64"/>
+        </group>
     </sbe:message>
 </sbe:messageSchema>

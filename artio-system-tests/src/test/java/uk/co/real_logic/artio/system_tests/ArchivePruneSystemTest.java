@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 Adaptive Financial Consulting Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.client.AeronArchive;
@@ -93,6 +108,9 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
             connectSessions();
             messagesCanBeExchanged();
+
+            final Long2LongHashMap endRecordingIdToStartPos = checkRecordings(archive);
+            assertEquals(prunedRecordingIdToStartPos, endRecordingIdToStartPos);
         }
     }
 
@@ -144,6 +162,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             startTimestamp, stopTimestamp, startPosition, stopPosition, initialTermId, segmentFileLength,
             termBufferLength, mtuLength, sessionId, streamId, strippedChannel, originalChannel, sourceIdentity) ->
             startPositions.put(recordingId, startPosition));
+        System.out.println(startPositions);
         return startPositions;
     }
 }
