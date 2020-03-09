@@ -139,9 +139,9 @@ public class AbstractGatewayToGatewaySystemTest
         assertSessionsDisconnected();
     }
 
-    void logoutAcceptingSession()
+    long logoutAcceptingSession()
     {
-        logoutSession(acceptingSession);
+        return logoutSession(acceptingSession);
     }
 
     void logoutInitiatingSession()
@@ -149,9 +149,11 @@ public class AbstractGatewayToGatewaySystemTest
         logoutSession(initiatingSession);
     }
 
-    private void logoutSession(final Session session)
+    private long logoutSession(final Session session)
     {
-        assertThat(session.startLogout(), greaterThan(0L));
+        final long position = session.startLogout();
+        assertThat(position, greaterThan(0L));
+        return position;
     }
 
     void assertSessionsDisconnected()
@@ -310,7 +312,7 @@ public class AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged(initiatingSession);
     }
 
-    void messagesCanBeExchanged(final Session session)
+    long messagesCanBeExchanged(final Session session)
     {
         final long position = messagesCanBeExchanged(session, initiatingOtfAcceptor);
 
@@ -321,6 +323,8 @@ public class AbstractGatewayToGatewaySystemTest
 
                 return initiatingHandler.sentPosition() >= position;
             });
+
+        return position;
     }
 
     long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)

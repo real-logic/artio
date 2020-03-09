@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ControlledFragmentAssembler;
-import io.aeron.Image;
-import io.aeron.ImageControlledFragmentAssembler;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -34,7 +31,10 @@ import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.CompletionPosition;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.PositionSender;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -67,9 +67,9 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
+import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
-import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.GatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;

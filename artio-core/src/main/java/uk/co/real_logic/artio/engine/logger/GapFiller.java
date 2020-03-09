@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -42,6 +43,7 @@ public class GapFiller implements ProtocolHandler, Agent
     private static final int FRAGMENT_LIMIT = 10;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
+    private final ReplayerCommandQueue replayerCommandQueue;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final ControlledFragmentHandler protocolSubscription;
 
@@ -55,19 +57,21 @@ public class GapFiller implements ProtocolHandler, Agent
         final GatewayPublication publication,
         final String agentNamePrefix,
         final SenderSequenceNumbers senderSequenceNumbers,
+        final ReplayerCommandQueue replayerCommandQueue,
         final FixSessionCodecsFactory fixSessionCodecsFactory)
     {
         this.inboundSubscription = inboundSubscription;
         this.publication = publication;
         this.agentNamePrefix = agentNamePrefix;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.replayerCommandQueue = replayerCommandQueue;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.protocolSubscription = ProtocolSubscription.of(this, fixSessionCodecsFactory);
     }
 
     public int doWork()
     {
-        return senderSequenceNumbers.poll() + inboundSubscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
+        return replayerCommandQueue.poll() + inboundSubscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
     }
 
     public String roleName()

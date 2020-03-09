@@ -21,19 +21,23 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
+import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
@@ -53,6 +57,7 @@ public class ReplayQuery implements AutoCloseable
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
     private final Long2ObjectCache<SessionQuery> fixSessionToIndex;
     private final String logFileDir;
+    private final File logFileDirFile;
     private final ExistingBufferFactory indexBufferFactory;
     private final int requiredStreamId;
     private final IdleStrategy idleStrategy;
@@ -81,6 +86,7 @@ public class ReplayQuery implements AutoCloseable
         this.errorHandler = errorHandler;
         this.archiveReplayStream = archiveReplayStream;
 
+        logFileDirFile = new File(logFileDir);
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
@@ -104,9 +110,52 @@ public class ReplayQuery implements AutoCloseable
         final int endSequenceIndex,
         final LogTag logTag)
     {
-        return fixSessionToIndex
-            .computeIfAbsent(sessionId, newSessionQuery)
+        return lookupSessionQuery(sessionId)
             .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex, logTag);
+    }
+
+    public void queryStartPositions(final Long2LongHashMap newStartPositions)
+    {
+        final LongHashSet allSessionIds = listReplayIndexSessionIds(logFileDirFile, requiredStreamId);
+
+        // Run over existing session queries first in order to minimise cache evictions then reloads.
+        for (final SessionQuery query : fixSessionToIndex.values())
+        {
+            aggregateLowerPosition(query.queryStartPositions(), newStartPositions);
+            allSessionIds.remove(query.sessionId);
+        }
+
+        final LongHashSet.LongIterator sessionIdIt = allSessionIds.iterator();
+        while (sessionIdIt.hasNext())
+        {
+            final long sessionId = sessionIdIt.nextValue();
+            final SessionQuery query = lookupSessionQuery(sessionId);
+            aggregateLowerPosition(query.queryStartPositions(), newStartPositions);
+        }
+    }
+
+    private void aggregateLowerPosition(
+        final Long2LongHashMap recordingIdToStartPosition, final Long2LongHashMap newStartPositions)
+    {
+        final Long2LongHashMap.EntryIterator it = recordingIdToStartPosition.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+
+            final long recordingId = it.getLongKey();
+            final long position = it.getLongValue();
+
+            final long oldPosition = newStartPositions.get(recordingId);
+            if (oldPosition == NULL_VALUE || position < oldPosition)
+            {
+                newStartPositions.put(recordingId, position);
+            }
+        }
+    }
+
+    private SessionQuery lookupSessionQuery(final long sessionId)
+    {
+        return fixSessionToIndex.computeIfAbsent(sessionId, newSessionQuery);
     }
 
     public void close()
@@ -122,6 +171,8 @@ public class ReplayQuery implements AutoCloseable
         private final long sessionId;
         private final UnsafeBuffer buffer;
         private final int capacity;
+        private final int actingBlockLength;
+        private final int actingVersion;
 
         SessionQuery(final long sessionId)
         {
@@ -129,6 +180,10 @@ public class ReplayQuery implements AutoCloseable
             buffer = new UnsafeBuffer(wrappedBuffer);
             capacity = recordCapacity(buffer.capacity());
             this.sessionId = sessionId;
+
+            messageFrameHeader.wrap(buffer, 0);
+            actingBlockLength = messageFrameHeader.blockLength();
+            actingVersion = messageFrameHeader.version();
         }
 
         ReplayOperation query(
@@ -139,10 +194,8 @@ public class ReplayQuery implements AutoCloseable
             final int endSequenceIndex,
             final LogTag logTag)
         {
-            messageFrameHeader.wrap(buffer, 0);
-
-            final int actingBlockLength = messageFrameHeader.blockLength();
-            final int actingVersion = messageFrameHeader.version();
+            final int actingBlockLength = this.actingBlockLength;
+            final int actingVersion = this.actingVersion;
             final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
             // LOOKUP THE RANGE FROM THE INDEX
@@ -283,7 +336,7 @@ public class ReplayQuery implements AutoCloseable
             }
 
             range.add(
-                beginPosition - FRAME_ALIGNMENT,
+                trueBeginPosition(beginPosition),
                 readLength + FRAME_ALIGNMENT);
 
             // FIX messages can be fragmented, so number of range adds != count
@@ -304,6 +357,81 @@ public class ReplayQuery implements AutoCloseable
                 iteratorPosition = 0;
             }
             return iteratorPosition;
+        }
+
+        public Long2LongHashMap queryStartPositions()
+        {
+            final int actingBlockLength = this.actingBlockLength;
+            final int actingVersion = this.actingVersion;
+
+            long iteratorPosition = getIteratorPosition();
+            long stopIteratingPosition = iteratorPosition + capacity;
+
+            final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
+            int highestSequenceIndex = 0;
+
+            while (iteratorPosition != stopIteratingPosition)
+            {
+                final long changePosition = endChangeVolatile(buffer);
+
+                // Lapped by writer
+                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                {
+                    iteratorPosition = changePosition;
+                    stopIteratingPosition = iteratorPosition + capacity;
+                }
+
+                final int offset = offset(iteratorPosition, capacity);
+                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
+                final long beginPosition = indexRecord.position();
+                final int sequenceIndex = indexRecord.sequenceIndex();
+                final int sequenceNumber = indexRecord.sequenceNumber();
+                final long recordingId = indexRecord.recordingId();
+
+                UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+
+                // if the block was read atomically with no updates
+                if (changePosition == beginChangeVolatile(buffer))
+                {
+                    idleStrategy.reset();
+
+                    if (beginPosition == 0)
+                    {
+                        return recordingIdToStartPosition;
+                    }
+
+                    if (sequenceIndex > highestSequenceIndex)
+                    {
+                        // Don't want the lower positions of a previous sequence index to matter.
+                        recordingIdToStartPosition.clear();
+                        recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
+                        highestSequenceIndex = sequenceIndex;
+                    }
+                    else
+                    {
+                        // Might have other messages on different recording ids
+                        final long oldPosition = recordingIdToStartPosition.get(recordingId);
+                        if (oldPosition == NULL_VALUE)
+                        {
+                            recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
+                        }
+                    }
+
+                    iteratorPosition += RECORD_LENGTH;
+                }
+                else
+                {
+                    idleStrategy.idle();
+                }
+            }
+
+
+            return recordingIdToStartPosition;
+        }
+
+        private long trueBeginPosition(final long beginPosition)
+        {
+            return beginPosition - FRAME_ALIGNMENT;
         }
 
         public void close()

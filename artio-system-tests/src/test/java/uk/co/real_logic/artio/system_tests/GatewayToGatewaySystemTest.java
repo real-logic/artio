@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.archive.client.AeronArchive;
+import org.agrona.collections.Long2LongHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
@@ -75,7 +77,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
-        acceptingConfig.printErrorMessages(false);
+        acceptingConfig.printErrorMessages(true);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -1050,6 +1052,44 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             final Reply<Session> failedReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
             completeFailedSession(failedReply);
             assertThat(failedReply.error().getMessage(), containsString("DUPLICATE"));
+        }
+    }
+
+    @Test
+    public void shouldPruneAwayOldArchivePositions()
+    {
+        acquireAcceptingSession();
+
+        messagesCanBeExchanged();
+
+        final long logoutPosition = logoutAcceptingSession();
+        assertSessionsDisconnected();
+        System.out.println("logoutPosition = " + logoutPosition);
+
+        connectSessions();
+        acquireAcceptingSession();
+        final long retainPosition = messagesCanBeExchanged(acceptingSession,acceptingOtfAcceptor);
+        System.out.println("retainPosition = " + retainPosition);
+
+        final Reply<Long2LongHashMap> pruneReply = acceptingEngine.pruneArchive(null);
+        assertNotNull(pruneReply);
+        testSystem.awaitCompletedReplies(pruneReply);
+
+        final AeronArchive.Context archiveContext = acceptingEngine.configuration().archiveContextClone();
+        try (final AeronArchive archive = AeronArchive.connect(archiveContext))
+        {
+            final int recordingCount = archive.listRecordings(0, 4,
+                (controlSessionId, correlationId, recordingId,
+                startTimestamp, stopTimestamp, startPosition, stopPosition, initialTermId, segmentFileLength,
+                termBufferLength, mtuLength, sessionId, streamId, strippedChannel, originalChannel, sourceIdentity) ->
+                {
+                    System.out.println("sessionId = " + sessionId);
+                    System.out.println("recordingId = " + recordingId);
+                    System.out.println("startPosition = " + startPosition);
+                    System.out.println("streamId = " + streamId);
+                    System.out.println("originalChannel = " + originalChannel);
+                });
+            assertEquals(2, recordingCount);
         }
     }
 

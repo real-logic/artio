@@ -16,12 +16,14 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.BitUtil;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
+import java.util.Objects;
 
 public final class ReplayIndexDescriptor
 {
@@ -45,6 +47,28 @@ public final class ReplayIndexDescriptor
     static File replayIndexFile(final String logFileDir, final long fixSessionId, final int streamId)
     {
         return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
+    }
+
+    static LongHashSet listReplayIndexSessionIds(final File logFileDir, final int streamId)
+    {
+        final String prefix = "replay-index-";
+        final String suffix = "-" + streamId;
+        final LongHashSet sessionIds = new LongHashSet();
+        for (final File file : Objects.requireNonNull(logFileDir.listFiles()))
+        {
+            final String fileName = file.getName();
+            if (fileName.startsWith(prefix))
+            {
+                if (fileName.endsWith(suffix))
+                {
+                    final int suffixIndex = fileName.length() - suffix.length();
+                    final String sessionIdString = fileName.substring(prefix.length(), suffixIndex);
+                    final long sessionId = Long.parseLong(sessionIdString);
+                    sessionIds.add(sessionId);
+                }
+            }
+        }
+        return sessionIds;
     }
 
     public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId)

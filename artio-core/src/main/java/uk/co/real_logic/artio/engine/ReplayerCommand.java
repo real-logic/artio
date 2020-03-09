@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Real Logic Limited.
+ * Copyright 2020 Adaptive Financial Consulting Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine.framer;
+package uk.co.real_logic.artio.engine;
 
 @FunctionalInterface
-public interface AdminCommand
+public interface ReplayerCommand
 {
-    void execute(Framer framer);
+    void execute();
 }

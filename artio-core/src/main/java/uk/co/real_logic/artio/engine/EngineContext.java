@@ -26,15 +26,19 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.framer.AdminCommand;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
+import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
@@ -42,11 +46,13 @@ import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 public class EngineContext implements AutoCloseable
 {
+
     private final Clock clock;
     private final EngineConfiguration configuration;
     private final ErrorHandler errorHandler;
     private final FixCounters fixCounters;
     private final Aeron aeron;
+    private final ReplayerCommandQueue replayerCommandQueue;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final AeronArchive aeronArchive;
     private final RecordingCoordinator recordingCoordinator;
@@ -64,6 +70,9 @@ public class EngineContext implements AutoCloseable
     private Indexer inboundIndexer;
     private Indexer outboundIndexer;
     private Agent indexingAgent;
+    private ReplayQuery inboundReplayQuery;
+    private ReplayQuery outboundReplayQuery;
+    private Predicate<AdminCommand> offerAdminCommand;
 
     EngineContext(
         final EngineConfiguration configuration,
@@ -83,7 +92,8 @@ public class EngineContext implements AutoCloseable
         this.aeronArchive = aeronArchive;
         this.recordingCoordinator = recordingCoordinator;
 
-        senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
+        replayerCommandQueue = new ReplayerCommandQueue(configuration.framerIdleStrategy());
+        senderSequenceNumbers = new SenderSequenceNumbers(replayerCommandQueue);
 
         try
         {
@@ -187,10 +197,10 @@ public class EngineContext implements AutoCloseable
     }
 
     private Replayer newReplayer(
-        final ExclusivePublication replayPublication)
+        final ExclusivePublication replayPublication, final ReplayQuery replayQuery)
     {
         return new Replayer(
-            newReplayQuery(configuration.archiverIdleStrategy(), configuration.outboundLibraryStream()),
+            replayQuery,
             replayPublication,
             new BufferClaim(),
             configuration.archiverIdleStrategy(),
@@ -203,7 +213,8 @@ public class EngineContext implements AutoCloseable
             configuration.replayHandler(),
             senderSequenceNumbers,
             new FixSessionCodecsFactory(),
-            configuration.senderMaxBytesInBuffer());
+            configuration.senderMaxBytesInBuffer(),
+            replayerCommandQueue);
     }
 
     private void newIndexers()
@@ -256,7 +267,9 @@ public class EngineContext implements AutoCloseable
         {
             newIndexers();
 
-            final Replayer replayer = newReplayer(replayPublication);
+            outboundReplayQuery = newReplayQuery(
+                configuration.archiverIdleStrategy(), configuration.outboundLibraryStream());
+            final Replayer replayer = newReplayer(replayPublication, outboundReplayQuery);
 
             final List<Agent> agents = new ArrayList<>();
             agents.add(inboundIndexer);
@@ -278,7 +291,9 @@ public class EngineContext implements AutoCloseable
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix(),
-                senderSequenceNumbers, new FixSessionCodecsFactory());
+                senderSequenceNumbers,
+                replayerCommandQueue,
+                new FixSessionCodecsFactory());
         }
     }
 
@@ -307,7 +322,13 @@ public class EngineContext implements AutoCloseable
             return null;
         }
 
-        return newReplayQuery(configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
+        if (inboundReplayQuery == null)
+        {
+            inboundReplayQuery = newReplayQuery(
+                configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
+        }
+
+        return inboundReplayQuery;
     }
 
     public GatewayPublication inboundPublication()
@@ -343,6 +364,30 @@ public class EngineContext implements AutoCloseable
         return senderSequenceNumbers;
     }
 
+    public void framerContext(final FramerContext framerContext)
+    {
+        this.offerAdminCommand = framerContext::offer;
+        sentSequenceNumberIndex.framerContext(framerContext);
+    }
+
+    public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap minimumPrunePositions)
+    {
+        final PruneOperation operation = new PruneOperation(
+            minimumPrunePositions,
+            offerAdminCommand,
+            outboundReplayQuery,
+            inboundReplayQuery(),
+            configuration.archiverIdleStrategy(),
+            aeronArchive);
+
+        if (!replayerCommandQueue.offer(operation))
+        {
+            return null;
+        }
+
+        return operation;
+    }
+
     public void close()
     {
         if (configuration.gracefulShutdown())
@@ -352,8 +397,4 @@ public class EngineContext implements AutoCloseable
         }
     }
 
-    public void framerContext(final FramerContext framerContext)
-    {
-        sentSequenceNumberIndex.framerContext(framerContext);
-    }
 }
