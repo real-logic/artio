@@ -88,9 +88,15 @@ public class AbstractGatewayToGatewaySystemTest
         closeAcceptingEngine();
 
         CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
+        closeAcceptingLibrary();
 
         cleanupMediaDriver(mediaDriver);
+    }
+
+    void closeAcceptingLibrary()
+    {
+        CloseHelper.close(acceptingLibrary);
+        testSystem.remove(acceptingLibrary);
     }
 
     void closeInitiatingEngine()
