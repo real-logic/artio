@@ -45,7 +45,7 @@ public class FixCounters implements AutoCloseable
             this.id = id;
         }
 
-        public int getId()
+        public int id()
         {
             return id;
         }
@@ -60,11 +60,11 @@ public class FixCounters implements AutoCloseable
     FixCounters(final Aeron aeron)
     {
         this.aeron = aeron;
-        failedInboundPublications = newCounter(FixCountersId.FAILED_INBOUND_TYPE_ID.getId(),
+        failedInboundPublications = newCounter(FixCountersId.FAILED_INBOUND_TYPE_ID.id(),
                 "Failed offer to inbound publication");
-        failedOutboundPublications = newCounter(FixCountersId.FAILED_OUTBOUND_TYPE_ID.getId(),
+        failedOutboundPublications = newCounter(FixCountersId.FAILED_OUTBOUND_TYPE_ID.id(),
                 "Failed offer to outbound publication");
-        failedReplayPublications = newCounter(FixCountersId.FAILED_REPLAY_TYPE_ID.getId(),
+        failedReplayPublications = newCounter(FixCountersId.FAILED_REPLAY_TYPE_ID.id(),
                 "Failed offer to replay publication");
     }
 
@@ -85,30 +85,30 @@ public class FixCounters implements AutoCloseable
 
     public AtomicCounter messagesRead(final long connectionId, final String address)
     {
-        return newCounter(FixCountersId.MESSAGES_READ_TYPE_ID.getId(),
+        return newCounter(FixCountersId.MESSAGES_READ_TYPE_ID.id(),
                 "Messages Read from " + address + " id = " + connectionId);
     }
 
     public AtomicCounter bytesInBuffer(final long connectionId, final String address)
     {
-        return newCounter(FixCountersId.BYTES_IN_BUFFER_TYPE_ID.getId(),
+        return newCounter(FixCountersId.BYTES_IN_BUFFER_TYPE_ID.id(),
                 "Quarantined bytes for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter invalidLibraryAttempts(final long connectionId, final String address)
     {
-        return newCounter(FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID.getId(),
+        return newCounter(FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID.id(),
                 "Invalid Library Attempts for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)
     {
-        return newCounter(FixCountersId.SENT_MSG_SEQ_NO_TYPE_ID.getId(), "Last Sent MsgSeqNo for " + connectionId);
+        return newCounter(FixCountersId.SENT_MSG_SEQ_NO_TYPE_ID.id(), "Last Sent MsgSeqNo for " + connectionId);
     }
 
     public AtomicCounter receivedMsgSeqNo(final long connectionId)
     {
-        return newCounter(FixCountersId.RECV_MSG_SEQ_NO_TYPE_ID.getId(), "Last Received MsgSeqNo for " + connectionId);
+        return newCounter(FixCountersId.RECV_MSG_SEQ_NO_TYPE_ID.id(), "Last Received MsgSeqNo for " + connectionId);
     }
 
     private AtomicCounter newCounter(final int typeId, final String label)
