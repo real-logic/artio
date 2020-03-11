@@ -45,7 +45,7 @@ public class FixCounters implements AutoCloseable
             this.id = id;
         }
 
-        int getId()
+        public int getId()
         {
             return id;
         }
