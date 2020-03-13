@@ -601,6 +601,19 @@ public abstract class Generator
             case TZTIMESTAMP:
                 return timeAppendTo(fieldName);
 
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                if (flyweightsEnabled)
+                {
+                    return String.format("%1$s().appendTo(builder)", fieldName);
+                }
+
+                return String.format("%1$s.appendTo(builder)", fieldName);
+
             case DATA:
             case XMLDATA:
                 return dataAppendTo(field, fieldName);
