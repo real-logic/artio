@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.fields;
 import java.math.BigDecimal;
 
 
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.util.float_parsing.CharSequenceCharReader;
 import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
 import uk.co.real_logic.artio.util.PowerOf10;
@@ -186,6 +187,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     {
         final int result = (int)(value ^ (value >>> 32));
         return 31 * result + scale;
+    }
+
+    public void appendTo(final StringBuilder builder)
+    {
+        CodecUtil.appendFloat(builder, this);
     }
 
     public String toString()

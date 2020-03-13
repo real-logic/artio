@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
@@ -197,5 +198,21 @@ public class DecimalFloatEncodingTest
 
         assertEquals(input, string.getAscii(1, length));
         assertEquals(length, encodedLength);
+    }
+
+    @Test
+    public void canFormatToString()
+    {
+        // ignoring test since expected output has Trailing Zeros
+        if (isExpectedOutputContainTrailingZeros())
+        {
+            return;
+        }
+
+        final DecimalFloat price = new DecimalFloat(value, scale);
+        final StringBuilder builder = new StringBuilder();
+        CodecUtil.appendFloat(builder, price);
+
+        assertEquals(input, builder.toString());
     }
 }
