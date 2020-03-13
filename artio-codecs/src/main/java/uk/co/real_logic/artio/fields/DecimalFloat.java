@@ -15,13 +15,10 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import java.math.BigDecimal;
-
-
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.util.PowerOf10;
 import uk.co.real_logic.artio.util.float_parsing.CharSequenceCharReader;
 import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
-import uk.co.real_logic.artio.util.PowerOf10;
 
 import static uk.co.real_logic.artio.util.PowerOf10.HIGHEST_POWER_OF_TEN;
 import static uk.co.real_logic.artio.util.PowerOf10.POWERS_OF_TEN;
@@ -196,8 +193,9 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public String toString()
     {
-        final BigDecimal bigDecimal = BigDecimal.valueOf(value, scale);
-        return bigDecimal.toPlainString();
+        final StringBuilder builder = new StringBuilder();
+        appendTo(builder);
+        return builder.toString();
     }
 
     public DecimalFloat negate()
