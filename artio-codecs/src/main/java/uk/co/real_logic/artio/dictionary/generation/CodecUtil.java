@@ -41,7 +41,7 @@ public final class CodecUtil
     public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
 
     private static final char ZERO = '0';
-    private static final char DOT = (byte)'.';
+    private static final char DOT = '.';
 
     // NB: only valid for ASCII bytes.
     @Deprecated // Will be removed in a future version
