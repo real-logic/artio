@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
@@ -62,6 +63,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.engine.RecordingCoordinator.createExtendedChannel;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
@@ -1502,6 +1504,27 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             // Commit to ensure that you leave the poll loop having reconnected successfully
             return BREAK;
+        }
+
+        return CONTINUE;
+    }
+
+    public Action onLibraryExtendPosition(
+        final int libraryId,
+        final long correlationId,
+        final long stopPosition,
+        final int initialTermId,
+        final int termBufferLength,
+        final int mtuLength)
+    {
+        if (libraryId == this.libraryId)
+        {
+            /*final String channel = createExtendedChannel(
+                currentAeronChannel, stopPosition, initialTermId, termBufferLength, mtuLength);*/
+            /*outboundPublication = transport.newOutboundPublication(currentAeronChannel);
+            System.out.println("outboundPublication.position() = " + outboundPublication.position());*/
+
+            sendLibraryConnect(timeInMs());
         }
 
         return CONTINUE;

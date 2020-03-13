@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
@@ -47,6 +48,7 @@ import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
+@Ignore
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int HIGH_INITIAL_SEQUENCE_NUMBER = 1000;
@@ -526,6 +528,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         firstConnectTimeRange = connectTimeRange;
 
         launch(this.beforeReconnect);
+        System.out.println("DONE");
+
         connectPersistingSessions(
             initialSentSequenceNumber,
             initialReceivedSequenceNumber,

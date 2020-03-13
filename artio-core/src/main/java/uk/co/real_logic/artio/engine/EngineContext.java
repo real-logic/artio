@@ -334,7 +334,7 @@ public class EngineContext implements AutoCloseable
     public GatewayPublication inboundPublication()
     {
         return inboundLibraryStreams.gatewayPublication(
-            configuration.framerIdleStrategy(), "inboundPublication");
+            configuration.framerIdleStrategy(), inboundLibraryStreams.dataPublication("inboundPublication"));
     }
 
     public CompletionPosition inboundCompletionPosition()

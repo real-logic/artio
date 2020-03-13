@@ -401,6 +401,15 @@ public final class DebugLogger
     }
 
     public static void logSbeMessage(
+        final LogTag tag, final LibraryExtendPositionEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
         final LogTag tag, final ValidResendRequestEncoder encoder)
     {
         if (isEnabled(tag))
@@ -643,6 +652,7 @@ public final class DebugLogger
         private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
         private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
         private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
+        private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
 
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -1094,6 +1104,22 @@ public final class DebugLogger
             validResendRequest.appendTo(builder);
             finish(tag);
         }
+
+        public void logSbeMessage(
+            final LogTag tag,
+            final LibraryExtendPositionEncoder encoder)
+        {
+            appendStart();
+            libraryExtendPosition.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                LibraryExtendPositionEncoder.BLOCK_LENGTH,
+                LibraryExtendPositionEncoder.SCHEMA_VERSION);
+            libraryExtendPosition.appendTo(builder);
+            finish(tag);
+        }
+
+
 
         private void appendStart()
         {

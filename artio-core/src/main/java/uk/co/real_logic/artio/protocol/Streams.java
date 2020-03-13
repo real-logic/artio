@@ -55,23 +55,27 @@ public final class Streams
         this.recordingCoordinator = recordingCoordinator;
     }
 
-    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final String name)
+    public GatewayPublication gatewayPublication(
+        final IdleStrategy idleStrategy, final ExclusivePublication dataPublication)
     {
         return new GatewayPublication(
-            dataPublication(name),
+            dataPublication,
             failedPublications,
             idleStrategy,
             clock,
-            maxClaimAttempts
-        );
+            maxClaimAttempts);
     }
 
-    private ExclusivePublication dataPublication(final String name)
+    public ExclusivePublication dataPublication(final String name)
     {
-        final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, streamId);
-        if (recordingCoordinator != null)
+        final ExclusivePublication publication;
+        if (recordingCoordinator == null)
         {
-            recordingCoordinator.track(publication);
+            publication = aeron.addExclusivePublication(aeronChannel, streamId);
+        }
+        else
+        {
+            publication = recordingCoordinator.track(aeronChannel, streamId);
         }
         StreamInformation.print(name, publication, printAeronStreamIdentifiers);
         return publication;

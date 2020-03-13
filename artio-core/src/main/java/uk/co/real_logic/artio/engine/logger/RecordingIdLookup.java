@@ -19,6 +19,7 @@ import io.aeron.archive.status.RecordingPos;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
@@ -37,10 +38,11 @@ public class RecordingIdLookup
         this.counters = counters;
     }
 
-    long getRecordingId(final int aeronSessionId)
+    long getRecordingId(final int aeronSessionId, final int templateId)
     {
         long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
 
+        int i = 0;
         while (recordingId == NULL_RECORDING_ID)
         {
             final int counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
@@ -54,6 +56,13 @@ public class RecordingIdLookup
             }
 
             archiverIdleStrategy.idle();
+            i++;
+
+            if ((i % 100) == 0)
+            {
+                System.out.println(templateId);
+                Exceptions.printStackTrace();
+            }
         }
 
         archiverIdleStrategy.reset();

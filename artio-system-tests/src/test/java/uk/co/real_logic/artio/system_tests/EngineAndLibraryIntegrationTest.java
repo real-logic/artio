@@ -191,11 +191,14 @@ public class EngineAndLibraryIntegrationTest
         Thread.sleep(beyondTimeout);
         assertEventuallyTrue("engine fails to timeout library", () -> libraries(engine).size() == 1);
         // Poll until engine heartbeat messages are all read in order to force a library timeout
-        library.poll(10);
+        library.poll(50);
 
-        Thread.sleep(beyondTimeout);
-        testSystem.poll();
-        assertFalse("library still connected", library.isConnected());
+        assertEventuallyTrue("Library still connected", () ->
+        {
+            Thread.sleep(beyondTimeout);
+            testSystem.poll();
+            assertFalse("library still connected", library.isConnected());
+        });
 
         assertEventuallyTrue("library reconnect fails", () ->
         {

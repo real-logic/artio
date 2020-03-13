@@ -82,7 +82,8 @@ public class FramerContext
             configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
 
         this.inboundPublication = engineContext.inboundPublication();
-        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
+        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
+            outboundLibraryStreams.dataPublication("outboundPublication"));
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler, configuration.logFileDir());

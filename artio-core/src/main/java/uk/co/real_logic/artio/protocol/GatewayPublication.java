@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
@@ -96,16 +97,15 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesEncoder.BLOCK_LENGTH;
     private static final int REPLAY_MESSAGES_REPLY_LENGTH =
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
-
     public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength() +
         InitiateILinkConnectionEncoder.accessKeyIdHeaderLength();
-
     private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
         HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
-
     private static final int VALID_RESEND_REQUEST_LENGTH =
         HEADER_LENGTH + ValidResendRequestEncoder.BLOCK_LENGTH + ValidResendRequestEncoder.bodyHeaderLength();
+    private static final int LIBRARY_EXTEND_POSITION_LENGTH =
+        HEADER_LENGTH + LibraryExtendPositionEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -138,6 +138,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
+    private final LibraryExtendPositionEncoder libraryExtendPosition = new LibraryExtendPositionEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -1401,6 +1402,34 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveLibraryExtendPosition(
+        final int libraryId, final long correlationId, final RecordingCoordinator.LibraryExtendPosition extend)
+    {
+        final long position = claim(LIBRARY_EXTEND_POSITION_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        libraryExtendPosition
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .stopPosition(extend.stopPosition)
+            .initialTermId(extend.initialTermId)
+            .termBufferLength(extend.termBufferLength)
+            .mtuLength(extend.mtuLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, libraryExtendPosition);
+
+        return position;
+    }
+
     public int id()
     {
         return dataPublication.sessionId();
@@ -1420,5 +1449,4 @@ public class GatewayPublication extends ClaimablePublication
 
         return host.getBytes(UTF_8);
     }
-
 }

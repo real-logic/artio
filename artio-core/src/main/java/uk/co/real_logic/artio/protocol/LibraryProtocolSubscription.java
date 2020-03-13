@@ -46,6 +46,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
     private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -137,11 +138,36 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
             case ILinkConnectDecoder.TEMPLATE_ID:
             {
-                return onILinkConnectDecoder(buffer, offset, blockLength, version);
+                return onILinkConnect(buffer, offset, blockLength, version);
+            }
+
+            case LibraryExtendPositionDecoder.TEMPLATE_ID:
+            {
+                return onLibraryExtendPosition(buffer, offset, blockLength, version);
             }
         }
 
         return CONTINUE;
+    }
+
+    private Action onLibraryExtendPosition(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        libraryExtendPosition.wrap(buffer, offset, blockLength, version);
+        final int libraryId = libraryExtendPosition.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onLibraryExtendPosition(
+            libraryId,
+            libraryExtendPosition.correlationId(),
+            libraryExtendPosition.stopPosition(),
+            libraryExtendPosition.initialTermId(),
+            libraryExtendPosition.termBufferLength(),
+            libraryExtendPosition.mtuLength());
     }
 
     private Action onControlNotification(
@@ -303,7 +329,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             readMetaDataReply.metaDataLength());
     }
 
-    private Action onILinkConnectDecoder(
+    private Action onILinkConnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         iLinkConnect.wrap(buffer, offset, blockLength, version);

@@ -1233,6 +1233,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return CONTINUE;
         }
 
+        final RecordingCoordinator.LibraryExtendPosition extend = recordingCoordinator.trackLibrary(
+            aeronSessionId, libraryId);
+        if (extend != null)
+        {
+            return Pressure.apply(inboundPublication.saveLibraryExtendPosition(libraryId, correlationId, extend));
+        }
+
         final LiveLibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
@@ -1767,8 +1774,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long correlationId,
         final DirectBuffer srcBuffer,
         final int srcOffset,
-        final int srcLength)
+        final int srcLength,
+        final Header header)
     {
+//        recordingCoordinator.trackLibrary();
+
         asciiBuffer.wrap(srcBuffer);
         final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(asciiBuffer, srcOffset, srcLength);
         final SessionHeaderDecoder acceptorHeaderDecoder =

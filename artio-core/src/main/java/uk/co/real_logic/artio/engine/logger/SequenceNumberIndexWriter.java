@@ -245,16 +245,17 @@ public class SequenceNumberIndexWriter implements Index
             return;
         }
 
+        int offset = srcOffset;
+        messageHeader.wrap(buffer, offset);
+
+        offset += messageHeader.encodedLength();
+        final int actingBlockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+        final int templateId = messageHeader.templateId();
+
         if ((header.flags() & BEGIN_FLAG) == BEGIN_FLAG)
         {
-            int offset = srcOffset;
-            messageHeader.wrap(buffer, offset);
-
-            offset += messageHeader.encodedLength();
-            final int actingBlockLength = messageHeader.blockLength();
-            final int version = messageHeader.version();
-
-            switch (messageHeader.templateId())
+            switch (templateId)
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
@@ -319,7 +320,16 @@ public class SequenceNumberIndexWriter implements Index
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
 
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        switch (templateId)
+        {
+            case LibraryConnectDecoder.TEMPLATE_ID:
+            case ValidResendRequestDecoder.TEMPLATE_ID:
+            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                return;
+        }
+
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
         positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 

@@ -309,7 +309,8 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             followerSessionRequest.correlationId(),
             buffer,
             offset + FOLLOWER_SESSION_REQUEST_LENGTH,
-            messageLength);
+            messageLength,
+            header);
     }
 
     private Action onWriteMetaData(

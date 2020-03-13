@@ -240,9 +240,11 @@ public final class FixEngine extends GatewayProcess
             final AeronArchive aeronArchive =
                 configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
             recordingCoordinator = new RecordingCoordinator(
+                aeron,
                 aeronArchive,
                 configuration,
-                configuration.archiverIdleStrategy());
+                configuration.archiverIdleStrategy(),
+                errorHandler);
 
             final ExclusivePublication replayPublication = replayPublication();
             engineContext = new EngineContext(
@@ -255,7 +257,6 @@ public final class FixEngine extends GatewayProcess
                 recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration, aeronArchive);
-            recordingCoordinator.awaitReady();
         }
         catch (final Exception e)
         {

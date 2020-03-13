@@ -42,7 +42,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         mediaDriver = launchMediaDriver(TERM_MIN_LENGTH);
 
-        newAcceptingEngine();
+        newAcceptingEngine(true);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
@@ -58,10 +58,10 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler));
     }
 
-    private void newAcceptingEngine()
+    private void newAcceptingEngine(final boolean deleteLogFileDirOnStart)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
-            .deleteLogFileDirOnStart(true);
+            .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
         acceptingConfig.printErrorMessages(true);
         acceptingEngine = FixEngine.launch(acceptingConfig);
     }
@@ -102,13 +102,14 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             closeAcceptingEngine();
             closeAcceptingLibrary();
 
-            newAcceptingEngine();
+            newAcceptingEngine(false);
             newAcceptingLibrary();
             testSystem.add(acceptingLibrary);
 
             connectSessions();
             messagesCanBeExchanged();
 
+            // Ensure that the recordings have been extended
             final Long2LongHashMap endRecordingIdToStartPos = checkRecordings(archive);
             assertEquals(prunedRecordingIdToStartPos, endRecordingIdToStartPos);
         }

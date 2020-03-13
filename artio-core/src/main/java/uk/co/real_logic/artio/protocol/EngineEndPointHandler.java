@@ -88,7 +88,8 @@ public interface EngineEndPointHandler
         long correlationId,
         DirectBuffer srcBuffer,
         int srcOffset,
-        int srcLength);
+        int srcLength,
+        Header header);
 
     Action onWriteMetaData(
         int libraryId,

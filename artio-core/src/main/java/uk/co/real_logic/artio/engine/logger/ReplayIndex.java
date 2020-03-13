@@ -122,16 +122,16 @@ public class ReplayIndex implements Index
             return;
         }
 
+        int offset = srcOffset;
+        frameHeaderDecoder.wrap(srcBuffer, offset);
+        final int templateId = frameHeaderDecoder.templateId();
+        final int blockLength = frameHeaderDecoder.blockLength();
+        final int version = frameHeaderDecoder.version();
+        offset += frameHeaderDecoder.encodedLength();
+
         final boolean beginMessage = (flags & BEGIN_FRAG_FLAG) == BEGIN_FRAG_FLAG;
         if ((flags & UNFRAGMENTED) == UNFRAGMENTED || beginMessage)
         {
-            int offset = srcOffset;
-            frameHeaderDecoder.wrap(srcBuffer, offset);
-            final int templateId = frameHeaderDecoder.templateId();
-            final int blockLength = frameHeaderDecoder.blockLength();
-            final int version = frameHeaderDecoder.version();
-            offset += frameHeaderDecoder.encodedLength();
-
             if (templateId == FixMessageEncoder.TEMPLATE_ID)
             {
                 messageFrame.wrap(srcBuffer, offset, blockLength, version);
@@ -192,8 +192,19 @@ public class ReplayIndex implements Index
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
 
+        // We haven't started recording the library's stream
+        // at this point so the recording id lookup won't work.
+        switch (templateId)
+        {
+            case LibraryConnectDecoder.TEMPLATE_ID:
+            case ValidResendRequestDecoder.TEMPLATE_ID:
+            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                return;
+        }
+
         final int aeronSessionId = header.sessionId();
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
         positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
         positionWriter.updateChecksums();
     }
@@ -252,7 +263,7 @@ public class ReplayIndex implements Index
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
             final int aeronSessionId = header.sessionId();
-            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, -1);
             final long beginPosition = endPosition - length;
 
             beginChangeOrdered(buffer, changePosition);
