@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2IntHashMap;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -24,6 +25,7 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionDecoder;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionEncoder;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 
 /**
@@ -45,16 +47,20 @@ class IndexedPositionWriter
     private final Int2IntHashMap recordOffsets = new Int2IntHashMap(MISSING_RECORD);
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
+    private final RecordingIdLookup recordingIdLookup;
     private final ChecksumFramer checksumFramer;
+    private final Long2LongHashMap recheckSessions = new Long2LongHashMap(MISSING_RECORD);
 
     IndexedPositionWriter(
         final AtomicBuffer buffer,
         final ErrorHandler errorHandler,
         final int errorReportingOffset,
-        final String fileName)
+        final String fileName,
+        final RecordingIdLookup recordingIdLookup)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
+        this.recordingIdLookup = recordingIdLookup;
         checksumFramer = new ChecksumFramer(
             buffer, buffer.capacity(), errorHandler, errorReportingOffset, fileName);
         setupHeader();
@@ -147,5 +153,43 @@ class IndexedPositionWriter
     private void putPosition(final long position, final AtomicBuffer buffer, final int offset)
     {
         buffer.putLongVolatile(offset + POSITION_OFFSET, position);
+    }
+
+    public void trackPosition(final int aeronSessionId, final long endPosition)
+    {
+        recheckSessions.remove(aeronSessionId);
+        if (!checkPosition(aeronSessionId, endPosition))
+        {
+            recheckSessions.put(aeronSessionId, endPosition);
+        }
+    }
+
+    private boolean checkPosition(final int aeronSessionId, final long endPosition)
+    {
+        final long recordingId = recordingIdLookup.findRecordingId(aeronSessionId);
+        if (recordingId != NULL_RECORDING_ID)
+        {
+            indexedUpTo(aeronSessionId, recordingId, endPosition);
+            return true;
+        }
+        return false;
+    }
+
+    public int checkRecordings()
+    {
+        int work = 0;
+        final Long2LongHashMap.EntryIterator it = recheckSessions.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+            final int aeronSessionId = (int)it.getLongKey();
+            final long endPosition = it.getLongValue();
+            if (checkPosition(aeronSessionId, endPosition))
+            {
+                it.remove();
+                work++;
+            }
+        }
+        return work;
     }
 }

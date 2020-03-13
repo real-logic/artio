@@ -164,6 +164,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         return handler.onLibraryExtendPosition(
             libraryId,
             libraryExtendPosition.correlationId(),
+            libraryExtendPosition.sessionId(),
             libraryExtendPosition.stopPosition(),
             libraryExtendPosition.initialTermId(),
             libraryExtendPosition.termBufferLength(),

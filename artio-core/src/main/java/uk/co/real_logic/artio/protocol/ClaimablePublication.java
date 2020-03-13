@@ -17,10 +17,13 @@ package uk.co.real_logic.artio.protocol;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+
+import java.util.Objects;
 
 import static io.aeron.Publication.CLOSED;
 import static io.aeron.Publication.MAX_POSITION_EXCEEDED;
@@ -36,7 +39,8 @@ class ClaimablePublication implements AutoCloseable
     private final AtomicCounter fails;
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected final BufferClaim bufferClaim = new BufferClaim();
-    protected final ExclusivePublication dataPublication;
+    protected ExclusivePublication dataPublication;
+    private long initialPosition;
 
     protected final IdleStrategy idleStrategy;
 
@@ -49,7 +53,7 @@ class ClaimablePublication implements AutoCloseable
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;
         this.fails = fails;
-        this.dataPublication = dataPublication;
+        dataPublication(dataPublication);
     }
 
     protected long claim(final int framedLength)
@@ -99,6 +103,19 @@ class ClaimablePublication implements AutoCloseable
     public ExclusivePublication dataPublication()
     {
         return dataPublication;
+    }
+
+    public void dataPublication(final ExclusivePublication dataPublication)
+    {
+        Objects.requireNonNull(dataPublication, "dataPublication");
+        CloseHelper.close(this.dataPublication);
+        this.dataPublication = dataPublication;
+        initialPosition = dataPublication.position();
+    }
+
+    public long initialPosition()
+    {
+        return initialPosition;
     }
 
     public void close()

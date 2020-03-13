@@ -111,7 +111,7 @@ public class SequenceNumberIndexWriter implements Index
     private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
     private final int indexedPositionsOffset;
-    private final IndexedPositionWriter positions;
+    private final IndexedPositionWriter positionWriter;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -159,11 +159,12 @@ public class SequenceNumberIndexWriter implements Index
         try
         {
             initialiseBuffer();
-            positions = new IndexedPositionWriter(
+            positionWriter = new IndexedPositionWriter(
                 positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
                 errorHandler,
                 indexedPositionsOffset,
-                "SequenceNumberIndex");
+                "SequenceNumberIndex",
+                recordingIdLookup);
 
             if (metaDataDir != null)
             {
@@ -323,14 +324,17 @@ public class SequenceNumberIndexWriter implements Index
         switch (templateId)
         {
             case LibraryConnectDecoder.TEMPLATE_ID:
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                positionWriter.trackPosition(aeronSessionId, endPosition);
+                return;
+
             case ValidResendRequestDecoder.TEMPLATE_ID:
             case RedactSequenceUpdateDecoder.TEMPLATE_ID:
-            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
                 return;
         }
 
         final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
-        positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
+        positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
     private void onLinkMessage(
@@ -553,17 +557,19 @@ public class SequenceNumberIndexWriter implements Index
 
     public int doWork()
     {
+        int work = positionWriter.checkRecordings();
+
         if (hasSavedRecordSinceFileUpdate)
         {
             final long requiredUpdateTimeInMs = lastUpdatedFileTimeInMs + indexFileStateFlushTimeoutInMs;
             if (requiredUpdateTimeInMs < clock.time())
             {
                 updateFile();
-                return 1;
+                work++;
             }
         }
 
-        return CollectionUtil.removeIf(responsesToResend, sendResponseFunc);
+        return work + CollectionUtil.removeIf(responsesToResend, sendResponseFunc);
     }
 
     private boolean sendResponse(final WriteMetaDataResponse response)
@@ -614,7 +620,7 @@ public class SequenceNumberIndexWriter implements Index
     private void updateFile()
     {
         checksumFramer.updateChecksums();
-        positions.updateChecksums();
+        positionWriter.updateChecksums();
         saveFile();
         flipFiles();
         hasSavedRecordSinceFileUpdate = false;
@@ -724,7 +730,7 @@ public class SequenceNumberIndexWriter implements Index
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
         // Inefficient, but only run once on startup, so not a big deal.
-        new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
+        new IndexedPositionReader(positionWriter.buffer()).readLastPosition(consumer);
     }
 
     private int saveRecord(

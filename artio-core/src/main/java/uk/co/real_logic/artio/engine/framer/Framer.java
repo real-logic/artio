@@ -880,6 +880,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final Exception ex)
         {
+            ex.printStackTrace();
             sessionContexts.onDisconnect(
                 sessionContext.sessionId());
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);

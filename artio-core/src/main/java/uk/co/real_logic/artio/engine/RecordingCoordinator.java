@@ -44,14 +44,20 @@ import uk.co.real_logic.artio.storage.messages.PreviousRecordingEncoder.Outbound
 
 import java.io.File;
 import java.nio.MappedByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.LongConsumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.CommonContext.MTU_LENGTH_PARAM_NAME;
 import static io.aeron.archive.codecs.SourceLocation.LOCAL;
 import static io.aeron.archive.codecs.SourceLocation.REMOTE;
+import static io.aeron.driver.Configuration.publicationReservedSessionIdHigh;
+import static io.aeron.driver.Configuration.publicationReservedSessionIdLow;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.storage.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -107,7 +113,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
         if (configuration.logAnyMessages())
         {
-            final AeronArchive.Context archiveContext = archive.context();
             counters = this.aeron.countersReader();
             inboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
             outboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
@@ -124,7 +129,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         if (recordingIdsFile.exists())
         {
-
             final MappedByteBuffer mappedBuffer = IoUtil.mapExistingFile(recordingIdsFile, FILE_NAME);
             final UnsafeBuffer buffer = new UnsafeBuffer(mappedBuffer);
             try
@@ -150,24 +154,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 IoUtil.unmap(mappedBuffer);
             }
         }
-
-        System.out.println("LOADED inboundRecordingIds = " + inboundRecordingIds);
-        System.out.println("LOADED outboundRecordingIds = " + outboundRecordingIds);
     }
 
     private void saveRecordingIdsFile()
     {
         libraryIdToExtendPosition.values().forEach(pos -> outboundRecordingIds.free.add(pos.recordingId));
 
-        System.out.println("SAVING inboundRecordingIds = " + inboundRecordingIds);
-        System.out.println("SAVING outboundRecordingIds = " + outboundRecordingIds);
-
         try
         {
             final int inboundSize = inboundRecordingIds.size();
             final int outboundSize = outboundRecordingIds.size();
 
-            final File saveFile = File.createTempFile(FILE_NAME, "tmp");
+            final File saveFile = File.createTempFile(FILE_NAME, "tmp", new File(configuration.logFileDir()));
             final int requiredLength = MessageHeaderEncoder.ENCODED_LENGTH + PreviousRecordingEncoder.BLOCK_LENGTH +
                 InboundRecordingsEncoder.HEADER_SIZE + OutboundRecordingsEncoder.HEADER_SIZE +
                 InboundRecordingsEncoder.recordingIdEncodingLength() * inboundSize +
@@ -194,14 +192,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 IoUtil.unmap(mappedBuffer);
             }
 
-            if (!saveFile.renameTo(recordingIdsFile))
-            {
-                errorHandler.onError(new IllegalStateException("Unable to rename temporary recordingIdsFile " +
-                    saveFile + " to " + recordingIdsFile));
-            }
+            Files.move(saveFile.toPath(), recordingIdsFile.toPath(), ATOMIC_MOVE, REPLACE_EXISTING);
         }
         catch (final Throwable e)
         {
+            e.printStackTrace();
             errorHandler.onError(e);
         }
     }
@@ -217,11 +212,13 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             final ExclusivePublication publication;
             if (libraryExtendPosition != null)
             {
-                final String channel = createExtendedChannel(aeronChannel,
+                final ChannelUri channelUri = ChannelUri.parse(aeronChannel);
+                channelUri.initialPosition(
                     libraryExtendPosition.stopPosition,
                     libraryExtendPosition.initialTermId,
-                    libraryExtendPosition.termBufferLength,
-                    libraryExtendPosition.mtuLength);
+                    libraryExtendPosition.termBufferLength);
+                setMtuLength(libraryExtendPosition.mtuLength, channelUri);
+                final String channel = channelUri.toString();
                 publication = aeron.addExclusivePublication(channel, streamId);
                 extendRecording(streamId, libraryExtendPosition, publication.sessionId());
             }
@@ -241,20 +238,9 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    public static String createExtendedChannel(
-        final String aeronChannel,
-        final long stopPosition,
-        final int initialTermId,
-        final int termBufferLength,
-        final int mtuLength)
+    public static void setMtuLength(final int mtuLength, final ChannelUri channelUri)
     {
-        final ChannelUri channelUri = ChannelUri.parse(aeronChannel);
-        channelUri.initialPosition(
-            stopPosition,
-            initialTermId,
-            termBufferLength);
         channelUri.put(MTU_LENGTH_PARAM_NAME, Integer.toString(mtuLength));
-        return channelUri.toString();
     }
 
     private void extendRecording(
@@ -301,21 +287,31 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             final int streamId = configuration.outboundLibraryStream();
             final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
 
-            LibraryExtendPosition extendPosition = libraryIdToExtendPosition.remove(libraryId);
+            LibraryExtendPosition extendPosition = libraryIdToExtendPosition.get(libraryId);
             if (extendPosition != null)
             {
                 // Library has moved to a previously configured extend position
-                extendRecording(streamId, extendPosition, sessionId);
-                System.out.println("acknowledge extend recording");
-                return null;
+                if (sessionId != extendPosition.newSessionId)
+                {
+                    // Received another Library Connect message before the library has switched to an extend
+                    // Position, we should tell the library to extend position and await the position extension
+                    // response.
+                    return extendPosition;
+                }
+                else
+                {
+                    libraryIdToExtendPosition.remove(libraryId);
+                    awaitRecordingStart(sessionId, idleStrategy, outboundRecordingIds.used);
+                    return null;
+                }
             }
 
             extendPosition = acquireRecording(outboundRecordingIds);
             if (extendPosition != null)
             {
+                extendRecording(streamId, extendPosition, extendPosition.newSessionId);
                 // Library needs to be informed of its extend position.
                 libraryIdToExtendPosition.put(libraryId, extendPosition);
-                System.out.println("Setup extend recording");
                 return extendPosition;
             }
             else
@@ -330,15 +326,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         return null;
     }
 
-    public void onRecordingDescriptor(final long controlSessionId, final long correlationId, final long recordingId,
-                                      final long startTimestamp, final long stopTimestamp, final long startPosition,
-                                      final long stopPosition, final int initialTermId, final int segmentFileLength,
-                                      final int termBufferLength, final int mtuLength, final int sessionId,
-                                      final int streamId, final String strippedChannel, final String originalChannel,
-                                      final String sourceIdentity)
+    public void onRecordingDescriptor(
+        final long controlSessionId, final long correlationId, final long recordingId,
+        final long startTimestamp, final long stopTimestamp, final long startPosition,
+        final long stopPosition, final int initialTermId, final int segmentFileLength,
+        final int termBufferLength, final int mtuLength, final int sessionId,
+        final int streamId, final String strippedChannel, final String originalChannel,
+        final String sourceIdentity)
     {
+        final int newSessionId = ThreadLocalRandom.current().nextInt(
+            publicationReservedSessionIdLow(), publicationReservedSessionIdHigh());
         this.libraryExtendPosition = new LibraryExtendPosition(
-            recordingId, stopPosition, initialTermId, termBufferLength, mtuLength);
+            newSessionId, recordingId, stopPosition, initialTermId, termBufferLength, mtuLength);
     }
 
     private boolean startRecording(
@@ -346,6 +345,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         final int sessionId,
         final SourceLocation local)
     {
+
+        if (recordingAlreadyStarted(sessionId))
+        {
+            return true;
+        }
+
         try
         {
             final String channel = ChannelUri.addSessionId(this.channel, sessionId);
@@ -356,14 +361,15 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
         catch (final ArchiveException e)
         {
-            // Perfectly reasonable error if we're already recording the session.
-            if (!e.getMessage().contains("recording exists for"))
-            {
-                throw e;
-            }
+            errorHandler.onError(e);
 
             return false;
         }
+    }
+
+    public boolean recordingAlreadyStarted(final int sessionId)
+    {
+        return RecordingPos.findCounterIdBySession(counters, sessionId) != Aeron.NULL_VALUE;
     }
 
     private void awaitRecordingStart(
@@ -542,6 +548,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     public static class LibraryExtendPosition
     {
+        public final int newSessionId;
         public final long recordingId;
         public final long stopPosition;
         public final int initialTermId;
@@ -549,12 +556,14 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         public final int mtuLength;
 
         LibraryExtendPosition(
+            final int newSessionId,
             final long recordingId,
             final long stopPosition,
             final int initialTermId,
             final int termBufferLength,
             final int mtuLength)
         {
+            this.newSessionId = newSessionId;
             this.recordingId = recordingId;
             this.stopPosition = stopPosition;
             this.initialTermId = initialTermId;

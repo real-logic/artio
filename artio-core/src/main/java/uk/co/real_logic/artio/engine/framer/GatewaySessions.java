@@ -313,10 +313,15 @@ class GatewaySessions
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
     {
         final int aeronSessionId = outboundPublication.id();
-        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
-        if (requiredPosition > 0 && sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+        final long initialPosition = outboundPublication.initialPosition();
+        // At requiredPosition=initialPosition there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > initialPosition)
         {
-            return false;
+            final long indexedPosition = sentSequenceNumberIndex.indexedPosition(aeronSessionId);
+            if (indexedPosition < requiredPosition)
+            {
+                return false;
+            }
         }
 
         final long sessionId = gatewaySession.sessionId();

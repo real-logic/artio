@@ -1418,6 +1418,7 @@ public class GatewayPublication extends ClaimablePublication
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .correlationId(correlationId)
+            .sessionId(extend.newSessionId)
             .stopPosition(extend.stopPosition)
             .initialTermId(extend.initialTermId)
             .termBufferLength(extend.termBufferLength)

@@ -15,9 +15,8 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.ControlledFragmentAssembler;
-import io.aeron.ExclusivePublication;
-import io.aeron.Subscription;
+import io.aeron.*;
+import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
@@ -63,7 +62,6 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
-import static uk.co.real_logic.artio.engine.RecordingCoordinator.createExtendedChannel;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
@@ -1512,19 +1510,43 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onLibraryExtendPosition(
         final int libraryId,
         final long correlationId,
+        final int newSessionId,
         final long stopPosition,
         final int initialTermId,
         final int termBufferLength,
         final int mtuLength)
     {
-        if (libraryId == this.libraryId)
+        if (libraryId == this.libraryId &&
+            // Possible to receive resent extend position responses if we resent the library connect
+            // before the extend was received.
+            newSessionId != outboundPublication.id())
         {
-            /*final String channel = createExtendedChannel(
-                currentAeronChannel, stopPosition, initialTermId, termBufferLength, mtuLength);*/
-            /*outboundPublication = transport.newOutboundPublication(currentAeronChannel);
-            System.out.println("outboundPublication.position() = " + outboundPublication.position());*/
+            final long timeInMs = timeInMs();
+            resetNextEngineTimer(timeInMs);
 
-            sendLibraryConnect(timeInMs());
+            final ChannelUri channelUri = ChannelUri.parse(currentAeronChannel);
+            channelUri.initialPosition(
+                stopPosition,
+                initialTermId,
+                termBufferLength);
+            RecordingCoordinator.setMtuLength(mtuLength, channelUri);
+            channelUri.put(CommonContext.SESSION_ID_PARAM_NAME, Integer.toString(newSessionId));
+            final String channel = channelUri.toString();
+            DebugLogger.log(LIBRARY_CONNECT, "Extended Library Position to: ", channel);
+            try
+            {
+                transport.newOutboundPublication(channel);
+            }
+            catch (final RegistrationException e)
+            {
+                // In this scenario we just retry again we randomly get generated a unique id
+                if (!e.getMessage().contains("existing publication has clashing session id"))
+                {
+                    throw e;
+                }
+            }
+            newLivenessDetector();
+            sendLibraryConnect(timeInMs);
         }
 
         return CONTINUE;

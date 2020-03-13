@@ -98,7 +98,7 @@ public class ReplayIndex implements Index
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
-            positionBuffer, errorHandler, 0, replayPositionPath);
+            positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup);
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
@@ -192,21 +192,28 @@ public class ReplayIndex implements Index
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
 
-        // We haven't started recording the library's stream
-        // at this point so the recording id lookup won't work.
+        final int aeronSessionId = header.sessionId();
+
         switch (templateId)
         {
             case LibraryConnectDecoder.TEMPLATE_ID:
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                positionWriter.trackPosition(aeronSessionId, endPosition);
+                return;
+
             case ValidResendRequestDecoder.TEMPLATE_ID:
             case RedactSequenceUpdateDecoder.TEMPLATE_ID:
-            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
                 return;
         }
 
-        final int aeronSessionId = header.sessionId();
         final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
         positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
         positionWriter.updateChecksums();
+    }
+
+    public int doWork()
+    {
+        return positionWriter.checkRecordings();
     }
 
     public void close()

@@ -83,7 +83,8 @@ class LibraryTransport
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
 
-        newOutboundPublication(aeronChannel);
+        outboundPublication = outboundLibraryStreams.gatewayPublication(
+            idleStrategy, outboundDataPublication(aeronChannel));
 
         final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, inboundLibraryStream);
         StreamInformation.print("inboundPublication", publication, printAeronStreamIdentifiers);
@@ -95,21 +96,19 @@ class LibraryTransport
             configuration.inboundMaxClaimAttempts());
     }
 
-    GatewayPublication newOutboundPublication(final String aeronChannel)
+    void newOutboundPublication(final String aeronChannel)
     {
-        if (outboundPublication != null)
-        {
-            outboundPublication.close();
-        }
+        outboundPublication.dataPublication(outboundDataPublication(aeronChannel));
+    }
 
+    private ExclusivePublication outboundDataPublication(final String aeronChannel)
+    {
         final int outboundLibraryStream = configuration.outboundLibraryStream();
         final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
-        final IdleStrategy idleStrategy = configuration.libraryIdleStrategy();
 
         final ExclusivePublication outboundData = aeron.addExclusivePublication(aeronChannel, outboundLibraryStream);
         StreamInformation.print(OUTBOUND_PUBLICATION, outboundData, printAeronStreamIdentifiers);
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, outboundData);
-        return outboundPublication;
+        return outboundData;
     }
 
     Subscription inboundSubscription()

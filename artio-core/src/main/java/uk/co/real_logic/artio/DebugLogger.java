@@ -1119,8 +1119,6 @@ public final class DebugLogger
             finish(tag);
         }
 
-
-
         private void appendStart()
         {
             final StringBuilder builder = this.builder;
@@ -1208,6 +1206,7 @@ public final class DebugLogger
             final StringBuilder builder = this.builder;
             builder.append(prefixString);
             builder.append(suffixString);
+            finish(tag);
         }
 
         public void log(
@@ -1216,8 +1215,8 @@ public final class DebugLogger
         {
             appendStart();
             formatter.appendTo(builder);
+            finish(tag);
         }
-
 
         private void finish(final LogTag tag)
         {

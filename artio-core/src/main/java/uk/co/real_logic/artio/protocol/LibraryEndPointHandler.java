@@ -105,5 +105,6 @@ public interface LibraryEndPointHandler
         int lastSentSequenceNumber);
 
     Action onLibraryExtendPosition(
-        int libraryId, long correlationId, long stopPosition, int initialTermId, int termBufferLength, int mtuLength);
+        int libraryId, long correlationId, int newSessionId, long stopPosition, int initialTermId,
+        int termBufferLength, int mtuLength);
 }

@@ -68,15 +68,7 @@ public final class Streams
 
     public ExclusivePublication dataPublication(final String name)
     {
-        final ExclusivePublication publication;
-        if (recordingCoordinator == null)
-        {
-            publication = aeron.addExclusivePublication(aeronChannel, streamId);
-        }
-        else
-        {
-            publication = recordingCoordinator.track(aeronChannel, streamId);
-        }
+        final ExclusivePublication publication = recordingCoordinator.track(aeronChannel, streamId);
         StreamInformation.print(name, publication, printAeronStreamIdentifiers);
         return publication;
     }
