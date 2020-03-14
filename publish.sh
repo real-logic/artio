@@ -15,5 +15,5 @@ echo "Building binary to upload"
 
 echo "Uploading to maven repository"
 
-./gradlew uploadToMavenRepository
+./gradlew publish
 
