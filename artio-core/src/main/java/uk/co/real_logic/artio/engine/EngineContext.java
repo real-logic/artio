@@ -29,7 +29,6 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.engine.framer.AdminCommand;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.engine.logger.*;
@@ -38,7 +37,6 @@ import uk.co.real_logic.artio.protocol.Streams;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
@@ -70,9 +68,8 @@ public class EngineContext implements AutoCloseable
     private Indexer inboundIndexer;
     private Indexer outboundIndexer;
     private Agent indexingAgent;
-    private ReplayQuery inboundReplayQuery;
+    private ReplayQuery pruneInboundReplayQuery;
     private ReplayQuery outboundReplayQuery;
-    private Predicate<AdminCommand> offerAdminCommand;
 
     EngineContext(
         final EngineConfiguration configuration,
@@ -322,13 +319,8 @@ public class EngineContext implements AutoCloseable
             return null;
         }
 
-        if (inboundReplayQuery == null)
-        {
-            inboundReplayQuery = newReplayQuery(
-                configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
-        }
-
-        return inboundReplayQuery;
+        return newReplayQuery(
+            configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
     }
 
     public GatewayPublication inboundPublication()
@@ -366,18 +358,20 @@ public class EngineContext implements AutoCloseable
 
     public void framerContext(final FramerContext framerContext)
     {
-        this.offerAdminCommand = framerContext::offer;
         sentSequenceNumberIndex.framerContext(framerContext);
     }
 
     public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap minimumPrunePositions)
     {
+        if (pruneInboundReplayQuery == null)
+        {
+            pruneInboundReplayQuery = inboundReplayQuery();
+        }
+
         final PruneOperation operation = new PruneOperation(
             minimumPrunePositions,
-            offerAdminCommand,
             outboundReplayQuery,
-            inboundReplayQuery(),
-            configuration.archiverIdleStrategy(),
+            pruneInboundReplayQuery,
             aeronArchive);
 
         if (!replayerCommandQueue.offer(operation))

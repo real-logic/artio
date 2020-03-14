@@ -43,7 +43,6 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
@@ -151,7 +150,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @After
     public void teardown()
     {
-        Exceptions.closeAll(replayIndex, aeronArchive);
+        Exceptions.closeAll(query, replayIndex, aeronArchive);
         cleanupMediaDriver(mediaDriver);
     }
 
@@ -198,7 +197,7 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     @Test(timeout = 20_000L)
-    public void shouldReadRecordsFromBeforeARestart() throws IOException
+    public void shouldReadRecordsFromBeforeARestart()
     {
         indexExampleMessage();
 

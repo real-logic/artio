@@ -19,12 +19,9 @@ import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.RecordingDescriptorConsumer;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.ReplayerCommand;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
-
-import java.util.function.Predicate;
 
 import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
 
@@ -34,14 +31,12 @@ import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
  * aeron archiver to prune the archive
  */
 public class PruneOperation
-    implements AdminCommand, ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer
+    implements ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer
 {
-    private final Predicate<AdminCommand> adminCommands;
     private final ReplayQuery outboundReplayQuery;
     private final ReplayQuery inboundReplayQuery;
     private final Long2LongHashMap newStartPositions = new Long2LongHashMap(Aeron.NULL_VALUE);
     private final Long2LongHashMap minimumPrunePositions;
-    private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
 
     private volatile State replyState;
@@ -55,25 +50,21 @@ public class PruneOperation
 
     public PruneOperation(final Exception error)
     {
-        this(null, null, null, null, null, null);
+        this(null, null, null, null);
 
-        replyState = State.ERRORED;
         this.error = error;
+        replyState = State.ERRORED;
     }
 
     public PruneOperation(
         final Long2LongHashMap minimumPrunePositions,
-        final Predicate<AdminCommand> adminCommands,
         final ReplayQuery outboundReplayQuery,
         final ReplayQuery inboundReplayQuery,
-        final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive)
     {
-        this.adminCommands = adminCommands;
         this.outboundReplayQuery = outboundReplayQuery;
         this.inboundReplayQuery = inboundReplayQuery;
         this.minimumPrunePositions = minimumPrunePositions;
-        this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
         replyState = State.EXECUTING;
     }
@@ -97,23 +88,8 @@ public class PruneOperation
     public void execute()
     {
         inboundReplayQuery.queryStartPositions(newStartPositions);
-
-        moveToFramerThread();
-    }
-
-    private void moveToFramerThread()
-    {
-        while (!adminCommands.test(this))
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-    }
-
-    // On Framer thread
-    public void execute(final Framer framer)
-    {
         outboundReplayQuery.queryStartPositions(newStartPositions);
+
         prune();
     }
 
