@@ -154,15 +154,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         libraryExtendPosition.wrap(buffer, offset, blockLength, version);
-        final int libraryId = libraryExtendPosition.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
-        {
-            return action;
-        }
 
+        // Deliberately don't use as a heartbeat signal.
         return handler.onLibraryExtendPosition(
-            libraryId,
+            libraryExtendPosition.libraryId(),
             libraryExtendPosition.correlationId(),
             libraryExtendPosition.sessionId(),
             libraryExtendPosition.stopPosition(),

@@ -656,7 +656,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // return true if sent, false otherwise
     private void sendLibraryConnect(final long timeInMs)
     {
-        // TODO: ban connecting from everything but library connect
         try
         {
             final long correlationId = ++currentCorrelationId;
@@ -1545,7 +1544,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     throw e;
                 }
             }
-            newLivenessDetector();
+
+            livenessDetector.onConnectStep(timeInMs);
             sendLibraryConnect(timeInMs);
         }
 
