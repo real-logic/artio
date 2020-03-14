@@ -272,7 +272,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             final int count = archive.listRecording(recordingId, this);
             if (count != 1)
             {
-                System.err.println("ERR");
+                errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
+                    " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
             }
         }
 

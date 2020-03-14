@@ -495,7 +495,6 @@ public class AbstractGatewayToGatewaySystemTest
     void deleteAcceptorLogs()
     {
         delete(ACCEPTOR_LOGS);
-
     }
 
     void deleteClientLogs()

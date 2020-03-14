@@ -121,9 +121,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithCatchupReplayOfMissingMessages()
     {
-        printErrorMessages = false;
-
-        duringRestart = this::deleteAcceptorLogs;
+        duringRestart = () ->
+        {
+            dirsDeleteOnStart = false;
+            deleteAcceptorLogs();
+        };
 
         onAcquireSession = () -> assertReplyStatusWhenReplayRequested(OK);
 
