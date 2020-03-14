@@ -387,7 +387,7 @@ public class EngineContext implements AutoCloseable
         if (configuration.gracefulShutdown())
         {
             Exceptions.closeAll(
-                sentSequenceNumberIndex, receivedSequenceNumberIndex);
+                sentSequenceNumberIndex, receivedSequenceNumberIndex, pruneInboundReplayQuery);
         }
     }
 
