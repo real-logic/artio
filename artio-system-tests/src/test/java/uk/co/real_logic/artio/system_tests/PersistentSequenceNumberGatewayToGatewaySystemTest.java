@@ -526,7 +526,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         firstConnectTimeRange = connectTimeRange;
 
         launch(this.beforeReconnect);
-        System.out.println("DONE");
 
         connectPersistingSessions(
             initialSentSequenceNumber,

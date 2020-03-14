@@ -283,24 +283,14 @@ public class SequenceNumberIndexWriter implements Index
                 case WriteMetaDataDecoder.TEMPLATE_ID:
                 {
                     writeMetaData.wrap(buffer, offset, actingBlockLength, version);
-
-                    final int libraryId = writeMetaData.libraryId();
-                    final long sessionId = writeMetaData.session();
-                    final long correlationId = writeMetaData.correlationId();
-                    final int metaDataOffset = writeMetaData.metaDataOffset();
-
-                    onWriteMetaData(libraryId, sessionId, correlationId, metaDataOffset);
+                    onWriteMetaData();
                     break;
                 }
 
                 case RedactSequenceUpdateDecoder.TEMPLATE_ID:
                 {
                     redactSequenceUpdate.wrap(buffer, offset, actingBlockLength, version);
-                    saveRecord(
-                        redactSequenceUpdate.correctSequenceNumber(),
-                        redactSequenceUpdate.session(),
-                        redactSequenceUpdate.position(),
-                        redactSequenceUpdate.position());
+                    onRedactSequenceUpdate();
                     break;
                 }
 
@@ -321,20 +311,16 @@ public class SequenceNumberIndexWriter implements Index
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
 
-        switch (templateId)
-        {
-            case LibraryConnectDecoder.TEMPLATE_ID:
-            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
-                positionWriter.trackPosition(aeronSessionId, endPosition);
-                return;
+        positionWriter.update(aeronSessionId, templateId, endPosition);
+    }
 
-            case ValidResendRequestDecoder.TEMPLATE_ID:
-            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
-                return;
-        }
-
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
-        positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
+    private void onRedactSequenceUpdate()
+    {
+        saveRecord(
+            redactSequenceUpdate.correctSequenceNumber(),
+            redactSequenceUpdate.session(),
+            redactSequenceUpdate.position(),
+            redactSequenceUpdate.position());
     }
 
     private void onLinkMessage(
@@ -448,9 +434,13 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    private void onWriteMetaData(
-        final int libraryId, final long sessionId, final long correlationId, final int metaDataOffset)
+    private void onWriteMetaData()
     {
+        final int libraryId = writeMetaData.libraryId();
+        final long sessionId = writeMetaData.session();
+        final long correlationId = writeMetaData.correlationId();
+        final int metaDataOffset = writeMetaData.metaDataOffset();
+
         if (framerContext == null || metaDataFile == null)
         {
             writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);

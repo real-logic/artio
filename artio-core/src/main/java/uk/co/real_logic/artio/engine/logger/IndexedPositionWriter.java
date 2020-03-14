@@ -20,8 +20,7 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionDecoder;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionEncoder;
 
@@ -191,5 +190,26 @@ class IndexedPositionWriter
             }
         }
         return work;
+    }
+
+    public void update(final int aeronSessionId, final int templateId, final long endPosition)
+    {
+        switch (templateId)
+        {
+            // May not have setup the recording id when these messages come in.
+            case LibraryConnectDecoder.TEMPLATE_ID:
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                trackPosition(aeronSessionId, endPosition);
+                return;
+
+            // Outbound stream, so don't need to update the indexed position.
+            case ValidResendRequestDecoder.TEMPLATE_ID:
+            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                return;
+        }
+
+        // For other messages block until the recording id is setup.
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
+        indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 }

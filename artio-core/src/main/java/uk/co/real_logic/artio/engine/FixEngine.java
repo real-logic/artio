@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
+import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
 import java.io.File;
@@ -60,6 +61,7 @@ public final class FixEngine extends GatewayProcess
     private FramerContext framerContext;
     private EngineContext engineContext;
 
+    private volatile boolean startingClose = false;
     private volatile boolean isClosed = false;
 
     private final Object resetStateLock = new Object();
@@ -177,7 +179,8 @@ public final class FixEngine extends GatewayProcess
         {
             if (!stateHasBeenReset)
             {
-                final ResetArchiveState resetArchiveState = new ResetArchiveState(configuration, backupLocation);
+                final ResetArchiveState resetArchiveState = new ResetArchiveState(
+                    configuration, backupLocation, recordingCoordinator);
                 resetArchiveState.resetState();
 
                 stateHasBeenReset = true;
@@ -360,6 +363,8 @@ public final class FixEngine extends GatewayProcess
         {
             if (!isClosed)
             {
+                startingClose = true;
+
                 framerContext.startClose();
 
                 closeAll(scheduler, engineContext, configuration, super::close);
@@ -399,6 +404,16 @@ public final class FixEngine extends GatewayProcess
      */
     public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap recordingIdToMinimumPrunePositions)
     {
+        if (startingClose)
+        {
+            return new PruneOperation(new IllegalStateException("Unable to prune archive during shutdown."));
+        }
+
+        if (isClosed)
+        {
+            return new PruneOperation(new IllegalStateException("Unable to prune archive when closed."));
+        }
+
         return engineContext.pruneArchive(recordingIdToMinimumPrunePositions);
     }
 

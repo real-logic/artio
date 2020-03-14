@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -37,7 +36,6 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INIT
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
-@Ignore // TODO: Fix operation to use set of recording ids calculated by RecordingCoordinator.
 public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
 
@@ -89,7 +87,6 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final File archiveDir = mediaDriver.archive().context().archiveDir();
         final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
         final int numberOfRecordings = Objects.requireNonNull(recordings).length;
-        System.out.println("numberOfRecordings = " + numberOfRecordings);
 
         testSystem.awaitBlocking(() -> acceptingEngine.resetState(backupLocation));
         assertRecordingsDeleted();
@@ -126,7 +123,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final File archiveDir = mediaDriver.archive().context().archiveDir();
         final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
         final int numberOfRecordings = Objects.requireNonNull(recordings).length;
-        assertEquals(5, numberOfRecordings);
+        assertEquals(4, numberOfRecordings);
     }
 
     private void assertRecordingsTruncated()

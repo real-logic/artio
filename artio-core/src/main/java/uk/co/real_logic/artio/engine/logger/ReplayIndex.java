@@ -192,22 +192,7 @@ public class ReplayIndex implements Index
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
 
-        final int aeronSessionId = header.sessionId();
-
-        switch (templateId)
-        {
-            case LibraryConnectDecoder.TEMPLATE_ID:
-            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
-                positionWriter.trackPosition(aeronSessionId, endPosition);
-                return;
-
-            case ValidResendRequestDecoder.TEMPLATE_ID:
-            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
-                return;
-        }
-
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, templateId);
-        positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
+        positionWriter.update(header.sessionId(), templateId, endPosition);
         positionWriter.updateChecksums();
     }
 

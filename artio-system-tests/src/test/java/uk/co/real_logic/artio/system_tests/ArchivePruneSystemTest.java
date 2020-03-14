@@ -163,7 +163,6 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             startTimestamp, stopTimestamp, startPosition, stopPosition, initialTermId, segmentFileLength,
             termBufferLength, mtuLength, sessionId, streamId, strippedChannel, originalChannel, sourceIdentity) ->
             startPositions.put(recordingId, startPosition));
-        System.out.println(startPositions);
         return startPositions;
     }
 }

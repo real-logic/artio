@@ -471,6 +471,13 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
+    // Called after shutdown.
+    public void forEachRecording(final LongConsumer recordingIdConsumer)
+    {
+        inboundRecordingIds.forEach(recordingIdConsumer);
+        outboundRecordingIds.forEach(recordingIdConsumer);
+    }
+
     private class CompletingRecording
     {
         private final long completedPosition;

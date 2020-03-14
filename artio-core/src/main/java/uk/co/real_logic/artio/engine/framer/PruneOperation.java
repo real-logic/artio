@@ -53,6 +53,14 @@ public class PruneOperation
     private long segmentStartPosition;
     private long lowerBoundPrunePosition;
 
+    public PruneOperation(final Exception error)
+    {
+        this(null, null, null, null, null, null);
+
+        replyState = State.ERRORED;
+        this.error = error;
+    }
+
     public PruneOperation(
         final Long2LongHashMap minimumPrunePositions,
         final Predicate<AdminCommand> adminCommands,
