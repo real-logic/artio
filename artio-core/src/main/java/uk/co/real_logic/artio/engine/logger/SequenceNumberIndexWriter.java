@@ -82,8 +82,8 @@ public class SequenceNumberIndexWriter implements Index
     private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
     private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
-    private final AbstractILink3Offsets offsets = AbstractILink3Offsets.make();
-    private final AbstractILink3Parser parser = AbstractILink3Parser.make(null);
+    private AbstractILink3Offsets offsets;
+    private AbstractILink3Parser parser;
     private final Long2LongHashMap connectionIdToILinkUuid;
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
@@ -108,7 +108,6 @@ public class SequenceNumberIndexWriter implements Index
     private final Path writablePath;
     private final Path passingPlacePath;
     private final int fileCapacity;
-    private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positionWriter;
@@ -121,7 +120,7 @@ public class SequenceNumberIndexWriter implements Index
     private final long indexFileStateFlushTimeoutInMs;
     private long lastUpdatedFileTimeInMs;
     private boolean hasSavedRecordSinceFileUpdate = false;
-    private boolean hasLoggedILink3ConfigurationError = false;
+    private boolean attemptedILinkInit = false;
 
     public SequenceNumberIndexWriter(
         final AtomicBuffer inMemoryBuffer,
@@ -139,7 +138,6 @@ public class SequenceNumberIndexWriter implements Index
         this.errorHandler = errorHandler;
         this.streamId = streamId;
         this.fileCapacity = indexFile.buffer().capacity();
-        this.recordingIdLookup = recordingIdLookup;
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
         this.connectionIdToILinkUuid = connectionIdToILinkUuid;
@@ -296,7 +294,7 @@ public class SequenceNumberIndexWriter implements Index
 
                 case ILinkMessageDecoder.TEMPLATE_ID:
                 {
-                    onLinkMessage(buffer, endPosition, offset, actingBlockLength, version);
+                    onILinkMessage(buffer, endPosition, offset, actingBlockLength, version);
                     break;
                 }
 
@@ -323,23 +321,27 @@ public class SequenceNumberIndexWriter implements Index
             redactSequenceUpdate.position());
     }
 
-    private void onLinkMessage(
+    private void onILinkMessage(
         final DirectBuffer buffer,
         final long endPosition,
         final int offset,
         final int actingBlockLength,
         final int version)
     {
-        if (parser == null || offsets == null)
+        if (!attemptedILinkInit)
         {
-            if (!hasLoggedILink3ConfigurationError)
+            attemptedILinkInit = true;
+
+            parser = AbstractILink3Parser.make(null, errorHandler);
+            offsets = AbstractILink3Offsets.make(errorHandler);
+
+            if (parser == null || offsets == null)
             {
-                hasLoggedILink3ConfigurationError = true;
                 errorHandler.onError(new IllegalStateException(
                     "Configuration Issue: could not find ILink3Codes on the Engine classpath, despite " +
                     "ILink3 message requiring processing. Sequence Index update ignored"));
+                return;
             }
-            return;
         }
 
         iLinkMessage.wrap(buffer, offset, actingBlockLength, version);

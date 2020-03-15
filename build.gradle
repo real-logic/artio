@@ -325,7 +325,7 @@ project(':artio-ilink3-codecs') {
         testImplementation files('build/classes/java/generated')
     }
 
-    def outputClasses = 'out/generated/classes'
+    def outputClasses = 'out/production/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
@@ -337,9 +337,6 @@ project(':artio-ilink3-codecs') {
 
         compileGeneratedJava {
             dependsOn 'generateMessages', 'copySbeIr'
-            sourceCompatibility = artioJavaVersion
-            targetCompatibility = artioJavaVersion
-            options.deprecation = true
             classpath += configurations.codecGeneration
         }
 
@@ -369,8 +366,6 @@ project(':artio-ilink3-codecs') {
         }
     }
 
-    jar.dependsOn compileGeneratedJava
-
     checkstyleGenerated.enabled = false
 
     publishing {
@@ -386,7 +381,6 @@ project(':artio-ilink3-codecs') {
         sign publishing.publications.artioILink3Codecs
     }
 }
-
 
 project(':artio-ilink3-impl') {
     apply plugin: 'com.github.johnrengelman.shadow'
@@ -550,7 +544,6 @@ project(':artio-system-tests') {
 
         api project(':artio-session-codecs')
         api project(':artio-session-fixt-codecs')
-
         api project(path: ':artio-core')
 
         perfImplementation project
@@ -607,9 +600,9 @@ project(':artio-ilink-system-tests') {
         testImplementation project(path: ':artio-codecs', configuration: 'tests')
         testImplementation project(path: ':artio-system-tests', configuration: 'tests')
 
-        api project(':artio-session-codecs')
-        api project(path: ':artio-core')
-        api project(path: ':artio-ilink3-impl')
+        api project(':artio-core')
+        api project(':artio-ilink3-codecs')
+        api project(':artio-ilink3-impl')
     }
 
     compileJava.enabled = iLink3Enabled
@@ -680,15 +673,6 @@ subprojects {
             }
         }
     }
-}
-
-task uploadToMavenRepository {
-    dependsOn 'artio-core:uploadArchives',
-        'artio-samples:uploadArchives',
-        'artio-system-tests:uploadArchives',
-        'artio-codecs:uploadArchives',
-        'artio-session-codecs:uploadArchives',
-        'artio-session-fixt-codecs:uploadArchives'
 }
 
 wrapper {

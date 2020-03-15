@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -24,7 +25,7 @@ public abstract class AbstractILink3Parser
     public static final int ILINK_MESSAGE_HEADER_LENGTH = 8;
     public static final int BOOLEAN_FLAG_TRUE = 1;
 
-    public static AbstractILink3Parser make(final ILink3EndpointHandler session)
+    public static AbstractILink3Parser make(final ILink3EndpointHandler session, final ErrorHandler errorHandler)
     {
         try
         {
@@ -34,6 +35,7 @@ public abstract class AbstractILink3Parser
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
+            errorHandler.onError(e);
             return null;
         }
     }

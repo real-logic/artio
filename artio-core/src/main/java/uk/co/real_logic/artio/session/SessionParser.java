@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
@@ -69,7 +68,7 @@ public class SessionParser
     public SessionParser(
         final Session session,
         final MessageValidationStrategy validationStrategy,
-        final ErrorHandler errorHandler, // nullable
+        final ErrorHandler errorHandler,
         final boolean validateCompIdsOnEveryMessage,
         final OnMessageInfo messageInfo,
         final SessionIdStrategy sessionIdStrategy)
@@ -510,16 +509,7 @@ public class SessionParser
 
     private void onError(final Throwable throwable)
     {
-        // Library code should throw the exception to make users aware of it
-        // Engine code should log it through the normal error handling process.
-        if (errorHandler == null)
-        {
-            LangUtil.rethrowUnchecked(throwable);
-        }
-        else
-        {
-            errorHandler.onError(throwable);
-        }
+        errorHandler.onError(throwable);
     }
 
     private boolean resetSeqNumFlag(final AbstractLogonDecoder logon)

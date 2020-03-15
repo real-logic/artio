@@ -20,6 +20,7 @@ import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -111,6 +112,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final List<Session> unmodifiableSessions = new UnmodifiableWrapper<>(() -> sessions);
 
     private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
+
+    private static final ErrorHandler THROW_ERRORS = LangUtil::rethrowUnchecked;
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
@@ -1319,12 +1322,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final AbstractILink3Offsets offsets = AbstractILink3Offsets.make();
+                final AbstractILink3Offsets offsets = AbstractILink3Offsets.make(THROW_ERRORS);
+
                 final InternalILink3Session session = new InternalILink3Session(
                     proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
                 final ILink3Subscription subscription = new ILink3Subscription(
-                    AbstractILink3Parser.make(session), session);
+                    AbstractILink3Parser.make(session, THROW_ERRORS), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
             }
@@ -1599,7 +1603,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, validationStrategy,
-            null, configuration.validateCompIdsOnEveryMessage(), messageInfo, sessionIdStrategy);
+            THROW_ERRORS, configuration.validateCompIdsOnEveryMessage(), messageInfo, sessionIdStrategy);
         parser.sessionKey(compositeKey);
         parser.fixDictionary(fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(

@@ -15,13 +15,15 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import org.agrona.ErrorHandler;
+
 import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractILink3Offsets
 {
     public static final int MISSING_OFFSET = -1;
 
-    public static AbstractILink3Offsets make()
+    public static AbstractILink3Offsets make(final ErrorHandler errorHandler)
     {
         try
         {
@@ -31,6 +33,7 @@ public abstract class AbstractILink3Offsets
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
+            errorHandler.onError(e);
             return null;
         }
     }

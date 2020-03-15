@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import org.agrona.LangUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,8 @@ public class SessionParserTest
     private OnMessageInfo messageInfo = mock(OnMessageInfo.class);
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, false, messageInfo, null);
+        mockSession, validationStrategy, LangUtil::rethrowUnchecked,
+        false, messageInfo, null);
 
     @Before
     public void setUp()
