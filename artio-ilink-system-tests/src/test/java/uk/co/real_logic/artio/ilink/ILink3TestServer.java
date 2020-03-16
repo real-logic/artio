@@ -296,8 +296,7 @@ public class ILink3TestServer
 
     public void readNewOrderSingle(final int expectedSeqNum)
     {
-        final NewOrderSingle514Decoder newOrderSingle = new NewOrderSingle514Decoder();
-        read(newOrderSingle);
+        final NewOrderSingle514Decoder newOrderSingle = read(new NewOrderSingle514Decoder());
         assertEquals(expectedSeqNum, newOrderSingle.seqNum());
         // TODO: newOrderSingle.sendingTimeEpoch()
     }
@@ -322,5 +321,33 @@ public class ILink3TestServer
     public void expectedUuid(final long lastUuid)
     {
         this.uuid = lastUuid;
+    }
+
+    public void readSequence(final long nextSeqNo, final KeepAliveLapsed keepAliveIntervalLapsed)
+    {
+        final Sequence506Decoder sequence = read(new Sequence506Decoder());
+
+        assertEquals(uuid, sequence.uUID());
+        assertEquals(nextSeqNo, sequence.nextSeqNo());
+        assertEquals(FTI.Primary, sequence.faultToleranceIndicator());
+        assertEquals(keepAliveIntervalLapsed, sequence.keepAliveIntervalLapsed());
+    }
+
+    public void writeSequence(final int nextSeqNo, final KeepAliveLapsed keepAliveLapsed)
+    {
+        final Sequence506Encoder sequence = new Sequence506Encoder();
+        wrap(sequence, Sequence506Encoder.BLOCK_LENGTH);
+
+        sequence
+            .uUID(uuid)
+            .nextSeqNo(nextSeqNo)
+            .faultToleranceIndicator(FTI.Primary)
+            .keepAliveIntervalLapsed(keepAliveLapsed);
+
+        new Sequence506Decoder()
+            .wrap(unsafeWriteBuffer, ILINK_HEADER_LENGTH, sequence.sbeBlockLength(), sequence.sbeSchemaVersion())
+            .faultToleranceIndicator();
+
+        write();
     }
 }

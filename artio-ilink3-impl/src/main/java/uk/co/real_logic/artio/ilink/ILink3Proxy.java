@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import iLinkBinary.Establish503Encoder;
-import iLinkBinary.Negotiate500Encoder;
-import iLinkBinary.SplitMsg;
-import iLinkBinary.Terminate507Encoder;
+import iLinkBinary.*;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
@@ -51,11 +48,11 @@ public class ILink3Proxy extends AbstractILink3Proxy
     private final Negotiate500Encoder negotiate = new Negotiate500Encoder();
     private final Establish503Encoder establish = new Establish503Encoder();
     private final Terminate507Encoder terminate = new Terminate507Encoder();
+    private final Sequence506Encoder sequence = new Sequence506Encoder();
 
     public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
     {
         this.connectionId = connectionId;
-
         this.publication = publication;
     }
 
@@ -143,6 +140,28 @@ public class ILink3Proxy extends AbstractILink3Proxy
             .requestTimestamp(requestTimestamp)
             .errorCodes(errorCodes)
             .splitMsg(SplitMsg.NULL_VAL);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendSequence(
+        final long uuid, final int nextSentSeqNo, final short fti, final short keepAliveIntervalLapsed)
+    {
+        final Sequence506Encoder sequence = this.sequence;
+
+        final long position = claimILinkMessage(Sequence506Encoder.BLOCK_LENGTH, sequence);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        sequence
+            .uUID(uuid)
+            .nextSeqNo(nextSentSeqNo)
+            .faultToleranceIndicator(FTI.get(fti))
+            .keepAliveIntervalLapsed(KeepAliveLapsed.get(keepAliveIntervalLapsed));
 
         commit();
 

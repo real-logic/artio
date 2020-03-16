@@ -29,6 +29,8 @@ public class ILink3Parser extends AbstractILink3Parser
     private final EstablishmentAck504Decoder establishmentAck = new EstablishmentAck504Decoder();
     private final EstablishmentReject505Decoder establishmentReject = new EstablishmentReject505Decoder();
     private final Terminate507Decoder terminate = new Terminate507Decoder();
+    private final Sequence506Decoder sequence = new Sequence506Decoder();
+
     private final ILink3EndpointHandler handler;
 
     public ILink3Parser(final ILink3EndpointHandler handler)
@@ -44,11 +46,13 @@ public class ILink3Parser extends AbstractILink3Parser
 
     public long onMessage(final DirectBuffer buffer, final int start)
     {
-        final int offset = start + SOFH_LENGTH;
+        int offset = start + SOFH_LENGTH;
 
         header.wrap(buffer, offset);
         final int blockLength = header.blockLength();
         final int version = header.version();
+
+        offset += MessageHeaderEncoder.ENCODED_LENGTH;
 
         switch (header.templateId())
         {
@@ -75,6 +79,11 @@ public class ILink3Parser extends AbstractILink3Parser
             case Terminate507Decoder.TEMPLATE_ID:
             {
                 return onTerminate(buffer, offset, blockLength, version);
+            }
+
+            case Sequence506Decoder.TEMPLATE_ID:
+            {
+                return onSequence(buffer, offset, blockLength, version);
             }
         }
         return 1;
@@ -111,6 +120,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentAck.wrap(buffer, offset, blockLength, version);
+
         return handler.onEstablishmentAck(
             establishmentAck.uUID(),
             establishmentAck.requestTimestamp(),
@@ -148,4 +158,17 @@ public class ILink3Parser extends AbstractILink3Parser
             terminate.errorCodes());
             // terminate.splitMsg()
     }
+
+    private long onSequence(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        sequence.wrap(buffer, offset, blockLength, version);
+
+        return handler.onSequence(
+            sequence.uUID(),
+            sequence.nextSeqNo(),
+            sequence.faultToleranceIndicator().value(),
+            sequence.keepAliveIntervalLapsed().value());
+    }
+
 }

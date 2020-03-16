@@ -19,7 +19,6 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 
 public abstract class AbstractILink3Proxy
 {
-
     public static final int ARTIO_HEADER_LENGTH = 16;
 
     public abstract long sendNegotiate(
@@ -45,6 +44,9 @@ public abstract class AbstractILink3Proxy
 
     public abstract long sendTerminate(
         String reason, long uuid, long requestTimestamp, int errorCodes);
+
+    public abstract long sendSequence(
+        long uuid, int nextSentSeqNo, short fti, short keepAliveIntervalLapsed);
 
     public abstract long claimILinkMessage(
         int messageLength,

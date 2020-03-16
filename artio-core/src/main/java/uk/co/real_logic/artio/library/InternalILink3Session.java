@@ -89,6 +89,12 @@ public class InternalILink3Session extends ILink3Session implements ILink3Endpoi
         return super.onEstablishmentReject(reason, uUID, requestTimestamp, nextSeqNo, errorCodes);
     }
 
+    public long onSequence(
+        final long uUID, final long nextSeqNo, final short faultToleranceIndicator, final short keepAliveIntervalLapsed)
+    {
+        return super.onSequence(uUID, nextSeqNo, faultToleranceIndicator, keepAliveIntervalLapsed);
+    }
+
     public int poll(final long timeInMs)
     {
         return super.poll(timeInMs);

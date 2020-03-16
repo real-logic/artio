@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.KeepAliveLapsed;
 import iLinkBinary.NewOrderSingle514Encoder;
 import iLinkBinary.SideReq;
 import io.aeron.archive.ArchivingMediaDriver;
@@ -23,6 +24,7 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -211,11 +213,6 @@ public class ILink3SystemTest
         assertNotNull(session);
     }
 
-    private void connectToTestServer(final ILink3SessionConfiguration sessionConfiguration) throws IOException
-    {
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
-    }
-
     @Test
     public void shouldDisconnectIfNegotiateNotRespondedTo() throws IOException
     {
@@ -279,6 +276,82 @@ public class ILink3SystemTest
 
         readEstablish(2);
         testServer.writeEstablishmentAck();
+    }
+
+    @Test
+    public void shouldSupportSequenceMessageHeartbeating() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        // From customer - as a heartbeat message to be sent when a KeepAliveInterval interval from customer lapses
+        // and no other message is sent to CME
+        sleepHalfInterval();
+        testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
+        testServer.readSequence(1, KeepAliveLapsed.NotLapsed);
+
+        // From CME - as a heartbeat message to be sent when a KeepAliveInterval interval from CME lapses and
+        // no other message is sent to customer
+        final long oldTimeout = session.nextReceiveMessageTimeInMs();
+        testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
+
+        Timing.assertEventuallyTrue("Timeout error", () ->
+        {
+            testSystem.poll();
+
+            final long timeout = session.nextReceiveMessageTimeInMs();
+
+            return timeout > oldTimeout && timeout > System.currentTimeMillis();
+        });
+
+        // From CME - when a KeepAliveInterval of the customer lapses without having received any message from them then
+        // send message with KeepAliveIntervalLapsed=1 as a warning before initiating disconnect of socket connection
+        // Interpret this as a must-reply to these messages
+        final long timeout = session.nextSendMessageTimeInMs();
+        testServer.writeSequence(1, KeepAliveLapsed.Lapsed);
+        testServer.readSequence(1, KeepAliveLapsed.NotLapsed);
+        assertThat(System.currentTimeMillis(), lessThan(timeout));
+
+        // From customer - when a KeepAliveInterval of CME lapses without having received any message from CME then send
+        // message with KeepAliveIntervalLapsed=1 as a warning before initiating disconnect of socket connection
+        // Send a message in order to suppress our own NotLapsed sequence keepalive and force a Lapsed one.
+        sleepHalfInterval();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.readSequence(2, KeepAliveLapsed.Lapsed);
+        testServer.readTerminate();
+        testServer.assertDisconnected();
+    }
+
+    private void sleepHalfInterval()
+    {
+        testSystem.awaitBlocking(() -> sleep(TEST_KEEP_ALIVE_INTERVAL_IN_MS / 2));
+    }
+
+    // TODO
+    /*@Test
+    public void shouldSupportNotAppliedMessageSequenceMessageResponse()
+    {
+        // From customer - to reset sequence number in response to Not Applied message sent by CME when CME detects a
+        // sequence gap from customer
+
+
+    }*/
+
+    private void sleep(final int timeInMs)
+    {
+        try
+        {
+            Thread.sleep(timeInMs);
+        }
+        catch (final InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void connectToTestServer(final ILink3SessionConfiguration sessionConfiguration) throws IOException
+    {
+        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
     }
 
     private void assertConnectError(final Matcher<String> messageMatcher)

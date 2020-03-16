@@ -43,6 +43,13 @@ public class ILink3Session
     public static final long NANOS_IN_MICROS = 1_000;
     private static final long NANOS_IN_MILLIS = MICROS_IN_MILLIS * NANOS_IN_MICROS;
 
+    // Constants caused by requirement to separate the build from the
+    private static final short FTI_BACKUP = (short)0;
+    private static final short FTI_PRIMARY = (short)1;
+
+    private static final short KAL_NOT_LAPSED = (short)0;
+    private static final short KAL_LAPSED = (short)1;
+
     public enum State
     {
         /** TCP connection established, negotiate not sent.*/
@@ -60,6 +67,7 @@ public class ILink3Session
         ESTABLISH_REJECTED,
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
+        AWAITING_KEEPALIVE,
         UNBINDING,
         SENT_TERMINATE,
         UNBOUND
@@ -79,6 +87,9 @@ public class ILink3Session
     private int nextSentSeqNo;
 
     private long resendTime;
+
+    private long nextReceiveMessageTimeInMs;
+    private long nextSendMessageTimeInMs;
 
     ILink3Session(
         final AbstractILink3Proxy proxy,
@@ -179,9 +190,11 @@ public class ILink3Session
 
     private void validateCanSend()
     {
-        if (state != State.ESTABLISHED)
+        final State state = this.state;
+        if (state != State.ESTABLISHED && state != State.AWAITING_KEEPALIVE)
         {
-            throw new IllegalStateException("State should be ESTABLISHED in order to send but is " + state);
+            throw new IllegalStateException(
+                "State should be ESTABLISHED or AWAITING_KEEPALIVE in order to send but is " + state);
         }
     }
 
@@ -206,6 +219,16 @@ public class ILink3Session
     }
 
     // END PUBLIC API
+
+    public long nextReceiveMessageTimeInMs()
+    {
+        return nextReceiveMessageTimeInMs;
+    }
+
+    public long nextSendMessageTimeInMs()
+    {
+        return nextSendMessageTimeInMs;
+    }
 
     private int calculateInitialSentSequenceNumber(
         final ILink3SessionConfiguration configuration, final int lastSentSequenceNumber)
@@ -243,7 +266,7 @@ public class ILink3Session
         if (position > 0)
         {
             state = State.SENT_NEGOTIATE;
-            resendTime = nextTimeout();
+            resendTime = nextTimeoutInMs();
             return true;
         }
 
@@ -280,7 +303,7 @@ public class ILink3Session
 
         if (position > 0)
         {
-            resendTime = nextTimeout();
+            resendTime = nextTimeoutInMs();
             state = State.SENT_ESTABLISH;
             return true;
         }
@@ -288,7 +311,7 @@ public class ILink3Session
         return false;
     }
 
-    private long nextTimeout()
+    private long nextTimeoutInMs()
     {
         return System.currentTimeMillis() + configuration.requestedKeepAliveIntervalInMs();
     }
@@ -379,8 +402,55 @@ public class ILink3Session
                     }
                 }
                 break;
+
+            case ESTABLISHED:
+            {
+                if (timeInMs > nextReceiveMessageTimeInMs)
+                {
+                    sendSequence(KAL_LAPSED);
+
+                    onReceivedMessage();
+
+                    this.state = State.AWAITING_KEEPALIVE;
+                }
+                else if (timeInMs > nextSendMessageTimeInMs)
+                {
+                    sendSequence(KAL_NOT_LAPSED);
+                }
+                break;
+            }
+
+            case AWAITING_KEEPALIVE:
+            {
+                if (timeInMs > nextReceiveMessageTimeInMs)
+                {
+                    final int expiry = 2 * configuration.requestedKeepAliveIntervalInMs();
+                    terminate(expiry + "ms expired without message", 0);
+                }
+                break;
+            }
+
+            case UNBINDING:
+            {
+                if (timeInMs > nextSendMessageTimeInMs)
+                {
+                    fullyUnbind();
+                }
+                break;
+            }
         }
         return 0;
+    }
+
+    private void sendSequence(final short keepAliveIntervalLapsed)
+    {
+        final long position = proxy.sendSequence(uuid, nextSentSeqNo, (short)1, keepAliveIntervalLapsed);
+        if (position > 0)
+        {
+            nextSendMessageTimeInMs = nextTimeoutInMs();
+        }
+
+        // Will be retried on next poll if enqueue back pressured.
     }
 
     // EVENT HANDLERS
@@ -395,6 +465,7 @@ public class ILink3Session
         if (uUID != uuid())
         {
             // TODO: error
+            System.out.println("onNegotiationResponse uUID = " + uUID);
         }
 
         // TODO: validate request timestamp
@@ -442,6 +513,7 @@ public class ILink3Session
         if (uUID != uuid())
         {
             // TODO: error
+            System.out.println("onNegotiationResponse uUID = " + uUID);
         }
 
         // TODO: validate request timestamp
@@ -451,6 +523,8 @@ public class ILink3Session
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
         initiateReply = null;
+
+        nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
 
         return 1;
     }
@@ -495,6 +569,32 @@ public class ILink3Session
         }
 
         return 1;
+    }
+
+    long onSequence(
+        final long uUID, final long nextSeqNo, final short faultToleranceIndicator, final short keepAliveIntervalLapsed)
+    {
+        if (uUID != uuid())
+        {
+            // TODO: error
+        }
+
+        // if (nextSeqNo != TODO)
+
+        // Reply to any warning messages to keep the session alive.
+        if (keepAliveIntervalLapsed == KAL_LAPSED)
+        {
+            sendSequence(KAL_NOT_LAPSED);
+        }
+
+        onReceivedMessage();
+
+        return 1;
+    }
+
+    private void onReceivedMessage()
+    {
+        nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 
     private void fullyUnbind()
