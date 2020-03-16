@@ -526,6 +526,19 @@ project(':artio-core') {
     test {
         systemProperties('java.net.preferIPv4Stack': true)
     }
+
+    publishing {
+        publications {
+            artioCore(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioCore
+    }
 }
 
 project(':artio-system-tests') {
