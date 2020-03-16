@@ -234,7 +234,6 @@ subprojects {
     }
 
     artifacts {
-        archives javadocJar, sourcesJar, testJar
         tests testJar
     }
 
@@ -531,6 +530,7 @@ project(':artio-core') {
         publications {
             artioCore(MavenPublication) {
                 from components.java
+                artifact(testJar)
                 pom(projectPom)
             }
         }
@@ -593,15 +593,16 @@ project(':artio-system-tests') {
 
     publishing {
         publications {
-            artioCore(MavenPublication) {
+            artioSystemTests(MavenPublication) {
                 from components.java
+                artifact(testJar)
                 pom(projectPom)
             }
         }
     }
 
     signing {
-        sign publishing.publications.artioCore
+        sign publishing.publications.artioSystemTests
     }
 }
 
