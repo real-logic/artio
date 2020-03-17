@@ -149,7 +149,7 @@ public class ILink3Proxy
     }
 
     public long sendSequence(
-        final long uuid, final int nextSentSeqNo, final short fti, final short keepAliveIntervalLapsed)
+        final long uuid, final int nextSentSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
     {
         final Sequence506Encoder sequence = this.sequence;
 
@@ -162,8 +162,8 @@ public class ILink3Proxy
         sequence
             .uUID(uuid)
             .nextSeqNo(nextSentSeqNo)
-            .faultToleranceIndicator(FTI.get(fti))
-            .keepAliveIntervalLapsed(KeepAliveLapsed.get(keepAliveIntervalLapsed));
+            .faultToleranceIndicator(fti)
+            .keepAliveIntervalLapsed(keepAliveLapsed);
 
         commit();
 

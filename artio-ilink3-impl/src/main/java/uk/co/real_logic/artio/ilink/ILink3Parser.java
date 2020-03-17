@@ -175,8 +175,8 @@ public class ILink3Parser extends AbstractILink3Parser
         return handler.onSequence(
             sequence.uUID(),
             sequence.nextSeqNo(),
-            sequence.faultToleranceIndicator().value(),
-            sequence.keepAliveIntervalLapsed().value());
+            sequence.faultToleranceIndicator(),
+            sequence.keepAliveIntervalLapsed());
     }
 
     private long onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

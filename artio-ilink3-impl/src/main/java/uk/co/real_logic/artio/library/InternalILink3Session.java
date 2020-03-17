@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.library;
 
+import iLinkBinary.FTI;
+import iLinkBinary.KeepAliveLapsed;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
@@ -32,6 +34,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
+import static iLinkBinary.KeepAliveLapsed.Lapsed;
+import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
@@ -44,9 +48,6 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public class InternalILink3Session extends ILink3Session
 {
-    private static final short KAL_NOT_LAPSED = (short)0;
-    private static final short KAL_LAPSED = (short)1;
-
     private final NotAppliedResponse response = new NotAppliedResponse();
 
     private final ILink3Proxy proxy;
@@ -392,7 +393,7 @@ public class InternalILink3Session extends ILink3Session
             {
                 if (timeInMs > nextReceiveMessageTimeInMs)
                 {
-                    sendSequence(KAL_LAPSED);
+                    sendSequence(Lapsed);
 
                     onReceivedMessage();
 
@@ -400,7 +401,7 @@ public class InternalILink3Session extends ILink3Session
                 }
                 else if (timeInMs > nextSendMessageTimeInMs)
                 {
-                    sendSequence(KAL_NOT_LAPSED);
+                    sendSequence(NotLapsed);
                 }
                 break;
             }
@@ -437,9 +438,9 @@ public class InternalILink3Session extends ILink3Session
         initiateReply.onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 
-    private void sendSequence(final short keepAliveIntervalLapsed)
+    private void sendSequence(final KeepAliveLapsed keepAliveIntervalLapsed)
     {
-        final long position = proxy.sendSequence(uuid, nextSentSeqNo, (short)1, keepAliveIntervalLapsed);
+        final long position = proxy.sendSequence(uuid, nextSentSeqNo, FTI.Primary, keepAliveIntervalLapsed);
         if (position > 0)
         {
             nextSendMessageTimeInMs = nextTimeoutInMs();
@@ -567,7 +568,7 @@ public class InternalILink3Session extends ILink3Session
     }
 
     public long onSequence(
-        final long uUID, final long nextSeqNo, final short faultToleranceIndicator, final short keepAliveIntervalLapsed)
+        final long uUID, final long nextSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
     {
         if (uUID != uuid())
         {
@@ -577,9 +578,9 @@ public class InternalILink3Session extends ILink3Session
         // if (nextSeqNo != TODO)
 
         // Reply to any warning messages to keep the session alive.
-        if (keepAliveIntervalLapsed == KAL_LAPSED)
+        if (keepAliveLapsed == Lapsed)
         {
-            sendSequence(KAL_NOT_LAPSED);
+            sendSequence(NotLapsed);
         }
 
         onReceivedMessage();
@@ -602,7 +603,7 @@ public class InternalILink3Session extends ILink3Session
         }
         else
         {
-            sendSequence(KAL_NOT_LAPSED);
+            sendSequence(NotLapsed);
         }
 
         onReceivedMessage();
