@@ -33,9 +33,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -47,6 +45,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -104,7 +103,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private InternalILink3Session[] iLink3Sessions = new InternalILink3Session[0];
+    private ILink3Session[] iLink3Sessions = new ILink3Session[0];
     private final List<ILink3Session> unmodifiableILink3Sessions = new UnmodifiableWrapper<>(() -> iLink3Sessions);
 
     private InternalSession[] sessions = new InternalSession[0];
@@ -737,10 +736,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             total += session.poll(timeInMs);
         }
 
-        final InternalILink3Session[] iLink3Sessions = this.iLink3Sessions;
+        final ILink3Session[] iLink3Sessions = this.iLink3Sessions;
         for (int i = 0, size = iLink3Sessions.length; i < size; i++)
         {
-            final InternalILink3Session session = iLink3Sessions[i];
+            final ILink3Session session = iLink3Sessions[i];
             total += session.poll(timeInMs);
         }
 
@@ -1321,11 +1320,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (reply != null)
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
-                final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final AbstractILink3Offsets offsets = AbstractILink3Offsets.make(THROW_ERRORS);
-
-                final InternalILink3Session session = new InternalILink3Session(
-                    proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this,
+                final ILink3Session session = makeILink3Session(
+                    configuration, connectionId, reply, outboundPublication, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
                 final ILink3Subscription subscription = new ILink3Subscription(
                     AbstractILink3Parser.make(session, THROW_ERRORS), session);
@@ -1337,14 +1333,40 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    private AbstractILink3Proxy makeILink3Proxy(final long connectionId)
+    public static ILink3Session makeILink3Session(
+        final ILink3SessionConfiguration configuration,
+        final long connectionId,
+        final InitiateILink3SessionReply initiateReply,
+        final GatewayPublication outboundPublication,
+        final int libraryId,
+        final LibraryPoller owner,
+        final long uuid,
+        final int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber)
     {
         try
         {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy)cls
-                .getConstructor(long.class, ExclusivePublication.class)
-                .newInstance(connectionId, outboundPublication.dataPublication());
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.library.InternalILink3Session");
+            final Constructor<?> constructor = cls.getConstructor(
+                ILink3SessionConfiguration.class,
+                long.class,
+                InitiateILink3SessionReply.class,
+                GatewayPublication.class,
+                int.class,
+                LibraryPoller.class,
+                long.class,
+                int.class,
+                int.class);
+            return (ILink3Session)constructor.newInstance(
+                configuration,
+                connectionId,
+                initiateReply,
+                outboundPublication,
+                libraryId,
+                owner,
+                uuid,
+                lastReceivedSequenceNumber,
+                lastSentSequenceNumber);
         }
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
@@ -1806,7 +1828,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public void onUnbind(final ILink3Session session)
     {
-        iLink3Sessions = ArrayUtil.remove(iLink3Sessions, (InternalILink3Session)session);
+        iLink3Sessions = ArrayUtil.remove(iLink3Sessions, session);
     }
 }
 

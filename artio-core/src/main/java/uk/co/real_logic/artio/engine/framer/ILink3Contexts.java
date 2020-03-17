@@ -29,9 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static uk.co.real_logic.artio.library.ILink3Session.MICROS_IN_MILLIS;
-import static uk.co.real_logic.artio.library.ILink3Session.NANOS_IN_MICROS;
+import static uk.co.real_logic.artio.util.TimeUtil.microSecondTimestamp;
 
 public class ILink3Contexts
 {
@@ -132,12 +130,6 @@ public class ILink3Contexts
     private long lookupUuid(final ILink3Key key)
     {
         return keyToContext.computeIfAbsent(key, newUuid).uuid;
-    }
-
-    private long microSecondTimestamp()
-    {
-        final long microseconds = (System.nanoTime() / NANOS_IN_MICROS) % MICROS_IN_MILLIS;
-        return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
     }
 
     public void close()

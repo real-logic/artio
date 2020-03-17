@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.library.ILink3Session;
+import uk.co.real_logic.artio.library.InternalILink3Session;
 
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
@@ -32,11 +34,11 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Sequence506Decoder sequence = new Sequence506Decoder();
     private final NotApplied513Decoder notApplied = new NotApplied513Decoder();
 
-    private final ILink3EndpointHandler handler;
+    private final InternalILink3Session handler;
 
-    public ILink3Parser(final ILink3EndpointHandler handler)
+    public ILink3Parser(final ILink3Session handler)
     {
-        this.handler = handler;
+        this.handler = (InternalILink3Session)handler;
     }
 
     public int templateId(final DirectBuffer buffer, final int offset)

@@ -44,4 +44,3 @@ public abstract class AbstractILink3Offsets
 
     public abstract int sendingTimeEpochOffset(int templateId);
 }
-

@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.exceptions.TimeoutException;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.GatewayError;
 
@@ -75,15 +74,5 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
     ILink3SessionConfiguration configuration()
     {
         return configuration;
-    }
-
-    void onNegotiateFailure()
-    {
-        onError(new TimeoutException("Timed out: no reply for Negotiate"));
-    }
-
-    public void onEstablishFailure()
-    {
-        onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 }

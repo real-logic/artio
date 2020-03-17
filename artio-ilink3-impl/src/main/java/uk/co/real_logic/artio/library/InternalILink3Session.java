@@ -15,13 +15,16 @@
  */
 package uk.co.real_logic.artio.library;
 
+import io.aeron.exceptions.TimeoutException;
 import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.ILink3Offsets;
+import uk.co.real_logic.artio.ilink.ILink3Proxy;
+import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.TimeUtil;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -32,71 +35,40 @@ import java.util.Base64;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.library.ILink3SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
-// NB: This is an experimental API and is subject to change or potentially removal.
-public class ILink3Session
+/**
+ * External users should never rely on this API.
+ */
+public class InternalILink3Session extends ILink3Session
 {
-    public static final long MICROS_IN_MILLIS = 1_000;
-    public static final long NANOS_IN_MICROS = 1_000;
-    private static final long NANOS_IN_MILLIS = MICROS_IN_MILLIS * NANOS_IN_MICROS;
-
-    // Constants caused by requirement to separate the build from the
-    private static final short FTI_BACKUP = (short)0;
-    private static final short FTI_PRIMARY = (short)1;
-
     private static final short KAL_NOT_LAPSED = (short)0;
     private static final short KAL_LAPSED = (short)1;
 
-    public enum State
-    {
-        /** TCP connection established, negotiate not sent.*/
-        CONNECTED,
-        /** Negotiate sent but no reply received */
-        SENT_NEGOTIATE,
-        RETRY_NEGOTIATE,
-
-        NEGOTIATE_REJECTED,
-        /** Negotiate accepted, Establish not sent */
-        NEGOTIATED,
-        /** Negotiate accepted, Establish sent */
-        SENT_ESTABLISH,
-        RETRY_ESTABLISH,
-        ESTABLISH_REJECTED,
-        /** Establish accepted, messages can be exchanged */
-        ESTABLISHED,
-        AWAITING_KEEPALIVE,
-        UNBINDING,
-        SENT_TERMINATE,
-        UNBOUND
-    }
-
     private final NotAppliedResponse response = new NotAppliedResponse();
 
-    private final AbstractILink3Proxy proxy;
-    private final AbstractILink3Offsets offsets;
+    private final ILink3Proxy proxy;
+    private final ILink3Offsets offsets;
     private final ILink3SessionConfiguration configuration;
     private final long connectionId;
-    private InitiateILink3SessionReply initiateReply;
     private final GatewayPublication outboundPublication;
     private final int libraryId;
     private final LibraryPoller owner;
     private final ILink3SessionHandler handler;
-
     private final long uuid;
+
+    private InitiateILink3SessionReply initiateReply;
+
     private State state;
     private int nextSentSeqNo;
 
     private long resendTime;
-
     private long nextReceiveMessageTimeInMs;
     private long nextSendMessageTimeInMs;
 
-    ILink3Session(
-        final AbstractILink3Proxy proxy,
-        final AbstractILink3Offsets offsets,
+    public InternalILink3Session(
         final ILink3SessionConfiguration configuration,
         final long connectionId,
         final InitiateILink3SessionReply initiateReply,
@@ -107,8 +79,6 @@ public class ILink3Session
         final int lastReceivedSequenceNumber,
         final int lastSentSequenceNumber)
     {
-        this.proxy = proxy;
-        this.offsets = offsets;
         this.configuration = configuration;
         this.connectionId = connectionId;
         this.initiateReply = initiateReply;
@@ -117,6 +87,8 @@ public class ILink3Session
         this.owner = owner;
         this.handler = configuration.handler();
 
+        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
+        offsets = new ILink3Offsets();
         nextSentSeqNo = calculateInitialSentSequenceNumber(configuration, lastSentSequenceNumber);
         state = State.CONNECTED;
         this.uuid = uuid;
@@ -262,8 +234,7 @@ public class ILink3Session
 
     private long requestTimestamp()
     {
-        final long nanoseconds = System.nanoTime() % NANOS_IN_MILLIS;
-        return System.currentTimeMillis() * NANOS_IN_MILLIS + nanoseconds;
+        return TimeUtil.microSecondTimestamp();
     }
 
     private boolean sendNegotiate()
@@ -388,7 +359,7 @@ public class ILink3Session
             case RETRY_NEGOTIATE:
                 if (timeInMs > resendTime)
                 {
-                    initiateReply.onNegotiateFailure();
+                    onNegotiateFailure();
                     fullyUnbind();
                     return 1;
                 }
@@ -400,7 +371,7 @@ public class ILink3Session
             case RETRY_ESTABLISH:
                 if (timeInMs > resendTime)
                 {
-                    initiateReply.onEstablishFailure();
+                    onEstablishFailure();
                     fullyUnbind();
                     return 1;
                 }
@@ -456,6 +427,16 @@ public class ILink3Session
         return 0;
     }
 
+    private void onNegotiateFailure()
+    {
+        initiateReply.onError(new TimeoutException("Timed out: no reply for Negotiate"));
+    }
+
+    private void onEstablishFailure()
+    {
+        initiateReply.onError(new TimeoutException("Timed out: no reply for Establish"));
+    }
+
     private void sendSequence(final short keepAliveIntervalLapsed)
     {
         final long position = proxy.sendSequence(uuid, nextSentSeqNo, (short)1, keepAliveIntervalLapsed);
@@ -469,7 +450,7 @@ public class ILink3Session
 
     // EVENT HANDLERS
 
-    long onNegotiationResponse(
+    public long onNegotiationResponse(
         final long uUID,
         final long requestTimestamp,
         final int secretKeySecureIDExpiration,
@@ -492,7 +473,7 @@ public class ILink3Session
         return 1; // TODO: move to action
     }
 
-    long onNegotiationReject(
+    public long onNegotiationReject(
         final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
         if (uUID != uuid())
@@ -511,11 +492,12 @@ public class ILink3Session
     {
         initiateReply.onError(error);
         initiateReply = null;
+
         requestDisconnect(FAILED_AUTHENTICATION);
         owner.onUnbind(this);
     }
 
-    long onEstablishmentAck(
+    public long onEstablishmentAck(
         final long uUID,
         final long requestTimestamp,
         final long nextSeqNo,
@@ -536,14 +518,13 @@ public class ILink3Session
 
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
-        initiateReply = null;
 
         nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
 
         return 1;
     }
 
-    long onEstablishmentReject(
+    public long onEstablishmentReject(
         final String reason, final long uUID, final long requestTimestamp, final long nextSeqNo, final int errorCodes)
     {
         if (uUID != uuid())
@@ -560,7 +541,7 @@ public class ILink3Session
         return 1;
     }
 
-    long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    public long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
         if (uUID != uuid())
         {
@@ -585,7 +566,7 @@ public class ILink3Session
         return 1;
     }
 
-    long onSequence(
+    public long onSequence(
         final long uUID, final long nextSeqNo, final short faultToleranceIndicator, final short keepAliveIntervalLapsed)
     {
         if (uUID != uuid())
@@ -606,7 +587,7 @@ public class ILink3Session
         return 1;
     }
 
-    long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
+    public long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
     {
         if (uUID != uuid())
         {
@@ -615,7 +596,7 @@ public class ILink3Session
 
         handler.onNotApplied(fromSeqNo, msgCount, response);
 
-        if (response.shouldResend())
+        if (true) // response.shouldResend())
         {
             // TODO
         }
@@ -641,5 +622,4 @@ public class ILink3Session
         requestDisconnect(LOGOUT);
         owner.onUnbind(this);
     }
-
 }

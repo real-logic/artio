@@ -26,12 +26,15 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.nio.channels.ClosedChannelException;
 
-import static uk.co.real_logic.artio.ilink.AbstractILink3Proxy.ARTIO_HEADER_LENGTH;
+
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofh;
 
 class ILink3ReceiverEndPoint extends ReceiverEndPoint
 {
+    public static final int ARTIO_HEADER_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
+
     private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
     private final ExclusivePublication inboundPublication;
 

@@ -16,11 +16,14 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.Verify;
+import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
 public class ILink3SessionConfiguration
 {
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
+    public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
+
 
     private String host;
     private int port;
@@ -31,7 +34,7 @@ public class ILink3SessionConfiguration
     private String tradingSystemVendor = "";
     private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
     private String userKey;
-    private int initialSentSequenceNumber = SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+    private int initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private String accessKeyId;
     private boolean reestablishLastSession = false;
     private ILink3SessionHandler handler;

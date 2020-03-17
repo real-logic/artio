@@ -26,10 +26,12 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
-public class ILink3Proxy extends AbstractILink3Proxy
+public class ILink3Proxy
 {
     public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
 
+    private static final int ARTIO_HEADER_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
     private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
 
     private static final int NEGOTIATE_LENGTH =

@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
 public interface ILink3SessionHandler
@@ -23,9 +24,7 @@ public interface ILink3SessionHandler
     void onMessage(
         DirectBuffer buffer,
         int offset,
-        int length,
-        int libraryId,
-        ILink3Session session);
+        int length);
 
     void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
 }

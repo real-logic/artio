@@ -16,8 +16,6 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.library.ILink3Session;
-import uk.co.real_logic.artio.library.ILink3SessionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 public class FakeILink3SessionHandler implements ILink3SessionHandler
@@ -30,7 +28,7 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
     }
 
     public void onMessage(
-        final DirectBuffer buffer, final int offset, final int length, final int libraryId, final ILink3Session session)
+        final DirectBuffer buffer, final int offset, final int length)
     {
 
     }

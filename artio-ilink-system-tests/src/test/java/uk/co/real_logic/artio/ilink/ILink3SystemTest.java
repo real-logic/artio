@@ -27,10 +27,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
-import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.ILink3Session;
-import uk.co.real_logic.artio.library.ILink3SessionConfiguration;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
@@ -264,6 +261,7 @@ public class ILink3SystemTest
 
         // From CME - as a heartbeat message to be sent when a KeepAliveInterval interval from CME lapses and
         // no other message is sent to customer
+        final InternalILink3Session session = (InternalILink3Session)this.session;
         final long oldTimeout = session.nextReceiveMessageTimeInMs();
         testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
 

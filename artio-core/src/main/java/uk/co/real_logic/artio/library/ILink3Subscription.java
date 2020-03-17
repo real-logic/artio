@@ -22,9 +22,9 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 class ILink3Subscription
 {
     private final AbstractILink3Parser parser;
-    private final InternalILink3Session session;
+    private final ILink3Session session;
 
-    ILink3Subscription(final AbstractILink3Parser parser, final InternalILink3Session session)
+    ILink3Subscription(final AbstractILink3Parser parser, final ILink3Session session)
     {
         this.parser = parser;
         this.session = session;

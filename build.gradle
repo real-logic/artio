@@ -387,7 +387,7 @@ project(':artio-ilink3-impl') {
     dependencies {
         api project(':artio-ilink3-codecs')
         api project(':artio-codecs')
-        api "io.aeron:aeron-client:${aeronVersion}"
+        api project(':artio-core')
     }
 
     compileJava.enabled = iLink3Enabled
