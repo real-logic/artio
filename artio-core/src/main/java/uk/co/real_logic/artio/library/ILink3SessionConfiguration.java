@@ -34,6 +34,7 @@ public class ILink3SessionConfiguration
     private int initialSentSequenceNumber = SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private String accessKeyId;
     private boolean reestablishLastSession = false;
+    private ILink3SessionHandler handler;
 
     public ILink3SessionConfiguration host(final String host)
     {
@@ -167,6 +168,17 @@ public class ILink3SessionConfiguration
         return reestablishLastSession;
     }
 
+    public ILink3SessionConfiguration handler(final ILink3SessionHandler handler)
+    {
+        this.handler = handler;
+        return this;
+    }
+
+    public ILink3SessionHandler handler()
+    {
+        return handler;
+    }
+
     public void validate()
     {
         Verify.notNull(host, "host");
@@ -174,6 +186,7 @@ public class ILink3SessionConfiguration
         Verify.notNull(firmId, "firmId");
         Verify.notNull(userKey, "userKey");
         Verify.notNull(accessKeyId, "accessKeyId");
+        Verify.notNull(handler, "handler");
 
         if (requestedKeepAliveIntervalInMs <= 0)
         {
@@ -201,6 +214,7 @@ public class ILink3SessionConfiguration
             ", userKey='" + userKey + '\'' +
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
             ", accessKeyId=" + accessKeyId +
+            ", handler=" + handler +
             '}';
     }
 }

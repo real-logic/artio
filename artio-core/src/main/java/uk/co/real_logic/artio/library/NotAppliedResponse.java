@@ -15,17 +15,27 @@
  */
 package uk.co.real_logic.artio.library;
 
-import org.agrona.DirectBuffer;
-
-// NB: This is an experimental API and is subject to change or potentially removal.
-public interface ILink3SessionHandler
+/**
+ * Defines how Artio responds to a NotApplied message.
+ *
+ * NB: This is an experimental API and is subject to change or potentially removal.
+ */
+public class NotAppliedResponse
 {
-    void onMessage(
-        DirectBuffer buffer,
-        int offset,
-        int length,
-        int libraryId,
-        ILink3Session session);
+    private boolean shouldResend;
 
-    void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
+    public void gapfill()
+    {
+        shouldResend = false;
+    }
+
+    public void resendMessages()
+    {
+        shouldResend = true;
+    }
+
+    boolean shouldResend()
+    {
+        return shouldResend;
+    }
 }

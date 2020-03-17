@@ -30,6 +30,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private final EstablishmentReject505Decoder establishmentReject = new EstablishmentReject505Decoder();
     private final Terminate507Decoder terminate = new Terminate507Decoder();
     private final Sequence506Decoder sequence = new Sequence506Decoder();
+    private final NotApplied513Decoder notApplied = new NotApplied513Decoder();
 
     private final ILink3EndpointHandler handler;
 
@@ -84,6 +85,11 @@ public class ILink3Parser extends AbstractILink3Parser
             case Sequence506Decoder.TEMPLATE_ID:
             {
                 return onSequence(buffer, offset, blockLength, version);
+            }
+
+            case NotApplied513Decoder.TEMPLATE_ID:
+            {
+                return onNotApplied(buffer, offset, blockLength, version);
             }
         }
         return 1;
@@ -169,6 +175,17 @@ public class ILink3Parser extends AbstractILink3Parser
             sequence.nextSeqNo(),
             sequence.faultToleranceIndicator().value(),
             sequence.keepAliveIntervalLapsed().value());
+    }
+
+    private long onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        notApplied.wrap(buffer, offset, blockLength, version);
+
+        return handler.onNotApplied(
+            notApplied.uUID(),
+            notApplied.fromSeqNo(),
+            notApplied.msgCount());
+//            notApplied.splitMsg()
     }
 
 }

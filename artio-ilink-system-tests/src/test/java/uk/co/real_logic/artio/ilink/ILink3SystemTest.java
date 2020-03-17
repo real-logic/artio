@@ -24,7 +24,6 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -43,6 +42,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ILink3SystemTest
@@ -52,6 +52,8 @@ public class ILink3SystemTest
     private static final String SESSION_ID = "ABC";
     private static final String FIRM_ID = "DEFGH";
     private static final String USER_KEY = "somethingprivate";
+
+    private FakeILink3SessionHandler handler = new FakeILink3SessionHandler();
 
     private int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
@@ -134,35 +136,6 @@ public class ILink3SystemTest
         testServer.readNewOrderSingle(1);
 
         terminateAndDisconnect();
-    }
-
-    private void sendNewOrderSingle()
-    {
-        final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
-        assertThat(session.claimMessage(newOrderSingle), greaterThan(0L));
-        newOrderSingle
-            .partyDetailsListReqID(1)
-            .orderQty(1)
-            .senderID("IBM")
-            .side(SideReq.Buy)
-            .senderID("ABC")
-            .clOrdID("123")
-            .partyDetailsListReqID(1)
-            .orderRequestID(1);
-
-        session.commit();
-    }
-
-    private void terminateAndDisconnect()
-    {
-        startTerminate();
-
-        testServer.readTerminate();
-        testServer.writeTerminate();
-
-        testSystem.awaitUnbind(session);
-
-        assertDisconnected();
     }
 
     @Test
@@ -294,7 +267,7 @@ public class ILink3SystemTest
         final long oldTimeout = session.nextReceiveMessageTimeInMs();
         testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
 
-        Timing.assertEventuallyTrue("Timeout error", () ->
+        assertEventuallyTrue("Timeout error", () ->
         {
             testSystem.poll();
 
@@ -322,20 +295,32 @@ public class ILink3SystemTest
         testServer.assertDisconnected();
     }
 
+    @Test
+    public void shouldSupportNotAppliedMessageSequenceMessageResponse() throws IOException
+    {
+        // From customer - to reset sequence number in response to Not Applied message sent by CME when CME detects a
+        // sequence gap from customer
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        session.nextSentSeqNo(3);
+        sendNewOrderSingle();
+
+        testServer.readNewOrderSingle(3);
+        testServer.writeNotApplied(1, 2);
+
+        assertEventuallyTrue("", () ->
+        {
+            testSystem.poll();
+            return handler.hasReceivedNotApplied();
+        });
+
+        testServer.readSequence(4, KeepAliveLapsed.NotLapsed);
+    }
+
     private void sleepHalfInterval()
     {
         testSystem.awaitBlocking(() -> sleep(TEST_KEEP_ALIVE_INTERVAL_IN_MS / 2));
     }
-
-    // TODO
-    /*@Test
-    public void shouldSupportNotAppliedMessageSequenceMessageResponse()
-    {
-        // From customer - to reset sequence number in response to Not Applied message sent by CME when CME detects a
-        // sequence gap from customer
-
-
-    }*/
 
     private void sleep(final int timeInMs)
     {
@@ -391,12 +376,42 @@ public class ILink3SystemTest
             .firmId(FIRM_ID)
             .userKey(USER_KEY)
             .accessKeyId(ACCESS_KEY_ID)
-            .requestedKeepAliveIntervalInMs(TEST_KEEP_ALIVE_INTERVAL_IN_MS);
+            .requestedKeepAliveIntervalInMs(TEST_KEEP_ALIVE_INTERVAL_IN_MS)
+            .handler(handler);
     }
 
     private void assertDisconnected()
     {
         testServer.assertDisconnected();
         assertThat(library.iLink3Sessions(), hasSize(0));
+    }
+
+    private void sendNewOrderSingle()
+    {
+        final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
+        assertThat(session.claimMessage(newOrderSingle), greaterThan(0L));
+        newOrderSingle
+            .partyDetailsListReqID(1)
+            .orderQty(1)
+            .senderID("IBM")
+            .side(SideReq.Buy)
+            .senderID("ABC")
+            .clOrdID("123")
+            .partyDetailsListReqID(1)
+            .orderRequestID(1);
+
+        session.commit();
+    }
+
+    private void terminateAndDisconnect()
+    {
+        startTerminate();
+
+        testServer.readTerminate();
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(session);
+
+        assertDisconnected();
     }
 }

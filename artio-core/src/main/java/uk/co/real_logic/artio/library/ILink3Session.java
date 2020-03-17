@@ -73,6 +73,8 @@ public class ILink3Session
         UNBOUND
     }
 
+    private final NotAppliedResponse response = new NotAppliedResponse();
+
     private final AbstractILink3Proxy proxy;
     private final AbstractILink3Offsets offsets;
     private final ILink3SessionConfiguration configuration;
@@ -81,6 +83,7 @@ public class ILink3Session
     private final GatewayPublication outboundPublication;
     private final int libraryId;
     private final LibraryPoller owner;
+    private final ILink3SessionHandler handler;
 
     private final long uuid;
     private State state;
@@ -112,6 +115,7 @@ public class ILink3Session
         this.outboundPublication = outboundPublication;
         this.libraryId = libraryId;
         this.owner = owner;
+        this.handler = configuration.handler();
 
         nextSentSeqNo = calculateInitialSentSequenceNumber(configuration, lastSentSequenceNumber);
         state = State.CONNECTED;
@@ -216,6 +220,16 @@ public class ILink3Session
     public State state()
     {
         return state;
+    }
+
+    public int nextSentSeqNo()
+    {
+        return nextSentSeqNo;
+    }
+
+    public void nextSentSeqNo(final int nextSentSeqNo)
+    {
+        this.nextSentSeqNo = nextSentSeqNo;
     }
 
     // END PUBLIC API
@@ -583,6 +597,29 @@ public class ILink3Session
 
         // Reply to any warning messages to keep the session alive.
         if (keepAliveIntervalLapsed == KAL_LAPSED)
+        {
+            sendSequence(KAL_NOT_LAPSED);
+        }
+
+        onReceivedMessage();
+
+        return 1;
+    }
+
+    long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
+    {
+        if (uUID != uuid())
+        {
+            // TODO: error
+        }
+
+        handler.onNotApplied(fromSeqNo, msgCount, response);
+
+        if (response.shouldResend())
+        {
+            // TODO
+        }
+        else
         {
             sendSequence(KAL_NOT_LAPSED);
         }

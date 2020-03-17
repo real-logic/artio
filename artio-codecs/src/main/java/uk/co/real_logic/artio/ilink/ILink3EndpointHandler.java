@@ -40,4 +40,7 @@ public interface ILink3EndpointHandler
     long onEstablishmentReject(String reason, long uUID, long requestTimestamp, long nextSeqNo, int errorCodes);
 
     long onSequence(long uUID, long nextSeqNo, short faultToleranceIndicator, short keepAliveIntervalLapsed);
+
+    long onNotApplied(long uUID, long fromSeqNo, long msgCount);
+
 }

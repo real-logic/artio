@@ -344,9 +344,19 @@ public class ILink3TestServer
             .faultToleranceIndicator(FTI.Primary)
             .keepAliveIntervalLapsed(keepAliveLapsed);
 
-        new Sequence506Decoder()
-            .wrap(unsafeWriteBuffer, ILINK_HEADER_LENGTH, sequence.sbeBlockLength(), sequence.sbeSchemaVersion())
-            .faultToleranceIndicator();
+        write();
+    }
+
+    public void writeNotApplied(final long fromSeqNo, final long msgCount)
+    {
+        final NotApplied513Encoder notApplied = new NotApplied513Encoder();
+        wrap(notApplied, NotApplied513Encoder.BLOCK_LENGTH);
+
+        notApplied
+            .uUID(uuid)
+            .fromSeqNo(fromSeqNo)
+            .msgCount(msgCount)
+            .splitMsg(SplitMsg.NULL_VAL);
 
         write();
     }
