@@ -160,7 +160,8 @@ public class EngineContext implements AutoCloseable
         final int cacheNumSets,
         final String logFileDir,
         final int streamId,
-        final RecordingIdLookup recordingIdLookup)
+        final RecordingIdLookup recordingIdLookup,
+        final Long2LongHashMap connectionIdToILinkUuid)
     {
         return new ReplayIndex(
             logFileDir,
@@ -171,7 +172,8 @@ public class EngineContext implements AutoCloseable
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
             errorHandler,
-            recordingIdLookup);
+            recordingIdLookup,
+            connectionIdToILinkUuid);
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -220,12 +222,14 @@ public class EngineContext implements AutoCloseable
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final String logFileDir = configuration.logFileDir();
 
+        final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
         final ReplayIndex inboundReplayIndex = newReplayIndex(
             cacheSetSize,
             cacheNumSets,
             logFileDir,
             configuration.inboundLibraryStream(),
-            recordingCoordinator.inboundRecordingIdLookup());
+            recordingCoordinator.inboundRecordingIdLookup(),
+            connectionIdToILinkUuid);
 
         inboundIndexer = new Indexer(
             asList(inboundReplayIndex, receivedSequenceNumberIndex),
@@ -243,7 +247,8 @@ public class EngineContext implements AutoCloseable
             cacheNumSets,
             logFileDir,
             configuration.outboundLibraryStream(),
-            recordingCoordinator.outboundRecordingIdLookup()));
+            recordingCoordinator.outboundRecordingIdLookup(),
+            connectionIdToILinkUuid));
         outboundIndices.add(sentSequenceNumberIndex);
         outboundIndices.add(new PositionSender(inboundPublication()));
 

@@ -1319,9 +1319,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             if (reply != null)
             {
+                DebugLogger.log(FIX_CONNECTION, initiatorConnectFormatter, connectionId, libraryId);
+
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final ILink3Session session = makeILink3Session(
-                    configuration, connectionId, reply, outboundPublication, libraryId, this,
+                    configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
                 final ILink3Subscription subscription = new ILink3Subscription(
                     AbstractILink3Parser.make(session, THROW_ERRORS), session);
@@ -1333,11 +1335,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public static ILink3Session makeILink3Session(
+    private ILink3Session makeILink3Session(
         final ILink3SessionConfiguration configuration,
         final long connectionId,
         final InitiateILink3SessionReply initiateReply,
-        final GatewayPublication outboundPublication,
         final int libraryId,
         final LibraryPoller owner,
         final long uuid,
@@ -1352,16 +1353,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 InitiateILink3SessionReply.class,
                 GatewayPublication.class,
+                GatewayPublication.class,
                 int.class,
                 LibraryPoller.class,
                 long.class,
                 int.class,
                 int.class);
+
             return (ILink3Session)constructor.newInstance(
                 configuration,
                 connectionId,
                 initiateReply,
                 outboundPublication,
+                inboundPublication,
                 libraryId,
                 owner,
                 uuid,

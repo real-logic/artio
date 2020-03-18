@@ -1301,8 +1301,8 @@ public class GatewayPublication extends ClaimablePublication
     public long saveValidResendRequest(
         final long sessionId,
         final long connectionId,
-        final int beginSequenceNumber,
-        final int endSequenceNumber,
+        final long beginSequenceNumber,
+        final long endSequenceNumber,
         final int sequenceIndex,
         final DirectBuffer bodyBuffer,
         final int bodyOffset,
@@ -1372,7 +1372,7 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final long correlationId,
         final long connectionId,
-        final long lastUuid,
+        final long uuid,
         final int lastReceivedSequenceNumber,
         final int lastSentSequenceNumber)
     {
@@ -1391,7 +1391,7 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .correlationId(correlationId)
             .connection(connectionId)
-            .lastUuid(lastUuid)
+            .uuid(uuid)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .lastSentSequenceNumber(lastSentSequenceNumber);
 

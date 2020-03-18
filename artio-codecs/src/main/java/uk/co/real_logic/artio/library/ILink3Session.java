@@ -38,6 +38,7 @@ public abstract class ILink3Session
         ESTABLISH_REJECTED,
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
+        RETRANSMITTING,
         AWAITING_KEEPALIVE,
         UNBINDING,
         SENT_TERMINATE,

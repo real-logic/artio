@@ -21,23 +21,15 @@ import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.status.RecordingPos;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 
 /**
  * A continuable replay operation that can retried.
@@ -46,8 +38,6 @@ import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
  */
 public class ReplayOperation
 {
-    private static final ThreadLocal<CharFormatter> FOUND_REPLAY_MESSAGE =
-        ThreadLocal.withInitial(() -> new CharFormatter("Found Replay Message [%s]%n"));
     private static final ThreadLocal<CharFormatter> RECORDING_RANGE_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Attempting Recording Range:" +
         " RecordingRange{" +
@@ -83,16 +73,16 @@ public class ReplayOperation
     private Image image;
 
     ReplayOperation(
-        final ControlledFragmentHandler handler,
         final List<RecordingRange> ranges,
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
         final Subscription subscription,
         final int archiveReplayStream,
-        final LogTag logTag)
+        final LogTag logTag,
+        final MessageTracker messageTracker)
     {
-        messageTracker = new MessageTracker(logTag, handler);
-        assembler = new ControlledFragmentAssembler(messageTracker);
+        this.messageTracker = messageTracker;
+        assembler = new ControlledFragmentAssembler(this.messageTracker);
 
         this.ranges = ranges;
         this.aeronArchive = aeronArchive;
@@ -122,7 +112,6 @@ public class ReplayOperation
 
             recordingRange = ranges.get(0);
             logRange();
-            messageTracker.sessionId = recordingRange.sessionId;
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
             final long endPosition = beginPosition + length;
@@ -269,73 +258,6 @@ public class ReplayOperation
         }
 
         return false;
-    }
-
-    private static class MessageTracker implements ControlledFragmentHandler
-    {
-        private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
-        private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
-        private final LogTag logTag;
-        private final ControlledFragmentHandler messageHandler;
-
-        int count;
-        long sessionId;
-
-        MessageTracker(final LogTag logTag, final ControlledFragmentHandler messageHandler)
-        {
-            this.logTag = logTag;
-            this.messageHandler = messageHandler;
-        }
-
-        @Override
-        public Action onFragment(
-            final DirectBuffer buffer, final int offset, final int length, final Header header)
-        {
-            messageHeaderDecoder.wrap(buffer, offset);
-
-            if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
-            {
-                final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
-                if (sessionId != UNK_SESSION)
-                {
-                    messageDecoder.wrap(
-                        buffer,
-                        messageOffset,
-                        messageHeaderDecoder.blockLength(),
-                        messageHeaderDecoder.version()
-                    );
-
-                    if (messageDecoder.session() != sessionId)
-                    {
-                        return CONTINUE;
-                    }
-                }
-
-                if (DebugLogger.isEnabled(logTag))
-                {
-                    messageDecoder.skipMetaData();
-                    final int bodyLength = messageDecoder.bodyLength();
-                    final int bodyOffset = messageDecoder.limit();
-                    final CharFormatter formatter = FOUND_REPLAY_MESSAGE.get();
-                    formatter.clear();
-                    DebugLogger.log(logTag, formatter, buffer, bodyOffset, bodyLength);
-                }
-
-                final Action action = messageHandler.onFragment(buffer, offset, length, header);
-                if (action != ABORT)
-                {
-                    count++;
-                }
-                return action;
-            }
-
-            return CONTINUE;
-        }
-
-        void reset()
-        {
-            count = 0;
-        }
     }
 
     public void close()

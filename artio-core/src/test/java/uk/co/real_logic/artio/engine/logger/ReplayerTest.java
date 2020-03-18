@@ -84,8 +84,8 @@ public class ReplayerTest extends AbstractLogTest
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private EpochClock clock = mock(EpochClock.class);
-    private ArgumentCaptor<ControlledFragmentHandler> handler =
-        ArgumentCaptor.forClass(ControlledFragmentHandler.class);
+    private ArgumentCaptor<MessageTracker> messageTracker =
+        ArgumentCaptor.forClass(MessageTracker.class);
     private Header fragmentHeader = mock(Header.class);
     private ReplayHandler replayHandler = mock(ReplayHandler.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
@@ -102,7 +102,7 @@ public class ReplayerTest extends AbstractLogTest
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         when(publication.maxPayloadLength()).thenReturn(Configuration.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
 
-        when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any()))
+        when(replayQuery.query(anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any(), messageTracker.capture()))
             .thenReturn(replayOperation);
         when(replayOperation.attemptReplay()).thenReturn(true);
         when(senderSequenceNumbers.hasDisconnected(anyLong())).thenReturn(false);
@@ -176,10 +176,10 @@ public class ReplayerTest extends AbstractLogTest
         onReplayOtherSession(END_SEQ_NO);
 
         // Two queries means two handlers
-        final List<ControlledFragmentHandler> handlers = handler.getAllValues();
-        assertEquals(2, handlers.size());
-        final ControlledFragmentHandler firstHandler = handlers.get(0);
-        final ControlledFragmentHandler secondHandler = handlers.get(1);
+        final List<MessageTracker> messageTrackers = messageTracker.getAllValues();
+        assertEquals(2, messageTrackers.size());
+        final ControlledFragmentHandler firstHandler = messageTrackers.get(0);
+        final ControlledFragmentHandler secondHandler = messageTrackers.get(1);
         assertNotSame(firstHandler, secondHandler);
 
         // First replay
@@ -528,7 +528,7 @@ public class ReplayerTest extends AbstractLogTest
 
             backpressureTryClaim();
 
-            onFragment(fragmentLength(), COMMIT, getHandler());
+            onFragment(fragmentLength(), COMMIT, getMessageTracker());
 
             verifyClaim();
 
@@ -605,14 +605,14 @@ public class ReplayerTest extends AbstractLogTest
     {
         bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
         final int srcLength = fragmentLength();
-        onFragment(srcLength, expectedAction, getHandler());
+        onFragment(srcLength, expectedAction, getMessageTracker());
         return srcLength;
     }
 
     private void onTestRequest(final int sequenceNumber)
     {
         bufferContainsTestRequest(sequenceNumber);
-        onFragment(fragmentLength(), CONTINUE, getHandler());
+        onFragment(fragmentLength(), CONTINUE, getMessageTracker());
     }
 
     private int endSeqNoForTwoMessages()
@@ -623,7 +623,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onFragment(final int length)
     {
-        onFragment(length, CONTINUE, getHandler());
+        onFragment(length, CONTINUE, getMessageTracker());
     }
 
     private void onReplay(final int endSeqNo, final Answer<Boolean> answer)
@@ -648,9 +648,9 @@ public class ReplayerTest extends AbstractLogTest
         assertEquals(expectedAction, action);
     }
 
-    private ControlledFragmentHandler getHandler()
+    private ControlledFragmentHandler getMessageTracker()
     {
-        return handler.getValue();
+        return messageTracker.getValue();
     }
 
     private void verifyIllegalStateException()
@@ -728,12 +728,12 @@ public class ReplayerTest extends AbstractLogTest
     private void verifyQueriedService(final int endSeqNo)
     {
         verify(replayQuery).query(
-            any(),
             eq(SESSION_ID),
             eq(BEGIN_SEQ_NO),
             eq(SEQUENCE_INDEX),
             eq(endSeqNo),
             eq(SEQUENCE_INDEX),
+            any(),
             any());
     }
 

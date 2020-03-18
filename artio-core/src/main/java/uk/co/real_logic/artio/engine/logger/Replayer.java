@@ -33,9 +33,7 @@ import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.ValidResendRequestDecoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -66,16 +64,28 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final BufferClaim bufferClaim;
+
+    // FIX specific state.
+    private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
-    private final int maxBytesInBuffer;
-    private final ReplayerCommandQueue replayerCommandQueue;
-    private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
     private final CharFormatter receivedResendFormatter = new CharFormatter(
         "Received Resend Request for range: [%s, %s]%n");
     private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
         "Not processing Resend Request for %s because it has already disconnected %n");
-    private final ReplayerSession.Formatters formatters = new ReplayerSession.Formatters();
+    private final FixReplayerSession.Formatters formatters = new FixReplayerSession.Formatters();
 
+    // ILink specific state
+    private final LongHashSet iLinkConnectionIds = new LongHashSet();
+    private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
+
+    private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
+
+
+    private final int maxBytesInBuffer;
+    private final ReplayerCommandQueue replayerCommandQueue;
     private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
@@ -83,13 +93,9 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final int maxClaimAttempts;
     private final Subscription inboundSubscription;
     private final String agentNamePrefix;
-    private final LongHashSet gapFillMessageTypes;
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
-
-    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
 
     public Replayer(
         final ReplayQuery outboundReplayQuery,
@@ -129,37 +135,66 @@ public class Replayer implements Agent, ControlledFragmentHandler
     }
 
     public Action onFragment(
-        final DirectBuffer buffer, final int offset, final int length, final Header header)
+        final DirectBuffer buffer, final int start, final int length, final Header header)
     {
-        messageHeader.wrap(buffer, offset);
-        if (messageHeader.templateId() == ValidResendRequestDecoder.TEMPLATE_ID)
+        messageHeader.wrap(buffer, start);
+        final int templateId = messageHeader.templateId();
+        final int offset = start + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int blockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+
+        if (templateId == ValidResendRequestDecoder.TEMPLATE_ID)
         {
             validResendRequest.wrap(
                 buffer,
-                offset + MessageHeaderDecoder.ENCODED_LENGTH,
-                messageHeader.blockLength(),
-                messageHeader.version());
+                offset,
+                blockLength,
+                version);
 
             final long sessionId = validResendRequest.session();
             final long connectionId = validResendRequest.connection();
-            final int beginSeqNo = validResendRequest.beginSequenceNumber();
-            final int endSeqNo = validResendRequest.endSequenceNumber();
+            final long beginSeqNo = validResendRequest.beginSequenceNumber();
+            final long endSeqNo = validResendRequest.endSequenceNumber();
             final int sequenceIndex = validResendRequest.sequenceIndex();
             validResendRequest.wrapBody(asciiBuffer);
 
             return onResendRequest(sessionId, connectionId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
         }
+        else if (templateId == ILinkConnectDecoder.TEMPLATE_ID)
+        {
+            iLinkConnect.wrap(
+                buffer,
+                offset,
+                blockLength,
+                version);
+
+            iLinkConnectionIds.add(iLinkConnect.connection());
+
+            return CONTINUE;
+        }
+        else if (templateId == RequestDisconnectDecoder.TEMPLATE_ID)
+        {
+            requestDisconnect.wrap(
+                buffer,
+                offset,
+                blockLength,
+                version);
+
+            iLinkConnectionIds.remove(requestDisconnect.connection());
+
+            return CONTINUE;
+        }
         else
         {
-            return fixSessionCodecsFactory.onFragment(buffer, offset, length, header);
+            return fixSessionCodecsFactory.onFragment(buffer, start, length, header);
         }
     }
 
     Action onResendRequest(
         final long sessionId,
         final long connectionId,
-        final int beginSeqNo,
-        final int endSeqNo,
+        final long beginSeqNo,
+        final long endSeqNo,
         final int sequenceIndex,
         final AsciiBuffer asciiBuffer)
     {
@@ -172,13 +207,49 @@ public class Replayer implements Agent, ControlledFragmentHandler
             return CONTINUE;
         }
 
+        final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
+        if (sessionCodecs != null)
+        {
+            if (processFixResendRequest(
+                sessionId, connectionId, (int)beginSeqNo, (int)endSeqNo, sequenceIndex, asciiBuffer, sessionCodecs))
+            {
+                return ABORT;
+            }
+        }
+        else if (iLinkConnectionIds.contains(connectionId))
+        {
+            DebugLogger.log(REPLAY,
+                receivedResendFormatter,
+                beginSeqNo,
+                endSeqNo);
+
+            final ILinkReplayerSession session = new ILinkReplayerSession(
+                connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
+                (int)beginSeqNo, (int)endSeqNo, sessionId);
+
+            session.query();
+
+            replayerSessions.add(session);
+        }
+
+        return COMMIT;
+    }
+
+    private boolean processFixResendRequest(
+        final long sessionId,
+        final long connectionId,
+        final int beginSeqNo,
+        final int endSeqNo,
+        final int sequenceIndex,
+        final AsciiBuffer asciiBuffer,
+        final FixReplayerCodecs sessionCodecs)
+    {
         final AtomicCounter bytesInBuffer = senderSequenceNumbers.bytesInBufferCounter(connectionId);
         if (bytesInBuffer == null)
         {
-            return ABORT;
+            return true;
         }
 
-        final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
         final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
         resendRequest.reset();
         resendRequest.decode(asciiBuffer, 0, asciiBuffer.capacity());
@@ -192,7 +263,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         encoder.setupMessage(resendRequest.header());
 
         final String message = asciiBuffer.getAscii(0, asciiBuffer.capacity());
-        final ReplayerSession replayerSession = new ReplayerSession(
+        final FixReplayerSession fixReplayerSession = new FixReplayerSession(
             bufferClaim,
             idleStrategy,
             replayHandler,
@@ -213,11 +284,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
             bytesInBuffer,
             maxBytesInBuffer);
 
-        replayerSession.query();
+        fixReplayerSession.query();
 
-        replayerSessions.add(replayerSession);
-
-        return COMMIT;
+        replayerSessions.add(fixReplayerSession);
+        return false;
     }
 
     public int doWork()
@@ -229,15 +299,15 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     private int pollReplayerSessions()
     {
-        final ArrayList<ReplayerSession> replayerSessions = this.replayerSessions;
-        final int size = replayerSessions.size();
+        final ArrayList<ReplayerSession> fixReplayerSessions = this.replayerSessions;
+        final int size = fixReplayerSessions.size();
 
         for (int lastIndex = size - 1, i = lastIndex; i >= 0; i--)
         {
-            final ReplayerSession replayerSession = replayerSessions.get(i);
-            if (replayerSession.attempReplay())
+            final ReplayerSession fixReplayerSession = fixReplayerSessions.get(i);
+            if (fixReplayerSession.attempReplay())
             {
-                fastUnorderedRemove(replayerSessions, i, lastIndex--);
+                fastUnorderedRemove(fixReplayerSessions, i, lastIndex--);
             }
         }
         return size;

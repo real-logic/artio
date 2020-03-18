@@ -18,9 +18,17 @@ package uk.co.real_logic.artio.ilink;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
+import java.util.function.Consumer;
+
 public class FakeILink3SessionHandler implements ILink3SessionHandler
 {
+    private final Consumer<NotAppliedResponse> notAppliedResponse;
     private boolean hasReceivedNotApplied;
+
+    public FakeILink3SessionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
+    {
+        this.notAppliedResponse = notAppliedResponse;
+    }
 
     public boolean hasReceivedNotApplied()
     {
@@ -37,6 +45,6 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
         final long fromSequenceNumber, final long msgCount, final NotAppliedResponse response)
     {
         hasReceivedNotApplied = true;
-        response.gapfill();
+        notAppliedResponse.accept(response);
     }
 }

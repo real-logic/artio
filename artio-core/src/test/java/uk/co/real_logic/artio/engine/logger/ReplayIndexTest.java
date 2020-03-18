@@ -41,6 +41,7 @@ import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -107,7 +108,8 @@ public class ReplayIndexTest extends AbstractLogTest
             newBufferFactory,
             replayPositionBuffer,
             errorHandler,
-            recordingIdLookup);
+            recordingIdLookup,
+            new Long2LongHashMap(Session.UNKNOWN));
     }
 
     private Aeron aeron()
@@ -492,13 +494,13 @@ public class ReplayIndexTest extends AbstractLogTest
         final int endSequenceIndex)
     {
         final ReplayOperation operation = query.query(
-            mockHandler,
             sessionId,
             beginSequenceNumber,
             beginSequenceIndex,
             endSequenceNumber,
             endSequenceIndex,
-            REPLAY);
+            REPLAY,
+            new FixMessageTracker(REPLAY, mockHandler, sessionId));
 
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         while (!operation.attemptReplay())

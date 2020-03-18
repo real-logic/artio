@@ -100,7 +100,7 @@ public interface LibraryEndPointHandler
         int libraryId,
         long correlationId,
         long connection,
-        long lastUuid,
+        long uuid,
         int lastReceivedSequenceNumber,
         int lastSentSequenceNumber);
 

@@ -31,8 +31,6 @@ import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.WriteMetaDataResponse;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
@@ -48,14 +46,9 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -80,11 +73,6 @@ public class SequenceNumberIndexWriter implements Index
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
     private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
-    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
-    private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
-    private AbstractILink3Offsets offsets;
-    private AbstractILink3Parser parser;
-    private final Long2LongHashMap connectionIdToILinkUuid;
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -111,6 +99,7 @@ public class SequenceNumberIndexWriter implements Index
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positionWriter;
+    private final ILinkSequenceNumberExtractor iLinkSequenceNumberExtractor;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -120,7 +109,6 @@ public class SequenceNumberIndexWriter implements Index
     private final long indexFileStateFlushTimeoutInMs;
     private long lastUpdatedFileTimeInMs;
     private boolean hasSavedRecordSinceFileUpdate = false;
-    private boolean attemptedILinkInit = false;
 
     public SequenceNumberIndexWriter(
         final AtomicBuffer inMemoryBuffer,
@@ -140,7 +128,11 @@ public class SequenceNumberIndexWriter implements Index
         this.fileCapacity = indexFile.buffer().capacity();
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
-        this.connectionIdToILinkUuid = connectionIdToILinkUuid;
+
+        iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
+            connectionIdToILinkUuid, errorHandler,
+            (seqNum, uuid, messageSize, endPosition, aeronSessionId) ->
+            saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION));
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
@@ -292,16 +284,9 @@ public class SequenceNumberIndexWriter implements Index
                     break;
                 }
 
-                case ILinkMessageDecoder.TEMPLATE_ID:
+                default:
                 {
-                    onILinkMessage(buffer, endPosition, offset, actingBlockLength, version);
-                    break;
-                }
-
-                case ILinkConnectDecoder.TEMPLATE_ID:
-                {
-                    iLinkConnect.wrap(buffer, offset, actingBlockLength, version);
-                    connectionIdToILinkUuid.put(iLinkConnect.connection(), iLinkConnect.lastUuid());
+                    iLinkSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
                     break;
                 }
             }
@@ -319,63 +304,6 @@ public class SequenceNumberIndexWriter implements Index
             redactSequenceUpdate.session(),
             redactSequenceUpdate.position(),
             redactSequenceUpdate.position());
-    }
-
-    private void onILinkMessage(
-        final DirectBuffer buffer,
-        final long endPosition,
-        final int offset,
-        final int actingBlockLength,
-        final int version)
-    {
-        if (!attemptedILinkInit)
-        {
-            attemptedILinkInit = true;
-
-            parser = AbstractILink3Parser.make(null, errorHandler);
-            offsets = AbstractILink3Offsets.make(errorHandler);
-
-            if (parser == null || offsets == null)
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Configuration Issue: could not find ILink3Codes on the Engine classpath, despite " +
-                    "ILink3 message requiring processing. Sequence Index update ignored"));
-                return;
-            }
-        }
-
-        iLinkMessage.wrap(buffer, offset, actingBlockLength, version);
-        final long connectionId = iLinkMessage.connection();
-
-        final int sofhOffset = offset + ILinkMessageDecoder.BLOCK_LENGTH;
-        final int headerOffset = sofhOffset + SOFH_LENGTH;
-        final int templateId = parser.templateId(buffer, headerOffset);
-        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
-        final int possRetransOffset = offsets.possRetransOffset(templateId);
-        if (possRetransOffset != AbstractILink3Offsets.MISSING_OFFSET)
-        {
-            final int possRetrans = possRetrans(buffer, messageOffset, possRetransOffset);
-            if (possRetrans == BOOLEAN_FLAG_TRUE)
-            {
-                return;
-            }
-        }
-
-        final int seqNumOffset = offsets.seqNumOffset(templateId);
-        if (seqNumOffset != AbstractILink3Offsets.MISSING_OFFSET)
-        {
-            final int seqNum = buffer.getInt(messageOffset + seqNumOffset, LITTLE_ENDIAN);
-            final long sessionId = connectionIdToILinkUuid.get(connectionId);
-            if (sessionId != UNK_SESSION)
-            {
-                saveRecord(seqNum, sessionId, endPosition, NO_REQUIRED_POSITION);
-            }
-        }
-    }
-
-    private int possRetrans(final DirectBuffer buffer, final int messageOffset, final int possRetransOffset)
-    {
-        return (short)buffer.getByte(messageOffset + possRetransOffset) & 0xFF;
     }
 
     private boolean onFixMessage(

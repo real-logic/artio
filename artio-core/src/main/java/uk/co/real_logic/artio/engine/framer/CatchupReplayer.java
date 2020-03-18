@@ -26,9 +26,7 @@ import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.engine.logger.ReplayOperation;
-import uk.co.real_logic.artio.engine.logger.ReplayQuery;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -392,13 +390,13 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     session.sessionId(), replayToSequenceNumber, replayToSequenceIndex);
 
                 replayOperation = inboundMessages.query(
-                    this,
                     session.sessionId(),
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     replayToSequenceNumber,
                     replayToSequenceIndex,
-                    CATCHUP);
+                    CATCHUP,
+                    new FixMessageTracker(CATCHUP, this, session.sessionId()));
 
                 state = State.REPLAYING;
 

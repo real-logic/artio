@@ -13,29 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.engine.logger;
 
-/**
- * Defines how Artio responds to a NotApplied message.
- *
- * NB: This is an experimental API and is subject to change or potentially removal.
- */
-public class NotAppliedResponse
+public interface ILinkSequenceNumberHandler
 {
-    private boolean shouldRetransmit;
-
-    public void gapfill()
-    {
-        shouldRetransmit = false;
-    }
-
-    public void retransmit()
-    {
-        shouldRetransmit = true;
-    }
-
-    boolean shouldRetransmit()
-    {
-        return shouldRetransmit;
-    }
+    void onSequenceNumber(int seqNum, long uuid, int length, long endPosition, int aeronSessionId);
 }

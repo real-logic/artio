@@ -449,7 +449,7 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
         <field name="connection" id="3" type="ConnectionId"/>
-        <field name="lastUuid" id="4" type="uint64"/>
+        <field name="uuid" id="4" type="uint64"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="lastSentSequenceNumber" id="6" type="int32"/>
     </sbe:message>
@@ -528,8 +528,8 @@
         sinceVersion="9">
         <field name="session" id="1" type="FixSessionId"/>
         <field name="connection" id="2" type="ConnectionId"/>
-        <field name="beginSequenceNumber" id="3" type="int32"/>
-        <field name="endSequenceNumber" id="4" type="int32"/>
+        <field name="beginSequenceNumber" id="3" type="uint32"/>
+        <field name="endSequenceNumber" id="4" type="uint32"/>
         <field name="SequenceIndex" id="5" type="int32"/>
         <data name="body" id="6" type="AsciiString"/>
     </sbe:message>

@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -92,26 +91,26 @@ public class ReplayQuery implements AutoCloseable
 
     /**
      *
-     * @param handler the handler to pass the messages to
      * @param sessionId the FIX session id of the stream to replay.
      * @param beginSequenceNumber sequence number to begin replay at (inclusive).
      * @param beginSequenceIndex the sequence index to begin replay at (inclusive).
      * @param endSequenceNumber sequence number to end replay at (inclusive).
      * @param endSequenceIndex the sequence index to end replay at (inclusive).
      * @param logTag the operation to tag log entries with
+     * @param tracker
      * @return number of messages replayed
      */
     public ReplayOperation query(
-        final ControlledFragmentHandler handler,
         final long sessionId,
         final int beginSequenceNumber,
         final int beginSequenceIndex,
         final int endSequenceNumber,
         final int endSequenceIndex,
-        final LogTag logTag)
+        final LogTag logTag,
+        final MessageTracker tracker)
     {
         return lookupSessionQuery(sessionId)
-            .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex, logTag);
+            .query(beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex, logTag, tracker);
     }
 
     public void queryStartPositions(final Long2LongHashMap newStartPositions)
@@ -187,12 +186,11 @@ public class ReplayQuery implements AutoCloseable
         }
 
         ReplayOperation query(
-            final ControlledFragmentHandler handler,
             final int beginSequenceNumber,
             final int beginSequenceIndex,
             final int endSequenceNumber,
             final int endSequenceIndex,
-            final LogTag logTag)
+            final LogTag logTag, final MessageTracker messageTracker)
         {
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
@@ -271,7 +269,7 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
-            return newReplayOperation(handler, ranges, logTag);
+            return newReplayOperation(ranges, logTag, messageTracker);
         }
 
         private long skipToStart(final int beginSequenceNumber, final long iteratorPosition, final int sequenceNumber)
@@ -297,7 +295,7 @@ public class ReplayQuery implements AutoCloseable
         }
 
         private ReplayOperation newReplayOperation(
-            final ControlledFragmentHandler handler, final List<RecordingRange> ranges, final LogTag logTag)
+            final List<RecordingRange> ranges, final LogTag logTag, final MessageTracker messageTracker)
         {
             if (replaySubscription == null)
             {
@@ -306,13 +304,13 @@ public class ReplayQuery implements AutoCloseable
             }
 
             return new ReplayOperation(
-                handler,
                 ranges,
                 aeronArchive,
                 errorHandler,
                 replaySubscription,
                 archiveReplayStream,
-                logTag);
+                logTag,
+                messageTracker);
         }
 
         private RecordingRange addRange(

@@ -41,6 +41,19 @@ public class ILink3Offsets extends AbstractILink3Offsets
 
     public ILink3Offsets()
     {
+        final Ir ir = loadSbeIr();
+        ir.messages().forEach(messageTokens ->
+        {
+            final Token beginMessage = messageTokens.get(0);
+            final int templateId = beginMessage.id();
+            findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
+            findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
+            findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
+        });
+    }
+
+    public static Ir loadSbeIr()
+    {
         try
         {
             final InputStream stream = Negotiate500Encoder.class.getResourceAsStream(SBE_IR_FILE);
@@ -53,20 +66,13 @@ public class ILink3Offsets extends AbstractILink3Offsets
             }
             try (IrDecoder irDecoder = new IrDecoder(ByteBuffer.wrap(bytes)))
             {
-                final Ir ir = irDecoder.decode();
-                ir.messages().forEach(messageTokens ->
-                {
-                    final Token beginMessage = messageTokens.get(0);
-                    final int templateId = beginMessage.id();
-                    findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
-                    findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
-                    findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
-                });
+                return irDecoder.decode();
             }
         }
         catch (final Exception e)
         {
             LangUtil.rethrowUnchecked(e);
+            return null;
         }
     }
 

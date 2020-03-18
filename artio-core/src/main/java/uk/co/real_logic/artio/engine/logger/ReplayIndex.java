@@ -20,6 +20,7 @@ import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -64,6 +65,8 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
     private final SequenceNumberExtractor sequenceNumberExtractor;
 
+    private final ILinkSequenceNumberExtractor iLinkSequenceNumberExtractor;
+
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
     private final String logFileDir;
@@ -83,7 +86,8 @@ public class ReplayIndex implements Index
         final BufferFactory bufferFactory,
         final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler,
-        final RecordingIdLookup recordingIdLookup)
+        final RecordingIdLookup recordingIdLookup,
+        final Long2LongHashMap connectionIdToILinkUuid)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -93,6 +97,10 @@ public class ReplayIndex implements Index
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
+        iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
+            connectionIdToILinkUuid, errorHandler,
+            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId) ->
+                sessionIndex(uuid).onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId));
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
         checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
@@ -159,11 +167,14 @@ public class ReplayIndex implements Index
                             continuedSequenceIndex = sequenceIndex;
                         }
 
-                        fixSessionIdToIndex
-                            .computeIfAbsent(fixSessionId, newSessionIndex)
-                            .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
+                        sessionIndex(fixSessionId)
+                            .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header.sessionId());
                     }
                 }
+            }
+            else if (templateId == ILinkMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
+            {
+                iLinkSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
             }
             else if (templateId == ResetSequenceNumberDecoder.TEMPLATE_ID)
             {
@@ -187,13 +198,18 @@ public class ReplayIndex implements Index
         }
         else
         {
-            fixSessionIdToIndex
-                .computeIfAbsent(continuedFixSessionId, newSessionIndex)
-                .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
+            sessionIndex(continuedFixSessionId)
+                .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header.sessionId());
         }
 
         positionWriter.update(header.sessionId(), templateId, endPosition);
         positionWriter.updateChecksums();
+    }
+
+    private SessionIndex sessionIndex(final long fixSessionId)
+    {
+        return fixSessionIdToIndex
+            .computeIfAbsent(fixSessionId, newSessionIndex);
     }
 
     public int doWork()
@@ -250,11 +266,10 @@ public class ReplayIndex implements Index
             final int length,
             final int sequenceNumber,
             final int sequenceIndex,
-            final Header header)
+            final int aeronSessionId)
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
-            final int aeronSessionId = header.sessionId();
             final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, -1);
             final long beginPosition = endPosition - length;
 

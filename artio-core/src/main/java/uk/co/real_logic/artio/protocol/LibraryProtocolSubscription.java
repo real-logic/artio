@@ -340,7 +340,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             libraryId,
             iLinkConnect.correlationId(),
             iLinkConnect.connection(),
-            iLinkConnect.lastUuid(),
+            iLinkConnect.uuid(),
             iLinkConnect.lastReceivedSequenceNumber(),
             iLinkConnect.lastSentSequenceNumber());
     }

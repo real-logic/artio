@@ -287,7 +287,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
             {
-                return CONTINUE;
+                return iLink3SenderEndPoints.onMessage(connectionId, buffer, offset);
             }
         },
         new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)),
@@ -652,9 +652,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         return;
                     }
 
-                    // TODO: session id
                     DebugLogger.log(FIX_CONNECTION,
-                        initiatingSessionFormatter, 0, library.libraryId());
+                        initiatingSessionFormatter, uuid, library.libraryId());
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
@@ -697,7 +696,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         private final int libraryId;
         private final long correlationId;
-        private final long lastUuid;
+        private final long uuid;
         private final int aeronSessionId;
         private final long position;
 
@@ -711,14 +710,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private ILink3LookupConnectOperation(
             final int libraryId,
             final long correlationId,
-            final long lastUuid,
+            final long uuid,
             final int aeronSessionId,
             final long position,
             final boolean reestablishConnection)
         {
             this.libraryId = libraryId;
             this.correlationId = correlationId;
-            this.lastUuid = lastUuid;
+            this.uuid = uuid;
             this.aeronSessionId = aeronSessionId;
             this.position = position;
 
@@ -745,7 +744,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             return inboundPublication.saveILinkConnect(
-                libraryId, correlationId, connectionId, lastUuid, lastReceivedSequenceNumber,
+                libraryId, correlationId, connectionId, uuid, lastReceivedSequenceNumber,
                 lastSentSequenceNumber);
         }
 
@@ -753,8 +752,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             if (sentSequenceNumberIndex.indexedPosition(aeronSessionId) > position)
             {
-                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(lastUuid);
-                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(lastUuid);
+                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(uuid);
+                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(uuid);
                 hasScannedIndex = true;
             }
         }

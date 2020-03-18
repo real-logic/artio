@@ -50,7 +50,7 @@ public class ILink3SystemTest
     private static final String FIRM_ID = "DEFGH";
     private static final String USER_KEY = "somethingprivate";
 
-    private FakeILink3SessionHandler handler = new FakeILink3SessionHandler();
+    private FakeILink3SessionHandler handler = new FakeILink3SessionHandler(NotAppliedResponse::gapfill);
 
     private int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
@@ -313,6 +313,30 @@ public class ILink3SystemTest
         });
 
         testServer.readSequence(4, KeepAliveLapsed.NotLapsed);
+    }
+
+    // TODO: ensure that new messages can't be sent until replay complete.
+    @Test
+    public void shouldSupportRetransmitInResponseToNotAppliedMessage() throws IOException
+    {
+        handler = new FakeILink3SessionHandler(NotAppliedResponse::retransmit);
+
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(2);
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(3);
+
+        // Let's pretend we haven't received 1 and 2 and initiate a resend.
+        testServer.writeNotApplied(1, 2);
+
+        testServer.readNewOrderSingle(1);
+        testServer.readNewOrderSingle(2);
     }
 
     private void sleepHalfInterval()

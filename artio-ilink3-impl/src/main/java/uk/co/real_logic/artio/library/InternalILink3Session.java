@@ -20,6 +20,7 @@ import iLinkBinary.KeepAliveLapsed;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.ilink.ILink3Offsets;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
@@ -48,6 +49,8 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public class InternalILink3Session extends ILink3Session
 {
+    private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
+
     private final NotAppliedResponse response = new NotAppliedResponse();
 
     private final ILink3Proxy proxy;
@@ -55,6 +58,7 @@ public class InternalILink3Session extends ILink3Session
     private final ILink3SessionConfiguration configuration;
     private final long connectionId;
     private final GatewayPublication outboundPublication;
+    private final GatewayPublication inboundPublication;
     private final int libraryId;
     private final LibraryPoller owner;
     private final ILink3SessionHandler handler;
@@ -74,6 +78,7 @@ public class InternalILink3Session extends ILink3Session
         final long connectionId,
         final InitiateILink3SessionReply initiateReply,
         final GatewayPublication outboundPublication,
+        final GatewayPublication inboundPublication,
         final int libraryId,
         final LibraryPoller owner,
         final long uuid,
@@ -84,6 +89,7 @@ public class InternalILink3Session extends ILink3Session
         this.connectionId = connectionId;
         this.initiateReply = initiateReply;
         this.outboundPublication = outboundPublication;
+        this.inboundPublication = inboundPublication;
         this.libraryId = libraryId;
         this.owner = owner;
         this.handler = configuration.handler();
@@ -597,18 +603,29 @@ public class InternalILink3Session extends ILink3Session
 
         handler.onNotApplied(fromSeqNo, msgCount, response);
 
-        if (true) // response.shouldResend())
+        onReceivedMessage();
+
+        if (response.shouldRetransmit())
         {
-            // TODO
+            state = State.RETRANSMITTING;
+
+            // TODO: handle backpressure better
+            return inboundPublication.saveValidResendRequest(
+                uUID,
+                connectionId,
+                fromSeqNo,
+                fromSeqNo + msgCount - 1,
+                0,
+                NO_BUFFER,
+                0,
+                0);
         }
         else
         {
             sendSequence(NotLapsed);
+
+            return 1;
         }
-
-        onReceivedMessage();
-
-        return 1;
     }
 
     private void onReceivedMessage()

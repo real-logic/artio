@@ -21,8 +21,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.system_tests.TestSystem;
+import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -35,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
@@ -44,7 +45,7 @@ public class ILink3TestServer
     public static final String REJECT_REASON = "Invalid Logon";
     public static final int ESTABLISHMENT_REJECT_SEQ_NO = 2;
 
-    private final SocketChannel socket;
+    private final JsonPrinter jsonPrinter = new JsonPrinter(ILink3Offsets.loadSbeIr());
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final UnsafeBuffer unsafeWriteBuffer = new UnsafeBuffer(writeBuffer);
     private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -52,6 +53,8 @@ public class ILink3TestServer
 
     private final MessageHeaderDecoder iLinkHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder iLinkHeaderEncoder = new MessageHeaderEncoder();
+
+    private final SocketChannel socket;
     private final TestSystem testSystem;
 
     private long uuid;
@@ -107,6 +110,8 @@ public class ILink3TestServer
                     blockLength,
                     iLinkHeaderDecoder.version());
 
+                print(unsafeReadBuffer, "> ");
+
                 assertEquals(messageDecoder.sbeTemplateId(), iLinkHeaderDecoder.templateId());
                 assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
 
@@ -120,6 +125,16 @@ public class ILink3TestServer
                 return null;
             }
         });
+    }
+
+    private void print(final UnsafeBuffer unsafeReadBuffer, final String prefixString)
+    {
+        if (DebugLogger.isEnabled(FIX_TEST))
+        {
+            final StringBuilder sb = new StringBuilder();
+            jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
+            DebugLogger.log(FIX_TEST, prefixString, sb.toString());
+        }
     }
 
     public void wrap(final MessageEncoderFlyweight messageEncoder, final int length)
@@ -146,6 +161,7 @@ public class ILink3TestServer
         {
             try
             {
+                print(unsafeWriteBuffer, "< ");
 
                 final int written = socket.write(writeBuffer);
                 assertEquals(messageSize, written);
@@ -168,7 +184,6 @@ public class ILink3TestServer
 
         assertEquals(expectedFirmId, negotiate.firm());
         assertEquals(0, negotiate.credentialsLength());
-        DebugLogger.log(LogTag.FIX_TEST, negotiate.toString());
 
         uuid = negotiate.uUID();
         negotiateRequestTimestamp = negotiate.requestTimestamp();
