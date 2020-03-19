@@ -368,7 +368,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    public boolean recordingAlreadyStarted(final int sessionId)
+    private boolean recordingAlreadyStarted(final int sessionId)
     {
         return RecordingPos.findCounterIdBySession(counters, sessionId) != Aeron.NULL_VALUE;
     }
@@ -510,12 +510,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    RecordingIdLookup inboundRecordingIdLookup()
+    public RecordingIdLookup inboundRecordingIdLookup()
     {
         return inboundLookup;
     }
 
-    RecordingIdLookup outboundRecordingIdLookup()
+    public RecordingIdLookup outboundRecordingIdLookup()
     {
         return outboundLookup;
     }

@@ -86,9 +86,11 @@ public class FramerContext
             outboundLibraryStreams.dataPublication("outboundPublication"));
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler, configuration.logFileDir());
+            configuration.sentSequenceNumberBuffer(), errorHandler, recordingCoordinator.outboundRecordingIdLookup(),
+            configuration.logFileDir());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler, null);
+            configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.inboundRecordingIdLookup(),
+            null);
 
         gatewaySessions = new GatewaySessions(
             epochClock,

@@ -37,7 +37,7 @@ public class RecordingIdLookup
         this.counters = counters;
     }
 
-    long getRecordingId(final int aeronSessionId, final int templateId)
+    long getRecordingId(final int aeronSessionId)
     {
         long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
 

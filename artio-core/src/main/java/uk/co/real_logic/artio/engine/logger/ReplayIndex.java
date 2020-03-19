@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.logbuffer.FrameDescriptor.*;
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
@@ -114,21 +115,39 @@ public class ReplayIndex implements Index
     private int continuedSequenceNumber;
     private int continuedSequenceIndex;
 
+    public void onCatchup(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header,
+        final long recordingId)
+    {
+        onFragment(buffer, offset, length, header, recordingId);
+    }
+
+    public void onFragment(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header)
+    {
+        final int streamId = header.streamId();
+        if (streamId == requiredStreamId)
+        {
+            onFragment(buffer, offset, length, header, NULL_RECORDING_ID);
+        }
+    }
+
     public void onFragment(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
-        final Header header)
+        final Header header,
+        final long recordingId)
     {
-        final int streamId = header.streamId();
         final long endPosition = header.position();
         final byte flags = header.flags();
         final int length = BitUtil.align(srcLength, FRAME_ALIGNMENT);
-
-        if (streamId != requiredStreamId)
-        {
-            return;
-        }
 
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);
@@ -202,7 +221,14 @@ public class ReplayIndex implements Index
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header.sessionId());
         }
 
-        positionWriter.update(header.sessionId(), templateId, endPosition);
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            positionWriter.update(header.sessionId(), templateId, endPosition);
+        }
+        else
+        {
+            positionWriter.indexedUpTo(header.sessionId(), recordingId, endPosition);
+        }
         positionWriter.updateChecksums();
     }
 
@@ -270,7 +296,7 @@ public class ReplayIndex implements Index
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
-            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, -1);
+            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
             final long beginPosition = endPosition - length;
 
             beginChangeOrdered(buffer, changePosition);
