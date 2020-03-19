@@ -39,4 +39,14 @@ public class ILink3SenderEndPoints
     {
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
+
+    public Action onReplayComplete(final long connectionId)
+    {
+        final ILink3SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        if (senderEndPoint != null)
+        {
+            return senderEndPoint.onReplayComplete(connectionId);
+        }
+        return CONTINUE;
+    }
 }

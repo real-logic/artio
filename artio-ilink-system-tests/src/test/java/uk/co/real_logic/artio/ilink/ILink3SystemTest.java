@@ -36,8 +36,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -315,11 +314,16 @@ public class ILink3SystemTest
         testServer.readSequence(4, KeepAliveLapsed.NotLapsed);
     }
 
-    // TODO: ensure that new messages can't be sent until replay complete.
     @Test
     public void shouldSupportRetransmitInResponseToNotAppliedMessage() throws IOException
     {
-        handler = new FakeILink3SessionHandler(NotAppliedResponse::retransmit);
+        handler = new FakeILink3SessionHandler(response ->
+        {
+            response.retransmit();
+
+            // We shouldn't be allowed to send messages whilst a retransmit is occurring.
+            assertThrows(IllegalStateException.class, this::sendNewOrderSingle);
+        });
 
         shouldEstablishConnectionAtBeginningOfWeek();
 
@@ -337,6 +341,14 @@ public class ILink3SystemTest
 
         testServer.readNewOrderSingle(1);
         testServer.readNewOrderSingle(2);
+
+        assertEventuallyTrue("Session never re-establishes", () ->
+        {
+            testSystem.poll();
+            return session.state() == ILink3Session.State.ESTABLISHED;
+        });
+
+        sendNewOrderSingle();
     }
 
     private void sleepHalfInterval()

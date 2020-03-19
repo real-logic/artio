@@ -290,7 +290,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return iLink3SenderEndPoints.onMessage(connectionId, buffer, offset);
             }
         },
-        new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)),
+        new ReplayProtocolSubscription(connectionId ->
+        {
+            final Action action = senderEndPoints.onReplayComplete(connectionId);
+            if (action != ABORT)
+            {
+                return iLink3SenderEndPoints.onReplayComplete(connectionId);
+            }
+            return action;
+        })),
         0,
         true);
 
@@ -653,19 +661,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     }
 
                     DebugLogger.log(FIX_CONNECTION,
-                        initiatingSessionFormatter, uuid, library.libraryId());
+                        initiatingSessionFormatter, uuid, libraryId);
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
 
-                    iLink3SenderEndPoints.add(new ILink3SenderEndPoint(connectionId, channel, errorHandler));
+                    final ExclusivePublication inboundPublication = this.inboundPublication.dataPublication();
+
+                    iLink3SenderEndPoints.add(new ILink3SenderEndPoint(
+                        connectionId, channel, errorHandler, inboundPublication, libraryId));
                     receiverEndPoints.add(new ILink3ReceiverEndPoint(
                         connectionId,
                         channel,
                         configuration.receiverBufferSize(),
                         errorHandler,
                         this,
-                        inboundPublication.dataPublication()));
+                        inboundPublication));
                 });
         }
         catch (final IOException ex)

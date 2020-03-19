@@ -90,19 +90,22 @@ public class ILink3TestServer
         iLinkHeaderEncoder.wrap(unsafeWriteBuffer, SOFH_LENGTH);
     }
 
-    public <T extends MessageDecoderFlyweight> T read(final T messageDecoder)
+    public <T extends MessageDecoderFlyweight> T read(final T messageDecoder, final int nonBlockLength)
     {
         return testSystem.awaitBlocking(() ->
         {
             try
             {
+                final int messageOffset = iLinkHeaderDecoder.encodedLength() + SOFH_LENGTH;
+                final int expectedLength = messageOffset + messageDecoder.sbeBlockLength() + nonBlockLength;
+                readBuffer.limit(expectedLength);
+
                 final int read = socket.read(readBuffer);
                 final int totalLength = readSofh(unsafeReadBuffer, 0);
                 if (totalLength != read)
                 {
                     throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
                 }
-                final int messageOffset = iLinkHeaderDecoder.encodedLength() + SOFH_LENGTH;
                 final int blockLength = iLinkHeaderDecoder.blockLength();
                 messageDecoder.wrap(
                     unsafeReadBuffer,
@@ -179,7 +182,8 @@ public class ILink3TestServer
 
     public void readNegotiate(final String expectedAccessKeyId, final String expectedFirmId)
     {
-        final Negotiate500Decoder negotiate = read(new Negotiate500Decoder());
+        final Negotiate500Decoder negotiate = read(
+            new Negotiate500Decoder(), Negotiate500Decoder.credentialsHeaderLength());
         assertEquals(expectedAccessKeyId, negotiate.accessKeyID());
 
         assertEquals(expectedFirmId, negotiate.firm());
@@ -231,7 +235,8 @@ public class ILink3TestServer
         final String expectedAccessKeyID, final String expectedFirmId, final String expectedSessionId,
         final int expectedKeepAliveInterval, final long expectedNextSeqNo)
     {
-        final Establish503Decoder establish = read(new Establish503Decoder());
+        final Establish503Decoder establish = read(
+            new Establish503Decoder(), Establish503Decoder.credentialsHeaderLength());
         //  establish.hMACSignature()
         assertEquals(expectedAccessKeyID, establish.accessKeyID());
         // TradingSystemInfo
@@ -288,7 +293,7 @@ public class ILink3TestServer
 
     public void readTerminate()
     {
-        final Terminate507Decoder terminate = read(new Terminate507Decoder());
+        final Terminate507Decoder terminate = read(new Terminate507Decoder(), 0);
 //        terminate.reason();
         assertEquals(uuid, terminate.uUID());
 //        terminate.requestTimestamp();
@@ -311,7 +316,7 @@ public class ILink3TestServer
 
     public void readNewOrderSingle(final int expectedSeqNum)
     {
-        final NewOrderSingle514Decoder newOrderSingle = read(new NewOrderSingle514Decoder());
+        final NewOrderSingle514Decoder newOrderSingle = read(new NewOrderSingle514Decoder(), 0);
         assertEquals(expectedSeqNum, newOrderSingle.seqNum());
         // TODO: newOrderSingle.sendingTimeEpoch()
     }
@@ -340,7 +345,7 @@ public class ILink3TestServer
 
     public void readSequence(final long nextSeqNo, final KeepAliveLapsed keepAliveIntervalLapsed)
     {
-        final Sequence506Decoder sequence = read(new Sequence506Decoder());
+        final Sequence506Decoder sequence = read(new Sequence506Decoder(), 0);
 
         assertEquals(uuid, sequence.uUID());
         assertEquals(nextSeqNo, sequence.nextSeqNo());

@@ -115,6 +115,8 @@ public class InternalILink3Session extends ILink3Session
     public long claimMessage(
         final MessageEncoderFlyweight message)
     {
+        validateCanSend();
+
         final long position = proxy.claimILinkMessage(message.sbeBlockLength(), message);
 
         if (position > 0)
@@ -601,14 +603,15 @@ public class InternalILink3Session extends ILink3Session
             // TODO: error
         }
 
+        // Stop messages from being sent whilst a retransmit is underway.
+        state = State.RETRANSMITTING;
+
         handler.onNotApplied(fromSeqNo, msgCount, response);
 
         onReceivedMessage();
 
         if (response.shouldRetransmit())
         {
-            state = State.RETRANSMITTING;
-
             // TODO: handle backpressure better
             return inboundPublication.saveValidResendRequest(
                 uUID,
@@ -624,8 +627,15 @@ public class InternalILink3Session extends ILink3Session
         {
             sendSequence(NotLapsed);
 
+            state = State.ESTABLISHED;
+
             return 1;
         }
+    }
+
+    void onReplayComplete()
+    {
+        state = State.ESTABLISHED;
     }
 
     private void onReceivedMessage()

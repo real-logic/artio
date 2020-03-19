@@ -509,6 +509,7 @@
     <sbe:message name="ReplayComplete" id="45"
                  description="Replayer tells SenderEndPoint that the current replay is complete">
         <field name="connection" id="1" type="ConnectionId"/>
+        <field name="libraryId" id="2" type="LibraryId" sinceVersion="9"/>
     </sbe:message>
 
     <sbe:message name="ILinkMessage" id="58" description="ILink3 Message Header"

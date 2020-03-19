@@ -15,33 +15,55 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 
 public class ILink3SenderEndPoint
 {
+    private static final int REPLAY_COMPLETE_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
+
+    private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
+    private final ReplayCompleteEncoder replayComplete = new ReplayCompleteEncoder();
+    private final BufferClaim bufferClaim = new BufferClaim();
+
     private final long connectionId;
     private final TcpChannel channel;
     private final ErrorHandler errorHandler;
+    private final ExclusivePublication inboundPublication;
+    private final int libraryId;
 
-    public ILink3SenderEndPoint(final long connectionId, final TcpChannel channel, final ErrorHandler errorHandler)
+    public ILink3SenderEndPoint(
+        final long connectionId,
+        final TcpChannel channel,
+        final ErrorHandler errorHandler,
+        final ExclusivePublication inboundPublication,
+        final int libraryId)
     {
         this.connectionId = connectionId;
         this.channel = channel;
         this.errorHandler = errorHandler;
+        this.inboundPublication = inboundPublication;
+        this.libraryId = libraryId;
     }
 
-    public ControlledFragmentHandler.Action onMessage(final DirectBuffer directBuffer, final int offset)
+    public Action onMessage(final DirectBuffer directBuffer, final int offset)
     {
         final int messageSize = SimpleOpenFramingHeader.readSofhMessageSize(directBuffer, offset);
 
@@ -80,5 +102,25 @@ public class ILink3SenderEndPoint
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public Action onReplayComplete(final long connectionId)
+    {
+        final BufferClaim bufferClaim = this.bufferClaim;
+        final long position = inboundPublication.tryClaim(REPLAY_COMPLETE_LENGTH, bufferClaim);
+
+        if (Pressure.isBackPressured(position))
+        {
+            return ABORT;
+        }
+
+        replayComplete
+            .wrapAndApplyHeader(bufferClaim.buffer(), bufferClaim.offset(), messageHeader)
+            .connection(connectionId)
+            .libraryId(libraryId);
+
+        bufferClaim.commit();
+
+        return CONTINUE;
     }
 }

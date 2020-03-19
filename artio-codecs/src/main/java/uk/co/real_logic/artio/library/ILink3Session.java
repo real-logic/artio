@@ -69,4 +69,6 @@ public abstract class ILink3Session
 
     abstract int poll(long timeInMs);
 
+    abstract void onReplayComplete();
+
 }

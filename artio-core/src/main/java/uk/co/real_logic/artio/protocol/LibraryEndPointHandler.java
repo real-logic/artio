@@ -107,4 +107,6 @@ public interface LibraryEndPointHandler
     Action onLibraryExtendPosition(
         int libraryId, long correlationId, int newSessionId, long stopPosition, int initialTermId,
         int termBufferLength, int mtuLength);
+
+    Action onReplayComplete(int libraryId, long connection);
 }

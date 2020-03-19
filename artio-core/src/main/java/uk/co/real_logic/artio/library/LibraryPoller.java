@@ -1614,6 +1614,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return Action.CONTINUE;
     }
 
+    public Action onReplayComplete(final int libraryId, final long connection)
+    {
+        if (libraryId == this.libraryId)
+        {
+            final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connection);
+            if (subscription != null)
+            {
+                subscription.onReplayComplete();
+            }
+
+            return CONTINUE;
+        }
+
+        return CONTINUE;
+    }
+
     // -----------------------------------------------------------------------
     //                     END EVENT HANDLERS
     // -----------------------------------------------------------------------

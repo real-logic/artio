@@ -47,6 +47,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
+    private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -144,6 +145,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case LibraryExtendPositionDecoder.TEMPLATE_ID:
             {
                 return onLibraryExtendPosition(buffer, offset, blockLength, version);
+            }
+
+            case ReplayCompleteDecoder.TEMPLATE_ID:
+            {
+                return onReplayComplete(buffer, offset, blockLength, version);
             }
         }
 
@@ -464,5 +470,25 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         return handler.onEngineClose(libraryId);
     }
+
+    private Action onReplayComplete(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        replayComplete.wrap(buffer, offset, blockLength, version);
+        final long connection = replayComplete.connection();
+        final int libraryId = replayComplete.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+
+        if (ABORT == action)
+        {
+            return action;
+        }
+
+        return handler.onReplayComplete(libraryId, connection);
+    }
+
 
 }

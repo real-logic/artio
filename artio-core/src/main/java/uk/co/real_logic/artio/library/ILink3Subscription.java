@@ -39,4 +39,9 @@ class ILink3Subscription
     {
         return session.requestDisconnect(reason);
     }
+
+    public void onReplayComplete()
+    {
+        session.onReplayComplete();
+    }
 }
