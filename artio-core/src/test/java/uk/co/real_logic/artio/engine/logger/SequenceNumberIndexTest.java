@@ -35,7 +35,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
