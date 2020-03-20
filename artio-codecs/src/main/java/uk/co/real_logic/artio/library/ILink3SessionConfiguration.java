@@ -220,4 +220,9 @@ public class ILink3SessionConfiguration
             ", handler=" + handler +
             '}';
     }
+
+    public int retransmitRequestMessageLimit()
+    {
+        return 2500;
+    }
 }

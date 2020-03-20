@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.KeepAliveLapsed;
 import iLinkBinary.NewOrderSingle514Encoder;
+import iLinkBinary.Sequence506Decoder;
 import iLinkBinary.SideReq;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
@@ -38,8 +39,12 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.ilink.ILink3TestServer.*;
 import static uk.co.real_logic.artio.library.ILink3Session.NOT_AWAITING_RETRANSMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -53,7 +58,7 @@ public class ILink3SystemTest
     static final String USER_KEY = "somethingprivate";
     public static final String CL_ORD_ID = "123";
 
-    private FakeILink3SessionHandler handler = new FakeILink3SessionHandler(NotAppliedResponse::gapfill);
+    private FakeILink3SessionHandler handler = spy(new FakeILink3SessionHandler(NotAppliedResponse::gapfill));
 
     private int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
@@ -407,9 +412,54 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
-    // TODO: handle sequence message
-    // TODO: > 2500 resend limit / batching
-    // TODO: retransmit reject
+    @Test
+    public void shouldLimitLargeRetransmitRequestsIntoBatches() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeExecutionReportStatus(5000, false);
+
+        testServer.acceptRetransRequest(1, 2500);
+        writeExecutionReports(1, 2500);
+
+        testServer.canSkip(Sequence506Decoder.TEMPLATE_ID);
+
+        testServer.acceptRetransRequest(2501, 2499);
+        writeExecutionReports(2501, 2499);
+
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        agreeRecvSeqNo(5001);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldNotStallUponARetransmitReject() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeExecutionReportStatus(5000, false);
+
+        testServer.rejectRetransRequest(1, 2500);
+        testServer.rejectRetransRequest(2501, 2499);
+
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        agreeRecvSeqNo(5001);
+
+        verify(handler, times(2))
+            .onRetransmitReject(eq(RETRANSMIT_REJECT_REASON), anyLong(), eq(RETRANSMIT_REJECT_ERROR_CODES));
+
+        terminateAndDisconnect();
+    }
+
+    private void writeExecutionReports(final int fromSeqNo, final int msgCount)
+    {
+        final int lastSeqNo = fromSeqNo + msgCount;
+        for (int i = fromSeqNo; i < lastSeqNo; i++)
+        {
+            testServer.writeExecutionReportStatus(i, true);
+        }
+    }
 
     private void agreeRecvSeqNo(final long nextRecvSeqNo)
     {

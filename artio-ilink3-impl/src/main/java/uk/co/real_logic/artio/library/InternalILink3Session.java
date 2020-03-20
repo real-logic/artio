@@ -611,7 +611,7 @@ public class InternalILink3Session extends ILink3Session
             // TODO: error
         }
 
-        // if (nextSeqNo != TODO)
+//        nextRecvSeqNo = nextSentSeqNo;
 
         // Reply to any warning messages to keep the session alive.
         if (keepAliveLapsed == Lapsed)
@@ -695,25 +695,7 @@ public class InternalILink3Session extends ILink3Session
         {
             if (seqNum == retransmitFillSeqNo)
             {
-                final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
-                if (retransmitRequest == null)
-                {
-                    retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
-                }
-                else
-                {
-                    final long fromSeqNo = retransmitRequest.fromSeqNo;
-                    final int msgCount = retransmitRequest.msgCount;
-                    final long position = sendRetransmitRequest(fromSeqNo, msgCount);
-
-                    if (!Pressure.isBackPressured(position))
-                    {
-                        retransmitRequests.pollFirst();
-                        retransmitFillSeqNo = fromSeqNo + msgCount - 1;
-                    }
-
-                    return position;
-                }
+                return retransmitFilled();
             }
 
             return 1;
@@ -727,13 +709,15 @@ public class InternalILink3Session extends ILink3Session
         }
 
         final long fromSeqNo = nextRecvSeqNo;
-        final int msgCount = seqNum - nextRecvSeqNo;
+        final int totalMsgCount = seqNum - nextRecvSeqNo;
+        final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
         {
             final long position = sendRetransmitRequest(fromSeqNo, msgCount);
             if (!Pressure.isBackPressured(position))
             {
+                addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
                 nextRecvSeqNo = seqNum + 1;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
@@ -741,11 +725,60 @@ public class InternalILink3Session extends ILink3Session
         }
         else
         {
-            retransmitRequests.offerLast(new RetransmitRequest(fromSeqNo, msgCount));
+            addRetransmitRequest(fromSeqNo, msgCount);
+            addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
             nextRecvSeqNo = seqNum + 1;
 
             return 1;
         }
+    }
+
+    private long retransmitFilled()
+    {
+        final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
+        if (retransmitRequest == null)
+        {
+            retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
+        }
+        else
+        {
+            final long fromSeqNo = retransmitRequest.fromSeqNo;
+            final int msgCount = retransmitRequest.msgCount;
+            final long position = sendRetransmitRequest(fromSeqNo, msgCount);
+
+            if (!Pressure.isBackPressured(position))
+            {
+                retransmitRequests.pollFirst();
+                retransmitFillSeqNo = fromSeqNo + msgCount - 1;
+            }
+
+            return position;
+        }
+
+        return 1;
+    }
+
+    private void addRemainingRetransmitRequests(
+        final long initialFromSeqNo, final int initialMessagesRequested, final int totalMessageCount)
+    {
+        final int retransmitRequestMsgLimit = configuration.retransmitRequestMessageLimit();
+
+        long fromSeqNo = initialFromSeqNo + initialMessagesRequested;
+        int messagesRequested = initialMessagesRequested;
+
+        while (messagesRequested < totalMessageCount)
+        {
+            final int msgCount = Math.min(totalMessageCount - messagesRequested, retransmitRequestMsgLimit);
+            addRetransmitRequest(fromSeqNo, msgCount);
+
+            messagesRequested += msgCount;
+            fromSeqNo += msgCount;
+        }
+    }
+
+    private void addRetransmitRequest(final long fromSeqNo, final int msgCount)
+    {
+        retransmitRequests.offerLast(new RetransmitRequest(fromSeqNo, msgCount));
     }
 
     private long sendRetransmitRequest(final long fromSeqNo, final int msgCount)
@@ -765,5 +798,20 @@ public class InternalILink3Session extends ILink3Session
             this.fromSeqNo = fromSeqNo;
             this.msgCount = msgCount;
         }
+    }
+
+    public long onRetransmitReject(
+        final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    {
+        if (uUID != this.uuid)
+        {
+            // TODO: error
+        }
+
+        handler.onRetransmitReject(reason, requestTimestamp, errorCodes);
+
+        retransmitFilled();
+
+        return 1;
     }
 }

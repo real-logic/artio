@@ -47,4 +47,9 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
         hasReceivedNotApplied = true;
         notAppliedResponse.accept(response);
     }
+
+    public void onRetransmitReject(final String reason, final long requestTimestamp, final int errorCodes)
+    {
+
+    }
 }

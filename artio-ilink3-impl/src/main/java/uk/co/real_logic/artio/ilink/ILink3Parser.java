@@ -33,6 +33,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Terminate507Decoder terminate = new Terminate507Decoder();
     private final Sequence506Decoder sequence = new Sequence506Decoder();
     private final NotApplied513Decoder notApplied = new NotApplied513Decoder();
+    private final RetransmitReject510Decoder retransmitReject = new RetransmitReject510Decoder();
 
     private final InternalILink3Session handler;
 
@@ -95,11 +96,28 @@ public class ILink3Parser extends AbstractILink3Parser
                 return onNotApplied(buffer, offset, blockLength, version);
             }
 
+            case RetransmitReject510Decoder.TEMPLATE_ID:
+            {
+                return onRetransmitReject(buffer, offset, blockLength, version);
+            }
+
             default:
             {
                 return handler.onMessage(buffer, offset, templateId, blockLength, version);
             }
         }
+    }
+
+    private long onRetransmitReject(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        retransmitReject.wrap(buffer, offset, blockLength, version);
+        return handler.onRetransmitReject(
+            retransmitReject.reason(),
+            retransmitReject.uUID(),
+            retransmitReject.requestTimestamp(),
+            retransmitReject.errorCodes());
+//        retransmitReject.splitMsg()
     }
 
     private long onNegotiationResponse(

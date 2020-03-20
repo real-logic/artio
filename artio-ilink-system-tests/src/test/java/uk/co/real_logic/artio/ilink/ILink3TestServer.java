@@ -44,9 +44,14 @@ import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
 public class ILink3TestServer
 {
+    private static final int NOT_SKIPPING = -1;
     private static final int BUFFER_SIZE = 8 * 1024;
+
     public static final String REJECT_REASON = "Invalid Logon";
     public static final int ESTABLISHMENT_REJECT_SEQ_NO = 2;
+
+    public static final String RETRANSMIT_REJECT_REASON = "rejectreason";
+    public static final int RETRANSMIT_REJECT_ERROR_CODES = 1;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(ILink3Offsets.loadSbeIr());
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -64,6 +69,7 @@ public class ILink3TestServer
     private long establishRequestTimestamp;
     private long negotiateRequestTimestamp;
     private int requestedKeepAliveInterval;
+    private int skipTemplateId = NOT_SKIPPING;
 
     public ILink3TestServer(
         final int port,
@@ -95,45 +101,74 @@ public class ILink3TestServer
 
     public <T extends MessageDecoderFlyweight> T read(final T messageDecoder, final int nonBlockLength)
     {
-        return testSystem.awaitBlocking(() ->
+        return testSystem.awaitBlocking(() -> readInternal(messageDecoder, nonBlockLength));
+    }
+
+    private <T extends MessageDecoderFlyweight> T readInternal(final T messageDecoder, final int nonBlockLength)
+    {
+        try
         {
-            try
+            final int headerLength = MessageHeaderDecoder.ENCODED_LENGTH + SOFH_LENGTH;
+            readBuffer.limit(headerLength);
+            final int readHeader = socket.read(readBuffer);
+            if (readHeader != headerLength)
             {
-                final int messageOffset = iLinkHeaderDecoder.encodedLength() + SOFH_LENGTH;
-                final int expectedLength = messageOffset + messageDecoder.sbeBlockLength() + nonBlockLength;
-                readBuffer.limit(expectedLength);
+                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
+            }
 
-                final int read = socket.read(readBuffer);
-                final int totalLength = readSofh(unsafeReadBuffer, 0);
+            final int totalLength = readSofh(unsafeReadBuffer, 0);
+            final int templateId = iLinkHeaderDecoder.templateId();
+            final int blockLength = iLinkHeaderDecoder.blockLength();
+            final int version = iLinkHeaderDecoder.version();
 
-                final int blockLength = iLinkHeaderDecoder.blockLength();
-                messageDecoder.wrap(
-                    unsafeReadBuffer,
-                    messageOffset,
-                    blockLength,
-                    iLinkHeaderDecoder.version());
-
-                print(unsafeReadBuffer, "> ");
-
-                assertEquals(messageDecoder.sbeTemplateId(), iLinkHeaderDecoder.templateId());
-
-                if (totalLength != read)
+            if (skipTemplateId != NOT_SKIPPING && templateId == skipTemplateId)
+            {
+                readBuffer.limit(totalLength);
+                int readSkip = 0;
+                do
                 {
-                    throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
+                    readSkip += socket.read(readBuffer);
                 }
-
-                assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
+                while (readSkip < (totalLength - readHeader));
 
                 readBuffer.clear();
 
-                return messageDecoder;
+                return readInternal(messageDecoder, nonBlockLength);
             }
-            catch (final IOException e)
+
+            final int messageOffset = headerLength;
+            final int expectedLength = messageOffset + messageDecoder.sbeBlockLength() + nonBlockLength;
+            readBuffer.limit(expectedLength);
+
+            final int readBody = socket.read(readBuffer);
+            final int read = readHeader + readBody;
+
+            messageDecoder.wrap(
+                unsafeReadBuffer,
+                messageOffset,
+                blockLength,
+                version);
+
+            print(unsafeReadBuffer, "> ");
+
+            assertEquals(messageDecoder.sbeTemplateId(), templateId);
+
+            if (totalLength != read)
             {
-                LangUtil.rethrowUnchecked(e);
-                return null;
+                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
             }
-        });
+
+            assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
+
+            readBuffer.clear();
+
+            return messageDecoder;
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     private void print(final UnsafeBuffer unsafeReadBuffer, final String prefixString)
@@ -429,7 +464,13 @@ public class ILink3TestServer
         writeRetransmission(requestTimestamp, fromSeqNo, msgCount);
     }
 
-    public void writeRetransmission(final long requestTimestamp, final long fromSeqNo, final int msgCount)
+    public void rejectRetransRequest(final int fromSeqNo, final int msgCount)
+    {
+        final long requestTimestamp = readRetransmitRequest(fromSeqNo, msgCount);
+        writeRetransitReject(requestTimestamp);
+    }
+
+    private void writeRetransmission(final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
         final Retransmission509Encoder retransmission = new Retransmission509Encoder();
         wrap(retransmission, Retransmission509Encoder.BLOCK_LENGTH);
@@ -443,6 +484,21 @@ public class ILink3TestServer
         write();
     }
 
+    private void writeRetransitReject(final long requestTimestamp)
+    {
+        final RetransmitReject510Encoder retransmitReject = new RetransmitReject510Encoder();
+        wrap(retransmitReject, RetransmitReject510Encoder.BLOCK_LENGTH);
+
+        retransmitReject
+            .reason(RETRANSMIT_REJECT_REASON)
+            .uUID(uuid)
+            .lastUUID(RetransmitReject510Encoder.lastUUIDNullValue())
+            .requestTimestamp(requestTimestamp)
+            .errorCodes(RETRANSMIT_REJECT_ERROR_CODES);
+
+        write();
+    }
+
     public long readRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
         final RetransmitRequest508Decoder retransmitRequest = read(new RetransmitRequest508Decoder(), 0);
@@ -452,5 +508,10 @@ public class ILink3TestServer
         assertEquals(msgCount, retransmitRequest.msgCount());
 
         return requestTimestamp;
+    }
+
+    public void canSkip(final int templateId)
+    {
+        this.skipTemplateId = templateId;
     }
 }

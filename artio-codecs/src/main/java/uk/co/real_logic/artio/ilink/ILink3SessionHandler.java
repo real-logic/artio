@@ -27,4 +27,6 @@ public interface ILink3SessionHandler
         int length);
 
     void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
+
+    void onRetransmitReject(String reason, long requestTimestamp, int errorCodes);
 }
