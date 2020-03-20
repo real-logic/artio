@@ -28,4 +28,10 @@ public class TimeUtil
         final long microseconds = (System.nanoTime() / NANOS_IN_MICROS) % MICROS_IN_MILLIS;
         return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
     }
+
+    public static long nanoSecondTimestamp()
+    {
+        final long nanoseconds = System.nanoTime();
+        return MILLISECONDS.toNanos(System.currentTimeMillis()) + nanoseconds;
+    }
 }

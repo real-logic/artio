@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 
 import java.lang.reflect.InvocationTargetException;
@@ -40,7 +41,11 @@ public abstract class AbstractILink3Offsets
 
     public abstract int seqNumOffset(int templateId);
 
+    public abstract int seqNum(int templateId, DirectBuffer buffer, int messageOffset);
+
     public abstract int possRetransOffset(int templateId);
+
+    public abstract int possRetrans(int templateId, DirectBuffer buffer, int messageOffset);
 
     public abstract int sendingTimeEpochOffset(int templateId);
 }

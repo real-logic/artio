@@ -52,12 +52,13 @@ public class ILink3Parser extends AbstractILink3Parser
         int offset = start + SOFH_LENGTH;
 
         header.wrap(buffer, offset);
+        final int templateId = header.templateId();
         final int blockLength = header.blockLength();
         final int version = header.version();
 
         offset += MessageHeaderEncoder.ENCODED_LENGTH;
 
-        switch (header.templateId())
+        switch (templateId)
         {
             case NegotiationResponse501Decoder.TEMPLATE_ID:
             {
@@ -93,8 +94,12 @@ public class ILink3Parser extends AbstractILink3Parser
             {
                 return onNotApplied(buffer, offset, blockLength, version);
             }
+
+            default:
+            {
+                return handler.onMessage(buffer, offset, templateId, blockLength, version);
+            }
         }
-        return 1;
     }
 
     private long onNegotiationResponse(

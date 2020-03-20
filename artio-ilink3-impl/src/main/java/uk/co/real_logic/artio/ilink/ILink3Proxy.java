@@ -23,6 +23,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
@@ -51,6 +52,7 @@ public class ILink3Proxy
     private final Establish503Encoder establish = new Establish503Encoder();
     private final Terminate507Encoder terminate = new Terminate507Encoder();
     private final Sequence506Encoder sequence = new Sequence506Encoder();
+    private final RetransmitRequest508Encoder retransmitRequest = new RetransmitRequest508Encoder();
 
     public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
     {
@@ -170,6 +172,29 @@ public class ILink3Proxy
         return position;
     }
 
+    public long sendRetransmitRequest(
+        final long uuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
+    {
+        final RetransmitRequest508Encoder retransmitRequest = this.retransmitRequest;
+
+        final long position = claimILinkMessage(RetransmitRequest508Encoder.BLOCK_LENGTH, retransmitRequest);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        retransmitRequest
+            .uUID(uuid)
+            .lastUUID(lastUUIDNullValue())
+            .requestTimestamp(requestTimestamp)
+            .fromSeqNo(fromSeqNo)
+            .msgCount(msgCount);
+
+        commit();
+
+        return position;
+    }
+
     public long claimILinkMessage(
         final int messageLength,
         final MessageEncoderFlyweight message)
@@ -211,5 +236,4 @@ public class ILink3Proxy
     {
         bufferClaim.commit();
     }
-
 }

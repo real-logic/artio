@@ -115,7 +115,7 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         while (usedBufferData > SOFH_LENGTH)
         {
             final int messageSize = readSofh(buffer, offset);
-            if ((offset + messageSize) > usedBufferData)
+            if (messageSize > usedBufferData)
             {
                 moveRemainingDataToBufferStart(offset);
                 return true;

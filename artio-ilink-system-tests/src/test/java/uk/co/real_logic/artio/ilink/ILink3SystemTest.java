@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
+import java.util.function.LongSupplier;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -39,15 +40,18 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.library.ILink3Session.NOT_AWAITING_RETRANSMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ILink3SystemTest
 {
     private static final int TEST_KEEP_ALIVE_INTERVAL_IN_MS = 500;
-    private static final String ACCESS_KEY_ID = "12345678901234567890";
-    private static final String SESSION_ID = "ABC";
-    private static final String FIRM_ID = "DEFGH";
-    private static final String USER_KEY = "somethingprivate";
+
+    static final String ACCESS_KEY_ID = "12345678901234567890";
+    static final String SESSION_ID = "ABC";
+    static final String FIRM_ID = "DEFGH";
+    static final String USER_KEY = "somethingprivate";
+    public static final String CL_ORD_ID = "123";
 
     private FakeILink3SessionHandler handler = new FakeILink3SessionHandler(NotAppliedResponse::gapfill);
 
@@ -351,6 +355,81 @@ public class ILink3SystemTest
         sendNewOrderSingle();
     }
 
+    @Test
+    public void shouldRequestRetransmitForSequenceNumberGap() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        testServer.writeExecutionReportStatus(3, false);
+
+        testServer.acceptRetransRequest(1, 2);
+
+        testServer.writeExecutionReportStatus(1, true);
+        testServer.writeExecutionReportStatus(4, false);
+        testServer.writeExecutionReportStatus(2, true);
+
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldOnlyHaveASingleRequestRetransmitInflight() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeExecutionReportStatus(2, false);
+        testServer.writeExecutionReportStatus(4, false);
+
+        testServer.acceptRetransRequest(1, 1);
+        agreeRecvSeqNo(5);
+
+        // Ensure that the second retransmit request isn't sent yet
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        // Fill First
+        assertEquals(1, session.retransmitFillSeqNo());
+        testServer.writeExecutionReportStatus(1, true);
+
+        testServer.acceptRetransRequest(3, 1);
+
+        // Fill second
+        assertEquals(3, session.retransmitFillSeqNo());
+        testServer.writeExecutionReportStatus(3, true);
+
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    // TODO: handle sequence message
+    // TODO: > 2500 resend limit / batching
+    // TODO: retransmit reject
+
+    private void agreeRecvSeqNo(final long nextRecvSeqNo)
+    {
+        agreeEquals(session::nextRecvSeqNo, nextRecvSeqNo);
+    }
+
+    private void agreeRetransmitFillSeqNo(final long retransmitFillSeqNo)
+    {
+        agreeEquals(session::retransmitFillSeqNo, retransmitFillSeqNo);
+    }
+
+    private void agreeEquals(final LongSupplier supplier, final long value)
+    {
+        assertEventuallyTrue("Fails to agree value " + value, () ->
+        {
+            testSystem.poll();
+            return supplier.getAsLong() == value;
+        });
+    }
+
     private void sleepHalfInterval()
     {
         testSystem.awaitBlocking(() -> sleep(TEST_KEEP_ALIVE_INTERVAL_IN_MS / 2));
@@ -427,10 +506,9 @@ public class ILink3SystemTest
         newOrderSingle
             .partyDetailsListReqID(1)
             .orderQty(1)
-            .senderID("IBM")
+            .senderID(FIRM_ID)
             .side(SideReq.Buy)
-            .senderID("ABC")
-            .clOrdID("123")
+            .clOrdID(CL_ORD_ID)
             .partyDetailsListReqID(1)
             .orderRequestID(1);
 

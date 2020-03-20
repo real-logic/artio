@@ -21,6 +21,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 // NB: This is an experimental API and is subject to change or potentially removal.
 public abstract class ILink3Session
 {
+    public static final long NOT_AWAITING_RETRANSMIT = -1L;
+
     public enum State
     {
         /** TCP connection established, negotiate not sent.*/
@@ -45,11 +47,21 @@ public abstract class ILink3Session
         UNBOUND
     }
 
+    // -----------------------------------------------
+    // Operations
+    // -----------------------------------------------
+
     public abstract long claimMessage(MessageEncoderFlyweight message);
 
     public abstract void commit();
 
     public abstract long requestDisconnect(DisconnectReason reason);
+
+    public abstract long terminate(String shutdown, int errorCodes);
+
+    // -----------------------------------------------
+    // Accessors
+    // -----------------------------------------------
 
     public abstract long uuid();
 
@@ -61,7 +73,11 @@ public abstract class ILink3Session
 
     public abstract void nextSentSeqNo(int nextSentSeqNo);
 
-    public abstract long terminate(String shutdown, int errorCodes);
+    public abstract int nextRecvSeqNo();
+
+    public abstract void nextRecvSeqNo(int nextRecvSeqNo);
+
+    public abstract long retransmitFillSeqNo();
 
     // -----------------------------------------------
     // Internal Methods below, not part of public API

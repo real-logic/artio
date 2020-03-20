@@ -18,13 +18,13 @@ package uk.co.real_logic.artio.library;
 import iLinkBinary.FTI;
 import iLinkBinary.KeepAliveLapsed;
 import io.aeron.exceptions.TimeoutException;
+import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
-import uk.co.real_logic.artio.ilink.ILink3Offsets;
-import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
+import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.TimeUtil;
@@ -33,16 +33,18 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
+import java.util.*;
 
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.library.ILink3SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
+import static uk.co.real_logic.artio.util.TimeUtil.nanoSecondTimestamp;
 
 /**
  * External users should never rely on this API.
@@ -52,6 +54,7 @@ public class InternalILink3Session extends ILink3Session
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
 
     private final NotAppliedResponse response = new NotAppliedResponse();
+    private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
 
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
@@ -67,7 +70,9 @@ public class InternalILink3Session extends ILink3Session
     private InitiateILink3SessionReply initiateReply;
 
     private State state;
+    private int nextRecvSeqNo;
     private int nextSentSeqNo;
+    private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
 
     private long resendTime;
     private long nextReceiveMessageTimeInMs;
@@ -97,6 +102,7 @@ public class InternalILink3Session extends ILink3Session
         proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
         offsets = new ILink3Offsets();
         nextSentSeqNo = calculateInitialSentSequenceNumber(configuration, lastSentSequenceNumber);
+        nextRecvSeqNo = calculateInitialSentSequenceNumber(configuration, lastReceivedSequenceNumber);
         state = State.CONNECTED;
         this.uuid = uuid;
 
@@ -147,6 +153,13 @@ public class InternalILink3Session extends ILink3Session
     public void commit()
     {
         proxy.commit();
+
+        sentMessage();
+    }
+
+    private void sentMessage()
+    {
+        nextSendMessageTimeInMs = nextTimeoutInMs();
     }
 
     public long terminate(final String reason, final int errorCodes)
@@ -211,6 +224,21 @@ public class InternalILink3Session extends ILink3Session
     public void nextSentSeqNo(final int nextSentSeqNo)
     {
         this.nextSentSeqNo = nextSentSeqNo;
+    }
+
+    public int nextRecvSeqNo()
+    {
+        return nextRecvSeqNo;
+    }
+
+    public void nextRecvSeqNo(final int nextRecvSeqNo)
+    {
+        this.nextRecvSeqNo = nextRecvSeqNo;
+    }
+
+    public long retransmitFillSeqNo()
+    {
+        return retransmitFillSeqNo;
     }
 
     // END PUBLIC API
@@ -451,7 +479,7 @@ public class InternalILink3Session extends ILink3Session
         final long position = proxy.sendSequence(uuid, nextSentSeqNo, FTI.Primary, keepAliveIntervalLapsed);
         if (position > 0)
         {
-            nextSendMessageTimeInMs = nextTimeoutInMs();
+            sentMessage();
         }
 
         // Will be retried on next poll if enqueue back pressured.
@@ -649,5 +677,93 @@ public class InternalILink3Session extends ILink3Session
         state = State.UNBOUND;
         requestDisconnect(LOGOUT);
         owner.onUnbind(this);
+    }
+
+    public long onMessage(
+        final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
+    {
+        onReceivedMessage();
+
+        final int seqNum = offsets.seqNum(templateId, buffer, offset);
+        if (seqNum == MISSING_OFFSET)
+        {
+            return 1;
+        }
+
+        final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
+        if (possRetrans == BOOLEAN_FLAG_TRUE)
+        {
+            if (seqNum == retransmitFillSeqNo)
+            {
+                final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
+                if (retransmitRequest == null)
+                {
+                    retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
+                }
+                else
+                {
+                    final long fromSeqNo = retransmitRequest.fromSeqNo;
+                    final int msgCount = retransmitRequest.msgCount;
+                    final long position = sendRetransmitRequest(fromSeqNo, msgCount);
+
+                    if (!Pressure.isBackPressured(position))
+                    {
+                        retransmitRequests.pollFirst();
+                        retransmitFillSeqNo = fromSeqNo + msgCount - 1;
+                    }
+
+                    return position;
+                }
+            }
+
+            return 1;
+        }
+
+        if (seqNum == nextRecvSeqNo)
+        {
+            nextRecvSeqNo = seqNum + 1;
+
+            return 1;
+        }
+
+        final long fromSeqNo = nextRecvSeqNo;
+        final int msgCount = seqNum - nextRecvSeqNo;
+
+        if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
+        {
+            final long position = sendRetransmitRequest(fromSeqNo, msgCount);
+            if (!Pressure.isBackPressured(position))
+            {
+                nextRecvSeqNo = seqNum + 1;
+                retransmitFillSeqNo = fromSeqNo + msgCount - 1;
+            }
+            return position;
+        }
+        else
+        {
+            retransmitRequests.offerLast(new RetransmitRequest(fromSeqNo, msgCount));
+            nextRecvSeqNo = seqNum + 1;
+
+            return 1;
+        }
+    }
+
+    private long sendRetransmitRequest(final long fromSeqNo, final int msgCount)
+    {
+        sentMessage();
+        final long requestTimestamp = nanoSecondTimestamp();
+        return proxy.sendRetransmitRequest(uuid, requestTimestamp, fromSeqNo, msgCount);
+    }
+
+    static final class RetransmitRequest
+    {
+        final long fromSeqNo;
+        final int msgCount;
+
+        RetransmitRequest(final long fromSeqNo, final int msgCount)
+        {
+            this.fromSeqNo = fromSeqNo;
+            this.msgCount = msgCount;
+        }
     }
 }

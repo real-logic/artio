@@ -22,6 +22,7 @@ import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.system_tests.TestSystem;
+import uk.co.real_logic.artio.util.TimeUtil;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.IOException;
@@ -37,6 +38,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
+import static uk.co.real_logic.artio.ilink.ILink3SystemTest.CL_ORD_ID;
+import static uk.co.real_logic.artio.ilink.ILink3SystemTest.FIRM_ID;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
 public class ILink3TestServer
@@ -102,10 +105,7 @@ public class ILink3TestServer
 
                 final int read = socket.read(readBuffer);
                 final int totalLength = readSofh(unsafeReadBuffer, 0);
-                if (totalLength != read)
-                {
-                    throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
-                }
+
                 final int blockLength = iLinkHeaderDecoder.blockLength();
                 messageDecoder.wrap(
                     unsafeReadBuffer,
@@ -116,6 +116,12 @@ public class ILink3TestServer
                 print(unsafeReadBuffer, "> ");
 
                 assertEquals(messageDecoder.sbeTemplateId(), iLinkHeaderDecoder.templateId());
+
+                if (totalLength != read)
+                {
+                    throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
+                }
+
                 assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
 
                 readBuffer.clear();
@@ -140,10 +146,11 @@ public class ILink3TestServer
         }
     }
 
-    public void wrap(final MessageEncoderFlyweight messageEncoder, final int length)
+    private void wrap(final MessageEncoderFlyweight messageEncoder, final int length)
     {
         final int messageSize = ILINK_HEADER_LENGTH + length;
         writeSofh(unsafeWriteBuffer, 0, messageSize);
+        DebugLogger.log(FIX_TEST, "wrap messageSize=", String.valueOf(messageSize));
 
         iLinkHeaderEncoder
             .wrap(unsafeWriteBuffer, SOFH_LENGTH)
@@ -155,7 +162,7 @@ public class ILink3TestServer
         messageEncoder.wrap(unsafeWriteBuffer, ILINK_HEADER_LENGTH);
     }
 
-    public void write()
+    private void write()
     {
         final int messageSize = readSofhMessageSize(unsafeWriteBuffer, 0);
         writeBuffer.position(0).limit(messageSize);
@@ -379,5 +386,71 @@ public class ILink3TestServer
             .splitMsg(SplitMsg.NULL_VAL);
 
         write();
+    }
+
+    public void writeExecutionReportStatus(final int sequenceNumber, final boolean possRetrans)
+    {
+        final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();
+        wrap(executionReportStatus, ExecutionReportStatus532Encoder.BLOCK_LENGTH);
+
+        executionReportStatus
+            .seqNum(sequenceNumber)
+            .uUID(uuid)
+            .text("")
+            .execID("123")
+            .senderID(FIRM_ID)
+            .clOrdID(CL_ORD_ID)
+            .partyDetailsListReqID(1)
+            .orderID(1)
+            .transactTime(TimeUtil.microSecondTimestamp()) // TODO: nanos
+            .sendingTimeEpoch(TimeUtil.microSecondTimestamp())
+            .orderRequestID(1)
+            .location("LONDO")
+            .securityID(1)
+            .orderQty(1)
+            .cumQty(1)
+            .leavesQty(1)
+            .expireDate(1)
+            .ordStatus(OrderStatus.Filled)
+            .side(SideReq.Buy)
+            .timeInForce(TimeInForce.Day)
+            .possRetransFlag(possRetrans ? BooleanFlag.True : BooleanFlag.False)
+            .shortSaleType(ShortSaleType.LongSell);
+
+        executionReportStatus.price().mantissa(1);
+        executionReportStatus.stopPx().mantissa(2);
+
+        write();
+    }
+
+    public void acceptRetransRequest(final long fromSeqNo, final int msgCount)
+    {
+        final long requestTimestamp = readRetransmitRequest(fromSeqNo, msgCount);
+        writeRetransmission(requestTimestamp, fromSeqNo, msgCount);
+    }
+
+    public void writeRetransmission(final long requestTimestamp, final long fromSeqNo, final int msgCount)
+    {
+        final Retransmission509Encoder retransmission = new Retransmission509Encoder();
+        wrap(retransmission, Retransmission509Encoder.BLOCK_LENGTH);
+
+        retransmission
+            .uUID(uuid)
+            .requestTimestamp(requestTimestamp)
+            .fromSeqNo(fromSeqNo)
+            .msgCount(msgCount);
+
+        write();
+    }
+
+    public long readRetransmitRequest(final long fromSeqNo, final int msgCount)
+    {
+        final RetransmitRequest508Decoder retransmitRequest = read(new RetransmitRequest508Decoder(), 0);
+        assertEquals(uuid, retransmitRequest.uUID());
+        final long requestTimestamp = retransmitRequest.requestTimestamp();
+        assertEquals(fromSeqNo, retransmitRequest.fromSeqNo());
+        assertEquals(msgCount, retransmitRequest.msgCount());
+
+        return requestTimestamp;
     }
 }

@@ -28,7 +28,6 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_AND_END_FLAGS;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
@@ -130,30 +129,20 @@ class ILinkSequenceNumberExtractor
         final int headerOffset = sofhOffset + SOFH_LENGTH;
         final int templateId = parser.templateId(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
-        final int possRetransOffset = offsets.possRetransOffset(templateId);
-        if (possRetransOffset != AbstractILink3Offsets.MISSING_OFFSET)
+        final int possRetrans = offsets.possRetrans(templateId, buffer, messageOffset);
+        if (possRetrans == BOOLEAN_FLAG_TRUE)
         {
-            final int possRetrans = possRetrans(buffer, messageOffset, possRetransOffset);
-            if (possRetrans == BOOLEAN_FLAG_TRUE)
-            {
-                return;
-            }
+            return;
         }
 
-        final int seqNumOffset = offsets.seqNumOffset(templateId);
-        if (seqNumOffset != AbstractILink3Offsets.MISSING_OFFSET)
+        final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
+        if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
         {
-            final int seqNum = buffer.getInt(messageOffset + seqNumOffset, LITTLE_ENDIAN);
             final long uuid = connectionIdToILinkUuid.get(connectionId);
             if (uuid != UNK_SESSION)
             {
                 handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId);
             }
         }
-    }
-
-    private int possRetrans(final DirectBuffer buffer, final int messageOffset, final int possRetransOffset)
-    {
-        return (short)buffer.getByte(messageOffset + possRetransOffset) & 0xFF;
     }
 }
