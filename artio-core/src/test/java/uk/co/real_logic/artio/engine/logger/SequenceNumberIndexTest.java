@@ -35,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
@@ -51,6 +52,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
@@ -72,7 +74,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexReader reader;
     private FakeEpochClock clock = new FakeEpochClock();
 
-    private ArchivingMediaDriver mediaDriver = launchMediaDriver();
+    private ArchivingMediaDriver mediaDriver;
     private AeronArchive aeronArchive;
     private Publication publication;
     private Subscription subscription;
@@ -81,6 +83,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Before
     public void setUp()
     {
+        mediaDriver = launchMediaDriver();
         aeronArchive = AeronArchive.connect();
         final Aeron aeron = aeronArchive.context().aeron();
 
@@ -107,7 +110,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         verify(errorHandler, never()).onError(any());
 
         CloseHelper.close(aeronArchive);
-        CloseHelper.close(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
 
         Mockito.framework().clearInlineMocks();
     }

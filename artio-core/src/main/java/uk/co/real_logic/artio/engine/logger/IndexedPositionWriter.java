@@ -80,7 +80,6 @@ class IndexedPositionWriter
             if (decoder.position() != 0)
             {
                 recordOffsets.put(decoder.recordingId(), offset);
-                return;
             }
             offset += RECORD_LENGTH;
         }
