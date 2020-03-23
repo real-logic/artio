@@ -19,6 +19,7 @@ import iLinkBinary.*;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
@@ -34,6 +35,8 @@ public class ILink3Proxy
     private static final int ARTIO_HEADER_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
     private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
+
+    private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer(new byte[0]);
 
     private static final int NEGOTIATE_LENGTH =
         Negotiate500Encoder.BLOCK_LENGTH + Negotiate500Encoder.credentialsHeaderLength();
@@ -82,7 +85,8 @@ public class ILink3Proxy
             .uUID(uuid)
             .requestTimestamp(requestTimestamp)
             .session(sessionId)
-            .firm(firmId);
+            .firm(firmId)
+            .putCredentials(NO_BUFFER,0, 0);
 
         commit();
 
@@ -121,7 +125,8 @@ public class ILink3Proxy
             .nextSeqNo(nextSentSeqNo)
             .session(sessionId)
             .firm(firmId)
-            .keepAliveInterval(keepAliveInterval);
+            .keepAliveInterval(keepAliveInterval)
+            .putCredentials(NO_BUFFER, 0, 0);
 
         commit();
 
