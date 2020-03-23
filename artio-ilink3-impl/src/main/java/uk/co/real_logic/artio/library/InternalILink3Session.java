@@ -81,6 +81,7 @@ public class InternalILink3Session extends ILink3Session
     private long resendTime;
     private long nextReceiveMessageTimeInMs;
     private long nextSendMessageTimeInMs;
+    private boolean backpressuredNotApplied = false;
 
     public InternalILink3Session(
         final ILink3SessionConfiguration configuration,
@@ -474,7 +475,7 @@ public class InternalILink3Session extends ILink3Session
         initiateReply.onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 
-    private void sendSequence(final KeepAliveLapsed keepAliveIntervalLapsed)
+    private long sendSequence(final KeepAliveLapsed keepAliveIntervalLapsed)
     {
         final long position = proxy.sendSequence(uuid, nextSentSeqNo, FTI.Primary, keepAliveIntervalLapsed);
         if (position > 0)
@@ -483,6 +484,8 @@ public class InternalILink3Session extends ILink3Session
         }
 
         // Will be retried on next poll if enqueue back pressured.
+
+        return position;
     }
 
     // EVENT HANDLERS
@@ -631,17 +634,18 @@ public class InternalILink3Session extends ILink3Session
             // TODO: error
         }
 
-        // Stop messages from being sent whilst a retransmit is underway.
-        state = State.RETRANSMITTING;
-
-        handler.onNotApplied(fromSeqNo, msgCount, response);
-
-        onReceivedMessage();
+        // Don't invoke the handler on the backpressured retry
+        if (!backpressuredNotApplied)
+        {
+            // Stop messages from being sent whilst a retransmit is underway.
+            state = State.RETRANSMITTING;
+            handler.onNotApplied(fromSeqNo, msgCount, response);
+            onReceivedMessage();
+        }
 
         if (response.shouldRetransmit())
         {
-            // TODO: handle backpressure better
-            return inboundPublication.saveValidResendRequest(
+            final long position = inboundPublication.saveValidResendRequest(
                 uUID,
                 connectionId,
                 fromSeqNo,
@@ -650,14 +654,22 @@ public class InternalILink3Session extends ILink3Session
                 NO_BUFFER,
                 0,
                 0);
+
+            backpressuredNotApplied = Pressure.isBackPressured(position);
+
+            return position;
         }
         else
         {
-            sendSequence(NotLapsed);
+            final long position = sendSequence(NotLapsed);
+            if (position > 0)
+            {
+                state = State.ESTABLISHED;
+            }
 
-            state = State.ESTABLISHED;
+            backpressuredNotApplied = Pressure.isBackPressured(position);
 
-            return 1;
+            return position;
         }
     }
 
