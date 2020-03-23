@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.TimeUtil;
 
 import javax.crypto.Mac;
@@ -270,7 +271,14 @@ public class InternalILink3Session extends ILink3Session
 
         if (initialSequenceNumber == AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
         {
-            return lastSequenceNumber + 1;
+            if (lastSequenceNumber == Session.UNKNOWN)
+            {
+                return 1;
+            }
+            else
+            {
+                return lastSequenceNumber + 1;
+            }
         }
         return initialSequenceNumber;
     }
@@ -554,12 +562,19 @@ public class InternalILink3Session extends ILink3Session
 
         // TODO: validate request timestamp
         // TODO: calculate session expiration
-        // TODO: check gap with previous sequence number and uuid
 
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
-
         nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
+
+        if (previousUUID == uuid)
+        {
+            final long impliedNextRecvSeqNo = previousSeqNo + 1;
+            if (impliedNextRecvSeqNo > nextRecvSeqNo)
+            {
+                return onInvalidSequenceNumber(impliedNextRecvSeqNo, impliedNextRecvSeqNo);
+            }
+        }
 
         return 1;
     }
@@ -696,7 +711,7 @@ public class InternalILink3Session extends ILink3Session
     {
         onReceivedMessage();
 
-        final int seqNum = offsets.seqNum(templateId, buffer, offset);
+        final long seqNum = offsets.seqNum(templateId, buffer, offset);
         if (seqNum == MISSING_OFFSET)
         {
             return 1;
@@ -715,11 +730,21 @@ public class InternalILink3Session extends ILink3Session
 
         if (seqNum == nextRecvSeqNo)
         {
-            nextRecvSeqNo = seqNum + 1;
+            nextRecvSeqNo(seqNum + 1);
 
             return 1;
         }
 
+        return onInvalidSequenceNumber(seqNum);
+    }
+
+    private long onInvalidSequenceNumber(final long seqNum)
+    {
+        return onInvalidSequenceNumber(seqNum, seqNum + 1);
+    }
+
+    private long onInvalidSequenceNumber(final long seqNum, final long newNextRecvSeqNo)
+    {
         final long fromSeqNo = nextRecvSeqNo;
         final int totalMsgCount = (int)(seqNum - nextRecvSeqNo);
         final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
@@ -730,7 +755,7 @@ public class InternalILink3Session extends ILink3Session
             if (!Pressure.isBackPressured(position))
             {
                 addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
-                nextRecvSeqNo = seqNum + 1;
+                nextRecvSeqNo(newNextRecvSeqNo);
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
             return position;
@@ -739,7 +764,7 @@ public class InternalILink3Session extends ILink3Session
         {
             addRetransmitRequest(fromSeqNo, msgCount);
             addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
-            nextRecvSeqNo = seqNum + 1;
+            nextRecvSeqNo(newNextRecvSeqNo);
 
             return 1;
         }

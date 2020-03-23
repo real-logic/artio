@@ -25,6 +25,7 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -113,14 +114,19 @@ public class ILink3SystemTest
         testServer.writeNegotiateResponse();
 
         readEstablish();
-        testServer.writeEstablishmentAck();
+        testServer.writeEstablishmentAck(0, 0, 1);
 
-        testSystem.awaitCompletedReplies(reply);
-        session = reply.resultIfPresent();
-        assertNotNull(session);
+        acquireSession();
 
         assertEquals(session.state(), ILink3Session.State.ESTABLISHED);
         assertEquals(testServer.uuid(), session.uuid());
+    }
+
+    private void acquireSession()
+    {
+        testSystem.awaitCompletedReplies(reply);
+        session = reply.resultIfPresent();
+        assertNotNull(session);
     }
 
     @Test
@@ -184,11 +190,9 @@ public class ILink3SystemTest
 
         readEstablish();
         readEstablish();
-        testServer.writeEstablishmentAck();
+        testServer.writeEstablishmentAck(0, 0, 1);
 
-        testSystem.awaitCompletedReplies(reply);
-        session = reply.resultIfPresent();
-        assertNotNull(session);
+        acquireSession();
     }
 
     @Test
@@ -253,7 +257,9 @@ public class ILink3SystemTest
         testServer.expectedUuid(lastUuid);
 
         readEstablish(2);
-        testServer.writeEstablishmentAck();
+        testServer.writeEstablishmentAck(1, lastUuid, 2);
+
+        acquireSession();
     }
 
     @Test
@@ -452,6 +458,41 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
+    @Test
+    public void shouldRequestRetransmitForEstablishGap() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = session.uuid();
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+            .reestablishLastSession(true);
+        connectToTestServer(sessionConfiguration);
+
+        testServer.expectedUuid(lastUuid);
+
+        readEstablish(2);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 2);
+        acquireSession();
+
+        // retransmit message 1
+        testServer.acceptRetransRequest(1, 1);
+        agreeRecvSeqNo(2);
+
+        testServer.writeExecutionReportStatus(2, false);
+        testServer.writeExecutionReportStatus(1, true);
+
+        agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        terminateAndDisconnect();
+    }
+
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
     {
         final int lastSeqNo = fromSeqNo + msgCount;
@@ -473,11 +514,15 @@ public class ILink3SystemTest
 
     private void agreeEquals(final LongSupplier supplier, final long value)
     {
-        assertEventuallyTrue("Fails to agree value " + value, () ->
-        {
-            testSystem.poll();
-            return supplier.getAsLong() == value;
-        });
+        assertEventuallyTrue(
+            () -> "Fails to agree value " + value + " currently: " + supplier.getAsLong(),
+            () ->
+            {
+                testSystem.poll();
+                return supplier.getAsLong() == value;
+            },
+            Timing.DEFAULT_TIMEOUT_IN_MS,
+            () -> {});
     }
 
     private void sleepHalfInterval()

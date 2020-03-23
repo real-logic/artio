@@ -297,7 +297,7 @@ public class ILink3TestServer
         assertEquals(expectedKeepAliveInterval, requestedKeepAliveInterval);
     }
 
-    public void writeEstablishmentAck()
+    public void writeEstablishmentAck(final long previousSeqNo, final long previousUUID, final int nextSeqNo)
     {
         final EstablishmentAck504Encoder establishmentAck = new EstablishmentAck504Encoder();
         wrap(establishmentAck, EstablishmentAck504Encoder.BLOCK_LENGTH);
@@ -305,9 +305,9 @@ public class ILink3TestServer
         establishmentAck
             .uUID(uuid)
             .requestTimestamp(establishRequestTimestamp)
-            .nextSeqNo(1)
-            .previousSeqNo(0)
-            .previousUUID(0)
+            .nextSeqNo(nextSeqNo)
+            .previousSeqNo(previousSeqNo)
+            .previousUUID(previousUUID)
             .keepAliveInterval(requestedKeepAliveInterval + 100)
             .secretKeySecureIDExpiration(1)
             .faultToleranceIndicator(FTI.Primary)
