@@ -24,7 +24,9 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.ilink.*;
+import uk.co.real_logic.artio.ilink.ILink3Offsets;
+import uk.co.real_logic.artio.ilink.ILink3Proxy;
+import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.TimeUtil;
@@ -33,7 +35,9 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Base64;
+import java.util.Deque;
 
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
@@ -145,7 +149,7 @@ public class InternalILink3Session extends ILink3Session
             final int sendingTimeEpochOffset = offsets.sendingTimeEpochOffset(templateId);
             if (sendingTimeEpochOffset != MISSING_OFFSET)
             {
-                buffer.putLong(messageOffset + sendingTimeEpochOffset, requestTimestamp(), LITTLE_ENDIAN);
+                buffer.putLong(messageOffset + sendingTimeEpochOffset, TimeUtil.nanoSecondTimestamp(), LITTLE_ENDIAN);
             }
         }
 
@@ -180,7 +184,7 @@ public class InternalILink3Session extends ILink3Session
 
     private long sendTerminate(final String reason, final int errorCodes)
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
         return proxy.sendTerminate(
             reason,
             uuid,
@@ -270,14 +274,9 @@ public class InternalILink3Session extends ILink3Session
         return initialSequenceNumber;
     }
 
-    private long requestTimestamp()
-    {
-        return TimeUtil.microSecondTimestamp();
-    }
-
     private boolean sendNegotiate()
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
@@ -298,7 +297,7 @@ public class InternalILink3Session extends ILink3Session
 
     private boolean sendEstablish()
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String tradingSystemName = configuration.tradingSystemName();
