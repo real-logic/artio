@@ -294,8 +294,8 @@ public final class FixEngine extends GatewayProcess
             replayImage("slow-replay", replaySessionId),
             timers,
             aeron.conductorAgentInvoker(),
-            recordingCoordinator,
-            aeron.countersReader());
+            recordingCoordinator
+        );
 
         engineContext.framerContext(framerContext);
     }

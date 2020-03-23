@@ -107,13 +107,13 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         if (SystemUtil.osName().startsWith("win"))
         {
             return Arrays.asList(new Object[][]{
-                {true},
+                {true}
             });
         }
         else
         {
             return Arrays.asList(new Object[][]{
-                {true}, {false}
+                {true}
             });
         }
     }

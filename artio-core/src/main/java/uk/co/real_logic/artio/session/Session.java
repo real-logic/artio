@@ -190,6 +190,7 @@ public class Session
         this.libraryId = libraryId;
         sequenceIndex(sequenceIndex);
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
+        System.out.println("lastsendmsgnew=" + lastSentMsgSeqNum);
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
         this.asciiBuffer = asciiBuffer;
@@ -731,6 +732,7 @@ public class Session
 
     public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
     {
+        new Exception("lastsendmsg=" + lastSentMsgSeqNum).printStackTrace();
         this.lastSentMsgSeqNum = lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
         incNextHeartbeatTime();

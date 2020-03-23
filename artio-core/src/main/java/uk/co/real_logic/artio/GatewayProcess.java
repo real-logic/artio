@@ -180,6 +180,7 @@ public class GatewayProcess implements AutoCloseable
         }
         else
         {
+            aeron.close();
             CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
             closeAll(monitoringFile);
         }

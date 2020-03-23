@@ -101,7 +101,7 @@ public class EngineContext implements AutoCloseable
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
                 configuration.outboundLibraryStream(),
-                recordingCoordinator.outboundRecordingIdLookup(),
+                recordingCoordinator.indexerOutboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 configuration.logFileDir(),
@@ -111,7 +111,7 @@ public class EngineContext implements AutoCloseable
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
                 configuration.inboundLibraryStream(),
-                recordingCoordinator.inboundRecordingIdLookup(),
+                recordingCoordinator.indexerInboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 null,
@@ -228,7 +228,7 @@ public class EngineContext implements AutoCloseable
             cacheNumSets,
             logFileDir,
             configuration.inboundLibraryStream(),
-            recordingCoordinator.inboundRecordingIdLookup(),
+            recordingCoordinator.indexerInboundRecordingIdLookup(),
             connectionIdToILinkUuid);
 
         inboundIndexer = new Indexer(
@@ -247,7 +247,7 @@ public class EngineContext implements AutoCloseable
             cacheNumSets,
             logFileDir,
             configuration.outboundLibraryStream(),
-            recordingCoordinator.outboundRecordingIdLookup(),
+            recordingCoordinator.indexerOutboundRecordingIdLookup(),
             connectionIdToILinkUuid));
         outboundIndices.add(sentSequenceNumberIndex);
         outboundIndices.add(new PositionSender(inboundPublication()));
