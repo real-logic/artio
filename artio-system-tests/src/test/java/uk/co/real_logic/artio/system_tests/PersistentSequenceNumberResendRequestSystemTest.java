@@ -113,7 +113,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         else
         {
             return Arrays.asList(new Object[][]{
-                {true}, // disable this test until it can be made to run consistently: {false}
+                {true}, {false}
             });
         }
     }

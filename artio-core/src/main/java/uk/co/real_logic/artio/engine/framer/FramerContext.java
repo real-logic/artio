@@ -19,6 +19,7 @@ import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
@@ -69,7 +71,8 @@ public class FramerContext
         final Image slowReplayImage,
         final EngineTimers timers,
         final AgentInvoker conductorAgentInvoker,
-        final RecordingCoordinator recordingCoordinator)
+        final RecordingCoordinator recordingCoordinator,
+        final CountersReader countersReader)
     {
         this.configuration = configuration;
 
@@ -85,11 +88,16 @@ public class FramerContext
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
             outboundLibraryStreams.dataPublication("outboundPublication"));
 
+        final RecordingIdLookup outboundRecordingIdLookup = new RecordingIdLookup(configuration.archiverIdleStrategy(),
+            countersReader);
+        final RecordingIdLookup inboundRecordingIdLookup = new RecordingIdLookup(configuration.archiverIdleStrategy(),
+            countersReader);
+
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler, recordingCoordinator.outboundRecordingIdLookup(),
+            configuration.sentSequenceNumberBuffer(), errorHandler, outboundRecordingIdLookup,
             configuration.logFileDir());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.inboundRecordingIdLookup(),
+            configuration.receivedSequenceNumberBuffer(), errorHandler, inboundRecordingIdLookup,
             null);
 
         gatewaySessions = new GatewaySessions(

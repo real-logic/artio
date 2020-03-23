@@ -510,12 +510,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    public RecordingIdLookup inboundRecordingIdLookup()
+    RecordingIdLookup inboundRecordingIdLookup()
     {
         return inboundLookup;
     }
 
-    public RecordingIdLookup outboundRecordingIdLookup()
+    RecordingIdLookup outboundRecordingIdLookup()
     {
         return outboundLookup;
     }

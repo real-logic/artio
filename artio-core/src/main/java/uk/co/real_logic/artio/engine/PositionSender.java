@@ -97,7 +97,6 @@ public class PositionSender implements Index
     {
     }
 
-    @Override
     public void onCatchup(final DirectBuffer buffer, final int offset, final int length, final Header header,
         final long recordingId)
     {
