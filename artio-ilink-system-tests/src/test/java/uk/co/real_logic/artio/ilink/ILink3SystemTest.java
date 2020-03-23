@@ -124,11 +124,25 @@ public class ILink3SystemTest
     }
 
     @Test
-    public void shouldTerminateConnection() throws IOException
+    public void shouldSupportInitiatorTerminateConnection() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
         terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldAcceptExchangeInitiatedTerminate() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(session);
+
+        testServer.readTerminate();
+
+        assertDisconnected();
     }
 
     @Test
@@ -141,20 +155,6 @@ public class ILink3SystemTest
         testServer.readNewOrderSingle(1);
 
         terminateAndDisconnect();
-    }
-
-    @Test
-    public void shouldExchangeInitiatedTerminateConnection() throws IOException
-    {
-        shouldEstablishConnectionAtBeginningOfWeek();
-
-        testServer.writeTerminate();
-
-        testSystem.awaitUnbind(session);
-
-        testServer.readTerminate();
-
-        assertDisconnected();
     }
 
     @Test
