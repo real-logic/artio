@@ -86,7 +86,7 @@ public class ILink3Proxy
             .requestTimestamp(requestTimestamp)
             .session(sessionId)
             .firm(firmId)
-            .putCredentials(NO_BUFFER,0, 0);
+            .putCredentials(NO_BUFFER, 0, 0);
 
         commit();
 
@@ -101,7 +101,7 @@ public class ILink3Proxy
         final String tradingSystemVersion,
         final long uuid,
         final long requestTimestamp,
-        final int nextSentSeqNo,
+        final long nextSentSeqNo,
         final String sessionId,
         final String firmId,
         final int keepAliveInterval)
@@ -156,7 +156,7 @@ public class ILink3Proxy
     }
 
     public long sendSequence(
-        final long uuid, final int nextSentSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
+        final long uuid, final long nextSentSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
     {
         final Sequence506Encoder sequence = this.sequence;
 

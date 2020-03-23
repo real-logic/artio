@@ -101,8 +101,8 @@ public interface LibraryEndPointHandler
         long correlationId,
         long connection,
         long uuid,
-        int lastReceivedSequenceNumber,
-        int lastSentSequenceNumber);
+        long lastReceivedSequenceNumber,
+        long lastSentSequenceNumber);
 
     Action onLibraryExtendPosition(
         int libraryId, long correlationId, int newSessionId, long stopPosition, int initialTermId,

@@ -1373,8 +1373,8 @@ public class GatewayPublication extends ClaimablePublication
         final long correlationId,
         final long connectionId,
         final long uuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber)
     {
         final long position = claim(
             MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);

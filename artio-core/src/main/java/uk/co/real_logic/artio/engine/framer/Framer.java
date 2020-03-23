@@ -715,8 +715,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private boolean hasScannedIndex = false;
 
         private long connectionId;
-        private int lastReceivedSequenceNumber;
-        private int lastSentSequenceNumber;
+        private long lastReceivedSequenceNumber;
+        private long lastSentSequenceNumber;
 
         private ILink3LookupConnectOperation(
             final int libraryId,

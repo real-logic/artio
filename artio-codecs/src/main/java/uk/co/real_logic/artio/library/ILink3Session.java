@@ -69,13 +69,13 @@ public abstract class ILink3Session
 
     public abstract State state();
 
-    public abstract int nextSentSeqNo();
+    public abstract long nextSentSeqNo();
 
-    public abstract void nextSentSeqNo(int nextSentSeqNo);
+    public abstract void nextSentSeqNo(long nextSentSeqNo);
 
-    public abstract int nextRecvSeqNo();
+    public abstract long nextRecvSeqNo();
 
-    public abstract void nextRecvSeqNo(int nextRecvSeqNo);
+    public abstract void nextRecvSeqNo(long nextRecvSeqNo);
 
     public abstract long retransmitFillSeqNo();
 

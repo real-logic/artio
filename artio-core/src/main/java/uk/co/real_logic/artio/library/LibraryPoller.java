@@ -1309,8 +1309,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long correlationId,
         final long connectionId,
         final long uuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber)
     {
         if (libraryId == this.libraryId)
         {
@@ -1342,8 +1342,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId,
         final LibraryPoller owner,
         final long uuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber)
     {
         try
         {
@@ -1357,8 +1357,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 int.class,
                 LibraryPoller.class,
                 long.class,
-                int.class,
-                int.class);
+                long.class,
+                long.class);
 
             return (ILink3Session)constructor.newInstance(
                 configuration,

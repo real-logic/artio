@@ -70,8 +70,8 @@ public class InternalILink3Session extends ILink3Session
     private InitiateILink3SessionReply initiateReply;
 
     private State state;
-    private int nextRecvSeqNo;
-    private int nextSentSeqNo;
+    private long nextRecvSeqNo;
+    private long nextSentSeqNo;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
 
     private long resendTime;
@@ -87,8 +87,8 @@ public class InternalILink3Session extends ILink3Session
         final int libraryId,
         final LibraryPoller owner,
         final long uuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber)
     {
         this.configuration = configuration;
         this.connectionId = connectionId;
@@ -101,8 +101,10 @@ public class InternalILink3Session extends ILink3Session
 
         proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
         offsets = new ILink3Offsets();
-        nextSentSeqNo = calculateInitialSentSequenceNumber(configuration, lastSentSequenceNumber);
-        nextRecvSeqNo = calculateInitialSentSequenceNumber(configuration, lastReceivedSequenceNumber);
+        nextSentSeqNo(calculateInitialSequenceNumber(
+            lastSentSequenceNumber, configuration.initialSentSequenceNumber()));
+        nextRecvSeqNo(calculateInitialSequenceNumber(
+            lastReceivedSequenceNumber, configuration.initialReceivedSequenceNumber()));
         state = State.CONNECTED;
         this.uuid = uuid;
 
@@ -134,7 +136,7 @@ public class InternalILink3Session extends ILink3Session
             final int seqNumOffset = offsets.seqNumOffset(templateId);
             if (seqNumOffset != MISSING_OFFSET)
             {
-                buffer.putInt(messageOffset + seqNumOffset, nextSentSeqNo++, LITTLE_ENDIAN);
+                buffer.putInt(messageOffset + seqNumOffset, (int)nextSentSeqNo++, LITTLE_ENDIAN);
             }
 
             // NB: possRetrans field does not need to be set because it is always false in this claim API
@@ -216,22 +218,22 @@ public class InternalILink3Session extends ILink3Session
         return state;
     }
 
-    public int nextSentSeqNo()
+    public long nextSentSeqNo()
     {
         return nextSentSeqNo;
     }
 
-    public void nextSentSeqNo(final int nextSentSeqNo)
+    public void nextSentSeqNo(final long nextSentSeqNo)
     {
         this.nextSentSeqNo = nextSentSeqNo;
     }
 
-    public int nextRecvSeqNo()
+    public long nextRecvSeqNo()
     {
         return nextRecvSeqNo;
     }
 
-    public void nextRecvSeqNo(final int nextRecvSeqNo)
+    public void nextRecvSeqNo(final long nextRecvSeqNo)
     {
         this.nextRecvSeqNo = nextRecvSeqNo;
     }
@@ -253,20 +255,19 @@ public class InternalILink3Session extends ILink3Session
         return nextSendMessageTimeInMs;
     }
 
-    private int calculateInitialSentSequenceNumber(
-        final ILink3SessionConfiguration configuration, final int lastSentSequenceNumber)
+    private long calculateInitialSequenceNumber(
+        final long lastSequenceNumber, final long initialSequenceNumber)
     {
-        if (!configuration.reestablishLastSession())
+        if (!this.configuration.reestablishLastSession())
         {
             return 1;
         }
 
-        final int initialSentSequenceNumber = configuration.initialSentSequenceNumber();
-        if (initialSentSequenceNumber == AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
+        if (initialSequenceNumber == AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
         {
-            return lastSentSequenceNumber + 1;
+            return lastSequenceNumber + 1;
         }
-        return initialSentSequenceNumber;
+        return initialSequenceNumber;
     }
 
     private long requestTimestamp()
@@ -709,7 +710,7 @@ public class InternalILink3Session extends ILink3Session
         }
 
         final long fromSeqNo = nextRecvSeqNo;
-        final int totalMsgCount = seqNum - nextRecvSeqNo;
+        final int totalMsgCount = (int)(seqNum - nextRecvSeqNo);
         final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)

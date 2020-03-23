@@ -450,8 +450,8 @@
         <field name="correlationId" id="2" type="CorrelationId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="uuid" id="4" type="uint64"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="lastSentSequenceNumber" id="6" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="uint32"/>
+        <field name="lastSentSequenceNumber" id="6" type="uint32"/>
     </sbe:message>
 
     <sbe:message name="LibraryExtendPosition" id="60" description="" sinceVersion="9">

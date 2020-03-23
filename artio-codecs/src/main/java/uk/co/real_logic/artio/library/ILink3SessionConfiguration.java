@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 public class ILink3SessionConfiguration
 {
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
-    public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
+    public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
 
 
     private String host;
@@ -34,7 +34,8 @@ public class ILink3SessionConfiguration
     private String tradingSystemVendor = "";
     private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
     private String userKey;
-    private int initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+    private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+    private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private String accessKeyId;
     private boolean reestablishLastSession = false;
     private ILink3SessionHandler handler;
@@ -138,15 +139,26 @@ public class ILink3SessionConfiguration
         return userKey;
     }
 
-    public ILink3SessionConfiguration initialSentSequenceNumber(final int initialSentSequenceNumber)
+    public ILink3SessionConfiguration initialSentSequenceNumber(final long initialSentSequenceNumber)
     {
         this.initialSentSequenceNumber = initialSentSequenceNumber;
         return this;
     }
 
-    public int initialSentSequenceNumber()
+    public long initialSentSequenceNumber()
     {
         return initialSentSequenceNumber;
+    }
+
+    public ILink3SessionConfiguration initialReceivedSequenceNumber(final long initialReceivedSequenceNumber)
+    {
+        this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
+        return this;
+    }
+
+    public long initialReceivedSequenceNumber()
+    {
+        return initialReceivedSequenceNumber;
     }
 
     public ILink3SessionConfiguration accessKeyId(final String accessKeyId)
