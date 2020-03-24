@@ -386,6 +386,32 @@ public class MessageBasedAcceptorSystemTest
         }
     }
 
+    @Test
+    public void shouldSupportProxyProtocol() throws IOException
+    {
+        setup(true, true);
+
+        handler = new FakeHandler(new FakeOtfAcceptor());
+        final TestSystem testSystem = new TestSystem();
+
+        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        {
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                connection.sendProxyV1Line();
+                logon(connection);
+
+                final long sessionId = handler.awaitSessionId(testSystem::poll);
+                handler.clearSessionExistsInfos();
+                final Session session = acquireSession(handler, library, sessionId, testSystem);
+                assertNotNull(session);
+
+                assertEquals(FixConnection.PROXY_SOURCE_IP, session.connectedHost());
+                assertEquals(FixConnection.PROXY_SOURCE_PORT, session.connectedPort());
+            }
+        }
+    }
+
     private void sleepToAwaitResend()
     {
         try

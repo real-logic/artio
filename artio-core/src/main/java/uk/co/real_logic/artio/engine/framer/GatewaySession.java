@@ -112,6 +112,11 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 
     public String address()
     {
+        if (receiverEndPoint != null)
+        {
+            return receiverEndPoint.address();
+        }
+
         return address;
     }
 

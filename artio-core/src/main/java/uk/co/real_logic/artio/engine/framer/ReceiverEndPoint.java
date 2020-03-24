@@ -121,5 +121,4 @@ public abstract class ReceiverEndPoint
     abstract boolean requiresAuthentication();
 
     abstract void closeResources();
-
 }

@@ -44,6 +44,8 @@ final class FixConnection implements AutoCloseable
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
+    public static final String PROXY_SOURCE_IP = "192.168.0.1";
+    public static final int PROXY_SOURCE_PORT = 56324;
 
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final MutableAsciiBuffer writeAsciiBuffer = new MutableAsciiBuffer(writeBuffer);
@@ -123,6 +125,13 @@ final class FixConnection implements AutoCloseable
         {
             return false;
         }
+    }
+
+    void sendProxyV1Line()
+    {
+        final int length = writeAsciiBuffer.putAscii(
+            0, "PROXY TCP4 " + PROXY_SOURCE_IP + " 192.168.0.11 " + PROXY_SOURCE_PORT + " 443\r\n");
+        send(0, length);
     }
 
     void logon(final boolean resetSeqNumFlag)
@@ -236,12 +245,18 @@ final class FixConnection implements AutoCloseable
 
     void send(final Encoder encoder)
     {
+        final long result = encoder.encode(writeAsciiBuffer, OFFSET);
+        final int offset = Encoder.offset(result);
+        final int length = Encoder.length(result);
+        encoder.reset();
+
+        send(offset, length);
+    }
+
+    private void send(final int offset, final int length)
+    {
         try
         {
-            final long result = encoder.encode(writeAsciiBuffer, OFFSET);
-            final int offset = Encoder.offset(result);
-            final int length = Encoder.length(result);
-            encoder.reset();
             writeBuffer.position(offset).limit(offset + length);
             final int written = socket.write(writeBuffer);
             assertEquals(length, written);

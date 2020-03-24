@@ -28,10 +28,12 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Objects;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
@@ -50,6 +52,8 @@ import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
  */
 class FixReceiverEndPoint extends ReceiverEndPoint
 {
+    private static final byte[] PROXY_V1_SIG = "PROXY ".getBytes(US_ASCII);
+
     private static final char INVALID_MESSAGE_TYPE = '-';
 
     private static final byte BODY_LENGTH_FIELD = 9;
@@ -85,6 +89,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
     private long lastReadTimestamp;
+    private String address;
 
     FixReceiverEndPoint(
         final TcpChannel channel,
@@ -117,6 +122,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
+
+        address = channel.remoteAddress();
     }
 
     int poll()
@@ -228,7 +235,9 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     // false - needs to be retried, aka back-pressured
     private boolean frameMessages(final long readTimestamp)
     {
-        int offset = 0;
+        final MutableAsciiBuffer buffer = this.buffer;
+        int offset = checkProxyLine(buffer);
+
         while (true)
         {
             if (usedBufferData < offset + SessionConstants.MIN_MESSAGE_SIZE) // Need more data
@@ -320,6 +329,41 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         moveRemainingDataToBufferStart(offset);
         return true;
+    }
+
+    private int checkProxyLine(final MutableAsciiBuffer buffer)
+    {
+        final int usedBufferData = this.usedBufferData;
+
+        int index = 0;
+        if (requiresAuthentication() && usedBufferData > 8)
+        {
+            final byte[] proxyV1Sig = PROXY_V1_SIG;
+            for (; index < proxyV1Sig.length; index++)
+            {
+                if (buffer.getByte(index) != proxyV1Sig[index])
+                {
+                    return 0;
+                }
+            }
+
+            // skip protocol version: TCP4 or TCP6
+            index = buffer.scan(index, usedBufferData, ' ') + 1;
+
+            int end = buffer.scan(index, usedBufferData, ' ');
+            final String sourceAddress = buffer.getAscii(index, end - index);
+
+            // skip destination address
+            index = buffer.scan(end + 1, usedBufferData, ' ') + 1;
+
+            end = buffer.scan(index, usedBufferData, ' ');
+            final String sourcePort = buffer.getAscii(index, end - index);
+            address = sourceAddress + ":" + sourcePort;
+
+            index = buffer.scan(index, usedBufferData, '\r') + 2;
+        }
+
+        return index;
     }
 
     private int onInvalidBodyLength(final int offset, final int startOfChecksumTag, final long readTimestamp)
@@ -698,6 +742,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     void play()
     {
         isPaused = false;
+    }
+
+    String address()
+    {
+        return address;
     }
 
     public String toString()
