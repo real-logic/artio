@@ -19,13 +19,16 @@ import io.aeron.Aeron;
 import io.aeron.Image;
 import io.aeron.Publication;
 import io.aeron.Subscription;
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.codecs.SourceLocation;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -48,8 +51,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
-import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -67,18 +71,23 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
-    private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
     private FakeEpochClock clock = new FakeEpochClock();
 
-    private MediaDriver mediaDriver = launchJustMediaDriver();
-    private Aeron aeron;
+    private ArchivingMediaDriver mediaDriver;
+    private AeronArchive aeronArchive;
     private Publication publication;
     private Subscription subscription;
+    private RecordingIdLookup recordingIdLookup;
 
     @Before
     public void setUp()
     {
-        aeron = Aeron.connect();
+        mediaDriver = launchMediaDriver();
+        aeronArchive = AeronArchive.connect();
+        final Aeron aeron = aeronArchive.context().aeron();
+
+        aeronArchive.startRecording(IPC_CHANNEL, STREAM_ID, SourceLocation.LOCAL);
+
         publication = aeron.addPublication(IPC_CHANNEL, STREAM_ID);
         subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
 
@@ -86,8 +95,9 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         deleteFiles();
 
+        recordingIdLookup = new RecordingIdLookup(new YieldingIdleStrategy(), aeron.countersReader());
         writer = newWriter(inMemoryBuffer);
-        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, null);
+        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, null);
     }
 
     @After
@@ -98,8 +108,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         verify(errorHandler, never()).onError(any());
 
-        CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
+        CloseHelper.close(aeronArchive);
+        cleanupMediaDriver(mediaDriver);
 
         Mockito.framework().clearInlineMocks();
     }
@@ -155,7 +165,9 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer tableBuffer = newBuffer();
 
-        new SequenceNumberIndexReader(tableBuffer, errorHandler, null);
+        new SequenceNumberIndexReader(tableBuffer, errorHandler,
+            recordingIdLookup,
+            null);
 
         verify(errorHandler, times(1), IllegalStateException.class);
     }
@@ -277,7 +289,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         try (MappedFile mappedFile = newIndexFile())
         {
             final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(
-                mappedFile.buffer(), errorHandler, null);
+                mappedFile.buffer(), errorHandler, recordingIdLookup, null);
 
             assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER + requiredMessagesToRoll, newReader);
         }
@@ -318,7 +330,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
         newWriter(inMemoryBuffer).close();
-        return new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, null);
+        return new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, null);
     }
 
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)

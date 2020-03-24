@@ -57,7 +57,7 @@ public class IndexedPositionTest
 
         indexed(position, SESSION_ID, RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
+        hasPosition(position, RECORDING_ID);
     }
 
     @Test
@@ -71,7 +71,7 @@ public class IndexedPositionTest
 
         indexed(position, SESSION_ID, RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
+        hasPosition(position, RECORDING_ID);
     }
 
     @Test
@@ -83,8 +83,8 @@ public class IndexedPositionTest
         indexed(position, SESSION_ID, RECORDING_ID);
         indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
-        hasPosition(otherPosition, OTHER_SESSION_ID);
+        hasPosition(position, RECORDING_ID);
+        hasPosition(otherPosition, OTHER_RECORDING_ID);
 
         queriesLastPosition(position, otherPosition);
 
@@ -94,8 +94,8 @@ public class IndexedPositionTest
         indexed(position, SESSION_ID, RECORDING_ID);
         indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
-        hasPosition(otherPosition, OTHER_SESSION_ID);
+        hasPosition(position, RECORDING_ID);
+        hasPosition(otherPosition, OTHER_RECORDING_ID);
 
         queriesLastPosition(position, otherPosition);
     }
@@ -112,7 +112,7 @@ public class IndexedPositionTest
     @Test
     public void shouldNotReadMissingPosition()
     {
-        hasPosition(UNKNOWN_POSITION, SESSION_ID);
+        hasPosition(UNKNOWN_POSITION, RECORDING_ID);
     }
 
     @Test
@@ -125,7 +125,7 @@ public class IndexedPositionTest
         writer.updateChecksums();
 
         newWriter();
-        assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(SESSION_ID));
+        assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(RECORDING_ID));
     }
 
     @Test
@@ -157,9 +157,9 @@ public class IndexedPositionTest
         writer.indexedUpTo(sessionId, recordingId, position);
     }
 
-    private void hasPosition(final long position, final int sessionId)
+    private void hasPosition(final long position, final int recordingId)
     {
-        assertEquals(position, reader.indexedPosition(sessionId));
+        assertEquals(position, reader.indexedPosition(recordingId));
     }
 
     private IndexedPositionWriter newWriter()

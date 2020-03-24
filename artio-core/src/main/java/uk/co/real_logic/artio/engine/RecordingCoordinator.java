@@ -78,8 +78,10 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     private final String channel;
     private final CountersReader counters;
     private final EngineConfiguration configuration;
-    private final RecordingIdLookup inboundLookup;
-    private final RecordingIdLookup outboundLookup;
+    private final RecordingIdLookup framerInboundLookup;
+    private final RecordingIdLookup framerOutboundLookup;
+    private final RecordingIdLookup indexerInboundLookup;
+    private final RecordingIdLookup indexerOutboundLookup;
     private final File recordingIdsFile;
     private final ErrorHandler errorHandler;
 
@@ -114,14 +116,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         if (configuration.logAnyMessages())
         {
             counters = this.aeron.countersReader();
-            inboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            outboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            framerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            framerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
         }
         else
         {
             counters = null;
-            inboundLookup = null;
-            outboundLookup = null;
+            framerInboundLookup = null;
+            framerOutboundLookup = null;
+            indexerInboundLookup = null;
+            indexerOutboundLookup = null;
         }
     }
 
@@ -208,6 +214,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         {
             final RecordingIds recordingIds = streamId == configuration.inboundLibraryStream() ?
                 inboundRecordingIds : outboundRecordingIds;
+            final RecordingIdLookup lookup = streamId == configuration.inboundLibraryStream() ?
+                framerOutboundLookup : framerInboundLookup;
             final LibraryExtendPosition libraryExtendPosition = acquireRecording(recordingIds);
             final ExclusivePublication publication;
             if (libraryExtendPosition != null)
@@ -228,7 +236,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 startRecording(streamId, publication.sessionId(), LOCAL);
             }
 
-            awaitRecordingStart(publication.sessionId(), idleStrategy, recordingIds.used);
+            awaitRecordingStart(publication.sessionId(), lookup, recordingIds.used);
 
             return publication;
         }
@@ -286,7 +294,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         if (configuration.logOutboundMessages())
         {
             final int streamId = configuration.outboundLibraryStream();
-            final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
 
             LibraryExtendPosition extendPosition = libraryIdToExtendPosition.get(libraryId);
             if (extendPosition != null)
@@ -302,7 +309,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 else
                 {
                     libraryIdToExtendPosition.remove(libraryId);
-                    awaitRecordingStart(sessionId, idleStrategy, outboundRecordingIds.used);
+                    awaitRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used);
                     return null;
                 }
             }
@@ -319,7 +326,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             {
                 if (startRecording(streamId, sessionId, outboundLocation))
                 {
-                    awaitRecordingStart(sessionId, idleStrategy, outboundRecordingIds.used);
+                    awaitRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used);
                 }
             }
         }
@@ -368,24 +375,15 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    public boolean recordingAlreadyStarted(final int sessionId)
+    private boolean recordingAlreadyStarted(final int sessionId)
     {
         return RecordingPos.findCounterIdBySession(counters, sessionId) != Aeron.NULL_VALUE;
     }
 
     private void awaitRecordingStart(
-        final int sessionId, final IdleStrategy idleStrategy, final LongHashSet recordingIds)
+        final int sessionId, final RecordingIdLookup lookup, final LongHashSet recordingIds)
     {
-        int counterId;
-        do
-        {
-            counterId = RecordingPos.findCounterIdBySession(counters, sessionId);
-            idleStrategy.idle();
-        }
-        while (counterId == NULL_COUNTER_ID);
-        idleStrategy.reset();
-
-        final long recordingId = RecordingPos.getRecordingId(counters, counterId);
+        final long recordingId = lookup.getRecordingId(sessionId);
         recordingIds.add(recordingId);
     }
 
@@ -510,14 +508,24 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    RecordingIdLookup inboundRecordingIdLookup()
+    RecordingIdLookup indexerInboundRecordingIdLookup()
     {
-        return inboundLookup;
+        return indexerInboundLookup;
     }
 
-    RecordingIdLookup outboundRecordingIdLookup()
+    RecordingIdLookup indexerOutboundRecordingIdLookup()
     {
-        return outboundLookup;
+        return indexerOutboundLookup;
+    }
+
+    public RecordingIdLookup framerInboundLookup()
+    {
+        return framerInboundLookup;
+    }
+
+    public RecordingIdLookup framerOutboundLookup()
+    {
+        return framerOutboundLookup;
     }
 
     static final class RecordingIds

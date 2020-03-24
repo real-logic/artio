@@ -96,4 +96,10 @@ public class PositionSender implements Index
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
     }
+
+    public void onCatchup(final DirectBuffer buffer, final int offset, final int length, final Header header,
+        final long recordingId)
+    {
+        onFragment(buffer, offset, length, header);
+    }
 }

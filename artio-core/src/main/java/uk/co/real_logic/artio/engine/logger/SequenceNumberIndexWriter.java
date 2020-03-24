@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
@@ -221,6 +222,16 @@ public class SequenceNumberIndexWriter implements Index
         file.getFD().sync();
     }
 
+    public void onCatchup(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header,
+        final long recordingId)
+    {
+        onFragment(buffer, offset, length, header, recordingId);
+    }
+
     public void onFragment(
         final DirectBuffer buffer,
         final int srcOffset,
@@ -228,13 +239,21 @@ public class SequenceNumberIndexWriter implements Index
         final Header header)
     {
         final int streamId = header.streamId();
+        if (streamId == this.streamId)
+        {
+            onFragment(buffer, srcOffset, length, header, NULL_RECORDING_ID);
+        }
+    }
+
+    private void onFragment(
+        final DirectBuffer buffer,
+        final int srcOffset,
+        final int length,
+        final Header header,
+        final long recordingId)
+    {
         final long endPosition = header.position();
         final int aeronSessionId = header.sessionId();
-
-        if (streamId != this.streamId)
-        {
-            return;
-        }
 
         int offset = srcOffset;
         messageHeader.wrap(buffer, offset);
@@ -294,7 +313,14 @@ public class SequenceNumberIndexWriter implements Index
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
 
-        positionWriter.update(aeronSessionId, templateId, endPosition);
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            positionWriter.update(aeronSessionId, templateId, endPosition);
+        }
+        else
+        {
+            positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
+        }
     }
 
     private void onRedactSequenceUpdate()

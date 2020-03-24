@@ -294,7 +294,7 @@ public class ReplayIndexTest extends AbstractLogTest
         positionReader.readLastPosition(positionConsumer);
 
         final int aeronSessionId = publication.sessionId();
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId, 0);
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
 
         verify(positionConsumer, times(1))
             .accept(aeronSessionId, recordingId, alignedEndPosition());
