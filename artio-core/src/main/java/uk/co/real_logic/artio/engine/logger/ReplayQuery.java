@@ -97,7 +97,7 @@ public class ReplayQuery implements AutoCloseable
      * @param endSequenceNumber sequence number to end replay at (inclusive).
      * @param endSequenceIndex the sequence index to end replay at (inclusive).
      * @param logTag the operation to tag log entries with
-     * @param tracker
+     * @param tracker the tracker to which messages are replayed
      * @return number of messages replayed
      */
     public ReplayOperation query(

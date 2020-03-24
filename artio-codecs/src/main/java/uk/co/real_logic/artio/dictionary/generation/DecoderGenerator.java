@@ -559,7 +559,7 @@ public class DecoderGenerator extends Generator
         final String validationCode = String.format(
             "%3$s        {\n" +
             "%3$s            int count = 0;\n" +
-            "%3$s            final %4$s iterator = %2$s.iterator();" +
+            "%3$s            final %4$s iterator = %2$s.iterator();\n" +
             "%3$s            for (final %1$s group : iterator)\n" +
             "%3$s            {\n" +
             "%3$s                count++;" +
@@ -1700,29 +1700,33 @@ public class DecoderGenerator extends Generator
 
     protected String groupEntryAppendTo(final Group group, final String name)
     {
+        final String numberField = group.numberField().name();
         return String.format(
             "    if (has%2$s)\n" +
             "    {\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
-            "    for (final %3$s %4$s : %5$s.iterator())\n" +
-            "    {\n" +
             "        indent(builder, level);\n" +
-            "        %4$s.appendTo(builder, level + 1);" +
-            "        if (%4$s.next() != null)\n" +
+            "        builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "        %3$s %4$s = this.%4$s;\n" +
+            "        for (int i = 0, size = this.%6$s; i < size; i++)\n" +
             "        {\n" +
-            "            builder.append(',');\n" +
+            "            indent(builder, level);\n" +
+            "            %4$s.appendTo(builder, level + 1);" +
+            "            if (%4$s.next() != null)\n" +
+            "            {\n" +
+            "                builder.append(',');\n" +
+            "            }\n" +
+            "            builder.append('\\n');\n" +
+            "            %4$s = %4$s.next();" +
             "        }\n" +
-            "        builder.append('\\n');\n" +
-            "    }\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"],\\n\");\n" +
+            "        indent(builder, level);\n" +
+            "        builder.append(\"],\\n\");\n" +
             "    }\n",
             name,
-            group.numberField().name(),
+            numberField,
             decoderClassName(name),
-            formatPropertyName(decoderClassName(name)),
-            iteratorFieldName(group));
+            formatPropertyName(name),
+            iteratorFieldName(group),
+            formatPropertyName(numberField));
     }
 
     protected String optionalReset(final Field field, final String name)

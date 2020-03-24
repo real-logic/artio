@@ -334,8 +334,6 @@ public abstract class AbstractDecoderGeneratorTest
         assertValid(decoder);
     }
 
-    // TODO: update the examples to add this
-
     @Test
     public void setsMissingOptionalValues() throws Exception
     {
@@ -431,6 +429,30 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
         assertToStringAndAppendToMatches(decoder, containsString(STRING_GROUP_TWO_ELEMENTS));
+    }
+
+    @Test
+    public void shouldToStringRepeatingGroupsWithoutMutatingIterator() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+
+        assertHasNext(iterator);
+        Object group = iterator.next();
+        assertEquals(1, getGroupField(group));
+
+        assertThat(decoder.toString(), containsString(STRING_GROUP_TWO_ELEMENTS));
+
+        assertHasNext(iterator);
+        group = iterator.next();
+        assertEquals(2, getGroupField(group));
+        assertNotHasNext(iterator);
+    }
+
+    private void assertHasNext(final Iterator<?> iterator)
+    {
+        assertTrue("fails hasNext()", iterator.hasNext());
     }
 
     private void assertToStringAndAppendToMatches(final Decoder decoder, final Matcher<String> matcher)
@@ -1030,7 +1052,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(ZERO_REPEATING_GROUP_MESSAGE);
 
-        canNotIteratorOverRepeatingGroup(decoder);
+        assertNotHasNext(decoder);
     }
 
     @Test
@@ -1038,7 +1060,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
 
-        canNotIteratorOverRepeatingGroup(decoder);
+        assertNotHasNext(decoder);
     }
 
     @Test
@@ -1520,15 +1542,15 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
 
-        assertTrue(iterator.hasNext());
+        assertHasNext(iterator);
         Object group = iterator.next();
         assertEquals(1, getGroupField(group));
 
-        assertTrue(iterator.hasNext());
+        assertHasNext(iterator);
         group = iterator.next();
         assertEquals(2, getGroupField(group));
 
-        canNotIteratorOverRepeatingGroup(iterator);
+        assertNotHasNext(iterator);
     }
 
     private void canIterateOverGroupUsingForEach(final Decoder decoder) throws Exception
@@ -1546,15 +1568,15 @@ public abstract class AbstractDecoderGeneratorTest
 
     }
 
-    private void canNotIteratorOverRepeatingGroup(final Decoder decoder) throws Exception
+    private void assertNotHasNext(final Decoder decoder) throws Exception
     {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
-        canNotIteratorOverRepeatingGroup(iterator);
+        assertNotHasNext(iterator);
     }
 
-    private void canNotIteratorOverRepeatingGroup(final Iterator<?> iterator)
+    private void assertNotHasNext(final Iterator<?> iterator)
     {
-        assertFalse(iterator.hasNext());
+        assertFalse("hasNext() when it shouldn't", iterator.hasNext());
     }
 
     private void assertValidRepeatingGroupDecoded(final Decoder decoder) throws Exception
