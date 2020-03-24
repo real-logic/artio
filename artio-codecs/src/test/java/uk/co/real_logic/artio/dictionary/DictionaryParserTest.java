@@ -237,7 +237,7 @@ public class DictionaryParserTest
     @Test
     public void shouldDedupeFieldsIncludedTwice()
     {
-        shouldThrow(() -> parseDictionary("example_invalid_dictionary_2.xml"),
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_fields_included_twice.xml"),
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
@@ -259,11 +259,10 @@ public class DictionaryParserTest
         parseDictionary("example_duplicate_dictionary.xml", true);
     }
 
-
     @Test
     public void shouldFailIfTwoFieldsAppearInSameMessage()
     {
-        shouldThrow(() -> parseDictionary("example_invalid_dictionary.xml"),
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_field_in_group_and_message.xml"),
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
@@ -273,9 +272,20 @@ public class DictionaryParserTest
     }
 
     @Test
+    public void shouldFailIfFieldDefinitionDuplicated()
+    {
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_duplicate_field_definitions.xml"),
+            IllegalStateException.class,
+            "Cannot have the same field name defined twice; this is against the FIX spec." +
+            "Details to follow:\n" +
+            "Field : MemberID (101)\n" +
+            "Field : MemberID (100)");
+    }
+
+    @Test
     public void shouldNotAllowDataFieldWithoutLength()
     {
-        shouldThrow(() -> parseDictionary("example_invalid_dictionary_3.xml"),
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_data_field_without_length.xml"),
             IllegalStateException.class,
             "Each DATA field must have a corresponding LENGTH field using the suffix 'Len' or 'Length'." +
             " RawData is missing a length field in EgGroupGroup");
