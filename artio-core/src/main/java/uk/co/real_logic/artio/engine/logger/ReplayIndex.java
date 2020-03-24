@@ -221,14 +221,7 @@ public class ReplayIndex implements Index
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header.sessionId());
         }
 
-        if (recordingId == NULL_RECORDING_ID)
-        {
-            positionWriter.update(header.sessionId(), templateId, endPosition);
-        }
-        else
-        {
-            positionWriter.indexedUpTo(header.sessionId(), recordingId, endPosition);
-        }
+        positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
         positionWriter.updateChecksums();
     }
 

@@ -312,15 +312,7 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
-
-        if (recordingId == NULL_RECORDING_ID)
-        {
-            positionWriter.update(aeronSessionId, templateId, endPosition);
-        }
-        else
-        {
-            positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
-        }
+        positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
     }
 
     private void onRedactSequenceUpdate()

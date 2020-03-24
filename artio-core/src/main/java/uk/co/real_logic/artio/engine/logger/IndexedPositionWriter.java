@@ -212,24 +212,29 @@ class IndexedPositionWriter
         return work;
     }
 
-    public void update(final int aeronSessionId, final int templateId, final long endPosition)
+    public void update(
+        final int aeronSessionId, final int templateId, final long endPosition, final long knownRecordingId)
     {
-        switch (templateId)
+        long recordingId = knownRecordingId;
+        if (recordingId == NULL_RECORDING_ID)
         {
-            // May not have setup the recording id when these messages come in.
-            case LibraryConnectDecoder.TEMPLATE_ID:
-            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
-                trackPosition(aeronSessionId, endPosition);
-                return;
+            switch (templateId)
+            {
+                // May not have setup the recording id when these messages come in.
+                case LibraryConnectDecoder.TEMPLATE_ID:
+                case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                    trackPosition(aeronSessionId, endPosition);
+                    return;
 
-            // Outbound stream, so don't need to update the indexed position.
-            case ValidResendRequestDecoder.TEMPLATE_ID:
-            case RedactSequenceUpdateDecoder.TEMPLATE_ID:
-                return;
+                // Outbound stream, so don't need to update the indexed position.
+                case ValidResendRequestDecoder.TEMPLATE_ID:
+                case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                    return;
+            }
+            recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
         }
 
         // For other messages block until the recording id is setup.
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
         indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 }
