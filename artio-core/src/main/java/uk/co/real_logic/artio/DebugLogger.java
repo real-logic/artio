@@ -78,6 +78,22 @@ public final class DebugLogger
     public static void log(
         final LogTag tag,
         final CharFormatter formatter,
+        final long first,
+        final String second,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag))
+        {
+            formatter.clear().with(first).with(second);
+            THREAD_LOCAL.get().log(tag, formatter, buffer, offset, length);
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final CharFormatter formatter,
         final DirectBuffer buffer,
         final int offset,
         final int length)

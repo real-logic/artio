@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -49,6 +50,7 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.system_tests.FixConnection.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
@@ -387,7 +389,41 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
-    public void shouldSupportProxyProtocol() throws IOException
+    public void shouldSupportProxyV1Protocol() throws IOException
+    {
+        shouldSupportProxyProtocol(FixConnection::sendProxyV1Line, PROXY_SOURCE_IP, PROXY_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV1ProtocolLargest() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV1LargestLine, LARGEST_PROXY_SOURCE_IP, LARGEST_PROXY_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV4() throws IOException
+    {
+        shouldSupportProxyProtocol(FixConnection::sendProxyV2LineTcpV4, PROXY_SOURCE_IP, PROXY_V2_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV6() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV2LineTcpV6, PROXY_V2_IPV6_SOURCE_IP, PROXY_V2_IPV6_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV6Localhost() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV2LineTcpV6Localhost, "::1", PROXY_V2_IPV6_SOURCE_PORT);
+    }
+
+    private void shouldSupportProxyProtocol(
+        final Consumer<FixConnection> sendLine, final String proxySourceIp, final int proxySourcePort)
+        throws IOException
     {
         setup(true, true);
 
@@ -398,7 +434,7 @@ public class MessageBasedAcceptorSystemTest
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {
-                connection.sendProxyV1Line();
+                sendLine.accept(connection);
                 logon(connection);
 
                 final long sessionId = handler.awaitSessionId(testSystem::poll);
@@ -406,8 +442,8 @@ public class MessageBasedAcceptorSystemTest
                 final Session session = acquireSession(handler, library, sessionId, testSystem);
                 assertNotNull(session);
 
-                assertEquals(FixConnection.PROXY_SOURCE_IP, session.connectedHost());
-                assertEquals(FixConnection.PROXY_SOURCE_PORT, session.connectedPort());
+                assertEquals(proxySourceIp, session.connectedHost());
+                assertEquals(proxySourcePort, session.connectedPort());
             }
         }
     }

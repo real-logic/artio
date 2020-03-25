@@ -149,7 +149,8 @@ public class ReceiverEndPointTest
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,
-            new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()));
+            new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()),
+            new FixReceiverEndPoint.FixReceiverEndPointFormatters());
         endPoint.gatewaySession(gatewaySession);
     }
 

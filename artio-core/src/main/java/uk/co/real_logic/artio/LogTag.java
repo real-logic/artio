@@ -45,7 +45,13 @@ public enum LogTag
     REPLAY,
     REPLAY_ATTEMPT,
     INDEX,
-    LIBRARY_MANAGEMENT;
+    LIBRARY_MANAGEMENT,
+
+    /**
+     * Logs information from the proxy protocol - see http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+     * for details.
+     */
+    PROXY;
 
     private final char[] logStr;
 

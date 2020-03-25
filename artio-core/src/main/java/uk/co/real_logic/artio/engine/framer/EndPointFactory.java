@@ -24,6 +24,9 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 class EndPointFactory
 {
+    private final FixReceiverEndPoint.FixReceiverEndPointFormatters formatters =
+        new FixReceiverEndPoint.FixReceiverEndPointFormatters();
+
     private final EngineConfiguration configuration;
     private final SessionContexts sessionContexts;
     private final GatewayPublication inboundLibraryPublication;
@@ -74,7 +77,8 @@ class EndPointFactory
             libraryId,
             gatewaySessions,
             configuration.clock(),
-            framer.acceptorFixDictionaryLookup());
+            framer.acceptorFixDictionaryLookup(),
+            formatters);
     }
 
     SenderEndPoint senderEndPoint(

@@ -44,8 +44,17 @@ final class FixConnection implements AutoCloseable
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
+
     public static final String PROXY_SOURCE_IP = "192.168.0.1";
     public static final int PROXY_SOURCE_PORT = 56324;
+
+    public static final String LARGEST_PROXY_SOURCE_IP = "ffff:f...f:ffff";
+    public static final int LARGEST_PROXY_SOURCE_PORT = 65535;
+
+    public static final int PROXY_V2_SOURCE_PORT = 56546;
+
+    public static final String PROXY_V2_IPV6_SOURCE_IP = "fdaa:bbcc:ddee:0:5e8:349b:d23d:f168";
+    public static final int PROXY_V2_IPV6_SOURCE_PORT = 44858;
 
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final MutableAsciiBuffer writeAsciiBuffer = new MutableAsciiBuffer(writeBuffer);
@@ -131,6 +140,101 @@ final class FixConnection implements AutoCloseable
     {
         final int length = writeAsciiBuffer.putAscii(
             0, "PROXY TCP4 " + PROXY_SOURCE_IP + " 192.168.0.11 " + PROXY_SOURCE_PORT + " 443\r\n");
+        send(0, length);
+    }
+
+    void sendProxyV1LargestLine()
+    {
+        final int length = writeAsciiBuffer.putAscii(
+            0, "PROXY UNKNOWN " + LARGEST_PROXY_SOURCE_IP +
+            " ffff:f...f:ffff " + LARGEST_PROXY_SOURCE_PORT + " 65535\r\n");
+        send(0, length);
+    }
+
+    void sendProxyV2LineTcpV4()
+    {
+        final byte[] bytes =
+        {
+            13, 10, 13, 10,
+            0, 13, 10, 81,
+            85, 73, 84, 10,
+            33, 17, 0, 12,
+
+            -64, -88, 0, 1,
+            -64, -88, 0, 1,
+            -36, -30,
+            19, -120,
+        };
+
+        sendBytes(bytes);
+    }
+
+    void sendProxyV2LineTcpV6()
+    {
+        final byte[] bytes =
+        {
+            13, 10, 13, 10,
+            0, 13, 10, 81,
+            85, 73, 84, 10,
+            33, 33, 0, 36,
+
+            // ipv6 source addr
+            -3, -86, -69, -52,
+            -35, -18, 0, 0,
+            5, -24, 52, -101,
+            -46, 61, -15, 104,
+
+            // ipv6 dest addr
+            -3, -86, -69, -52,
+            -35, -18, 0, 0,
+            5, -24, 52, -101,
+            -46, 61, -15, 104,
+
+            // ipv6 source port
+            -81, 58,
+
+            // ipv6 dest port
+            19, -120
+        };
+
+        sendBytes(bytes);
+    }
+
+    void sendProxyV2LineTcpV6Localhost()
+    {
+        final byte[] bytes =
+        {
+            13, 10, 13, 10,
+            0, 13, 10, 81,
+            85, 73, 84, 10,
+            33, 33, 0, 36,
+
+            // ipv6 source addr
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 1,
+
+            // ipv6 dest addr
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 1,
+
+            // ipv6 source port
+            -81, 58,
+
+            // ipv6 dest port
+            19, -120
+        };
+
+        sendBytes(bytes);
+    }
+
+    private void sendBytes(final byte[] bytes)
+    {
+        final int length = bytes.length;
+        writeAsciiBuffer.putBytes(0, bytes);
         send(0, length);
     }
 
