@@ -17,11 +17,10 @@ package uk.co.real_logic.artio.util;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class TimeUtil
+public final class TimeUtil
 {
-    public static final long MICROS_IN_MILLIS = 1_000;
-    public static final long NANOS_IN_MICROS = 1_000;
-    public static final long NANOS_IN_MILLIS = MICROS_IN_MILLIS * NANOS_IN_MICROS;
+    private static final long MICROS_IN_MILLIS = 1_000;
+    private static final long NANOS_IN_MICROS = 1_000;
 
     public static long microSecondTimestamp()
     {
