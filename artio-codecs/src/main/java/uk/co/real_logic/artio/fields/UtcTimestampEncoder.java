@@ -22,12 +22,6 @@ import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.*;
 
 public final class UtcTimestampEncoder
 {
-    public enum EpochFractionFormat
-    {
-        MILLISECONDS,
-        MICROSECONDS,
-        NANOSECONDS
-    }
 
     public static final long MIN_EPOCH_MILLIS = UtcTimestampDecoder.MIN_EPOCH_MILLIS;
     public static final long MAX_EPOCH_MILLIS = UtcTimestampDecoder.MAX_EPOCH_MILLIS;
@@ -57,23 +51,6 @@ public final class UtcTimestampEncoder
     public UtcTimestampEncoder()
     {
         this(EpochFractionFormat.MILLISECONDS);
-    }
-
-    /**
-     * Create the encoder.
-     *
-     * This method could be removed in 0.30 or later.
-     *
-     * @deprecated
-     * @param usesMillisecondsAsEpochFraction true if you want to use milliseconds as the precision of the
-     *                                        timeunit for the <code>epochFraction</code> passed to encode().
-     *                                        False if you wish to use microseconds.
-     */
-    @Deprecated
-    public UtcTimestampEncoder(final boolean usesMillisecondsAsEpochFraction)
-    {
-        this(usesMillisecondsAsEpochFraction ?
-            EpochFractionFormat.MILLISECONDS : EpochFractionFormat.MICROSECONDS);
     }
 
     /**

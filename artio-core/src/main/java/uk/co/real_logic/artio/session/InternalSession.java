@@ -21,6 +21,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -58,7 +59,8 @@ public class InternalSession extends Session implements AutoCloseable
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final EpochFractionFormat epochFractionPrecision)
     {
         super(
             heartbeatIntervalInS,
@@ -80,7 +82,8 @@ public class InternalSession extends Session implements AutoCloseable
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
-            messageInfo);
+            messageInfo,
+            epochFractionPrecision);
     }
 
     public int poll(final long time)

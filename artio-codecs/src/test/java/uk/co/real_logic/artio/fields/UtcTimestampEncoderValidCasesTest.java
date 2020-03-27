@@ -26,7 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.*;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Parameterized.class)
@@ -159,7 +159,7 @@ public class UtcTimestampEncoderValidCasesTest
         final long epochFraction,
         final String expectedTimestamp,
         final int expectedLength,
-        final UtcTimestampEncoder.EpochFractionFormat epochFractionFormat)
+        final EpochFractionFormat epochFractionFormat)
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(epochFractionFormat);
         final int length = encoder.encode(epochFraction);

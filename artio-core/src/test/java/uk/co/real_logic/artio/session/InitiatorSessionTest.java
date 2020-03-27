@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -54,7 +55,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             false,
             SessionCustomisationStrategy.none(),
-            messageInfo);
+            messageInfo,
+            EpochFractionFormat.MILLISECONDS);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(mockLogonListener);
     }

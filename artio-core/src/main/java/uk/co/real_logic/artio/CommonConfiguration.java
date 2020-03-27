@@ -17,8 +17,10 @@ package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
 import org.agrona.IoUtil;
+import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
@@ -240,6 +242,7 @@ public class CommonConfiguration
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     private boolean gracefulShutdown = true;
     private boolean validateCompIdsOnEveryMessage = true;
+    private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -527,9 +530,22 @@ public class CommonConfiguration
      * @param validateCompIdsOnEveryMessage true to validate comp ids
      * @return this
      */
-    public CommonConfiguration setValidateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
+    public CommonConfiguration validateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
     {
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+        return this;
+    }
+
+    /**
+     * Sets the time precision that the the session logic uses to encode time stamps.
+     *
+     * @param sessionEpochFractionFormat the format to use.
+     * @return this
+     */
+    public CommonConfiguration sessionEpochFractionFormat(final EpochFractionFormat sessionEpochFractionFormat)
+    {
+        Verify.notNull(sessionEpochFractionFormat, "sessionEpochFractionFormat");
+        this.sessionEpochFractionFormat = sessionEpochFractionFormat;
         return this;
     }
 
@@ -631,6 +647,11 @@ public class CommonConfiguration
     public boolean validateCompIdsOnEveryMessage()
     {
         return validateCompIdsOnEveryMessage;
+    }
+
+    public EpochFractionFormat sessionEpochFractionFormat()
+    {
+        return sessionEpochFractionFormat;
     }
 
     protected void conclude(final String fixSuffix)

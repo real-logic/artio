@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.engine.logger.*;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 
@@ -198,6 +199,7 @@ public class EngineContext implements AutoCloseable
     private Replayer newReplayer(
         final ExclusivePublication replayPublication, final ReplayQuery replayQuery)
     {
+        final EpochFractionFormat epochFractionFormat = configuration.sessionEpochFractionFormat();
         return new Replayer(
             replayQuery,
             replayPublication,
@@ -211,9 +213,10 @@ public class EngineContext implements AutoCloseable
             configuration.gapfillOnReplayMessageTypes(),
             configuration.replayHandler(),
             senderSequenceNumbers,
-            new FixSessionCodecsFactory(),
+            new FixSessionCodecsFactory(epochFractionFormat),
             configuration.senderMaxBytesInBuffer(),
-            replayerCommandQueue);
+            replayerCommandQueue,
+            epochFractionFormat);
     }
 
     private void newIndexers()
@@ -295,7 +298,7 @@ public class EngineContext implements AutoCloseable
                 configuration.agentNamePrefix(),
                 senderSequenceNumbers,
                 replayerCommandQueue,
-                new FixSessionCodecsFactory());
+                new FixSessionCodecsFactory(configuration.sessionEpochFractionFormat()));
         }
     }
 

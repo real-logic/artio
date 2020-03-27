@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -243,7 +244,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final EpochFractionFormat epochFractionPrecision)
     {
         sessionProxyRequests++;
         return fakeSessionProxy;

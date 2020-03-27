@@ -104,7 +104,8 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            receivedSequenceNumberIndex,
+            configuration.sessionEpochFractionFormat());
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

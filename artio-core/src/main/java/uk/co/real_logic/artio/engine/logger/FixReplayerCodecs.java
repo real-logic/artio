@@ -17,16 +17,20 @@ package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 
 class FixReplayerCodecs
 {
     private final FixDictionary dictionary;
     private final AbstractResendRequestDecoder resendRequest;
+    private final UtcTimestampEncoder timestampEncoder;
     private GapFillEncoder gapFillEncoder;
 
-    FixReplayerCodecs(final Class<? extends FixDictionary> fixDictionaryType)
+    FixReplayerCodecs(
+        final Class<? extends FixDictionary> fixDictionaryType, final UtcTimestampEncoder timestampEncoder)
     {
         dictionary = FixDictionary.of(fixDictionaryType);
+        this.timestampEncoder = timestampEncoder;
         resendRequest = dictionary.makeResendRequestDecoder();
     }
 
@@ -47,6 +51,6 @@ class FixReplayerCodecs
 
     GapFillEncoder makeGapFillEncoder()
     {
-        return new GapFillEncoder(dictionary.makeSequenceResetEncoder());
+        return new GapFillEncoder(dictionary.makeSequenceResetEncoder(), timestampEncoder);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Monotonic Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine.logger;
+package uk.co.real_logic.artio.fields;
 
-import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.fields.EpochFractionFormat;
-
-public class FakeFixSessionCodecsFactory extends FixSessionCodecsFactory
+public enum EpochFractionFormat
 {
-    public FakeFixSessionCodecsFactory()
-    {
-        super(EpochFractionFormat.MILLISECONDS);
-    }
-
-    FixReplayerCodecs get(final long sessionId)
-    {
-        return new FixReplayerCodecs(FixDictionary.findDefault(), timestampEncoder);
-    }
+    MILLISECONDS,
+    MICROSECONDS,
+    NANOSECONDS
 }

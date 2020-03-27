@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.logger.Replayer;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -85,7 +86,7 @@ public class Session
     private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
     private static final int NO_LOGOUT_REJECT_REASON = -1;
 
-    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder timestampEncoder;
 
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication outboundPublication;
@@ -170,7 +171,8 @@ public class Session
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final EpochFractionFormat epochFractionPrecision)
     {
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
@@ -202,6 +204,7 @@ public class Session
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
         lastMsgSeqNumProcessed = this.enableLastMsgSeqNumProcessed ? 0 : NO_LAST_MSG_SEQ_NUM_PROCESSED;
+        timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
 
     // ---------- PUBLIC API ----------

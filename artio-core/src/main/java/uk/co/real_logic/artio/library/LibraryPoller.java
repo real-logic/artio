@@ -1698,7 +1698,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
-            messageInfo);
+            messageInfo,
+            configuration.sessionEpochFractionFormat());
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -1770,7 +1771,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
-            messageInfo);
+            messageInfo,
+            configuration.sessionEpochFractionFormat());
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;
@@ -1786,7 +1788,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             new SystemEpochClock(),
             connectionId,
             libraryId,
-            LangUtil::rethrowUnchecked);
+            LangUtil::rethrowUnchecked,
+            configuration.sessionEpochFractionFormat());
     }
 
     private void checkState()

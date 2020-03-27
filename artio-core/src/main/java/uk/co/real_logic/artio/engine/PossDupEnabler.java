@@ -59,7 +59,7 @@ public class PossDupEnabler
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new LongDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
-    private final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder utcTimestampEncoder;
 
     private final BufferClaim bufferClaim;
     private final Claimer claimer;
@@ -78,6 +78,7 @@ public class PossDupEnabler
     }
 
     public PossDupEnabler(
+        final UtcTimestampEncoder utcTimestampEncoder,
         final BufferClaim bufferClaim,
         final Claimer claimer,
         final PreCommit onPreCommit,
@@ -87,6 +88,7 @@ public class PossDupEnabler
         final int maxPayloadLength,
         final LogTag logTag)
     {
+        this.utcTimestampEncoder = utcTimestampEncoder;
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
         this.onPreCommit = onPreCommit;

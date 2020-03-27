@@ -33,6 +33,8 @@ import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -62,7 +64,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private static final int POLL_LIMIT = 10;
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-
     private final BufferClaim bufferClaim;
 
     // FIX specific state.
@@ -96,6 +97,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final UtcTimestampEncoder utcTimestampEncoder;
 
     public Replayer(
         final ReplayQuery outboundReplayQuery,
@@ -112,7 +114,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
         final int maxBytesInBuffer,
-        final ReplayerCommandQueue replayerCommandQueue)
+        final ReplayerCommandQueue replayerCommandQueue,
+        final EpochFractionFormat epochFractionFormat)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -132,6 +135,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
             gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
+        utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
     }
 
     public Action onFragment(
@@ -282,7 +286,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             encoder,
             formatters,
             bytesInBuffer,
-            maxBytesInBuffer);
+            maxBytesInBuffer,
+            utcTimestampEncoder);
 
         fixReplayerSession.query();
 

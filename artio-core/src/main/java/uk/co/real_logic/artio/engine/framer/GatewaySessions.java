@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -83,6 +84,8 @@ class GatewaySessions
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final Clock clock;
+    private final EpochFractionFormat epochFractionPrecision;
+    private final UtcTimestampEncoder sendingTimeEncoder;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -103,7 +106,8 @@ class GatewaySessions
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final EpochFractionFormat epochFractionPrecision)
     {
         this.epochClock = epochClock;
         this.inboundPublication = inboundPublication;
@@ -124,6 +128,9 @@ class GatewaySessions
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.epochFractionPrecision = epochFractionPrecision;
+
+        sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
 
     static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
@@ -166,7 +173,8 @@ class GatewaySessions
             epochClock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
-            errorHandler);
+            errorHandler,
+            epochFractionPrecision);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
@@ -189,7 +197,8 @@ class GatewaySessions
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
             customisationStrategy,
-            messageInfo);
+            messageInfo,
+            epochFractionPrecision);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -608,7 +617,6 @@ class GatewaySessions
         {
             encodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
 
-            final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
             final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(encodeBuffer);
 
             final SessionHeaderEncoder header = encoder.header();

@@ -29,7 +29,7 @@ import static java.time.temporal.ChronoField.NANO_OF_SECOND;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoderValidCasesTest.*;
 
 public class UtcTimestampCodecsTrailingZerosTest
@@ -135,7 +135,7 @@ public class UtcTimestampCodecsTrailingZerosTest
         final long epochFraction,
         final String expectedTimestampFraction,
         final int expectedLength,
-        final UtcTimestampEncoder.EpochFractionFormat format)
+        final EpochFractionFormat format)
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
         final int length = encoder.initialise(epochFraction);
@@ -168,7 +168,7 @@ public class UtcTimestampCodecsTrailingZerosTest
         final long epochFraction,
         final String expectedTimestampFraction,
         final int expectedLength,
-        final UtcTimestampEncoder.EpochFractionFormat format)
+        final EpochFractionFormat format)
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
         encoder.initialise(epochFraction - 1);

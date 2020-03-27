@@ -20,11 +20,14 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.ManageSessionDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
@@ -36,6 +39,14 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
 
     private final Map<String, FixReplayerCodecs> fixDictionaryClassToIndex = new HashMap<>();
     private final Long2ObjectHashMap<FixReplayerCodecs> sessionIdToFixDictionaryIndex = new Long2ObjectHashMap<>();
+    private final Function<String, FixReplayerCodecs> makeFixReplayerCodecs = this::makeFixReplayerCodecs;
+
+    final UtcTimestampEncoder timestampEncoder;
+
+    public FixSessionCodecsFactory(final EpochFractionFormat epochFractionFormat)
+    {
+        timestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
+    }
 
     public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -68,14 +79,19 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
 
     private void onDictionary(final long sessionId, final String fixDictionaryClassName)
     {
-        final FixReplayerCodecs fixReplayerCodecs = fixDictionaryClassToIndex.computeIfAbsent(fixDictionaryClassName,
-            fixDictionaryName -> new FixReplayerCodecs(FixDictionary.find(fixDictionaryName)));
+        final FixReplayerCodecs fixReplayerCodecs = fixDictionaryClassToIndex.computeIfAbsent(
+            fixDictionaryClassName, makeFixReplayerCodecs);
         final FixReplayerCodecs previousIndex = sessionIdToFixDictionaryIndex.get(sessionId);
         // NB: this could potentially changes over time.
         if (previousIndex != fixReplayerCodecs)
         {
             sessionIdToFixDictionaryIndex.put(sessionId, fixReplayerCodecs);
         }
+    }
+
+    private FixReplayerCodecs makeFixReplayerCodecs(final String fixDictionaryName)
+    {
+        return new FixReplayerCodecs(FixDictionary.find(fixDictionaryName), timestampEncoder);
     }
 
     FixReplayerCodecs get(final long sessionId)

@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -111,7 +112,8 @@ class FixReplayerSession extends ReplayerSession
         final GapFillEncoder gapFillEncoder,
         final Formatters formatters,
         final AtomicCounter bytesInBuffer,
-        final int maxBytesInBuffer)
+        final int maxBytesInBuffer,
+        final UtcTimestampEncoder utcTimestampEncoder)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, sequenceIndex);
@@ -129,6 +131,7 @@ class FixReplayerSession extends ReplayerSession
         lastSeqNo = beginSeqNo - 1;
 
         possDupEnabler = new PossDupEnabler(
+            utcTimestampEncoder,
             bufferClaim,
             this::claimMessageBuffer,
             this::onPreCommit,

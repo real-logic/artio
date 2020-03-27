@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.engine.logger.*;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -167,6 +168,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final SessionHeaderDecoder headerDecoder;
     private final ReplayFor replayFor;
     private final Formatters formatters;
+    private final EpochFractionFormat epochFractionFormat;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -196,7 +198,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewaySession session,
         final long catchupEndTimeInMs,
         final ReplayFor replayFor,
-        final Formatters formatters)
+        final Formatters formatters,
+        final EpochFractionFormat epochFractionFormat)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -215,6 +218,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
         this.replayFor = replayFor;
         this.formatters = formatters;
+        this.epochFractionFormat = epochFractionFormat;
     }
 
     private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)
@@ -282,7 +286,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (sequenceResetEncoder == null)
         {
             sequenceResetEncoder = session.fixDictionary().makeSequenceResetEncoder();
-            timestampEncoder = new UtcTimestampEncoder();
+            timestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
             encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
             sequenceResetEncoder.gapFillFlag(true);
 
