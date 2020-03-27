@@ -208,11 +208,7 @@ public class MessageBasedInitiatorSystemTest
             final Session session = handler.lastSession();
             assertThat(session.logoutAndDisconnect(), greaterThan(0L));
 
-            assertEventuallyTrue("Socket is not disconnected", () ->
-            {
-                testSystem.poll();
-                return !connection.isConnected();
-            });
+            assertConnectionDisconnects(testSystem, connection);
 
             assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
             {
@@ -220,6 +216,15 @@ public class MessageBasedInitiatorSystemTest
                 return handler.hasDisconnected();
             });
         }
+    }
+
+    public static void assertConnectionDisconnects(final TestSystem testSystem, final FixConnection connection)
+    {
+        assertEventuallyTrue("Socket is not disconnected", () ->
+        {
+            testSystem.poll();
+            return !connection.isConnected();
+        });
     }
 
     void sendExecutionReport(final FixConnection connection, final int msgSeqNum, final boolean possDupFlag)

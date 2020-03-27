@@ -51,7 +51,6 @@ import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
-import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
@@ -155,13 +154,6 @@ public class AbstractGatewayToGatewaySystemTest
         logoutSession(initiatingSession);
     }
 
-    private long logoutSession(final Session session)
-    {
-        final long position = session.startLogout();
-        assertThat(position, greaterThan(0L));
-        return position;
-    }
-
     void assertSessionsDisconnected()
     {
         assertSessionDisconnected(initiatingSession);
@@ -188,12 +180,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSessionDisconnected(final Session session)
     {
-        assertEventuallyTrue("Session is still connected",
-            () ->
-            {
-                testSystem.poll();
-                return session.state() == DISCONNECTED;
-            });
+        SystemTestUtil.assertSessionDisconnected(testSystem, session);
     }
 
     void assertNotSession(final FakeHandler sessionHandler, final Session session)
@@ -386,7 +373,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         acquireAcceptingSession();
 
-        acceptingSession.startLogout();
+        logoutSession(acceptingSession);
         assertSessionsDisconnected();
 
         assertAllMessagesHaveSequenceIndex(0);

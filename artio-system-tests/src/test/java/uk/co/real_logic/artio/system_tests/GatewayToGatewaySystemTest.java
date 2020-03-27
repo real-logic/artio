@@ -214,7 +214,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        initiatingSession.startLogout();
+        logoutSession(initiatingSession);
 
         assertSessionsDisconnected();
 
@@ -317,7 +317,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
         assertSequenceFromInitToAcceptAt(2, 2);
 
-        initiatingSession.startLogout();
+        logoutSession(initiatingSession);
 
         assertSequenceIndicesAre(0);
         assertSessionsDisconnected();

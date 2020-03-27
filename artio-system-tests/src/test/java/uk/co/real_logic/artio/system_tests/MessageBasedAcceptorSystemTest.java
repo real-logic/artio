@@ -51,6 +51,7 @@ import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.FixConnection.*;
+import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
@@ -267,58 +268,70 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
+    public void shouldDisconnectConnectionWithNoLogoutReply() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final Session session = acquireSession();
+            logoutSession(session);
+            assertSessionDisconnected(testSystem, session);
+
+            assertConnectionDisconnects(testSystem, connection);
+        }
+    }
+
+    @Test
     public void shouldSupportRapidLogonAndLogoutOperations() throws IOException
     {
         setup(false, true, true, ENGINE);
 
-        final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
-        final FakeHandler handler = new FakeHandler(otfAcceptor);
-        final TestSystem testSystem = new TestSystem();
+        setupLibrary();
+
         final Session session;
 
-        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        try (FixConnection connection = FixConnection.initiate(port))
         {
-            try (FixConnection connection = FixConnection.initiate(port))
+            connection.logon(false);
+
+            handler.awaitSessionId(testSystem::poll);
+
+            session = acquireSession();
+
+            connection.readLogonReply();
+
+            connection.logout();
+        }
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            // The previous connection hasn't yet been detected as it's still active.
+            assertTrue(session.isActive());
+
+            connection.msgSeqNum(3);
+
+            connection.logon(false);
+
+            // During this loop the logout message for the disconnected connection is sent,
+            // But not received by the new connection.
+            Timing.assertEventuallyTrue("Library has disconnected old session", () ->
             {
-                connection.logon(false);
+                testSystem.poll();
 
-                handler.awaitSessionId(testSystem::poll);
+                return !handler.sessions().contains(session);
+            });
 
-                final long sessionId = handler.awaitSessionId(testSystem::poll);
-                handler.clearSessionExistsInfos();
-                session = acquireSession(handler, library, sessionId, testSystem);
-                assertNotNull(session);
+            // Use sequence number 3 to ensure that we're getting a logon reply
+            final LogonDecoder logonReply = connection.readLogonReply();
+            assertEquals(3, logonReply.header().msgSeqNum());
 
-                connection.readLogonReply();
-
-                connection.logout();
-            }
-
-            try (FixConnection connection = FixConnection.initiate(port))
-            {
-                // The previous connection hasn't yet been detected as it's still active.
-                assertTrue(session.isActive());
-
-                connection.msgSeqNum(3);
-
-                connection.logon(false);
-
-                // During this loop the logout message for the disconnected connection is sent,
-                // But not received by the new connection.
-                Timing.assertEventuallyTrue("Library has disconnected old session", () ->
-                {
-                    testSystem.poll();
-
-                    return !handler.sessions().contains(session);
-                });
-
-                // Use sequence number 3 to ensure that we're getting a logon reply
-                final LogonDecoder logonReply = connection.readLogonReply();
-                assertEquals(3, logonReply.header().msgSeqNum());
-
-                final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
-                assertEquals(4, logoutDecoder.header().msgSeqNum());
-            }
+            final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
+            assertEquals(4, logoutDecoder.header().msgSeqNum());
         }
     }
 
@@ -332,8 +345,7 @@ public class MessageBasedAcceptorSystemTest
         {
             logon(connection);
 
-            final long sessionId = handler.awaitSessionId(testSystem::poll);
-            final Session session = acquireSession(handler, library, sessionId, testSystem);
+            final Session session = acquireSession();
 
             final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
             connection.setupHeader(testRequestEncoder.header(), connection.acquireMsgSeqNum(), false);
@@ -427,25 +439,27 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        handler = new FakeHandler(new FakeOtfAcceptor());
-        final TestSystem testSystem = new TestSystem();
+        setupLibrary();
 
-        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        try (FixConnection connection = FixConnection.initiate(port))
         {
-            try (FixConnection connection = FixConnection.initiate(port))
-            {
-                sendLine.accept(connection);
-                logon(connection);
+            sendLine.accept(connection);
+            logon(connection);
 
-                final long sessionId = handler.awaitSessionId(testSystem::poll);
-                handler.clearSessionExistsInfos();
-                final Session session = acquireSession(handler, library, sessionId, testSystem);
-                assertNotNull(session);
+            final Session session = acquireSession();
 
-                assertEquals(proxySourceIp, session.connectedHost());
-                assertEquals(proxySourcePort, session.connectedPort());
-            }
+            assertEquals(proxySourceIp, session.connectedHost());
+            assertEquals(proxySourcePort, session.connectedPort());
         }
+    }
+
+    private Session acquireSession()
+    {
+        final long sessionId = handler.awaitSessionId(testSystem::poll);
+        handler.clearSessionExistsInfos();
+        final Session session = SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
+        assertNotNull(session);
+        return session;
     }
 
     private void sleepToAwaitResend()
@@ -481,18 +495,23 @@ public class MessageBasedAcceptorSystemTest
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {
-                Timing.assertEventuallyTrue(
-                    "Never gets disconnected",
-                    () ->
-                    {
-                        library.poll(10);
-
-                        LockSupport.parkNanos(10_000);
-
-                        return !connection.isConnected();
-                    });
+                assertDisconnected(library, connection);
             }
         }
+    }
+
+    private void assertDisconnected(final FixLibrary library, final FixConnection connection)
+    {
+        Timing.assertEventuallyTrue(
+            "Never gets disconnected",
+            () ->
+            {
+                library.poll(10);
+
+                LockSupport.parkNanos(10_000);
+
+                return !connection.isConnected();
+            });
     }
 
     private void completeBind()
@@ -590,7 +609,9 @@ public class MessageBasedAcceptorSystemTest
             config.bindTo("localhost", port);
         }
 
-        config.printErrorMessages(false);
+        config
+            .printErrorMessages(false)
+            .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);
     }
 

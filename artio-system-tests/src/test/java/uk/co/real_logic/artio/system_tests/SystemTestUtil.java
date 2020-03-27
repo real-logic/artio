@@ -58,6 +58,7 @@ import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
@@ -487,5 +488,22 @@ public final class SystemTestUtil
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
+    }
+
+    public static void assertSessionDisconnected(final TestSystem testSystem, final Session session)
+    {
+        assertEventuallyTrue("Session is still connected",
+            () ->
+            {
+                testSystem.poll();
+                return session.state() == DISCONNECTED;
+            });
+    }
+
+    public static long logoutSession(final Session session)
+    {
+        final long position = session.startLogout();
+        assertThat(position, greaterThan(0L));
+        return position;
     }
 }

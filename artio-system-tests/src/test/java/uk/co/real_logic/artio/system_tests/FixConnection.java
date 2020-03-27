@@ -245,7 +245,7 @@ final class FixConnection implements AutoCloseable
         logon
             .resetSeqNumFlag(resetSeqNumFlag)
             .encryptMethod(0)
-            .heartBtInt(30)
+            .heartBtInt(1)
             .maxMessageSize(9999);
 
         send(logon);

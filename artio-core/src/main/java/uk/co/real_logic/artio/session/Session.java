@@ -132,6 +132,8 @@ public class Session
     private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
+    private long awaitingLogoutTimeoutInMs;
+
     private String username;
     private String password;
     private String connectedHost;
@@ -373,8 +375,8 @@ public class Session
      * Sends a logout message and puts the session into the awaiting logout state.
      * <p>
      * This method will eventually also disconnect the Session, but it won't disconnect the session until you
-     * receive a logout message from your counter-party. That's the difference between this and
-     * <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
+     * receive a logout message from your counter-party or the heartbeat timeout elapses. That's the difference
+     * between this and <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
      *
      * @return the position of the sent message
      * @see Session#logoutAndDisconnect()
@@ -382,7 +384,15 @@ public class Session
     public long startLogout()
     {
         final long position = sendLogout();
-        state(position < 0 ? LOGGING_OUT : AWAITING_LOGOUT);
+        if (position < 0)
+        {
+            state(LOGGING_OUT);
+        }
+        else
+        {
+            awaitingLogoutTimeoutInMs = time() + heartbeatIntervalInMs;
+            state(AWAITING_LOGOUT);
+        }
         return position;
     }
 
@@ -1645,7 +1655,7 @@ public class Session
 
     void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis(heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);
@@ -1817,6 +1827,19 @@ public class Session
                 return 1;
             }
 
+            case AWAITING_LOGOUT_VALUE:
+            {
+                if (time > awaitingLogoutTimeoutInMs)
+                {
+                    if (!Pressure.isBackPressured(requestDisconnect()))
+                    {
+                        state(DISCONNECTING);
+                    }
+                }
+
+                return 1;
+            }
+
             default:
             {
                 int actions = 0;
@@ -1832,7 +1855,7 @@ public class Session
 
                 if (time >= nextRequiredInboundMessageTimeInMs)
                 {
-                    if (state == AWAITING_LOGOUT_VALUE || awaitingHeartbeat)
+                    if (awaitingHeartbeat)
                     {
                         // Drop when back pressured: retried on duty cycle
                         requestDisconnect();
