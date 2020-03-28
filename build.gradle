@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
     repositories {
@@ -108,8 +107,8 @@ allprojects {
     apply plugin: 'idea'
 
     repositories {
-        mavenCentral()
         mavenLocal()
+        mavenCentral()
     }
 
     idea {
@@ -127,17 +126,6 @@ allprojects {
 subprojects {
     apply plugin: 'java-library'
     apply plugin: 'checkstyle'
-
-    // Make sure that we use the correct JDK in Eclipse
-    // There needs to be a JDK8 JVM installed in Eclipse before
-    // importing the generated projects.
-    plugins.withType(JavaBasePlugin) {
-        eclipse.classpath.file.whenMerged { Classpath path ->
-            path.entries.findAll { it.path.contains('JRE_CONTAINER') }.each {
-                it.path += "/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"
-            }
-        }
-    }
 
     group = artioGroup
     version = version
