@@ -151,7 +151,7 @@ public class EncoderGenerator extends Generator
         "            next.reset();\n" +
         "        }\n";
 
-    private static String encoderClassName(final String name)
+    static String encoderClassName(final String name)
     {
         return formatClassName(name + "Encoder");
     }
@@ -198,7 +198,7 @@ public class EncoderGenerator extends Generator
             className,
             (out) ->
             {
-                out.append(fileHeader(builderPackage));
+                out.append(fileHeader(thisPackage));
 
                 if (REQUIRED_SESSION_CODECS.contains(className))
                 {
@@ -292,7 +292,7 @@ public class EncoderGenerator extends Generator
         generateSetters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
-        out.append(appendTo(aggregate, isMessage));
+        out.append(generateAppendTo(aggregate, isMessage));
         out.append("}\n");
     }
 

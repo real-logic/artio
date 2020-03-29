@@ -57,4 +57,6 @@ public interface Decoder extends CharAppender
     SessionHeaderDecoder header();
 
     StringBuilder appendTo(StringBuilder builder, int level);
+
+    Encoder toEncoder(Encoder encoder);
 }

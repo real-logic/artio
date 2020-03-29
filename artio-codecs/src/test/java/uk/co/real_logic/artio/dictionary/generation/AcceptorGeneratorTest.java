@@ -29,6 +29,7 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.AcceptorGenerator.*;
+import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
 
 public class AcceptorGeneratorTest
 {
@@ -37,8 +38,12 @@ public class AcceptorGeneratorTest
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static EnumGenerator enumGenerator =
         new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
+        TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
+        RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
     private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
+        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
+        outputManager, ValidationOn.class,
         RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
         Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
     private static AcceptorGenerator acceptorGenerator =
@@ -53,6 +58,7 @@ public class AcceptorGeneratorTest
     {
         constantGenerator.generate();
         enumGenerator.generate();
+        encoderGenerator.generate();
         decoderGenerator.generate();
         acceptorGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();

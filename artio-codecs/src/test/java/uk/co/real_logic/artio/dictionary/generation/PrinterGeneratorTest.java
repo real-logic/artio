@@ -28,6 +28,7 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
 
 public class PrinterGeneratorTest
 {
@@ -37,10 +38,15 @@ public class PrinterGeneratorTest
     private static EnumGenerator enumGenerator =
         new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
 
-    private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
+    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1,
+        TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
+        outputManager, ValidationOn.class,
         RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
         Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
+        TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
+        RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+
     private static PrinterGenerator printerGenerator =
         new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;
@@ -52,6 +58,7 @@ public class PrinterGeneratorTest
     {
         constantGenerator.generate();
         enumGenerator.generate();
+        encoderGenerator.generate();
         decoderGenerator.generate();
         printerGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();

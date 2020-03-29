@@ -122,12 +122,17 @@ public abstract class AbstractDecoderGeneratorTest
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
+            outputManager, validationClass, rejectUnknownField,
             rejectUnknownEnumValue, flyweightStringsEnabled, String.valueOf(rejectingUnknownEnumValue));
+        final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
+            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
+            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
 
         constantGenerator.generate();
         enumGenerator.generate();
         decoderGenerator.generate();
+        encoderGenerator.generate();
         return outputManager.getSources();
     }
 
@@ -611,8 +616,6 @@ public abstract class AbstractDecoderGeneratorTest
         assertInvalid(decoder, REQUIRED_TAG_MISSING, INT_FIELD_TAG);
     }
 
-    // heartbeatWithoutEnumValueValidation
-
     @Test
     public void shouldValidateMissingRequiredPriceFields() throws Exception
     {
@@ -623,6 +626,10 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
     }
+
+    // --------------------------------------------------------------
+    // Without Validation
+    // --------------------------------------------------------------
 
     @Test
     public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithoutValidation() throws Exception

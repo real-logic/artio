@@ -89,8 +89,8 @@ public abstract class Generator
         "import %1$s.Trailer%2$s;\n";
 
     protected final Dictionary dictionary;
-    protected final String builderPackage;
-    private String builderCommonPackage;
+    protected final String thisPackage;
+    private String commonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
     protected final Class<?> rejectUnknownFieldClass;
@@ -109,8 +109,8 @@ public abstract class Generator
         final String codecRejectUnknownEnumValueEnabled)
     {
         this.dictionary = dictionary;
-        this.builderPackage = thisPackage;
-        this.builderCommonPackage = commonPackage;
+        this.thisPackage = thisPackage;
+        this.commonPackage = commonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
         this.rejectUnknownFieldClass = rejectUnknownFieldClass;
@@ -149,7 +149,7 @@ public abstract class Generator
             out.append(importFor(topType(GROUP)));
         }
 
-        out .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
+        out .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, thisPackage, compoundSuffix) : "")
             .append(importFor(DecimalFloat.class))
             .append(importFor(MutableAsciiBuffer.class))
             .append(importFor(AsciiBuffer.class))
@@ -173,9 +173,9 @@ public abstract class Generator
             .append(importStaticFor(rejectUnknownFieldClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED))
             .append(importStaticFor(rejectUnknownEnumValueClass, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY));
 
-        if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
+        if (!thisPackage.equals(commonPackage) && !commonPackage.isEmpty())
         {
-            out.append(importFor(builderCommonPackage + ".*"));
+            out.append(importFor(commonPackage + ".*"));
         }
     }
 
@@ -458,12 +458,12 @@ public abstract class Generator
             resetValue);
     }
 
-    protected String appendTo(final Aggregate aggregate, final boolean hasCommonCompounds)
+    protected String generateAppendTo(final Aggregate aggregate, final boolean hasCommonCompounds)
     {
         final String entriesToString = aggregate
             .entries()
             .stream()
-            .map(this::entryAppendTo)
+            .map(this::generateEntryAppendTo)
             .collect(joining("\n"));
 
         final String prefix;
@@ -504,7 +504,7 @@ public abstract class Generator
             entriesToString);
     }
 
-    protected String entryAppendTo(final Entry entry)
+    protected String generateEntryAppendTo(final Entry entry)
     {
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 

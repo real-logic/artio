@@ -149,8 +149,13 @@ public final class GenerationUtil
 
     public static String importStaticFor(final Class<?> cls, final String name)
     {
+        return importStaticFor(cls.getCanonicalName(), name);
+    }
+
+    public static String importStaticFor(final String cls, final String name)
+    {
         Verify.notNull(name, "name");
-        return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
+        return String.format("import static %s.%s;\n", cls, name);
     }
 
     public static String optionalStaticInit(final String containing)
