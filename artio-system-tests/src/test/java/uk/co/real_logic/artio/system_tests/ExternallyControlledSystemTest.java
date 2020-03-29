@@ -51,7 +51,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private SessionWriter acceptingSessionWriter = null;
     private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -82,7 +81,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler)
-            .libraryConnectHandler(fakeConnectHandler)
             .sessionProxyFactory(this::sessionProxyFactory);
 
         acceptingLibrary = connect(acceptingLibraryConfig);

@@ -63,7 +63,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 {
     private static final String NEW_PASSWORD = "ABCDEF";
 
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private CapturingAuthenticationStrategy auth;
 
     @Before
@@ -81,7 +80,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
@@ -660,40 +658,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 }
             }
         }
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldNotAllowClosingMidPoll()
-    {
-        fakeConnectHandler.shouldCloseOnDisconnect();
-
-        acceptingEngine.close();
-
-        awaitIsConnected(false, acceptingLibrary);
-    }
-
-    @Test
-    public void shouldReconnectToBouncedGatewayViaIpc()
-    {
-        closeAcceptingEngine();
-
-        awaitIsConnected(false, acceptingLibrary);
-
-        launchAcceptingEngine();
-
-        awaitIsConnected(true, acceptingLibrary);
-    }
-
-    @Test
-    public void shouldReconnectToBouncedGatewayViaUdp()
-    {
-        closeInitiatingEngine();
-
-        awaitIsConnected(false, initiatingLibrary);
-
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
-
-        awaitIsConnected(true, initiatingLibrary);
     }
 
     @Test

@@ -77,7 +77,8 @@ public final class SystemTestUtil
     static final String PASSWORD = "Uv1aegoh";
 
     private static final String HI_ID = "hi";
-    public static final long TEST_REPLY_TIMEOUT_IN_MS = 3_000;
+
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = 1_000;
 
     static
     {

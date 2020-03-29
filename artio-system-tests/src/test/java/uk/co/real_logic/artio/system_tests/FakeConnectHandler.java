@@ -20,23 +20,35 @@ import uk.co.real_logic.artio.library.LibraryConnectHandler;
 
 class FakeConnectHandler implements LibraryConnectHandler
 {
-    private boolean shouldCloseOnDisconnect = false;
+    private boolean shouldCloseOnConnect = false;
+    private Exception exception;
 
     public void onConnect(final FixLibrary library)
     {
-
+        if (shouldCloseOnConnect)
+        {
+            try
+            {
+                library.close();
+            }
+            catch (final Exception e)
+            {
+                this.exception = e;
+            }
+        }
     }
 
     public void onDisconnect(final FixLibrary library)
     {
-        if (shouldCloseOnDisconnect)
-        {
-            library.close();
-        }
     }
 
-    void shouldCloseOnDisconnect()
+    void shouldCloseOnConnect(final boolean shouldCloseOnConnect)
     {
-        this.shouldCloseOnDisconnect = true;
+        this.shouldCloseOnConnect = shouldCloseOnConnect;
+    }
+
+    public Exception exception()
+    {
+        return exception;
     }
 }

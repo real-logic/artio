@@ -43,8 +43,6 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int NUMBER_OF_SESSIONS = 10;
 
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-
     @Before
     public void launch()
     {
@@ -73,7 +71,6 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting");
 
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
