@@ -32,8 +32,10 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.CODEC_LOGGING;
 import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
 
+@SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 public class ToEncoderDecoderGeneratorTest
 {
@@ -42,11 +44,44 @@ public class ToEncoderDecoderGeneratorTest
     private static Class<? extends Decoder> heartbeatDecoder;
     private static Class<? extends Encoder> heartbeatEncoder;
 
-    @SuppressWarnings("unchecked")
+    private static Class<? extends Decoder> flyweightHeartbeatDecoder;
+    private static Class<? extends Encoder> flyweightHeartbeatEncoder;
+
     @BeforeClass
     public static void generateClasses() throws ClassNotFoundException
     {
-        final boolean flyweightStringsEnabled = false;
+        Map<String, CharSequence> sources = generateClasses(false);
+
+        heartbeatDecoder = decoder(sources);
+        if (heartbeatDecoder == null || CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
+        heartbeatEncoder = encoder(heartbeatDecoder);
+
+        sources = generateClasses(true);
+
+        flyweightHeartbeatDecoder = decoder(sources);
+        if (flyweightHeartbeatDecoder == null || CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
+        flyweightHeartbeatEncoder = encoder(flyweightHeartbeatDecoder);
+    }
+
+    private static Class<? extends Encoder> encoder(final Class<?> decoder) throws ClassNotFoundException
+    {
+        return (Class<? extends Encoder>)decoder.getClassLoader().loadClass(HEARTBEAT_ENCODER);
+    }
+
+    private static Class<? extends Decoder> decoder(final Map<String, CharSequence> sources)
+        throws ClassNotFoundException
+    {
+        return (Class<? extends Decoder>)compileInMemory(HEARTBEAT_DECODER, sources);
+    }
+
+    private static Map<String, CharSequence> generateClasses(final boolean flyweightStringsEnabled)
+    {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
@@ -65,13 +100,7 @@ public class ToEncoderDecoderGeneratorTest
         encoderGenerator.generate();
         decoderGenerator.generate();
 
-        final Map<String, CharSequence> sources = outputManager.getSources();
-        heartbeatDecoder = (Class<? extends Decoder>)compileInMemory(HEARTBEAT_DECODER, sources);
-        if (heartbeatDecoder == null)
-        {
-            System.out.println(sources);
-        }
-        heartbeatEncoder = (Class<? extends Encoder>)heartbeatDecoder.getClassLoader().loadClass(HEARTBEAT_ENCODER);
+        return outputManager.getSources();
     }
 
     @Parameterized.Parameters(name = "{0}")
@@ -111,6 +140,19 @@ public class ToEncoderDecoderGeneratorTest
 
     @Test
     public void shouldToEncoderProvidedEncoder() throws Exception
+    {
+        shouldToEncoderProvidedEncoder(heartbeatDecoder, heartbeatEncoder);
+    }
+
+    @Test
+    public void shouldToEncoderProvidedEncoderFlyweight() throws Exception
+    {
+        shouldToEncoderProvidedEncoder(flyweightHeartbeatDecoder, flyweightHeartbeatEncoder);
+    }
+
+    private void shouldToEncoderProvidedEncoder(
+        final Class<? extends Decoder> heartbeatDecoder, final Class<? extends Encoder> heartbeatEncoder)
+        throws Exception
     {
         final Decoder decoder = heartbeatDecoder.getConstructor().newInstance();
         final Encoder encoder = heartbeatEncoder.getConstructor().newInstance();

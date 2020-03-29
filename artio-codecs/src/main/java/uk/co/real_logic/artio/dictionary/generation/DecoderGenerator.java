@@ -1777,18 +1777,19 @@ public class DecoderGenerator extends Generator
             .stream()
             .map(this::generateEntryToEncoder)
             .collect(joining("\n"));
-
-        // TODO: fields
-
         final String name = aggregate.name();
 
         return String.format(
+            "    /**\n" +
+            "     * {@inheritDoc}\n" +
+            "     */" +
             "    public %1$s toEncoder(final Encoder encoder)\n" +
             "    {\n" +
             "        return toEncoder((%1$s)encoder);\n" +
             "    }\n\n" +
             "    public %1$s toEncoder(final %1$s encoder)\n" +
             "    {\n" +
+            "        encoder.reset();\n" +
             "        %2$s" +
             "        return encoder;\n" +
             "    }\n\n",
@@ -1941,14 +1942,10 @@ public class DecoderGenerator extends Generator
 
                 return String.format("%3$s.%1$s(%1$s()); %3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
 
+            case NUMINGROUP:
+                // Deliberately blank since it gets set by the group ToEncoder logic.
             default:
-                return ""; // TODO
-                /*if (flyweightsEnabled)
-                {
-                    return String.format("builder.append(%1$s())", fieldName);
-                }
-
-                return String.format("builder.append(%1$s)", fieldName);*/
+                return "";
         }
     }
 
