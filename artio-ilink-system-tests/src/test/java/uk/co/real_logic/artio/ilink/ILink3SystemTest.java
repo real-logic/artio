@@ -555,7 +555,17 @@ public class ILink3SystemTest
         shouldEstablishConnection();
     }
 
-    // TODO: shouldTerminateOnATimeout
+    @Test
+    public void shouldTerminateOnATimeout() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        startTerminate();
+
+        testServer.readTerminate();
+        testSystem.awaitUnbind(session);
+        assertDisconnected();
+    }
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
     {
@@ -635,8 +645,7 @@ public class ILink3SystemTest
 
     private void startTerminate()
     {
-        testSystem.awaitSend(
-            "Failed to send terminate", () -> session.terminate("shutdown", 0));
+        session.terminate("shutdown", 0);
     }
 
     private ILink3SessionConfiguration sessionConfiguration()
