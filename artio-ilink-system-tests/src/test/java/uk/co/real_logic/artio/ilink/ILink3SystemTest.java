@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.system_tests.TestSystem;
 import java.io.IOException;
 import java.util.function.LongSupplier;
 
+import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -45,7 +46,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.ilink.ILink3TestServer.*;
+import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_ERROR_CODES;
+import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_REASON;
 import static uk.co.real_logic.artio.library.ILink3Session.NOT_AWAITING_RETRANSMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -106,6 +108,11 @@ public class ILink3SystemTest
     {
         launch(true);
 
+        shouldEstablishConnection();
+    }
+
+    private void shouldEstablishConnection() throws IOException
+    {
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
         connectToTestServer(sessionConfiguration);
@@ -152,7 +159,7 @@ public class ILink3SystemTest
     }
 
     @Test
-    public void shouldExchangeBusinessMessage() throws IOException
+    public void shouldSendBusinessMessage() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
@@ -246,7 +253,7 @@ public class ILink3SystemTest
     @Test
     public void shouldSupportReestablishingConnections() throws IOException
     {
-        shouldExchangeBusinessMessage();
+        shouldSendBusinessMessage();
 
         final long lastUuid = session.uuid();
 
@@ -270,14 +277,14 @@ public class ILink3SystemTest
         // From customer - as a heartbeat message to be sent when a KeepAliveInterval interval from customer lapses
         // and no other message is sent to CME
         sleepHalfInterval();
-        testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
-        testServer.readSequence(1, KeepAliveLapsed.NotLapsed);
+        testServer.writeSequence(1, NotLapsed);
+        testServer.readSequence(1, NotLapsed);
 
         // From CME - as a heartbeat message to be sent when a KeepAliveInterval interval from CME lapses and
         // no other message is sent to customer
         final InternalILink3Session session = (InternalILink3Session)this.session;
         final long oldTimeout = session.nextReceiveMessageTimeInMs();
-        testServer.writeSequence(1, KeepAliveLapsed.NotLapsed);
+        testServer.writeSequence(1, NotLapsed);
 
         assertEventuallyTrue("Timeout error", () ->
         {
@@ -293,7 +300,7 @@ public class ILink3SystemTest
         // Interpret this as a must-reply to these messages
         final long timeout = session.nextSendMessageTimeInMs();
         testServer.writeSequence(1, KeepAliveLapsed.Lapsed);
-        testServer.readSequence(1, KeepAliveLapsed.NotLapsed);
+        testServer.readSequence(1, NotLapsed);
         assertThat(System.currentTimeMillis(), lessThan(timeout));
 
         // From customer - when a KeepAliveInterval of CME lapses without having received any message from CME then send
@@ -326,7 +333,7 @@ public class ILink3SystemTest
             return handler.hasReceivedNotApplied();
         });
 
-        testServer.readSequence(4, KeepAliveLapsed.NotLapsed);
+        testServer.readSequence(4, NotLapsed);
     }
 
     @Test
@@ -493,6 +500,63 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
+    @Test
+    public void shouldTerminateALowSequenceNumberSequenceMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        testServer.writeExecutionReportStatus(1, false);
+
+        testServer.writeSequence(1, NotLapsed);
+
+        testServer.readTerminate();
+        serverAcceptsTerminate();
+    }
+
+    @Test
+    public void shouldTerminateALowSequenceNumberBusinessMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        testServer.writeExecutionReportStatus(1, false);
+
+        testServer.writeExecutionReportStatus(1, false);
+
+        testServer.readTerminate();
+        serverAcceptsTerminate();
+    }
+
+    @Test
+    public void shouldTerminateALowSequenceNumberEstablishWithSameUuid() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        testServer.writeExecutionReportStatus(1, false);
+        agreeRecvSeqNo(2);
+        terminateAndDisconnect();
+        final long lastUuid = session.uuid();
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+            .reestablishLastSession(true);
+        connectToTestServer(sessionConfiguration);
+        testServer.expectedUuid(lastUuid);
+        readEstablish(1);
+
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+
+        testServer.readTerminate();
+        serverAcceptsTerminate();
+    }
+
+    @Test
+    public void shouldAcceptALowSequenceNumberEstablishWithNewUuid() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        testServer.writeExecutionReportStatus(1, false);
+        agreeRecvSeqNo(2);
+        terminateAndDisconnect();
+
+        shouldEstablishConnection();
+    }
+
+    // TODO: shouldTerminateOnATimeout
+
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
     {
         final int lastSeqNo = fromSeqNo + msgCount;
@@ -615,10 +679,13 @@ public class ILink3SystemTest
         startTerminate();
 
         testServer.readTerminate();
+        serverAcceptsTerminate();
+    }
+
+    private void serverAcceptsTerminate()
+    {
         testServer.writeTerminate();
-
         testSystem.awaitUnbind(session);
-
         assertDisconnected();
     }
 }

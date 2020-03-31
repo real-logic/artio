@@ -378,6 +378,15 @@ public class ILink3TestServer
         });
 
         assertTrue(disconnected);
+
+        try
+        {
+            socket.close();
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 
     public void expectedUuid(final long lastUuid)

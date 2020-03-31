@@ -42,6 +42,7 @@ public abstract class ILink3Session
         ESTABLISHED,
         RETRANSMITTING,
         AWAITING_KEEPALIVE,
+        RESEND_TERMINATE,
         UNBINDING,
         SENT_TERMINATE,
         UNBOUND

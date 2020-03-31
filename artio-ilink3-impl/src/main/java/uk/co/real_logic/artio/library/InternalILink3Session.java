@@ -57,6 +57,7 @@ import static uk.co.real_logic.artio.util.TimeUtil.nanoSecondTimestamp;
 public class InternalILink3Session extends ILink3Session
 {
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
+    private static final long OK_POSITION = Long.MIN_VALUE;
 
     private final NotAppliedResponse response = new NotAppliedResponse();
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
@@ -83,6 +84,9 @@ public class InternalILink3Session extends ILink3Session
     private long nextReceiveMessageTimeInMs;
     private long nextSendMessageTimeInMs;
     private boolean backpressuredNotApplied = false;
+
+    private String resendTerminateReason;
+    private int resendTerminateErrorCodes;
 
     public InternalILink3Session(
         final ILink3SessionConfiguration configuration,
@@ -179,6 +183,14 @@ public class InternalILink3Session extends ILink3Session
         if (position > 0)
         {
             state = State.UNBINDING;
+            resendTerminateReason = null;
+            resendTerminateErrorCodes = 0;
+        }
+        else
+        {
+            state = State.RESEND_TERMINATE;
+            resendTerminateReason = reason;
+            resendTerminateErrorCodes = errorCodes;
         }
 
         return position;
@@ -461,6 +473,12 @@ public class InternalILink3Session extends ILink3Session
                 break;
             }
 
+            case RESEND_TERMINATE:
+            {
+                terminate(resendTerminateReason, resendTerminateErrorCodes);
+                break;
+            }
+
             case UNBINDING:
             {
                 if (timeInMs > nextSendMessageTimeInMs)
@@ -567,6 +585,7 @@ public class InternalILink3Session extends ILink3Session
         initiateReply.onComplete(this);
         nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
 
+        final long nextRecvSeqNo = this.nextRecvSeqNo;
         if (previousUUID == uuid)
         {
             final long impliedNextRecvSeqNo = previousSeqNo + 1;
@@ -574,6 +593,12 @@ public class InternalILink3Session extends ILink3Session
             {
                 return onInvalidSequenceNumber(impliedNextRecvSeqNo, impliedNextRecvSeqNo);
             }
+        }
+
+        final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
+        if (position != OK_POSITION)
+        {
+            return position;
         }
 
         return 1;
@@ -629,7 +654,19 @@ public class InternalILink3Session extends ILink3Session
             // TODO: error
         }
 
-//        nextRecvSeqNo = nextSentSeqNo;
+        onReceivedMessage();
+
+        final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
+        if (position == OK_POSITION)
+        {
+            // Behaviour for a sequence message is to accept a higher sequence update - this differs from a business
+            // message
+            nextRecvSeqNo(nextSeqNo);
+        }
+        else
+        {
+            return position;
+        }
 
         // Reply to any warning messages to keep the session alive.
         if (keepAliveLapsed == Lapsed)
@@ -637,9 +674,20 @@ public class InternalILink3Session extends ILink3Session
             sendSequence(NotLapsed);
         }
 
-        onReceivedMessage();
-
         return 1;
+    }
+
+    private long checkLowSequenceNumberCase(final long seqNo, final long nextRecvSeqNo)
+    {
+        if (seqNo < nextRecvSeqNo)
+        {
+            return terminate(String.format(
+                "seqNo=%s,expecting=%s",
+                seqNo,
+                this.nextRecvSeqNo), 0);
+        }
+
+        return OK_POSITION;
     }
 
     public long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
@@ -728,14 +776,24 @@ public class InternalILink3Session extends ILink3Session
             return 1;
         }
 
-        if (seqNum == nextRecvSeqNo)
+        final long nextRecvSeqNo = this.nextRecvSeqNo;
+        final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
+        if (position == OK_POSITION)
         {
-            nextRecvSeqNo(seqNum + 1);
-
-            return 1;
+            if (nextRecvSeqNo == seqNum)
+            {
+                nextRecvSeqNo(seqNum + 1);
+                return 1;
+            }
+            else
+            {
+                return onInvalidSequenceNumber(seqNum);
+            }
         }
-
-        return onInvalidSequenceNumber(seqNum);
+        else
+        {
+            return position;
+        }
     }
 
     private long onInvalidSequenceNumber(final long seqNum)
