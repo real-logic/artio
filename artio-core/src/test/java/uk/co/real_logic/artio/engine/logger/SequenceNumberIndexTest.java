@@ -337,7 +337,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexRecord();
         assertLastKnownSequenceNumberIs(SESSION_ID + 1, SEQUENCE_NUMBER + 5);
 
-        newInstanceAfterRestart();
+        writer.close();
         writer = newWriter(inMemoryBuffer);
 
         writer.resetSequenceNumber(SESSION_ID, 1000);
