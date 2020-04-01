@@ -285,7 +285,7 @@ public class SequenceNumberIndexWriter implements Index
                 case ResetSequenceNumberDecoder.TEMPLATE_ID:
                 {
                     resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                    saveRecord(0, resetSequenceNumber.session(), endPosition, NO_REQUIRED_POSITION);
+                    resetSequenceNumber(resetSequenceNumber.session(), endPosition);
                     break;
                 }
 
@@ -515,6 +515,11 @@ public class SequenceNumberIndexWriter implements Index
         return framerContext.offer(response);
     }
 
+    void resetSequenceNumber(final long session, final long endPosition)
+    {
+        saveRecord(0, session, endPosition, NO_REQUIRED_POSITION);
+    }
+
     void resetSequenceNumbers()
     {
         inMemoryBuffer.setMemory(0, indexedPositionsOffset, (byte)0);
@@ -692,7 +697,7 @@ public class SequenceNumberIndexWriter implements Index
                 }
 
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
-                if (lastKnownDecoder.sequenceNumber() == 0)
+                if (lastKnownDecoder.sequenceNumber() == 0 && newSequenceNumber != 0)
                 {
                     // Don't redact if there's nothing to redact
                     if (requiredPosition == NO_REQUIRED_POSITION)
@@ -704,6 +709,7 @@ public class SequenceNumberIndexWriter implements Index
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
+                    recordOffsets.put(sessionId, position);
                     updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
                     return position;
                 }

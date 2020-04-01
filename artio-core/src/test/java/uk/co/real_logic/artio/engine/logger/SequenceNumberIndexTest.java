@@ -326,6 +326,32 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertUnknownSession();
     }
 
+    @Test
+    public void shouldResetSequenceNumberForSessionAfterRestart()
+    {
+        indexFixMessage();
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+
+        bufferContainsExampleMessage(false, SESSION_ID + 1, SEQUENCE_NUMBER + 5,
+            SEQUENCE_INDEX);
+        indexRecord();
+        assertLastKnownSequenceNumberIs(SESSION_ID + 1, SEQUENCE_NUMBER + 5);
+
+        newInstanceAfterRestart();
+        writer = newWriter(inMemoryBuffer);
+
+        writer.resetSequenceNumber(SESSION_ID, 1000);
+        assertLastKnownSequenceNumberIs(SESSION_ID, 0);
+
+        // this should write to old session place and not to same as previous call
+        writer.resetSequenceNumber(SESSION_ID + 1, 1000);
+        assertLastKnownSequenceNumberIs(SESSION_ID + 1, 0);
+
+        indexFixMessage();
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+        assertLastKnownSequenceNumberIs(SESSION_ID + 1, 0);
+    }
+
     private SequenceNumberIndexReader newInstanceAfterRestart()
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
