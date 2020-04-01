@@ -344,12 +344,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(SESSION_ID, 0);
 
         // this should write to old session place and not to same as previous call
-        writer.resetSequenceNumber(SESSION_ID + 1, 1000);
-        assertLastKnownSequenceNumberIs(SESSION_ID + 1, 0);
+        writer.resetSequenceNumber(SESSION_ID_2, 1000);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, 0);
 
         indexFixMessage();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
-        assertLastKnownSequenceNumberIs(SESSION_ID + 1, 0);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, 0);
     }
 
     private SequenceNumberIndexReader newInstanceAfterRestart()

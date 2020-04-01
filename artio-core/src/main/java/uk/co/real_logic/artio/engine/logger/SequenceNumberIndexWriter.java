@@ -68,6 +68,7 @@ public class SequenceNumberIndexWriter implements Index
     static final int SEQUENCE_NUMBER_OFFSET = LastKnownSequenceNumberEncoder.sequenceNumberEncodingOffset();
     static final int MESSAGE_POSITION_OFFSET = LastKnownSequenceNumberEncoder.messagePositionEncodingOffset();
     static final int META_DATA_OFFSET = LastKnownSequenceNumberEncoder.metaDataPositionEncodingOffset();
+    public static final int RESET_SEQUENCE = 0;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -517,7 +518,7 @@ public class SequenceNumberIndexWriter implements Index
 
     void resetSequenceNumber(final long session, final long endPosition)
     {
-        saveRecord(0, session, endPosition, NO_REQUIRED_POSITION);
+        saveRecord(RESET_SEQUENCE, session, endPosition, NO_REQUIRED_POSITION);
     }
 
     void resetSequenceNumbers()
@@ -697,7 +698,7 @@ public class SequenceNumberIndexWriter implements Index
                 }
 
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
-                if (lastKnownDecoder.sequenceNumber() == 0 && newSequenceNumber != 0)
+                if (lastKnownDecoder.sessionId() == 0)
                 {
                     // Don't redact if there's nothing to redact
                     if (requiredPosition == NO_REQUIRED_POSITION)
