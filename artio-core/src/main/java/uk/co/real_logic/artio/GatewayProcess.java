@@ -155,7 +155,8 @@ public class GatewayProcess implements AutoCloseable
                 monitoringFile.errorBuffer(),
                 configuration.agentNamePrefix(),
                 startTimeInMs,
-                aeronArchive));
+                aeronArchive,
+                configuration.customErrorConsumer()));
         }
 
         if (!agents.isEmpty())

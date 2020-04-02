@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.ilink.ILink3Offsets;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
+import uk.co.real_logic.artio.ilink.IllegalResponseException;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -87,6 +88,8 @@ public class InternalILink3Session extends ILink3Session
 
     private String resendTerminateReason;
     private int resendTerminateErrorCodes;
+    private long lastNegotiateRequestTimestamp;
+    private long lastEstablishRequestTimestamp;
 
     public InternalILink3Session(
         final ILink3SessionConfiguration configuration,
@@ -178,32 +181,33 @@ public class InternalILink3Session extends ILink3Session
     {
         validateCanSend();
 
-        final long position = sendTerminate(reason, errorCodes);
+        return sendTerminate(reason, errorCodes, State.UNBINDING, State.RESEND_TERMINATE);
+    }
+
+    private long sendTerminate(
+        final String reason, final int errorCodes, final State finalState, final State resendState)
+    {
+        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
+        final long position = proxy.sendTerminate(
+            reason,
+            uuid,
+            requestTimestamp,
+            errorCodes);
 
         if (position > 0)
         {
-            state = State.UNBINDING;
+            state = finalState;
             resendTerminateReason = null;
             resendTerminateErrorCodes = 0;
         }
         else
         {
-            state = State.RESEND_TERMINATE;
+            state = resendState;
             resendTerminateReason = reason;
             resendTerminateErrorCodes = errorCodes;
         }
 
         return position;
-    }
-
-    private long sendTerminate(final String reason, final int errorCodes)
-    {
-        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
-        return proxy.sendTerminate(
-            reason,
-            uuid,
-            requestTimestamp,
-            errorCodes);
     }
 
     private void validateCanSend()
@@ -310,6 +314,7 @@ public class InternalILink3Session extends ILink3Session
         {
             state = State.SENT_NEGOTIATE;
             resendTime = nextTimeoutInMs();
+            lastNegotiateRequestTimestamp = requestTimestamp;
             return true;
         }
 
@@ -347,6 +352,7 @@ public class InternalILink3Session extends ILink3Session
         if (position > 0)
         {
             resendTime = nextTimeoutInMs();
+            lastEstablishRequestTimestamp = requestTimestamp;
             state = State.SENT_ESTABLISH;
             return true;
         }
@@ -479,6 +485,12 @@ public class InternalILink3Session extends ILink3Session
                 break;
             }
 
+            case RESEND_TERMINATE_ACK:
+            {
+                sendTerminateAck(resendTerminateReason, resendTerminateErrorCodes);
+                break;
+            }
+
             case UNBINDING:
             {
                 if (timeInMs > nextSendMessageTimeInMs)
@@ -523,35 +535,47 @@ public class InternalILink3Session extends ILink3Session
         final long previousSeqNo,
         final long previousUUID)
     {
-        if (uUID != uuid())
+        if (checkBoundaryErrors("Negotiate", uUID, requestTimestamp, lastNegotiateRequestTimestamp))
         {
-            // TODO: error
-            System.out.println("onNegotiationResponse uUID = " + uUID);
+            return 1;
         }
-
-        // TODO: validate request timestamp
-        // TODO: calculate session expiration
-        // TODO: check gap with previous sequence number and uuid
 
         state = State.NEGOTIATED;
         sendEstablish();
 
-        return 1; // TODO: move to action
+        return 1;
+    }
+
+    private boolean checkBoundaryErrors(
+        final String name, final long uUID, final long requestTimestamp, final long expectedRequestTimestamp)
+    {
+        if (uUID != uuid())
+        {
+            connectionError(new IllegalResponseException("Invalid " + name + ".uuid=" + uUID + ",expected=" + uuid()));
+            return true;
+        }
+
+        if (expectedRequestTimestamp != requestTimestamp)
+        {
+            connectionError(new IllegalResponseException(
+                "Invalid " + name + ".requestTimestamp=" + requestTimestamp +
+                ",expected=" + expectedRequestTimestamp));
+            return true;
+        }
+
+        return false;
     }
 
     public long onNegotiationReject(
         final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
-        if (uUID != uuid())
-        {
-            // TODO: error
-        }
-
-        // TODO: validate request timestamp
         state = State.NEGOTIATE_REJECTED;
-        connectionError(new RuntimeException("Negotiate rejected: " + reason + ",errorCodes=" + errorCodes));
-
-        return 1;
+        return onReject(
+            uUID,
+            requestTimestamp,
+            lastNegotiateRequestTimestamp,
+            "Negotiate rejected: " + reason,
+            errorCodes);
     }
 
     private void connectionError(final Exception error)
@@ -572,14 +596,10 @@ public class InternalILink3Session extends ILink3Session
         final int keepAliveInterval,
         final int secretKeySecureIDExpiration)
     {
-        if (uUID != uuid())
+        if (checkBoundaryErrors("EstablishmentAck", uUID, requestTimestamp, lastEstablishRequestTimestamp))
         {
-            // TODO: error
-            System.out.println("onNegotiationResponse uUID = " + uUID);
+            return 1;
         }
-
-        // TODO: validate request timestamp
-        // TODO: calculate session expiration
 
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
@@ -607,29 +627,46 @@ public class InternalILink3Session extends ILink3Session
     public long onEstablishmentReject(
         final String reason, final long uUID, final long requestTimestamp, final long nextSeqNo, final int errorCodes)
     {
-        if (uUID != uuid())
+        state = State.ESTABLISH_REJECTED;
+        final String reasonMsg = "Establishment rejected: " + reason + ",nextSeqNo=" + nextSeqNo;
+        return onReject(uUID, requestTimestamp, lastEstablishRequestTimestamp, reasonMsg, errorCodes);
+    }
+
+    private long onReject(
+        final long msgUuid,
+        final long msgRequestTimestamp,
+        final long expectedRequestTimestamp,
+        final String reasonMsg,
+        final int errorCodes)
+    {
+        final StringBuilder msgBuilder = new StringBuilder(reasonMsg);
+        if (msgUuid != uuid)
         {
-            // TODO: error
+            msgBuilder
+                .append("Incorrect uuid=")
+                .append(msgUuid)
+                .append(",expected=")
+                .append(uuid)
+                .append(",");
+        }
+        if (msgRequestTimestamp != expectedRequestTimestamp)
+        {
+            msgBuilder
+                .append("Incorrect requestTimestamp=")
+                .append(msgRequestTimestamp)
+                .append(",expected=")
+                .append(expectedRequestTimestamp)
+                .append(",");
         }
 
-        // TODO: validate request timestamp
-
-        state = State.ESTABLISH_REJECTED;
-        connectionError(new RuntimeException(
-            "Establishment rejected: " + reason + ",nextSeqNo=" + nextSeqNo + ",errorCodes=" + errorCodes));
+        msgBuilder.append(",errorCodes=").append(errorCodes);
+        connectionError(new IllegalResponseException(msgBuilder.toString()));
 
         return 1;
     }
 
     public long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
-        if (uUID != uuid())
-        {
-            // TODO: error
-        }
-
-        // TODO: validate request timestamp
-
         // We initiated termination
         if (state == State.UNBINDING)
         {
@@ -638,40 +675,55 @@ public class InternalILink3Session extends ILink3Session
         // The exchange initiated termination
         else
         {
-            // TODO: handle backpressure properly
-            sendTerminate(reason, errorCodes);
-            fullyUnbind();
+            sendTerminateAck(reason, errorCodes);
         }
 
+        checkUuid(uUID);
+
         return 1;
+    }
+
+    private void sendTerminateAck(final String reason, final int errorCodes)
+    {
+        final long position = sendTerminate(reason, errorCodes, State.UNBOUND, State.RESEND_TERMINATE_ACK);
+        if (position > 0)
+        {
+            fullyUnbind();
+        }
+    }
+
+    private void checkUuid(final long uUID)
+    {
+        if (uUID != uuid())
+        {
+            throw new IllegalResponseException("Invalid uuid=" + uUID + ",expected=" + uuid());
+        }
     }
 
     public long onSequence(
         final long uUID, final long nextSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
     {
-        if (uUID != uuid())
+        if (uUID == uuid())
         {
-            // TODO: error
-        }
+            onReceivedMessage();
 
-        onReceivedMessage();
+            final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
+            if (position == OK_POSITION)
+            {
+                // Behaviour for a sequence message is to accept a higher sequence update - this differs from a
+                // business message
+                nextRecvSeqNo(nextSeqNo);
+            }
+            else
+            {
+                return position;
+            }
 
-        final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
-        if (position == OK_POSITION)
-        {
-            // Behaviour for a sequence message is to accept a higher sequence update - this differs from a business
-            // message
-            nextRecvSeqNo(nextSeqNo);
-        }
-        else
-        {
-            return position;
-        }
-
-        // Reply to any warning messages to keep the session alive.
-        if (keepAliveLapsed == Lapsed)
-        {
-            sendSequence(NotLapsed);
+            // Reply to any warning messages to keep the session alive.
+            if (keepAliveLapsed == Lapsed)
+            {
+                sendSequence(NotLapsed);
+            }
         }
 
         return 1;
@@ -694,7 +746,7 @@ public class InternalILink3Session extends ILink3Session
     {
         if (uUID != uuid())
         {
-            // TODO: error
+
         }
 
         // Don't invoke the handler on the backpressured retry
@@ -748,7 +800,6 @@ public class InternalILink3Session extends ILink3Session
 
     private void fullyUnbind()
     {
-        // TODO: linger state = State.SENT_TERMINATE;
         state = State.UNBOUND;
         requestDisconnect(LOGOUT);
         owner.onUnbind(this);
@@ -903,10 +954,7 @@ public class InternalILink3Session extends ILink3Session
     public long onRetransmitReject(
         final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
-        if (uUID != this.uuid)
-        {
-            // TODO: error
-        }
+        checkUuid(uUID);
 
         handler.onRetransmitReject(reason, requestTimestamp, errorCodes);
 

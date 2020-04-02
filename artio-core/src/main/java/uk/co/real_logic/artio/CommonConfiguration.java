@@ -20,6 +20,7 @@ import org.agrona.IoUtil;
 import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -217,6 +218,7 @@ public class CommonConfiguration
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private Clock clock = Clock.systemNanoTime();
     private boolean printErrorMessages = true;
+    private ErrorConsumer customErrorConsumer;
     private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
@@ -375,6 +377,12 @@ public class CommonConfiguration
     public CommonConfiguration printErrorMessages(final boolean printErrorMessages)
     {
         this.printErrorMessages = printErrorMessages;
+        return this;
+    }
+
+    public CommonConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
+    {
+        this.customErrorConsumer = customErrorConsumer;
         return this;
     }
 
@@ -562,6 +570,11 @@ public class CommonConfiguration
     public boolean printErrorMessages()
     {
         return printErrorMessages;
+    }
+
+    public ErrorConsumer customErrorConsumer()
+    {
+        return customErrorConsumer;
     }
 
     public IdleStrategy monitoringThreadIdleStrategy()

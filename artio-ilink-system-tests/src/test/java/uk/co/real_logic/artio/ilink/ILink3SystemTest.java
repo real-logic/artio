@@ -19,6 +19,7 @@ import iLinkBinary.*;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntArrayList;
+import org.agrona.concurrent.errors.ErrorConsumer;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
@@ -69,6 +70,7 @@ public class ILink3SystemTest
     private ILink3TestServer testServer;
     private Reply<ILink3Session> reply;
     private ILink3Session session;
+    private ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
 
     public void launch(final boolean printErrorMessages)
     {
@@ -82,7 +84,8 @@ public class ILink3SystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
             .printErrorMessages(printErrorMessages)
-            .lookupDefaultAcceptorfixDictionary(false);
+            .lookupDefaultAcceptorfixDictionary(false)
+            .customErrorConsumer(errorConsumer);
         engine = FixEngine.launch(engineConfig);
 
         testSystem = new TestSystem();
@@ -90,6 +93,7 @@ public class ILink3SystemTest
         final LibraryConfiguration libraryConfig = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+        libraryConfig.customErrorConsumer(errorConsumer);
         library = testSystem.connect(libraryConfig);
     }
 
@@ -154,6 +158,23 @@ public class ILink3SystemTest
         testServer.readTerminate();
 
         assertDisconnected();
+    }
+
+    @Test
+    public void shouldNotifyIncorrectUuidExchangeInitiatedTerminate() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        testServer.writeTerminate(0);
+
+        testSystem.awaitUnbind(session);
+
+        testServer.readTerminate();
+
+        assertDisconnected();
+
+        Timing.assertEventuallyTrue("Failed to receive error", () ->
+            verify(errorConsumer).accept(eq(1), anyLong(), anyLong(), contains("Invalid uuid=0")));
     }
 
     @Test

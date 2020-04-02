@@ -333,16 +333,21 @@ public class ILink3TestServer
         write();
     }
 
-    public void readTerminate()
+    public long readTerminate()
     {
         final Terminate507Decoder terminate = read(new Terminate507Decoder(), 0);
 //        terminate.reason();
         assertEquals(uuid, terminate.uUID());
-//        terminate.requestTimestamp();
+        return terminate.requestTimestamp();
 //        terminate.errorCodes();
     }
 
     public void writeTerminate()
+    {
+        writeTerminate(uuid);
+    }
+
+    public void writeTerminate(final long uuid)
     {
         final Terminate507Encoder terminate = new Terminate507Encoder();
         wrap(terminate, Terminate507Encoder.BLOCK_LENGTH);
