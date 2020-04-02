@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.util.CharFormatter;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.ServiceLoader;
+import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
@@ -407,13 +408,19 @@ public final class DebugLogger
     public static void logSbeMessage(
         final LogTag tag, final InitiateILinkConnectionEncoder encoder)
     {
-        // TODO
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
     }
 
     public static void logSbeMessage(
         final LogTag tag, final ILinkConnectEncoder encoder)
     {
-        // TODO
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
     }
 
     public static void logSbeMessage(
@@ -431,6 +438,15 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeDecoder(
+        final LogTag tag, final Consumer<StringBuilder> appendTo)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeDecoder(tag, appendTo);
         }
     }
 
@@ -649,6 +665,8 @@ public final class DebugLogger
         private final ConnectDecoder connect = new ConnectDecoder();
         private final ResetSessionIdsDecoder resetSessionIds = new ResetSessionIdsDecoder();
         private final LibraryTimeoutDecoder libraryTimeout = new LibraryTimeoutDecoder();
+        private final InitiateILinkConnectionDecoder initiateILinkConnection =
+            new InitiateILinkConnectionDecoder();
 
         // Engine -> Library
         private final ErrorDecoder error = new ErrorDecoder();
@@ -669,6 +687,7 @@ public final class DebugLogger
         private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
         private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
         private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
+        private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -1132,6 +1151,37 @@ public final class DebugLogger
                 LibraryExtendPositionEncoder.BLOCK_LENGTH,
                 LibraryExtendPositionEncoder.SCHEMA_VERSION);
             libraryExtendPosition.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final InitiateILinkConnectionEncoder encoder)
+        {
+            appendStart();
+            initiateILinkConnection.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                InitiateILinkConnectionEncoder.BLOCK_LENGTH,
+                InitiateILinkConnectionEncoder.SCHEMA_VERSION);
+            initiateILinkConnection.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ILinkConnectEncoder encoder)
+        {
+            appendStart();
+            iLinkConnect.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ILinkConnectEncoder.BLOCK_LENGTH,
+                ILinkConnectEncoder.SCHEMA_VERSION);
+            iLinkConnect.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeDecoder(final LogTag tag, final Consumer<StringBuilder> appendTo)
+        {
+            appendStart();
+            appendTo.accept(builder);
             finish(tag);
         }
 

@@ -18,9 +18,13 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.ILink3Session;
 import uk.co.real_logic.artio.library.InternalILink3Session;
 
+import java.util.function.Consumer;
+
+import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class ILink3Parser extends AbstractILink3Parser
@@ -34,6 +38,15 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Sequence506Decoder sequence = new Sequence506Decoder();
     private final NotApplied513Decoder notApplied = new NotApplied513Decoder();
     private final RetransmitReject510Decoder retransmitReject = new RetransmitReject510Decoder();
+
+    private final Consumer<StringBuilder> negotiationResponseAppendTo = negotiationResponse::appendTo;
+    private final Consumer<StringBuilder> negotiationRejectAppendTo = negotiationReject::appendTo;
+    private final Consumer<StringBuilder> establishmentAckAppendTo = establishmentAck::appendTo;
+    private final Consumer<StringBuilder> establishmentRejectAppendTo = establishmentReject::appendTo;
+    private final Consumer<StringBuilder> terminateAppendTo = terminate::appendTo;
+    private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
+    private final Consumer<StringBuilder> notAppliedAppendTo = notApplied::appendTo;
+    private final Consumer<StringBuilder> retransmitRejectAppendTo = retransmitReject::appendTo;
 
     private final InternalILink3Session handler;
 
@@ -124,6 +137,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationResponse.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiationResponseAppendTo);
         return handler.onNegotiationResponse(
             negotiationResponse.uUID(),
             negotiationResponse.requestTimestamp(),
@@ -138,6 +152,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationReject.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiationRejectAppendTo);
         return handler.onNegotiationReject(
             negotiationReject.reason(),
             negotiationReject.uUID(),
@@ -151,7 +166,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentAck.wrap(buffer, offset, blockLength, version);
-
+        DebugLogger.logSbeDecoder(ILINK_SESSION, establishmentAckAppendTo);
         return handler.onEstablishmentAck(
             establishmentAck.uUID(),
             establishmentAck.requestTimestamp(),
@@ -168,6 +183,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentReject.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, establishmentRejectAppendTo);
         return handler.onEstablishmentReject(
             establishmentReject.reason(),
             establishmentReject.uUID(),
@@ -182,6 +198,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         terminate.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, terminateAppendTo);
         return handler.onTerminate(
             terminate.reason(),
             terminate.uUID(),
@@ -194,7 +211,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         sequence.wrap(buffer, offset, blockLength, version);
-
+        DebugLogger.logSbeDecoder(ILINK_SESSION, sequenceAppendTo);
         return handler.onSequence(
             sequence.uUID(),
             sequence.nextSeqNo(),
@@ -205,7 +222,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private long onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         notApplied.wrap(buffer, offset, blockLength, version);
-
+        DebugLogger.logSbeDecoder(ILINK_SESSION, notAppliedAppendTo);
         return handler.onNotApplied(
             notApplied.uUID(),
             notApplied.fromSeqNo(),

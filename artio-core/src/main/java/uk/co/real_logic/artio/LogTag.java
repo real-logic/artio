@@ -51,7 +51,12 @@ public enum LogTag
      * Logs information from the proxy protocol - see http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
      * for details.
      */
-    PROXY;
+    PROXY,
+
+    /**
+     * Prints out the ILink3 session messages
+     */
+    ILINK_SESSION;
 
     private final char[] logStr;
 

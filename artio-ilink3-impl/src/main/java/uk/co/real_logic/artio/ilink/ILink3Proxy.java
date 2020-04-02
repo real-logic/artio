@@ -21,10 +21,14 @@ import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import java.util.function.Consumer;
+
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
+import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
@@ -57,6 +61,12 @@ public class ILink3Proxy
     private final Sequence506Encoder sequence = new Sequence506Encoder();
     private final RetransmitRequest508Encoder retransmitRequest = new RetransmitRequest508Encoder();
 
+    private final Consumer<StringBuilder> negotiateAppendTo = negotiate::appendTo;
+    private final Consumer<StringBuilder> establishAppendTo = establish::appendTo;
+    private final Consumer<StringBuilder> terminateAppendTo = terminate::appendTo;
+    private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
+    private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
+
     public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
     {
         this.connectionId = connectionId;
@@ -87,6 +97,8 @@ public class ILink3Proxy
             .session(sessionId)
             .firm(firmId)
             .putCredentials(NO_BUFFER, 0, 0);
+
+        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiateAppendTo);
 
         commit();
 
@@ -128,6 +140,8 @@ public class ILink3Proxy
             .keepAliveInterval(keepAliveInterval)
             .putCredentials(NO_BUFFER, 0, 0);
 
+        DebugLogger.logSbeDecoder(ILINK_SESSION, establishAppendTo);
+
         commit();
 
         return position;
@@ -149,6 +163,8 @@ public class ILink3Proxy
             .requestTimestamp(requestTimestamp)
             .errorCodes(errorCodes)
             .splitMsg(SplitMsg.NULL_VAL);
+
+        DebugLogger.logSbeDecoder(ILINK_SESSION, terminateAppendTo);
 
         commit();
 
@@ -172,6 +188,10 @@ public class ILink3Proxy
             .faultToleranceIndicator(fti)
             .keepAliveIntervalLapsed(keepAliveLapsed);
 
+
+
+        DebugLogger.logSbeDecoder(ILINK_SESSION, sequenceAppendTo);
+
         commit();
 
         return position;
@@ -194,6 +214,8 @@ public class ILink3Proxy
             .requestTimestamp(requestTimestamp)
             .fromSeqNo(fromSeqNo)
             .msgCount(msgCount);
+
+        DebugLogger.logSbeDecoder(ILINK_SESSION, retransmitRequestAppendTo);
 
         commit();
 
