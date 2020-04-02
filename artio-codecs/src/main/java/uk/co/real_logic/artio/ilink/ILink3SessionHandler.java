@@ -21,10 +21,13 @@ import uk.co.real_logic.artio.library.NotAppliedResponse;
 // NB: This is an experimental API and is subject to change or potentially removal.
 public interface ILink3SessionHandler
 {
-    void onMessage(
+    void onBusinessMessage(
+        int templateId,
         DirectBuffer buffer,
         int offset,
-        int length);
+        int blockLength,
+        int version,
+        boolean possRetrans);
 
     void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
 

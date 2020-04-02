@@ -15,12 +15,10 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import iLinkBinary.KeepAliveLapsed;
-import iLinkBinary.NewOrderSingle514Encoder;
-import iLinkBinary.Sequence506Decoder;
-import iLinkBinary.SideReq;
+import iLinkBinary.*;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.collections.IntArrayList;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
@@ -159,13 +157,19 @@ public class ILink3SystemTest
     }
 
     @Test
-    public void shouldSendBusinessMessage() throws IOException
+    public void shouldExchangeBusinessMessage() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
         sendNewOrderSingle();
 
         testServer.readNewOrderSingle(1);
+        testServer.writeExecutionReportStatus(1, false);
+
+        agreeRecvSeqNo(2);
+        final IntArrayList messageIds = handler.messageIds();
+        assertThat(messageIds, hasSize(1));
+        assertEquals(messageIds.getInt(0), ExecutionReportStatus532Decoder.TEMPLATE_ID);
 
         terminateAndDisconnect();
     }
@@ -253,7 +257,7 @@ public class ILink3SystemTest
     @Test
     public void shouldSupportReestablishingConnections() throws IOException
     {
-        shouldSendBusinessMessage();
+        shouldExchangeBusinessMessage();
 
         final long lastUuid = session.uuid();
 

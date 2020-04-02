@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
+import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 import java.util.function.Consumer;
@@ -24,6 +25,7 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
 {
     private final Consumer<NotAppliedResponse> notAppliedResponse;
     private boolean hasReceivedNotApplied;
+    private IntArrayList messageIds = new IntArrayList();
 
     public FakeILink3SessionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -35,10 +37,15 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
         return hasReceivedNotApplied;
     }
 
-    public void onMessage(
-        final DirectBuffer buffer, final int offset, final int length)
+    public void onBusinessMessage(
+        final int templateId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final boolean possRetrans)
     {
-
+        messageIds.add(templateId);
     }
 
     public void onNotApplied(
@@ -51,5 +58,10 @@ public class FakeILink3SessionHandler implements ILink3SessionHandler
     public void onRetransmitReject(final String reason, final long requestTimestamp, final int errorCodes)
     {
 
+    }
+
+    public IntArrayList messageIds()
+    {
+        return messageIds;
     }
 }

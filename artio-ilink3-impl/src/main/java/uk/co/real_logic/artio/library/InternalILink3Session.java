@@ -773,6 +773,8 @@ public class InternalILink3Session extends ILink3Session
                 return retransmitFilled();
             }
 
+            handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
+
             return 1;
         }
 
@@ -783,6 +785,9 @@ public class InternalILink3Session extends ILink3Session
             if (nextRecvSeqNo == seqNum)
             {
                 nextRecvSeqNo(seqNum + 1);
+
+                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+
                 return 1;
             }
             else
