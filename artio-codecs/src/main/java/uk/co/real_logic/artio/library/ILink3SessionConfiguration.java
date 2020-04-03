@@ -24,7 +24,6 @@ public class ILink3SessionConfiguration
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
     public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
 
-
     private String host;
     private int port;
     private String sessionId;
@@ -40,6 +39,12 @@ public class ILink3SessionConfiguration
     private boolean reEstablishLastSession = false;
     private ILink3SessionHandler handler;
 
+    /**
+     * Sets the host to connect to.
+     *
+     * @param host the host to connect to.
+     * @return this
+     */
     public ILink3SessionConfiguration host(final String host)
     {
         this.host = host;

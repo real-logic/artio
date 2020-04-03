@@ -284,8 +284,8 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Initiate a FIX session with a FIX acceptor. This method returns a reply object
-     * wrapping the Session itself.
+     * Initiate a FIX session. Artio will connect to the specified FIX acceptor / server and attempt to logon.
+     * This method returns a reply object wrapping the Session itself.
      *
      * @param configuration the configuration to use for the session.
      * @return the session object for the session that you've initiated. It can return the following errors:
@@ -455,12 +455,30 @@ public class FixLibrary extends GatewayProcess
         return poller.currentAeronChannel();
     }
 
-    // NB: This is an experimental API and is subject to change or potentially removal.
+    /**
+     * Initiate an ILink3 session. Artio will connect to the iLink server and attempt to logon.
+     * This method returns a reply object wrapping the Session itself.
+     *
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * @param configuration the configuration for this Session.
+     * @return a reply object wrapping the Session itself.
+     * @see <a href="https://github.com/real-logic/artio/wiki/ILink-3-Support">
+     *     https://github.com/real-logic/artio/wiki/ILink-3-Support</a>
+     */
     public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
     {
         return poller.initiate(configuration);
     }
 
+    /**
+     * Get a list of the currently active ILink3 Sessions.
+     * <p>
+     * Note: the list is unmodifiable.
+     *
+     * @return a list of the currently active ILink3 Sessions
+     * @see this#sessions()
+     */
     public List<ILink3Session> iLink3Sessions()
     {
         return poller.iLink3Sessions();
