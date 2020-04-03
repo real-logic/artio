@@ -72,8 +72,11 @@ public class ILink3SystemTest
     private ILink3Session session;
     private ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
 
-    public void launch(final boolean printErrorMessages)
+    private boolean noExpectedError;
+
+    public void launch(final boolean noExpectedError)
     {
+        this.noExpectedError = noExpectedError;
         delete(CLIENT_LOGS);
 
         mediaDriver = launchMediaDriver();
@@ -83,7 +86,6 @@ public class ILink3SystemTest
             .scheduler(new LowResourceEngineScheduler())
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
-            .printErrorMessages(printErrorMessages)
             .lookupDefaultAcceptorfixDictionary(false)
             .customErrorConsumer(errorConsumer);
         engine = FixEngine.launch(engineConfig);
@@ -103,6 +105,11 @@ public class ILink3SystemTest
         testSystem.awaitBlocking(() -> CloseHelper.close(engine));
         CloseHelper.close(library);
         cleanupMediaDriver(mediaDriver);
+
+        if (!noExpectedError)
+        {
+            verifyNoInteractions(errorConsumer);
+        }
     }
 
     @Test
@@ -110,15 +117,20 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        shouldEstablishConnection();
+        establishNewConnection();
     }
 
-    private void shouldEstablishConnection() throws IOException
+    private void establishNewConnection() throws IOException
     {
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
         connectToTestServer(sessionConfiguration);
 
+        establishConnection();
+    }
+
+    private void establishConnection()
+    {
         readNegotiate();
         testServer.writeNegotiateResponse();
 
@@ -198,7 +210,7 @@ public class ILink3SystemTest
     @Test
     public void shouldProvideErrorUponConnectionFailure()
     {
-        launch(false);
+        launch(true);
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
 
@@ -283,7 +295,7 @@ public class ILink3SystemTest
         final long lastUuid = session.uuid();
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reestablishLastSession(true);
+            .reEstablishLastSession(true);
         connectToTestServer(sessionConfiguration);
 
         testServer.expectedUuid(lastUuid);
@@ -292,6 +304,18 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(1, lastUuid, 2);
 
         acquireSession();
+    }
+
+    @Test
+    public void shouldAllowRestablishmentFirstTime() throws IOException
+    {
+        launch(true);
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+            .reEstablishLastSession(true);
+        connectToTestServer(sessionConfiguration);
+
+        establishConnection();
     }
 
     @Test
@@ -502,7 +526,7 @@ public class ILink3SystemTest
         final long lastUuid = session.uuid();
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reestablishLastSession(true);
+            .reEstablishLastSession(true);
         connectToTestServer(sessionConfiguration);
 
         testServer.expectedUuid(lastUuid);
@@ -558,7 +582,7 @@ public class ILink3SystemTest
         terminateAndDisconnect();
         final long lastUuid = session.uuid();
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reestablishLastSession(true);
+            .reEstablishLastSession(true);
         connectToTestServer(sessionConfiguration);
         testServer.expectedUuid(lastUuid);
         readEstablish(1);
@@ -577,13 +601,15 @@ public class ILink3SystemTest
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
 
-        shouldEstablishConnection();
+        establishNewConnection();
     }
 
     @Test
     public void shouldTerminateOnATimeout() throws IOException
     {
-        shouldEstablishConnectionAtBeginningOfWeek();
+        launch(false);
+
+        establishNewConnection();
 
         startTerminate();
 

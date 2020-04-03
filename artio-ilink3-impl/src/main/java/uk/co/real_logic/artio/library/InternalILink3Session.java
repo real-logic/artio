@@ -72,6 +72,7 @@ public class InternalILink3Session extends ILink3Session
     private final int libraryId;
     private final LibraryPoller owner;
     private final ILink3SessionHandler handler;
+    private final boolean newlyAllocated;
     private final long uuid;
 
     private InitiateILink3SessionReply initiateReply;
@@ -101,7 +102,8 @@ public class InternalILink3Session extends ILink3Session
         final LibraryPoller owner,
         final long uuid,
         final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber)
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated)
     {
         this.configuration = configuration;
         this.connectionId = connectionId;
@@ -111,6 +113,7 @@ public class InternalILink3Session extends ILink3Session
         this.libraryId = libraryId;
         this.owner = owner;
         this.handler = configuration.handler();
+        this.newlyAllocated = newlyAllocated;
 
         proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
         offsets = new ILink3Offsets();
@@ -121,13 +124,13 @@ public class InternalILink3Session extends ILink3Session
         state = State.CONNECTED;
         this.uuid = uuid;
 
-        if (configuration.reestablishLastSession())
+        if (!configuration.reEstablishLastSession() || newlyAllocated)
         {
-            sendEstablish();
+            sendNegotiate();
         }
         else
         {
-            sendNegotiate();
+            sendEstablish();
         }
     }
 
@@ -280,7 +283,7 @@ public class InternalILink3Session extends ILink3Session
     private long calculateInitialSequenceNumber(
         final long lastSequenceNumber, final long initialSequenceNumber)
     {
-        if (!this.configuration.reestablishLastSession())
+        if (!this.configuration.reEstablishLastSession())
         {
             return 1;
         }

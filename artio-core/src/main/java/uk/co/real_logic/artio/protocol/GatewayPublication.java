@@ -1337,7 +1337,7 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final int port,
         final long correlationId,
-        final boolean reestablishConnection,
+        final boolean reEstablishLastSession,
         final String host,
         final String accessKeyId)
     {
@@ -1357,7 +1357,7 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .port(port)
             .correlationId(correlationId)
-            .reestablishConnection(toBool(reestablishConnection))
+            .reestablishConnection(toBool(reEstablishLastSession))
             .putHost(hostBytes, 0, hostBytes.length)
             .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length);
 
@@ -1374,7 +1374,8 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final long uuid,
         final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber)
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated)
     {
         final long position = claim(
             MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);
@@ -1393,7 +1394,8 @@ public class GatewayPublication extends ClaimablePublication
             .connection(connectionId)
             .uuid(uuid)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .lastSentSequenceNumber(lastSentSequenceNumber);
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .newlyAllocated(toBool(newlyAllocated));
 
         bufferClaim.commit();
 

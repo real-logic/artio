@@ -37,7 +37,7 @@ public class ILink3SessionConfiguration
     private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     private String accessKeyId;
-    private boolean reestablishLastSession = false;
+    private boolean reEstablishLastSession = false;
     private ILink3SessionHandler handler;
 
     public ILink3SessionConfiguration host(final String host)
@@ -172,15 +172,25 @@ public class ILink3SessionConfiguration
         return accessKeyId;
     }
 
-    public ILink3SessionConfiguration reestablishLastSession(final boolean reestablishLastSession)
+    /**
+     * Enable a re-establishment of the same session with the same UUID, rather than generating a new UUID.
+     * If there is an existing UUID associated with this session identifier then that will be used. The
+     * session identifier here is a triple of (port, host and accessKeyId).
+     *
+     * Note: if this session has never connected before then a new UUID will be generated.
+     *
+     * @param reEstablishLastSession true to re-establish the session, false otherwise.
+     * @return this.
+     */
+    public ILink3SessionConfiguration reEstablishLastSession(final boolean reEstablishLastSession)
     {
-        this.reestablishLastSession = reestablishLastSession;
+        this.reEstablishLastSession = reEstablishLastSession;
         return this;
     }
 
-    public boolean reestablishLastSession()
+    public boolean reEstablishLastSession()
     {
-        return reestablishLastSession;
+        return reEstablishLastSession;
     }
 
     public ILink3SessionConfiguration handler(final ILink3SessionHandler handler)

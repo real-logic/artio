@@ -36,7 +36,6 @@ public class ILink3ContextsTest
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private File file;
-    private MappedFile mappedFile;
     private ILink3Contexts contexts;
 
     @Before
@@ -53,47 +52,56 @@ public class ILink3ContextsTest
 
     private void newContexts()
     {
-        mappedFile = MappedFile.map(file.getPath(), DEFAULT_SESSION_ID_BUFFER_SIZE);
+        final MappedFile mappedFile = MappedFile.map(file.getPath(), DEFAULT_SESSION_ID_BUFFER_SIZE);
         contexts = new ILink3Contexts(mappedFile, errorHandler);
     }
 
     @Test
     public void shouldLoadSavedUuid()
     {
-        final long oldUuid = calculateUuid();
-        final long secondUuid = calculateUuid();
-        assertEquals(oldUuid, secondUuid);
+        final ILink3Context oldUuid = calculateUuid();
+        assertTrue(oldUuid.newlyAllocated());
+
+        final ILink3Context secondUuid = calculateUuid();
+        assertFalse(secondUuid.newlyAllocated());
+        assertEquals(oldUuid.uuid(), secondUuid.uuid());
 
         contexts.close();
         newContexts();
 
-        final long reloadedUuid = calculateUuid();
-        assertEquals(oldUuid, reloadedUuid);
+        final ILink3Context reloadedUuid = calculateUuid();
+        assertEquals(oldUuid.uuid(), reloadedUuid.uuid());
+        assertFalse(reloadedUuid.newlyAllocated());
     }
 
     @Test
     public void shouldRegenerateUuid()
     {
-        final long oldUuid = calculateUuid(false);
-        final long secondUuid = calculateUuid(true);
-        assertEquals(oldUuid, secondUuid);
+        final ILink3Context oldUuid = calculateUuid(false);
+        assertTrue(oldUuid.newlyAllocated());
+
+        final ILink3Context secondUuid = calculateUuid(true);
+        assertFalse(secondUuid.newlyAllocated());
+        assertEquals(oldUuid.uuid(), secondUuid.uuid());
 
         contexts.close();
         newContexts();
 
-        final long reloadedUuid = calculateUuid(false);
-        assertNotEquals(oldUuid, reloadedUuid);
+        final ILink3Context reloadedUuid = calculateUuid(false);
+        assertTrue(reloadedUuid.newlyAllocated());
+        assertNotEquals(oldUuid.uuid(), reloadedUuid.uuid());
 
-        final long reloadedUuid2 = calculateUuid(true);
-        assertEquals(reloadedUuid, reloadedUuid2);
+        final ILink3Context reloadedUuid2 = calculateUuid(true);
+        assertFalse(reloadedUuid2.newlyAllocated());
+        assertEquals(reloadedUuid.uuid(), reloadedUuid2.uuid());
     }
 
-    private long calculateUuid()
+    private ILink3Context calculateUuid()
     {
         return calculateUuid(true);
     }
 
-    private long calculateUuid(final boolean reestablishConnection)
+    private ILink3Context calculateUuid(final boolean reestablishConnection)
     {
         return contexts.calculateUuid(PORT, HOST, ACCESS_KEY_ID, reestablishConnection);
     }

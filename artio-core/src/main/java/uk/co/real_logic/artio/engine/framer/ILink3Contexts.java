@@ -31,7 +31,7 @@ import java.util.function.Function;
 
 import static uk.co.real_logic.artio.util.TimeUtil.microSecondTimestamp;
 
-public class ILink3Contexts
+class ILink3Contexts
 {
     private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
     private final Function<ILink3Key, ILink3Context> newUuid = this::newUuid;
@@ -47,7 +47,7 @@ public class ILink3Contexts
 
     int offset;
 
-    public ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler)
+    ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
@@ -86,13 +86,13 @@ public class ILink3Contexts
             final String host = contextDecoder.host();
             final String accessKeyId = contextDecoder.accessKeyId();
 
-            keyToContext.put(new ILink3Key(port, host, accessKeyId), new ILink3Context(uuid, offset));
+            keyToContext.put(new ILink3Key(port, host, accessKeyId), new ILink3Context(uuid, false));
 
             offset = contextDecoder.limit();
         }
     }
 
-    public long calculateUuid(
+    ILink3Context calculateUuid(
         final int port, final String host, final String accessKeyId, final boolean reestablishConnection)
     {
         final ILink3Key key = new ILink3Key(port, host, accessKeyId);
@@ -105,11 +105,11 @@ public class ILink3Contexts
         return allocateUuid(key);
     }
 
-    private long allocateUuid(final ILink3Key key)
+    private ILink3Context allocateUuid(final ILink3Key key)
     {
         final ILink3Context context = newUuid(key);
         keyToContext.put(key, context);
-        return context.uuid;
+        return context;
     }
 
     private ILink3Context newUuid(final ILink3Key key)
@@ -122,14 +122,21 @@ public class ILink3Contexts
             .host(key.host)
             .accessKeyId(key.accessKeyId);
 
-        final ILink3Context context = new ILink3Context(newUuid, offset);
+        final ILink3Context context = new ILink3Context(newUuid, true);
         offset = contextEncoder.limit();
         return context;
     }
 
-    private long lookupUuid(final ILink3Key key)
+    private ILink3Context lookupUuid(final ILink3Key key)
     {
-        return keyToContext.computeIfAbsent(key, newUuid).uuid;
+        final ILink3Context context = keyToContext.get(key);
+        if (context != null)
+        {
+            context.newlyAllocated(false);
+            return context;
+        }
+
+        return allocateUuid(key);
     }
 
     public void close()
@@ -183,15 +190,4 @@ public class ILink3Contexts
         }
     }
 
-    private static final class ILink3Context
-    {
-        private final long uuid;
-        private final int position;
-
-        private ILink3Context(final long uuid, final int position)
-        {
-            this.uuid = uuid;
-            this.position = position;
-        }
-    }
 }

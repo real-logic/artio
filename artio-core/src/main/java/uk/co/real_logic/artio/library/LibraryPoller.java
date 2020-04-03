@@ -1310,7 +1310,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final long uuid,
         final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber)
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated)
     {
         if (libraryId == this.libraryId)
         {
@@ -1324,7 +1325,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final ILink3Session session = makeILink3Session(
                     configuration, connectionId, reply, libraryId, this,
-                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
+                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated);
                 final ILink3Subscription subscription = new ILink3Subscription(
                     AbstractILink3Parser.make(session, THROW_ERRORS), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
@@ -1343,7 +1344,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final LibraryPoller owner,
         final long uuid,
         final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber)
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated)
     {
         try
         {
@@ -1358,7 +1360,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 LibraryPoller.class,
                 long.class,
                 long.class,
-                long.class);
+                long.class,
+                boolean.class);
 
             return (ILink3Session)constructor.newInstance(
                 configuration,
@@ -1370,7 +1373,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 owner,
                 uuid,
                 lastReceivedSequenceNumber,
-                lastSentSequenceNumber);
+                lastSentSequenceNumber,
+                newlyAllocated);
         }
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
@@ -1835,7 +1839,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public long saveInitiateILink(final long correlationId, final ILink3SessionConfiguration configuration)
     {
         return outboundPublication.saveInitiateILinkConnection(
-            libraryId, configuration.port(), correlationId, configuration.reestablishLastSession(),
+            libraryId, configuration.port(), correlationId, configuration.reEstablishLastSession(),
             configuration.host(), configuration.accessKeyId());
     }
 

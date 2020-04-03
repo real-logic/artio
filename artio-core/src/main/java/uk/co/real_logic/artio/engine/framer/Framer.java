@@ -626,14 +626,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final InetSocketAddress address = new InetSocketAddress(host, port);
 
         final ILink3Contexts iLink3Contexts = iLink3Contexts();
-        final long uuid = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
+        final ILink3Context context = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
         final int aeronSessionId = library.aeronSessionId();
         final Image image = librarySubscription.imageBySessionId(aeronSessionId);
         final long position = image.position();
         final ILink3LookupConnectOperation lookupInformation = new ILink3LookupConnectOperation(
             libraryId,
             correlationId,
-            uuid,
+            context,
             aeronSessionId,
             position,
             reestablishConnection);
@@ -656,7 +656,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     }
 
                     DebugLogger.log(FIX_CONNECTION,
-                        initiatingSessionFormatter, uuid, libraryId);
+                        initiatingSessionFormatter, context.uuid(), libraryId);
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
@@ -700,7 +700,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         private final int libraryId;
         private final long correlationId;
-        private final long uuid;
+        private final ILink3Context context;
         private final int aeronSessionId;
         private final long position;
 
@@ -714,18 +714,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private ILink3LookupConnectOperation(
             final int libraryId,
             final long correlationId,
-            final long uuid,
+            final ILink3Context context,
             final int aeronSessionId,
             final long position,
             final boolean reestablishConnection)
         {
             this.libraryId = libraryId;
             this.correlationId = correlationId;
-            this.uuid = uuid;
+            this.context = context;
             this.aeronSessionId = aeronSessionId;
             this.position = position;
 
-            if (!reestablishConnection)
+            if (!reestablishConnection || context.newlyAllocated())
             {
                 lastSentSequenceNumber = UNK_SESSION;
                 lastReceivedSequenceNumber = UNK_SESSION;
@@ -748,16 +748,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             return inboundPublication.saveILinkConnect(
-                libraryId, correlationId, connectionId, uuid, lastReceivedSequenceNumber,
-                lastSentSequenceNumber);
+                libraryId, correlationId, connectionId, context.uuid(), lastReceivedSequenceNumber,
+                lastSentSequenceNumber, context.newlyAllocated());
         }
 
         private void scanIndex()
         {
             if (sentSequenceNumberIndex.indexedPosition(aeronSessionId) > position)
             {
-                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(uuid);
-                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(uuid);
+                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(context.uuid());
+                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(context.uuid());
                 hasScannedIndex = true;
             }
         }
