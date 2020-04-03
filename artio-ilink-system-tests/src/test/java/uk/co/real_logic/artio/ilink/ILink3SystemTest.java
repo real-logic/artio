@@ -81,6 +81,11 @@ public class ILink3SystemTest
 
         mediaDriver = launchMediaDriver();
 
+        launchArtio();
+    }
+
+    private void launchArtio()
+    {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
@@ -102,14 +107,19 @@ public class ILink3SystemTest
     @After
     public void close()
     {
-        testSystem.awaitBlocking(() -> CloseHelper.close(engine));
-        CloseHelper.close(library);
+        closeArtio();
         cleanupMediaDriver(mediaDriver);
 
         if (!noExpectedError)
         {
             verifyNoInteractions(errorConsumer);
         }
+    }
+
+    private void closeArtio()
+    {
+        testSystem.awaitBlocking(() -> CloseHelper.close(engine));
+        CloseHelper.close(library);
     }
 
     @Test
@@ -293,6 +303,28 @@ public class ILink3SystemTest
         shouldExchangeBusinessMessage();
 
         final long lastUuid = session.uuid();
+
+        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+            .reEstablishLastSession(true);
+        connectToTestServer(sessionConfiguration);
+
+        testServer.expectedUuid(lastUuid);
+
+        readEstablish(2);
+        testServer.writeEstablishmentAck(1, lastUuid, 2);
+
+        acquireSession();
+    }
+
+    @Test
+    public void shouldSupportReestablishingConnectionsAfterRestart() throws IOException
+    {
+        shouldExchangeBusinessMessage();
+
+        final long lastUuid = session.uuid();
+
+        closeArtio();
+        launchArtio();
 
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
             .reEstablishLastSession(true);
@@ -617,6 +649,8 @@ public class ILink3SystemTest
         testSystem.awaitUnbind(session);
         assertDisconnected();
     }
+
+
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
     {
