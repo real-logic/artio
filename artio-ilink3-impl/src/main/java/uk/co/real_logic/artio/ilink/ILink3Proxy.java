@@ -188,8 +188,6 @@ public class ILink3Proxy
             .faultToleranceIndicator(fti)
             .keepAliveIntervalLapsed(keepAliveLapsed);
 
-
-
         DebugLogger.logSbeDecoder(ILINK_SESSION, sequenceAppendTo);
 
         commit();

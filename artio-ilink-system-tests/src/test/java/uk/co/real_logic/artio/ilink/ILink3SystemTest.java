@@ -58,7 +58,7 @@ public class ILink3SystemTest
     static final String SESSION_ID = "ABC";
     static final String FIRM_ID = "DEFGH";
     static final String USER_KEY = "somethingprivate";
-    public static final String CL_ORD_ID = "123";
+    static final String CL_ORD_ID = "123";
 
     private FakeILink3SessionHandler handler = spy(new FakeILink3SessionHandler(NotAppliedResponse::gapfill));
 
@@ -690,6 +690,7 @@ public class ILink3SystemTest
     {
         testServer.assertDisconnected();
         assertThat(library.iLink3Sessions(), hasSize(0));
+        assertThat(engine.allSessions(), hasSize(0));
     }
 
     private void sendNewOrderSingle()

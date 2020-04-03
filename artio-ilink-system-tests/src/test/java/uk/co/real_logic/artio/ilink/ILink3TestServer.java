@@ -365,7 +365,6 @@ public class ILink3TestServer
     {
         final NewOrderSingle514Decoder newOrderSingle = read(new NewOrderSingle514Decoder(), 0);
         assertEquals(expectedSeqNum, newOrderSingle.seqNum());
-        // TODO: newOrderSingle.sendingTimeEpoch()
     }
 
     public void assertDisconnected()

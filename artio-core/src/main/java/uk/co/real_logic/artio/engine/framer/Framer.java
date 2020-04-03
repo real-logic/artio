@@ -624,9 +624,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final InetSocketAddress address = new InetSocketAddress(host, port);
-        // TODO: re-add this
-        /*final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
-        library.connectionStartsConnecting(correlationId, connectingSession);*/
 
         final ILink3Contexts iLink3Contexts = iLink3Contexts();
         final long uuid = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
@@ -654,8 +651,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     if (ex != null)
                     {
-                        /*sessionContexts.onDisconnect(sessionContext.sessionId());
-                        library.connectionFinishesConnecting(correlationId);*/
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -681,8 +676,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final IOException ex)
         {
-            /*sessionContexts.onDisconnect(
-                sessionContext.sessionId());*/
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
 
             return CONTINUE;
