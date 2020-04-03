@@ -175,6 +175,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
+    private Iterator<ILink3Subscription> iLink3LogoutIterator = null;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -1440,12 +1441,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionLogoutIndex++;
         }
 
-        final Iterator<ILink3Subscription> iLink3Iterator = connectionIdToILink3Subscription.values().iterator();
-        while (iLink3Iterator.hasNext())
+        // Continue from previous position on backpressured re-attempts
+        if (iLink3LogoutIterator == null)
         {
-            final ILink3Subscription iLink3Subscription = iLink3Iterator.next();
-            // TODO: backpressure
-            iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN);
+            iLink3LogoutIterator = connectionIdToILink3Subscription.values().iterator();
+        }
+        while (iLink3LogoutIterator.hasNext())
+        {
+            final ILink3Subscription iLink3Subscription = iLink3LogoutIterator.next();
+            if (Pressure.isBackPressured(iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN)))
+            {
+                return;
+            }
         }
 
         // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.
