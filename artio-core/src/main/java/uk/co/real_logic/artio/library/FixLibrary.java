@@ -477,7 +477,6 @@ public class FixLibrary extends GatewayProcess
      * Note: the list is unmodifiable.
      *
      * @return a list of the currently active ILink3 Sessions
-     * @see this#sessions()
      */
     public List<ILink3Session> iLink3Sessions()
     {

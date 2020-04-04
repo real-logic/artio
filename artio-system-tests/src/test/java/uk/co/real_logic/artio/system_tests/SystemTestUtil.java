@@ -50,8 +50,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
-import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
+import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -78,7 +77,7 @@ public final class SystemTestUtil
 
     private static final String HI_ID = "hi";
 
-    public static final long TEST_REPLY_TIMEOUT_IN_MS = 1_000;
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : 1_000;
 
     static
     {

@@ -47,6 +47,7 @@ import java.util.function.Predicate;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
+import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
@@ -59,8 +60,6 @@ import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEnc
  */
 public class SequenceNumberIndexWriter implements Index
 {
-    public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
-
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
     public static final long NO_REQUIRED_POSITION = -1000;

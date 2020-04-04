@@ -214,6 +214,8 @@ public class CommonConfiguration
     public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;
     public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
 
+    public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
+
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private Clock clock = Clock.systemNanoTime();
