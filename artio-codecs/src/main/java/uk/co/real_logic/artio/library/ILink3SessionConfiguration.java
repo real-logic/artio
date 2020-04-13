@@ -28,9 +28,9 @@ public class ILink3SessionConfiguration
     private int port;
     private String sessionId;
     private String firmId;
-    private String tradingSystemName = "";
-    private String tradingSystemVersion = "";
-    private String tradingSystemVendor = "";
+    private String tradingSystemName = "Artio";
+    private String tradingSystemVersion = "1.0";
+    private String tradingSystemVendor = "Monotonic";
     private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
     private String userKey;
     private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
