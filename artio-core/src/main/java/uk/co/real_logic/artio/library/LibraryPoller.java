@@ -1617,7 +1617,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final Session session = subscriber.session();
                 if (session.id() == sessionId)
                 {
-                    return Pressure.apply(session.resetSequenceNumbers());
+                    return Pressure.apply(session.tryResetSequenceNumbers());
                 }
             }
         }

@@ -128,7 +128,7 @@ public final class SystemTestUtil
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
         testRequest.testReqID(testReqID);
 
-        final long position = session.send(testRequest);
+        final long position = session.trySend(testRequest);
         assertThat(position, greaterThan(0L));
         return position;
     }

@@ -157,7 +157,7 @@ public class TestSystem
 
     public void send(final Session session, final Encoder encoder)
     {
-        awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.send(encoder));
+        awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.trySend(encoder));
     }
 
     public void awaitSend(final String message, final LongSupplier operation)

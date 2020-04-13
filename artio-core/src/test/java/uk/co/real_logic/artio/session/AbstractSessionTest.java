@@ -241,7 +241,7 @@ public abstract class AbstractSessionTest
 
         assertThat(session().lastSentMsgSeqNum(), lessThanOrEqualTo(1));
 
-        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
+        session().trySendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
         final int nextSequenceIndex = SEQUENCE_INDEX + 1;
         verify(sessionProxy).sendSequenceReset(anyInt(), eq(newSentSeqNo), eq(nextSequenceIndex), anyInt());
@@ -257,7 +257,7 @@ public abstract class AbstractSessionTest
 
         givenActive();
 
-        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
+        session().trySendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
         final String testReqId = "hello";
 
@@ -840,7 +840,7 @@ public abstract class AbstractSessionTest
     {
         sequenceNumbersAreThreeAndActive();
 
-        session().resetSequenceNumbers();
+        session().tryResetSequenceNumbers();
 
         verifySetsSentSequenceNumbersToTwo(SEQUENCE_INDEX + 1);
     }
@@ -1048,7 +1048,7 @@ public abstract class AbstractSessionTest
         testRequest.reset();
         testRequest.testReqID("testReqID");
         fakeClock.advanceMilliSeconds(nonSecondDurationInMs);
-        session().send(testRequest);
+        session().trySend(testRequest);
         return getSentMessage();
     }
 

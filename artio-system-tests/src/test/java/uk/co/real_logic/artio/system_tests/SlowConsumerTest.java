@@ -101,7 +101,7 @@ public class SlowConsumerTest
                     hasBecomeSlow = true;
                 }
 
-                session.send(testRequest);
+                session.trySend(testRequest);
             }
 
             testSystem.poll();
@@ -131,7 +131,7 @@ public class SlowConsumerTest
             }
             while (bytesRead > 0);
 
-            session.send(testRequest);
+            session.trySend(testRequest);
 
             testSystem.poll();
         }
@@ -171,7 +171,7 @@ public class SlowConsumerTest
         {
             for (int i = 0; i < 10; i++)
             {
-                session.send(testRequest);
+                session.trySend(testRequest);
             }
 
             testSystem.poll();

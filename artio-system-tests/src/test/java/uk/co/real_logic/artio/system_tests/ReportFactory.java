@@ -49,6 +49,6 @@ public class ReportFactory
 
         executionReport.instrument().symbol(MSFT.getBytes(US_ASCII));
 
-        return Pressure.apply(session.send(executionReport));
+        return Pressure.apply(session.trySend(executionReport));
     }
 }

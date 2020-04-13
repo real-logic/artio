@@ -443,7 +443,7 @@ public class CommonConfiguration
     /**
      * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode messages
      * via
-     * {@link uk.co.real_logic.artio.session.Session#send(uk.co.real_logic.artio.builder.Encoder)}.
+     * {@link uk.co.real_logic.artio.session.Session#trySend(uk.co.real_logic.artio.builder.Encoder)}.
      *
      * This is also used as the size of buffer for messages that are sent by the Session management system itself.
      *

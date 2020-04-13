@@ -270,7 +270,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     private void send(
         final UnsafeBuffer writeBuffer, final TestRequestEncoder testRequest, final int metaDataUpdateOffset)
     {
-        assertThat(acceptingSession.send(testRequest, writeBuffer, metaDataUpdateOffset), greaterThan(0L));
+        assertThat(acceptingSession.trySend(testRequest, writeBuffer, metaDataUpdateOffset), greaterThan(0L));
     }
 
     private UnsafeBuffer updateBuffer()

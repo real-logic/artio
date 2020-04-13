@@ -294,7 +294,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         otfAcceptor.messages().clear();
 
-        while (session.send(resendRequest) < 0)
+        while (session.trySend(resendRequest) < 0)
         {
             Thread.yield();
         }

@@ -53,7 +53,7 @@ public abstract class ILink3Session
     // Operations
     // -----------------------------------------------
 
-    public abstract long claimMessage(MessageEncoderFlyweight message);
+    public abstract long tryClaim(MessageEncoderFlyweight message);
 
     public abstract void commit();
 

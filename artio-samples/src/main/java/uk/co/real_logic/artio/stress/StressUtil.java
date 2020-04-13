@@ -74,7 +74,7 @@ final class StressUtil
             final String msg = messagePool[random.nextInt(messagePool.length)];
             testRequest.testReqID(msg);
 
-            while (session.send(testRequest) < 0)
+            while (session.trySend(testRequest) < 0)
             {
                 idleStrategy.idle(library.poll(1));
             }

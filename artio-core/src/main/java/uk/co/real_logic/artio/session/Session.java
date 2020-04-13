@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
@@ -30,10 +31,12 @@ import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
+import uk.co.real_logic.artio.library.SentPositionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.NotConnectedException;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -386,7 +389,7 @@ public class Session
      */
     public long startLogout()
     {
-        final long position = sendLogout();
+        final long position = trySendLogout();
         if (position < 0)
         {
             state(LOGGING_OUT);
@@ -444,7 +447,7 @@ public class Session
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            position = sendLogout();
+            position = trySendLogout();
             if (position < 0)
             {
                 state(LOGGING_OUT_AND_DISCONNECTING);
@@ -487,21 +490,40 @@ public class Session
     }
 
     /**
-     * Send a message on this session.
+     * Tries to send a message on this session. This send method returns after having attempted to write the message
+     * into an in memory log buffer. If the return value returned is {@link Publication#BACK_PRESSURED} or
+     * {@link Publication#ADMIN_ACTION} then the message won't have been written into the log buffer due to back
+     * pressure issues. A retry can be attempted later. In order to know when the message has actually been written
+     * over TCP you can implement the {@link SentPositionHandler} which will notify you when the position has been
+     * processed.
      *
      * @param encoder the encoder of the message to be sent
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      */
-    public long send(final Encoder encoder)
+    public long trySend(final Encoder encoder)
     {
-        return send(encoder, null, 0);
+        return trySend(encoder, null, 0);
     }
 
     /**
-     * Send a message on this session.
+     * @param encoder the encoder of the message to be sent
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(Encoder)
+     */
+    @Deprecated
+    public long send(final Encoder encoder)
+    {
+        return trySend(encoder);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param encoder              the encoder of the message to be sent
      * @param metaDataBuffer       the metadata to associate with this message.
@@ -510,9 +532,11 @@ public class Session
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
-    public long send(
+    public long trySend(
         final Encoder encoder,
         final DirectBuffer metaDataBuffer,
         final int metaDataUpdateOffset)
@@ -526,11 +550,28 @@ public class Session
         final int offset = Encoder.offset(result);
         final long type = encoder.messageType();
 
-        return send(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
+        return trySend(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
     }
 
     /**
-     * Send a message on this session.
+     * @param encoder              the encoder of the message to be sent
+     * @param metaDataBuffer       the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(Encoder, DirectBuffer, int)
+     */
+    @Deprecated
+    public long send(
+        final Encoder encoder,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
+        return trySend(encoder, metaDataBuffer, metaDataUpdateOffset);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param messageBuffer the buffer with the FIX message in to send
      * @param offset        the offset within the messageBuffer where the message starts
@@ -539,15 +580,34 @@ public class Session
      * @param messageType   the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      */
-    public long send(
+    public long trySend(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
-        return send(messageBuffer, offset, length, seqNum, messageType, null, 0);
+        return trySend(messageBuffer, offset, length, seqNum, messageType, null, 0);
     }
 
     /**
-     * Send a message on this session.
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset        the offset within the messageBuffer where the message starts
+     * @param length        the length of the message within the messageBuffer
+     * @param seqNum        the sequence number of the sent message
+     * @param messageType   the long encoded message type.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(DirectBuffer, int, int, int, long)
+     */
+    @Deprecated
+    public long send(
+        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
+    {
+        return trySend(messageBuffer, offset, length, seqNum, messageType);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param messageBuffer        the buffer with the FIX message in to send
      * @param offset               the offset within the messageBuffer where the message starts
@@ -558,9 +618,11 @@ public class Session
      * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
-    public long send(
+    public long trySend(
         final DirectBuffer messageBuffer,
         final int offset,
         final int length,
@@ -586,6 +648,31 @@ public class Session
     }
 
     /**
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset        the offset within the messageBuffer where the message starts
+     * @param length        the length of the message within the messageBuffer
+     * @param seqNum        the sequence number of the sent message
+     * @param messageType   the long encoded message type.
+     * @param metaDataBuffer       the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(DirectBuffer, int, int, int, long, DirectBuffer, int)
+     */
+    @Deprecated
+    public long send(
+        final DirectBuffer messageBuffer,
+        final int offset,
+        final int length,
+        final int seqNum,
+        final long messageType,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
+        return trySend(messageBuffer, offset, length, seqNum, messageType, metaDataBuffer, metaDataUpdateOffset);
+    }
+
+    /**
      * Check if the session is in a state where it can send a message.
      * <p>
      * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
@@ -605,13 +692,13 @@ public class Session
      * used to increase the sequence number of the session.
      * <p>
      * If you want to reset the sequence number back to 1 you should use
-     * {@link #resetSequenceNumbers()}.
+     * {@link #tryResetSequenceNumbers()}.
      *
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sendSequenceReset(
+    public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
         nextSequenceIndex(clock.time());
@@ -623,7 +710,20 @@ public class Session
     }
 
     /**
-     * Acts like {@link #sendSequenceReset(int, int)} but also resets the received sequence number.
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #trySendSequenceReset(int)
+     */
+    @Deprecated
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber)
+    {
+        return trySendSequenceReset(nextSentMessageSequenceNumber);
+    }
+
+    /**
+     * Acts like {@link #trySendSequenceReset(int, int)} but also resets the received sequence number.
      *
      * @param nextSentMessageSequenceNumber     the new sequence number of the next message to be
      *                                          sent.
@@ -631,11 +731,11 @@ public class Session
      *                                          received.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sendSequenceReset(
+    public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber,
         final int nextReceivedMessageSequenceNumber)
     {
-        final long position = sendSequenceReset(nextSentMessageSequenceNumber);
+        final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
         lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
         if (!redact(NO_REQUIRED_POSITION))
         {
@@ -643,6 +743,22 @@ public class Session
         }
 
         return position;
+    }
+
+    /**
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
+     *                                          received.
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #trySendSequenceReset(int, int)
+     */
+    @Deprecated
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber,
+        final int nextReceivedMessageSequenceNumber)
+    {
+        return trySendSequenceReset(nextSentMessageSequenceNumber, nextReceivedMessageSequenceNumber);
     }
 
     private void nextSequenceIndex(final long messageTime)
@@ -655,11 +771,11 @@ public class Session
      * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
      * sending a Logon message with ResetSeqNum flag set to Y.
      * <p>
-     * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int, int)}.
+     * If you want to send a sequence reset message then you should use {@link #trySendSequenceReset(int, int)}.
      *
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long resetSequenceNumbers()
+    public long tryResetSequenceNumbers()
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
@@ -675,6 +791,16 @@ public class Session
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
+    }
+
+    /**
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #tryResetSequenceNumbers()
+     */
+    @Deprecated
+    public long resetSequenceNumbers()
+    {
+        return tryResetSequenceNumbers();
     }
 
     public boolean isActive()
@@ -949,7 +1075,7 @@ public class Session
             }
             else if (msgSeqNum == lastResendChunkMsgSeqNum)
             {
-                final Action action = checkPosition(sendResendRequest(
+                final Action action = checkPosition(trySendResendRequest(
                     msgSeqNum + 1, // Effectively begin
                     endOfResendMsgSeqNum()));   // Effectively ideal end pre chunking
                 if (action == CONTINUE)
@@ -963,7 +1089,7 @@ public class Session
             {
                 if (sendRedundantResendRequests)
                 {
-                    return Pressure.apply(sendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
+                    return Pressure.apply(trySendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
                 }
                 else
                 {
@@ -1010,7 +1136,7 @@ public class Session
 
     private Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
+        final long position = trySendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
         if (position >= 0)
         {
             awaitingResend = true;
@@ -1021,7 +1147,7 @@ public class Session
         return checkPosition(position);
     }
 
-    private long sendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
+    private long trySendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
         // Cap at a chunk size if specified, otherwise send 0 to indicate infinity or the receivedMsgSeqNo
         final boolean chunkedResend = resendRequestChunkSize != NO_RESEND_REQUEST_CHUNK_SIZE;
@@ -1482,7 +1608,7 @@ public class Session
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(sendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo - 1));
+            final Action action = checkPosition(trySendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo - 1));
             if (action != ABORT)
             {
                 if (awaitingResend)
@@ -1520,7 +1646,7 @@ public class Session
                 {
                     if (newSeqNo == lastResendChunkMsgSeqNum)
                     {
-                        final Action action = checkPosition(sendResendRequest(
+                        final Action action = checkPosition(trySendResendRequest(
                             newSeqNo,
                             endOfResendMsgSeqNum()));
                         if (action == CONTINUE)
@@ -1640,7 +1766,7 @@ public class Session
         nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
     }
 
-    private long sendLogout()
+    private long trySendLogout()
     {
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
@@ -1823,7 +1949,7 @@ public class Session
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
-                final long position = sendLogout();
+                final long position = trySendLogout();
 
                 state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
 

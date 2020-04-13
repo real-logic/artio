@@ -756,7 +756,7 @@ public class ILink3SystemTest
     private void sendNewOrderSingle()
     {
         final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
-        assertThat(session.claimMessage(newOrderSingle), greaterThan(0L));
+        assertThat(session.tryClaim(newOrderSingle), greaterThan(0L));
         newOrderSingle
             .partyDetailsListReqID(1)
             .orderQty(1)

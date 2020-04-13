@@ -166,7 +166,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
             case RESET_ENGINE_SESSION:
             {
-                final long position = session.resetSequenceNumbers();
+                final long position = session.tryResetSequenceNumbers();
                 if (!Pressure.isBackPressured(position))
                 {
                     waitSequence = 1;

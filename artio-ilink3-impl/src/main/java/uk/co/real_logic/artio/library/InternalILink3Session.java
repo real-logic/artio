@@ -136,7 +136,7 @@ public class InternalILink3Session extends ILink3Session
 
     // PUBLIC API
 
-    public long claimMessage(
+    public long tryClaim(
         final MessageEncoderFlyweight message)
     {
         validateCanSend();

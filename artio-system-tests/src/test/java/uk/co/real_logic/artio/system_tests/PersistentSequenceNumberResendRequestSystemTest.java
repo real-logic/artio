@@ -246,7 +246,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         newOrderSingle.instrument().symbol("MSFT");
         newOrderSingle.orderQtyData().orderQty(orderQty);
 
-        final long position = initiatingSession.send(newOrderSingle);
+        final long position = initiatingSession.trySend(newOrderSingle);
         assertThat(position, Matchers.greaterThan(0L));
     }
 }

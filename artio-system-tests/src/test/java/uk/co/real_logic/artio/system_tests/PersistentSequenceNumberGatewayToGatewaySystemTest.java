@@ -420,7 +420,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
         cannotConnectWithSequence(acceptorSequenceNumber, 1);
 
-        assertThat(acceptingSession.sendSequenceReset(1, 1),
+        assertThat(acceptingSession.trySendSequenceReset(1, 1),
             greaterThan(0L));
 
         onAcquireSession = this::nothing;

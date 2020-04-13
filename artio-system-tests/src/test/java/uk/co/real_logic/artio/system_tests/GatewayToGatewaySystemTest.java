@@ -177,7 +177,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         exampleMessage.testReqID(testReqID);
-        final long position = initiatingSession.send(exampleMessage);
+        final long position = initiatingSession.trySend(exampleMessage);
         assertThat(position, greaterThan(0L));
 
         return testSystem.awaitMessageOf(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
@@ -887,7 +887,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .password(PASSWORD)
             .newPassword(NEW_PASSWORD);
 
-        while (initiatingSession.send(userRequestEncoder) < 0)
+        while (initiatingSession.trySend(userRequestEncoder) < 0)
         {
             testSystem.poll();
 
@@ -1055,7 +1055,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .ordStatus(OrdStatus.FILLED)
             .side(Side.BUY);
         executionReport.instrument().symbol("IBM");
-        assertThat(acceptingSession.send(executionReport), greaterThan(0L));
+        assertThat(acceptingSession.trySend(executionReport), greaterThan(0L));
 
         testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
     }

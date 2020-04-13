@@ -24,7 +24,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
  *
  * This can be correlated against the position returned by the session's send method.
  *
- * @see uk.co.real_logic.artio.session.Session#send(uk.co.real_logic.artio.builder.Encoder)
+ * @see uk.co.real_logic.artio.session.Session#trySend(uk.co.real_logic.artio.builder.Encoder)
  */
 @FunctionalInterface
 public interface SentPositionHandler

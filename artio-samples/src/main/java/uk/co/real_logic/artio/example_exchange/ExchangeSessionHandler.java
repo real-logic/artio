@@ -97,7 +97,7 @@ public class ExchangeSessionHandler implements SessionHandler
 
         executionReport.instrument().symbol(newOrderSingle.symbol(), newOrderSingle.symbolLength());
 
-        return Pressure.apply(session.send(executionReport));
+        return Pressure.apply(session.trySend(executionReport));
     }
 
     private boolean validOrder()
@@ -134,7 +134,7 @@ public class ExchangeSessionHandler implements SessionHandler
 
         executionReport.instrument().symbol(SYMBOL_BYTES);
 
-        final long sendPosition = session.send(executionReport);
+        final long sendPosition = session.trySend(executionReport);
         if (Pressure.isBackPressured(sendPosition))
         {
             // Roll back transactional state and indicate that you need to retry.
