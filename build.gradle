@@ -602,9 +602,9 @@ project(':artio-ilink-system-tests') {
         testImplementation project(path: ':artio-codecs', configuration: 'tests')
         testImplementation project(path: ':artio-system-tests', configuration: 'tests')
 
-        api project(':artio-core')
-        api project(':artio-ilink3-codecs')
-        api project(':artio-ilink3-impl')
+        implementation project(':artio-core')
+        implementation project(':artio-ilink3-codecs')
+        implementation project(':artio-ilink3-impl')
     }
 
     compileJava.enabled = iLink3Enabled

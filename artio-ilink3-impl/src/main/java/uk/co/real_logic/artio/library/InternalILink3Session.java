@@ -123,15 +123,6 @@ public class InternalILink3Session extends ILink3Session
             lastReceivedSequenceNumber, configuration.initialReceivedSequenceNumber()));
         state = State.CONNECTED;
         this.uuid = uuid;
-
-        if (!configuration.reEstablishLastSession() || newlyAllocated)
-        {
-            sendNegotiate();
-        }
-        else
-        {
-            sendEstablish();
-        }
     }
 
     // PUBLIC API
@@ -410,100 +401,149 @@ public class InternalILink3Session extends ILink3Session
         switch (state)
         {
             case CONNECTED:
-                return sendNegotiate() ? 1 : 0;
+                return pollConnected();
 
             case SENT_NEGOTIATE:
-                if (timeInMs > resendTime)
-                {
-                    if (sendNegotiate())
-                    {
-                        this.state = State.RETRY_NEGOTIATE;
-                        return 1;
-                    }
-                }
-                break;
+                return pollSentNegotiate(timeInMs);
 
             case RETRY_NEGOTIATE:
-                if (timeInMs > resendTime)
-                {
-                    onNegotiateFailure();
-                    fullyUnbind();
-                    return 1;
-                }
-                break;
+                return pollRetryNegotiate(timeInMs);
 
             case NEGOTIATED:
                 return sendEstablish() ? 1 : 0;
 
             case RETRY_ESTABLISH:
-                if (timeInMs > resendTime)
-                {
-                    onEstablishFailure();
-                    fullyUnbind();
-                    return 1;
-                }
-                break;
+                return pollRetryEstablish(timeInMs);
 
             case SENT_ESTABLISH:
-                if (timeInMs > resendTime)
-                {
-                    if (sendEstablish())
-                    {
-                        this.state = State.RETRY_ESTABLISH;
-                        return 1;
-                    }
-                }
-                break;
+                return pollSentEstablish(timeInMs);
 
             case ESTABLISHED:
-            {
-                if (timeInMs > nextReceiveMessageTimeInMs)
-                {
-                    sendSequence(Lapsed);
-
-                    onReceivedMessage();
-
-                    this.state = State.AWAITING_KEEPALIVE;
-                }
-                else if (timeInMs > nextSendMessageTimeInMs)
-                {
-                    sendSequence(NotLapsed);
-                }
-                break;
-            }
+                return pollEstablished(timeInMs);
 
             case AWAITING_KEEPALIVE:
-            {
-                if (timeInMs > nextReceiveMessageTimeInMs)
-                {
-                    final int expiry = 2 * configuration.requestedKeepAliveIntervalInMs();
-                    terminate(expiry + "ms expired without message", 0);
-                }
-                break;
-            }
+                return pollAwaitingKeepAlive(timeInMs);
 
             case RESEND_TERMINATE:
-            {
-                terminate(resendTerminateReason, resendTerminateErrorCodes);
-                break;
-            }
+                return pollResendTerminate();
 
             case RESEND_TERMINATE_ACK:
-            {
-                sendTerminateAck(resendTerminateReason, resendTerminateErrorCodes);
-                break;
-            }
+                return pollResendTerminateAck();
 
             case UNBINDING:
+                return pollUnbinding(timeInMs);
+
+            default:
+                return 0;
+        }
+    }
+
+    private int pollUnbinding(final long timeInMs)
+    {
+        if (timeInMs > nextSendMessageTimeInMs)
+        {
+            fullyUnbind();
+        }
+        return 0;
+    }
+
+    private int pollResendTerminateAck()
+    {
+        sendTerminateAck(resendTerminateReason, resendTerminateErrorCodes);
+        return 0;
+    }
+
+    private int pollResendTerminate()
+    {
+        terminate(resendTerminateReason, resendTerminateErrorCodes);
+        return 0;
+    }
+
+    private int pollAwaitingKeepAlive(final long timeInMs)
+    {
+        if (timeInMs > nextReceiveMessageTimeInMs)
+        {
+            final int expiry = 2 * configuration.requestedKeepAliveIntervalInMs();
+            terminate(expiry + "ms expired without message", 0);
+        }
+        return 0;
+    }
+
+    private int pollEstablished(final long timeInMs)
+    {
+        if (timeInMs > nextReceiveMessageTimeInMs)
+        {
+            sendSequence(Lapsed);
+
+            onReceivedMessage();
+
+            this.state = State.AWAITING_KEEPALIVE;
+        }
+        else if (timeInMs > nextSendMessageTimeInMs)
+        {
+            sendSequence(NotLapsed);
+        }
+        return 0;
+    }
+
+    private int pollSentEstablish(final long timeInMs)
+    {
+        if (timeInMs > resendTime)
+        {
+            if (sendEstablish())
             {
-                if (timeInMs > nextSendMessageTimeInMs)
-                {
-                    fullyUnbind();
-                }
-                break;
+                this.state = State.RETRY_ESTABLISH;
+                return 1;
             }
         }
         return 0;
+    }
+
+    private int pollRetryEstablish(final long timeInMs)
+    {
+        if (timeInMs > resendTime)
+        {
+            onEstablishFailure();
+            fullyUnbind();
+            return 1;
+        }
+        return 0;
+    }
+
+    private int pollRetryNegotiate(final long timeInMs)
+    {
+        if (timeInMs > resendTime)
+        {
+            onNegotiateFailure();
+            fullyUnbind();
+            return 1;
+        }
+        return 0;
+    }
+
+    private int pollSentNegotiate(final long timeInMs)
+    {
+        if (timeInMs > resendTime)
+        {
+            if (sendNegotiate())
+            {
+                this.state = State.RETRY_NEGOTIATE;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    private int pollConnected()
+    {
+        if (!configuration.reEstablishLastSession() || newlyAllocated)
+        {
+            return sendNegotiate() ? 1 : 0;
+        }
+        else
+        {
+            return sendEstablish() ? 1 : 0;
+        }
     }
 
     private void onNegotiateFailure()

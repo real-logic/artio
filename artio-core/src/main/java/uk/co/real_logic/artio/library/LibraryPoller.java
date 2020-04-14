@@ -1377,8 +1377,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastSentSequenceNumber,
                 newlyAllocated);
         }
+        catch (final InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e.getTargetException());
+            return null;
+        }
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
+            IllegalAccessException e)
         {
             LangUtil.rethrowUnchecked(e);
             return null;
