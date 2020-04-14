@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -38,8 +39,7 @@ import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.BitUtil.SIZE_OF_CHAR;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
-import static uk.co.real_logic.artio.LogTag.PROXY;
+import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
@@ -201,6 +201,25 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
 
         address = channel.remoteAddress();
+    }
+
+    private int readData() throws IOException
+    {
+        final int dataRead = channel.read(byteBuffer);
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
+                DebugLogger.log(FIX_MESSAGE_TCP, "Read     ", buffer, usedBufferData, dataRead);
+            }
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnectDetected();
+        }
+
+        return dataRead;
     }
 
     int poll()

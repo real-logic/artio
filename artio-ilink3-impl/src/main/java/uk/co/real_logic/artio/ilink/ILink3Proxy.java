@@ -98,7 +98,7 @@ public class ILink3Proxy
             .firm(firmId)
             .putCredentials(NO_BUFFER, 0, 0);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiateAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", negotiateAppendTo);
 
         commit();
 
@@ -140,7 +140,7 @@ public class ILink3Proxy
             .keepAliveInterval(keepAliveInterval)
             .putCredentials(NO_BUFFER, 0, 0);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, establishAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", establishAppendTo);
 
         commit();
 
@@ -164,7 +164,7 @@ public class ILink3Proxy
             .errorCodes(errorCodes)
             .splitMsg(SplitMsg.NULL_VAL);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, terminateAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", terminateAppendTo);
 
         commit();
 
@@ -188,7 +188,7 @@ public class ILink3Proxy
             .faultToleranceIndicator(fti)
             .keepAliveIntervalLapsed(keepAliveLapsed);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, sequenceAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", sequenceAppendTo);
 
         commit();
 
@@ -213,7 +213,7 @@ public class ILink3Proxy
             .fromSeqNo(fromSeqNo)
             .msgCount(msgCount);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, retransmitRequestAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", retransmitRequestAppendTo);
 
         commit();
 

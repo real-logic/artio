@@ -85,7 +85,7 @@ public class ILink3SenderEndPoint
             if (written > 0)
             {
                 ByteBufferUtil.position(buffer, offset);
-                DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
+                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
                 buffer.limit(startLimit).position(startPosition);
             }

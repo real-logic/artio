@@ -23,6 +23,7 @@ import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.ilink.ILink3Offsets;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
@@ -31,6 +32,7 @@ import uk.co.real_logic.artio.ilink.IllegalResponseException;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.TimeUtil;
 
 import javax.crypto.Mac;
@@ -45,6 +47,7 @@ import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.library.ILink3SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -62,6 +65,8 @@ public class InternalILink3Session extends ILink3Session
 
     private final NotAppliedResponse response = new NotAppliedResponse();
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
+    private final CharFormatter unknownMessage = new CharFormatter(
+        "Unknown Message,templateId=%s,blockLength=%s,version=%s,seqNum=%s,possRetrans=%s%n");
 
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
@@ -848,50 +853,73 @@ public class InternalILink3Session extends ILink3Session
         owner.onUnbind(this);
     }
 
+//    private
+
     public long onMessage(
         final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
     {
         onReceivedMessage();
 
-        final long seqNum = offsets.seqNum(templateId, buffer, offset);
-        if (seqNum == MISSING_OFFSET)
+        if (state == State.ESTABLISHED)
         {
-            return 1;
-        }
-
-        final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
-        if (possRetrans == BOOLEAN_FLAG_TRUE)
-        {
-            if (seqNum == retransmitFillSeqNo)
+            final long seqNum = offsets.seqNum(templateId, buffer, offset);
+            if (seqNum == MISSING_OFFSET)
             {
-                return retransmitFilled();
+                return 1;
             }
 
-            handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
-
-            return 1;
-        }
-
-        final long nextRecvSeqNo = this.nextRecvSeqNo;
-        final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
-        if (position == OK_POSITION)
-        {
-            if (nextRecvSeqNo == seqNum)
+            final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
+            if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
-                nextRecvSeqNo(seqNum + 1);
+                if (seqNum == retransmitFillSeqNo)
+                {
+                    return retransmitFilled();
+                }
 
-                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
                 return 1;
             }
+
+            final long nextRecvSeqNo = this.nextRecvSeqNo;
+            final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
+            if (position == OK_POSITION)
+            {
+                if (nextRecvSeqNo == seqNum)
+                {
+                    nextRecvSeqNo(seqNum + 1);
+
+                    handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+
+                    return 1;
+                }
+                else
+                {
+                    return onInvalidSequenceNumber(seqNum);
+                }
+            }
             else
             {
-                return onInvalidSequenceNumber(seqNum);
+                return position;
             }
         }
         else
         {
-            return position;
+            final long seqNum = offsets.seqNum(templateId, buffer, offset);
+            final boolean possRetrans = offsets.possRetrans(templateId, buffer, offset) == BOOLEAN_FLAG_TRUE;
+
+            if (DebugLogger.isEnabled(ILINK_SESSION))
+            {
+                unknownMessage.clear()
+                    .with(templateId)
+                    .with(blockLength)
+                    .with(version)
+                    .with(seqNum)
+                    .with(possRetrans);
+                DebugLogger.log(ILINK_SESSION, unknownMessage);
+            }
+
+            return 1;
         }
     }
 

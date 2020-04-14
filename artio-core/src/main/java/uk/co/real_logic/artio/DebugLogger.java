@@ -442,11 +442,11 @@ public final class DebugLogger
     }
 
     public static void logSbeDecoder(
-        final LogTag tag, final Consumer<StringBuilder> appendTo)
+        final LogTag tag, final String prefix, final Consumer<StringBuilder> appendTo)
     {
         if (isEnabled(tag))
         {
-            THREAD_LOCAL.get().logSbeDecoder(tag, appendTo);
+            THREAD_LOCAL.get().logSbeDecoder(tag, prefix, appendTo);
         }
     }
 
@@ -460,6 +460,19 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             THREAD_LOCAL.get().log(tag, prefixString, buffer, offset, length);
+        }
+    }
+
+    public static void logBytes(
+        final LogTag tag,
+        final String prefixString,
+        final ByteBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logBytes(tag, prefixString, buffer, offset, length);
         }
     }
 
@@ -1178,9 +1191,10 @@ public final class DebugLogger
             finish(tag);
         }
 
-        public void logSbeDecoder(final LogTag tag, final Consumer<StringBuilder> appendTo)
+        public void logSbeDecoder(final LogTag tag, final String prefix, final Consumer<StringBuilder> appendTo)
         {
             appendStart();
+            builder.append(prefix);
             appendTo.accept(builder);
             finish(tag);
         }
@@ -1203,6 +1217,40 @@ public final class DebugLogger
             final AsciiSequenceView asciiView = this.asciiView;
             asciiView.wrap(buffer, 0, length);
             builder.append(asciiView);
+            finish(tag);
+        }
+
+        public void logBytes(
+            final LogTag tag,
+            final String prefixString,
+            final ByteBuffer byteBuffer,
+            final int offset,
+            final int length)
+        {
+            appendStart();
+            final StringBuilder builder = this.builder;
+            builder.append(prefixString);
+
+            if (length == 0)
+            {
+                builder.append("{}");
+            }
+            else
+            {
+                builder.append('{');
+                for (int i = 0; i < length; i++)
+                {
+                    builder.append(byteBuffer.get(offset + i));
+                    if (i == length - 1)
+                    {
+                        builder.append('}');
+                    }
+                    else
+                    {
+                        builder.append(", ");
+                    }
+                }
+            }
             finish(tag);
         }
 

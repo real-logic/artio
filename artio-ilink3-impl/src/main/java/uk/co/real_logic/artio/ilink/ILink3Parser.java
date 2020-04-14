@@ -125,6 +125,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         retransmitReject.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", retransmitRejectAppendTo);
         return handler.onRetransmitReject(
             retransmitReject.reason(),
             retransmitReject.uUID(),
@@ -137,7 +138,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationResponse.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiationResponseAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", negotiationResponseAppendTo);
         return handler.onNegotiationResponse(
             negotiationResponse.uUID(),
             negotiationResponse.requestTimestamp(),
@@ -152,7 +153,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationReject.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, negotiationRejectAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", negotiationRejectAppendTo);
         return handler.onNegotiationReject(
             negotiationReject.reason(),
             negotiationReject.uUID(),
@@ -166,7 +167,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentAck.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, establishmentAckAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", establishmentAckAppendTo);
         return handler.onEstablishmentAck(
             establishmentAck.uUID(),
             establishmentAck.requestTimestamp(),
@@ -183,7 +184,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentReject.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, establishmentRejectAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", establishmentRejectAppendTo);
         return handler.onEstablishmentReject(
             establishmentReject.reason(),
             establishmentReject.uUID(),
@@ -198,7 +199,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         terminate.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, terminateAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", terminateAppendTo);
         return handler.onTerminate(
             terminate.reason(),
             terminate.uUID(),
@@ -211,7 +212,7 @@ public class ILink3Parser extends AbstractILink3Parser
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         sequence.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, sequenceAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", sequenceAppendTo);
         return handler.onSequence(
             sequence.uUID(),
             sequence.nextSeqNo(),
@@ -222,7 +223,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private long onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         notApplied.wrap(buffer, offset, blockLength, version);
-        DebugLogger.logSbeDecoder(ILINK_SESSION, notAppliedAppendTo);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", notAppliedAppendTo);
         return handler.onNotApplied(
             notApplied.uUID(),
             notApplied.fromSeqNo(),

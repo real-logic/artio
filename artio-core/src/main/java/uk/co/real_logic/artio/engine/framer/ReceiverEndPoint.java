@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -26,7 +25,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
 import static java.nio.channels.SelectionKey.OP_READ;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 
 public abstract class ReceiverEndPoint
@@ -58,25 +56,6 @@ public abstract class ReceiverEndPoint
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-    }
-
-    int readData() throws IOException
-    {
-        final int dataRead = channel.read(byteBuffer);
-        if (dataRead != SOCKET_DISCONNECTED)
-        {
-            if (dataRead > 0)
-            {
-                DebugLogger.log(FIX_MESSAGE_TCP, "Read     ", buffer, 0, dataRead);
-            }
-            usedBufferData += dataRead;
-        }
-        else
-        {
-            onDisconnectDetected();
-        }
-
-        return dataRead;
     }
 
     long connectionId()

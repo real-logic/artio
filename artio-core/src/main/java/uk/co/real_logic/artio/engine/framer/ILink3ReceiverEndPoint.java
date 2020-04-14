@@ -18,15 +18,18 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
 
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofh;
 
@@ -76,6 +79,25 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
     {
         // TODO
         return false;
+    }
+
+    private int readData() throws IOException
+    {
+        final int dataRead = channel.read(byteBuffer);
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
+                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Read     ", byteBuffer, usedBufferData, dataRead);
+            }
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnectDetected();
+        }
+
+        return dataRead;
     }
 
     int poll()
