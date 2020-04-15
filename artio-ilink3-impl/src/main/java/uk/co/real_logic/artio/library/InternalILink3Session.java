@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import iLinkBinary.BusinessReject521Decoder;
 import iLinkBinary.FTI;
 import iLinkBinary.KeepAliveLapsed;
 import io.aeron.exceptions.TimeoutException;
@@ -42,6 +43,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.Base64;
 import java.util.Deque;
+import java.util.function.Consumer;
 
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
@@ -67,6 +69,8 @@ public class InternalILink3Session extends ILink3Session
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
     private final CharFormatter unknownMessage = new CharFormatter(
         "Unknown Message,templateId=%s,blockLength=%s,version=%s,seqNum=%s,possRetrans=%s%n");
+    private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
+    private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
 
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
@@ -917,6 +921,12 @@ public class InternalILink3Session extends ILink3Session
                     .with(seqNum)
                     .with(possRetrans);
                 DebugLogger.log(ILINK_SESSION, unknownMessage);
+
+                if (templateId == BusinessReject521Decoder.TEMPLATE_ID)
+                {
+                    businessReject.wrap(buffer, offset, blockLength, version);
+                    DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", businessRejectAppendTo);
+                }
             }
 
             return 1;
