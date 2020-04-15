@@ -38,9 +38,11 @@ import uk.co.real_logic.artio.util.TimeUtil;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.function.Consumer;
@@ -48,7 +50,6 @@ import java.util.function.Consumer;
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
@@ -308,7 +309,11 @@ public class InternalILink3Session extends ILink3Session
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
+        System.out.println("canonicalMsg = " + canonicalMsg);
+        System.out.println("userKey = " + configuration.userKey());
         final byte[] hMACSignature = calculateHMAC(canonicalMsg);
+        System.out.println(Arrays.toString(hMACSignature));
+        System.out.println(hMACSignature.length);
 
         final long position = proxy.sendNegotiate(
             hMACSignature, configuration.accessKeyId(), uuid, requestTimestamp, sessionId, firmId);
@@ -382,9 +387,9 @@ public class InternalILink3Session extends ILink3Session
             sha256HMAC.init(secretKey);
 
             // Calculate HMAC
-            return sha256HMAC.doFinal(canonicalRequest.getBytes(UTF_8));
+            return sha256HMAC.doFinal(canonicalRequest.getBytes("UTF-8"));
         }
-        catch (final InvalidKeyException | IllegalStateException e)
+        catch (final InvalidKeyException | IllegalStateException | UnsupportedEncodingException e)
         {
             LangUtil.rethrowUnchecked(e);
             return null;
