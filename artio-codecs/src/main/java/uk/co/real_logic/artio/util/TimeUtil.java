@@ -15,9 +15,6 @@
  */
 package uk.co.real_logic.artio.util;
 
-import java.time.Instant;
-import java.time.temporal.ChronoField;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public final class TimeUtil
