@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.util;
 
+import java.time.Instant;
+import java.time.temporal.ChronoField;
+
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public final class TimeUtil
@@ -30,7 +33,11 @@ public final class TimeUtil
 
     public static long nanoSecondTimestamp()
     {
-        final long nanoseconds = System.nanoTime();
-        return MILLISECONDS.toNanos(System.currentTimeMillis()) + nanoseconds;
+        /*final long nanoseconds = System.nanoTime() % (NANOS_IN_MICROS * MICROS_IN_MILLIS);
+        System.out.println("nanoseconds = " + nanoseconds);
+        final Instant now = Instant.now();
+        System.out.println(now.getNano());
+        System.out.println(now.getLong(ChronoField.));*/
+        return MILLISECONDS.toNanos(System.currentTimeMillis());
     }
 }
