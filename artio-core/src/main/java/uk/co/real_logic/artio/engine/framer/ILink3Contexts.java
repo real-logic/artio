@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -29,15 +30,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static uk.co.real_logic.artio.util.TimeUtil.microSecondTimestamp;
 
 class ILink3Contexts
 {
+    private static final long NANOS_IN_MICROS = 1_000;
+
     private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
     private final Function<ILink3Key, ILink3Context> newUuid = this::newUuid;
     private final MappedFile mappedFile;
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
+    private final EpochNanoClock epochNanoClock;
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final ILink3ContextEncoder contextEncoder = new ILink3ContextEncoder();
@@ -47,11 +50,12 @@ class ILink3Contexts
 
     int offset;
 
-    ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler)
+    ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
         this.errorHandler = errorHandler;
+        this.epochNanoClock = epochNanoClock;
         loadBuffer();
     }
 
@@ -125,6 +129,11 @@ class ILink3Contexts
         final ILink3Context context = new ILink3Context(newUuid, true);
         offset = contextEncoder.limit();
         return context;
+    }
+
+    private long microSecondTimestamp()
+    {
+        return epochNanoClock.nanoTime();
     }
 
     private ILink3Context lookupUuid(final ILink3Key key)

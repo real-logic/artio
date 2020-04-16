@@ -17,12 +17,13 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
 import org.agrona.LangUtil;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.SystemEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.system_tests.TestSystem;
-import uk.co.real_logic.artio.util.TimeUtil;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.IOException;
@@ -53,6 +54,7 @@ public class ILink3TestServer
     public static final String RETRANSMIT_REJECT_REASON = "rejectreason";
     public static final int RETRANSMIT_REJECT_ERROR_CODES = 1;
 
+    private final EpochNanoClock epochNanoClock = new SystemEpochNanoClock();
     private final JsonPrinter jsonPrinter = new JsonPrinter(ILink3Offsets.loadSbeIr());
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final UnsafeBuffer unsafeWriteBuffer = new UnsafeBuffer(writeBuffer);
@@ -450,8 +452,8 @@ public class ILink3TestServer
             .clOrdID(CL_ORD_ID)
             .partyDetailsListReqID(1)
             .orderID(1)
-            .transactTime(TimeUtil.microSecondTimestamp()) // TODO: nanos
-            .sendingTimeEpoch(TimeUtil.microSecondTimestamp())
+            .transactTime(epochNanoClock.nanoTime())
+            .sendingTimeEpoch(epochNanoClock.nanoTime())
             .orderRequestID(1)
             .location("LONDO")
             .securityID(1)

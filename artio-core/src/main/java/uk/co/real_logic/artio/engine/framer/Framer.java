@@ -690,7 +690,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             iLink3Contexts = new ILink3Contexts(
                 configuration.iLink3IdBuffer(),
-                errorHandler);
+                errorHandler,
+                configuration.epochNanoClock());
         }
 
         return iLink3Contexts;

@@ -22,6 +22,7 @@ import io.aeron.exceptions.TimeoutException;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
@@ -34,7 +35,6 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.CharFormatter;
-import uk.co.real_logic.artio.util.TimeUtil;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -42,7 +42,6 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.function.Consumer;
@@ -56,7 +55,6 @@ import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRU
 import static uk.co.real_logic.artio.library.ILink3SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
-import static uk.co.real_logic.artio.util.TimeUtil.nanoSecondTimestamp;
 
 /**
  * External users should never rely on this API.
@@ -84,6 +82,7 @@ public class InternalILink3Session extends ILink3Session
     private final ILink3SessionHandler handler;
     private final boolean newlyAllocated;
     private final long uuid;
+    private final EpochNanoClock epochNanoClock;
 
     private InitiateILink3SessionReply initiateReply;
 
@@ -113,7 +112,8 @@ public class InternalILink3Session extends ILink3Session
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
-        final boolean newlyAllocated)
+        final boolean newlyAllocated,
+        final EpochNanoClock epochNanoClock)
     {
         this.configuration = configuration;
         this.connectionId = connectionId;
@@ -124,6 +124,7 @@ public class InternalILink3Session extends ILink3Session
         this.owner = owner;
         this.handler = configuration.handler();
         this.newlyAllocated = newlyAllocated;
+        this.epochNanoClock = epochNanoClock;
 
         proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
         offsets = new ILink3Offsets();
@@ -162,7 +163,7 @@ public class InternalILink3Session extends ILink3Session
             final int sendingTimeEpochOffset = offsets.sendingTimeEpochOffset(templateId);
             if (sendingTimeEpochOffset != MISSING_OFFSET)
             {
-                buffer.putLong(messageOffset + sendingTimeEpochOffset, TimeUtil.nanoSecondTimestamp(), LITTLE_ENDIAN);
+                buffer.putLong(messageOffset + sendingTimeEpochOffset, requestTimestamp(), LITTLE_ENDIAN);
             }
         }
 
@@ -191,7 +192,7 @@ public class InternalILink3Session extends ILink3Session
     private long sendTerminate(
         final String reason, final int errorCodes, final State finalState, final State resendState)
     {
-        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         final long position = proxy.sendTerminate(
             reason,
             uuid,
@@ -305,15 +306,11 @@ public class InternalILink3Session extends ILink3Session
 
     private boolean sendNegotiate()
     {
-        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
-        System.out.println("canonicalMsg = " + canonicalMsg);
-        System.out.println("userKey = " + configuration.userKey());
         final byte[] hMACSignature = calculateHMAC(canonicalMsg);
-        System.out.println(Arrays.toString(hMACSignature));
-        System.out.println(hMACSignature.length);
 
         final long position = proxy.sendNegotiate(
             hMACSignature, configuration.accessKeyId(), uuid, requestTimestamp, sessionId, firmId);
@@ -329,9 +326,14 @@ public class InternalILink3Session extends ILink3Session
         return false;
     }
 
+    private long requestTimestamp()
+    {
+        return epochNanoClock.nanoTime();
+    }
+
     private boolean sendEstablish()
     {
-        final long requestTimestamp = TimeUtil.nanoSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String tradingSystemName = configuration.tradingSystemName();
@@ -1021,7 +1023,7 @@ public class InternalILink3Session extends ILink3Session
     private long sendRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
         sentMessage();
-        final long requestTimestamp = nanoSecondTimestamp();
+        final long requestTimestamp = requestTimestamp();
         return proxy.sendRetransmitRequest(uuid, requestTimestamp, fromSeqNo, msgCount);
     }
 

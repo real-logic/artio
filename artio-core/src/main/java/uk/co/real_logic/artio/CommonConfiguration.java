@@ -19,12 +19,14 @@ import io.aeron.Aeron;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
+import uk.co.real_logic.artio.util.OffsetEpochNanoClock;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
@@ -219,6 +221,7 @@ public class CommonConfiguration
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private Clock clock = Clock.systemNanoTime();
+    private EpochNanoClock epochNanoClock = new OffsetEpochNanoClock();
     private boolean printErrorMessages = true;
     private ErrorConsumer customErrorConsumer;
     private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
@@ -498,6 +501,18 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the clock used for producing requestTimestamp fields on iLink3 messages.
+     *
+     * @param epochNanoClock the clock used for producing requestTimestamp fields on iLink3 messages.
+     * @return this
+     */
+    public CommonConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        this.epochNanoClock = epochNanoClock;
+        return this;
+    }
+
     public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
     {
         this.inboundLibraryStream = inboundLibraryStream;
@@ -726,6 +741,11 @@ public class CommonConfiguration
     public Clock clock()
     {
         return clock;
+    }
+
+    public EpochNanoClock epochNanoClock()
+    {
+        return epochNanoClock;
     }
 
     public int inboundLibraryStream()

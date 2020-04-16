@@ -20,6 +20,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.engine.MappedFile;
+import uk.co.real_logic.artio.util.OffsetEpochNanoClock;
 
 import java.io.File;
 
@@ -53,7 +54,7 @@ public class ILink3ContextsTest
     private void newContexts()
     {
         final MappedFile mappedFile = MappedFile.map(file.getPath(), DEFAULT_SESSION_ID_BUFFER_SIZE);
-        contexts = new ILink3Contexts(mappedFile, errorHandler);
+        contexts = new ILink3Contexts(mappedFile, errorHandler, new OffsetEpochNanoClock());
     }
 
     @Test

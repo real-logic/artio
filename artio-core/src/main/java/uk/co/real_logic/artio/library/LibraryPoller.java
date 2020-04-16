@@ -26,6 +26,7 @@ import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
@@ -1362,7 +1363,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 long.class,
                 long.class,
-                boolean.class);
+                boolean.class,
+                EpochNanoClock.class);
 
             return (ILink3Session)constructor.newInstance(
                 configuration,
@@ -1375,7 +1377,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 uuid,
                 lastReceivedSequenceNumber,
                 lastSentSequenceNumber,
-                newlyAllocated);
+                newlyAllocated,
+                this.configuration.epochNanoClock());
         }
         catch (final InvocationTargetException e)
         {
