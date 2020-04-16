@@ -18,6 +18,14 @@ package uk.co.real_logic.artio.library;
 import org.agrona.Verify;
 import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
 
+import java.util.Properties;
+import java.util.function.Consumer;
+import java.util.function.LongConsumer;
+
+import static java.lang.Boolean.parseBoolean;
+import static java.lang.Integer.parseInt;
+import static java.lang.Long.parseLong;
+
 // NB: This is an experimental API and is subject to change or potentially removal.
 public class ILink3SessionConfiguration
 {
@@ -38,6 +46,44 @@ public class ILink3SessionConfiguration
     private String accessKeyId;
     private boolean reEstablishLastSession = false;
     private ILink3SessionHandler handler;
+
+    public static ILink3SessionConfiguration fromProperties(final Properties properties)
+    {
+        final ILink3SessionConfiguration config = new ILink3SessionConfiguration()
+            .host(properties.getProperty("host"))
+            .port(parseInt(properties.getProperty("port")))
+            .sessionId(properties.getProperty("session_id"))
+            .firmId(properties.getProperty("firm_id"))
+            .userKey(properties.getProperty("user_key"))
+            .accessKeyId(properties.getProperty("access_key_id"));
+
+        getIfPresent(properties, v -> config.requestedKeepAliveIntervalInMs(parseInt(v)),
+            "requestedKeepAliveIntervalInMs");
+        getLongIfPresent(properties, config::initialSentSequenceNumber, "initialSentSequenceNumber");
+        getLongIfPresent(properties, config::initialReceivedSequenceNumber, "initialReceivedSequenceNumber");
+        getIfPresent(properties, v -> config.reEstablishLastSession(parseBoolean(v)),
+            "re_establish_last_session");
+
+        return config;
+    }
+
+    private static void getIfPresent(final Properties properties, final Consumer<String> setter, final String propName)
+    {
+        final String value = properties.getProperty(propName);
+        if (value != null)
+        {
+            setter.accept(value);
+        }
+    }
+
+    private static void getLongIfPresent(final Properties properties, final LongConsumer setter, final String propName)
+    {
+        final String value = properties.getProperty(propName);
+        if (value != null)
+        {
+            setter.accept(parseLong(value));
+        }
+    }
 
     /**
      * Sets the host to connect to.
