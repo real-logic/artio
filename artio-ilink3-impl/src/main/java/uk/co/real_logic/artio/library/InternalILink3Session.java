@@ -1050,4 +1050,20 @@ public class InternalILink3Session extends ILink3Session
 
         return 1;
     }
+
+    public String toString()
+    {
+        return "InternalILink3Session{" +
+            "configuration=" + configuration +
+            ", connectionId=" + connectionId +
+            ", libraryId=" + libraryId +
+            ", uuid=" + uuid +
+            ", state=" + state +
+            ", nextRecvSeqNo=" + nextRecvSeqNo +
+            ", nextSentSeqNo=" + nextSentSeqNo +
+            ", retransmitFillSeqNo=" + retransmitFillSeqNo +
+            ", nextReceiveMessageTimeInMs=" + nextReceiveMessageTimeInMs +
+            ", nextSendMessageTimeInMs=" + nextSendMessageTimeInMs +
+            '}';
+    }
 }
