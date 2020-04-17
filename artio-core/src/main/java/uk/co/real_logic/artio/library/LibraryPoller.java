@@ -25,6 +25,7 @@ import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
+import org.agrona.collections.ObjectHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochClock;
@@ -131,7 +132,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final FixCounters fixCounters;
 
     private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
-    private final List<BooleanSupplier> tasks = new ArrayList<>();
+    private final ObjectHashSet<BooleanSupplier> tasks = new ObjectHashSet<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
