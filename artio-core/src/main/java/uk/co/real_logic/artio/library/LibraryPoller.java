@@ -23,6 +23,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
@@ -791,16 +792,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
         }
 
-        final Iterator<BooleanSupplier> tasksIt = tasks.iterator();
-        while (tasksIt.hasNext())
-        {
-            final BooleanSupplier task = tasksIt.next();
-
-            if (task.getAsBoolean())
-            {
-                tasksIt.remove();
-            }
-        }
+        CollectionUtil.removeIf(tasks, BooleanSupplier::getAsBoolean);
 
         return count;
     }
