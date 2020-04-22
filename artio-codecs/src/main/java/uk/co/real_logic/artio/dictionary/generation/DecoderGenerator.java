@@ -780,7 +780,6 @@ public class DecoderGenerator extends Generator
 
     private void generateGetter(
         final Entry entry, final Writer out, final Set<String> missingOptionalFields)
-        throws IOException
     {
         entry.forEach(
             (field) -> out.append(fieldGetter(entry, field, missingOptionalFields)),
@@ -1120,7 +1119,7 @@ public class DecoderGenerator extends Generator
 
             case DATA:
             case XMLDATA:
-                // Length extracted separately from a preceeding field
+                // Length extracted separately from a preceding field
                 final Field associatedLengthField = field.associatedLengthField();
                 if (associatedLengthField == null)
                 {
@@ -1144,7 +1143,6 @@ public class DecoderGenerator extends Generator
             case MONTHYEAR:
                 decodeMethod = String.format("buffer.getBytes(%1$s, %1$sOffset, %1$sLength)", fieldName);
                 break;
-
 
             case BOOLEAN:
             case CHAR:
@@ -1748,7 +1746,7 @@ public class DecoderGenerator extends Generator
             "        indent(builder, level);\n" +
             "        builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
             "        %3$s %4$s = this.%4$s;\n" +
-            "        for (int i = 0, size = this.%6$s; i < size; i++)\n" +
+            "        for (int i = 0, size = this.%5$s; i < size; i++)\n" +
             "        {\n" +
             "            indent(builder, level);\n" +
             "            %4$s.appendTo(builder, level + 1);" +
@@ -1766,7 +1764,6 @@ public class DecoderGenerator extends Generator
             numberField,
             decoderClassName(name),
             formatPropertyName(name),
-            iteratorFieldName(group),
             formatPropertyName(numberField));
     }
 
@@ -1852,26 +1849,24 @@ public class DecoderGenerator extends Generator
         final String numberField = group.numberField().name();
 
         return String.format(
-            "        if (has%2$s)\n" +
+            "        if (has%1$s)\n" +
             "        {\n" +
-            "            final int size = this.%6$s;\n" +
-            "            %3$s %4$s = this.%4$s;\n" +
-            "            %8$s %4$sEncoder = %7$s.%4$s(size);\n" +
+            "            final int size = this.%4$s;\n" +
+            "            %2$s %3$s = this.%3$s;\n" +
+            "            %6$s %3$sEncoder = %5$s.%3$s(size);\n" +
             "            for (int i = 0; i < size; i++)\n" +
             "            {\n" +
-            "                if (%4$s != null)\n" +
+            "                if (%3$s != null)\n" +
             "                {\n" +
-            "                    %4$s.toEncoder(%4$sEncoder);\n" +
-            "                    %4$s = %4$s.next();\n" +
-            "                    %4$sEncoder = %4$sEncoder.next();\n" +
+            "                    %3$s.toEncoder(%3$sEncoder);\n" +
+            "                    %3$s = %3$s.next();\n" +
+            "                    %3$sEncoder = %3$sEncoder.next();\n" +
             "                }\n" +
             "            }\n" +
             "        }\n",
-            name,
             numberField,
             decoderClassName(name),
             formatPropertyName(name),
-            iteratorFieldName(group),
             formatPropertyName(numberField),
             encoderName,
             encoderClassName(name));
