@@ -861,6 +861,11 @@ public class InternalILink3Session extends ILink3Session
 
     private void onReceivedMessage()
     {
+        if (state == State.AWAITING_KEEPALIVE)
+        {
+            state = State.ESTABLISHED;
+        }
+
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 

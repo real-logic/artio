@@ -133,6 +133,14 @@ public class ILink3SystemTest
         establishNewConnection();
     }
 
+    @Test
+    public void shouldCloseShouldShutdownOpenConnections() throws IOException
+    {
+        launch(true);
+
+        establishNewConnection();
+    }
+
     private void establishNewConnection() throws IOException
     {
         final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
@@ -199,7 +207,7 @@ public class ILink3SystemTest
         assertDisconnected();
 
         Timing.assertEventuallyTrue("Failed to receive error", () ->
-            verify(errorConsumer).accept(eq(1), anyLong(), anyLong(), contains("Invalid uuid=0")));
+            verify(errorConsumer, atLeastOnce()).accept(eq(1), anyLong(), anyLong(), contains("Invalid uuid=0")));
     }
 
     @Test
