@@ -737,7 +737,7 @@ public class Session
     {
         final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
         lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
-        if (!redact(NO_REQUIRED_POSITION))
+        if (redact(NO_REQUIRED_POSITION))
         {
             this.sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
         }
@@ -1191,6 +1191,7 @@ public class Session
             MSG_SEQ_NO_TOO_LOW);
     }
 
+    // true if needs backpressure / retry
     private boolean redact(final long position)
     {
         messageInfo.isValid(false);
