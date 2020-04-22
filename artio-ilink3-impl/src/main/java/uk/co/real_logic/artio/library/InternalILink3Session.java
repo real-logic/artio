@@ -141,9 +141,16 @@ public class InternalILink3Session extends ILink3Session
     public long tryClaim(
         final MessageEncoderFlyweight message)
     {
+        return tryClaim(message, 0);
+    }
+
+    public long tryClaim(
+        final MessageEncoderFlyweight message, final int variableLength)
+    {
         validateCanSend();
 
-        final long position = proxy.claimILinkMessage(message.sbeBlockLength(), message);
+        final long position = proxy.claimILinkMessage(
+            message.sbeBlockLength() + variableLength, message);
 
         if (position > 0)
         {

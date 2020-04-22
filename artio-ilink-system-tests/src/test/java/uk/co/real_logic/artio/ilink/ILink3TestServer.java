@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
+import iLinkBinary.PartyDetailsDefinitionRequest518Decoder.NoPartyDetailsDecoder;
+import iLinkBinary.PartyDetailsDefinitionRequest518Decoder.NoTrdRegPublicationsDecoder;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochNanoClock;
@@ -38,6 +40,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
+import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.CL_ORD_ID;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.FIRM_ID;
@@ -367,6 +370,20 @@ public class ILink3TestServer
     {
         final NewOrderSingle514Decoder newOrderSingle = read(new NewOrderSingle514Decoder(), 0);
         assertEquals(expectedSeqNum, newOrderSingle.seqNum());
+    }
+
+    public void readPartyDetailsDefinitionRequest(final int expectedSeqNum, final int noPartyDetailsCount)
+    {
+        final int nonBlockLength = NoPartyDetailsDecoder.HEADER_SIZE +
+            noPartyDetailsCount * NoPartyDetailsDecoder.sbeBlockLength() +
+            NoTrdRegPublicationsDecoder.HEADER_SIZE;
+
+        final PartyDetailsDefinitionRequest518Decoder request = read(
+            new PartyDetailsDefinitionRequest518Decoder(), nonBlockLength);
+
+        assertEquals(expectedSeqNum, request.seqNum());
+
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "TS: ", request::appendTo);
     }
 
     public void assertDisconnected()

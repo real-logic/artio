@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
+import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoPartyDetailsEncoder;
+import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoTrdRegPublicationsEncoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntArrayList;
@@ -42,6 +44,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.contains;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -215,6 +218,50 @@ public class ILink3SystemTest
         assertEquals(messageIds.getInt(0), ExecutionReportStatus532Decoder.TEMPLATE_ID);
 
         terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldExchangeVariableLengthBusinessMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendPartyDetailsDefinitionRequest();
+
+        testServer.readPartyDetailsDefinitionRequest(1, 1);
+
+        terminateAndDisconnect();
+    }
+
+    private void sendPartyDetailsDefinitionRequest()
+    {
+        final PartyDetailsDefinitionRequest518Encoder partyDetailsDefinitionRequest =
+            new PartyDetailsDefinitionRequest518Encoder();
+        final int variableLength = NoPartyDetailsEncoder.HEADER_SIZE + NoPartyDetailsEncoder.sbeBlockLength() +
+            NoTrdRegPublicationsEncoder.HEADER_SIZE;
+        assertThat(session.tryClaim(partyDetailsDefinitionRequest, variableLength), greaterThan(0L));
+
+        partyDetailsDefinitionRequest
+            .partyDetailsListReqID(1)
+            .listUpdateAction(ListUpdAct.Add)
+            .memo(0, PartyDetailsDefinitionRequest518Encoder.memoNullValue())
+            .avgPxGroupID(0, PartyDetailsDefinitionRequest518Encoder.avgPxGroupIDNullValue())
+            .selfMatchPreventionID(PartyDetailsDefinitionRequest518Encoder.selfMatchPreventionIDNullValue())
+            .cmtaGiveupCD(CmtaGiveUpCD.GiveUp)
+            .custOrderCapacity(CustOrderCapacity.Clearingfirmtradingforitsproprietaryaccount)
+            .clearingAccountType(ClearingAcctType.Firm)
+            .selfMatchPreventionInstruction(SMPI.CancelOldest)
+            .avgPxIndicator(AvgPxInd.NoAveragePricing)
+            .clearingTradePriceType(SLEDS.TradeClearingatExecutionPrice)
+            .custOrderHandlingInst(CustOrdHandlInst.AlgoEngine)
+            .executor(PartyDetailsDefinitionRequest518Encoder.executorNullValue())
+            .iDMShortCode(PartyDetailsDefinitionRequest518Encoder.iDMShortCodeNullValue())
+            .noPartyDetailsCount(1)
+                .next()
+                .partyDetailID("abc")
+                .partyDetailRole(PartyDetailRole.ExecutingFirm);
+        partyDetailsDefinitionRequest.noTrdRegPublicationsCount(0);
+
+        session.commit();
     }
 
     @Test
