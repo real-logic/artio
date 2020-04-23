@@ -57,6 +57,8 @@ public abstract class ILink3Session
 
     public abstract long tryClaim(MessageEncoderFlyweight message, int variableLength);
 
+    public abstract long trySendSequence();
+
     public abstract void commit();
 
     public abstract long requestDisconnect(DisconnectReason reason);

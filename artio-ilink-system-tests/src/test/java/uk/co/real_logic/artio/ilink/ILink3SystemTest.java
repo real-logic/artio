@@ -461,7 +461,7 @@ public class ILink3SystemTest
         sendNewOrderSingle();
 
         testServer.readNewOrderSingle(3);
-        testServer.writeNotApplied(1, 2);
+        testServer.writeNotApplied(1, 3);
 
         assertEventuallyTrue("", () ->
         {

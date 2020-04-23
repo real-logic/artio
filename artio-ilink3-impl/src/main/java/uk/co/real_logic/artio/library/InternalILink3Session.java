@@ -579,6 +579,11 @@ public class InternalILink3Session extends ILink3Session
         initiateReply.onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 
+    public long trySendSequence()
+    {
+        return sendSequence(NotLapsed);
+    }
+
     private long sendSequence(final KeepAliveLapsed keepAliveIntervalLapsed)
     {
         final long position = proxy.sendSequence(uuid, nextSentSeqNo, FTI.Primary, keepAliveIntervalLapsed);
@@ -588,7 +593,6 @@ public class InternalILink3Session extends ILink3Session
         }
 
         // Will be retried on next poll if enqueue back pressured.
-
         return position;
     }
 
