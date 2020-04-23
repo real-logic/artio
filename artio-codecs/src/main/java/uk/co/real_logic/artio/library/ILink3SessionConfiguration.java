@@ -287,7 +287,6 @@ public class ILink3SessionConfiguration
             ", tradingSystemVersion='" + tradingSystemVersion + '\'' +
             ", tradingSystemVendor='" + tradingSystemVendor + '\'' +
             ", keepAliveInterval=" + requestedKeepAliveIntervalInMs +
-            ", userKey='" + userKey + '\'' +
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
             ", accessKeyId=" + accessKeyId +
             ", handler=" + handler +
