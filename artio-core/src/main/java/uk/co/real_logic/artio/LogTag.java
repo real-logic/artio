@@ -54,7 +54,7 @@ public enum LogTag
     PROXY,
 
     /**
-     * Prints out the ILink3 session messages
+     * Prints out the ILink3 session messages.
      */
     ILINK_SESSION;
 

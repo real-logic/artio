@@ -261,4 +261,9 @@ public class ILink3Proxy
     {
         bufferClaim.commit();
     }
+
+    public void abort()
+    {
+        bufferClaim.abort();
+    }
 }

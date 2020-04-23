@@ -184,6 +184,11 @@ public class InternalILink3Session extends ILink3Session
         sentMessage();
     }
 
+    public void abort()
+    {
+        proxy.abort();
+    }
+
     private void sentMessage()
     {
         nextSendMessageTimeInMs = nextTimeoutInMs();

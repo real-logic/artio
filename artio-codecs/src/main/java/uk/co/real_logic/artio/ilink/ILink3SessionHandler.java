@@ -18,9 +18,27 @@ package uk.co.real_logic.artio.ilink;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
-// NB: This is an experimental API and is subject to change or potentially removal.
+/**
+ * This handler should be implemented by anyone using Artio to connect to the iLink3 protocol. Your application code
+ * will receive callbacks on these messages in response to business level messages. Artio handles session level
+ * messages itself.
+ *
+ * NB: This is an experimental API and is subject to change or potentially removal.
+ */
 public interface ILink3SessionHandler
 {
+    /**
+     * Callback for receiving iLink3 business messages. Details of business messages can be found in the
+     * <a href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/iLink+3+Application+Layer">CME
+     * Documentation</a>. These may also be referred to as application layer messages.
+     *
+     * @param templateId the templateId of the iLink3 SBE message that you have received.
+     * @param buffer the buffer containing the message.
+     * @param offset the offset within the buffer at which your message starts.
+     * @param blockLength the blockLength of the received message.
+     * @param version the sbe version of the protocol.
+     * @param possRetrans true of the possRetrans flag is set to true.
+     */
     void onBusinessMessage(
         int templateId,
         DirectBuffer buffer,
@@ -29,7 +47,22 @@ public interface ILink3SessionHandler
         int version,
         boolean possRetrans);
 
+    /**
+     * Callback when Artio has received a NotApplied message. The {@link NotAppliedResponse} parameter can be used
+     * in order to get Artio to retransmit messages or use a Sequence message in order to fill the gap.
+     *
+     * @param fromSequenceNumber the fromSequenceNumber of the NotApplied message.
+     * @param msgCount the msgCount of the NotApplied message.
+     * @param response used to tell Artio how to respond to the NotApplied message.
+     */
     void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
 
+    /**
+     * Callback when Artio has received a RetransmitReject message. This can be used for error logging or handling.
+     *
+     * @param reason the reason of the RetransmitReject message
+     * @param requestTimestamp the requestTimestamp of the RetransmitReject message
+     * @param errorCodes the errorCodes of the RetransmitReject message
+     */
     void onRetransmitReject(String reason, long requestTimestamp, int errorCodes);
 }

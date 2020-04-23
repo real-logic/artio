@@ -143,7 +143,7 @@ public class ILink3SystemTest
 
     private void establishNewConnection() throws IOException
     {
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
+        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration();
 
         connectToTestServer(sessionConfiguration);
 
@@ -277,9 +277,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-
-        reply = library.initiate(sessionConfiguration);
+        reply = library.initiate(sessionConfiguration().build());
         assertConnectError(containsString("UNABLE_TO_CONNECT"));
     }
 
@@ -288,9 +286,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration());
 
         readNegotiate();
         readNegotiate();
@@ -309,9 +305,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration());
 
         readNegotiate();
         readNegotiate();
@@ -324,9 +318,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration());
 
         readNegotiate();
 
@@ -341,8 +333,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration();
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration());
 
         readNegotiate();
 
@@ -359,9 +350,7 @@ public class ILink3SystemTest
 
         final long lastUuid = session.uuid();
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reEstablishLastSession(true);
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -381,7 +370,7 @@ public class ILink3SystemTest
         closeArtio();
         launchArtio();
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
+        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration()
             .reEstablishLastSession(true);
         connectToTestServer(sessionConfiguration);
 
@@ -398,9 +387,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reEstablishLastSession(true);
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
         establishConnection();
     }
@@ -612,9 +599,7 @@ public class ILink3SystemTest
 
         final long lastUuid = session.uuid();
 
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reEstablishLastSession(true);
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -668,9 +653,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
         final long lastUuid = session.uuid();
-        final ILink3SessionConfiguration sessionConfiguration = sessionConfiguration()
-            .reEstablishLastSession(true);
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
         testServer.expectedUuid(lastUuid);
         readEstablish(1);
 
@@ -756,9 +739,10 @@ public class ILink3SystemTest
         }
     }
 
-    private void connectToTestServer(final ILink3SessionConfiguration sessionConfiguration) throws IOException
+    private void connectToTestServer(final ILink3SessionConfiguration.Builder sessionConfiguration) throws IOException
     {
-        testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
+        testServer = new ILink3TestServer(
+            port, () -> reply = library.initiate(sessionConfiguration.build()), testSystem);
     }
 
     private void assertConnectError(final Matcher<String> messageMatcher)
@@ -788,9 +772,9 @@ public class ILink3SystemTest
         session.terminate("shutdown", 0);
     }
 
-    private ILink3SessionConfiguration sessionConfiguration()
+    private ILink3SessionConfiguration.Builder sessionConfiguration()
     {
-        return new ILink3SessionConfiguration()
+        return ILink3SessionConfiguration.builder()
             .host("localhost")
             .port(port)
             .sessionId(SESSION_ID)

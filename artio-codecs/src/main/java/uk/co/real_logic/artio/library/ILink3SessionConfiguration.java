@@ -26,45 +26,73 @@ import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 
-// NB: This is an experimental API and is subject to change or potentially removal.
-public class ILink3SessionConfiguration
+/**
+ * Configuration object for connecting to an iLink3 session.
+ *
+ * NB: This is an experimental API and is subject to change or potentially removal.
+ */
+public final class ILink3SessionConfiguration
 {
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
     public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
 
-    private String host;
-    private int port;
-    private String sessionId;
-    private String firmId;
-    private String tradingSystemName = "Artio";
-    private String tradingSystemVersion = "1.0";
-    private String tradingSystemVendor = "Monotonic";
-    private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
-    private String userKey;
-    private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-    private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-    private String accessKeyId;
-    private boolean reEstablishLastSession = false;
-    private ILink3SessionHandler handler;
+    public static final String HOST_PROP_NAME = "host";
+    public static final String PORT_PROP_NAME = "port";
+    public static final String SESSION_ID_PROP_NAME = "session_id";
+    public static final String FIRM_ID_PROP_NAME = "firm_id";
+    public static final String USER_KEY_PROP_NAME = "user_key";
+    public static final String ACCESS_KEY_ID_PROP_NAME = "access_key_id";
+    public static final String REQUESTED_KEEP_ALIVE_INTERVAL_IN_MS_PROP_NAME = "requestedKeepAliveIntervalInMs";
+    public static final String INITIAL_SENT_SEQUENCE_NUMBER_PROP_NAME = "initialSentSequenceNumber";
+    public static final String INITIAL_RECEIVED_SEQUENCE_NUMBER_PROP_NAME = "initialReceivedSequenceNumber";
+    public static final String RE_ESTABLISH_LAST_SESSION_PROP_NAME = "re_establish_last_session";
 
-    public static ILink3SessionConfiguration fromProperties(final Properties properties)
+    private final String host;
+    private final int port;
+    private final String sessionId;
+    private final String firmId;
+    private final String tradingSystemName;
+    private final String tradingSystemVersion;
+    private final String tradingSystemVendor;
+    private final int requestedKeepAliveIntervalInMs;
+    private final String userKey;
+    private final long initialSentSequenceNumber;
+    private final long initialReceivedSequenceNumber;
+    private final String accessKeyId;
+    private final boolean reEstablishLastSession;
+    private final ILink3SessionHandler handler;
+
+    /**
+     * Load the ILink3SessionConfiguration from a properties file.
+     *
+     * @param properties the properties object to load from.
+     * @return the builder initialised with the provided properties.
+     */
+    public static ILink3SessionConfiguration.Builder fromProperties(final Properties properties)
     {
-        final ILink3SessionConfiguration config = new ILink3SessionConfiguration()
-            .host(properties.getProperty("host"))
-            .port(parseInt(properties.getProperty("port")))
-            .sessionId(properties.getProperty("session_id"))
-            .firmId(properties.getProperty("firm_id"))
-            .userKey(properties.getProperty("user_key"))
-            .accessKeyId(properties.getProperty("access_key_id"));
+        final Builder builder = builder()
+            .host(properties.getProperty(HOST_PROP_NAME))
+            .port(parseInt(properties.getProperty(PORT_PROP_NAME)))
+            .sessionId(properties.getProperty(SESSION_ID_PROP_NAME))
+            .firmId(properties.getProperty(FIRM_ID_PROP_NAME))
+            .userKey(properties.getProperty(USER_KEY_PROP_NAME))
+            .accessKeyId(properties.getProperty(ACCESS_KEY_ID_PROP_NAME));
 
-        getIfPresent(properties, v -> config.requestedKeepAliveIntervalInMs(parseInt(v)),
-            "requestedKeepAliveIntervalInMs");
-        getLongIfPresent(properties, config::initialSentSequenceNumber, "initialSentSequenceNumber");
-        getLongIfPresent(properties, config::initialReceivedSequenceNumber, "initialReceivedSequenceNumber");
-        getIfPresent(properties, v -> config.reEstablishLastSession(parseBoolean(v)),
-            "re_establish_last_session");
+        getIfPresent(properties, v -> builder.requestedKeepAliveIntervalInMs(parseInt(v)),
+            REQUESTED_KEEP_ALIVE_INTERVAL_IN_MS_PROP_NAME);
+        getLongIfPresent(properties, builder::initialSentSequenceNumber,
+            INITIAL_SENT_SEQUENCE_NUMBER_PROP_NAME);
+        getLongIfPresent(properties, builder::initialReceivedSequenceNumber,
+            INITIAL_RECEIVED_SEQUENCE_NUMBER_PROP_NAME);
+        getIfPresent(properties, v -> builder.reEstablishLastSession(parseBoolean(v)),
+            RE_ESTABLISH_LAST_SESSION_PROP_NAME);
 
-        return config;
+        return builder;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
     }
 
     private static void getIfPresent(final Properties properties, final Consumer<String> setter, final String propName)
@@ -85,27 +113,9 @@ public class ILink3SessionConfiguration
         }
     }
 
-    /**
-     * Sets the host to connect to.
-     *
-     * @param host the host to connect to.
-     * @return this
-     */
-    public ILink3SessionConfiguration host(final String host)
-    {
-        this.host = host;
-        return this;
-    }
-
     public String host()
     {
         return host;
-    }
-
-    public ILink3SessionConfiguration port(final int port)
-    {
-        this.port = port;
-        return this;
     }
 
     public int port()
@@ -113,21 +123,9 @@ public class ILink3SessionConfiguration
         return port;
     }
 
-    public ILink3SessionConfiguration sessionId(final String sessionId)
-    {
-        this.sessionId = sessionId;
-        return this;
-    }
-
     public String sessionId()
     {
         return sessionId;
-    }
-
-    public ILink3SessionConfiguration firmId(final String firmId)
-    {
-        this.firmId = firmId;
-        return this;
     }
 
     public String firmId()
@@ -135,21 +133,9 @@ public class ILink3SessionConfiguration
         return firmId;
     }
 
-    public ILink3SessionConfiguration tradingSystemName(final String tradingSystemName)
-    {
-        this.tradingSystemName = tradingSystemName;
-        return this;
-    }
-
     public String tradingSystemName()
     {
         return tradingSystemName;
-    }
-
-    public ILink3SessionConfiguration tradingSystemVersion(final String tradingSystemVersion)
-    {
-        this.tradingSystemVersion = tradingSystemVersion;
-        return this;
     }
 
     public String tradingSystemVersion()
@@ -157,21 +143,9 @@ public class ILink3SessionConfiguration
         return tradingSystemVersion;
     }
 
-    public ILink3SessionConfiguration tradingSystemVendor(final String tradingSystemVendor)
-    {
-        this.tradingSystemVendor = tradingSystemVendor;
-        return this;
-    }
-
     public String tradingSystemVendor()
     {
         return tradingSystemVendor;
-    }
-
-    public ILink3SessionConfiguration requestedKeepAliveIntervalInMs(final int requestedKeepAliveIntervalInMs)
-    {
-        this.requestedKeepAliveIntervalInMs = requestedKeepAliveIntervalInMs;
-        return this;
     }
 
     public int requestedKeepAliveIntervalInMs()
@@ -179,21 +153,9 @@ public class ILink3SessionConfiguration
         return requestedKeepAliveIntervalInMs;
     }
 
-    public ILink3SessionConfiguration userKey(final String userKey)
-    {
-        this.userKey = userKey;
-        return this;
-    }
-
     public String userKey()
     {
         return userKey;
-    }
-
-    public ILink3SessionConfiguration initialSentSequenceNumber(final long initialSentSequenceNumber)
-    {
-        this.initialSentSequenceNumber = initialSentSequenceNumber;
-        return this;
     }
 
     public long initialSentSequenceNumber()
@@ -201,42 +163,9 @@ public class ILink3SessionConfiguration
         return initialSentSequenceNumber;
     }
 
-    public ILink3SessionConfiguration initialReceivedSequenceNumber(final long initialReceivedSequenceNumber)
-    {
-        this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
-        return this;
-    }
-
     public long initialReceivedSequenceNumber()
     {
         return initialReceivedSequenceNumber;
-    }
-
-    public ILink3SessionConfiguration accessKeyId(final String accessKeyId)
-    {
-        this.accessKeyId = accessKeyId;
-        return this;
-    }
-
-    public String accessKeyId()
-    {
-        return accessKeyId;
-    }
-
-    /**
-     * Enable a re-establishment of the same session with the same UUID, rather than generating a new UUID.
-     * If there is an existing UUID associated with this session identifier then that will be used. The
-     * session identifier here is a triple of (port, host and accessKeyId).
-     *
-     * Note: if this session has never connected before then a new UUID will be generated.
-     *
-     * @param reEstablishLastSession true to re-establish the session, false otherwise.
-     * @return this.
-     */
-    public ILink3SessionConfiguration reEstablishLastSession(final boolean reEstablishLastSession)
-    {
-        this.reEstablishLastSession = reEstablishLastSession;
-        return this;
     }
 
     public boolean reEstablishLastSession()
@@ -244,18 +173,17 @@ public class ILink3SessionConfiguration
         return reEstablishLastSession;
     }
 
-    public ILink3SessionConfiguration handler(final ILink3SessionHandler handler)
-    {
-        this.handler = handler;
-        return this;
-    }
-
     public ILink3SessionHandler handler()
     {
         return handler;
     }
 
-    public void validate()
+    public String accessKeyId()
+    {
+        return accessKeyId;
+    }
+
+    private void validate()
     {
         Verify.notNull(host, "host");
         Verify.notNull(sessionId, "sessionId");
@@ -296,5 +224,263 @@ public class ILink3SessionConfiguration
     public int retransmitRequestMessageLimit()
     {
         return 2500;
+    }
+
+    private ILink3SessionConfiguration(
+        final String host,
+        final int port,
+        final String sessionId,
+        final String firmId,
+        final String tradingSystemName,
+        final String tradingSystemVersion,
+        final String tradingSystemVendor,
+        final int requestedKeepAliveIntervalInMs,
+        final String userKey,
+        final long initialSentSequenceNumber,
+        final long initialReceivedSequenceNumber,
+        final String accessKeyId,
+        final boolean reEstablishLastSession,
+        final ILink3SessionHandler handler)
+    {
+        this.host = host;
+        this.port = port;
+        this.sessionId = sessionId;
+        this.firmId = firmId;
+        this.tradingSystemName = tradingSystemName;
+        this.tradingSystemVersion = tradingSystemVersion;
+        this.tradingSystemVendor = tradingSystemVendor;
+        this.requestedKeepAliveIntervalInMs = requestedKeepAliveIntervalInMs;
+        this.userKey = userKey;
+        this.initialSentSequenceNumber = initialSentSequenceNumber;
+        this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
+        this.accessKeyId = accessKeyId;
+
+        this.reEstablishLastSession = reEstablishLastSession;
+        this.handler = handler;
+
+        validate();
+    }
+
+    public static final class Builder
+    {
+        private String host;
+        private int port;
+        private String sessionId;
+        private String firmId;
+        private String tradingSystemName = "Artio";
+        private String tradingSystemVersion = "1.0";
+        private String tradingSystemVendor = "Monotonic";
+        private int requestedKeepAliveIntervalInMs = DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
+        private String userKey;
+        private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        private String accessKeyId;
+        private boolean reEstablishLastSession = false;
+        private ILink3SessionHandler handler;
+
+        public ILink3SessionConfiguration build()
+        {
+            return new ILink3SessionConfiguration(
+                host,
+                port,
+                sessionId,
+                firmId,
+                tradingSystemName,
+                tradingSystemVersion,
+                tradingSystemVendor,
+                requestedKeepAliveIntervalInMs,
+                userKey,
+                initialSentSequenceNumber,
+                initialReceivedSequenceNumber,
+                accessKeyId,
+                reEstablishLastSession,
+                handler);
+        }
+
+        /**
+         * Sets the host IP to connect to.
+         *
+         * @param host the host IP to connect to.
+         * @return this
+         */
+        public Builder host(final String host)
+        {
+            this.host = host;
+            return this;
+        }
+
+        /**
+         * Sets the host port to connect to.
+         *
+         * @param port the host port to connect to.
+         * @return this
+         */
+        public Builder port(final int port)
+        {
+            this.port = port;
+            return this;
+        }
+
+        /**
+         * Sets the sessionId used in the Negotiate and Establish messages.
+         *
+         * @param sessionId the sessionId used in the Negotiate and Establish messages.
+         * @return this
+         */
+        public Builder sessionId(final String sessionId)
+        {
+            this.sessionId = sessionId;
+            return this;
+        }
+
+        /**
+         * Sets the firmId used in the Negotiate and Establish messages.
+         *
+         * @param firmId the firmId used in the Negotiate and Establish messages.
+         * @return this
+         */
+        public Builder firmId(final String firmId)
+        {
+            this.firmId = firmId;
+            return this;
+        }
+
+        /**
+         * Sets the tradingSystemName used in the Establish message.
+         *
+         * @param tradingSystemName the tradingSystemName used in the Establish message.
+         * @return this
+         */
+        public Builder tradingSystemName(final String tradingSystemName)
+        {
+            this.tradingSystemName = tradingSystemName;
+            return this;
+        }
+
+        /**
+         * Sets the tradingSystemVersion used in the Establish message.
+         *
+         * @param tradingSystemVersion the tradingSystemVersion used in the Establish message.
+         * @return this
+         */
+        public Builder tradingSystemVersion(final String tradingSystemVersion)
+        {
+            this.tradingSystemVersion = tradingSystemVersion;
+            return this;
+        }
+
+        /**
+         * Sets the tradingSystemVendor used in the Establish message.
+         *
+         * @param tradingSystemVendor the tradingSystemVendor used in the Establish message.
+         * @return this
+         */
+        public Builder tradingSystemVendor(final String tradingSystemVendor)
+        {
+            this.tradingSystemVendor = tradingSystemVendor;
+            return this;
+        }
+
+        /**
+         * Sets the keepAliveInterval used in the Establish message. This is specified in milliseconds and
+         * used as a timeout period by the iLink3 session. Sequence messages will be used to keep the session alive
+         * after this interval passes and sessions will be terminated if twice this length passes without a reply
+         * from the exchange.
+         *
+         * @param requestedKeepAliveIntervalInMs the keepAliveInterval used in the Establish message.
+         * @return this
+         */
+        public Builder requestedKeepAliveIntervalInMs(final int requestedKeepAliveIntervalInMs)
+        {
+            this.requestedKeepAliveIntervalInMs = requestedKeepAliveIntervalInMs;
+            return this;
+        }
+
+        /**
+         * Sets the key id used by the HMAC encryption. This is the ID for the {@link #userKey(String)} parameter.
+         * This key id will be generated by the CME and can be downloaded from their Request Center along with the
+         * user key.
+         *
+         * @param accessKeyId the key id used by the HMAC encryption.
+         * @return this
+         * @see #userKey(String)
+         */
+        public Builder accessKeyId(final String accessKeyId)
+        {
+            this.accessKeyId = accessKeyId;
+            return this;
+        }
+
+        /**
+         * Sets the key used to by the HMAC encryption in the Negotiate and Establish messages. This key will be
+         * generated by the CME and can be downloaded from their Request Center. It may also be referred as
+         * "the secret key".
+         *
+         * @param userKey the key used to by the HMAC encryption in the Negotiate and Establish messages.
+         * @return this
+         */
+        public Builder userKey(final String userKey)
+        {
+            this.userKey = userKey;
+            return this;
+        }
+
+        /**
+         * Sets the sequence number that is sent by your session upon session establishment. The default is
+         * AUTOMATIC_INITIAL_SEQUENCE_NUMBER which will start from 1 if this is a new UUID or continuing from the
+         * last known sequence number if {@link #reEstablishLastSession(boolean)} is set to true.
+         *
+         * @param initialSentSequenceNumber the sequence that is sent by your session upon session establishment
+         * @return this
+         */
+        public Builder initialSentSequenceNumber(final long initialSentSequenceNumber)
+        {
+            this.initialSentSequenceNumber = initialSentSequenceNumber;
+            return this;
+        }
+
+        /**
+         * Sets the sequence number that is expected by your session upon session establishment from the exchange.
+         * The default is AUTOMATIC_INITIAL_SEQUENCE_NUMBER which will start from 1 if this is a new UUID or continuing
+         * from the last known sequence number if {@link #reEstablishLastSession(boolean)} is set to true.
+         *
+         * @param initialReceivedSequenceNumber the sequence number that is expected by your session upon session
+         *                                      establishment from the exchange
+         * @return this
+         */
+        public Builder initialReceivedSequenceNumber(final long initialReceivedSequenceNumber)
+        {
+            this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
+            return this;
+        }
+
+        /**
+         * Enable a re-establishment of the same session with the same UUID, rather than generating a new UUID.
+         * If there is an existing UUID associated with this session identifier then that will be used. The
+         * session identifier here is a triple of (port, host and accessKeyId).
+         * <p>
+         * Note: if this session has never connected before then a new UUID will be generated.
+         *
+         * @param reEstablishLastSession true to re-establish the session, false otherwise.
+         * @return this.
+         */
+        public Builder reEstablishLastSession(final boolean reEstablishLastSession)
+        {
+            this.reEstablishLastSession = reEstablishLastSession;
+            return this;
+        }
+
+        /**
+         * Sets your callback handler in order to receive business / application level messages from the exchange.
+         *
+         * @param handler your callback handler in order to receive business / application level messages from the
+         *                exchange.
+         * @return this
+         */
+        public Builder handler(final ILink3SessionHandler handler)
+        {
+            this.handler = handler;
+            return this;
+        }
     }
 }

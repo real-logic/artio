@@ -33,8 +33,6 @@ import java.util.function.Function;
 
 class ILink3Contexts
 {
-    private static final long NANOS_IN_MICROS = 1_000;
-
     private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
     private final Function<ILink3Key, ILink3Context> newUuid = this::newUuid;
     private final MappedFile mappedFile;

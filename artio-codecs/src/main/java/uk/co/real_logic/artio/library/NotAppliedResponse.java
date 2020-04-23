@@ -24,11 +24,19 @@ public class NotAppliedResponse
 {
     private boolean shouldRetransmit;
 
+    /**
+     * This method in order to send a Sequence message that fills the NotApplied gap. The message will be sent
+     * after your <code>ILink3SessionHandler.onNotApplied()</code> callback is completed.
+     */
     public void gapfill()
     {
         shouldRetransmit = false;
     }
 
+    /**
+     * This method in order to retransmit the messages from the NotApplied gap. These messages will be sent
+     * after your <code>ILink3SessionHandler.onNotApplied()</code> callback is completed.
+     */
     public void retransmit()
     {
         shouldRetransmit = true;

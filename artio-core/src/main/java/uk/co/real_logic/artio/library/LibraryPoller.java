@@ -240,7 +240,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         requireNonNull(configuration, "configuration");
         validateEndOfDay();
-        configuration.validate();
 
         return new InitiateILink3SessionReply(
             this, timeInMs() + configuration.requestedKeepAliveIntervalInMs(), configuration);
