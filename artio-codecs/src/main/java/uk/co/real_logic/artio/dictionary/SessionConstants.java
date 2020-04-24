@@ -63,6 +63,8 @@ public final class SessionConstants
     public static final String SEQUENCE_RESET_TYPE_STR = "4";
     public static final String LOGOUT_MESSAGE_TYPE_STR = "5";
 
+    public static final byte SEQUENCE_RESET_TYPE_BYTE = (byte)'4';
+
     public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = HEARTBEAT_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = TEST_REQUEST_MESSAGE_TYPE_STR.toCharArray();

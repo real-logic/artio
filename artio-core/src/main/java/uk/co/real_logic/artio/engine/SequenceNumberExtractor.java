@@ -19,13 +19,13 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
-import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
 import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.otf.MessageControl.CONTINUE;
 import static uk.co.real_logic.artio.otf.MessageControl.STOP;
 
@@ -35,6 +35,7 @@ public class SequenceNumberExtractor
 
     private final ErrorHandler errorHandler;
 
+    private boolean isSequenceReset;
     private int sequenceNumber;
 
     public SequenceNumberExtractor(final ErrorHandler errorHandler)
@@ -46,6 +47,7 @@ public class SequenceNumberExtractor
         final DirectBuffer buffer, final int offset, final int length)
     {
         sequenceNumber = NO_SEQUENCE_NUMBER;
+        isSequenceReset = false;
 
         parser.onMessage(buffer, offset, length);
 
@@ -67,9 +69,18 @@ public class SequenceNumberExtractor
         public MessageControl onField(
             final int tag, final AsciiBuffer buffer, final int offset, final int length)
         {
-            if (tag == SessionConstants.MSG_SEQ_NO)
+            if (tag == MESSAGE_TYPE)
+            {
+                isSequenceReset = length == 1 && buffer.getByte(offset) == SEQUENCE_RESET_TYPE_BYTE;
+            }
+            else if (tag == MSG_SEQ_NO && !isSequenceReset)
             {
                 sequenceNumber = buffer.getInt(offset, offset + length);
+                return STOP;
+            }
+            else if (tag == NEW_SEQ_NO && isSequenceReset)
+            {
+                sequenceNumber = buffer.getInt(offset, offset + length) - 1;
                 return STOP;
             }
 

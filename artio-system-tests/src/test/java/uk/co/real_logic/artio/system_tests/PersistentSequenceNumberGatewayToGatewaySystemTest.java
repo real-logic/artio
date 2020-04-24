@@ -423,8 +423,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertThat(acceptingSession.trySendSequenceReset(1, 1),
             greaterThan(0L));
 
+        initiatingOtfAcceptor.messages().clear();
+
         onAcquireSession = this::nothing;
         connectPersistingSessions(1, 1, false);
+
+        final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
+        assertEquals(1, logon.messageSequenceNumber());
     }
 
     private void connectPersistingSessions()
