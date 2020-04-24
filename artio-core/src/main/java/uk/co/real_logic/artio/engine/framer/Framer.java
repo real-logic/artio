@@ -488,6 +488,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return indexedPosition >= position;
     }
 
+    private boolean receivedIndexedPosition(final int aeronSessionId, final long position)
+    {
+        final long indexedPosition = receivedSequenceNumberIndex.indexedPosition(aeronSessionId);
+        return indexedPosition >= position;
+    }
+
     private void saveLibraryTimeout(final LibraryInfo library)
     {
         final int libraryId = library.libraryId();
@@ -968,7 +974,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Class<? extends FixDictionary> fixDictionaryClass,
         final int heartbeatIntervalInS,
         final long correlationId,
-        final Header header,
+        final Header outBoundheader,
         final LiveLibraryInfo library,
         final InetSocketAddress address,
         final TcpChannel channel,
@@ -1023,8 +1029,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 connectionId,
                 sessionId,
                 gatewaySession,
-                header.sessionId(),
-                header.position(),
+                outBoundheader.sessionId(),
+                outBoundheader.position(),
                 address.toString(),
                 INITIATOR);
         }
@@ -1059,15 +1065,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId,
         final long sessionId,
         final GatewaySession gatewaySession,
-        final int aeronSessionId,
-        final long requiredPosition,
+        final int outBoundAeronSessionId,
+        final long outBoundRequiredPosition,
         final String address,
         final ConnectionType connectionType)
     {
         schedule(new HandoverNewConnectionToLibrary(
             gatewaySession,
-            aeronSessionId,
-            requiredPosition,
+            outBoundAeronSessionId,
+            outBoundRequiredPosition,
             sessionId,
             connectionType,
             sessionContext,
@@ -2375,8 +2381,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     class HandoverNewConnectionToLibrary extends UnitOfWork
     {
         private final GatewaySession gatewaySession;
-        private final int aeronSessionId;
-        private final long requiredPosition;
+        private final int outBoundAeronSessionId;
+        private final long outBoundRequiredPosition;
+        private final int inboundAeronSessionId;
+        private final long inBoundRequiredPosition;
         private final long sessionId;
         private final ConnectionType connectionType;
         private final SessionContext sessionContext;
@@ -2408,8 +2416,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         HandoverNewConnectionToLibrary(
             final GatewaySession gatewaySession,
-            final int aeronSessionId,
-            final long requiredPosition,
+            final int outBoundAeronSessionId,
+            final long outBoundRequiredPosition,
             final long sessionId,
             final ConnectionType connectionType,
             final SessionContext sessionContext,
@@ -2435,8 +2443,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final LiveLibraryInfo library)
         {
             this.gatewaySession = gatewaySession;
-            this.aeronSessionId = aeronSessionId;
-            this.requiredPosition = requiredPosition;
+            this.outBoundAeronSessionId = outBoundAeronSessionId;
+            this.outBoundRequiredPosition = outBoundRequiredPosition;
             this.sessionId = sessionId;
             this.connectionType = connectionType;
             this.sessionContext = sessionContext;
@@ -2461,7 +2469,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.fixDictionary = fixDictionary;
             this.library = library;
 
-            if (configuration.logInboundMessages())
+            inboundAeronSessionId = inboundPublication.id();
+            inBoundRequiredPosition = inboundPublication.position();
+
+            if (configuration.logAllMessages())
             {
                 work(this::checkLoggerUpToDate, this::saveManageSession);
             }
@@ -2485,7 +2496,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return COMPLETE;
             }
 
-            if (sentIndexedPosition(aeronSessionId, requiredPosition))
+            if (sentIndexedPosition(outBoundAeronSessionId, outBoundRequiredPosition) &&
+                receivedIndexedPosition(inboundAeronSessionId, inBoundRequiredPosition))
             {
                 lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
