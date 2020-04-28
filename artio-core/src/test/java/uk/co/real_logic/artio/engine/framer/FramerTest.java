@@ -165,8 +165,6 @@ public class FramerTest
 
         when(mockSenderEndPoint.connectionId()).then((inv) -> connectionId.getValue());
 
-        when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
-
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.fixDictionary()).thenReturn(fixDictionary);
         when(gatewaySession.isOffline()).thenReturn(false);

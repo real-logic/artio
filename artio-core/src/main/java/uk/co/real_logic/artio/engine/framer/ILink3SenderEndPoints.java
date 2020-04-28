@@ -40,6 +40,11 @@ public class ILink3SenderEndPoints
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
 
+    void removeConnection(final long connectionId)
+    {
+        connectionIdToSenderEndpoint.remove(connectionId);
+    }
+
     public Action onReplayComplete(final long connectionId)
     {
         final ILink3SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);

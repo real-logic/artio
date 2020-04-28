@@ -21,9 +21,9 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -47,10 +47,10 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final int bufferSize,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final ExclusivePublication inboundPublication)
+        final GatewayPublication publication, final int libraryId)
     {
-        super(channel, connectionId, bufferSize, errorHandler, framer);
-        this.inboundPublication = inboundPublication;
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
+        inboundPublication = publication.dataPublication();
 
         makeHeader();
     }
@@ -67,18 +67,17 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     void removeEndpointFromFramer()
     {
-        // TODO
+        framer.onILink3Disconnect(connectionId, null);
     }
 
-    void disconnectEndpoint(final DisconnectReason reason)
+    void disconnectContext()
     {
-        // TODO
+        // Not needed in iLink implementation
     }
 
     boolean retryFrameMessages()
     {
-        // TODO
-        return false;
+        return frameMessages();
     }
 
     private int readData() throws IOException

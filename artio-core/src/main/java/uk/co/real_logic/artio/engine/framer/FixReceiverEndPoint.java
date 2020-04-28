@@ -144,7 +144,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             "Proxy v2 detected for connId=%s,addr=%s,line=%s%n");
     }
 
-    private final GatewayPublication publication;
     private final SessionContexts sessionContexts;
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
@@ -153,7 +152,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
-    private int libraryId;
     private GatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
@@ -183,19 +181,16 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
         final FixReceiverEndPointFormatters formatters)
     {
-        super(channel, connectionId, bufferSize, errorHandler, framer);
-        this.formatters = formatters;
-        Objects.requireNonNull(publication, "publication");
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
 
-        this.publication = publication;
+        this.formatters = formatters;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.sessionContexts = sessionContexts;
         this.messagesRead = messagesRead;
-        this.libraryId = libraryId;
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
@@ -933,32 +928,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         completeDisconnect(AUTHENTICATION_TIMEOUT);
     }
 
-    void disconnectEndpoint(final DisconnectReason reason)
+    void disconnectContext()
     {
-        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
-
         sessionContexts.onDisconnect(sessionId);
-        if (selectionKey != null)
-        {
-            selectionKey.cancel();
-        }
-
-        hasDisconnected = true;
     }
 
     boolean hasDisconnected()
     {
         return hasDisconnected;
-    }
-
-    public int libraryId()
-    {
-        return libraryId;
-    }
-
-    public void libraryId(final int libraryId)
-    {
-        this.libraryId = libraryId;
     }
 
     void gatewaySession(final GatewaySession gatewaySession)

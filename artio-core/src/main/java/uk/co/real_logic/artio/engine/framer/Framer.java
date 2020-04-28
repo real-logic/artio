@@ -630,7 +630,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final InetSocketAddress address = new InetSocketAddress(host, port);
-
         final ILink3Contexts iLink3Contexts = iLink3Contexts();
         final ILink3Context context = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
         final int aeronSessionId = library.aeronSessionId();
@@ -647,9 +646,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
-            DebugLogger.log(
-                FIX_CONNECTION,
-                connectingFormatter, host, port, libraryId);
+            DebugLogger.log(FIX_CONNECTION, connectingFormatter, host, port, libraryId);
 
             channelSupplier.open(
                 address,
@@ -667,17 +664,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     lookupInformation.connected(connectionId);
 
-                    final ExclusivePublication inboundPublication = this.inboundPublication.dataPublication();
-
                     iLink3SenderEndPoints.add(new ILink3SenderEndPoint(
-                        connectionId, channel, errorHandler, inboundPublication, libraryId));
+                        connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId));
                     receiverEndPoints.add(new ILink3ReceiverEndPoint(
                         connectionId,
                         channel,
                         configuration.receiverBufferSize(),
                         errorHandler,
                         this,
-                        inboundPublication));
+                        inboundPublication,
+                        libraryId));
                 });
         }
         catch (final IOException ex)
@@ -1224,6 +1220,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    void onILink3Disconnect(final long connectionId, final DisconnectReason reason)
+    {
+        receiverEndPoints.removeConnection(connectionId, reason);
+        iLink3SenderEndPoints.removeConnection(connectionId);
     }
 
     public Action onLibraryConnect(
