@@ -41,6 +41,7 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
@@ -619,7 +620,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * by the Engine and Libraries can request ownership of the Session from the Engine. If <code>SOLE_LIBRARY</code>
      * mode is chosen then only a single library instance must connect.
      *
-     * NB: This is an experimental API and is subject to change.
+     * Setting this configuration option will also automatically set {@link #bindAtStartup(boolean)} to false. In sole
+     * library mode the server side TCP port will automatically be bound when the sole library connects, and unbound
+     * when it disconnects.
      *
      * @param initialAcceptedSessionOwner whether accepted sessions are initially owned by the Engine or a Library
      * @return this
@@ -628,6 +631,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
         this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
+        bindAtStartup(false);
         return this;
     }
 
@@ -1093,6 +1097,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                     "this would allow you to encode messages that are larger than you can read.",
                 receiverBufferSize(),
                 sessionBufferSize()));
+        }
+
+        if (initialAcceptedSessionOwner() == SOLE_LIBRARY && bindAtStartup())
+        {
+            throw new IllegalArgumentException(
+                "In Sole Library Mode the port is now only bound when there is an active library." +
+                " As a result you cannot combine bindAtStartup(true) with initialAcceptedSessionOwner(SOLE_LIBRARY).");
         }
 
         if (deleteLogFileDirOnStart())

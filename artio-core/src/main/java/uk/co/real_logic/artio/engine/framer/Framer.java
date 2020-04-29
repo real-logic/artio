@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.*;
+import io.aeron.ControlledFragmentAssembler;
+import io.aeron.Image;
+import io.aeron.ImageControlledFragmentAssembler;
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -431,7 +434,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
-
                 if (DebugLogger.isEnabled(LIBRARY_MANAGEMENT))
                 {
                     DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
@@ -444,9 +446,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
         }
 
+        soleLibraryModeUnbind();
+
         total += removeIf(librariesBeingAcquired, retryAcquireLibrarySessionsFunc);
 
         return total;
+    }
+
+    private void soleLibraryModeUnbind()
+    {
+        if (soleLibraryMode && idToLibrary.isEmpty())
+        {
+            try
+            {
+                channelSupplier.unbind();
+            }
+            catch (final IOException e)
+            {
+                errorHandler.onError(e);
+            }
+        }
     }
 
     private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
@@ -1261,9 +1280,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return Pressure.apply(inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
         }
 
-        if (soleLibraryMode && idToLibrary.size() >= 1)
+        if (soleLibraryMode)
         {
-            logSoleLibraryError();
+            if (idToLibrary.size() >= 1)
+            {
+                logSoleLibraryError();
+                return CONTINUE;
+            }
+            else
+            {
+                soleLibraryModeBind();
+            }
         }
 
         // Send an empty control notification if you've never seen this library before
@@ -1316,6 +1343,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));
+    }
+
+    private void soleLibraryModeBind()
+    {
+        if (configuration.hasBindAddress())
+        {
+            try
+            {
+                channelSupplier.bind();
+            }
+            catch (final IOException e)
+            {
+                errorHandler.onError(e);
+            }
+        }
     }
 
     public Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId)
@@ -2603,10 +2645,5 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public AcceptorFixDictionaryLookup acceptorFixDictionaryLookup()
     {
         return acceptorFixDictionaryLookup;
-    }
-
-    public boolean soleLibraryMode()
-    {
-        return soleLibraryMode;
     }
 }
