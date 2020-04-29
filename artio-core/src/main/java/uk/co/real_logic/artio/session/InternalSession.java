@@ -248,7 +248,6 @@ public class InternalSession extends Session implements AutoCloseable
         fixDictionary(fixDictionary);
         address(address);
         refreshSequenceNumberCounters(counters);
-
     }
 
     public void lastReceivedMsgSeqNumOnly(final int value)

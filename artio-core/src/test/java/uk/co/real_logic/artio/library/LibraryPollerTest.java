@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_I
 import static uk.co.real_logic.artio.LivenessDetector.SEND_INTERVAL_FRACTION;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 
 public class LibraryPollerTest
@@ -102,7 +103,7 @@ public class LibraryPollerTest
 
         manageConnection(CONNECTION_ID, SESSION_ID);
 
-        library.onControlNotification(libraryId(), noSessionIds());
+        library.onControlNotification(libraryId(), ENGINE, noSessionIds());
 
         verify(sessionHandler).onTimeout(libraryId(), session.getValue());
     }
@@ -115,7 +116,7 @@ public class LibraryPollerTest
         manageConnection(CONNECTION_ID, SESSION_ID);
         manageConnection(OTHER_CONNECTION_ID, OTHER_SESSION_ID);
 
-        library.onControlNotification(libraryId(), hasOtherSessionId());
+        library.onControlNotification(libraryId(), ENGINE, hasOtherSessionId());
 
         final Session firstSession = session.getAllValues().get(0);
         verify(sessionHandler).onTimeout(libraryId(), firstSession);

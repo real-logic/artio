@@ -258,6 +258,11 @@ class GatewaySessions
     {
         final List<GatewaySession> sessions = this.sessions;
 
+        return indexBySessionId(sessionId, sessions);
+    }
+
+    static int indexBySessionId(final long sessionId, final List<GatewaySession> sessions)
+    {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final GatewaySession session = sessions.get(i);
@@ -267,7 +272,7 @@ class GatewaySessions
             }
         }
 
-        return -1;
+        return UNK_SESSION;
     }
 
     void releaseByConnectionId(final long connectionId)

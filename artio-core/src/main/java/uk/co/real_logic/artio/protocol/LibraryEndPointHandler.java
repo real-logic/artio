@@ -33,7 +33,8 @@ public interface LibraryEndPointHandler
 
     Action onNewSentPosition(int libraryId, long position);
 
-    Action onControlNotification(int libraryId, SessionsDecoder sessions);
+    Action onControlNotification(
+        int libraryId, InitialAcceptedSessionOwner initialAcceptedSessionOwner, SessionsDecoder sessions);
 
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
 

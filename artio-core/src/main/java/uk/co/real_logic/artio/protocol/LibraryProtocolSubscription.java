@@ -188,6 +188,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         return handler.onControlNotification(
             libraryId,
+            controlNotification.initialAcceptedSessionOwner(),
             controlNotification.sessions());
     }
 

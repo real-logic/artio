@@ -45,6 +45,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -67,7 +68,7 @@ import static uk.co.real_logic.artio.session.InternalSession.*;
  */
 public class Session
 {
-    public static final long UNKNOWN = -1;
+    public static final int UNKNOWN = -1;
     public static final long UNKNOWN_TIME = -1;
 
     static final short ACTIVE_VALUE = 3;
@@ -829,6 +830,8 @@ public class Session
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+        address("", Session.UNKNOWN);
+        connectionId(NO_CONNECTION_ID);
     }
 
     // Also checks the sequence index

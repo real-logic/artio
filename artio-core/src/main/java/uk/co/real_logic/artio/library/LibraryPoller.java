@@ -67,6 +67,7 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
@@ -151,7 +152,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
         "%s: Received Heartbeat from engine at timeInMs %s%n");
     private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s%n");
-    private final CharFormatter onDisconnectFormatter = new CharFormatter("%s: Library Disconnect %s, %s%n");
+    private final CharFormatter onDisconnectFormatter = new CharFormatter(
+        "%s: Session Disconnect @ Library %s, %s%n");
     private final CharFormatter sessionExistsFormatter = new CharFormatter(
         "onSessionExists: conn=%s, sess=%s, sentSeqNo=%s, recvSeqNo=%s%n");
 
@@ -160,6 +162,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
+    private InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private int state = CONNECTING;
 
     // State changed upon connect/reconnect
@@ -1163,27 +1166,39 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         DebugLogger.log(GATEWAY_MESSAGE, onDisconnectFormatter, libraryId, connectionId, reason.name());
         if (libraryId == this.libraryId)
         {
-            final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-            if (subscriber != null)
+            final boolean retainOwnerShip = initialAcceptedSessionOwner == SOLE_LIBRARY;
+            if (retainOwnerShip)
             {
-                final Action action = subscriber.onDisconnect(libraryId, reason);
-                if (action == ABORT)
+                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+                if (subscriber != null)
                 {
-                    // If we abort the action then we should ensure that it can be processed when
-                    // re-run.
-                    connectionIdToSession.put(connectionId, subscriber);
+                    return subscriber.onDisconnect(libraryId, reason);
                 }
-                else
+            }
+            else
+            {
+                final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
+                if (subscriber != null)
                 {
-                    final InternalSession session = subscriber.session();
-                    session.close();
-                    // session will be in either pendingInitiatorSessions or sessions
-                    pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
-                    sessions = ArrayUtil.remove(sessions, session);
-                    cacheSession(session);
-                }
+                    final Action action = subscriber.onDisconnect(libraryId, reason);
+                    if (action == ABORT)
+                    {
+                        // If we abort the action then we should ensure that it can be processed when
+                        // re-run.
+                        connectionIdToSession.put(connectionId, subscriber);
+                    }
+                    else
+                    {
+                        final InternalSession session = subscriber.session();
+                        session.close();
+                        // session will be in either pendingInitiatorSessions or sessions
+                        pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
+                        sessions = ArrayUtil.remove(sessions, session);
+                        cacheSession(session);
+                    }
 
-                return action;
+                    return action;
+                }
             }
         }
 
@@ -1477,13 +1492,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
+    public Action onControlNotification(
+        final int libraryId,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final SessionsDecoder sessionsDecoder)
     {
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
             livenessDetector.onHeartbeat(timeInMs);
             state = CONNECTED;
+            this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
             DebugLogger.log(
                 LIBRARY_CONNECT,
                 controlNotificationFormatter,

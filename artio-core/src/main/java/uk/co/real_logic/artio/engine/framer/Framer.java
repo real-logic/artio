@@ -72,7 +72,6 @@ import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
-import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.GatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
@@ -81,6 +80,7 @@ import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
@@ -118,6 +118,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
     private final Predicate<LiveLibraryInfo> retryAcquireLibrarySessionsFunc = this::retryAcquireLibrarySessions;
+    private final Consumer<GatewaySession> onSessionlogon = this::onSessionLogon;
+    private final CatchupReplayer.Formatters catchupReplayFormatters = new CatchupReplayer.Formatters();
+    // Both connection id to library id maps
+    private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
+    private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock epochClock;
@@ -128,12 +134,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler librarySubscriber;
     private final ControlledFragmentHandler replaySubscriber;
     private final ControlledFragmentHandler replaySlowSubscriber;
-
     private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
     private final ILink3SenderEndPoints iLink3SenderEndPoints;
-
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final Subscription librarySubscription;
@@ -155,29 +159,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
-    private final Consumer<GatewaySession> onSessionlogon = this::onSessionLogon;
-
     /**
      * Null if inbound messages are not logged
      */
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
-    private final CatchupReplayer.Formatters catchupReplayFormatters = new CatchupReplayer.Formatters();
-    // Both connection id to library id maps
-    private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
-    private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
     private final AgentInvoker conductorAgentInvoker;
     private final RecordingCoordinator recordingCoordinator;
     private final PositionSender nonLoggingPositionSender;
-
-    private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final boolean soleLibraryMode;
+    private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
+    private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
+
     private ILink3Contexts iLink3Contexts;
-
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
-
     private boolean performingCloseOperation = false;
 
     Framer(
@@ -234,7 +230,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
-        this.soleLibraryMode = configuration.initialAcceptedSessionOwner() == SOLE_LIBRARY;
+        this.initialAcceptedSessionOwner = configuration.initialAcceptedSessionOwner();
+        this.soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
             configuration.acceptorfixDictionary(),
@@ -1235,7 +1232,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
-            library.removeSession(connectionId);
+            if (soleLibraryMode)
+            {
+                library.offlineSession(connectionId);
+            }
+            else
+            {
+                library.removeSessionByConnectionId(connectionId);
+            }
         }
 
         return CONTINUE;
@@ -1277,7 +1281,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             existingLibrary.onHeartbeat(epochClock.time());
 
-            return Pressure.apply(inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
+            return Pressure.apply(inboundPublication.saveControlNotification(
+                libraryId, initialAcceptedSessionOwner, existingLibrary.sessions()));
         }
 
         if (soleLibraryMode)
@@ -1296,7 +1301,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         // Send an empty control notification if you've never seen this library before
         // Since it may have connected to another gateway node if you're clustered.
         if (Pressure.isBackPressured(
-            inboundPublication.saveControlNotification(libraryId, Collections.emptyList())))
+            inboundPublication.saveControlNotification(
+            libraryId, initialAcceptedSessionOwner, Collections.emptyList())))
         {
             return ABORT;
         }
@@ -1410,7 +1416,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             connectionId,
             libraryId);
 
-        final GatewaySession session = libraryInfo.removeSession(connectionId);
+        final GatewaySession session = libraryInfo.removeSessionBySessionId(sessionId);
 
         if (session == null)
         {

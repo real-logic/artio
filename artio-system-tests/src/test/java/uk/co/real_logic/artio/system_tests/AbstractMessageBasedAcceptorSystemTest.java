@@ -21,8 +21,8 @@ import org.junit.After;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;

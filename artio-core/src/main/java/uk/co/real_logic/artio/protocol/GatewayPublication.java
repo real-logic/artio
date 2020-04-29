@@ -961,7 +961,10 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveControlNotification(final int libraryId, final List<ConnectedSessionInfo> sessions)
+    public long saveControlNotification(
+        final int libraryId,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final List<ConnectedSessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(CONTROL_NOTIFICATION_LENGTH +
@@ -975,7 +978,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        controlNotification.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId);
+        controlNotification
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .initialAcceptedSessionOwner(initialAcceptedSessionOwner);
 
         final SessionsEncoder sessionsEncoder = controlNotification.sessionsCount(sessionsCount);
         for (int i = 0; i < sessionsCount; i++)

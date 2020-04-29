@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="9"
+                   version="10"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -196,6 +196,11 @@
                         description="We can't find the required number of messages in the log">5</validValue>
             <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
                         description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">6</validValue>
+        </enum>
+
+        <enum name="InitialAcceptedSessionOwner" encodingType="uint8" sinceVersion="10">
+            <validValue name="ENGINE">0</validValue>
+            <validValue name="SOLE_LIBRARY">1</validValue>
         </enum>
     </types>
 
@@ -403,6 +408,8 @@
     <sbe:message name="ControlNotification" id="39"
                  description="notifies library instances of messages that have been acquired">
         <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="initialAcceptedSessionOwner" id="3" type="InitialAcceptedSessionOwner"/>
+
         <group name="sessions" id="2" dimensionType="groupSizeEncoding">
             <field name="sessionId" id="10" type="FixSessionId"/>
         </group>

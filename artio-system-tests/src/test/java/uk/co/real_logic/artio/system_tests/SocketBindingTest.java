@@ -25,7 +25,7 @@ import java.net.ConnectException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest

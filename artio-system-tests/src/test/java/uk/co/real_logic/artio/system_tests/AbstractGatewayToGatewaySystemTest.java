@@ -188,6 +188,11 @@ public class AbstractGatewayToGatewaySystemTest
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
 
+    void assertHasSession(final FakeHandler sessionHandler, final Session session)
+    {
+        assertThat(sessionHandler.sessions(), not(hasItem(session)));
+    }
+
     void wireSessions()
     {
         connectSessions();
