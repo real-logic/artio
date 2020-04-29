@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.decoder;
 
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractTestRequestDecoder extends Decoder
@@ -22,4 +23,8 @@ public interface AbstractTestRequestDecoder extends Decoder
     char[] testReqID();
 
     int testReqIDLength();
+
+    String testReqIDAsString();
+
+    void testReqID(AsciiSequenceView view);
 }

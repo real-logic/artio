@@ -853,12 +853,12 @@ public class DecoderGenerator extends Generator
             generateGetter(entry, out, missingOptionalFields);
         }
 
-        generateMissingOptionalSessionFields(out, className, missingOptionalFields);
+        generateMissingOptionalSessionFields(out, missingOptionalFields);
         generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
     }
 
     private void generateMissingOptionalSessionFields(
-        final Writer out, final String className, final Set<String> missingOptionalFields)
+        final Writer out, final Set<String> missingOptionalFields)
         throws IOException
     {
         for (final String optionalField : missingOptionalFields)
@@ -866,11 +866,28 @@ public class DecoderGenerator extends Generator
             final String propertyName = formatPropertyName(optionalField);
 
             out.append(String.format(
+                "    public char[] %1$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
+                "    public boolean has%2$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
+                "    public int %1$sLength()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
                 "    public String %1$sAsString()\n" +
                 "    {\n" +
                 "        throw new UnsupportedOperationException();\n" +
-                "    }\n",
-                propertyName));
+                "    }\n\n" +
+                "    public void %1$s(final AsciiSequenceView view)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n",
+                propertyName,
+                optionalField));
         }
     }
 
