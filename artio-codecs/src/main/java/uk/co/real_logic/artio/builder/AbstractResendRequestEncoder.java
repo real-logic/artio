@@ -19,5 +19,9 @@ public interface AbstractResendRequestEncoder extends Encoder
 {
     AbstractResendRequestEncoder beginSeqNo(int beginSeqNo);
 
+    void resetBeginSeqNo();
+
     AbstractResendRequestEncoder endSeqNo(int endSeqNo);
+
+    void resetEndSeqNo();
 }

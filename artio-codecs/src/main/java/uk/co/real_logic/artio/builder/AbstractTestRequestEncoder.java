@@ -15,7 +15,39 @@
  */
 package uk.co.real_logic.artio.builder;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+
 public interface AbstractTestRequestEncoder extends Encoder
 {
-    AbstractTestRequestEncoder testReqID(CharSequence testReqID);
+    AbstractTestRequestEncoder testReqID(DirectBuffer value, int offset, int length);
+
+    AbstractTestRequestEncoder testReqID(DirectBuffer value, int length);
+
+    AbstractTestRequestEncoder testReqID(DirectBuffer value);
+
+    AbstractTestRequestEncoder testReqID(byte[] value, int offset, int length);
+
+    AbstractTestRequestEncoder testReqID(byte[] value, int length);
+
+    AbstractTestRequestEncoder testReqID(byte[] value);
+
+    boolean hasTestReqID();
+
+    String testReqIDAsString();
+
+    AbstractTestRequestEncoder testReqID(CharSequence value);
+
+    AbstractTestRequestEncoder testReqID(AsciiSequenceView value);
+
+    AbstractTestRequestEncoder testReqID(char[] value, int offset, int length);
+
+    AbstractTestRequestEncoder testReqID(char[] value, int length);
+
+    AbstractTestRequestEncoder testReqID(char[] value);
+
+    MutableDirectBuffer testReqID();
+
+    void resetTestReqID();
 }

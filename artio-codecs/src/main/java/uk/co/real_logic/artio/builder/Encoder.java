@@ -58,5 +58,4 @@ public interface Encoder extends CharAppender
     SessionHeaderEncoder header();
 
     void resetMessage();
-
 }

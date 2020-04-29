@@ -399,12 +399,83 @@ public class EncoderGenerator extends Generator
             final String propertyName = formatPropertyName(optionalField);
 
             out.append(String.format(
-                "    public %2$s %1$s(CharSequence value)\n" +
+                "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
                 "    {\n" +
                 "        throw new UnsupportedOperationException();\n" +
-                "    }\n",
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final DirectBuffer value, final int length)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final DirectBuffer value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final byte[] value, final int length)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final byte[] value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public boolean has%3$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public String %1$sAsString()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final CharSequence value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final AsciiSequenceView value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final char[] value, final int offset, final int length)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final char[] value, final int length)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public %2$s %1$s(final char[] value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public MutableDirectBuffer %1$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n" +
+                "\n" +
+                "    public void reset%3$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }",
                 propertyName,
-                className));
+                className,
+                optionalField));
         }
     }
 
