@@ -188,7 +188,6 @@ public final class FixEngine extends GatewayProcess
         }
     }
 
-
     /**
      * Gets session info for all sessions the FixEngine is aware of including offline ones.
      * Can be used to acquire offline sessions or for administration purposes.

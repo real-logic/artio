@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+
 /**
  * Defines how Artio responds to a NotApplied message.
  *

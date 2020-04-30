@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.*;
+import uk.co.real_logic.artio.system_tests.Backup;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
@@ -361,6 +362,39 @@ public class ILink3SystemTest
         connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
         establishConnection();
+    }
+
+    @Test
+    public void shouldSupportResetState() throws IOException
+    {
+        final Backup backup = new Backup();
+
+        try
+        {
+            shouldExchangeBusinessMessage();
+
+            final long lastUuid = session.uuid();
+
+            closeArtio();
+
+            backup.resetState(engine);
+            backup.assertStateReset(mediaDriver, 0);
+            backup.assertRecordingsTruncated();
+            // Idempotence
+            backup.resetState(engine);
+
+            // Test that a gateway can be restarted and a new session established after the state reset.
+            launchArtio();
+            final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration()
+                .reEstablishLastSession(true);
+            connectToTestServer(sessionConfiguration);
+            establishConnection();
+            assertNotEquals(session.uuid(), lastUuid);
+        }
+        finally
+        {
+            backup.cleanup();
+        }
     }
 
     @Test

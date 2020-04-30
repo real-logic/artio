@@ -15,8 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.archive.client.AeronArchive;
-import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
@@ -24,9 +22,6 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
-
-import java.io.File;
-import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -39,15 +34,12 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
 
-    private File backupLocation = new File("backup");
+    private Backup backup = new Backup();
 
     @After
     public void cleanup()
     {
-        if (backupLocation.exists())
-        {
-            IoUtil.delete(backupLocation, false);
-        }
+        backup.cleanup();
     }
 
     @Test
@@ -84,21 +76,15 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final FixMessage logout = testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
         assertEquals(3, logout.messageSequenceNumber());
 
-        final File archiveDir = mediaDriver.archive().context().archiveDir();
-        final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
-        final int numberOfRecordings = Objects.requireNonNull(recordings).length;
+        testSystem.awaitBlocking(() -> backup.resetState(acceptingEngine));
 
-        testSystem.awaitBlocking(() -> acceptingEngine.resetState(backupLocation));
-        assertRecordingsDeleted();
-
-        assertTrue("backupLocation missing", backupLocation.exists());
-        assertTrue("backupLocation not directory", backupLocation.isDirectory());
+        backup.assertStateReset(mediaDriver, 4);
 
         clearMessages();
         close();
 
         // resetState should be idempotent
-        acceptingEngine.resetState(backupLocation);
+        backup.resetState(acceptingEngine);
 
         launchMediaDriverWithDirs();
         launch(1, 1);
@@ -115,42 +101,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         }
 
         assertAcceptingSessionHasSequenceIndex(0);
-        assertRecordingsTruncated();
-    }
-
-    private void assertRecordingsDeleted()
-    {
-        final File archiveDir = mediaDriver.archive().context().archiveDir();
-        final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
-        final int numberOfRecordings = Objects.requireNonNull(recordings).length;
-        assertEquals(4, numberOfRecordings);
-    }
-
-    private void assertRecordingsTruncated()
-    {
-        try (AeronArchive archive = AeronArchive.connect())
-        {
-            archive.listRecording(0,
-                (controlSessionId,
-                correlationId,
-                recordingId,
-                startTimestamp,
-                stopTimestamp,
-                startPosition,
-                stopPosition,
-                initialTermId,
-                segmentFileLength,
-                termBufferLength,
-                mtuLength,
-                sessionId,
-                streamId,
-                strippedChannel,
-                originalChannel,
-                sourceIdentity) ->
-                {
-                    assertEquals(0, stopPosition);
-                });
-        }
+        backup.assertRecordingsTruncated();
     }
 
     private void launch(
