@@ -54,4 +54,11 @@ public class ILink3SenderEndPoints
         }
         return CONTINUE;
     }
+
+    public String toString()
+    {
+        return "ILink3SenderEndPoints{" +
+            "connectionIdToSenderEndpoint=" + connectionIdToSenderEndpoint +
+            '}';
+    }
 }

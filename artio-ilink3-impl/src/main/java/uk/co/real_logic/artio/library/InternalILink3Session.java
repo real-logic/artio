@@ -880,9 +880,14 @@ public class InternalILink3Session extends ILink3Session
 
     private void fullyUnbind()
     {
-        state = State.UNBOUND;
         requestDisconnect(LOGOUT);
         owner.onUnbind(this);
+        unbindState();
+    }
+
+    void unbindState()
+    {
+        state = State.UNBOUND;
     }
 
 //    private

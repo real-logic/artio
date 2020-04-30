@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.*;
+import io.aeron.ChannelUri;
+import io.aeron.CommonContext;
+import io.aeron.ControlledFragmentAssembler;
+import io.aeron.Subscription;
 import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -35,7 +38,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.ilink.*;
+import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -103,14 +106,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private static final int ENGINE_CLOSE = 5;
 
+    private static final ILink3Session[] EMPTY_ILINK_SESSIONS = new ILink3Session[0];
+    private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
+
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private ILink3Session[] iLink3Sessions = new ILink3Session[0];
+    private ILink3Session[] iLink3Sessions = EMPTY_ILINK_SESSIONS;
     private final List<ILink3Session> unmodifiableILink3Sessions = new UnmodifiableWrapper<>(() -> iLink3Sessions);
 
-    private InternalSession[] sessions = new InternalSession[0];
-    private InternalSession[] pendingInitiatorSessions = new InternalSession[0];
+    private InternalSession[] sessions = EMPTY_SESSIONS;
+    private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
     private final List<Session> unmodifiableSessions = new UnmodifiableWrapper<>(() -> sessions);
 
     private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
@@ -1509,60 +1515,80 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 libraryId,
                 timeInMs);
 
-            // TODO(Nick): This should be a new set, not the actual
-            // set as we remove all the ids to check for existence..
-            // Weirdly looks like this.sessionIds is never used anywhere else?
-            // Why do we have it then? Is the caching saving
-            // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
-            final LongHashSet sessionIds = this.sessionIds;
-            InternalSession[] sessions = this.sessions;
+            controlUpdateILinkSessions();
 
-            // copy session ids.
-            sessionIds.clear();
-            while (sessionsDecoder.hasNext())
-            {
-                sessionsDecoder.next();
-                sessionIds.add(sessionsDecoder.sessionId());
-            }
-
-            for (int i = 0, size = sessions.length; i < size; i++)
-            {
-                final InternalSession session = sessions[i];
-                final long sessionId = session.id();
-                if (!sessionIds.remove(sessionId))
-                {
-                    final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
-                    if (subscriber != null)
-                    {
-                        subscriber.onTimeout(libraryId);
-                    }
-                    session.close();
-                    // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
-                    sessions = ArrayUtil.remove(sessions, i);
-                    size--;
-                }
-                else
-                {
-                    i++;
-                }
-            }
-            this.sessions = sessions;
-
-            // sessions that the gateway thinks you have, that you don't
-            if (!sessionIds.isEmpty())
-            {
-                final String msg = String.format(
-                    "The gateway thinks that we own the following session ids: %s", sessionIds);
-                configuration
-                    .gatewayErrorHandler()
-                    .onError(GatewayError.UNKNOWN_SESSION, libraryId, msg);
-            }
-
-            // Commit to ensure that you leave the poll loop having reconnected successfully
-            return BREAK;
+            return controlUpdateSessions(libraryId, sessionsDecoder);
         }
 
         return CONTINUE;
+    }
+
+    private void controlUpdateILinkSessions()
+    {
+        // We just disconnect everything.
+        if (iLink3Sessions.length > 0)
+        {
+            for (final ILink3Session session : iLink3Sessions)
+            {
+                session.unbindState();
+            }
+            iLink3Sessions = new ILink3Session[0];
+        }
+    }
+
+    private Action controlUpdateSessions(final int libraryId, final SessionsDecoder sessionsDecoder)
+    {
+        // TODO(Nick): This should be a new set, not the actual
+        // set as we remove all the ids to check for existence..
+        // Weirdly looks like this.sessionIds is never used anywhere else?
+        // Why do we have it then? Is the caching saving
+        // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
+        final LongHashSet sessionIds = this.sessionIds;
+        InternalSession[] sessions = this.sessions;
+
+        // copy session ids.
+        sessionIds.clear();
+        while (sessionsDecoder.hasNext())
+        {
+            sessionsDecoder.next();
+            sessionIds.add(sessionsDecoder.sessionId());
+        }
+
+        for (int i = 0, size = sessions.length; i < size; i++)
+        {
+            final InternalSession session = sessions[i];
+            final long sessionId = session.id();
+            if (!sessionIds.remove(sessionId))
+            {
+                final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
+                if (subscriber != null)
+                {
+                    subscriber.onTimeout(libraryId);
+                }
+                session.close();
+                // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
+                sessions = ArrayUtil.remove(sessions, i);
+                size--;
+            }
+            else
+            {
+                i++;
+            }
+        }
+        this.sessions = sessions;
+
+        // sessions that the gateway thinks you have, that you don't
+        if (!sessionIds.isEmpty())
+        {
+            final String msg = String.format(
+                "The gateway thinks that we own the following session ids: %s", sessionIds);
+            configuration
+                .gatewayErrorHandler()
+                .onError(GatewayError.UNKNOWN_SESSION, libraryId, msg);
+        }
+
+        // Commit to ensure that you leave the poll loop having reconnected successfully
+        return BREAK;
     }
 
     public Action onLibraryExtendPosition(

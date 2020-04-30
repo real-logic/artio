@@ -236,4 +236,6 @@ public abstract class ILink3Session
 
     abstract void onReplayComplete();
 
+    abstract void unbindState();
+
 }

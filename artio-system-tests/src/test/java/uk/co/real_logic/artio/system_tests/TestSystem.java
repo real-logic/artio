@@ -33,6 +33,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.FixMatchers.isConnected;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
@@ -93,6 +94,14 @@ public class TestSystem
     {
         final FixLibrary library = FixLibrary.connect(configuration);
         add(library);
+        awaitConnected(library);
+
+        return library;
+    }
+
+    public void awaitConnected(final FixLibrary library)
+    {
+        assertThat(libraries, contains(library));
         assertEventuallyTrue(
             () -> "Unable to connect to engine",
             () ->
@@ -103,8 +112,6 @@ public class TestSystem
             },
             DEFAULT_TIMEOUT_IN_MS,
             () -> close(library));
-
-        return library;
     }
 
     public void awaitCompletedReplies(final Reply<?>... replies)

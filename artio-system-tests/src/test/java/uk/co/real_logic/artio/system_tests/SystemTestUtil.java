@@ -408,6 +408,18 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
+    public static void awaitLibraryDisconnect(final FixEngine engine)
+    {
+        assertEventuallyTrue(
+            () -> "libraries haven't disconnected yet",
+            () -> libraries(engine).size() == 1,
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
+        );
+    }
+
     static List<LibraryInfo> libraries(final FixEngine engine, final TestSystem testSystem)
     {
         final Reply<List<LibraryInfo>> reply = engine.libraries();

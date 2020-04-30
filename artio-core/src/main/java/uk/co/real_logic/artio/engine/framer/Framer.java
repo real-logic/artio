@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -138,6 +139,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
     private final ILink3SenderEndPoints iLink3SenderEndPoints;
+    private final LongConsumer removeILink3SenderEndPoints;
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final Subscription librarySubscription;
@@ -221,6 +223,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.iLink3SenderEndPoints = new ILink3SenderEndPoints();
+        this.removeILink3SenderEndPoints = iLink3SenderEndPoints::removeConnection;
         this.conductorAgentInvoker = conductorAgentInvoker;
         this.recordingCoordinator = recordingCoordinator;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
@@ -431,15 +434,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
-                if (DebugLogger.isEnabled(LIBRARY_MANAGEMENT))
-                {
-                    DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
-                }
-
                 iterator.remove();
-                library.releaseSlowPeeker();
-                tryAcquireLibrarySessions(library);
-                saveLibraryTimeout(library);
+                onLibraryDisconnect(library);
             }
         }
 
@@ -448,6 +444,25 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         total += removeIf(librariesBeingAcquired, retryAcquireLibrarySessionsFunc);
 
         return total;
+    }
+
+    private void onLibraryDisconnect(final LiveLibraryInfo library)
+    {
+        if (DebugLogger.isEnabled(LIBRARY_MANAGEMENT))
+        {
+            DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
+        }
+
+        library.releaseSlowPeeker();
+        tryAcquireLibrarySessions(library);
+        saveLibraryTimeout(library);
+        disconnectILinkConnections(library);
+    }
+
+    private void disconnectILinkConnections(final LiveLibraryInfo library)
+    {
+        final int libraryId = library.libraryId();
+        receiverEndPoints.disconnectILinkConnections(libraryId, removeILink3SenderEndPoints);
     }
 
     private void soleLibraryModeUnbind()

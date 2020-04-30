@@ -65,6 +65,7 @@ public class ILink3SystemTest
 
     private FakeILink3SessionHandler handler = spy(new FakeILink3SessionHandler(NotAppliedResponse::gapfill));
 
+    private int testKeepAliveIntervalInMs = TEST_KEEP_ALIVE_INTERVAL_IN_MS;
     private int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private TestSystem testSystem;
@@ -139,36 +140,6 @@ public class ILink3SystemTest
         launch(true);
 
         establishNewConnection();
-    }
-
-    private void establishNewConnection() throws IOException
-    {
-        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration();
-
-        connectToTestServer(sessionConfiguration);
-
-        establishConnection();
-    }
-
-    private void establishConnection()
-    {
-        readNegotiate();
-        testServer.writeNegotiateResponse();
-
-        readEstablish();
-        testServer.writeEstablishmentAck(0, 0, 1);
-
-        acquireSession();
-
-        assertEquals(session.state(), ILink3Session.State.ESTABLISHED);
-        assertEquals(testServer.uuid(), session.uuid());
-    }
-
-    private void acquireSession()
-    {
-        testSystem.awaitCompletedReplies(reply);
-        session = reply.resultIfPresent();
-        assertNotNull(session);
     }
 
     @Test
@@ -688,7 +659,64 @@ public class ILink3SystemTest
         assertDisconnected();
     }
 
+    @Test
+    public void shouldDisconnectSessionsForClosedLibrary() throws IOException
+    {
+        launch(true);
+        establishNewConnection();
 
+        library.close();
+        awaitLibraryDisconnect(engine);
+
+        testServer.assertDisconnected();
+    }
+
+    @Test
+    public void shouldDisconnectSessionsForTimedOutLibrary() throws IOException
+    {
+        // Use large keep alive timeout to ensure that it doesn't accidentally trigger the unbind
+        testKeepAliveIntervalInMs = ILink3SessionConfiguration.KEEP_ALIVE_INTERVAL_MAX_VALUE;
+
+        launch(true);
+        establishNewConnection();
+
+        awaitLibraryDisconnect(engine);
+        testServer.assertDisconnected();
+
+        // Library reconnects and receives a control notification
+        testSystem.awaitUnbind(session);
+        assertArtioShowsSessionDisconnected();
+    }
+
+    private void establishNewConnection() throws IOException
+    {
+        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration();
+
+        connectToTestServer(sessionConfiguration);
+
+        establishConnection();
+    }
+
+    private void establishConnection()
+    {
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
+        testServer.writeEstablishmentAck(0, 0, 1);
+
+        acquireSession();
+
+        assertEquals(session.state(), ILink3Session.State.ESTABLISHED);
+        assertEquals(testServer.uuid(), session.uuid());
+    }
+
+    private void acquireSession()
+    {
+        testSystem.awaitCompletedReplies(reply);
+        session = reply.resultIfPresent();
+        assertNotNull(session);
+    }
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
     {
@@ -759,7 +787,7 @@ public class ILink3SystemTest
 
     private void readEstablish(final long expectedNextSeqNo)
     {
-        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, TEST_KEEP_ALIVE_INTERVAL_IN_MS, expectedNextSeqNo);
+        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, testKeepAliveIntervalInMs, expectedNextSeqNo);
     }
 
     private void readNegotiate()
@@ -781,13 +809,18 @@ public class ILink3SystemTest
             .firmId(FIRM_ID)
             .userKey(USER_KEY)
             .accessKeyId(ACCESS_KEY_ID)
-            .requestedKeepAliveIntervalInMs(TEST_KEEP_ALIVE_INTERVAL_IN_MS)
+            .requestedKeepAliveIntervalInMs(testKeepAliveIntervalInMs)
             .handler(handler);
     }
 
     private void assertDisconnected()
     {
         testServer.assertDisconnected();
+        assertArtioShowsSessionDisconnected();
+    }
+
+    private void assertArtioShowsSessionDisconnected()
+    {
         assertThat(library.iLink3Sessions(), hasSize(0));
         assertThat(engine.allSessions(), hasSize(0));
     }

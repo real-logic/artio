@@ -126,4 +126,9 @@ public abstract class ReceiverEndPoint
     {
         this.libraryId = libraryId;
     }
+
+    public int libraryId()
+    {
+        return libraryId;
+    }
 }

@@ -34,6 +34,7 @@ import static java.lang.Long.parseLong;
 public final class ILink3SessionConfiguration
 {
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
+    public static final int KEEP_ALIVE_INTERVAL_MAX_VALUE = 65534;
     public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
 
     public static final String HOST_PROP_NAME = "host";
@@ -392,6 +393,12 @@ public final class ILink3SessionConfiguration
          */
         public Builder requestedKeepAliveIntervalInMs(final int requestedKeepAliveIntervalInMs)
         {
+            if (requestedKeepAliveIntervalInMs > KEEP_ALIVE_INTERVAL_MAX_VALUE)
+            {
+                throw new IllegalArgumentException(
+                    "Invalid requestedKeepAliveIntervalInMs: " + requestedKeepAliveIntervalInMs +
+                    " cannot be larger than " + KEEP_ALIVE_INTERVAL_MAX_VALUE);
+            }
             this.requestedKeepAliveIntervalInMs = requestedKeepAliveIntervalInMs;
             return this;
         }

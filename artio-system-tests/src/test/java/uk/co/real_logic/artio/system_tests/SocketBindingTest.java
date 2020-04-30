@@ -24,9 +24,9 @@ import java.net.ConnectException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.awaitLibraryDisconnect;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newAcceptingLibrary;
 
 public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 {
@@ -154,24 +154,9 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         {
         }
 
-        awaitLibraryDisconnect();
+        awaitLibraryDisconnect(engine);
 
         cannotConnect();
-    }
-
-    private void awaitLibraryDisconnect()
-    {
-        assertEventuallyTrue(
-            () -> "libraries haven't disconnected yet",
-            () ->
-            {
-                return libraries(engine).size() == 1;
-            },
-            AWAIT_TIMEOUT,
-            () ->
-            {
-            }
-        );
     }
 
     private void setupSoleLibrary(final boolean shouldBind)
