@@ -33,9 +33,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.FixMatchers.isConnected;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -68,11 +67,6 @@ public class TestSystem
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
     }
 
-    public void assertConnected()
-    {
-        libraries.forEach((library) -> assertThat(library, isConnected()));
-    }
-
     public void close(final FixLibrary library)
     {
         library.close();
@@ -93,15 +87,24 @@ public class TestSystem
     public FixLibrary connect(final LibraryConfiguration configuration)
     {
         final FixLibrary library = FixLibrary.connect(configuration);
-        add(library);
-        awaitConnected(library);
+        try
+        {
+            add(library);
+            awaitConnected(library);
 
-        return library;
+            return library;
+        }
+        catch (final Exception e)
+        {
+            library.close();
+            LangUtil.rethrowUnchecked(e);
+            return library;
+        }
     }
 
     public void awaitConnected(final FixLibrary library)
     {
-        assertThat(libraries, contains(library));
+        assertThat(libraries, hasItem(library));
         assertEventuallyTrue(
             () -> "Unable to connect to engine",
             () ->
