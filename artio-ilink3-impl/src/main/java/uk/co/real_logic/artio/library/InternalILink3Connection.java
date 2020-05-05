@@ -52,14 +52,14 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.library.ILink3SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
 /**
  * External users should never rely on this API.
  */
-public class InternalILink3Session extends ILink3Session
+public class InternalILink3Connection extends ILink3Connection
 {
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
     private static final long OK_POSITION = Long.MIN_VALUE;
@@ -73,7 +73,7 @@ public class InternalILink3Session extends ILink3Session
 
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
-    private final ILink3SessionConfiguration configuration;
+    private final ILink3ConnectionConfiguration configuration;
     private final long connectionId;
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundPublication;
@@ -84,7 +84,7 @@ public class InternalILink3Session extends ILink3Session
     private final long uuid;
     private final EpochNanoClock epochNanoClock;
 
-    private InitiateILink3SessionReply initiateReply;
+    private InitiateILink3ConnectionReply initiateReply;
 
     private State state;
     private long nextRecvSeqNo;
@@ -101,10 +101,10 @@ public class InternalILink3Session extends ILink3Session
     private long lastNegotiateRequestTimestamp;
     private long lastEstablishRequestTimestamp;
 
-    public InternalILink3Session(
-        final ILink3SessionConfiguration configuration,
+    public InternalILink3Connection(
+        final ILink3ConnectionConfiguration configuration,
         final long connectionId,
-        final InitiateILink3SessionReply initiateReply,
+        final InitiateILink3ConnectionReply initiateReply,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
         final int libraryId,

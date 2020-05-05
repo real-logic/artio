@@ -24,15 +24,15 @@ import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 /**
  * .
  */
-class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
+class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
 {
-    private final ILink3SessionConfiguration configuration;
+    private final ILink3ConnectionConfiguration configuration;
     private long connectionId = NO_CONNECTION_ID;
 
-    InitiateILink3SessionReply(
+    InitiateILink3ConnectionReply(
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTime,
-        final ILink3SessionConfiguration configuration)
+        final ILink3ConnectionConfiguration configuration)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.configuration = configuration;
@@ -49,7 +49,7 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
         requiresResend = position < 0;
     }
 
-    void onComplete(final ILink3Session result)
+    void onComplete(final ILink3Connection result)
     {
         libraryPoller.deregister(correlationId);
         super.onComplete(result);
@@ -71,7 +71,7 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
         }
     }
 
-    ILink3SessionConfiguration configuration()
+    ILink3ConnectionConfiguration configuration()
     {
         return configuration;
     }

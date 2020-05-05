@@ -106,14 +106,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private static final int ENGINE_CLOSE = 5;
 
-    private static final ILink3Session[] EMPTY_ILINK_SESSIONS = new ILink3Session[0];
+    private static final ILink3Connection[] EMPTY_ILINK_CONNECTIONS = new ILink3Connection[0];
     private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
 
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private ILink3Session[] iLink3Sessions = EMPTY_ILINK_SESSIONS;
-    private final List<ILink3Session> unmodifiableILink3Sessions = new UnmodifiableWrapper<>(() -> iLink3Sessions);
+    private ILink3Connection[] iLink3Connections = EMPTY_ILINK_CONNECTIONS;
+    private final List<ILink3Connection> unmodifiableILink3Connections =
+        new UnmodifiableWrapper<>(() -> iLink3Connections);
 
     private InternalSession[] sessions = EMPTY_SESSIONS;
     private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
@@ -245,12 +246,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return new InitiateSessionReply(this, timeInMs() + configuration.timeoutInMs(), configuration);
     }
 
-    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    public Reply<ILink3Connection> initiate(final ILink3ConnectionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
         validateEndOfDay();
 
-        return new InitiateILink3SessionReply(
+        return new InitiateILink3ConnectionReply(
             this, timeInMs() + configuration.requestedKeepAliveIntervalInMs(), configuration);
     }
 
@@ -747,11 +748,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             total += session.poll(timeInMs);
         }
 
-        final ILink3Session[] iLink3Sessions = this.iLink3Sessions;
-        for (int i = 0, size = iLink3Sessions.length; i < size; i++)
+        final ILink3Connection[] iLink3Connections = this.iLink3Connections;
+        for (int i = 0, size = iLink3Connections.length; i < size; i++)
         {
-            final ILink3Session session = iLink3Sessions[i];
-            total += session.poll(timeInMs);
+            final ILink3Connection connection = iLink3Connections[i];
+            total += connection.poll(timeInMs);
         }
 
         return total;
@@ -1329,31 +1330,31 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final InitiateILink3SessionReply reply =
-                (InitiateILink3SessionReply)correlationIdToReply.remove(correlationId);
+            final InitiateILink3ConnectionReply reply =
+                (InitiateILink3ConnectionReply)correlationIdToReply.remove(correlationId);
 
             if (reply != null)
             {
                 DebugLogger.log(FIX_CONNECTION, initiatorConnectFormatter, connectionId, libraryId);
 
-                final ILink3SessionConfiguration configuration = reply.configuration();
-                final ILink3Session session = makeILink3Session(
+                final ILink3ConnectionConfiguration configuration = reply.configuration();
+                final ILink3Connection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated);
                 final ILink3Subscription subscription = new ILink3Subscription(
-                    AbstractILink3Parser.make(session, THROW_ERRORS), session);
+                    AbstractILink3Parser.make(connection, THROW_ERRORS), connection);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
-                iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
+                iLink3Connections = ArrayUtil.add(iLink3Connections, connection);
             }
         }
 
         return CONTINUE;
     }
 
-    private ILink3Session makeILink3Session(
-        final ILink3SessionConfiguration configuration,
+    private ILink3Connection makeILink3Connection(
+        final ILink3ConnectionConfiguration configuration,
         final long connectionId,
-        final InitiateILink3SessionReply initiateReply,
+        final InitiateILink3ConnectionReply initiateReply,
         final int libraryId,
         final LibraryPoller owner,
         final long uuid,
@@ -1363,11 +1364,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.library.InternalILink3Session");
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.library.InternalILink3Connection");
             final Constructor<?> constructor = cls.getConstructor(
-                ILink3SessionConfiguration.class,
+                ILink3ConnectionConfiguration.class,
                 long.class,
-                InitiateILink3SessionReply.class,
+                InitiateILink3ConnectionReply.class,
                 GatewayPublication.class,
                 GatewayPublication.class,
                 int.class,
@@ -1378,7 +1379,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 boolean.class,
                 EpochNanoClock.class);
 
-            return (ILink3Session)constructor.newInstance(
+            return (ILink3Connection)constructor.newInstance(
                 configuration,
                 connectionId,
                 initiateReply,
@@ -1526,13 +1527,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void controlUpdateILinkSessions()
     {
         // We just disconnect everything.
-        if (iLink3Sessions.length > 0)
+        if (iLink3Connections.length > 0)
         {
-            for (final ILink3Session session : iLink3Sessions)
+            for (final ILink3Connection session : iLink3Connections)
             {
                 session.unbindState();
             }
-            iLink3Sessions = new ILink3Session[0];
+            iLink3Connections = new ILink3Connection[0];
         }
     }
 
@@ -1887,7 +1888,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
-    public long saveInitiateILink(final long correlationId, final ILink3SessionConfiguration configuration)
+    public long saveInitiateILink(final long correlationId, final ILink3ConnectionConfiguration configuration)
     {
         return outboundPublication.saveInitiateILinkConnection(
             libraryId, configuration.port(), correlationId, configuration.reEstablishLastSession(),
@@ -1899,14 +1900,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         tasks.add(task);
     }
 
-    public List<ILink3Session> iLink3Sessions()
+    public List<ILink3Connection> iLink3Sessions()
     {
-        return unmodifiableILink3Sessions;
+        return unmodifiableILink3Connections;
     }
 
-    public void onUnbind(final ILink3Session session)
+    public void onUnbind(final ILink3Connection session)
     {
-        iLink3Sessions = ArrayUtil.remove(iLink3Sessions, session);
+        iLink3Connections = ArrayUtil.remove(iLink3Connections, session);
     }
 }
 

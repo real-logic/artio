@@ -19,17 +19,19 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 /**
- * Represents a Session of the iLink3 protocol. This is a FIXP session protocol with SBE encoded binary messages.
+ * Represents a Session Connection of the iLink3 protocol.
+ * This is a FIXP session protocol with SBE encoded binary messages. Unlike FIX it possible to have multiple connections
+ * open with the same session id.
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public abstract class ILink3Session
+public abstract class ILink3Connection
 {
     public static final long NOT_AWAITING_RETRANSMIT = -1L;
 
     /**
      * Defines the internal state of the Session, this can be accessed using
-     * the {@link ILink3Session#state()} method.
+     * the {@link ILink3Connection#state()} method.
      */
     public enum State
     {

@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.ILink3Session;
+import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
@@ -219,8 +219,8 @@ public class TestSystem
         return null;
     }
 
-    public void awaitUnbind(final ILink3Session session)
+    public void awaitUnbind(final ILink3Connection session)
     {
-        await("Failed to unbind session", () -> session.state() == ILink3Session.State.UNBOUND);
+        await("Failed to unbind session", () -> session.state() == ILink3Connection.State.UNBOUND);
     }
 }

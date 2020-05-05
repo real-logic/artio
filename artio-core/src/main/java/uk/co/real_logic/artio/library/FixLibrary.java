@@ -456,17 +456,17 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Initiate an ILink3 session. Artio will connect to the iLink server and attempt to logon.
-     * This method returns a reply object wrapping the Session itself.
+     * Initiate an ILink3 connection. Artio will connect to the iLink server and attempt to logon.
+     * This method returns a reply object wrapping the Connection itself.
      *
      * NB: This is an experimental API and is subject to change or potentially removal.
      *
      * @param configuration the configuration for this Session.
-     * @return a reply object wrapping the Session itself.
+     * @return a reply object wrapping the Connection itself.
      * @see <a href="https://github.com/real-logic/artio/wiki/ILink-3-Support">
      *     https://github.com/real-logic/artio/wiki/ILink-3-Support</a>
      */
-    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    public Reply<ILink3Connection> initiate(final ILink3ConnectionConfiguration configuration)
     {
         return poller.initiate(configuration);
     }
@@ -478,7 +478,7 @@ public class FixLibrary extends GatewayProcess
      *
      * @return a list of the currently active ILink3 Sessions
      */
-    public List<ILink3Session> iLink3Sessions()
+    public List<ILink3Connection> iLink3Sessions()
     {
         return poller.iLink3Sessions();
     }

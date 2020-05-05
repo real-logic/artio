@@ -27,11 +27,11 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 
 /**
- * Configuration object for connecting to an iLink3 session.
+ * Configuration object for connecting to an iLink3 connection.
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public final class ILink3SessionConfiguration
+public final class ILink3ConnectionConfiguration
 {
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
     public static final int KEEP_ALIVE_INTERVAL_MAX_VALUE = 65534;
@@ -69,7 +69,7 @@ public final class ILink3SessionConfiguration
      * @param properties the properties object to load from.
      * @return the builder initialised with the provided properties.
      */
-    public static ILink3SessionConfiguration.Builder fromProperties(final Properties properties)
+    public static ILink3ConnectionConfiguration.Builder fromProperties(final Properties properties)
     {
         final Builder builder = builder()
             .host(properties.getProperty(HOST_PROP_NAME))
@@ -227,7 +227,7 @@ public final class ILink3SessionConfiguration
         return 2500;
     }
 
-    private ILink3SessionConfiguration(
+    private ILink3ConnectionConfiguration(
         final String host,
         final int port,
         final String sessionId,
@@ -279,9 +279,9 @@ public final class ILink3SessionConfiguration
         private boolean reEstablishLastSession = false;
         private ILink3SessionHandler handler;
 
-        public ILink3SessionConfiguration build()
+        public ILink3ConnectionConfiguration build()
         {
-            return new ILink3SessionConfiguration(
+            return new ILink3ConnectionConfiguration(
                 host,
                 port,
                 sessionId,

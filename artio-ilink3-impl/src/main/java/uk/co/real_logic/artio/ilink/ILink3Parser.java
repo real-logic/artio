@@ -19,8 +19,8 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.library.ILink3Session;
-import uk.co.real_logic.artio.library.InternalILink3Session;
+import uk.co.real_logic.artio.library.ILink3Connection;
+import uk.co.real_logic.artio.library.InternalILink3Connection;
 
 import java.util.function.Consumer;
 
@@ -48,11 +48,11 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Consumer<StringBuilder> notAppliedAppendTo = notApplied::appendTo;
     private final Consumer<StringBuilder> retransmitRejectAppendTo = retransmitReject::appendTo;
 
-    private final InternalILink3Session handler;
+    private final InternalILink3Connection handler;
 
-    public ILink3Parser(final ILink3Session handler)
+    public ILink3Parser(final ILink3Connection handler)
     {
-        this.handler = (InternalILink3Session)handler;
+        this.handler = (InternalILink3Connection)handler;
     }
 
     public int templateId(final DirectBuffer buffer, final int offset)

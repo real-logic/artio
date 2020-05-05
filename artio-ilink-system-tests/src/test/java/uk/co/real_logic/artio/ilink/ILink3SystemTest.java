@@ -51,7 +51,7 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_ERROR_CODES;
 import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_REASON;
-import static uk.co.real_logic.artio.library.ILink3Session.NOT_AWAITING_RETRANSMIT;
+import static uk.co.real_logic.artio.library.ILink3Connection.NOT_AWAITING_RETRANSMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ILink3SystemTest
@@ -73,8 +73,8 @@ public class ILink3SystemTest
     private FixEngine engine;
     private FixLibrary library;
     private ILink3TestServer testServer;
-    private Reply<ILink3Session> reply;
-    private ILink3Session session;
+    private Reply<ILink3Connection> reply;
+    private ILink3Connection connection;
     private ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
 
     private boolean noExpectedError;
@@ -158,7 +158,7 @@ public class ILink3SystemTest
 
         testServer.writeTerminate();
 
-        testSystem.awaitUnbind(session);
+        testSystem.awaitUnbind(connection);
 
         testServer.readTerminate();
 
@@ -172,7 +172,7 @@ public class ILink3SystemTest
 
         testServer.writeTerminate(0);
 
-        testSystem.awaitUnbind(session);
+        testSystem.awaitUnbind(connection);
 
         testServer.readTerminate();
 
@@ -218,7 +218,7 @@ public class ILink3SystemTest
             new PartyDetailsDefinitionRequest518Encoder();
         final int variableLength = NoPartyDetailsEncoder.HEADER_SIZE + NoPartyDetailsEncoder.sbeBlockLength() +
             NoTrdRegPublicationsEncoder.HEADER_SIZE;
-        assertThat(session.tryClaim(partyDetailsDefinitionRequest, variableLength), greaterThan(0L));
+        assertThat(connection.tryClaim(partyDetailsDefinitionRequest, variableLength), greaterThan(0L));
 
         partyDetailsDefinitionRequest
             .partyDetailsListReqID(1)
@@ -241,7 +241,7 @@ public class ILink3SystemTest
                 .partyDetailRole(PartyDetailRole.ExecutingFirm);
         partyDetailsDefinitionRequest.noTrdRegPublicationsCount(0);
 
-        session.commit();
+        connection.commit();
     }
 
     @Test
@@ -320,7 +320,7 @@ public class ILink3SystemTest
     {
         shouldExchangeBusinessMessage();
 
-        final long lastUuid = session.uuid();
+        final long lastUuid = connection.uuid();
 
         connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
@@ -337,12 +337,12 @@ public class ILink3SystemTest
     {
         shouldExchangeBusinessMessage();
 
-        final long lastUuid = session.uuid();
+        final long lastUuid = connection.uuid();
 
         closeArtio();
         launchArtio();
 
-        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration()
+        final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration()
             .reEstablishLastSession(true);
         connectToTestServer(sessionConfiguration);
 
@@ -373,7 +373,7 @@ public class ILink3SystemTest
         {
             shouldExchangeBusinessMessage();
 
-            final long lastUuid = session.uuid();
+            final long lastUuid = connection.uuid();
 
             closeArtio();
 
@@ -385,11 +385,11 @@ public class ILink3SystemTest
 
             // Test that a gateway can be restarted and a new session established after the state reset.
             launchArtio();
-            final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration()
+            final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration()
                 .reEstablishLastSession(true);
             connectToTestServer(sessionConfiguration);
             establishConnection();
-            assertNotEquals(session.uuid(), lastUuid);
+            assertNotEquals(connection.uuid(), lastUuid);
         }
         finally
         {
@@ -410,7 +410,7 @@ public class ILink3SystemTest
 
         // From CME - as a heartbeat message to be sent when a KeepAliveInterval interval from CME lapses and
         // no other message is sent to customer
-        final InternalILink3Session session = (InternalILink3Session)this.session;
+        final InternalILink3Connection session = (InternalILink3Connection)this.connection;
         final long oldTimeout = session.nextReceiveMessageTimeInMs();
         testServer.writeSequence(1, NotLapsed);
 
@@ -449,7 +449,7 @@ public class ILink3SystemTest
         // sequence gap from customer
         shouldEstablishConnectionAtBeginningOfWeek();
 
-        session.nextSentSeqNo(3);
+        connection.nextSentSeqNo(3);
         sendNewOrderSingle();
 
         testServer.readNewOrderSingle(3);
@@ -495,7 +495,7 @@ public class ILink3SystemTest
         assertEventuallyTrue("Session never re-establishes", () ->
         {
             testSystem.poll();
-            return session.state() == ILink3Session.State.ESTABLISHED;
+            return connection.state() == ILink3Connection.State.ESTABLISHED;
         });
 
         sendNewOrderSingle();
@@ -538,13 +538,13 @@ public class ILink3SystemTest
         testServer.readNewOrderSingle(1);
 
         // Fill First
-        assertEquals(1, session.retransmitFillSeqNo());
+        assertEquals(1, connection.retransmitFillSeqNo());
         testServer.writeExecutionReportStatus(1, true);
 
         testServer.acceptRetransRequest(3, 1);
 
         // Fill second
-        assertEquals(3, session.retransmitFillSeqNo());
+        assertEquals(3, connection.retransmitFillSeqNo());
         testServer.writeExecutionReportStatus(3, true);
 
         agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
@@ -602,7 +602,7 @@ public class ILink3SystemTest
         terminateAndDisconnect();
         // nextSent=2,nextRecv=1
 
-        final long lastUuid = session.uuid();
+        final long lastUuid = connection.uuid();
 
         connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
 
@@ -657,7 +657,7 @@ public class ILink3SystemTest
         testServer.writeExecutionReportStatus(1, false);
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
-        final long lastUuid = session.uuid();
+        final long lastUuid = connection.uuid();
         connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
         testServer.expectedUuid(lastUuid);
         readEstablish(1);
@@ -689,7 +689,7 @@ public class ILink3SystemTest
         startTerminate();
 
         testServer.readTerminate();
-        testSystem.awaitUnbind(session);
+        testSystem.awaitUnbind(connection);
         assertDisconnected();
     }
 
@@ -709,7 +709,7 @@ public class ILink3SystemTest
     public void shouldDisconnectSessionsForTimedOutLibrary() throws IOException
     {
         // Use large keep alive timeout to ensure that it doesn't accidentally trigger the unbind
-        testKeepAliveIntervalInMs = ILink3SessionConfiguration.KEEP_ALIVE_INTERVAL_MAX_VALUE;
+        testKeepAliveIntervalInMs = ILink3ConnectionConfiguration.KEEP_ALIVE_INTERVAL_MAX_VALUE;
 
         launch(true);
         establishNewConnection();
@@ -718,13 +718,13 @@ public class ILink3SystemTest
         testServer.assertDisconnected();
 
         // Library reconnects and receives a control notification
-        testSystem.awaitUnbind(session);
+        testSystem.awaitUnbind(connection);
         assertArtioShowsSessionDisconnected();
     }
 
     private void establishNewConnection() throws IOException
     {
-        final ILink3SessionConfiguration.Builder sessionConfiguration = sessionConfiguration();
+        final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration();
 
         connectToTestServer(sessionConfiguration);
 
@@ -741,15 +741,15 @@ public class ILink3SystemTest
 
         acquireSession();
 
-        assertEquals(session.state(), ILink3Session.State.ESTABLISHED);
-        assertEquals(testServer.uuid(), session.uuid());
+        assertEquals(connection.state(), ILink3Connection.State.ESTABLISHED);
+        assertEquals(testServer.uuid(), connection.uuid());
     }
 
     private void acquireSession()
     {
         testSystem.awaitCompletedReplies(reply);
-        session = reply.resultIfPresent();
-        assertNotNull(session);
+        connection = reply.resultIfPresent();
+        assertNotNull(connection);
     }
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
@@ -763,12 +763,12 @@ public class ILink3SystemTest
 
     private void agreeRecvSeqNo(final long nextRecvSeqNo)
     {
-        agreeEquals(session::nextRecvSeqNo, nextRecvSeqNo);
+        agreeEquals(connection::nextRecvSeqNo, nextRecvSeqNo);
     }
 
     private void agreeRetransmitFillSeqNo(final long retransmitFillSeqNo)
     {
-        agreeEquals(session::retransmitFillSeqNo, retransmitFillSeqNo);
+        agreeEquals(connection::retransmitFillSeqNo, retransmitFillSeqNo);
     }
 
     private void agreeEquals(final LongSupplier supplier, final long value)
@@ -801,7 +801,9 @@ public class ILink3SystemTest
         }
     }
 
-    private void connectToTestServer(final ILink3SessionConfiguration.Builder sessionConfiguration) throws IOException
+    private void connectToTestServer(
+        final ILink3ConnectionConfiguration.Builder sessionConfiguration)
+        throws IOException
     {
         testServer = new ILink3TestServer(
             port, () -> reply = library.initiate(sessionConfiguration.build()), testSystem);
@@ -831,12 +833,12 @@ public class ILink3SystemTest
 
     private void startTerminate()
     {
-        session.terminate("shutdown", 0);
+        connection.terminate("shutdown", 0);
     }
 
-    private ILink3SessionConfiguration.Builder sessionConfiguration()
+    private ILink3ConnectionConfiguration.Builder sessionConfiguration()
     {
-        return ILink3SessionConfiguration.builder()
+        return ILink3ConnectionConfiguration.builder()
             .host("localhost")
             .port(port)
             .sessionId(SESSION_ID)
@@ -862,7 +864,7 @@ public class ILink3SystemTest
     private void sendNewOrderSingle()
     {
         final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
-        assertThat(session.tryClaim(newOrderSingle), greaterThan(0L));
+        assertThat(connection.tryClaim(newOrderSingle), greaterThan(0L));
         newOrderSingle
             .partyDetailsListReqID(1)
             .orderQty(1)
@@ -872,7 +874,7 @@ public class ILink3SystemTest
             .partyDetailsListReqID(1)
             .orderRequestID(1);
 
-        session.commit();
+        connection.commit();
     }
 
     private void terminateAndDisconnect()
@@ -886,7 +888,7 @@ public class ILink3SystemTest
     private void serverAcceptsTerminate()
     {
         testServer.writeTerminate();
-        testSystem.awaitUnbind(session);
+        testSystem.awaitUnbind(connection);
         assertDisconnected();
     }
 }
