@@ -16,14 +16,15 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static org.agrona.collections.CollectionUtil.removeIf;
 
 class RetryManager implements AutoCloseable
 {
@@ -68,7 +69,12 @@ class RetryManager implements AutoCloseable
 
     int attemptSteps()
     {
-        return removeIf(continuations, step -> step.attemptToAction() == CONTINUE);
+        return removeIf(step -> step.attemptToAction() == CONTINUE);
+    }
+
+    int removeIf(final Predicate<Continuation> predicate)
+    {
+        return CollectionUtil.removeIf(continuations, predicate);
     }
 
     public void close()

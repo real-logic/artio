@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.library;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.GatewayError;
 
-import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 
 /**
@@ -27,7 +26,7 @@ import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
 {
     private final ILink3ConnectionConfiguration configuration;
-    private long connectionId = NO_CONNECTION_ID;
+    private boolean onTcpConnected = false;
 
     InitiateILink3ConnectionReply(
         final LibraryPoller libraryPoller,
@@ -55,12 +54,25 @@ class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
         super.onComplete(result);
     }
 
+    void onTcpConnected()
+    {
+        onTcpConnected = true;
+    }
+
     protected boolean onTimeout()
     {
-        // TODO: we need an equivalent of this.
-//        libraryPoller.onInitiatorSessionTimeout(correlationId, connectionId);
+        // In the iLink3 case - the reply timeout should only be for the connection itself.
+        // According to the iLink3 spec we should start a new countdown for the keepalive when
+        // waiting for the negotiate and establish messages separately.
 
-        return super.onTimeout();
+        if (!onTcpConnected)
+        {
+            libraryPoller.onTimeoutWaitingForConnection(correlationId);
+
+            super.onTimeout();
+        }
+
+        return true;
     }
 
     void onError(final GatewayError errorType, final String errorMessage)

@@ -446,12 +446,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         if (connectionId == NO_CONNECTION_ID)
         {
-            // We've timed out when waiting for a connection to complete.
-
-            if (!saveMidConnectionDisconnect(correlationId))
-            {
-                tasks.add(() -> saveMidConnectionDisconnect(correlationId));
-            }
+            onTimeoutWaitingForConnection(correlationId);
         }
         else
         {
@@ -461,6 +456,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 tasks.add(() -> saveNoLogonRequestDisconnect(connectionId));
             }
+        }
+    }
+
+    void onTimeoutWaitingForConnection(final long correlationId)
+    {
+        if (!saveMidConnectionDisconnect(correlationId))
+        {
+            tasks.add(() -> saveMidConnectionDisconnect(correlationId));
         }
     }
 
@@ -1336,6 +1339,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (reply != null)
             {
                 DebugLogger.log(FIX_CONNECTION, initiatorConnectFormatter, connectionId, libraryId);
+
+                reply.onTcpConnected();
 
                 final ILink3ConnectionConfiguration configuration = reply.configuration();
                 final ILink3Connection connection = makeILink3Connection(

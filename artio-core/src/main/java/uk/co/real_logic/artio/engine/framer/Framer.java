@@ -672,7 +672,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             context,
             aeronSessionId,
             position,
-            reestablishConnection);
+            reestablishConnection,
+            address);
         schedule(lookupInformation);
 
         try
@@ -685,6 +686,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     if (ex != null)
                     {
+                        cancelILink3LookupConnectOperation(correlationId, false);
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -709,6 +711,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final IOException ex)
         {
+            cancelILink3LookupConnectOperation(correlationId, false);
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
 
             return CONTINUE;
@@ -737,6 +740,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private final ILink3Context context;
         private final int aeronSessionId;
         private final long position;
+        private final InetSocketAddress address;
 
         private boolean hasConnected = false;
         private boolean hasScannedIndex = false;
@@ -751,13 +755,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final ILink3Context context,
             final int aeronSessionId,
             final long position,
-            final boolean reestablishConnection)
+            final boolean reestablishConnection,
+            final InetSocketAddress address)
         {
             this.libraryId = libraryId;
             this.correlationId = correlationId;
             this.context = context;
             this.aeronSessionId = aeronSessionId;
             this.position = position;
+            this.address = address;
 
             if (!reestablishConnection || context.newlyAllocated())
             {
@@ -946,6 +952,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ConnectingSession connectingSession = library.connectionFinishesConnecting(correlationId);
         if (connectingSession == null)
         {
+            if (cancelILink3LookupConnectOperation(correlationId, true))
+            {
+                return CONTINUE;
+            }
+
             saveError(GatewayError.UNKNOWN_SESSION, libraryId, correlationId,
                 "Engine doesn't think library is connecting this session");
 
@@ -953,16 +964,44 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         sessionContexts.onDisconnect(connectingSession.sessionId());
+        final InetSocketAddress address = connectingSession.address();
+        stopConnecting(address);
+
+        return CONTINUE;
+    }
+
+    private boolean cancelILink3LookupConnectOperation(final long correlationId, final boolean requiresStopping)
+    {
+        return retryManager.removeIf(continuation ->
+        {
+            if (continuation instanceof ILink3LookupConnectOperation)
+            {
+                final ILink3LookupConnectOperation connectOperation = (ILink3LookupConnectOperation)continuation;
+                if (connectOperation.correlationId == correlationId)
+                {
+                    if (requiresStopping)
+                    {
+                        stopConnecting(connectOperation.address);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }) > 0;
+    }
+
+    private void stopConnecting(final InetSocketAddress address)
+    {
         try
         {
-            channelSupplier.stopConnecting(connectingSession.address());
+            channelSupplier.stopConnecting(address);
         }
         catch (final IOException e)
         {
             errorHandler.onError(e);
         }
-
-        return CONTINUE;
     }
 
     private Action badSequenceNumberConfiguration(
