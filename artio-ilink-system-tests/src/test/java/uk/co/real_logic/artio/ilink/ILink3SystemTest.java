@@ -64,7 +64,7 @@ public class ILink3SystemTest
     static final String USER_KEY = "somethingprivate";
     static final String CL_ORD_ID = "123";
 
-    private FakeILink3SessionHandler handler = spy(new FakeILink3SessionHandler(NotAppliedResponse::gapfill));
+    private FakeILink3ConnectionHandler handler = spy(new FakeILink3ConnectionHandler(NotAppliedResponse::gapfill));
 
     private int testKeepAliveIntervalInMs = TEST_KEEP_ALIVE_INTERVAL_IN_MS;
     private int port = unusedPort();
@@ -249,7 +249,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        reply = library.initiate(sessionConfiguration().build());
+        reply = library.initiate(connectionConfiguration().build());
         assertConnectError(containsString("UNABLE_TO_CONNECT"));
     }
 
@@ -258,7 +258,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(sessionConfiguration());
+        connectToTestServer(connectionConfiguration());
 
         readNegotiate();
         readNegotiate();
@@ -277,7 +277,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(sessionConfiguration());
+        connectToTestServer(connectionConfiguration());
 
         readNegotiate();
         readNegotiate();
@@ -290,7 +290,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(sessionConfiguration());
+        connectToTestServer(connectionConfiguration());
 
         readNegotiate();
 
@@ -305,7 +305,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(sessionConfiguration());
+        connectToTestServer(connectionConfiguration());
 
         readNegotiate();
 
@@ -322,7 +322,7 @@ public class ILink3SystemTest
 
         final long lastUuid = connection.uuid();
 
-        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -342,9 +342,9 @@ public class ILink3SystemTest
         closeArtio();
         launchArtio();
 
-        final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration()
+        final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration()
             .reEstablishLastSession(true);
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(connectionConfiguration);
 
         testServer.expectedUuid(lastUuid);
 
@@ -359,7 +359,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
 
         establishConnection();
     }
@@ -385,9 +385,9 @@ public class ILink3SystemTest
 
             // Test that a gateway can be restarted and a new session established after the state reset.
             launchArtio();
-            final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration()
+            final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration()
                 .reEstablishLastSession(true);
-            connectToTestServer(sessionConfiguration);
+            connectToTestServer(connectionConfiguration);
             establishConnection();
             assertNotEquals(connection.uuid(), lastUuid);
         }
@@ -467,7 +467,7 @@ public class ILink3SystemTest
     @Test
     public void shouldSupportRetransmitInResponseToNotAppliedMessage() throws IOException
     {
-        handler = new FakeILink3SessionHandler(response ->
+        handler = new FakeILink3ConnectionHandler(response ->
         {
             response.retransmit();
 
@@ -604,7 +604,7 @@ public class ILink3SystemTest
 
         final long lastUuid = connection.uuid();
 
-        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -658,7 +658,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
         final long lastUuid = connection.uuid();
-        connectToTestServer(sessionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
         testServer.expectedUuid(lastUuid);
         readEstablish(1);
 
@@ -724,9 +724,9 @@ public class ILink3SystemTest
 
     private void establishNewConnection() throws IOException
     {
-        final ILink3ConnectionConfiguration.Builder sessionConfiguration = sessionConfiguration();
+        final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration();
 
-        connectToTestServer(sessionConfiguration);
+        connectToTestServer(connectionConfiguration);
 
         establishConnection();
     }
@@ -802,11 +802,11 @@ public class ILink3SystemTest
     }
 
     private void connectToTestServer(
-        final ILink3ConnectionConfiguration.Builder sessionConfiguration)
+        final ILink3ConnectionConfiguration.Builder connectionConfiguration)
         throws IOException
     {
         testServer = new ILink3TestServer(
-            port, () -> reply = library.initiate(sessionConfiguration.build()), testSystem);
+            port, () -> reply = library.initiate(connectionConfiguration.build()), testSystem);
     }
 
     private void assertConnectError(final Matcher<String> messageMatcher)
@@ -836,7 +836,7 @@ public class ILink3SystemTest
         connection.terminate("shutdown", 0);
     }
 
-    private ILink3ConnectionConfiguration.Builder sessionConfiguration()
+    private ILink3ConnectionConfiguration.Builder connectionConfiguration()
     {
         return ILink3ConnectionConfiguration.builder()
             .host("localhost")

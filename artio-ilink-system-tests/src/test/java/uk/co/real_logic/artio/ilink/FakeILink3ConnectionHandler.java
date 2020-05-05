@@ -21,13 +21,13 @@ import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 import java.util.function.Consumer;
 
-public class FakeILink3SessionHandler implements ILink3SessionHandler
+public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
 {
     private final Consumer<NotAppliedResponse> notAppliedResponse;
     private boolean hasReceivedNotApplied;
     private IntArrayList messageIds = new IntArrayList();
 
-    public FakeILink3SessionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
+    public FakeILink3ConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
         this.notAppliedResponse = notAppliedResponse;
     }

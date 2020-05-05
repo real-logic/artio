@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.Verify;
-import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -61,7 +61,7 @@ public final class ILink3ConnectionConfiguration
     private final long initialReceivedSequenceNumber;
     private final String accessKeyId;
     private final boolean reEstablishLastSession;
-    private final ILink3SessionHandler handler;
+    private final ILink3ConnectionHandler handler;
 
     /**
      * Load the ILink3SessionConfiguration from a properties file.
@@ -174,7 +174,7 @@ public final class ILink3ConnectionConfiguration
         return reEstablishLastSession;
     }
 
-    public ILink3SessionHandler handler()
+    public ILink3ConnectionHandler handler()
     {
         return handler;
     }
@@ -241,7 +241,7 @@ public final class ILink3ConnectionConfiguration
         final long initialReceivedSequenceNumber,
         final String accessKeyId,
         final boolean reEstablishLastSession,
-        final ILink3SessionHandler handler)
+        final ILink3ConnectionHandler handler)
     {
         this.host = host;
         this.port = port;
@@ -277,7 +277,7 @@ public final class ILink3ConnectionConfiguration
         private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private String accessKeyId;
         private boolean reEstablishLastSession = false;
-        private ILink3SessionHandler handler;
+        private ILink3ConnectionHandler handler;
 
         public ILink3ConnectionConfiguration build()
         {
@@ -484,7 +484,7 @@ public final class ILink3ConnectionConfiguration
          *                exchange.
          * @return this
          */
-        public Builder handler(final ILink3SessionHandler handler)
+        public Builder handler(final ILink3ConnectionHandler handler)
         {
             this.handler = handler;
             return this;

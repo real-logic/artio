@@ -29,7 +29,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.ilink.ILink3Offsets;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.ilink.ILink3SessionHandler;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.ilink.IllegalResponseException;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -79,7 +79,7 @@ public class InternalILink3Connection extends ILink3Connection
     private final GatewayPublication inboundPublication;
     private final int libraryId;
     private final LibraryPoller owner;
-    private final ILink3SessionHandler handler;
+    private final ILink3ConnectionHandler handler;
     private final boolean newlyAllocated;
     private final long uuid;
     private final EpochNanoClock epochNanoClock;

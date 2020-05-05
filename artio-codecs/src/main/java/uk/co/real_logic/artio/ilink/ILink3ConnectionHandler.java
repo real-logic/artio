@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.library.NotAppliedResponse;
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public interface ILink3SessionHandler
+public interface ILink3ConnectionHandler
 {
     /**
      * Callback for receiving iLink3 business messages. Details of business messages can be found in the
