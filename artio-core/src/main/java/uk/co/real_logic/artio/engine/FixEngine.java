@@ -352,10 +352,10 @@ public final class FixEngine extends GatewayProcess
      * <code>FixLibrary</code> instances currently live in order for them to gracefully close as well. Therefore if you
      * close a <code>FixLibrary</code> before you call this method then the close operation could be delayed by up to
      * {@link uk.co.real_logic.artio.CommonConfiguration#replyTimeoutInMs()} in order for the <code>FixEngine</code>
-     * to timeout the <code>FixLibrary</code>.
+     * to timeout the <code>FixLibrary</code>. In order for graceful shutdown to successfully occur you should also
+     * ensure that any connected <code>FixLibrary</code> instances are regularly polled on their duty cycle.
      *
-     * This does not remove files associated with the engine, that are persistent
-     * over multiple runs of the engine.
+     * This does not remove files associated with the engine, that are persistent over multiple runs of the engine.
      */
     public void close()
     {
