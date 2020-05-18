@@ -421,4 +421,10 @@ public final class FixEngine extends GatewayProcess
     {
         return configuration;
     }
+
+    // Exceptions here are always on internal FixEngine threads and should not cause those threads to terminate.
+    protected boolean shouldRethrowExceptionInErrorHandler()
+    {
+        return false;
+    }
 }

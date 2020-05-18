@@ -46,7 +46,14 @@ public class DefaultLibraryScheduler implements LibraryScheduler
                 configuration.monitoringThreadIdleStrategy(),
                 errorHandler,
                 null,
-                new CompositeAgent(monitoringAgent, conductorAgent));
+                new CompositeAgent(monitoringAgent, conductorAgent)
+                {
+                    public void onStart()
+                    {
+                        FixLibrary.setClientConductorThread();
+                        super.onStart();
+                    }
+                });
             startOnThread(monitoringRunner, configuration.threadFactory());
         }
     }

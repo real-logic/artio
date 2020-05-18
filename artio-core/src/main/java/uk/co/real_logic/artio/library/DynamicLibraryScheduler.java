@@ -125,6 +125,13 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             this.errorHandler = errorHandler;
         }
 
+        public void onStart()
+        {
+            FixLibrary.setClientConductorThread();
+            monitoringAgent.onStart();
+            clientConductorAgent.onStart();
+        }
+
         public int doWork()
         {
             int count = 0;

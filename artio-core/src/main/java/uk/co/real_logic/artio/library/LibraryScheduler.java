@@ -28,6 +28,8 @@ public interface LibraryScheduler
      * Invoked by the Library to start the threads.
      * Should only return once they are started.
      *
+     * Whatever thread is used to start the conductorAgent should invoke {@link FixLibrary#setClientConductorThread()}.
+     *
      * @param configuration the library's configuration object.
      * @param errorHandler the ErrorHandler used by the library.
      * @param monitoringAgent the monitoring agent to schedule.

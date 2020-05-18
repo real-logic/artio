@@ -183,7 +183,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
-    private volatile Throwable remoteThrowable;
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
@@ -506,11 +505,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final long timeInMs = timeInMs();
 
-        if (null != remoteThrowable)
-        {
-            LangUtil.rethrowUnchecked(remoteThrowable);
-        }
-
         switch (state)
         {
             case CONNECTED:
@@ -548,11 +542,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         operations += pollPendingInitiatorSessions(timeInMs);
         operations += checkReplies(timeInMs);
         return operations;
-    }
-
-    void postExceptionToLibraryThread(final Throwable t)
-    {
-        this.remoteThrowable = t;
     }
 
     // -----------------------------------------------------------------------

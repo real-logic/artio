@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.Aeron;
-import io.aeron.exceptions.ConductorServiceTimeoutException;
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
@@ -55,10 +52,20 @@ public class FixLibrary extends GatewayProcess
     public static final int NO_MESSAGE_REPLAY = -1;
     public static final int CURRENT_SEQUENCE = -2;
 
+    // FixLibrary instances throw exceptions up to their invokers. Aeron catches exceptions in methods like
+    // Image.controlledPoll. This thread local is used to indicate which thread is a client conductor thread
+    // and thus can't safely rethrow the exception
+    private static final ThreadLocal<Boolean> RETHROW_EXCEPTION = ThreadLocal.withInitial(() -> true);
+
     private final LibraryConfiguration configuration;
     private final LibraryScheduler scheduler;
     private final LibraryPoller poller;
     private boolean isPolling = false;
+
+    static void setClientConductorThread()
+    {
+        RETHROW_EXCEPTION.set(false);
+    }
 
     FixLibrary(final LibraryConfiguration configuration)
     {
@@ -108,38 +115,8 @@ public class FixLibrary extends GatewayProcess
     private FixLibrary connect()
     {
         poller.startConnecting();
-        final ErrorHandler remoteThreadErrorHandler = createRemoteThreadErrorHandler(errorHandler);
-        scheduler.launch(configuration, remoteThreadErrorHandler, monitoringAgent, conductorAgent());
+        scheduler.launch(configuration, errorHandler, monitoringAgent, conductorAgent());
         return this;
-    }
-
-    protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
-    {
-        final Aeron.Context context = super.configureAeronContext(configuration);
-        final ErrorHandler errorHandler = context.errorHandler();
-        context.errorHandler(createRemoteThreadErrorHandler(errorHandler));
-        return context;
-    }
-
-    private ErrorHandler createRemoteThreadErrorHandler(final ErrorHandler innerHandler)
-    {
-        return (e) ->
-        {
-            if (e instanceof ConductorServiceTimeoutException)
-            {
-                // Currently only post specifically exceptions that we know need the library to be closed.
-                FixLibrary.this.postExceptionToLibraryThread(e);
-            }
-            else
-            {
-                innerHandler.onError(e);
-            }
-        };
-    }
-
-    private void postExceptionToLibraryThread(final Throwable e)
-    {
-        this.poller.postExceptionToLibraryThread(e);
     }
 
     // ------------- Public API -------------
@@ -481,5 +458,10 @@ public class FixLibrary extends GatewayProcess
     public List<ILink3Connection> iLink3Sessions()
     {
         return poller.iLink3Sessions();
+    }
+
+    protected boolean shouldRethrowExceptionInErrorHandler()
+    {
+        return RETHROW_EXCEPTION.get();
     }
 }
