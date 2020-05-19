@@ -73,13 +73,14 @@ public class AbstractMessageBasedAcceptorSystemTest
             .noLogonDisconnectTimeoutInMs(500)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .sessionPersistenceStrategy(logon ->
-            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
-            .bindAtStartup(shouldBind);
+            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
 
         if (provideBindingAddress)
         {
             config.bindTo("localhost", port);
         }
+
+        config.bindAtStartup(shouldBind);
 
         config
             .printErrorMessages(false)

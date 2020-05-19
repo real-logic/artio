@@ -370,7 +370,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
         throws IOException
     {
-        setup(true, initialAcceptedSessionOwner != SOLE_LIBRARY, true, initialAcceptedSessionOwner);
+        setup(true, true, true, initialAcceptedSessionOwner);
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);

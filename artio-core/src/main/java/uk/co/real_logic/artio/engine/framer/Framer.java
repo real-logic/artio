@@ -178,6 +178,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private boolean performingCloseOperation = false;
 
+    // true if we should be bound, false otherwise
+    // If we're in sole library mode and no library is connected we will be unbound.
+    private boolean shouldBind;
+
     Framer(
         final EpochClock epochClock,
         final Timer outboundTimer,
@@ -340,6 +344,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)));
 
         channelSupplier = configuration.channelSupplier();
+        shouldBind = configuration.bindAtStartup();
     }
 
     private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
@@ -1407,7 +1412,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void soleLibraryModeBind()
     {
-        if (configuration.hasBindAddress())
+        if (shouldBind)
         {
             try
             {
@@ -2456,6 +2461,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onBind(final BindCommand bindCommand)
     {
+        if (soleLibraryMode && idToLibrary.isEmpty())
+        {
+            shouldBind = bindCommand.bind();
+            bindCommand.success();
+            return;
+        }
+
         try
         {
             if (bindCommand.bind())
@@ -2466,6 +2478,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 channelSupplier.unbind();
             }
+            shouldBind = bindCommand.bind();
             bindCommand.success();
         }
         catch (final Exception e)

@@ -25,8 +25,7 @@ import java.net.ConnectException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.awaitLibraryDisconnect;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newAcceptingLibrary;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 {
@@ -38,17 +37,13 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
+        assertConnectable();
 
         completeUnbind();
         completeBind();
         completeBind();
 
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
+        assertConnectable();
     }
 
     @Test
@@ -59,7 +54,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         completeUnbind();
         completeUnbind();
 
-        cannotConnect();
+        assertCannotConnect();
     }
 
     @Test
@@ -68,7 +63,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         setup(true, false, false);
 
         final Reply<?> reply = engine.bind();
-        SystemTestUtil.awaitReply(reply);
+        awaitReply(reply);
         assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
 
         assertEquals("Missing address: EngineConfiguration.bindTo()", reply.error().getMessage());
@@ -91,7 +86,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
     public void shouldAllowBindingToBeDeferred() throws IOException
     {
         setup(true, false);
-        cannotConnect();
+        assertCannotConnect();
     }
 
     @Test
@@ -99,13 +94,11 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
+        assertConnectable();
 
         completeUnbind();
 
-        cannotConnect();
+        assertCannotConnect();
     }
 
     @Test
@@ -117,19 +110,17 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
+        assertConnectable();
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldValidateSoleLibraryModeConfiguration()
+    public void shouldValidateBindOnStartupConfiguration()
     {
-        setupSoleLibrary(true);
+        setup(true, true, false);
     }
 
     @Test
-    public void shouldBindConnectionOnceSoleLibraryIsActive() throws IOException
+    public void shouldNotBindConnectionOnceSoleLibraryIsActiveWhenUnboundBefore() throws IOException
     {
         setupSoleLibrary(false);
 
@@ -137,9 +128,42 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
         try (FixLibrary library = newAcceptingLibrary(fakeHandler))
         {
-            try (FixConnection connection = FixConnection.initiate(port))
-            {
-            }
+            assertCannotConnect();
+
+            completeBind();
+
+            assertConnectable();
+        }
+    }
+
+    @Test
+    public void shouldBindConnectionOnceSoleLibraryIsActiveWhenBoundAtStartup() throws IOException
+    {
+        setupSoleLibrary(true);
+
+        final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        {
+            assertConnectable();
+        }
+    }
+
+    @Test
+    public void shouldBindConnectionOnceSoleLibraryIsActiveWhenBoundBefore() throws IOException
+    {
+        setupSoleLibrary(false);
+
+        completeBind();
+
+        // Cannot connect yet as there's no library
+        assertCannotConnect();
+
+        final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        {
+            assertConnectable();
         }
     }
 
@@ -156,7 +180,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         awaitLibraryDisconnect(engine);
 
-        cannotConnect();
+        assertCannotConnect();
     }
 
     private void setupSoleLibrary(final boolean shouldBind)
@@ -167,18 +191,18 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
     private void completeBind()
     {
         final Reply<?> bindReply = engine.bind();
-        SystemTestUtil.awaitReply(bindReply);
+        awaitReply(bindReply);
         assertEquals(bindReply.toString(), Reply.State.COMPLETED, bindReply.state());
     }
 
     private void completeUnbind()
     {
         final Reply<?> unbindReply = engine.unbind();
-        SystemTestUtil.awaitReply(unbindReply);
+        awaitReply(unbindReply);
         assertEquals(unbindReply.toString(), Reply.State.COMPLETED, unbindReply.state());
     }
 
-    private void cannotConnect() throws IOException
+    private void assertCannotConnect() throws IOException
     {
         try
         {
@@ -190,6 +214,13 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         }
 
         fail("expected ConnectException");
+    }
+
+    private void assertConnectable() throws IOException
+    {
+        try (FixConnection ignore = FixConnection.initiate(port))
+        {
+        }
     }
 
 }

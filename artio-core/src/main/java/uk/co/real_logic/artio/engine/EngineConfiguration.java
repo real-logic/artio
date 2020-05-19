@@ -44,7 +44,6 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
-import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
 /**
@@ -233,13 +232,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private Map<String, FixDictionary> acceptorFixDictionaryOverrides = new HashMap<>();
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
-    private boolean bindAtStartup = true;
+    private boolean bindAtStartup = false;
     private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
      * <p>
-     * Optional.
+     * Optional. If set defaults {@link #bindAtStartup(boolean)} to true. Care should be taken with the
+     * initialisation order of these options.
      *
      * @param host the hostname to bind to.
      * @param port the port to bind to.
@@ -250,12 +250,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         Objects.requireNonNull(host, "host");
         this.host = host;
         this.port = port;
+        bindAtStartup(true);
         return this;
     }
 
     /**
      * Controls whether the engine should eagerly bind the network interface at startup when {@link #bindTo(String, int)} is used, or
-     * whether it is delayed delayed until {@link FixEngine#bind()} is invoked.
+     * whether it is delayed delayed until {@link FixEngine#bind()} is invoked. If used in conjunction with
+     * {@link InitialAcceptedSessionOwner#SOLE_LIBRARY} then the binding operation will delayed until the library
+     * is connected.
      *
      * @param bindAtStartup false to delay binding until {@link FixEngine#bind()} is invoked.
      * @return this
@@ -621,7 +624,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * by the Engine and Libraries can request ownership of the Session from the Engine. If <code>SOLE_LIBRARY</code>
      * mode is chosen then only a single library instance must connect.
      *
-     * Setting this configuration option will also automatically set {@link #bindAtStartup(boolean)} to false. In sole
+     * In sole
      * library mode the server side TCP port will automatically be bound when the sole library connects, and unbound
      * when it disconnects.
      *
@@ -632,7 +635,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
         this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
-        bindAtStartup(false);
         return this;
     }
 
@@ -1091,6 +1093,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             throw new IllegalArgumentException("Missing required configuration: library aeron channel");
         }
 
+        if (bindAtStartup() && !hasBindAddress())
+        {
+            throw new IllegalArgumentException("If you're setting EngineConfiguration.bindAtStartup() then you must " +
+                "also specify an address to bind to using EngineConfiguration.bindTo(host,port)");
+        }
+
         if (receiverBufferSize() < sessionBufferSize())
         {
             throw new IllegalArgumentException(String.format(
@@ -1098,13 +1106,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                     "this would allow you to encode messages that are larger than you can read.",
                 receiverBufferSize(),
                 sessionBufferSize()));
-        }
-
-        if (initialAcceptedSessionOwner() == SOLE_LIBRARY && bindAtStartup())
-        {
-            throw new IllegalArgumentException(
-                "In Sole Library Mode the port is now only bound when there is an active library." +
-                " As a result you cannot combine bindAtStartup(true) with initialAcceptedSessionOwner(SOLE_LIBRARY).");
         }
 
         if (deleteLogFileDirOnStart())
