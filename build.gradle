@@ -417,7 +417,7 @@ project(':artio-session-codecs') {
     compileJava.dependsOn 'compileGeneratedJava'
 
     compileGeneratedJava {
-        dependsOn 'generateCodecs'
+        dependsOn 'generateCodecs', 'generateOtherCodecs'
         classpath += configurations.codecGeneration
     }
 
@@ -427,6 +427,15 @@ project(':artio-session-codecs') {
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
         outputs.dir generatedDir
         systemProperty("fix.codecs.flyweight", "true")
+    }
+
+    task generateOtherCodecs(type: JavaExec) {
+        main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
+        classpath = configurations.codecGeneration
+        args = [generatedDir, 'src/main/resources/other_session_dictionary.xml']
+        outputs.dir generatedDir
+        systemProperty("fix.codecs.flyweight", "true")
+        systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.other")
     }
 
     jar {

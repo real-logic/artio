@@ -201,10 +201,15 @@ public class AbstractGatewayToGatewaySystemTest
 
     void acquireAcceptingSession()
     {
+        acquireAcceptingSession(INITIATOR_ID);
+    }
+
+    void acquireAcceptingSession(final String initiatorId)
+    {
         final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
-        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(initiatorId, acceptingHandler.lastInitiatorCompId());
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", acceptingSession);
     }

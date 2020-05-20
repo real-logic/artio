@@ -154,6 +154,7 @@ public class Session
     private SessionProcessHandler sessionProcessHandler;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
+    private FixDictionary fixDictionary;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -895,6 +896,11 @@ public class Session
     public String beginString()
     {
         return beginString;
+    }
+
+    public FixDictionary fixDictionary()
+    {
+        return fixDictionary;
     }
 
     public Reply<ReplayMessagesStatus> replayReceivedMessages(
@@ -2134,6 +2140,7 @@ public class Session
 
     void fixDictionary(final FixDictionary fixDictionary)
     {
+        this.fixDictionary = fixDictionary;
         proxy.fixDictionary(fixDictionary);
         this.beginString = fixDictionary.beginString();
     }

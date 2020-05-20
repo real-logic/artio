@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
@@ -680,6 +681,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param acceptorfixDictionary the Fix Dictionary used to parse messages when accepting an inbound connection.
      * @return this
+     * @see EngineConfiguration#overrideAcceptorFixDictionary(Class)
+     * @see AuthenticationProxy#accept(Class)
      */
     public EngineConfiguration acceptorfixDictionary(final Class<? extends FixDictionary> acceptorfixDictionary)
     {
@@ -703,10 +706,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Override the acceptor FIX Dictionary for a given beginString. The beginString to use is extracted from the
-     * Provided FIX Dictionary.
+     * Provided FIX Dictionary. If you wish to use multiple FIX dictionaries based upon the logon message and they
+     * both have the same beginString field then you should should implement a custom {@link AuthenticationStrategy}
+     * and use the {@link AuthenticationProxy#accept(Class)} method in order to specify the dictionary.
      *
      * @param fixDictionaryClass the FIX Dictionary to use
      * @return this
+     * @see EngineConfiguration#acceptorfixDictionary(Class)
+     * @see AuthenticationProxy#accept(Class)
      */
     public EngineConfiguration overrideAcceptorFixDictionary(final Class<? extends FixDictionary> fixDictionaryClass)
     {

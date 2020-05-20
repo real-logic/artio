@@ -390,7 +390,7 @@ class GatewaySessions
         private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final TcpChannel channel;
-        private final FixDictionary fixDictionary;
+        private FixDictionary fixDictionary;
         private final Framer framer;
         private final boolean resetSeqNum;
 
@@ -404,6 +404,7 @@ class GatewaySessions
         private Encoder encoder;
         private ByteBuffer encodeBuffer;
         private long lingerExpiryTimeInMs;
+        private Class<? extends FixDictionary> fixDictionaryClass;
 
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -512,6 +513,14 @@ class GatewaySessions
             state = AuthenticationState.AUTHENTICATED;
         }
 
+        public void accept(final Class<? extends FixDictionary> fixDictionaryClass)
+        {
+            validateState();
+
+            this.fixDictionaryClass = fixDictionaryClass;
+            state = AuthenticationState.AUTHENTICATED;
+        }
+
         private void validateState()
         {
             // NB: simple best efforts state check to catch programming errors.
@@ -530,10 +539,13 @@ class GatewaySessions
             switch (state)
             {
                 case AUTHENTICATED:
-                    if (session != null)
+                    if (fixDictionaryClass != null && fixDictionary.getClass() != fixDictionaryClass)
                     {
-                        session.onAuthenticationResult();
+                        fixDictionary = FixDictionary.of(fixDictionaryClass);
+                        session.fixDictionary(fixDictionary);
                     }
+
+                    session.onAuthenticationResult();
                     onAuthenticated();
                     return false;
 
