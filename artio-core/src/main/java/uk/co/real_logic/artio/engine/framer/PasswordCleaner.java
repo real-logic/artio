@@ -118,11 +118,28 @@ class PasswordCleaner
             newPasswordLengthChange = secondLength - REPLACEMENT_LENGTH;
         }
 
-        final int lengthChange = firstLength - REPLACEMENT_LENGTH + newPasswordLengthChange;
+        int lengthChange = firstLength - REPLACEMENT_LENGTH + newPasswordLengthChange;
 
         cleanedLength = length - lengthChange;
 
+        if (lengthOfBodyLength == 2)
+        {
+            final int endOfBodyLength = (bodyLengthOffset - offset) + lengthOfBodyLength;
+            shiftRight(endOfBodyLength, cleanedLength - endOfBodyLength);
+            lengthOfBodyLength++;
+            cleanedLength++;
+            lengthChange--;
+        }
+
         updateBodyLengthField(offset, lengthChange);
+    }
+
+    private void shiftRight(final int from, final int bytes)
+    {
+        for (int i = from + bytes; i >= from; i--)
+        {
+            cleanedBuffer.putByte(i + 1, cleanedBuffer.getByte(i));
+        }
     }
 
     private void putReplacement(final int destNewPasswordOffset)
