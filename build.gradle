@@ -34,8 +34,8 @@ def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.23'
 
 def aeronVersion = '1.27.0'
-def agronaVersion = '1.4.1'
-def sbeVersion = '1.17.0'
+def agronaVersion = '1.5.0'
+def sbeVersion = '1.18.1'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
