@@ -46,6 +46,10 @@ public enum LogTag
     REPLAY_ATTEMPT,
     INDEX,
     LIBRARY_MANAGEMENT,
+    /**
+     * Logs information related to the closing down of Artio.
+     */
+    CLOSE,
 
     /**
      * Logs information from the proxy protocol - see http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt

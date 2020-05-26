@@ -1419,6 +1419,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
+            DebugLogger.log(CLOSE, "Received engine close message, starting ENGINE_CLOSE operation");
             state = ENGINE_CLOSE;
 
             attemptEngineCloseBasedLogout();
@@ -1432,9 +1433,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InternalSession[] sessions = this.sessions;
         final int length = sessions.length;
 
-        while (sessionLogoutIndex < length)
+        final int initialSessionLogoutIndex = this.sessionLogoutIndex;
+
+        while (this.sessionLogoutIndex < length)
         {
-            final InternalSession session = sessions[sessionLogoutIndex];
+            final InternalSession session = sessions[this.sessionLogoutIndex];
             final long position;
             if (session.state() == ACTIVE)
             {
@@ -1451,7 +1454,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 return;
             }
 
-            sessionLogoutIndex++;
+            this.sessionLogoutIndex++;
+        }
+
+        // Don't repeatedly log this if you get back pressured below and re-attempt
+        if (sessionLogoutIndex != initialSessionLogoutIndex && length > 0)
+        {
+            DebugLogger.log(CLOSE, "Completed logging out FIX Sessions");
         }
 
         // Continue from previous position on backpressured re-attempts
@@ -1466,6 +1475,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 return;
             }
+        }
+
+        if (!connectionIdToILink3Subscription.isEmpty())
+        {
+            DebugLogger.log(CLOSE, "Completed logging out ILink 3 Sessions");
         }
 
         // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.

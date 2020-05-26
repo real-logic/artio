@@ -28,10 +28,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.concurrent.*;
-import uk.co.real_logic.artio.Clock;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LivenessDetector;
-import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
@@ -2270,6 +2267,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onStartClose(final StartCloseCommand startCloseCommand)
     {
+        DebugLogger.log(LogTag.CLOSE, "Framer has started close operation");
+
         performingCloseOperation = true;
 
         schedule(new CloseOperation(

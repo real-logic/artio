@@ -21,10 +21,7 @@ import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
-import uk.co.real_logic.artio.FixCounters;
-import uk.co.real_logic.artio.GatewayProcess;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.StreamInformation;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.framer.PruneOperation;
@@ -364,6 +361,8 @@ public final class FixEngine extends GatewayProcess
             if (!isClosed)
             {
                 startingClose = true;
+
+                DebugLogger.log(LogTag.CLOSE, "Shutdown initiated through FixEngine.close()");
 
                 framerContext.startClose();
 

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.InternalSession;
@@ -57,6 +59,7 @@ class CloseOperation implements Continuation
             {
                 receiverEndPoints.closeRequiredPollingEndPoints();
 
+                DebugLogger.log(LogTag.CLOSE, "Completed CLOSING_NOT_LOGGED_ON_RECEIVER_END_POINTS");
                 step = Step.LOGGING_OUT_LIBRARIES;
                 return BACK_PRESSURED;
             }
@@ -99,6 +102,7 @@ class CloseOperation implements Continuation
             libraryIndex++;
         }
 
+        DebugLogger.log(LogTag.CLOSE, "Completed LOGGING_OUT_LIBRARIES");
         step = Step.LOGGING_OUT_GATEWAY_SESSIONS;
         return BACK_PRESSURED;
     }
@@ -158,6 +162,7 @@ class CloseOperation implements Continuation
             gatewaySessionIndex++;
         }
 
+        DebugLogger.log(LogTag.CLOSE, "Completed LOGGING_OUT_GATEWAY_SESSIONS");
         step = Step.AWAITING_DISCONNECTS;
         return BACK_PRESSURED;
     }
@@ -169,6 +174,7 @@ class CloseOperation implements Continuation
             return BACK_PRESSURED;
         }
 
+        DebugLogger.log(LogTag.CLOSE, "Completed AWAITING_DISCONNECTS");
         command.success();
 
         return 1;
