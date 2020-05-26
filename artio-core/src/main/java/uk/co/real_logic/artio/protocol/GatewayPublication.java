@@ -121,7 +121,6 @@ public class GatewayPublication extends ClaimablePublication
     private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
-    private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
@@ -914,26 +913,6 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, requestSessionReply);
-
-        return position;
-    }
-
-    public long saveNewSentPosition(final int libraryId, final long sentPosition)
-    {
-        final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
-        if (position < 0)
-        {
-            return position;
-        }
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
-
-        newSentPosition.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId).position(sentPosition);
-
-        bufferClaim.commit();
-
-        logSbeMessage(GATEWAY_MESSAGE, newSentPosition);
 
         return position;
     }

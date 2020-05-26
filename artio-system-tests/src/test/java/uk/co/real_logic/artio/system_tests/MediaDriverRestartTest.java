@@ -85,7 +85,6 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
 
         final LibraryConfiguration configuration = new LibraryConfiguration()
             .sessionAcquireHandler(initiatingHandler)
-            .sentPositionHandler(initiatingHandler)
             .sessionExistsHandler(initiatingHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
         configuration.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);

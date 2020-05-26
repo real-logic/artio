@@ -315,19 +315,9 @@ public class AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged(initiatingSession);
     }
 
-    long messagesCanBeExchanged(final Session session)
+    void messagesCanBeExchanged(final Session session)
     {
-        final long position = messagesCanBeExchanged(session, initiatingOtfAcceptor);
-
-        assertEventuallyTrue("position never catches up",
-            () ->
-            {
-                testSystem.poll();
-
-                return initiatingHandler.sentPosition() >= position;
-            });
-
-        return position;
+        messagesCanBeExchanged(session, initiatingOtfAcceptor);
     }
 
     long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)

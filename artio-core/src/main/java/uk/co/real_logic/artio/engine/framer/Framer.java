@@ -36,7 +36,6 @@ import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.PositionSender;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
@@ -169,7 +168,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final GatewayPublication outboundPublication;
     private final AgentInvoker conductorAgentInvoker;
     private final RecordingCoordinator recordingCoordinator;
-    private final PositionSender nonLoggingPositionSender;
     private final boolean soleLibraryMode;
     private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
@@ -261,8 +259,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
             0,
             true);
-        nonLoggingPositionSender = configuration.logOutboundMessages() ?
-            null : new PositionSender(inboundPublication);
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
@@ -418,15 +414,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendOutboundMessages()
     {
-        int messagesRead = librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit);
-        messagesRead += librarySlowPeeker.peek(senderEndPointAssembler);
-
-        if (nonLoggingPositionSender != null)
-        {
-            nonLoggingPositionSender.doWork();
-        }
-
-        return messagesRead;
+        return librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit) +
+            librarySlowPeeker.peek(senderEndPointAssembler);
     }
 
     private int pollLibraries(final long timeInMs)
@@ -1200,12 +1189,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long now = outboundTimer.recordSince(timestamp);
 
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
-
-        final PositionSender nonLoggingPositionSender = this.nonLoggingPositionSender;
-        if (nonLoggingPositionSender != null)
-        {
-            nonLoggingPositionSender.newPosition(libraryId, position);
-        }
 
         sendTimer.recordSince(now);
 

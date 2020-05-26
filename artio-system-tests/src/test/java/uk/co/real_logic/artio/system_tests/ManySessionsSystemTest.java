@@ -67,7 +67,6 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
         final LibraryConfiguration acceptingLibraryConfig = new LibraryConfiguration()
             .sessionExistsHandler(acceptingHandler)
             .sessionAcquireHandler(acceptingHandler)
-            .sentPositionHandler(acceptingHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting");
 

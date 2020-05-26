@@ -277,16 +277,6 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
-        final NewSentPositionEncoder encoder)
-    {
-        if (isEnabled(tag))
-        {
-            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
-        }
-    }
-
-    public static void logSbeMessage(
-        final LogTag tag,
         final LibraryTimeoutEncoder encoder)
     {
         if (isEnabled(tag))
@@ -687,7 +677,6 @@ public final class DebugLogger
         private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
         private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
         private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
-        private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
         private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
         private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
         private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
@@ -954,20 +943,6 @@ public final class DebugLogger
                 RequestSessionReplyEncoder.BLOCK_LENGTH,
                 RequestSessionReplyEncoder.SCHEMA_VERSION);
             requestSessionReply.appendTo(builder);
-            finish(tag);
-        }
-
-        public void logSbeMessage(
-            final LogTag tag,
-            final NewSentPositionEncoder encoder)
-        {
-            appendStart();
-            newSentPosition.wrap(
-                encoder.buffer(),
-                encoder.initialOffset(),
-                NewSentPositionEncoder.BLOCK_LENGTH,
-                NewSentPositionEncoder.SCHEMA_VERSION);
-            newSentPosition.appendTo(builder);
             finish(tag);
         }
 

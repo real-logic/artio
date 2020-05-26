@@ -78,7 +78,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 
         testSystem.awaitBlocking(() -> backup.resetState(acceptingEngine));
 
-        backup.assertStateReset(mediaDriver, 4);
+        backup.assertStateReset(mediaDriver, 3);
 
         clearMessages();
         close();

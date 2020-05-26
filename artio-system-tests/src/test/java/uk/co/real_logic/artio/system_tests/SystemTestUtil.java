@@ -286,7 +286,6 @@ public final class SystemTestUtil
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
-            .sentPositionHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting")
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
@@ -361,7 +360,6 @@ public final class SystemTestUtil
     {
         return new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
-            .sentPositionHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
             .libraryName("initiating")

@@ -135,7 +135,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Timer sessionTimer;
     private final Timer receiveTimer;
     private final SessionExistsHandler sessionExistsHandler;
-    private final SentPositionHandler sentPositionHandler;
     private final boolean enginesAreClustered;
     private final FixCounters fixCounters;
 
@@ -207,7 +206,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionExistsHandler = configuration.sessionExistsHandler();
-        this.sentPositionHandler = configuration.sentPositionHandler();
         this.epochClock = epochClock;
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
@@ -1481,16 +1479,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             throw new IllegalStateException("Cannot perform operation whilst end of day process is running");
         }
-    }
-
-    public Action onNewSentPosition(final int libraryId, final long position)
-    {
-        if (this.libraryId == libraryId)
-        {
-            return sentPositionHandler.onSendCompleted(position);
-        }
-
-        return CONTINUE;
     }
 
     public Action onControlNotification(

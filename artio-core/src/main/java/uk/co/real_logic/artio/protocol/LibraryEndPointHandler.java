@@ -31,8 +31,6 @@ public interface LibraryEndPointHandler
 
     Action onRequestSessionReply(int toId, long replyToId, SessionReplyStatus status);
 
-    Action onNewSentPosition(int libraryId, long position);
-
     Action onControlNotification(
         int libraryId, InitialAcceptedSessionOwner initialAcceptedSessionOwner, SessionsDecoder sessions);
 

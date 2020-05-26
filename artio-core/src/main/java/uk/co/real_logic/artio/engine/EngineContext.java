@@ -253,7 +253,6 @@ public class EngineContext implements AutoCloseable
             recordingCoordinator.indexerOutboundRecordingIdLookup(),
             connectionIdToILinkUuid));
         outboundIndices.add(sentSequenceNumberIndex);
-        outboundIndices.add(new PositionSender(inboundPublication()));
 
         outboundIndexer = new Indexer(
             outboundIndices,

@@ -31,7 +31,6 @@ import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
-import uk.co.real_logic.artio.library.SentPositionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -495,9 +494,7 @@ public class Session
      * Tries to send a message on this session. This send method returns after having attempted to write the message
      * into an in memory log buffer. If the return value returned is {@link Publication#BACK_PRESSURED} or
      * {@link Publication#ADMIN_ACTION} then the message won't have been written into the log buffer due to back
-     * pressure issues. A retry can be attempted later. In order to know when the message has actually been written
-     * over TCP you can implement the {@link SentPositionHandler} which will notify you when the position has been
-     * processed.
+     * pressure issues. A retry can be attempted later.
      *
      * @param encoder the encoder of the message to be sent
      * @return the position in the stream that corresponds to the end of this message or a negative

@@ -36,7 +36,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
     private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
     private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
-    private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
     private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
@@ -67,11 +66,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         switch (messageHeader.templateId())
         {
-            case NewSentPositionDecoder.TEMPLATE_ID:
-            {
-                return onNewSentPosition(buffer, offset, blockLength, version);
-            }
-
             case ManageSessionDecoder.TEMPLATE_ID:
             {
                 return onManageSession(buffer, offset, blockLength, version);
@@ -385,17 +379,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             error.errorType(),
             error.replyToId(),
             error.message());
-    }
-
-    private Action onNewSentPosition(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        newSentPosition.wrap(buffer, offset, blockLength, version);
-        // Deliberately don't keepalive the heartbeat - may not be a cluster leader
-
-        return handler.onNewSentPosition(
-            newSentPosition.libraryId(),
-            newSentPosition.position());
     }
 
     private Action onManageSession(

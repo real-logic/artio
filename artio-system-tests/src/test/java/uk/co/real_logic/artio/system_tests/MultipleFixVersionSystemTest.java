@@ -84,7 +84,6 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         configuration
             .sessionExistsHandler(acceptingHandler)
             .sessionAcquireHandler(acceptingHandler)
-            .sentPositionHandler(acceptingHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting")
             .sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));

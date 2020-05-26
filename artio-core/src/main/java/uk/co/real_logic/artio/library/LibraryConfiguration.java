@@ -41,7 +41,6 @@ public final class LibraryConfiguration extends CommonConfiguration
 {
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
-    public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
     public static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
         (library,
         sessionId,
@@ -83,7 +82,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private SessionExistsHandler sessionExistsHandler = DEFAULT_SESSION_EXISTS_HANDLER;
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
-    private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
     private List<String> libraryAeronChannels = new ArrayList<>();
     private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
     private LibraryScheduler scheduler = new DefaultLibraryScheduler();
@@ -129,12 +127,6 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    public LibraryConfiguration sentPositionHandler(final SentPositionHandler sentPositionHandler)
-    {
-        this.sentPositionHandler = sentPositionHandler;
-        return this;
-    }
-
     public LibraryConfiguration libraryConnectHandler(final LibraryConnectHandler libraryConnectHandler)
     {
         this.libraryConnectHandler = libraryConnectHandler;
@@ -165,11 +157,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public GatewayErrorHandler gatewayErrorHandler()
     {
         return gatewayErrorHandler;
-    }
-
-    public SentPositionHandler sentPositionHandler()
-    {
-        return sentPositionHandler;
     }
 
     public LibraryConnectHandler libraryConnectHandler()
