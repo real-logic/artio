@@ -467,7 +467,10 @@ class GatewaySessions
             {
                 onStrategyError("authentication", throwable, connectionId, "false", logon);
 
-                reject();
+                if (state != AuthenticationState.REJECTED)
+                {
+                    reject();
+                }
             }
         }
 
