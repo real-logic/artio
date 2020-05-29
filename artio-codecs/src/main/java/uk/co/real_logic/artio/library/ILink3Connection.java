@@ -169,6 +169,18 @@ public abstract class ILink3Connection
      */
     public abstract long terminate(String shutdown, int errorCodes);
 
+    /**
+     * Send a custom retransmit request.
+     *
+     * @param uuid the UUID of the connection to request a retransmit request. This doesn't necessarily have to be the
+     *             current UUID, but it does have to be one for the same session on the same market segment.
+     * @param fromSeqNo the sequence number to start from.
+     * @param msgCount the number of messages to request a retransmit of.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     */
+    public abstract long tryRetransmitRequest(long uuid, long fromSeqNo, int msgCount);
+
     // -----------------------------------------------
     // Accessors
     // -----------------------------------------------

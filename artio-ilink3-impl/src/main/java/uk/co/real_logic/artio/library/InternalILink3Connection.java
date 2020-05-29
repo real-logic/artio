@@ -201,6 +201,25 @@ public class InternalILink3Connection extends ILink3Connection
         return sendTerminate(reason, errorCodes, State.UNBINDING, State.RESEND_TERMINATE);
     }
 
+    public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    {
+        final int retransmitRequestMessageLimit = configuration.retransmitRequestMessageLimit();
+        if (msgCount > retransmitRequestMessageLimit)
+        {
+            throw new IllegalArgumentException(
+                "msgCount [" + msgCount + "] cannot be larger than " + retransmitRequestMessageLimit);
+        }
+
+        sentMessage();
+        final long requestTimestamp = requestTimestamp();
+        final long position = proxy.sendRetransmitRequest(uuid, requestTimestamp, fromSeqNo, msgCount);
+        if (!Pressure.isBackPressured(position))
+        {
+            retransmitFillSeqNo = fromSeqNo + msgCount - 1;
+        }
+        return position;
+    }
+
     private long sendTerminate(
         final String reason, final int errorCodes, final State finalState, final State resendState)
     {
@@ -771,7 +790,7 @@ public class InternalILink3Connection extends ILink3Connection
     {
         if (uUID != uuid())
         {
-            throw new IllegalResponseException("Invalid uuid=" + uUID + ",expected=" + uuid());
+            handler.onError(new IllegalResponseException("Invalid uuid=" + uUID + ",expected=" + uuid()));
         }
     }
 
@@ -799,6 +818,8 @@ public class InternalILink3Connection extends ILink3Connection
             {
                 sendSequence(NotLapsed);
             }
+
+            handler.onSequence(uUID, nextSeqNo);
         }
 
         return 1;

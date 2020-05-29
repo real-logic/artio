@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.system_tests.Backup;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.LongSupplier;
 
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
@@ -45,7 +46,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.contains;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -178,8 +178,12 @@ public class ILink3SystemTest
 
         assertDisconnected();
 
-        Timing.assertEventuallyTrue("Failed to receive error", () ->
-            verify(errorConsumer, atLeastOnce()).accept(eq(1), anyLong(), anyLong(), contains("Invalid uuid=0")));
+        final List<Exception> exceptions = handler.exceptions();
+
+        Timing.assertEventuallyTrue("Failed to receive error", () -> !exceptions.isEmpty());
+
+        assertThat(exceptions, hasSize(1));
+        assertThat(exceptions.get(0).getMessage(), containsString("Invalid uuid=0"));
     }
 
     @Test

@@ -65,4 +65,22 @@ public interface ILink3ConnectionHandler
      * @param errorCodes the errorCodes of the RetransmitReject message
      */
     void onRetransmitReject(String reason, long requestTimestamp, int errorCodes);
+
+    /**
+     * Notifies an application when a sequence message is received. Normally applications would not need to implement
+     * this method or take any behaviour in response to a sequence message - Artio itself provides any session level
+     * protocol responses. This method just exposes the event to applications for debugging or certification purposes.
+     *
+     * @param uuid the UUID of the sequence message.
+     * @param nextSeqNo the next sequence number contained in the body of the sequence message.
+     */
+    void onSequence(long uuid, long nextSeqNo);
+
+    /**
+     * Callback when an error happens internally with the processing of a message in iLink3 that can't be handled
+     * through normal protocol means.
+     *
+     * @param ex the exception corresponding to an error
+     */
+    void onError(Exception ex);
 }

@@ -19,6 +19,8 @@ import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
@@ -26,6 +28,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     private final Consumer<NotAppliedResponse> notAppliedResponse;
     private boolean hasReceivedNotApplied;
     private IntArrayList messageIds = new IntArrayList();
+    private List<Exception> exceptions = new ArrayList<>();
 
     public FakeILink3ConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -60,8 +63,22 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
 
     }
 
+    public void onSequence(final long uuid, final long nextSeqNo)
+    {
+    }
+
+    public void onError(final Exception ex)
+    {
+        exceptions.add(ex);
+    }
+
     public IntArrayList messageIds()
     {
         return messageIds;
+    }
+
+    public List<Exception> exceptions()
+    {
+        return exceptions;
     }
 }
