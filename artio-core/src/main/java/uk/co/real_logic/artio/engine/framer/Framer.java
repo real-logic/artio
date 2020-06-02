@@ -427,10 +427,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 iterator.remove();
                 onLibraryDisconnect(library);
+
+                soleLibraryModeUnbind();
             }
         }
-
-        soleLibraryModeUnbind();
 
         total += removeIf(librariesBeingAcquired, retryAcquireLibrarySessionsFunc);
 
