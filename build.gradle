@@ -558,11 +558,10 @@ project(':artio-system-tests') {
 
         perfImplementation project
         perfImplementation "org.openjdk.jmh:jmh-core:${jmhVersion}"
-        annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:${jmhVersion}"
-    }
+        // For IDEA:
+        implementation "org.openjdk.jmh:jmh-core:${jmhVersion}"
 
-    idea.module {
-        scopes.COMPILE.plus += [configurations.perfCompile]
+        annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:${jmhVersion}"
     }
 
     test {
