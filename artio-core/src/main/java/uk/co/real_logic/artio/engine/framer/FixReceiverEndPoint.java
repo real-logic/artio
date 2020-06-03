@@ -188,7 +188,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         this.formatters = formatters;
         this.sessionId = sessionId;
-        this.sequenceIndex = sequenceIndex;
+        this.sequenceIndex = sequenceIndex - 1; // Incremented on first logon
         this.sessionContexts = sessionContexts;
         this.messagesRead = messagesRead;
         this.gatewaySessions = gatewaySessions;
@@ -393,12 +393,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     if (requiresAuthentication())
                     {
                         startAuthenticationFlow(offset, length, messageType);
-
                         // Actually has a logon message in it's buffer, but we return true because it's not
                         // a back-pressure scenario.
                         return true;
                     }
-
+                    else if (messageType == LOGON_MESSAGE_TYPE)
+                    {
+                        sequenceIndex++;
+                    }
                     messagesRead.incrementOrdered();
                     if (!saveMessage(offset, messageType, length, readTimestamp))
                     {

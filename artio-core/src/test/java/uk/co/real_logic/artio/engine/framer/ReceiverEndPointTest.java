@@ -145,7 +145,7 @@ public class ReceiverEndPointTest
     {
         endPoint = new FixReceiverEndPoint(
             mockChannel, BUFFER_SIZE, publication,
-            CONNECTION_ID, sessionId, SEQUENCE_INDEX, mockSessionContexts,
+            CONNECTION_ID, sessionId, SEQUENCE_INDEX + 1, mockSessionContexts,
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,

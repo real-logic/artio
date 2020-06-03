@@ -111,6 +111,21 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertPruneWorks(true);
     }
 
+    @Test
+    public void shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbers()
+    {
+        acquireAcceptingSession();
+
+        exchangeOverASegmentOfMessages();
+
+        testSystem.awaitSend("failed to trySendSequenceReset", () -> acceptingSession.tryResetSequenceNumbers());
+
+        testSystem.await("Failed to received logon in reply", () ->
+            acceptingSession.lastReceivedMsgSeqNum() == 1);
+
+        assertPruneWorks(false);
+    }
+
     private void assertPruneWorks(final boolean reconnectSession)
     {
         try (AeronArchive archive = newArchive())
