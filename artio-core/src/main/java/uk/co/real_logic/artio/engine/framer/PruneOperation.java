@@ -19,10 +19,14 @@ import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.RecordingDescriptorConsumer;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.ReplayerCommand;
+import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
 
 /**
@@ -31,13 +35,16 @@ import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
  * aeron archiver to prune the archive
  */
 public class PruneOperation
-    implements ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer
+    implements ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer, AdminCommand
 {
     private final ReplayQuery outboundReplayQuery;
     private final ReplayQuery inboundReplayQuery;
-    private final Long2LongHashMap newStartPositions = new Long2LongHashMap(Aeron.NULL_VALUE);
+    private final Long2LongHashMap recordingIdToNewStartPosition = new Long2LongHashMap(Aeron.NULL_VALUE);
     private final Long2LongHashMap minimumPrunePositions;
     private final AeronArchive aeronArchive;
+    private final ReplayerCommandQueue replayerCommandQueue;
+    private final RecordingCoordinator recordingCoordinator;
+    private final LongHashSet allRecordingIds = new LongHashSet();
 
     private volatile State replyState;
 
@@ -50,7 +57,7 @@ public class PruneOperation
 
     public PruneOperation(final Exception error)
     {
-        this(null, null, null, null);
+        this(null, null, null, null, null, null);
 
         this.error = error;
         replyState = State.ERRORED;
@@ -60,12 +67,16 @@ public class PruneOperation
         final Long2LongHashMap minimumPrunePositions,
         final ReplayQuery outboundReplayQuery,
         final ReplayQuery inboundReplayQuery,
-        final AeronArchive aeronArchive)
+        final AeronArchive aeronArchive,
+        final ReplayerCommandQueue replayerCommandQueue,
+        final RecordingCoordinator recordingCoordinator)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.inboundReplayQuery = inboundReplayQuery;
         this.minimumPrunePositions = minimumPrunePositions;
         this.aeronArchive = aeronArchive;
+        this.replayerCommandQueue = replayerCommandQueue;
+        this.recordingCoordinator = recordingCoordinator;
         replyState = State.EXECUTING;
     }
 
@@ -84,18 +95,52 @@ public class PruneOperation
         return replyState;
     }
 
+    // On Framer thread
+    public void execute(final Framer framer)
+    {
+        allRecordingIds.addAll(recordingCoordinator.inboundRecordingIds());
+        allRecordingIds.addAll(recordingCoordinator.outboundRecordingIds());
+
+        // move over to the replayer thread
+        framer.schedule(() -> replayerCommandQueue.offer(this) ? Continuation.COMPLETE : BACK_PRESSURED);
+    }
+
     // On Replayer Thread
     public void execute()
     {
-        inboundReplayQuery.queryStartPositions(newStartPositions);
-        outboundReplayQuery.queryStartPositions(newStartPositions);
+        inboundReplayQuery.queryStartPositions(recordingIdToNewStartPosition);
+        outboundReplayQuery.queryStartPositions(recordingIdToNewStartPosition);
+
+        findAllRecordingPositions();
 
         prune();
     }
 
+    private void findAllRecordingPositions()
+    {
+        // newStartPositions currently contains the lowest start position for each replay index file.
+        // if we have a recording with no replay index entries, for example if we've called
+        // FixEngine.resetSequenceNumber for every session then those recording ids won't be in the map.
+
+        final Long2LongHashMap.KeyIterator knownRecordingIds = recordingIdToNewStartPosition.keySet().iterator();
+        while (knownRecordingIds.hasNext())
+        {
+            allRecordingIds.remove(knownRecordingIds.nextValue());
+        }
+
+        final LongHashSet.LongIterator it = allRecordingIds.iterator();
+        while (it.hasNext())
+        {
+            final long recordingId = it.nextValue();
+            final long recordingPosition = aeronArchive.getRecordingPosition(recordingId);
+
+            recordingIdToNewStartPosition.put(recordingId, recordingPosition);
+        }
+    }
+
     private void prune()
     {
-        final Long2LongHashMap.EntryIterator it = newStartPositions.entrySet().iterator();
+        final Long2LongHashMap.EntryIterator it = recordingIdToNewStartPosition.entrySet().iterator();
         while (it.hasNext())
         {
             it.next();
@@ -114,11 +159,7 @@ public class PruneOperation
             try
             {
                 requestedNewStartPosition = newStartPosition;
-                final int count = aeronArchive.listRecording(recordingId, this);
-                if (count != 1)
-                {
-                    throw new IllegalStateException("Unable to list the recording: " + recordingId);
-                }
+                listRecording(recordingId);
 
                 final long segmentStartPosition = this.segmentStartPosition;
                 // Don't prune if you're < a segment away from the start of the stream.
@@ -129,7 +170,7 @@ public class PruneOperation
                 else
                 {
                     aeronArchive.purgeSegments(recordingId, segmentStartPosition);
-                    newStartPositions.put(recordingId, segmentStartPosition);
+                    recordingIdToNewStartPosition.put(recordingId, segmentStartPosition);
                 }
             }
             catch (final Exception e)
@@ -139,8 +180,17 @@ public class PruneOperation
                 return;
             }
         }
-        result = newStartPositions;
+        result = recordingIdToNewStartPosition;
         replyState = State.COMPLETED;
+    }
+
+    private void listRecording(final long recordingId)
+    {
+        final int count = aeronArchive.listRecording(recordingId, this);
+        if (count != 1)
+        {
+            throw new IllegalStateException("Unable to list the recording: " + recordingId);
+        }
     }
 
     public void onRecordingDescriptor(
@@ -165,14 +215,14 @@ public class PruneOperation
         }
 
         error = e;
-        result = newStartPositions;
+        result = recordingIdToNewStartPosition;
         replyState = State.ERRORED;
     }
 
     public String toString()
     {
         return "PruneOperation{" +
-            "newStartPositions=" + newStartPositions +
+            "newStartPositions=" + recordingIdToNewStartPosition +
             ", minimumPrunePositions=" + minimumPrunePositions +
             ", replyState=" + replyState +
             ", result=" + result +

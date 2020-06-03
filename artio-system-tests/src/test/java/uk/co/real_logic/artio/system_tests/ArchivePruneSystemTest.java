@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,17 +70,33 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldPruneAwayOldArchivePositions()
     {
-        acquireAcceptingSession();
-
-        exchangeOverASegmentOfMessages();
-
-        logoutAcceptingSession();
-        assertSessionsDisconnected();
+        setupSessionWithSegmentOfFiles();
 
         connectSessions();
         acquireAcceptingSession();
-        final long retainPosition = messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
 
+        assertPruneWorks(false);
+    }
+
+    @Test
+    public void shouldPruneAwayOldArchivePositionsFromResetSequenceNumbers()
+    {
+        setupSessionWithSegmentOfFiles();
+        final long sessionId = acceptingSession.id();
+        acceptingSession = null;
+
+        final Reply<?> reply = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+        if (reply.hasErrored())
+        {
+            LangUtil.rethrowUnchecked(reply.error());
+        }
+
+        assertPruneWorks(true);
+    }
+
+    private void assertPruneWorks(final boolean reconnectSession)
+    {
         try (AeronArchive archive = newArchive())
         {
             final Long2LongHashMap prePruneRecordingIdToStartPos = checkRecordings(archive);
@@ -94,8 +111,12 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
             assertThat(recordingIdToStartPos, not(hasKey(notPrunedRecordingId)));
             assertRecordingsPruned(
-                retainPosition, prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
+                prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
 
+            if (reconnectSession)
+            {
+                connectSessions();
+            }
             messagesCanBeExchanged();
 
             // Restart engines to ensure that the positions can be continued after pruning.
@@ -115,6 +136,16 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
+    private void setupSessionWithSegmentOfFiles()
+    {
+        acquireAcceptingSession();
+
+        exchangeOverASegmentOfMessages();
+
+        logoutAcceptingSession();
+        assertSessionsDisconnected();
+    }
+
     private void exchangeOverASegmentOfMessages()
     {
         for (int i = 0; i < 500; i++)
@@ -124,19 +155,20 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     private void assertRecordingsPruned(
-        final long retainPosition,
         final Long2LongHashMap prePruneRecordingIdToStartPos,
         final Long2LongHashMap recordingIdToStartPos,
         final Long2LongHashMap prunedRecordingIdToStartPos)
     {
-        for (final Map.Entry<Long, Long> entry : recordingIdToStartPos.entrySet())
+        final Long2LongHashMap.EntrySet entries = recordingIdToStartPos.entrySet();
+        assertThat(entries, not(empty()));
+
+        for (final Map.Entry<Long, Long> entry : entries)
         {
             final long recordingId = entry.getKey();
             final long startPosition = entry.getValue();
 
             assertThat(prePruneRecordingIdToStartPos.get(recordingId), lessThan(startPosition));
             assertEquals(prunedRecordingIdToStartPos.get(recordingId), recordingIdToStartPos.get(recordingId));
-            assertThat(startPosition, lessThan(retainPosition));
         }
     }
 

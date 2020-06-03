@@ -205,12 +205,13 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 return reset(outboundPublication, Step.AWAIT_RECV);
 
             case AWAIT_RECV:
-                return await(receivedSequenceNumberIndex);
+                return await(receivedSequenceNumberIndex, Step.AWAIT_SENT);
 
             case AWAIT_SENT:
-                return await(sentSequenceNumberIndex);
+                return await(sentSequenceNumberIndex, Step.DONE);
 
             case DONE:
+                state = COMPLETED;
                 return true;
         }
 
@@ -232,15 +233,15 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         return false;
     }
 
-    private boolean await(final SequenceNumberIndexReader sequenceNumberIndex)
+    private boolean await(final SequenceNumberIndexReader sequenceNumberIndex, final Step nextStep)
     {
-        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) <= waitSequence;
+        final int lastKnownSequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        final boolean done = lastKnownSequenceNumber <= waitSequence;
         if (done)
         {
-            step = Step.DONE;
-            state = COMPLETED;
+            step = nextStep;
         }
-        return done;
+        return false;
     }
 
     private boolean sessionIsUnknown()

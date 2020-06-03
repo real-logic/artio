@@ -71,6 +71,7 @@ public class EngineContext implements AutoCloseable
     private Agent indexingAgent;
     private ReplayQuery pruneInboundReplayQuery;
     private ReplayQuery outboundReplayQuery;
+    private FramerContext framerContext;
 
     EngineContext(
         final EngineConfiguration configuration,
@@ -365,6 +366,7 @@ public class EngineContext implements AutoCloseable
 
     public void framerContext(final FramerContext framerContext)
     {
+        this.framerContext = framerContext;
         sentSequenceNumberIndex.framerContext(framerContext);
     }
 
@@ -379,9 +381,11 @@ public class EngineContext implements AutoCloseable
             minimumPrunePositions,
             outboundReplayQuery,
             pruneInboundReplayQuery,
-            aeronArchive);
+            aeronArchive,
+            replayerCommandQueue,
+            recordingCoordinator);
 
-        if (!replayerCommandQueue.offer(operation))
+        if (!framerContext.offer(operation))
         {
             return null;
         }

@@ -528,6 +528,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         return framerOutboundLookup;
     }
 
+    // Read on the Framer Thread
+    public LongHashSet inboundRecordingIds()
+    {
+        return inboundRecordingIds.used;
+    }
+
+    // Read on the Framer Thread
+    public LongHashSet outboundRecordingIds()
+    {
+        return outboundRecordingIds.used;
+    }
+
     static final class RecordingIds
     {
         private LongHashSet free = new LongHashSet();
