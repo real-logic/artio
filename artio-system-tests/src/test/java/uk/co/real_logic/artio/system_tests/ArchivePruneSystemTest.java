@@ -80,7 +80,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test
-    public void shouldPruneAwayOldArchivePositionsFromResetSequenceNumbers()
+    public void shouldPruneAwayOldArchivePositionsForFixEngineResetSequenceNumbers()
     {
         setupSessionWithSegmentOfFiles();
         final long sessionId = acceptingSession.id();
@@ -91,6 +91,22 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         {
             LangUtil.rethrowUnchecked(reply.error());
         }
+
+        assertPruneWorks(true);
+    }
+
+    @Test
+    public void shouldPruneAwayOldArchivePositionsForSessionTrySendSequenceReset()
+    {
+        setupSessionWithSegmentOfFiles();
+        final long sessionId = acceptingSession.id();
+        acceptingSession = null;
+
+        acquireAcceptingSession();
+        assertOfflineSession(sessionId, acceptingSession);
+
+        testSystem.awaitSend("failed to trySendSequenceReset", () ->
+            acceptingSession.trySendSequenceReset(1, 1));
 
         assertPruneWorks(true);
     }
@@ -110,6 +126,8 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             final Long2LongHashMap prunedRecordingIdToStartPos = checkRecordings(archive);
 
             assertThat(recordingIdToStartPos, not(hasKey(notPrunedRecordingId)));
+            assertThat(recordingIdToStartPos, hasKey(0L));
+
             assertRecordingsPruned(
                 prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
 

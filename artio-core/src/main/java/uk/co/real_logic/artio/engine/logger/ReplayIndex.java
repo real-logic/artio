@@ -59,6 +59,7 @@ public class ReplayIndex implements Index
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
+    private final RedactSequenceUpdateDecoder redactSequenceUpdateDecoder = new RedactSequenceUpdateDecoder();
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
@@ -200,19 +201,17 @@ public class ReplayIndex implements Index
             {
                 resetSequenceNumber.wrap(srcBuffer, offset, blockLength, version);
                 final long fixSessionId = resetSequenceNumber.session();
-                final SessionIndex index = fixSessionIdToIndex.remove(fixSessionId);
-                if (index != null)
+                onResetSequenceNumber(fixSessionId);
+            }
+            else if (templateId == RedactSequenceUpdateDecoder.TEMPLATE_ID)
+            {
+                redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
+                // We only update the replay index in response to a redact if it is used to redact all the sequence
+                // numbers within the index
+                if (redactSequenceUpdateDecoder.correctSequenceNumber() <= 1)
                 {
-                    index.reset();
-                }
-                else
-                {
-                    // File might be present but not within the cache.
-                    final File replayIndexFile = replayIndexFile(fixSessionId);
-                    if (replayIndexFile.exists())
-                    {
-                        deleteFile(replayIndexFile);
-                    }
+                    final long fixSessionId = redactSequenceUpdateDecoder.session();
+                    onResetSequenceNumber(fixSessionId);
                 }
             }
         }
@@ -224,6 +223,25 @@ public class ReplayIndex implements Index
 
         positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
         positionWriter.updateChecksums();
+    }
+
+    private void onResetSequenceNumber(final long fixSessionId)
+    {
+        final SessionIndex index = fixSessionIdToIndex.remove(fixSessionId);
+
+        if (index != null)
+        {
+            index.reset();
+        }
+        else
+        {
+            // File might be present but not within the cache.
+            final File replayIndexFile = replayIndexFile(fixSessionId);
+            if (replayIndexFile.exists())
+            {
+                deleteFile(replayIndexFile);
+            }
+        }
     }
 
     private SessionIndex sessionIndex(final long fixSessionId)
