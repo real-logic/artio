@@ -20,8 +20,8 @@ import io.aeron.Counter;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class FixCounters implements AutoCloseable
 {
@@ -51,7 +51,7 @@ public class FixCounters implements AutoCloseable
         }
     }
 
-    private final List<Counter> counters = new ArrayList<>();
+    private final List<Counter> counters = new CopyOnWriteArrayList<>();
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
@@ -60,6 +60,8 @@ public class FixCounters implements AutoCloseable
     FixCounters(final Aeron aeron)
     {
         this.aeron = aeron;
+        aeron.addUnavailableCounterHandler((countersReader, registrationId, counterId) ->
+            counters.removeIf(counter -> counter.id() == counterId));
         failedInboundPublications = newCounter(FixCountersId.FAILED_INBOUND_TYPE_ID.id(),
                 "Failed offer to inbound publication");
         failedOutboundPublications = newCounter(FixCountersId.FAILED_OUTBOUND_TYPE_ID.id(),
