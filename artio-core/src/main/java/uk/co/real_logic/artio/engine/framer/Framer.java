@@ -851,7 +851,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.onLogon(
             sessionKey, FixDictionary.of(fixDictionaryClass));
 
-        if (sessionContext == SessionContexts.DUPLICATE_SESSION || isOwnedSession(sessionContext.sessionId()))
+        if (isUnsafeDuplicateSession(sessionContext, library))
         {
             final long sessionId = sessionContexts.lookupSessionId(sessionKey);
             final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
@@ -923,6 +923,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    private boolean isUnsafeDuplicateSession(final SessionContext sessionContext, final LiveLibraryInfo library)
+    {
+        // Obvious
+        if (sessionContext == SessionContexts.DUPLICATE_SESSION)
+        {
+            return true;
+        }
+
+        // If the library in question owns the session and its offline then it's safe to initiate the connection.
+        // If another library owns the session then it's not safe.
+        final long sessionId = sessionContext.sessionId();
+        final GatewaySession gatewaySession = library.lookupSessionById(sessionId);
+        if (gatewaySession != null)
+        {
+            return !gatewaySession.isOffline();
+        }
+
+        return isOwnedSession(sessionId);
     }
 
     private void saveUnknownLibrary(final int libraryId, final long correlationId)

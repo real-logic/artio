@@ -23,7 +23,6 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.messages.SessionState;
 
 import java.util.List;
 
@@ -34,6 +33,7 @@ import static uk.co.real_logic.artio.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.artio.FixMatchers.hasSessionId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -49,11 +49,14 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
             .initialAcceptedSessionOwner(SOLE_LIBRARY);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingConfig.initialAcceptedSessionOwner(SOLE_LIBRARY);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler));
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
@@ -65,7 +68,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         acceptingSession = acceptingHandler.lastSession();
         assertNotNull("should automatically receive the session upon logon In SOLE_LIBRARY mode",
             acceptingSession);
-        assertEquals(SessionState.ACTIVE, acceptingSession.state());
+        assertEquals(ACTIVE, acceptingSession.state());
 
         assertFalse("should not receive session exists callback in sole library mode",
             acceptingHandler.hasSeenSession());
@@ -93,6 +96,20 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
             hasSessionId(sessionId))));
 
         connectSessions();
-        assertEquals(SessionState.ACTIVE, acceptingSession.state());
+        assertEquals(ACTIVE, acceptingSession.state());
+    }
+
+    // Replicates a bug reported in issue #361 where reconnecting initiators can't reconnect.
+    @Test
+    public void shouldNotAffectUseAsInitiator()
+    {
+        connectSessions();
+        acceptingSession = acceptingHandler.lastSession();
+        messagesCanBeExchanged();
+        disconnectSessions();
+
+        connectSessions();
+        messagesCanBeExchanged();
+        disconnectSessions();
     }
 }
