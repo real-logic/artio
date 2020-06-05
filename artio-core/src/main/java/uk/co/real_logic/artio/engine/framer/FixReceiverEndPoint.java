@@ -616,7 +616,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             return BREAK;
         }
 
-        if (saveInvalidMessage(offset, endOfMessage, readTimestamp))
+        if (saveInvalidMessage(offset, endOfMessage - offset, readTimestamp))
         {
             DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, endOfMessage - offset);
             return offset;
@@ -826,12 +826,12 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return saveInvalidMessage(offset, readTimestamp);
     }
 
-    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag, final long readTimestamp)
+    private boolean saveInvalidMessage(final int offset, final int length, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
             offset,
-            startOfChecksumTag,
+            length,
             libraryId,
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
@@ -850,7 +850,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final long position = publication.saveMessage(
             buffer,
             offset,
-            usedBufferData,
+            usedBufferData - offset,
             libraryId,
             INVALID_MESSAGE_TYPE,
             sessionId,
