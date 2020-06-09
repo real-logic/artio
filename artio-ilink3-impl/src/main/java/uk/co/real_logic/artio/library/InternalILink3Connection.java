@@ -1116,6 +1116,13 @@ public class InternalILink3Connection extends ILink3Connection
         return proxy.sendRetransmitRequest(uuid, lastUUIDNullValue(), requestTimestamp, fromSeqNo, msgCount);
     }
 
+    public long onRetransmission(
+        final long uUID, final long lastUUID, final long requestTimestamp, final long fromSeqNo, final int msgCount)
+    {
+        // TODO: validate that
+        return 1;
+    }
+
     static final class RetransmitRequest
     {
         final long fromSeqNo;

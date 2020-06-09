@@ -38,6 +38,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Sequence506Decoder sequence = new Sequence506Decoder();
     private final NotApplied513Decoder notApplied = new NotApplied513Decoder();
     private final RetransmitReject510Decoder retransmitReject = new RetransmitReject510Decoder();
+    private final Retransmission509Decoder retransmission = new Retransmission509Decoder();
 
     private final Consumer<StringBuilder> negotiationResponseAppendTo = negotiationResponse::appendTo;
     private final Consumer<StringBuilder> negotiationRejectAppendTo = negotiationReject::appendTo;
@@ -47,6 +48,7 @@ public class ILink3Parser extends AbstractILink3Parser
     private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
     private final Consumer<StringBuilder> notAppliedAppendTo = notApplied::appendTo;
     private final Consumer<StringBuilder> retransmitRejectAppendTo = retransmitReject::appendTo;
+    private final Consumer<StringBuilder> retransmissionAppendTo = retransmission::appendTo;
 
     private final InternalILink3Connection handler;
 
@@ -114,11 +116,30 @@ public class ILink3Parser extends AbstractILink3Parser
                 return onRetransmitReject(buffer, offset, blockLength, version);
             }
 
+            case Retransmission509Decoder.TEMPLATE_ID:
+            {
+                return onRetransmission(buffer, offset, blockLength, version);
+            }
+
             default:
             {
                 return handler.onMessage(buffer, offset, templateId, blockLength, version);
             }
         }
+    }
+
+    private long onRetransmission(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        retransmission.wrap(buffer, offset, blockLength, version);
+        DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", retransmissionAppendTo);
+        return handler.onRetransmission(
+            retransmission.uUID(),
+            retransmission.lastUUID(),
+            retransmission.requestTimestamp(),
+            retransmission.fromSeqNo(),
+            retransmission.msgCount());
+//        retransmitReject.splitMsg()
     }
 
     private long onRetransmitReject(
