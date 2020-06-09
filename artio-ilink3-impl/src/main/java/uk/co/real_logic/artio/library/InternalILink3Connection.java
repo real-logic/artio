@@ -62,6 +62,8 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public class InternalILink3Connection extends ILink3Connection
 {
+    private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
+
     private static final String[] TERMINATE_ERROR_CODES = {
         "Finished: session is being terminated without finalization",
         "Unknown",
@@ -549,7 +551,7 @@ public class InternalILink3Connection extends ILink3Connection
         if (timeInMs > nextReceiveMessageTimeInMs)
         {
             final int expiry = 2 * configuration.requestedKeepAliveIntervalInMs();
-            terminate(expiry + "ms expired without message", 0);
+            terminate(expiry + "ms expired without message", KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE);
         }
         return 0;
     }
