@@ -27,9 +27,9 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.ilink.ILink3Offsets;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.ilink.IllegalResponseException;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -48,6 +48,7 @@ import java.util.function.Consumer;
 
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
+import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
@@ -61,6 +62,41 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public class InternalILink3Connection extends ILink3Connection
 {
+    private static final String[] TERMINATE_ERROR_CODES = {
+        "Finished: session is being terminated without finalization",
+        "Unknown",
+        "Unnegotiated: Sending any message when session has not been Negotiated",
+        "NotEstablished: Sending any message (except Negotiate) when session has not been established",
+        "AlreadyNegotiated: NegotiationResponse was already sent; Negotiate was redundant",
+        "NegotiationInProgress: Previous Negotiate still being processed; Wait for NegotiationResponse or timeout",
+        "AlreadyEstablished: EstablishmentAck was already sent; Establish was redundant",
+        "EstablishInProgress: Previous Establish still being processed; Wait for EstablishmentAck or timeout",
+        "CMEAdministeredPortClosure: due to invalid number of Negotiate/Establish attempts being exceeded",
+        "Volume Controls - exceeding TPS limit as defined for volume controls (logout action)",
+        "InvalidNextSeqNo - value is not greater than the one last used for same UUID or value sent by the client is" +
+            " out of acceptable range (MIN, MAX)",
+        "InvalidMsgSeqNo - value is lower than the last one used for the same UUID or value is not initialized to 1" +
+            " at the beginning of the week or value sent by the client is out of acceptable range (MIN, MAX)",
+        "InvalidLastSeqNo - value is lower than the last one used for the same UUID or value sent by the client is" +
+            " out of acceptable range (MIN, MAX)",
+        "InvalidUUID: UUID value does not match current UUID or value sent by the client is out of acceptable" +
+            " range (MIN, MAX)",
+        "InvalidTimestamp: Timestamp value does not match with RequestTimestamp sent by CME or value sent by the" +
+            " client is out of acceptable range (MIN, MAX)",
+        "RequiredUUIDMisssing: null value in UUID field",
+        "RequiredRequestTimestampMissing: null value in RequestTimestamp field",
+        "RequiredCodeMisssing: null value in Code field",
+        "InvalidSOFH: Invalid message length or invalid encoding type specified",
+        "DecodingError: Incoming message could not be decoded",
+        "KeepAliveIntervalLapsed: KeepAliveInterval has lapsed without any response so terminating session",
+        "RequiredNextSeqNoMissing: null value in NextSeqNo field",
+        "RequiredKeepAliveIntervalLapsedMissing: null value in KeepAliveIntervalLapsed field",
+        "Non-Negotiate/Establish message received when not Negotiated/Established",
+        "TerminateInProgress: Previous Terminate still being processed; Wait for Terminate or timeout",
+        "Other: any other error condition not mentioned above",
+        "DisconnectFromPrimary: Backup session will be terminated as well",
+    };
+
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
     private static final long OK_POSITION = Long.MIN_VALUE;
 
@@ -212,7 +248,9 @@ public class InternalILink3Connection extends ILink3Connection
 
         sentMessage();
         final long requestTimestamp = requestTimestamp();
-        final long position = proxy.sendRetransmitRequest(uuid, requestTimestamp, fromSeqNo, msgCount);
+        final long thisUuid = this.uuid;
+        final long lastUuid = uuid == thisUuid ? lastUUIDNullValue() : uuid;
+        final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
         if (!Pressure.isBackPressured(position))
         {
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
@@ -769,6 +807,10 @@ public class InternalILink3Connection extends ILink3Connection
         // The exchange initiated termination
         else
         {
+            if (errorCodes >= 2 && errorCodes < TERMINATE_ERROR_CODES.length)
+            {
+                DebugLogger.log(ILINK_SESSION, TERMINATE_ERROR_CODES[errorCodes]);
+            }
             sendTerminateAck(reason, errorCodes);
         }
 
@@ -1071,7 +1113,7 @@ public class InternalILink3Connection extends ILink3Connection
     {
         sentMessage();
         final long requestTimestamp = requestTimestamp();
-        return proxy.sendRetransmitRequest(uuid, requestTimestamp, fromSeqNo, msgCount);
+        return proxy.sendRetransmitRequest(uuid, lastUUIDNullValue(), requestTimestamp, fromSeqNo, msgCount);
     }
 
     static final class RetransmitRequest

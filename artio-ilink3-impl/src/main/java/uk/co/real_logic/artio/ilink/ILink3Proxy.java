@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.util.function.Consumer;
 
-import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
@@ -196,7 +195,7 @@ public class ILink3Proxy
     }
 
     public long sendRetransmitRequest(
-        final long uuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
+        final long uuid, final long lastUuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
         final RetransmitRequest508Encoder retransmitRequest = this.retransmitRequest;
 
@@ -208,7 +207,7 @@ public class ILink3Proxy
 
         retransmitRequest
             .uUID(uuid)
-            .lastUUID(lastUUIDNullValue())
+            .lastUUID(lastUuid)
             .requestTimestamp(requestTimestamp)
             .fromSeqNo(fromSeqNo)
             .msgCount(msgCount);
