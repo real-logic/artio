@@ -971,12 +971,12 @@ public class InternalILink3Connection extends ILink3Connection
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
             if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
+                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
+
                 if (seqNum == retransmitFillSeqNo)
                 {
                     return retransmitFilled();
                 }
-
-                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
                 return 1;
             }
