@@ -170,13 +170,15 @@ public final class FixArchivePrinter
             .aeronDirectoryName(aeronDirectoryName)
             .idleStrategy(CommonConfiguration.backoffIdleStrategy());
 
-        final FixArchiveScanner scanner = new FixArchiveScanner(context);
-        scanner.scan(
-            aeronChannel,
-            queryStreamId,
-            filterBy(FixArchivePrinter::print, predicate),
-            follow,
-            archiveScannerStreamId);
+        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
+        {
+            scanner.scan(
+                aeronChannel,
+                queryStreamId,
+                filterBy(FixArchivePrinter::print, predicate),
+                follow,
+                archiveScannerStreamId);
+        }
     }
 
     private static void requiredArgument(final String argument, final String description)
