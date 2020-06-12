@@ -23,6 +23,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
@@ -62,6 +63,7 @@ public class SenderEndPointTest
     private BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
     private BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
     private SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
+    private MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
     private SenderEndPoint endPoint = new SenderEndPoint(
         CONNECTION_ID,
@@ -76,7 +78,8 @@ public class SenderEndPointTest
         MAX_BYTES_IN_BUFFER,
         DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
         0,
-        senderSequenceNumber);
+        senderSequenceNumber,
+        messageTimingHandler);
 
     @Test
     public void shouldRetrySlowConsumerMessage()
