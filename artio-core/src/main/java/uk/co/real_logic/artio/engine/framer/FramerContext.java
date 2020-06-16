@@ -114,7 +114,8 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers());
+            engineContext.senderSequenceNumbers(),
+            configuration.messageTimingHandler());
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 

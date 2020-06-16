@@ -22,10 +22,7 @@ import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.UserRequestEncoder;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -42,6 +39,7 @@ import java.util.function.IntSupplier;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
@@ -64,6 +62,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private static final String NEW_PASSWORD = "ABCDEF";
 
     private CapturingAuthenticationStrategy auth;
+    private MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
     @Before
     public void launch()
@@ -75,6 +74,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
         acceptingConfig.printErrorMessages(false);
+        acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -108,6 +108,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
 
         assertSequenceIndicesAre(0);
+
+        final long connectionId = acceptingSession.connectionId();
+        verify(messageTimingHandler, times(2)).onMessage(connectionId);
     }
 
     @Test

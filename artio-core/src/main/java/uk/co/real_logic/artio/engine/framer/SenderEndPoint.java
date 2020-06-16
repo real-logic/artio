@@ -22,6 +22,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -52,6 +53,7 @@ class SenderEndPoint
     private final StreamTracker outboundTracker;
     private final StreamTracker replayTracker;
     private final SenderSequenceNumber senderSequenceNumber;
+    private final MessageTimingHandler messageTimingHandler;
 
     private int libraryId;
     private long sessionId;
@@ -71,7 +73,8 @@ class SenderEndPoint
         final int maxBytesInBuffer,
         final long slowConsumerTimeoutInMs,
         final long timeInMs,
-        final SenderSequenceNumber senderSequenceNumber)
+        final SenderSequenceNumber senderSequenceNumber,
+        final MessageTimingHandler messageTimingHandler)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -86,6 +89,7 @@ class SenderEndPoint
 
         outboundTracker = new StreamTracker(outboundBlockablePosition);
         replayTracker = new StreamTracker(replayBlockablePosition);
+        this.messageTimingHandler = messageTimingHandler;
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
@@ -111,7 +115,11 @@ class SenderEndPoint
             return;
         }
 
-        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker);
+        if (attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker) &&
+            messageTimingHandler != null)
+        {
+            messageTimingHandler.onMessage(connectionId);
+        }
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
     }
@@ -154,7 +162,7 @@ class SenderEndPoint
             metaDataLength);
     }
 
-    private void attemptFramedMessage(
+    private boolean attemptFramedMessage(
         final DirectBuffer directBuffer,
         final int offset,
         final int bodyLength,
@@ -166,7 +174,7 @@ class SenderEndPoint
         {
             dropFurtherBehind(bodyLength);
 
-            return;
+            return false;
         }
 
         try
@@ -180,12 +188,15 @@ class SenderEndPoint
             else
             {
                 tracker.sentPosition = position;
+                return true;
             }
         }
         catch (final IOException ex)
         {
             onError(ex);
         }
+
+        return false;
     }
 
     private void dropFurtherBehind(final int bodyLength)

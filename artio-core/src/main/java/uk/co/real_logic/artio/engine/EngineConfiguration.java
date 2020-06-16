@@ -235,6 +235,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
     private boolean bindAtStartup = false;
     private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
+    private MessageTimingHandler messageTimingHandler = null;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -734,6 +735,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration messageTimingHandler(final MessageTimingHandler messageTimingHandler)
+    {
+        this.messageTimingHandler = messageTimingHandler;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -1091,6 +1098,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return acceptedEnableLastMsgSeqNumProcessed;
     }
 
+    public MessageTimingHandler messageTimingHandler()
+    {
+        return messageTimingHandler;
+    }
+
     public EngineConfiguration conclude()
     {
         super.conclude("engine");
@@ -1193,5 +1205,4 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(sessionIdBuffer);
         CloseHelper.close(iLink3IdBuffer);
     }
-
 }
