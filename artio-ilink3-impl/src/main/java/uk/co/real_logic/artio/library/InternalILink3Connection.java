@@ -146,6 +146,12 @@ public final class InternalILink3Connection extends ILink3Connection
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
     private final CharFormatter unknownMessage = new CharFormatter(
         "Unknown Message,templateId=%s,blockLength=%s,version=%s,seqNum=%s,possRetrans=%s%n");
+    private final CharFormatter checkSeqNum = new CharFormatter("Checking msgSeqNum=%s,nextRecvSeqNo=%s%n");
+    private final CharFormatter retransmitFilled =
+        new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
+    private final CharFormatter retransmitFilledNext =
+        new CharFormatter("RetransmitFilledNext retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
+
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
 
@@ -167,7 +173,9 @@ public final class InternalILink3Connection extends ILink3Connection
     private State state;
     private long nextRecvSeqNo;
     private long nextSentSeqNo;
+
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
+    private long nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
 
     private long resendTime;
     private long nextReceiveMessageTimeInMs;
@@ -295,6 +303,7 @@ public final class InternalILink3Connection extends ILink3Connection
         final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
         if (!Pressure.isBackPressured(position))
         {
+            nextRetransmitSeqNo = fromSeqNo;
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
         }
         return position;
@@ -1022,19 +1031,31 @@ public final class InternalILink3Connection extends ILink3Connection
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
             if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
+                if (seqNum > nextRetransmitSeqNo)
+                {
+                    final long position = onInvalidSequenceNumber(seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
+                    if (Pressure.isBackPressured(position))
+                    {
+                        return position;
+                    }
+                }
+
                 handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
                 if (seqNum == retransmitFillSeqNo)
                 {
                     return retransmitFilled();
                 }
+                else
+                {
+                    nextRetransmitSeqNo = seqNum + 1;
+                }
 
                 return 1;
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
-            final CharFormatter formatter = new CharFormatter("Checking msgSeqNum=%s,nextRecvSeqNo=%s%n");
-            DebugLogger.log(ILINK_SESSION, formatter, seqNum, nextRecvSeqNo);
+            DebugLogger.log(ILINK_SESSION, checkSeqNum, seqNum, nextRecvSeqNo);
             final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
@@ -1048,6 +1069,10 @@ public final class InternalILink3Connection extends ILink3Connection
                 }
                 else /* nextRecvSeqNo > seqNum */
                 {
+                    // We could queue this instead of just passing it on to the customer's application but this
+                    // hasn't been requested as of yet
+                    handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+
                     return onInvalidSequenceNumber(seqNum);
                 }
             }
@@ -1089,8 +1114,14 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
-        final long fromSeqNo = nextRecvSeqNo;
-        final int totalMsgCount = (int)(msgSeqNum - nextRecvSeqNo);
+        return onInvalidSequenceNumber(msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
+    }
+
+    private long onInvalidSequenceNumber(
+        final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
+    {
+        final long fromSeqNo = oldNextRecvSeqNo;
+        final int totalMsgCount = (int)(msgSeqNum - oldNextRecvSeqNo);
         final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
@@ -1100,6 +1131,7 @@ public final class InternalILink3Connection extends ILink3Connection
             {
                 addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
                 nextRecvSeqNo(newNextRecvSeqNo);
+                nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
             return position;
@@ -1119,6 +1151,8 @@ public final class InternalILink3Connection extends ILink3Connection
         final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
         if (retransmitRequest == null)
         {
+            DebugLogger.log(ILINK_SESSION, retransmitFilled, retransmitFillSeqNo);
+            nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
         }
         else
@@ -1129,7 +1163,9 @@ public final class InternalILink3Connection extends ILink3Connection
 
             if (!Pressure.isBackPressured(position))
             {
+                DebugLogger.log(ILINK_SESSION, retransmitFilledNext, retransmitFillSeqNo, fromSeqNo, msgCount);
                 retransmitRequests.pollFirst();
+                nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
 
@@ -1211,6 +1247,7 @@ public final class InternalILink3Connection extends ILink3Connection
             ", nextRecvSeqNo=" + nextRecvSeqNo +
             ", nextSentSeqNo=" + nextSentSeqNo +
             ", retransmitFillSeqNo=" + retransmitFillSeqNo +
+            ", nextRetransmitSeqNo=" + nextRetransmitSeqNo +
             ", nextReceiveMessageTimeInMs=" + nextReceiveMessageTimeInMs +
             ", nextSendMessageTimeInMs=" + nextSendMessageTimeInMs +
             '}';

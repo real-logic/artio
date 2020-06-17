@@ -536,8 +536,8 @@ public class ILink3TestServer
         final RetransmitRequest508Decoder retransmitRequest = read(new RetransmitRequest508Decoder(), 0);
         assertEquals(uuid, retransmitRequest.uUID());
         final long requestTimestamp = retransmitRequest.requestTimestamp();
-        assertEquals(fromSeqNo, retransmitRequest.fromSeqNo());
-        assertEquals(msgCount, retransmitRequest.msgCount());
+        assertEquals("fromSeqNo", fromSeqNo, retransmitRequest.fromSeqNo());
+        assertEquals("msgCount", msgCount, retransmitRequest.msgCount());
 
         return requestTimestamp;
     }

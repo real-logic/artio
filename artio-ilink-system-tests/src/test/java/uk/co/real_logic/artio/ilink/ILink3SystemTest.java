@@ -527,6 +527,30 @@ public class ILink3SystemTest
     }
 
     @Test
+    public void shouldRequestRetransmitForSequenceNumberGapWithinRetransmission() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        testServer.writeExecutionReportStatus(4, false);
+
+        testServer.acceptRetransRequest(1, 3);
+
+        testServer.writeExecutionReportStatus(1, true);
+        testServer.writeExecutionReportStatus(3, true);
+
+        testServer.acceptRetransRequest(2, 1);
+
+        testServer.writeExecutionReportStatus(2, true);
+
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
     public void shouldOnlyHaveASingleRequestRetransmitInflight() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();

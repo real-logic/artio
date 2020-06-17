@@ -15,20 +15,26 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.ExecutionReportStatus532Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
+
 public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
 {
+    private final IntArrayList messageIds = new IntArrayList();
+    private final List<Exception> exceptions = new ArrayList<>();
     private final Consumer<NotAppliedResponse> notAppliedResponse;
+    private final ExecutionReportStatus532Decoder executionReportStatus = new ExecutionReportStatus532Decoder();
+
     private boolean hasReceivedNotApplied;
-    private IntArrayList messageIds = new IntArrayList();
-    private List<Exception> exceptions = new ArrayList<>();
 
     public FakeILink3ConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -49,6 +55,11 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         final boolean possRetrans)
     {
         messageIds.add(templateId);
+        if (templateId == ExecutionReportStatus532Decoder.TEMPLATE_ID)
+        {
+            executionReportStatus.wrap(buffer, offset, blockLength, version);
+            DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", executionReportStatus::appendTo);
+        }
     }
 
     public void onNotApplied(
