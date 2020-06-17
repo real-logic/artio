@@ -60,7 +60,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 /**
  * External users should never rely on this API.
  */
-public class InternalILink3Connection extends ILink3Connection
+public final class InternalILink3Connection extends ILink3Connection
 {
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
 
@@ -97,6 +97,46 @@ public class InternalILink3Connection extends ILink3Connection
         "TerminateInProgress: Previous Terminate still being processed; Wait for Terminate or timeout",
         "Other: any other error condition not mentioned above",
         "DisconnectFromPrimary: Backup session will be terminated as well",
+    };
+
+    private static final String[] ESTABLISH_AND_NEGOTIATE_REJECT_ERROR_CODES = {
+        "HMACNotAuthenticated: failed authentication because identity is not recognized",
+        "HMACNotAvailable: HMAC component is not responding (5sec)",
+        "InvalidUUID: UUID is not greater than the one last used or value sent by the client is out of acceptable" +
+            " range (MIN, MAX)",
+        "InvalidTimestamp: Timestamp is not greater than the one last used or value sent by the client is out of" +
+            " acceptable range (MIN, MAX)",
+        "RequiredHMACSignatureMissing: empty bytes in HMACSignature field",
+
+        "RequiredAccessKeyIDMissing: empty bytes in AccessKeyID field",
+        "RequiredSessionMissing: empty bytes in Session field",
+        "RequiredFirmMissing: empty bytes in Firm field",
+        "RequiredUUIDMisssing: null value in UUID field",
+        "RequiredRequestTimestampMissing: null value in RequestTimestamp field",
+
+        "SessionBlocked: session and firm are not authorized for this port",
+        "InvalidKeepAliveInterval: value is out of acceptable range (MIN, MAX)",
+        "InvalidAccessKeyID: contains non-printable ASCII character",
+        "InvalidSession: contains non-printable ASCII character",
+        "InvalidFirm: contains non-printable ASCII character",
+
+        "Volume Controls - exceeding TPS limit as defined for volume controls (reject action)",
+        "SplitMessageRejected - Messages queued due to split message penalty being rejected because of" +
+            " logout or disconnect",
+        "SplitMessageQueue - Reached threshold of messages queued due to split message penalty",
+        "RequiredTradingSystemNameMissing: empty bytes in TradingSystemName",
+        "RequiredTradingSystemVersionMissing: empty bytes in TradingSystemVersion",
+
+        "RequiredTradingSystemVendorMissing: empty bytes in TradingSystemVendor",
+        "RequiredKeepAliveIntervalMissing: null value in KeepAliveInterval field",
+        "RequiredNextSeqNoMissing: empty bytes in NextSeqNo field",
+        "InvalidTradingSystemName: contains non-prinatable ASCII character",
+        "InvalidTradingSystemVersion: contains non-prinatable ASCII character",
+
+        "InvalidTradingSystemVendor: contains non-prinatable ASCII character",
+        "26: Unknown",
+        "DesignatedBackup - Using Designated backup before designated primary not allowed",
+        "NegotiateNotAllowed - Not allowed to negotiate on backup when established on primary"
     };
 
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
@@ -288,12 +328,17 @@ public class InternalILink3Connection extends ILink3Connection
 
     private void validateCanSend()
     {
-        final State state = this.state;
-        if (state != State.ESTABLISHED && state != State.AWAITING_KEEPALIVE)
+        if (!canSendMessage())
         {
             throw new IllegalStateException(
                 "State should be ESTABLISHED or AWAITING_KEEPALIVE in order to send but is " + state);
         }
+    }
+
+    public boolean canSendMessage()
+    {
+        final State state = this.state;
+        return state == State.ESTABLISHED || state == State.AWAITING_KEEPALIVE;
     }
 
     public long requestDisconnect(final DisconnectReason reason)
@@ -793,7 +838,11 @@ public class InternalILink3Connection extends ILink3Connection
                 .append(",");
         }
 
-        msgBuilder.append(",errorCodes=").append(errorCodes);
+        msgBuilder
+            .append(",errorCodes=")
+            .append(errorCodes)
+            .append(",errorMessage=")
+            .append(ESTABLISH_AND_NEGOTIATE_REJECT_ERROR_CODES[errorCodes]);
         connectionError(new IllegalResponseException(msgBuilder.toString()));
 
         return 1;
@@ -984,6 +1033,8 @@ public class InternalILink3Connection extends ILink3Connection
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
+            final CharFormatter formatter = new CharFormatter("Checking msgSeqNum=%s,nextRecvSeqNo=%s%n");
+            DebugLogger.log(ILINK_SESSION, formatter, seqNum, nextRecvSeqNo);
             final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
@@ -995,7 +1046,7 @@ public class InternalILink3Connection extends ILink3Connection
 
                     return 1;
                 }
-                else
+                else /* nextRecvSeqNo > seqNum */
                 {
                     return onInvalidSequenceNumber(seqNum);
                 }
@@ -1036,10 +1087,10 @@ public class InternalILink3Connection extends ILink3Connection
         return onInvalidSequenceNumber(seqNum, seqNum + 1);
     }
 
-    private long onInvalidSequenceNumber(final long seqNum, final long newNextRecvSeqNo)
+    private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
         final long fromSeqNo = nextRecvSeqNo;
-        final int totalMsgCount = (int)(seqNum - nextRecvSeqNo);
+        final int totalMsgCount = (int)(msgSeqNum - nextRecvSeqNo);
         final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)

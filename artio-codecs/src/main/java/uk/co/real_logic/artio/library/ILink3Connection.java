@@ -242,6 +242,13 @@ public abstract class ILink3Connection
      */
     public abstract long retransmitFillSeqNo();
 
+    /**
+     * Check if a message can be sent. This is when you're in the ESTABLISHED or AWAITING_KEEPALIVE state.
+     *
+     * @return true if a message can be sent, false otherwise
+     */
+    public abstract boolean canSendMessage();
+
     // -----------------------------------------------
     // Internal Methods below, not part of the public API
     // -----------------------------------------------
