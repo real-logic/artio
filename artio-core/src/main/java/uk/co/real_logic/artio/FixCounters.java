@@ -17,7 +17,9 @@ package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
 import io.aeron.Counter;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import java.util.List;
@@ -36,7 +38,8 @@ public class FixCounters implements AutoCloseable
         BYTES_IN_BUFFER_TYPE_ID(10_004),
         INVALID_LIBRARY_ATTEMPTS_TYPE_ID(10_005),
         SENT_MSG_SEQ_NO_TYPE_ID(10_006),
-        RECV_MSG_SEQ_NO_TYPE_ID(10_007);
+        RECV_MSG_SEQ_NO_TYPE_ID(10_007),
+        CURRENT_REPLAY_COUNT_TYPE_ID(10_008);
 
         final int id;
 
@@ -55,9 +58,25 @@ public class FixCounters implements AutoCloseable
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
+    private final AtomicCounter currentReplayCount;
     private final Aeron aeron;
 
-    FixCounters(final Aeron aeron)
+    public static IntHashSet lookupCounterIds(
+        final FixCountersId counterTypeId, final CountersReader countersReader)
+    {
+        final int requiredTypeId = counterTypeId.id();
+        final IntHashSet counterIds = new IntHashSet();
+        countersReader.forEach((counterId, typeId, keyBuffer, label) ->
+        {
+            if (typeId == requiredTypeId)
+            {
+                counterIds.add(counterId);
+            }
+        });
+        return counterIds;
+    }
+
+    FixCounters(final Aeron aeron, final boolean isEngine)
     {
         this.aeron = aeron;
         aeron.addUnavailableCounterHandler((countersReader, registrationId, counterId) ->
@@ -68,6 +87,16 @@ public class FixCounters implements AutoCloseable
                 "Failed offer to outbound publication");
         failedReplayPublications = newCounter(FixCountersId.FAILED_REPLAY_TYPE_ID.id(),
                 "Failed offer to replay publication");
+
+        if (isEngine)
+        {
+            currentReplayCount = newCounter(FixCountersId.CURRENT_REPLAY_COUNT_TYPE_ID.id(),
+                "Current Replay Count");
+        }
+        else
+        {
+            currentReplayCount = null;
+        }
     }
 
     public AtomicCounter failedInboundPublications()
@@ -83,6 +112,11 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter failedReplayPublications()
     {
         return failedReplayPublications;
+    }
+
+    public AtomicCounter currentReplayCount()
+    {
+        return currentReplayCount;
     }
 
     public AtomicCounter messagesRead(final long connectionId, final String address)

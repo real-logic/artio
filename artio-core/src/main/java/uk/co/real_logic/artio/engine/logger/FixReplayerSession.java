@@ -285,7 +285,7 @@ class FixReplayerSession extends ReplayerSession
         return false;
     }
 
-    boolean attempReplay()
+    boolean attemptReplay()
     {
         switch (state)
         {
@@ -294,7 +294,7 @@ class FixReplayerSession extends ReplayerSession
                 if (replayOperation.attemptReplay())
                 {
                     state = State.CHECK_REPLAY;
-                    return attempReplay();
+                    return attemptReplay();
                 }
                 return false;
 
@@ -371,4 +371,21 @@ class FixReplayerSession extends ReplayerSession
         return true;
     }
 
+    public String toString()
+    {
+        return "FixReplayerSession{" +
+            "message='" + message + '\'' +
+            ", gapFillMessageTypes=" + gapFillMessageTypes +
+            ", bytesInBuffer=" + bytesInBuffer +
+            ", maxBytesInBuffer=" + maxBytesInBuffer +
+            ", lastSeqNo=" + lastSeqNo +
+            ", beginGapFillSeqNum=" + beginGapFillSeqNum +
+            ", state=" + state +
+            ", connectionId=" + connectionId +
+            ", beginSeqNo=" + beginSeqNo +
+            ", endSeqNo=" + endSeqNo +
+            ", sessionId=" + sessionId +
+            ", sequenceIndex=" + sequenceIndex +
+            '}';
+    }
 }

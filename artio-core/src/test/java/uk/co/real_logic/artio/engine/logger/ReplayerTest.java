@@ -62,6 +62,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.artio.decoder.ExampleMessageDecoder.MESSAGE_TYPE;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.artio.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
@@ -91,7 +92,8 @@ public class ReplayerTest extends AbstractLogTest
     private ReplayHandler replayHandler = mock(ReplayHandler.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
     private ReplayOperation replayOperation = mock(ReplayOperation.class);
-    private AtomicCounter counter = mock(AtomicCounter.class);
+    private AtomicCounter bytesInBufferCounter = mock(AtomicCounter.class);
+    private AtomicCounter currentReplayCounter = mock(AtomicCounter.class);
 
     private Replayer replayer;
 
@@ -106,8 +108,7 @@ public class ReplayerTest extends AbstractLogTest
         when(replayQuery.query(anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any(), messageTracker.capture()))
             .thenReturn(replayOperation);
         when(replayOperation.attemptReplay()).thenReturn(true);
-        when(senderSequenceNumbers.hasDisconnected(anyLong())).thenReturn(false);
-        when(senderSequenceNumbers.bytesInBufferCounter(anyLong())).thenReturn(counter);
+        when(senderSequenceNumbers.bytesInBufferCounter(anyLong())).thenReturn(bytesInBufferCounter);
 
         setReplayedMessages(1);
 
@@ -127,7 +128,9 @@ public class ReplayerTest extends AbstractLogTest
             new FakeFixSessionCodecsFactory(),
             DEFAULT_SENDER_MAX_BYTES_IN_BUFFER,
             mock(ReplayerCommandQueue.class),
-            EpochFractionFormat.MILLISECONDS);
+            EpochFractionFormat.MILLISECONDS,
+            currentReplayCounter,
+            DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS);
     }
 
     private void setReplayedMessages(final int replayedMessages)

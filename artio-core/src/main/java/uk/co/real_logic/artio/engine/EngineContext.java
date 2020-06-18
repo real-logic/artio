@@ -217,7 +217,9 @@ public class EngineContext implements AutoCloseable
             new FixSessionCodecsFactory(epochFractionFormat),
             configuration.senderMaxBytesInBuffer(),
             replayerCommandQueue,
-            epochFractionFormat);
+            epochFractionFormat,
+            fixCounters.currentReplayCount(),
+            configuration.maxConcurrentSessionReplays());
     }
 
     private void newIndexers()

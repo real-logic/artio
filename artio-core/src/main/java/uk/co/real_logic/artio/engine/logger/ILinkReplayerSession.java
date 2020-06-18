@@ -63,7 +63,7 @@ public class ILinkReplayerSession extends ReplayerSession
         return new ILink3MessageTracker(this);
     }
 
-    public boolean attempReplay()
+    public boolean attemptReplay()
     {
         switch (state)
         {

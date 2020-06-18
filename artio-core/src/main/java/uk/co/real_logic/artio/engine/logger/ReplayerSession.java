@@ -39,7 +39,6 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     final long connectionId;
     final BufferClaim bufferClaim;
 
-
     final ExclusivePublication publication;
     final ReplayQuery replayQuery;
     final int beginSeqNo;
@@ -130,7 +129,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         }
     }
 
-    abstract boolean attempReplay();
+    abstract boolean attemptReplay();
 
     void close()
     {

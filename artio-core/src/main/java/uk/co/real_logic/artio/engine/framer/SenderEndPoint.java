@@ -295,6 +295,7 @@ class SenderEndPoint
 
     public void close()
     {
+        senderSequenceNumber.close();
         bytesInBuffer.close();
         invalidLibraryAttempts.close();
     }
