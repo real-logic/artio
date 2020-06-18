@@ -3,11 +3,13 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
+import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.engine.FixEngine;
 
 import java.io.File;
 import java.util.Objects;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -28,7 +30,8 @@ public class Backup
         engine.resetState(backupLocation);
     }
 
-    public void assertStateReset(final ArchivingMediaDriver mediaDriver, final int expectedNumberOfRecordings)
+    public void assertStateReset(
+        final ArchivingMediaDriver mediaDriver, final Matcher<Integer> expectedNumberOfRecordings)
     {
         assertTrue("backupLocation missing", backupLocation.exists());
         assertTrue("backupLocation not directory", backupLocation.isDirectory());
@@ -36,12 +39,18 @@ public class Backup
         assertRecordingsDeleted(mediaDriver, expectedNumberOfRecordings);
     }
 
-    private void assertRecordingsDeleted(final ArchivingMediaDriver mediaDriver, final int expectedNumberOfRecordings)
+    private void assertRecordingsDeleted(
+        final ArchivingMediaDriver mediaDriver, final Matcher<Integer> expectedNumberOfRecordings)
+    {
+        final int numberOfRecordings = getNumberOfRecordings(mediaDriver);
+        assertThat(numberOfRecordings, expectedNumberOfRecordings);
+    }
+
+    int getNumberOfRecordings(final ArchivingMediaDriver mediaDriver)
     {
         final File archiveDir = mediaDriver.archive().context().archiveDir();
         final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
-        final int numberOfRecordings = Objects.requireNonNull(recordings).length;
-        assertEquals(expectedNumberOfRecordings, numberOfRecordings);
+        return Objects.requireNonNull(recordings).length;
     }
 
     public void assertRecordingsTruncated()

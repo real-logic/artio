@@ -60,7 +60,11 @@ class ResetArchiveState
 
     private void truncateArchive()
     {
-        recordingCoordinator.forEachRecording(recordingId -> archive.truncateRecording(recordingId, 0));
+        recordingCoordinator.forEachRecording(recordingId ->
+        {
+            final long startPosition = archive.getStartPosition(recordingId);
+            archive.truncateRecording(recordingId, startPosition);
+        });
     }
 
     private void createArchiver()

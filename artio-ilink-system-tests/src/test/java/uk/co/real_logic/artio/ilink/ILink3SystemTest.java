@@ -382,7 +382,7 @@ public class ILink3SystemTest
             closeArtio();
 
             backup.resetState(engine);
-            backup.assertStateReset(mediaDriver, 0);
+            backup.assertStateReset(mediaDriver, is(0));
             backup.assertRecordingsTruncated();
             // Idempotence
             backup.resetState(engine);
