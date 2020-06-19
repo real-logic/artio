@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.IntSupplier;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -110,7 +112,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
 
         final long connectionId = acceptingSession.connectionId();
-        verify(messageTimingHandler, times(2)).onMessage(connectionId);
+        final ArgumentCaptor<Integer> sequenceNumberCaptor = ArgumentCaptor.forClass(int.class);
+        verify(messageTimingHandler, times(2))
+            .onMessage(sequenceNumberCaptor.capture(), eq(connectionId));
+        assertEquals(asList(1, 2), sequenceNumberCaptor.getAllValues());
     }
 
     @Test

@@ -118,7 +118,7 @@ class SenderEndPoint
         if (attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker) &&
             messageTimingHandler != null)
         {
-            messageTimingHandler.onMessage(connectionId);
+            messageTimingHandler.onMessage(sequenceNumber, connectionId);
         }
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
