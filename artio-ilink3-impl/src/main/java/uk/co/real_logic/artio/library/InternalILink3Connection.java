@@ -1001,11 +1001,12 @@ public final class InternalILink3Connection extends ILink3Connection
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 
-    private void fullyUnbind()
+    void fullyUnbind()
     {
         requestDisconnect(LOGOUT);
         owner.onUnbind(this);
         unbindState();
+        handler.onDisconnect();
     }
 
     void unbindState()

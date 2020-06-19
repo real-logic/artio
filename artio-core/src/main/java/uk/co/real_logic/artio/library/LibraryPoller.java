@@ -1196,6 +1196,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
                     return action;
                 }
+                else
+                {
+                    final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connectionId);
+                    if (subscription != null)
+                    {
+                        subscription.onDisconnect();
+                    }
+                }
             }
         }
 

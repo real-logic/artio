@@ -83,6 +83,11 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         exceptions.add(ex);
     }
 
+    public void onDisconnect()
+    {
+
+    }
+
     public IntArrayList messageIds()
     {
         return messageIds;

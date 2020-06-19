@@ -257,6 +257,8 @@ public abstract class ILink3Connection
 
     abstract void onReplayComplete();
 
+    abstract void fullyUnbind();
+
     abstract void unbindState();
 
 }
