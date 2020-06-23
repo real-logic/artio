@@ -492,7 +492,8 @@ public class SenderEndPointTest
             BODY_LENGTH,
             LIBRARY_ID,
             timeInMs,
-            0);
+            0,
+            1);
         assertEquals(CONTINUE, action);
     }
 

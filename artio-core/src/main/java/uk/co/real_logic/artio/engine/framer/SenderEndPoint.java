@@ -41,6 +41,7 @@ import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 class SenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+    private static final int REPLAY_MESSAGE = -1;
 
     private final long connectionId;
     private final TcpChannel channel;
@@ -159,7 +160,7 @@ class SenderEndPoint
         final int length = bodyLength + totalFrameSize;
 
         return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, replayTracker,
-            metaDataLength);
+            metaDataLength, REPLAY_MESSAGE);
     }
 
     private boolean attemptFramedMessage(
@@ -308,7 +309,8 @@ class SenderEndPoint
         final int bodyLength,
         final int libraryId,
         final long timeInMs,
-        final int metaDataLength)
+        final int metaDataLength,
+        final int sequenceNumber)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -322,7 +324,8 @@ class SenderEndPoint
         }
 
         return attemptSlowMessage(
-            directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker, metaDataLength);
+            directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker, metaDataLength,
+            sequenceNumber);
     }
 
     private Action attemptSlowMessage(
@@ -333,7 +336,8 @@ class SenderEndPoint
         final int bodyLength,
         final long timeInMs,
         final StreamTracker tracker,
-        final int metaDataLength)
+        final int metaDataLength,
+        final int sequenceNumber)
     {
         if (!isSlowConsumer())
         {
@@ -400,6 +404,11 @@ class SenderEndPoint
                 tracker.sentPosition = position;
                 tracker.partiallySentMessage = false;
                 tracker.skipPosition = Long.MAX_VALUE;
+
+                if (sequenceNumber != REPLAY_MESSAGE && messageTimingHandler != null)
+                {
+                    messageTimingHandler.onMessage(sequenceNumber, connectionId);
+                }
 
                 if (!isSlowConsumer())
                 {
