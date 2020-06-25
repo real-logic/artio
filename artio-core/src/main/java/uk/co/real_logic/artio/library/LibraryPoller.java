@@ -1161,53 +1161,66 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         DebugLogger.log(GATEWAY_MESSAGE, onDisconnectFormatter, libraryId, connectionId, reason.name());
-        if (libraryId == this.libraryId)
+        if (libraryId != this.libraryId)
         {
-            final boolean retainOwnerShip = initialAcceptedSessionOwner == SOLE_LIBRARY;
-            if (retainOwnerShip)
+            return CONTINUE;
+        }
+
+        final boolean soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
+        if (soleLibraryMode)
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
             {
-                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-                if (subscriber != null)
-                {
-                    return subscriber.onDisconnect(libraryId, reason);
-                }
+                return subscriber.onDisconnect(libraryId, reason);
             }
             else
             {
-                final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-                if (subscriber != null)
+                // iLink3 doesn't behave any differently in sole library mode as it's an initiator connection.
+                onILink3Disconnect(connectionId);
+            }
+        }
+        else
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
+            if (subscriber != null)
+            {
+                final Action action = subscriber.onDisconnect(libraryId, reason);
+                if (action == ABORT)
                 {
-                    final Action action = subscriber.onDisconnect(libraryId, reason);
-                    if (action == ABORT)
-                    {
-                        // If we abort the action then we should ensure that it can be processed when
-                        // re-run.
-                        connectionIdToSession.put(connectionId, subscriber);
-                    }
-                    else
-                    {
-                        final InternalSession session = subscriber.session();
-                        session.close();
-                        // session will be in either pendingInitiatorSessions or sessions
-                        pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
-                        sessions = ArrayUtil.remove(sessions, session);
-                        cacheSession(session);
-                    }
-
-                    return action;
+                    // If we abort the action then we should ensure that it can be processed when
+                    // re-run.
+                    connectionIdToSession.put(connectionId, subscriber);
                 }
                 else
                 {
-                    final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connectionId);
-                    if (subscription != null)
-                    {
-                        subscription.onDisconnect();
-                    }
+                    final InternalSession session = subscriber.session();
+                    session.close();
+                    // session will be in either pendingInitiatorSessions or sessions
+                    pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
+                    sessions = ArrayUtil.remove(sessions, session);
+                    cacheSession(session);
                 }
+
+                return action;
+            }
+            else
+            {
+                onILink3Disconnect(connectionId);
             }
         }
 
         return CONTINUE;
+    }
+
+    private void onILink3Disconnect(final long connectionId)
+    {
+        final ILink3Subscription subscription = connectionIdToILink3Subscription.remove(connectionId);
+        if (subscription != null)
+        {
+            subscription.onDisconnect();
+            remove(subscription.session());
+        }
     }
 
     public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
@@ -1539,6 +1552,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             iLink3Connections = new ILink3Connection[0];
         }
+
+        connectionIdToILink3Subscription.clear();
     }
 
     private Action controlUpdateSessions(final int libraryId, final SessionsDecoder sessionsDecoder)
@@ -1909,9 +1924,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return unmodifiableILink3Connections;
     }
 
-    public void onUnbind(final ILink3Connection session)
+    public void remove(final ILink3Connection session)
     {
         iLink3Connections = ArrayUtil.remove(iLink3Connections, session);
+        connectionIdToILink3Subscription.remove(session.connectionId());
     }
 }
 

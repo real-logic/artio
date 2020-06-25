@@ -772,7 +772,7 @@ public final class InternalILink3Connection extends ILink3Connection
         initiateReply = null;
 
         requestDisconnect(FAILED_AUTHENTICATION);
-        owner.onUnbind(this);
+        owner.remove(this);
     }
 
     public long onEstablishmentAck(
@@ -906,12 +906,19 @@ public final class InternalILink3Connection extends ILink3Connection
             final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
-                // Behaviour for a sequence message is to accept a higher sequence update - this differs from a
-                // business message
+                final long expectedNextRecvSeqNo = this.nextRecvSeqNo;
                 nextRecvSeqNo(nextSeqNo);
+
+                if (expectedNextRecvSeqNo < nextSeqNo)
+                {
+                    // sequence gap, initiate retransmission.
+                    return onInvalidSequenceNumber(nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
+                }
             }
             else
             {
+                // low sequence number triggered disconnect
+                handler.onSequence(uUID, nextSeqNo);
                 return position;
             }
 
@@ -1004,14 +1011,14 @@ public final class InternalILink3Connection extends ILink3Connection
     void fullyUnbind()
     {
         requestDisconnect(LOGOUT);
-        owner.onUnbind(this);
+        owner.remove(this);
         unbindState();
-        handler.onDisconnect();
     }
 
     void unbindState()
     {
         state = State.UNBOUND;
+        handler.onDisconnect();
     }
 
 //    private

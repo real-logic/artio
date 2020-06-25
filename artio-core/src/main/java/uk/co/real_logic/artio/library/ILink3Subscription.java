@@ -49,4 +49,9 @@ class ILink3Subscription
     {
         session.onReplayComplete();
     }
+
+    public ILink3Connection session()
+    {
+        return session;
+    }
 }
