@@ -470,7 +470,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    // Called after shutdown.
+    // Called after shutdown or on the Framer Thread
     public void forEachRecording(final LongConsumer recordingIdConsumer)
     {
         inboundRecordingIds.forEach(recordingIdConsumer);
@@ -526,18 +526,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     public RecordingIdLookup framerOutboundLookup()
     {
         return framerOutboundLookup;
-    }
-
-    // Read on the Framer Thread
-    public LongHashSet inboundRecordingIds()
-    {
-        return inboundRecordingIds.used;
-    }
-
-    // Read on the Framer Thread
-    public LongHashSet outboundRecordingIds()
-    {
-        return outboundRecordingIds.used;
     }
 
     static final class RecordingIds

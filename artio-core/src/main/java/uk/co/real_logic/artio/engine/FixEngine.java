@@ -24,7 +24,6 @@ import org.agrona.concurrent.AgentInvoker;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
-import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
 import java.io.File;
@@ -405,12 +404,12 @@ public final class FixEngine extends GatewayProcess
     {
         if (startingClose)
         {
-            return new PruneOperation(new IllegalStateException("Unable to prune archive during shutdown."));
+            return engineContext.pruneArchive(new IllegalStateException("Unable to prune archive during shutdown."));
         }
 
         if (isClosed)
         {
-            return new PruneOperation(new IllegalStateException("Unable to prune archive when closed."));
+            return engineContext.pruneArchive(new IllegalStateException("Unable to prune archive when closed."));
         }
 
         return engineContext.pruneArchive(recordingIdToMinimumPrunePositions);

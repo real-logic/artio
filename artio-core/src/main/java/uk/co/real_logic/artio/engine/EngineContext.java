@@ -46,6 +46,11 @@ import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 public class EngineContext implements AutoCloseable
 {
 
+    private final PruneOperation.Formatters pruneOperationFormatters = new PruneOperation.Formatters();
+    private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
+    private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
+    private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
+
     private final Clock clock;
     private final EngineConfiguration configuration;
     private final ErrorHandler errorHandler;
@@ -58,9 +63,6 @@ public class EngineContext implements AutoCloseable
     private final ExclusivePublication replayPublication;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
-    private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
-    private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
-    private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
 
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
@@ -372,6 +374,11 @@ public class EngineContext implements AutoCloseable
         sentSequenceNumberIndex.framerContext(framerContext);
     }
 
+    public Reply<Long2LongHashMap> pruneArchive(final Exception exception)
+    {
+        return new PruneOperation(pruneOperationFormatters, exception);
+    }
+
     public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap minimumPrunePositions)
     {
         if (pruneInboundReplayQuery == null)
@@ -380,6 +387,7 @@ public class EngineContext implements AutoCloseable
         }
 
         final PruneOperation operation = new PruneOperation(
+            pruneOperationFormatters,
             minimumPrunePositions,
             outboundReplayQuery,
             pruneInboundReplayQuery,

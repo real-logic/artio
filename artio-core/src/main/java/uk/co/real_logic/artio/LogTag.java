@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio;
 
+import org.agrona.collections.Long2LongHashMap;
+
 public enum LogTag
 {
     LIBRARY_CONNECT,
@@ -50,6 +52,15 @@ public enum LogTag
      * Logs information related to the closing down of Artio.
      */
     CLOSE,
+
+    /**
+     * Logs information relating to the archive pruning operation.
+     *
+     * This is a low volume LogTag to enable.
+     *
+     * @see uk.co.real_logic.artio.engine.FixEngine#pruneArchive(Long2LongHashMap)
+     */
+    STATE_CLEANUP,
 
     /**
      * Logs information from the proxy protocol - see http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
