@@ -151,6 +151,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
     public static final long DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS = 10_000;
     public static final long DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS = 60_000;
+    public static final int DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS = 5;
 
     static
     {
@@ -236,6 +237,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean bindAtStartup = false;
     private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
     private MessageTimingHandler messageTimingHandler = null;
+    private int maxConcurrentSessionReplays = DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -741,6 +743,34 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the maximum number of resend requests per session that Artio will process concurrently. Once the maximum is
+     * hit further FIX resend requests will be ignored and an Exception will be logged noting the event. Note
+     * this is a per-session parameter - ie the number of ResendRequests that will be queued for processing.
+     *
+     * @param maxConcurrentSessionReplays the maximum number of resend requests per session that Artio will enqueue
+     *                                    before rejecting any more.
+     * @return this
+     */
+    public EngineConfiguration maxConcurrentSessionReplays(final int maxConcurrentSessionReplays)
+    {
+        this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
+        return this;
+    }
+
+    /**
+     * Sets the initial sequenceIndex for the new session.
+     * Doesnt affects existing session.
+     *
+     * @param initialSequenceIndex initial sequence index
+     * @return this
+     */
+    public EngineConfiguration initialSequenceIndex(final int initialSequenceIndex)
+    {
+        this.initialSequenceIndex = initialSequenceIndex;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -950,17 +980,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return initialSequenceIndex;
     }
 
-    /**
-     * Sets the initial sequenceIndex for the new session.
-     * Doesnt affects existing session.
-     *
-     * @param initialSequenceIndex initial sequence index
-     * @return this
-     */
-    public EngineConfiguration initialSequenceIndex(final int initialSequenceIndex)
+    public int maxConcurrentSessionReplays()
     {
-        this.initialSequenceIndex = initialSequenceIndex;
-        return this;
+        return maxConcurrentSessionReplays;
     }
 
     /**

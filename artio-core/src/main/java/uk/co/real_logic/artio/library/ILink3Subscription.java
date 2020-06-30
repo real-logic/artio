@@ -40,8 +40,18 @@ class ILink3Subscription
         return session.requestDisconnect(reason);
     }
 
+    public void onDisconnect()
+    {
+        session.unbindState();
+    }
+
     public void onReplayComplete()
     {
         session.onReplayComplete();
+    }
+
+    public ILink3Connection session()
+    {
+        return session;
     }
 }

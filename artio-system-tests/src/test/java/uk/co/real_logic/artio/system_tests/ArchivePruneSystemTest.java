@@ -20,6 +20,8 @@ import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -72,27 +74,38 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         setupSessionWithSegmentOfFiles();
 
-        connectSessions();
-        acquireAcceptingSession();
-        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+        resetSequenceNumberWithNewLogon();
 
-        assertPruneWorks(false);
+        assertPruneWorks(false, true);
+    }
+
+    @Test
+    public void shouldPruneAwayOldArchivePositionsWithFreeLibraryIds()
+    {
+        setupSessionWithSegmentOfFiles();
+
+        // Combine a FixEngine.resetSequenceNumber with disconnecting and then reconnecting the library to
+        // Ensure that we test a free recording id case.
+        resetSequenceWithResetSequenceNumber();
+
+        closeAcceptingLibrary();
+        newAcceptingLibrary();
+
+        closeAcceptingEngine();
+        closeAcceptingLibrary();
+
+        newAcceptingEngine(false);
+
+        assertPruneWorks(false, false);
     }
 
     @Test
     public void shouldPruneAwayOldArchivePositionsForFixEngineResetSequenceNumbers()
     {
         setupSessionWithSegmentOfFiles();
-        final long sessionId = acceptingSession.id();
-        acceptingSession = null;
+        resetSequenceWithResetSequenceNumber();
 
-        final Reply<?> reply = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        if (reply.hasErrored())
-        {
-            LangUtil.rethrowUnchecked(reply.error());
-        }
-
-        assertPruneWorks(true);
+        assertPruneWorks(true, true);
     }
 
     @Test
@@ -108,7 +121,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.awaitSend("failed to trySendSequenceReset", () ->
             acceptingSession.trySendSequenceReset(1, 1));
 
-        assertPruneWorks(true);
+        assertPruneWorks(true, true);
     }
 
     @Test
@@ -123,34 +136,44 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.await("Failed to received logon in reply", () ->
             acceptingSession.lastReceivedMsgSeqNum() == 1);
 
-        assertPruneWorks(false);
+        assertPruneWorks(false, true);
     }
 
-    private void assertPruneWorks(final boolean reconnectSession)
+    private void assertPruneWorks(final boolean reconnectSession, final boolean hasConnectedLibrary)
     {
         try (AeronArchive archive = newArchive())
         {
-            final Long2LongHashMap prePruneRecordingIdToStartPos = checkRecordings(archive);
+            final Long2LongHashMap prePruneRecordingIdToStartPos = getRecordingStartPos(archive);
 
             final Long2LongHashMap minimumPosition = new Long2LongHashMap(NULL_VALUE);
+            // Specify a recordingId to not prune in order to test that the archive takes account of the
+            // minimumPosition parameter.
             final long notPrunedRecordingId = 1;
             minimumPosition.put(notPrunedRecordingId, 0);
 
             final Long2LongHashMap recordingIdToStartPos = pruneArchive(minimumPosition);
+            final Long2LongHashMap prunedRecordingIdToStartPos = getRecordingStartPos(archive);
 
-            final Long2LongHashMap prunedRecordingIdToStartPos = checkRecordings(archive);
+            DebugLogger.log(LogTag.STATE_CLEANUP,
+                "prePruneRecordingIdToStartPos = " + prePruneRecordingIdToStartPos +
+                ", prunedRecordingIdToStartPos = " + prunedRecordingIdToStartPos +
+                ", recordingIdToStartPos = " + recordingIdToStartPos);
 
             assertThat(recordingIdToStartPos, not(hasKey(notPrunedRecordingId)));
             assertThat(recordingIdToStartPos, hasKey(0L));
+            assertThat(recordingIdToStartPos, hasKey(4L));
 
             assertRecordingsPruned(
                 prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
 
-            if (reconnectSession)
+            if (hasConnectedLibrary)
             {
-                connectSessions();
+                if (reconnectSession)
+                {
+                    connectSessions();
+                }
+                messagesCanBeExchanged();
             }
-            messagesCanBeExchanged();
 
             // Restart engines to ensure that the positions can be continued after pruning.
             closeAcceptingEngine();
@@ -164,7 +187,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             messagesCanBeExchanged();
 
             // Ensure that the recordings have been extended
-            final Long2LongHashMap endRecordingIdToStartPos = checkRecordings(archive);
+            final Long2LongHashMap endRecordingIdToStartPos = getRecordingStartPos(archive);
             assertEquals(prunedRecordingIdToStartPos, endRecordingIdToStartPos);
         }
     }
@@ -220,7 +243,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         return AeronArchive.connect(archiveContext);
     }
 
-    private Long2LongHashMap checkRecordings(final AeronArchive archive)
+    private Long2LongHashMap getRecordingStartPos(final AeronArchive archive)
     {
         final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
         archive.listRecordings(0, 100,
@@ -229,5 +252,24 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             termBufferLength, mtuLength, sessionId, streamId, strippedChannel, originalChannel, sourceIdentity) ->
             startPositions.put(recordingId, startPosition));
         return startPositions;
+    }
+
+    private void resetSequenceNumberWithNewLogon()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+    }
+
+    private void resetSequenceWithResetSequenceNumber()
+    {
+        final long sessionId = acceptingSession.id();
+        acceptingSession = null;
+
+        final Reply<?> reply = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+        if (reply.hasErrored())
+        {
+            LangUtil.rethrowUnchecked(reply.error());
+        }
     }
 }

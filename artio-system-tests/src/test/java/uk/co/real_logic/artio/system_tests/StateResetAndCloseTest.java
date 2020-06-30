@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
@@ -78,7 +79,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 
         testSystem.awaitBlocking(() -> backup.resetState(acceptingEngine));
 
-        backup.assertStateReset(mediaDriver, 3);
+        backup.assertStateReset(mediaDriver, lessThanOrEqualTo(4));
 
         clearMessages();
         close();

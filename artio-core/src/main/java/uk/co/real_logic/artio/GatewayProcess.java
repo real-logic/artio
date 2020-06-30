@@ -21,6 +21,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
+import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.timing.HistogramLogAgent;
 import uk.co.real_logic.artio.timing.Timer;
 
@@ -80,7 +81,7 @@ public abstract class GatewayProcess implements AutoCloseable
         final Aeron.Context context = configureAeronContext(configuration);
         aeron = Aeron.connect(context);
         CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
-        fixCounters = new FixCounters(aeron);
+        fixCounters = new FixCounters(aeron, this instanceof FixEngine);
     }
 
     public Agent conductorAgent()

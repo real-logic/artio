@@ -83,4 +83,9 @@ public interface ILink3ConnectionHandler
      * @param ex the exception corresponding to an error
      */
     void onError(Exception ex);
+
+    /**
+     * Call when this connection is disconnected.
+     */
+    void onDisconnect();
 }

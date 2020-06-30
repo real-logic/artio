@@ -109,7 +109,7 @@ public final class SystemTestUtil
         return position;
     }
 
-    static long sendTestRequest(final Session session, final String testReqID)
+    public static long sendTestRequest(final Session session, final String testReqID)
     {
         return sendTestRequest(session, testReqID, new FixDictionaryImpl());
     }
@@ -133,7 +133,7 @@ public final class SystemTestUtil
         return position;
     }
 
-    private static void assertReceivedTestRequest(
+    static void assertReceivedTestRequest(
         final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to receive a test request message",

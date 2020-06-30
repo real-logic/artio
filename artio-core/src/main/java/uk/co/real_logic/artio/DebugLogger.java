@@ -58,7 +58,10 @@ public final class DebugLogger
         final LogTag tag,
         final CharFormatter formatter)
     {
-        THREAD_LOCAL.get().log(tag, formatter);
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().log(tag, formatter);
+        }
     }
 
     public static void log(

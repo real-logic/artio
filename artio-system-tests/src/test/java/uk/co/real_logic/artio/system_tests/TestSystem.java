@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -43,12 +44,14 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 public class TestSystem
 {
     private final List<FixLibrary> libraries;
+    private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;
 
     public TestSystem(final LockStepFramerEngineScheduler scheduler, final FixLibrary... libraries)
     {
         this.scheduler = scheduler;
         this.libraries = new ArrayList<>();
+        this.operations = new ArrayList<>();
         Collections.addAll(this.libraries, libraries);
     }
 
@@ -65,6 +68,17 @@ public class TestSystem
             scheduler.invokeFramer();
         }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
+        operations.forEach(Runnable::run);
+    }
+
+    public void addOperation(final Runnable operation)
+    {
+        operations.add(operation);
+    }
+
+    public void removeOperation(final Runnable operation)
+    {
+        operations.remove(operation);
     }
 
     public void close(final FixLibrary library)
@@ -146,11 +160,17 @@ public class TestSystem
 
     public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
+        return awaitMessageOf(otfAcceptor, messageType, msg -> true);
+    }
+
+    public FixMessage awaitMessageOf(
+        final FakeOtfAcceptor otfAcceptor, final String messageType, final Predicate<FixMessage> predicate)
+    {
         return Timing.withTimeout("Never received " + messageType, () ->
         {
             poll();
 
-            return otfAcceptor.receivedMessage(messageType).findFirst();
+            return otfAcceptor.receivedMessage(messageType).filter(predicate).findFirst();
         },
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }

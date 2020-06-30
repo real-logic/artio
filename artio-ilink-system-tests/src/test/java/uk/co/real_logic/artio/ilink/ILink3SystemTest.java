@@ -382,7 +382,7 @@ public class ILink3SystemTest
             closeArtio();
 
             backup.resetState(engine);
-            backup.assertStateReset(mediaDriver, 0);
+            backup.assertStateReset(mediaDriver, is(0));
             backup.assertRecordingsTruncated();
             // Idempotence
             backup.resetState(engine);
@@ -519,6 +519,77 @@ public class ILink3SystemTest
 
         testServer.writeExecutionReportStatus(1, true);
         testServer.writeExecutionReportStatus(4, false);
+        testServer.writeExecutionReportStatus(2, true);
+
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldRequestRetransmitForSequenceNumberGapWithSequenceMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeSequence(4, NotLapsed);
+
+        testServer.acceptRetransRequest(2, 2);
+
+        testServer.writeExecutionReportStatus(2, true);
+        testServer.writeExecutionReportStatus(4, false);
+        testServer.writeExecutionReportStatus(3, true);
+
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldAcceptSequenceMessageAsAGapFillForARetransmission() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeSequence(4, NotLapsed);
+
+        testServer.acceptRetransRequest(2, 2);
+        testServer.writeSequence(4, NotLapsed);
+
+        agreeRecvSeqNo(4);
+
+        // Check there's no second retransmission
+        testServer.readSequence(2, NotLapsed);
+
+        testServer.writeExecutionReportStatus(4, false);
+        agreeRecvSeqNo(5);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldRequestRetransmitForSequenceNumberGapWithinRetransmission() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        testServer.writeExecutionReportStatus(4, false);
+
+        testServer.acceptRetransRequest(1, 3);
+
+        testServer.writeExecutionReportStatus(1, true);
+        testServer.writeExecutionReportStatus(3, true);
+
+        testServer.acceptRetransRequest(2, 1);
+
         testServer.writeExecutionReportStatus(2, true);
 
         agreeRecvSeqNo(5);

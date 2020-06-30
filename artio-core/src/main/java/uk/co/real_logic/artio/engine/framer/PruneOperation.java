@@ -20,14 +20,18 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.RecordingDescriptorConsumer;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongHashSet;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.ReplayerCommand;
 import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
+import static uk.co.real_logic.artio.LogTag.STATE_CLEANUP;
 
 /**
  * PruneOperation is sent to the replayer in order to find the outbound replay query positions.
@@ -37,6 +41,17 @@ import static io.aeron.archive.client.AeronArchive.segmentFileBasePosition;
 public class PruneOperation
     implements ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer, AdminCommand
 {
+    public static class Formatters
+    {
+        private final CharFormatter findingPositionsFormatter = new CharFormatter(
+            "PruneOperation: allRecordingIds=%s,queried recordingIdToNewStartPosition=%s%n");
+        private final CharFormatter foundPositionsFormatter = new CharFormatter(
+            "PruneOperation: complete recordingIdToNewStartPosition=%s%n");
+        private final CharFormatter filteredRecordingFormatter = new CharFormatter(
+            "PruneOperation: filtered recordingId=%s%n");
+    }
+
+    private final Formatters formatters;
     private final ReplayQuery outboundReplayQuery;
     private final ReplayQuery inboundReplayQuery;
     private final Long2LongHashMap recordingIdToNewStartPosition = new Long2LongHashMap(Aeron.NULL_VALUE);
@@ -55,15 +70,16 @@ public class PruneOperation
     private long segmentStartPosition;
     private long lowerBoundPrunePosition;
 
-    public PruneOperation(final Exception error)
+    public PruneOperation(final Formatters formatters, final Exception error)
     {
-        this(null, null, null, null, null, null);
+        this(formatters, null, null, null, null, null, null);
 
         this.error = error;
         replyState = State.ERRORED;
     }
 
     public PruneOperation(
+        final Formatters formatters,
         final Long2LongHashMap minimumPrunePositions,
         final ReplayQuery outboundReplayQuery,
         final ReplayQuery inboundReplayQuery,
@@ -71,6 +87,7 @@ public class PruneOperation
         final ReplayerCommandQueue replayerCommandQueue,
         final RecordingCoordinator recordingCoordinator)
     {
+        this.formatters = formatters;
         this.outboundReplayQuery = outboundReplayQuery;
         this.inboundReplayQuery = inboundReplayQuery;
         this.minimumPrunePositions = minimumPrunePositions;
@@ -98,8 +115,7 @@ public class PruneOperation
     // On Framer thread
     public void execute(final Framer framer)
     {
-        allRecordingIds.addAll(recordingCoordinator.inboundRecordingIds());
-        allRecordingIds.addAll(recordingCoordinator.outboundRecordingIds());
+        recordingCoordinator.forEachRecording(allRecordingIds::add);
 
         // move over to the replayer thread
         framer.schedule(() -> replayerCommandQueue.offer(this) ? Continuation.COMPLETE : BACK_PRESSURED);
@@ -118,6 +134,15 @@ public class PruneOperation
 
     private void findAllRecordingPositions()
     {
+        if (DebugLogger.isEnabled(STATE_CLEANUP))
+        {
+            final CharFormatter formatter = formatters.findingPositionsFormatter
+                .clear()
+                .with(allRecordingIds.toString())
+                .with(recordingIdToNewStartPosition.toString());
+            DebugLogger.log(STATE_CLEANUP, formatter);
+        }
+
         // newStartPositions currently contains the lowest start position for each replay index file.
         // if we have a recording with no replay index entries, for example if we've called
         // FixEngine.resetSequenceNumber for every session then those recording ids won't be in the map.
@@ -133,8 +158,23 @@ public class PruneOperation
         {
             final long recordingId = it.nextValue();
             final long recordingPosition = aeronArchive.getRecordingPosition(recordingId);
+            if (recordingPosition != NULL_POSITION)
+            {
+                recordingIdToNewStartPosition.put(recordingId, recordingPosition);
+            }
+            else
+            {
+                final long stopPosition = aeronArchive.getStopPosition(recordingId);
+                recordingIdToNewStartPosition.put(recordingId, stopPosition);
+            }
+        }
 
-            recordingIdToNewStartPosition.put(recordingId, recordingPosition);
+        if (DebugLogger.isEnabled(STATE_CLEANUP))
+        {
+            final CharFormatter formatter = formatters.foundPositionsFormatter
+                .clear()
+                .with(recordingIdToNewStartPosition.toString());
+            DebugLogger.log(STATE_CLEANUP, formatter);
         }
     }
 
@@ -165,6 +205,7 @@ public class PruneOperation
                 // Don't prune if you're < a segment away from the start of the stream.
                 if (segmentStartPosition < lowerBoundPrunePosition)
                 {
+                    DebugLogger.log(STATE_CLEANUP, formatters.filteredRecordingFormatter, recordingId);
                     it.remove();
                 }
                 else

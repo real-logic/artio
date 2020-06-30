@@ -60,7 +60,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 /**
  * External users should never rely on this API.
  */
-public class InternalILink3Connection extends ILink3Connection
+public final class InternalILink3Connection extends ILink3Connection
 {
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
 
@@ -99,6 +99,46 @@ public class InternalILink3Connection extends ILink3Connection
         "DisconnectFromPrimary: Backup session will be terminated as well",
     };
 
+    private static final String[] ESTABLISH_AND_NEGOTIATE_REJECT_ERROR_CODES = {
+        "HMACNotAuthenticated: failed authentication because identity is not recognized",
+        "HMACNotAvailable: HMAC component is not responding (5sec)",
+        "InvalidUUID: UUID is not greater than the one last used or value sent by the client is out of acceptable" +
+            " range (MIN, MAX)",
+        "InvalidTimestamp: Timestamp is not greater than the one last used or value sent by the client is out of" +
+            " acceptable range (MIN, MAX)",
+        "RequiredHMACSignatureMissing: empty bytes in HMACSignature field",
+
+        "RequiredAccessKeyIDMissing: empty bytes in AccessKeyID field",
+        "RequiredSessionMissing: empty bytes in Session field",
+        "RequiredFirmMissing: empty bytes in Firm field",
+        "RequiredUUIDMisssing: null value in UUID field",
+        "RequiredRequestTimestampMissing: null value in RequestTimestamp field",
+
+        "SessionBlocked: session and firm are not authorized for this port",
+        "InvalidKeepAliveInterval: value is out of acceptable range (MIN, MAX)",
+        "InvalidAccessKeyID: contains non-printable ASCII character",
+        "InvalidSession: contains non-printable ASCII character",
+        "InvalidFirm: contains non-printable ASCII character",
+
+        "Volume Controls - exceeding TPS limit as defined for volume controls (reject action)",
+        "SplitMessageRejected - Messages queued due to split message penalty being rejected because of" +
+            " logout or disconnect",
+        "SplitMessageQueue - Reached threshold of messages queued due to split message penalty",
+        "RequiredTradingSystemNameMissing: empty bytes in TradingSystemName",
+        "RequiredTradingSystemVersionMissing: empty bytes in TradingSystemVersion",
+
+        "RequiredTradingSystemVendorMissing: empty bytes in TradingSystemVendor",
+        "RequiredKeepAliveIntervalMissing: null value in KeepAliveInterval field",
+        "RequiredNextSeqNoMissing: empty bytes in NextSeqNo field",
+        "InvalidTradingSystemName: contains non-prinatable ASCII character",
+        "InvalidTradingSystemVersion: contains non-prinatable ASCII character",
+
+        "InvalidTradingSystemVendor: contains non-prinatable ASCII character",
+        "26: Unknown",
+        "DesignatedBackup - Using Designated backup before designated primary not allowed",
+        "NegotiateNotAllowed - Not allowed to negotiate on backup when established on primary"
+    };
+
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
     private static final long OK_POSITION = Long.MIN_VALUE;
 
@@ -106,6 +146,12 @@ public class InternalILink3Connection extends ILink3Connection
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
     private final CharFormatter unknownMessage = new CharFormatter(
         "Unknown Message,templateId=%s,blockLength=%s,version=%s,seqNum=%s,possRetrans=%s%n");
+    private final CharFormatter checkSeqNum = new CharFormatter("Checking msgSeqNum=%s,nextRecvSeqNo=%s%n");
+    private final CharFormatter retransmitFilled =
+        new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
+    private final CharFormatter retransmitFilledNext =
+        new CharFormatter("RetransmitFilledNext retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
+
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
 
@@ -127,7 +173,9 @@ public class InternalILink3Connection extends ILink3Connection
     private State state;
     private long nextRecvSeqNo;
     private long nextSentSeqNo;
+
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
+    private long nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
 
     private long resendTime;
     private long nextReceiveMessageTimeInMs;
@@ -255,6 +303,7 @@ public class InternalILink3Connection extends ILink3Connection
         final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
         if (!Pressure.isBackPressured(position))
         {
+            nextRetransmitSeqNo = fromSeqNo;
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
         }
         return position;
@@ -288,12 +337,17 @@ public class InternalILink3Connection extends ILink3Connection
 
     private void validateCanSend()
     {
-        final State state = this.state;
-        if (state != State.ESTABLISHED && state != State.AWAITING_KEEPALIVE)
+        if (!canSendMessage())
         {
             throw new IllegalStateException(
                 "State should be ESTABLISHED or AWAITING_KEEPALIVE in order to send but is " + state);
         }
+    }
+
+    public boolean canSendMessage()
+    {
+        final State state = this.state;
+        return state == State.ESTABLISHED || state == State.AWAITING_KEEPALIVE;
     }
 
     public long requestDisconnect(final DisconnectReason reason)
@@ -718,7 +772,7 @@ public class InternalILink3Connection extends ILink3Connection
         initiateReply = null;
 
         requestDisconnect(FAILED_AUTHENTICATION);
-        owner.onUnbind(this);
+        owner.remove(this);
     }
 
     public long onEstablishmentAck(
@@ -793,7 +847,11 @@ public class InternalILink3Connection extends ILink3Connection
                 .append(",");
         }
 
-        msgBuilder.append(",errorCodes=").append(errorCodes);
+        msgBuilder
+            .append(",errorCodes=")
+            .append(errorCodes)
+            .append(",errorMessage=")
+            .append(ESTABLISH_AND_NEGOTIATE_REJECT_ERROR_CODES[errorCodes]);
         connectionError(new IllegalResponseException(msgBuilder.toString()));
 
         return 1;
@@ -848,12 +906,19 @@ public class InternalILink3Connection extends ILink3Connection
             final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
-                // Behaviour for a sequence message is to accept a higher sequence update - this differs from a
-                // business message
+                final long expectedNextRecvSeqNo = this.nextRecvSeqNo;
                 nextRecvSeqNo(nextSeqNo);
+
+                if (expectedNextRecvSeqNo < nextSeqNo)
+                {
+                    // sequence gap, initiate retransmission.
+                    return onInvalidSequenceNumber(nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
+                }
             }
             else
             {
+                // low sequence number triggered disconnect
+                handler.onSequence(uUID, nextSeqNo);
                 return position;
             }
 
@@ -943,16 +1008,17 @@ public class InternalILink3Connection extends ILink3Connection
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 
-    private void fullyUnbind()
+    void fullyUnbind()
     {
         requestDisconnect(LOGOUT);
-        owner.onUnbind(this);
+        owner.remove(this);
         unbindState();
     }
 
     void unbindState()
     {
         state = State.UNBOUND;
+        handler.onDisconnect();
     }
 
 //    private
@@ -973,17 +1039,31 @@ public class InternalILink3Connection extends ILink3Connection
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
             if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
+                if (seqNum > nextRetransmitSeqNo)
+                {
+                    final long position = onInvalidSequenceNumber(seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
+                    if (Pressure.isBackPressured(position))
+                    {
+                        return position;
+                    }
+                }
+
                 handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
                 if (seqNum == retransmitFillSeqNo)
                 {
                     return retransmitFilled();
                 }
+                else
+                {
+                    nextRetransmitSeqNo = seqNum + 1;
+                }
 
                 return 1;
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
+            DebugLogger.log(ILINK_SESSION, checkSeqNum, seqNum, nextRecvSeqNo);
             final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
@@ -995,8 +1075,12 @@ public class InternalILink3Connection extends ILink3Connection
 
                     return 1;
                 }
-                else
+                else /* nextRecvSeqNo > seqNum */
                 {
+                    // We could queue this instead of just passing it on to the customer's application but this
+                    // hasn't been requested as of yet
+                    handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+
                     return onInvalidSequenceNumber(seqNum);
                 }
             }
@@ -1036,10 +1120,16 @@ public class InternalILink3Connection extends ILink3Connection
         return onInvalidSequenceNumber(seqNum, seqNum + 1);
     }
 
-    private long onInvalidSequenceNumber(final long seqNum, final long newNextRecvSeqNo)
+    private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
-        final long fromSeqNo = nextRecvSeqNo;
-        final int totalMsgCount = (int)(seqNum - nextRecvSeqNo);
+        return onInvalidSequenceNumber(msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
+    }
+
+    private long onInvalidSequenceNumber(
+        final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
+    {
+        final long fromSeqNo = oldNextRecvSeqNo;
+        final int totalMsgCount = (int)(msgSeqNum - oldNextRecvSeqNo);
         final int msgCount = Math.min(totalMsgCount, configuration.retransmitRequestMessageLimit());
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
@@ -1049,6 +1139,7 @@ public class InternalILink3Connection extends ILink3Connection
             {
                 addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
                 nextRecvSeqNo(newNextRecvSeqNo);
+                nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
             return position;
@@ -1068,6 +1159,8 @@ public class InternalILink3Connection extends ILink3Connection
         final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
         if (retransmitRequest == null)
         {
+            DebugLogger.log(ILINK_SESSION, retransmitFilled, retransmitFillSeqNo);
+            nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
         }
         else
@@ -1078,7 +1171,9 @@ public class InternalILink3Connection extends ILink3Connection
 
             if (!Pressure.isBackPressured(position))
             {
+                DebugLogger.log(ILINK_SESSION, retransmitFilledNext, retransmitFillSeqNo, fromSeqNo, msgCount);
                 retransmitRequests.pollFirst();
+                nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
 
@@ -1160,6 +1255,7 @@ public class InternalILink3Connection extends ILink3Connection
             ", nextRecvSeqNo=" + nextRecvSeqNo +
             ", nextSentSeqNo=" + nextSentSeqNo +
             ", retransmitFillSeqNo=" + retransmitFillSeqNo +
+            ", nextRetransmitSeqNo=" + nextRetransmitSeqNo +
             ", nextReceiveMessageTimeInMs=" + nextReceiveMessageTimeInMs +
             ", nextSendMessageTimeInMs=" + nextSendMessageTimeInMs +
             '}';

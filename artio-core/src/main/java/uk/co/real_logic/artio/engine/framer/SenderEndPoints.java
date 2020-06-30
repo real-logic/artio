@@ -164,9 +164,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
                 final int bodyLength = fixMessage.bodyLength();
                 final int libraryId = fixMessage.libraryId();
+                final int sequenceNumber = fixMessage.sequenceNumber();
                 return senderEndPoint.onSlowOutboundMessage(
                     buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs,
-                    metaDataLength);
+                    metaDataLength, sequenceNumber);
             }
         }
 

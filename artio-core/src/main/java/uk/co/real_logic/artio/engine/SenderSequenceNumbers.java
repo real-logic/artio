@@ -19,8 +19,6 @@ import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 
-import java.util.function.Consumer;
-
 /**
  * For publishing the last sent sequence number to the replay system.
  */
@@ -35,8 +33,6 @@ public class SenderSequenceNumbers
     private final Long2ObjectHashMap<SenderSequenceNumber> connectionIdToSequencePosition
         = new Long2ObjectHashMap<>();
     private final LongHashSet oldConnectionIds = new LongHashSet();
-    private final Consumer<SenderSequenceNumber> onSenderSequenceNumberFunc
-        = this::onSenderSequenceNumber;
 
     public SenderSequenceNumbers(final ReplayerCommandQueue queue)
     {
@@ -63,7 +59,6 @@ public class SenderSequenceNumbers
     {
         queue.enqueue(senderSequenceNumber);
     }
-
 
     // Called on Indexer Thread
     public int lastSentSequenceNumber(final long connectionId)
