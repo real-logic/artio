@@ -154,7 +154,7 @@ public final class ExampleDictionary
     public static final String STRING_ENCODED_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MessageName\": \"Heartbeat\",\n" +
-        String.format(HEADER_TO_STRING, 81) +
+        HEADER_TO_STRING +
         STRING_ENCODED_MESSAGE_SUFFIX;
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
@@ -173,7 +173,7 @@ public final class ExampleDictionary
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MessageName\": \"Heartbeat\",\n" +
-        String.format(HEADER_TO_STRING, 53) +
+        HEADER_TO_STRING +
         STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String COMPONENT_TO_STRING =
