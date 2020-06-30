@@ -38,7 +38,7 @@ import uk.co.real_logic.artio.util.CharFormatter;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
@@ -514,9 +514,9 @@ public final class InternalILink3Connection extends ILink3Connection
             sha256HMAC.init(secretKey);
 
             // Calculate HMAC
-            return sha256HMAC.doFinal(canonicalRequest.getBytes("UTF-8"));
+            return sha256HMAC.doFinal(canonicalRequest.getBytes(StandardCharsets.UTF_8));
         }
-        catch (final InvalidKeyException | IllegalStateException | UnsupportedEncodingException e)
+        catch (final InvalidKeyException | IllegalStateException e)
         {
             LangUtil.rethrowUnchecked(e);
             return null;

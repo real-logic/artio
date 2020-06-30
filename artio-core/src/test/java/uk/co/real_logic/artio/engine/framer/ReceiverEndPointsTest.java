@@ -29,7 +29,7 @@ public class ReceiverEndPointsTest
 {
     private static final int LIBRARY_ID = 1;
 
-    private LongConsumer removeFunc = mock(LongConsumer.class);
+    private final LongConsumer removeFunc = mock(LongConsumer.class);
 
     @Test
     public void shouldRemoveILink3EndPoints()

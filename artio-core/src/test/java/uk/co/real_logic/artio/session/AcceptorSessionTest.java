@@ -32,7 +32,7 @@ import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private AcceptorSession session = newAcceptorSession();
+    private final AcceptorSession session = newAcceptorSession();
 
     private AcceptorSession newAcceptorSession()
     {

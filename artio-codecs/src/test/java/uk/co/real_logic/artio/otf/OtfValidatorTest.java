@@ -26,13 +26,13 @@ import static uk.co.real_logic.artio.dictionary.SessionConstants.MESSAGE_TYPE;
 
 public class OtfValidatorTest
 {
-    private OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
+    private final OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
 
-    private LongDictionary requiredFields = new LongDictionary();
-    private LongDictionary allFields = new LongDictionary();
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[16 * 1024]);
+    private final LongDictionary requiredFields = new LongDictionary();
+    private final LongDictionary allFields = new LongDictionary();
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[16 * 1024]);
 
-    private OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
+    private final OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
 
     @Test
     public void validStartMessageDelegates()

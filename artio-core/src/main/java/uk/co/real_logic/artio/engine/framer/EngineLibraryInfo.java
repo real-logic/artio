@@ -17,8 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -68,7 +67,7 @@ class EngineLibraryInfo implements LibraryInfo
 
         final EngineLibraryInfo that = (EngineLibraryInfo)o;
 
-        return gatewaySessions != null ? gatewaySessions.equals(that.gatewaySessions) : that.gatewaySessions == null;
+        return Objects.equals(gatewaySessions, that.gatewaySessions);
     }
 
     public int hashCode()

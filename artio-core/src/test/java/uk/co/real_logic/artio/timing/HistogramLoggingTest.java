@@ -40,10 +40,10 @@ public class HistogramLoggingTest
 
     private static final HistogramHandler NO_HISTOGRAM_HANDLER = null;
 
-    private EpochClock clock = mock(EpochClock.class);
-    private HistogramLogHandler logHandler = mock(HistogramLogHandler.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private ArgumentCaptor<Histogram> histogramCaptor = ArgumentCaptor.forClass(Histogram.class);
+    private final EpochClock clock = mock(EpochClock.class);
+    private final HistogramLogHandler logHandler = mock(HistogramLogHandler.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final ArgumentCaptor<Histogram> histogramCaptor = ArgumentCaptor.forClass(Histogram.class);
 
     private File file;
     private Timer timer;
@@ -110,7 +110,7 @@ public class HistogramLoggingTest
         readsHistogram(6);
     }
 
-    private void writeHistogram() throws Exception
+    private void writeHistogram()
     {
         assertThat(writer.doWork(), greaterThan(0));
     }

@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
@@ -53,19 +52,19 @@ public class SenderEndPointTest
     private static final long BEGIN_POSITION = 8000;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
 
-    private TcpChannel tcpChannel = mock(TcpChannel.class);
-    private AtomicCounter bytesInBuffer = fakeCounter();
-    private AtomicCounter invalidLibraryAttempts = mock(AtomicCounter.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private Framer framer = mock(Framer.class);
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-    private UnsafeBuffer buffer = new UnsafeBuffer(byteBuffer);
-    private BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
-    private BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
-    private SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
-    private MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
+    private final TcpChannel tcpChannel = mock(TcpChannel.class);
+    private final AtomicCounter bytesInBuffer = fakeCounter();
+    private final AtomicCounter invalidLibraryAttempts = mock(AtomicCounter.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final Framer framer = mock(Framer.class);
+    private final ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+    private final UnsafeBuffer buffer = new UnsafeBuffer(byteBuffer);
+    private final BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
+    private final BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
+    private final SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
+    private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
-    private SenderEndPoint endPoint = new SenderEndPoint(
+    private final SenderEndPoint endPoint = new SenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
         libraryBlockablePosition,
@@ -117,7 +116,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldDisconnectSlowConsumerAfterTimeout() throws IOException
+    public void shouldDisconnectSlowConsumerAfterTimeout()
     {
         long timeInMs = 100;
         long position = POSITION;
@@ -139,7 +138,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldNotDisconnectSlowConsumerBeforeTimeout() throws IOException
+    public void shouldNotDisconnectSlowConsumerBeforeTimeout()
     {
         long timeInMs = 100;
         channelWillWrite(BODY_LENGTH);
@@ -154,7 +153,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldNotDisconnectSlowConsumerBeforeTimeoutOnSlowChannel() throws IOException
+    public void shouldNotDisconnectSlowConsumerBeforeTimeoutOnSlowChannel()
     {
         final int replayWrites = 41;
 
@@ -189,7 +188,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldNotDisconnectRegularConsumerDueToTimeout() throws IOException
+    public void shouldNotDisconnectRegularConsumerDueToTimeout()
     {
         long timeInMs = 100;
         channelWillWrite(BODY_LENGTH);
@@ -204,7 +203,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldDisconnectSlowConsumerAfterTimeoutAfterFragment() throws IOException
+    public void shouldDisconnectSlowConsumerAfterTimeoutAfterFragment()
     {
         becomeSlowConsumer();
 

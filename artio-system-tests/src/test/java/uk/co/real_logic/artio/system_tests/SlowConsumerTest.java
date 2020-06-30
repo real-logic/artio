@@ -53,19 +53,19 @@ public class SlowConsumerTest
     private static final int BUFFER_CAPACITY = 16 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
-    private int port = unusedPort();
+    private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
-    private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
+    private final FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
+    private final FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
     private TestSystem testSystem;
 
-    private TestRequestEncoder testRequest = newTestRequest();
-    private LogonEncoder logon = new LogonEncoder();
-    private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
-    private LockStepFramerEngineScheduler scheduler = new LockStepFramerEngineScheduler();
+    private final TestRequestEncoder testRequest = newTestRequest();
+    private final LogonEncoder logon = new LogonEncoder();
+    private final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
+    private final LockStepFramerEngineScheduler scheduler = new LockStepFramerEngineScheduler();
     private SocketChannel socket;
     private Session session;
 

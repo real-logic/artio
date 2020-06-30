@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.session.SessionIdStrategy.INSUFFICIENT_SPAC
 @SuppressWarnings("Indentation")
 public class SenderTargetAndSubSessionIdStrategyTest
 {
-    private SenderTargetAndSubSessionIdStrategy strategy = new SenderTargetAndSubSessionIdStrategy();
+    private final SenderTargetAndSubSessionIdStrategy strategy = new SenderTargetAndSubSessionIdStrategy();
 
     @Test
     public void differentIdsDoNotClash()

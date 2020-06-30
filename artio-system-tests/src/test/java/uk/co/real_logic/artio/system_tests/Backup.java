@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 
 public class Backup
 {
-    private File backupLocation = new File("backup");
+    private final File backupLocation = new File("backup");
 
     public void cleanup()
     {

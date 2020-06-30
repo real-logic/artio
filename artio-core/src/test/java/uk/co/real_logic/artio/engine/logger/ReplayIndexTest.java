@@ -66,14 +66,14 @@ public class ReplayIndexTest extends AbstractLogTest
 {
     private static final String CHANNEL = CommonContext.IPC_CHANNEL;
 
-    private ExistingBufferFactory existingBufferFactory = spy(new ExistingBufferFactory()
+    private final ExistingBufferFactory existingBufferFactory = spy(new ExistingBufferFactory()
     {
         public ByteBuffer map(final File fileName)
         {
             return LoggerUtil.mapExistingFile(fileName);
         }
     });
-    private BufferFactory newBufferFactory = spy(new BufferFactory()
+    private final BufferFactory newBufferFactory = spy(new BufferFactory()
     {
         public ByteBuffer map(final File file, final int size)
         {
@@ -83,12 +83,12 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private ReplayIndex replayIndex;
 
-    private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
-    private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
-    private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
+    private final UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
+    private final IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
+    private final IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
 
-    private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private ArchivingMediaDriver mediaDriver;
     private AeronArchive aeronArchive;

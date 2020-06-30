@@ -40,7 +40,7 @@ public abstract class GatewayProcess implements AutoCloseable
 
     public static final long NO_CONNECTION_ID = -1;
 
-    private static long startTimeInMs = System.currentTimeMillis();
+    private static final long START_TIME_IN_MS = System.currentTimeMillis();
 
     private DistinctErrorLog distinctErrorLog;
 
@@ -163,7 +163,7 @@ public abstract class GatewayProcess implements AutoCloseable
             agents.add(new ErrorPrinter(
                 monitoringFile.errorBuffer(),
                 configuration.agentNamePrefix(),
-                startTimeInMs,
+                START_TIME_IN_MS,
                 aeronArchive,
                 configuration.customErrorConsumer()));
         }

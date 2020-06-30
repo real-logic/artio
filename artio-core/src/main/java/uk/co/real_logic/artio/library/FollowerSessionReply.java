@@ -26,7 +26,7 @@ class FollowerSessionReply extends LibraryReply<SessionWriter>
 {
     private static final int INITIAL_BUFFER_SIZE = 4096;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[INITIAL_BUFFER_SIZE]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[INITIAL_BUFFER_SIZE]);
     private final int offset;
     private final int length;
 

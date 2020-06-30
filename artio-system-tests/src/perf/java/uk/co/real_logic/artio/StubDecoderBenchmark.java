@@ -33,8 +33,8 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 public class StubDecoderBenchmark
 {
-    private LogonDecoder logonDecoder = new LogonDecoder();
-    private AsciiBuffer buffer = new MutableAsciiBuffer(TestData.LOGON);
+    private final LogonDecoder logonDecoder = new LogonDecoder();
+    private final AsciiBuffer buffer = new MutableAsciiBuffer(TestData.LOGON);
 
     @Setup
     public void setup()

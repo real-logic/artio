@@ -31,14 +31,14 @@ class FinalImagePositions implements UnavailableImageHandler
     // If we ask for the position before the unavailable handler is called
     // then this value is put in the map so that we can check for its presence
     // and avoid leaking memory, reference comparison against this is deliberate
-    private static final Long LEAK_WITNESS = Long.valueOf(UNKNOWN_POSITION);
+    private static final Long LEAK_WITNESS = UNKNOWN_POSITION;
 
     // Hashtable picked over CHM due to low contention factor + expected small size
     private final Map<Integer, Long> sessionIdToPosition = new Hashtable<>();
 
     public void onUnavailableImage(final Image image)
     {
-        final Integer sessionId = Integer.valueOf(image.sessionId());
+        final Integer sessionId = image.sessionId();
         final long position = image.position();
 
         final Long old = sessionIdToPosition.remove(sessionId);
@@ -56,7 +56,7 @@ class FinalImagePositions implements UnavailableImageHandler
 
     void removePosition(final int aeronSessionId)
     {
-        final Integer boxedAeronSessionId = Integer.valueOf(aeronSessionId);
+        final Integer boxedAeronSessionId = aeronSessionId;
         sessionIdToPosition.compute(boxedAeronSessionId, removeOrSetWitness);
     }
 

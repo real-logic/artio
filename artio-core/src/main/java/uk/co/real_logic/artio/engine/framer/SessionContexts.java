@@ -70,7 +70,7 @@ public class SessionContexts
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         null,
         Session.UNKNOWN,
-        (int)Session.UNKNOWN,
+        Session.UNKNOWN,
         Session.UNKNOWN_TIME,
         Session.UNKNOWN_TIME,
         null,

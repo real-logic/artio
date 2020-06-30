@@ -75,7 +75,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static Class<?> allReqFieldTypesMessage;
     private static Class<?> enumTestMessage;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {

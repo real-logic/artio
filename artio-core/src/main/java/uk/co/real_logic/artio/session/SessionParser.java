@@ -62,7 +62,7 @@ public class SessionParser
 
     private final Session session;
     private final MessageValidationStrategy validationStrategy;
-    private ErrorHandler errorHandler;
+    private final ErrorHandler errorHandler;
     private CompositeKey compositeKey;
 
     public SessionParser(

@@ -125,7 +125,7 @@ public class FramerTest
         .onInitiateLogon("local", "", "", "remote", "", "");
     private final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
 
-    private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
+    private final FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
     @SuppressWarnings("unchecked")
     private final ArgumentCaptor<List<ConnectedSessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);

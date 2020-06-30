@@ -35,7 +35,7 @@ public class ILink3ContextsTest
     public static final String HOST = "host";
     public static final String ACCESS_KEY_ID = "key";
 
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private File file;
     private ILink3Contexts contexts;
 

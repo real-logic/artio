@@ -39,10 +39,10 @@ public class IndexedPositionTest
     private static final int RECORDING_ID = 3;
     private static final int OTHER_RECORDING_ID = 4;
 
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
-    private IndexedPositionWriter writer = newWriter();
-    private IndexedPositionReader reader = new IndexedPositionReader(buffer);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
+    private final IndexedPositionWriter writer = newWriter();
+    private final IndexedPositionReader reader = new IndexedPositionReader(buffer);
 
     @After
     public void noErrors()

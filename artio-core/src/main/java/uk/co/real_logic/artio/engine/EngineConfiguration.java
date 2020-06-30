@@ -205,9 +205,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(RECEIVER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE);
     private int senderSocketBufferSize =
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
-    private int sequenceNumberIndexSize =
+    private final int sequenceNumberIndexSize =
         getInteger(SEQUENCE_NUMBER_INDEX_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE);
-    private int sessionIdBufferSize =
+    private final int sessionIdBufferSize =
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
     private int senderMaxBytesInBuffer =
         getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
@@ -231,7 +231,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
     private boolean lookupDefaultAcceptorfixDictionary = true;
-    private Map<String, FixDictionary> acceptorFixDictionaryOverrides = new HashMap<>();
+    private final Map<String, FixDictionary> acceptorFixDictionaryOverrides = new HashMap<>();
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
     private boolean bindAtStartup = false;

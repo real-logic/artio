@@ -68,20 +68,20 @@ public class ReceiverEndPointTest
 
     private final AcceptorLogonResult pendingAuth = createSuccessfulPendingAuth();
     private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
-    private TcpChannel mockChannel = mock(TcpChannel.class);
-    private GatewayPublication publication = mock(GatewayPublication.class);
-    private SessionContexts mockSessionContexts = mock(SessionContexts.class);
-    private AtomicCounter messagesRead = mock(AtomicCounter.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private Framer framer = mock(Framer.class);
-    private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private InternalSession session = mock(InternalSession.class);
-    private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
-    private CompositeKey sessionKey = SessionIdStrategy
+    private final TcpChannel mockChannel = mock(TcpChannel.class);
+    private final GatewayPublication publication = mock(GatewayPublication.class);
+    private final SessionContexts mockSessionContexts = mock(SessionContexts.class);
+    private final AtomicCounter messagesRead = mock(AtomicCounter.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final Framer framer = mock(Framer.class);
+    private final GatewaySession gatewaySession = mock(GatewaySession.class);
+    private final InternalSession session = mock(InternalSession.class);
+    private final GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
+    private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
     private FixReceiverEndPoint endPoint;
-    private Clock mockClock = mock(Clock.class);
+    private final Clock mockClock = mock(Clock.class);
 
     private AcceptorLogonResult createSuccessfulPendingAuth()
     {
@@ -330,7 +330,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void invalidChecksumMessageRecorded() throws IOException
+    public void invalidChecksumMessageRecorded()
     {
         theEndpointReceivesAMessageWithInvalidChecksum();
 

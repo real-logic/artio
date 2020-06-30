@@ -265,8 +265,8 @@ public final class SessionConfiguration
     {
         private String username;
         private String password;
-        private List<String> hosts = new ArrayList<>();
-        private IntArrayList ports = new IntArrayList();
+        private final List<String> hosts = new ArrayList<>();
+        private final IntArrayList ports = new IntArrayList();
         private String senderCompId;
         private String senderSubId = "";
         private String senderLocationId = "";

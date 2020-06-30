@@ -109,7 +109,7 @@ public abstract class AbstractSessionTest
             anyLong(),
             any(),
             anyInt(),
-            eq((DirectBuffer)null),
+            eq(null),
             eq(0))).thenReturn(POSITION);
 
         when(sessionProxy.sendResendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX), anyInt()))

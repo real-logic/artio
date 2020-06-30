@@ -26,16 +26,16 @@ import static org.junit.Assert.*;
 
 public class FixMessagePredicateTest
 {
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
-    private FixMessageEncoder encoder = new FixMessageEncoder()
+    private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
+    private final FixMessageEncoder encoder = new FixMessageEncoder()
         .wrap(buffer, 0)
         .body("123ABC123");
-    private FixMessageDecoder decoder = new FixMessageDecoder()
+    private final FixMessageDecoder decoder = new FixMessageDecoder()
         .wrap(buffer, 0, encoder.sbeBlockLength(), encoder.sbeSchemaVersion());
 
-    private FixMessagePredicate middleAbc = FixMessagePredicates.bodyMatches(Pattern.compile(".*ABC.*"));
-    private FixMessagePredicate starts123 = FixMessagePredicates.bodyMatches(Pattern.compile("123.*"));
-    private FixMessagePredicate startsAbc = FixMessagePredicates.bodyMatches(Pattern.compile("abc.*"));
+    private final FixMessagePredicate middleAbc = FixMessagePredicates.bodyMatches(Pattern.compile(".*ABC.*"));
+    private final FixMessagePredicate starts123 = FixMessagePredicates.bodyMatches(Pattern.compile("123.*"));
+    private final FixMessagePredicate startsAbc = FixMessagePredicates.bodyMatches(Pattern.compile("abc.*"));
 
     @Test
     public void andShouldBeCompositional()

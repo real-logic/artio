@@ -81,19 +81,19 @@ public class ReplayerTest extends AbstractLogTest
 
     private static final int MAX_CLAIM_ATTEMPTS = 100;
 
-    private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private Subscription subscription = mock(Subscription.class);
-    private IdleStrategy idleStrategy = mock(IdleStrategy.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private EpochClock clock = mock(EpochClock.class);
-    private ArgumentCaptor<MessageTracker> messageTracker =
+    private final ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private final Subscription subscription = mock(Subscription.class);
+    private final IdleStrategy idleStrategy = mock(IdleStrategy.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final EpochClock clock = mock(EpochClock.class);
+    private final ArgumentCaptor<MessageTracker> messageTracker =
         ArgumentCaptor.forClass(MessageTracker.class);
-    private Header fragmentHeader = mock(Header.class);
-    private ReplayHandler replayHandler = mock(ReplayHandler.class);
-    private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
-    private ReplayOperation replayOperation = mock(ReplayOperation.class);
-    private AtomicCounter bytesInBufferCounter = mock(AtomicCounter.class);
-    private AtomicCounter currentReplayCounter = mock(AtomicCounter.class);
+    private final Header fragmentHeader = mock(Header.class);
+    private final ReplayHandler replayHandler = mock(ReplayHandler.class);
+    private final SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
+    private final ReplayOperation replayOperation = mock(ReplayOperation.class);
+    private final AtomicCounter bytesInBufferCounter = mock(AtomicCounter.class);
+    private final AtomicCounter currentReplayCounter = mock(AtomicCounter.class);
 
     private Replayer replayer;
 

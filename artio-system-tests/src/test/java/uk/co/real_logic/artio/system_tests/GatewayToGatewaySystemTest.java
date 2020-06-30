@@ -64,7 +64,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private static final String NEW_PASSWORD = "ABCDEF";
 
     private CapturingAuthenticationStrategy auth;
-    private MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
+    private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
     @Before
     public void launch()

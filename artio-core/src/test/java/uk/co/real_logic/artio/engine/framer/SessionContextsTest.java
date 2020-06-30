@@ -56,26 +56,27 @@ public class SessionContextsTest
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int TEST_INITIAL_SEQUENCE = 721;
 
-    private long time = System.currentTimeMillis();
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
-    private MappedFile mappedFile = mock(MappedFile.class);
-    private SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
+    private final long time = System.currentTimeMillis();
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    private final MappedFile mappedFile = mock(MappedFile.class);
+    private final SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
     private SessionContexts sessionContexts = newSessionContexts(buffer);
-    private MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(ByteBuffer.allocate(BUFFER_SIZE));
-    private LogonEncoder logonEncoder = new LogonEncoder();
-    private FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
+    private final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    private final LogonEncoder logonEncoder = new LogonEncoder();
+    private final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
 
-    private CompositeKey aSession = idStrategy.onInitiateLogon("a", null, null, "b", null, null);
-    private CompositeKey bSession = idStrategy.onInitiateLogon("b", null, null, "a", null, null);
-    private CompositeKey cSession = idStrategy.onInitiateLogon("c", null, null, "c", null, null);
-    private CompositeKey otherSession = idStrategy.onInitiateLogon("acceptor", null, null, "initiator", null, null);
+    private final CompositeKey aSession = idStrategy.onInitiateLogon("a", null, null, "b", null, null);
+    private final CompositeKey bSession = idStrategy.onInitiateLogon("b", null, null, "a", null, null);
+    private final CompositeKey cSession = idStrategy.onInitiateLogon("c", null, null, "c", null, null);
+    private final CompositeKey otherSession = idStrategy.onInitiateLogon(
+        "acceptor", null, null, "initiator", null, null);
 
     @Test
     public void sessionContextsAreUnique()
     {
-        assertNotEquals(sessionContexts.onLogon(aSession, fixDictionary), sessionContexts.onLogon(bSession,
-            fixDictionary));
+        assertNotEquals(sessionContexts.onLogon(aSession, fixDictionary),
+            sessionContexts.onLogon(bSession, fixDictionary));
     }
 
     @Test

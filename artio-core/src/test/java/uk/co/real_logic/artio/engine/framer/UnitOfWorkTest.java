@@ -25,7 +25,7 @@ import static org.junit.Assert.assertEquals;
 public class UnitOfWorkTest
 {
     private long firstStep = 1;
-    private UnitOfWork unitOfWork = new UnitOfWork(() -> firstStep, () -> 1);
+    private final UnitOfWork unitOfWork = new UnitOfWork(() -> firstStep, () -> 1);
 
     @Test
     public void shouldContinueUnitOfWorkWhenComplete()

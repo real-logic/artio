@@ -37,9 +37,9 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 
 public class Server implements Agent
 {
-    private ArchivingMediaDriver mediaDriver;
-    private FixEngine fixEngine;
-    private FixLibrary fixLibrary;
+    private final ArchivingMediaDriver mediaDriver;
+    private final FixEngine fixEngine;
+    private final FixLibrary fixLibrary;
 
     public Server()
     {
@@ -87,7 +87,7 @@ public class Server implements Agent
         return new AgentRunner(idleStrategy, errorHandler, null, new Server());
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
         return fixLibrary.poll(1);
     }

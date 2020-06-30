@@ -38,10 +38,10 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 public class GapFillerTest extends AbstractLogTest
 {
-    private GatewayPublication publication = mock(GatewayPublication.class);
-    private Subscription subscription = mock(Subscription.class);
-    private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
-    private GapFiller gapFiller = new GapFiller(
+    private final GatewayPublication publication = mock(GatewayPublication.class);
+    private final Subscription subscription = mock(Subscription.class);
+    private final SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
+    private final GapFiller gapFiller = new GapFiller(
         subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers,
         mock(ReplayerCommandQueue.class), new FakeFixSessionCodecsFactory());
 

@@ -70,17 +70,17 @@ public class LibraryPollerTest
     private static final List<String> CLUSTER_CHANNELS = asList(FIRST_CHANNEL, LEADER_CHANNEL, "3");
     private static final int SEQUENCE_INDEX = 0;
 
-    private ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
-    private LibraryConnectHandler connectHandler = mock(LibraryConnectHandler.class);
-    private SessionHandler sessionHandler = mock(SessionHandler.class);
-    private SessionAcquireHandler sessionAcquireHandler = mock(SessionAcquireHandler.class);
-    private GatewayPublication outboundPublication = mock(GatewayPublication.class);
-    private Subscription inboundSubscription = mock(Subscription.class);
-    private LibraryTransport transport = mock(LibraryTransport.class);
-    private FixCounters counters = mock(FixCounters.class);
-    private FixLibrary fixLibrary = mock(FixLibrary.class);
-    private String address = "localhost:1234";
-    private FakeEpochClock clock = new FakeEpochClock();
+    private final ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
+    private final LibraryConnectHandler connectHandler = mock(LibraryConnectHandler.class);
+    private final SessionHandler sessionHandler = mock(SessionHandler.class);
+    private final SessionAcquireHandler sessionAcquireHandler = mock(SessionAcquireHandler.class);
+    private final GatewayPublication outboundPublication = mock(GatewayPublication.class);
+    private final Subscription inboundSubscription = mock(Subscription.class);
+    private final LibraryTransport transport = mock(LibraryTransport.class);
+    private final FixCounters counters = mock(FixCounters.class);
+    private final FixLibrary fixLibrary = mock(FixLibrary.class);
+    private final String address = "localhost:1234";
+    private final FakeEpochClock clock = new FakeEpochClock();
 
     private LibraryPoller library;
 

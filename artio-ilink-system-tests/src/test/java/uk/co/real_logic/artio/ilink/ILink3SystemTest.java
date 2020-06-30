@@ -44,8 +44,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -67,7 +65,7 @@ public class ILink3SystemTest
     private FakeILink3ConnectionHandler handler = spy(new FakeILink3ConnectionHandler(NotAppliedResponse::gapfill));
 
     private int testKeepAliveIntervalInMs = TEST_KEEP_ALIVE_INTERVAL_IN_MS;
-    private int port = unusedPort();
+    private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private TestSystem testSystem;
     private FixEngine engine;
@@ -75,7 +73,7 @@ public class ILink3SystemTest
     private ILink3TestServer testServer;
     private Reply<ILink3Connection> reply;
     private ILink3Connection connection;
-    private ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
+    private final ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
 
     private boolean noExpectedError;
 

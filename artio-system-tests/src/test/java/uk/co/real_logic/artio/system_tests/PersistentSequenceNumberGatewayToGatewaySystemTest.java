@@ -71,7 +71,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertConnected(initiatingSession);
     };
 
-    private ErrorCounter errorCounter = new ErrorCounter();
+    private final ErrorCounter errorCounter = new ErrorCounter();
     private Runnable duringRestart = () -> dirsDeleteOnStart = false;
     private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
@@ -150,7 +150,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final FixMessage gapFillMessage =
             testSystem.awaitMessageOf(acceptingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
-        final int newSeqNo = Integer.valueOf(gapFillMessage.get(Constants.NEW_SEQ_NO));
+        final int newSeqNo = Integer.parseInt(gapFillMessage.get(Constants.NEW_SEQ_NO));
         final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
 
         assertEquals("Y", gapFillFlag);

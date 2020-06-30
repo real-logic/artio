@@ -33,7 +33,7 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private InitiatorSession session;
+    private final InitiatorSession session;
     {
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,

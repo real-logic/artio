@@ -92,7 +92,6 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
         sessions.forEach(this::messagesCanBeExchanged);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldBeNotifiedOnSessionLogoutAndDisconnect()
     {

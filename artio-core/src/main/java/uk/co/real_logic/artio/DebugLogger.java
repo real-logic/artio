@@ -29,7 +29,6 @@ import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.CommonConfiguration.*;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
 
 /**
  * A logger purely for debug data. Not optimised for high performance logging, but all logging calls must be removable

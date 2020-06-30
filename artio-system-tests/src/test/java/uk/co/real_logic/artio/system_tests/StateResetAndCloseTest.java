@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
 
-    private Backup backup = new Backup();
+    private final Backup backup = new Backup();
 
     @After
     public void cleanup()

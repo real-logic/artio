@@ -90,7 +90,7 @@ public abstract class Generator
 
     protected final Dictionary dictionary;
     protected final String thisPackage;
-    private String commonPackage;
+    private final String commonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
     protected final Class<?> rejectUnknownFieldClass;

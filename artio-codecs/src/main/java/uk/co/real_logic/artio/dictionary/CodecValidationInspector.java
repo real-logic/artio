@@ -116,7 +116,7 @@ public class CodecValidationInspector
     }
 
     public static void compileOnDisk(final String className, final Collection<File> files)
-        throws ClassNotFoundException, IOException
+        throws IOException
     {
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (null == compiler)

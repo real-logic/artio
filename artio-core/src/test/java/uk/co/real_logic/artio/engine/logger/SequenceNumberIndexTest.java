@@ -66,12 +66,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final String INDEX_FILE_PATH = IoUtil.tmpDirName() + "/SequenceNumberIndex";
 
-    private AtomicBuffer inMemoryBuffer = newBuffer();
+    private final AtomicBuffer inMemoryBuffer = newBuffer();
 
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
-    private FakeEpochClock clock = new FakeEpochClock();
+    private final FakeEpochClock clock = new FakeEpochClock();
 
     private ArchivingMediaDriver mediaDriver;
     private AeronArchive aeronArchive;

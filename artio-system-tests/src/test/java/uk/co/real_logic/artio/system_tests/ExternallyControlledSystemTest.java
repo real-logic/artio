@@ -53,7 +53,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 {
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private SessionWriter acceptingSessionWriter = null;
-    private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
+    private final FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
     {
         public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
         {

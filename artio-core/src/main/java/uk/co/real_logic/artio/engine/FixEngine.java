@@ -53,7 +53,7 @@ public final class FixEngine extends GatewayProcess
     private final EngineConfiguration configuration;
     private final RecordingCoordinator recordingCoordinator;
 
-    private EngineScheduler scheduler;
+    private final EngineScheduler scheduler;
     private FramerContext framerContext;
     private EngineContext engineContext;
 

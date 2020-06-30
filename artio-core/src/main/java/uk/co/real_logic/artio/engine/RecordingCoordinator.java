@@ -530,8 +530,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     static final class RecordingIds
     {
-        private LongHashSet free = new LongHashSet();
-        private LongHashSet used = new LongHashSet();
+        private final LongHashSet free = new LongHashSet();
+        private final LongHashSet used = new LongHashSet();
 
         int size()
         {

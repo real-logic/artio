@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class OtfParserBenchmark
 {
     // Deliberately not static/final
-    private UnsafeBuffer buffer = TestData.NEW_ORDER_SINGLE;
+    private final UnsafeBuffer buffer = TestData.NEW_ORDER_SINGLE;
 
     private OtfParser blackholeParser;
     private OtfParser noBlackholeParser;

@@ -69,7 +69,7 @@ class LookupSessionIdCommand implements AdminCommand, Reply<Long>
 
     void complete(final long sessionId)
     {
-        this.sessionId = Long.valueOf(sessionId);
+        this.sessionId = sessionId;
         state = State.COMPLETED;
     }
 

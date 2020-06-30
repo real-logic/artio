@@ -27,13 +27,13 @@ import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 
 public class LowResourceEngineSchedulerTest
 {
-    private Agent framer = mock(Agent.class);
-    private Agent archivingAgent = mock(Agent.class);
-    private Agent monitoringAgent = mock(Agent.class);
-    private EngineConfiguration configuration = mock(EngineConfiguration.class);
-    private Agent conductorAgent = mock(Agent.class);
-    private ErrorHandler mockErrorHandler = mock(ErrorHandler.class);
-    private RecordingCoordinator recordingCoordinator = mock(RecordingCoordinator.class);
+    private final Agent framer = mock(Agent.class);
+    private final Agent archivingAgent = mock(Agent.class);
+    private final Agent monitoringAgent = mock(Agent.class);
+    private final EngineConfiguration configuration = mock(EngineConfiguration.class);
+    private final Agent conductorAgent = mock(Agent.class);
+    private final ErrorHandler mockErrorHandler = mock(ErrorHandler.class);
+    private final RecordingCoordinator recordingCoordinator = mock(RecordingCoordinator.class);
 
     @Test
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception

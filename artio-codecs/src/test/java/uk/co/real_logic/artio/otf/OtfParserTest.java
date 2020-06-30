@@ -42,12 +42,12 @@ public class OtfParserTest
 
     public static final int LENGTH = 16 * 1024;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH]);
-    private OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
-    private LongDictionary groupToField = new LongDictionary();
-    private OtfParser parser = new OtfParser(mockAcceptor, groupToField);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH]);
+    private final OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
+    private final LongDictionary groupToField = new LongDictionary();
+    private final OtfParser parser = new OtfParser(mockAcceptor, groupToField);
 
-    private InOrder inOrder = inOrder(mockAcceptor);
+    private final InOrder inOrder = inOrder(mockAcceptor);
 
     @Theory
     public void notifiesAcceptorOfMessageStart(final int offset)

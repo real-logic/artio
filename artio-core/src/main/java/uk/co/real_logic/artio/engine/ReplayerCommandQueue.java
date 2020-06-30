@@ -30,7 +30,7 @@ public class ReplayerCommandQueue
     // Written on Framer, Read on Indexer
     private final OneToOneConcurrentArrayQueue<ReplayerCommand> queue
         = new OneToOneConcurrentArrayQueue<>(CAPACITY);
-    private Consumer<ReplayerCommand> onReplayerCommand = this::onReplayerCommand;
+    private final Consumer<ReplayerCommand> onReplayerCommand = this::onReplayerCommand;
 
     public ReplayerCommandQueue(final IdleStrategy framerIdleStrategy)
     {
