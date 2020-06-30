@@ -577,7 +577,7 @@ project(':artio-system-tests') {
 
             from sourceSets.main.output
             from sourceSets.perf.output
-            from project.configurations.perfRuntime
+            from project.configurations.perfRuntimeClasspath
 
             manifest.attributes('Main-Class': 'org.openjdk.jmh.Main')
         }
