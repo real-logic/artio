@@ -124,7 +124,7 @@ class IndexedPositionWriter
             while (true)
             {
                 offset = checksumFramer.claim(offset, RECORD_LENGTH);
-                if (position == OUT_OF_SPACE)
+                if (offset == OUT_OF_SPACE)
                 {
                     errorHandler.onError(new IllegalStateException(String.format(
                         "Unable to record new session (%d), indexed position buffer full",
