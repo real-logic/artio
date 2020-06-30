@@ -136,6 +136,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 4 * 1024 * 1024;
+    public static final int DEFAULT_REPLAY_POSITION_BUFFER_SIZE = 4 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int)SECONDS.toMillis(5);
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
     public static final String DEFAULT_ILINK3_ID_FILE = "ilink3_id_buffer";
@@ -238,6 +239,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int initialSequenceIndex = DEFAULT_INITIAL_SEQUENCE_INDEX;
     private MessageTimingHandler messageTimingHandler = null;
     private int maxConcurrentSessionReplays = DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
+    private int replayPositionBufferSize = DEFAULT_REPLAY_POSITION_BUFFER_SIZE;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -771,6 +773,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration replayPositionBufferSize(final int replayPositionBufferSize)
+    {
+        this.replayPositionBufferSize = replayPositionBufferSize;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -983,6 +991,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int maxConcurrentSessionReplays()
     {
         return maxConcurrentSessionReplays;
+    }
+
+    public int replayPositionBufferSize()
+    {
+        return replayPositionBufferSize;
     }
 
     /**

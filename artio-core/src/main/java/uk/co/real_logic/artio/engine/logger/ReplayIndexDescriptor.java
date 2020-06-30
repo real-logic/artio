@@ -27,8 +27,6 @@ import java.util.Objects;
 
 public final class ReplayIndexDescriptor
 {
-    static final int REPLAY_POSITION_BUFFER_SIZE = 4 * 1024;
-
     private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
@@ -71,10 +69,10 @@ public final class ReplayIndexDescriptor
         return sessionIds;
     }
 
-    public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId)
+    public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId, final int bufferSize)
     {
         final String pathname = replayPositionPath(logFileDir, streamId);
-        return new UnsafeBuffer(LoggerUtil.map(new File(pathname), REPLAY_POSITION_BUFFER_SIZE));
+        return new UnsafeBuffer(LoggerUtil.map(new File(pathname), bufferSize));
     }
 
     static String replayPositionPath(final String logFileDir, final int streamId)
