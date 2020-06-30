@@ -174,7 +174,7 @@ public class EngineContext implements AutoCloseable
             cacheNumSets,
             cacheSetSize,
             LoggerUtil::map,
-            ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
+            ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId, configuration.replayPositionBufferSize()),
             errorHandler,
             recordingIdLookup,
             connectionIdToILinkUuid);

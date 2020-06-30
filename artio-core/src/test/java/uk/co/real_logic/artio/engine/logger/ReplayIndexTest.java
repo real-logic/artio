@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -59,7 +60,6 @@ import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.REPLAY_POSITION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayIndexTest extends AbstractLogTest
@@ -83,7 +83,8 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private ReplayIndex replayIndex;
 
-    private final UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
+    private final UnsafeBuffer replayPositionBuffer =
+        new UnsafeBuffer(new byte[EngineConfiguration.DEFAULT_REPLAY_POSITION_BUFFER_SIZE]);
     private final IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private final IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
 
