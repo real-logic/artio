@@ -53,7 +53,7 @@ public class CodecValidationInspector
 
         System.out.println("message = " + message);
 
-        CodecGenerationTool.main(new String[] {outputDirPath, dictionaryFile});
+        CodecGenerationTool.main(new String[]{ outputDirPath, dictionaryFile });
 
         final File outputDir = new File(outputDirPath);
         final List<File> files = new ArrayList<>();
