@@ -48,7 +48,7 @@ public class PruneOperation
         private final CharFormatter foundPositionsFormatter = new CharFormatter(
             "PruneOperation: complete recordingIdToNewStartPosition=%s%n");
         private final CharFormatter filteredRecordingFormatter = new CharFormatter(
-            "PruneOperation: filtered recordingId=%s%n");
+            "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s,%n");
     }
 
     private final Formatters formatters;
@@ -205,7 +205,8 @@ public class PruneOperation
                 // Don't prune if you're < a segment away from the start of the stream.
                 if (segmentStartPosition < lowerBoundPrunePosition)
                 {
-                    DebugLogger.log(STATE_CLEANUP, formatters.filteredRecordingFormatter, recordingId);
+                    DebugLogger.log(STATE_CLEANUP, formatters.filteredRecordingFormatter,
+                        recordingId, segmentStartPosition, lowerBoundPrunePosition);
                     it.remove();
                 }
                 else
