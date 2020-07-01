@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -32,7 +33,7 @@ class AcceptorFixDictionaryLookup
 
     private final FixDictionary defaultfixDictionary;
     private final Map<String, FixDictionary> fixVersionToDictionaryOverride;
-    private final Map<FixDictionary, SessionHeaderDecoder> dictionaryToSessionHeader;
+    private final Map<FixDictionary, CachedDecoders> dictionaryToDecoders;
 
     AcceptorFixDictionaryLookup(
         final FixDictionary defaultfixDictionary, final Map<String, FixDictionary> fixVersionToDictionaryOverride)
@@ -40,7 +41,7 @@ class AcceptorFixDictionaryLookup
         this.defaultfixDictionary = defaultfixDictionary;
         this.fixVersionToDictionaryOverride = fixVersionToDictionaryOverride;
 
-        dictionaryToSessionHeader = new HashMap<>();
+        dictionaryToDecoders = new HashMap<>();
     }
 
     FixDictionary lookup(final AsciiBuffer buffer, final int offset, final int length)
@@ -57,11 +58,31 @@ class AcceptorFixDictionaryLookup
         return fixVersionToDictionaryOverride.getOrDefault(beginString, defaultfixDictionary);
     }
 
-    SessionHeaderDecoder lookupHeaderDecoder(
-        final FixDictionary dictionary)
+    SessionHeaderDecoder lookupHeaderDecoder(final FixDictionary dictionary)
     {
-        // We pool the SessionHeaderDecoder
-        return dictionaryToSessionHeader.computeIfAbsent(dictionary, FixDictionary::makeHeaderDecoder);
+        return lookupCachedDecoders(dictionary).sessionHeaderDecoder;
+    }
+
+    AbstractSequenceResetDecoder lookupSequenceResetDecoder(final FixDictionary dictionary)
+    {
+        return lookupCachedDecoders(dictionary).sequenceResetDecoder;
+    }
+
+    private CachedDecoders lookupCachedDecoders(final FixDictionary dictionary)
+    {
+        return dictionaryToDecoders.computeIfAbsent(dictionary, CachedDecoders::new);
+    }
+
+    private static final class CachedDecoders
+    {
+        private final SessionHeaderDecoder sessionHeaderDecoder;
+        private final AbstractSequenceResetDecoder sequenceResetDecoder;
+
+        private CachedDecoders(final FixDictionary dictionary)
+        {
+            sessionHeaderDecoder = dictionary.makeHeaderDecoder();
+            sequenceResetDecoder = dictionary.makeSequenceResetDecoder();
+        }
     }
 
 }

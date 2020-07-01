@@ -722,7 +722,8 @@ public class Session
     }
 
     /**
-     * Acts like {@link #trySendSequenceReset(int, int)} but also resets the received sequence number.
+     * Acts like {@link #trySendSequenceReset(int)} but also resets the received sequence number. This method
+     * can be used to reset sequence numbers of offline sessions.
      *
      * @param nextSentMessageSequenceNumber     the new sequence number of the next message to be
      *                                          sent.
@@ -735,7 +736,8 @@ public class Session
         final int nextReceivedMessageSequenceNumber)
     {
         final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
-        lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
+        // Do not reset the sequence index at this point.
+        lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
         if (redact(NO_REQUIRED_POSITION))
         {
             this.sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));

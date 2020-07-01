@@ -29,6 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
@@ -66,6 +67,8 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -1205,11 +1208,49 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long now = outboundTimer.recordSince(timestamp);
 
-        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
+        final boolean online = senderEndPoints.onMessage(
+            libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
+
+        if (!online)
+        {
+            checkOfflineSequenceReset(sessionId, messageType, buffer, offset, length);
+        }
 
         sendTimer.recordSince(now);
 
         return CONTINUE;
+    }
+
+    private void checkOfflineSequenceReset(
+        final long sessionId, final long messageType, final DirectBuffer buffer, final int offset, final int length)
+    {
+        if (messageType == LOGON_MESSAGE_TYPE)
+        {
+            // Always a sequence reset
+            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            if (entry != null)
+            {
+                final SessionContext context = entry.getValue();
+                context.onSequenceReset(clock.time());
+            }
+        }
+        else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
+        {
+            // If it's not a gap-fill it's a sequence reset
+            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            if (entry != null)
+            {
+                final SessionContext context = entry.getValue();
+                final AbstractSequenceResetDecoder decoder = acceptorFixDictionaryLookup.lookupSequenceResetDecoder(
+                    context.lastFixDictionary());
+                asciiBuffer.wrap(buffer);
+                decoder.decode(asciiBuffer, offset, length);
+                if (!decoder.hasGapFillFlag() || !decoder.gapFillFlag())
+                {
+                    context.onSequenceReset(clock.time());
+                }
+            }
+        }
     }
 
     public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)

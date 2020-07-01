@@ -26,7 +26,6 @@ public final class SessionConstants
     public static final int MIN_MESSAGE_SIZE = FIXT_HEADER_LENGTH + 6;
 
     // Message Types
-
     public static final int BODY_LENGTH = 9;
     public static final int CHECKSUM = 10;
     public static final int MSG_SEQ_NO = 34;

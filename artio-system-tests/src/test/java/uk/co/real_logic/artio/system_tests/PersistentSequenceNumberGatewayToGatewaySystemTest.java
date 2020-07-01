@@ -473,16 +473,21 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         launch(this::nothing);
         connectPersistingSessions();
+        assertEquals(0, acceptingSession.sequenceIndex());
         disconnectSessions();
         clearMessages();
 
         acquireAcceptingSession();
+        assertOfflineSession(acceptingSession.id(), acceptingSession);
+        assertEquals(0, acceptingSession.sequenceIndex());
 
         final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
         cannotConnectWithSequence(acceptorSequenceNumber, 1);
 
+        assertEquals(0, acceptingSession.sequenceIndex());
         assertThat(acceptingSession.trySendSequenceReset(1, 1),
             greaterThan(0L));
+        assertEquals(1, acceptingSession.sequenceIndex());
 
         initiatingOtfAcceptor.messages().clear();
 
@@ -491,6 +496,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
         assertEquals(1, logon.messageSequenceNumber());
+
+        // Ensure that the sequenceIndex is correct after the reset
+        assertEquals(1, acceptingSession.sequenceIndex());
     }
 
     private void connectPersistingSessions()
