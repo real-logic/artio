@@ -405,7 +405,7 @@ public class ReplayQuery implements AutoCloseable
                         recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
                         highestSequenceIndex = sequenceIndex;
                     }
-                    else
+                    else if (sequenceIndex == highestSequenceIndex)
                     {
                         // Might have other messages on different recording ids
                         final long oldPosition = recordingIdToStartPosition.get(recordingId);
@@ -422,7 +422,6 @@ public class ReplayQuery implements AutoCloseable
                     idleStrategy.idle();
                 }
             }
-
 
             return recordingIdToStartPosition;
         }
