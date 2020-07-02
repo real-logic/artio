@@ -65,6 +65,7 @@ class FixReplayerSession extends ReplayerSession
 
     private enum State
     {
+        INITIAL,
         REPLAYING,
         CHECK_REPLAY,
         SEND_COMPLETE_MESSAGE
@@ -141,7 +142,7 @@ class FixReplayerSession extends ReplayerSession
             publication.maxPayloadLength(),
             LogTag.FIX_MESSAGE);
 
-        state = State.REPLAYING;
+        state = State.INITIAL;
     }
 
     MessageTracker messageTracker()
@@ -289,17 +290,21 @@ class FixReplayerSession extends ReplayerSession
     {
         switch (state)
         {
-            case REPLAYING:
+            case INITIAL:
+                state = State.REPLAYING;
                 DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: REPLAYING step");
+                return attemptReplay();
+
+            case REPLAYING:
                 if (replayOperation.attemptReplay())
                 {
                     state = State.CHECK_REPLAY;
+                    DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: CHECK_REPLAY step");
                     return attemptReplay();
                 }
                 return false;
 
             case CHECK_REPLAY:
-                DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: CHECK_REPLAY step");
                 if (completeReplay())
                 {
                     state = State.SEND_COMPLETE_MESSAGE;

@@ -38,6 +38,15 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
  */
 public class ReplayOperation
 {
+    private enum State
+    {
+        INITIAL,
+        ACQURING_RANGE,
+        WAITING_FOR_ARCHIVING,
+        ACQURING_IMAGE,
+        POLLING_IMAGE
+    }
+
     private static final ThreadLocal<CharFormatter> RECORDING_RANGE_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Attempting Recording Range:" +
         " RecordingRange{" +
@@ -71,6 +80,7 @@ public class ReplayOperation
     private RecordingRange recordingRange;
     private int aeronSessionId;
     private Image image;
+    private State state = State.INITIAL;
 
     ReplayOperation(
         final List<RecordingRange> ranges,
@@ -104,14 +114,18 @@ public class ReplayOperation
     {
         if (recordingRange == null)
         {
+            state = State.ACQURING_RANGE;
             DebugLogger.log(logTag, "Acquiring Recording Range");
             if (ranges.isEmpty())
             {
                 return true;
             }
-
-            recordingRange = ranges.get(0);
+            recordingRange = ranges.remove(0);
             logRange();
+        }
+
+        if (state == State.ACQURING_RANGE || state == State.WAITING_FOR_ARCHIVING)
+        {
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
             final long endPosition = beginPosition + length;
@@ -119,15 +133,13 @@ public class ReplayOperation
 
             if (archivingNotComplete(endPosition, recordingId))
             {
-                DebugLogger.log(logTag, "Archiving not complete");
-
+                if (state != State.WAITING_FOR_ARCHIVING)
+                {
+                    DebugLogger.log(logTag, "Archiving not complete");
+                }
                 // Retry on the next iteration
-                recordingRange = null;
+                state = State.WAITING_FOR_ARCHIVING;
                 return false;
-            }
-            else
-            {
-                ranges.remove(0);
             }
 
             try
@@ -140,6 +152,7 @@ public class ReplayOperation
                     archiveReplayStream);
 
                 messageTracker.reset();
+                state = State.POLLING_IMAGE;
 
                 // reset the image if the new recordingRange requires it
                 if (image != null && aeronSessionId != image.sessionId())
@@ -157,14 +170,18 @@ public class ReplayOperation
 
         if (image == null)
         {
-            DebugLogger.log(logTag, "Acquiring Replay Image");
-
+            if (state != State.ACQURING_IMAGE)
+            {
+                DebugLogger.log(logTag, "Acquiring Replay Image");
+                state = State.ACQURING_IMAGE;
+            }
             image = subscription.imageBySessionId(aeronSessionId);
 
             return false;
         }
         else
         {
+            state = State.POLLING_IMAGE;
             if (DebugLogger.isEnabled(logTag))
             {
                 DebugLogger.log(logTag, POLLING_REPLAY_FORMATTER.get().clear().with(image.position()));
@@ -221,6 +238,7 @@ public class ReplayOperation
 
         replayedMessages += recordingRangeCount;
         recordingRange = null;
+        state = State.INITIAL;
 
         return ranges.isEmpty();
     }
@@ -237,6 +255,7 @@ public class ReplayOperation
         replayedMessages += recordingRangeCount;
         recordingRange = null;
         image = null;
+        state = State.INITIAL;
 
         return ranges.isEmpty();
     }
