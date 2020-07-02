@@ -3,6 +3,7 @@ package uk.co.real_logic.artio.fields;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 import static java.math.RoundingMode.UNNECESSARY;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,38 +33,38 @@ public class DecimalFloatToAndFromDoubleTest
     public void shouldConvertFromDoubleAccurately()
     {
         final StringBuilder builder = new StringBuilder();
-        assertEquals(String.format("%.0f", 0.0),
+        assertEquals(String.format(Locale.US, "%.0f", 0.0),
             buildDecimalFloatStringFromDouble(0.0, builder));
-        assertEquals(String.format("%.0f", 1.0),
+        assertEquals(String.format(Locale.US, "%.0f", 1.0),
             buildDecimalFloatStringFromDouble(1.0, builder));
-        assertEquals(String.format("%.0f", -1.0),
+        assertEquals(String.format(Locale.US, "%.0f", -1.0),
             buildDecimalFloatStringFromDouble(-1.0, builder));
-        assertEquals(String.format("%.0f", 87653.0),
+        assertEquals(String.format(Locale.US, "%.0f", 87653.0),
             buildDecimalFloatStringFromDouble(87653.0, builder));
-        assertEquals(String.format("%.0f", -237849.0),
+        assertEquals(String.format(Locale.US, "%.0f", -237849.0),
             buildDecimalFloatStringFromDouble(-237849.0, builder));
 
-        assertEquals(String.format("%.2f", 0.01),
+        assertEquals(String.format(Locale.US, "%.2f", 0.01),
             buildDecimalFloatStringFromDouble(0.01, builder));
-        assertEquals(String.format("%.1f", 0.1),
+        assertEquals(String.format(Locale.US, "%.1f", 0.1),
             buildDecimalFloatStringFromDouble(0.1, builder));
-        assertEquals(String.format("%.1f", -0.1),
+        assertEquals(String.format(Locale.US, "%.1f", -0.1),
             buildDecimalFloatStringFromDouble(-0.1, builder));
-        assertEquals(String.format("%.5f", 0.98374),
+        assertEquals(String.format(Locale.US, "%.5f", 0.98374),
             buildDecimalFloatStringFromDouble(0.98374, builder));
-        assertEquals(String.format("%.6f", 0.983745),
+        assertEquals(String.format(Locale.US, "%.6f", 0.983745),
             buildDecimalFloatStringFromDouble(0.983745, builder));
-        assertEquals(String.format("%.6f", -7284.928374),
+        assertEquals(String.format(Locale.US, "%.6f", -7284.928374),
             buildDecimalFloatStringFromDouble(-7284.928374, builder));
-        assertEquals(String.format("%.8f", 0.00007284),
+        assertEquals(String.format(Locale.US, "%.8f", 0.00007284),
             buildDecimalFloatStringFromDouble(0.00007284, builder));
-        assertEquals(String.format("%.14f", -0.00000000000001),
+        assertEquals(String.format(Locale.US, "%.14f", -0.00000000000001),
             buildDecimalFloatStringFromDouble(-0.00000000000001, builder));
-        assertEquals(String.format("%.4f", 10001.0001),
+        assertEquals(String.format(Locale.US, "%.4f", 10001.0001),
             buildDecimalFloatStringFromDouble(10001.0001, builder));
-        assertEquals(String.format("%.53f", 1.0e-53),
+        assertEquals(String.format(Locale.US, "%.53f", 1.0e-53),
             buildDecimalFloatStringFromDouble(1.0e-53, builder));
-        assertEquals(String.format("%.53f", -1.0e-53),
+        assertEquals(String.format(Locale.US, "%.53f", -1.0e-53),
             buildDecimalFloatStringFromDouble(-1.0e-53, builder));
     }
 
