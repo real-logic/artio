@@ -42,7 +42,7 @@ public class AbstractLogTest
 {
     protected static final String ORIGINAL_SENDING_TIME = "19700101-00:00:00";
     protected static final long ORIGINAL_SENDING_EPOCH_MS =
-        new UtcTimestampDecoder().decode(ORIGINAL_SENDING_TIME.getBytes(US_ASCII));
+        new UtcTimestampDecoder(true).decode(ORIGINAL_SENDING_TIME.getBytes(US_ASCII));
 
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;

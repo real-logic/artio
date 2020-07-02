@@ -45,7 +45,7 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 public class SessionParser
 {
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
+    private final UtcTimestampDecoder timestampDecoder;
 
     private AbstractLogonDecoder logon;
     private AbstractLogoutDecoder logout;
@@ -70,6 +70,7 @@ public class SessionParser
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler,
         final boolean validateCompIdsOnEveryMessage,
+        final boolean validateTimeStrictly,
         final OnMessageInfo messageInfo,
         final SessionIdStrategy sessionIdStrategy)
     {
@@ -79,6 +80,7 @@ public class SessionParser
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
         this.messageInfo = messageInfo;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.timestampDecoder = new UtcTimestampDecoder(validateTimeStrictly);
     }
 
     public void fixDictionary(final FixDictionary fixDictionary)

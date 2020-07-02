@@ -180,12 +180,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public long getUtcTimestamp(final int offset, final int length)
     {
-        return UtcTimestampDecoder.decode(this, offset, length);
+        return UtcTimestampDecoder.decode(this, offset, length, true);
     }
 
     public long getUtcTimeOnly(final int offset, final int length)
     {
-        return UtcTimeOnlyDecoder.decode(this, offset, length);
+        return UtcTimeOnlyDecoder.decode(this, offset, length, true);
     }
 
     public int getUtcDateOnly(final int offset)

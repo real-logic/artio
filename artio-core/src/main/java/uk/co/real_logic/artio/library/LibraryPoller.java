@@ -1720,7 +1720,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, validationStrategy,
-            THROW_ERRORS, configuration.validateCompIdsOnEveryMessage(), messageInfo, sessionIdStrategy);
+            THROW_ERRORS, configuration.validateCompIdsOnEveryMessage(), configuration.validateTimeStrictly(),
+            messageInfo, sessionIdStrategy);
         parser.sessionKey(compositeKey);
         parser.fixDictionary(fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
