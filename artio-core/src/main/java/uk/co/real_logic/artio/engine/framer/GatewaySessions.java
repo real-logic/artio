@@ -79,6 +79,7 @@ class GatewaySessions
     private final long reasonableTransmissionTimeInMs;
     private final boolean logAllMessages;
     private final boolean validateCompIdsOnEveryMessage;
+    private final boolean validateTimeStrictly;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
@@ -122,6 +123,7 @@ class GatewaySessions
         this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
         this.logAllMessages = configuration.logAllMessages();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
+        this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.clock();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
@@ -210,6 +212,7 @@ class GatewaySessions
             validationStrategy,
             errorHandler,
             validateCompIdsOnEveryMessage,
+            validateTimeStrictly,
             messageInfo,
             sessionIdStrategy);
 

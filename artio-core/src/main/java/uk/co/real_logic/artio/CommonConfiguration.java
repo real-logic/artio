@@ -249,6 +249,7 @@ public class CommonConfiguration
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     private boolean gracefulShutdown = true;
     private boolean validateCompIdsOnEveryMessage = true;
+    private boolean validateTimeStrictly = true;
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
@@ -562,6 +563,19 @@ public class CommonConfiguration
     }
 
     /**
+     * Set to true in order to validate that time from sender corresponds to FIX time format.
+     * See http://fixwiki.org/fixwiki/UTCTimestampDataType for details.
+     *
+     * @param validateTimeStrictly true to validate time matches format
+     * @return this
+     */
+    public CommonConfiguration validateTimeStrictly(final boolean validateTimeStrictly)
+    {
+        this.validateTimeStrictly = validateTimeStrictly;
+        return this;
+    }
+
+    /**
      * Sets the time precision that the the session logic uses to encode time stamps.
      *
      * @param sessionEpochFractionFormat the format to use.
@@ -677,6 +691,11 @@ public class CommonConfiguration
     public boolean validateCompIdsOnEveryMessage()
     {
         return validateCompIdsOnEveryMessage;
+    }
+
+    public boolean validateTimeStrictly()
+    {
+        return validateTimeStrictly;
     }
 
     public EpochFractionFormat sessionEpochFractionFormat()

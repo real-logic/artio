@@ -63,15 +63,15 @@ public class UtcTimestampCodecsTrailingZerosTest
         buffer.putBytes(1, bytes);
 
         // Normal
-        long result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_NANOSECONDS);
+        long result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_NANOSECONDS, true);
         assertEquals(EPOCH_NANOS, result);
 
         // Short
-        result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_MICROSECONDS);
+        result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_MICROSECONDS, true);
         assertEquals(EPOCH_NANOS, result);
 
         // Long
-        result = UtcTimestampDecoder.decode(buffer, 1, LENGTH_WITH_NANOSECONDS);
+        result = UtcTimestampDecoder.decode(buffer, 1, LENGTH_WITH_NANOSECONDS, true);
         assertEquals(EPOCH_MILLIS, result);
     }
 

@@ -1026,7 +1026,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(SHORT_TIMESTAMP_MESSAGE);
 
         final byte[] someTime = getSomeTimeField(decoder);
-        final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder();
+        final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder(true);
         final long someTimeValue = someTimeDecoder.decode(someTime, someTime.length);
         assertEquals(0, someTimeValue);
 

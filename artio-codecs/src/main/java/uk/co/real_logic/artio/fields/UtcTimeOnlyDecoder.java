@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.fields;
 
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+import uk.co.real_logic.artio.util.PowerOf10;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 
@@ -38,23 +39,32 @@ public final class UtcTimeOnlyDecoder
     static final int NANOS_FIELD_LENGTH = 9;
 
     private final AsciiBuffer buffer = new MutableAsciiBuffer();
+    private final boolean strict;
+
+    /**
+     * @param strict if length of FIX encoded value has to be checked to match FIX specification
+     */
+    public UtcTimeOnlyDecoder(final boolean strict)
+    {
+        this.strict = strict;
+    }
 
     public long decode(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decode(buffer, 0, length);
+        return decode(buffer, 0, length, strict);
     }
 
     public long decodeMicros(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decodeMicros(buffer, 0, length);
+        return decodeMicros(buffer, 0, length, strict);
     }
 
     public long decodeNanos(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decodeNanos(buffer, 0, length);
+        return decodeNanos(buffer, 0, length, strict);
     }
 
     public long decode(final byte[] bytes)
@@ -72,19 +82,19 @@ public final class UtcTimeOnlyDecoder
         return decodeNanos(bytes, bytes.length);
     }
 
-    public static long decode(final AsciiBuffer time, final int offset, final int length)
+    public static long decode(final AsciiBuffer time, final int offset, final int length, final boolean strict)
     {
-        return decodeFraction(time, offset, length, LONG_LENGTH, MILLIS_IN_SECOND);
+        return decodeFraction(time, offset, length, LONG_LENGTH, MILLIS_IN_SECOND, strict);
     }
 
-    public static long decodeMicros(final AsciiBuffer time, final int offset, final int length)
+    public static long decodeMicros(final AsciiBuffer time, final int offset, final int length, final boolean strict)
     {
-        return decodeFraction(time, offset, length, LONG_LENGTH_MICROS, MICROS_IN_SECOND);
+        return decodeFraction(time, offset, length, LONG_LENGTH_MICROS, MICROS_IN_SECOND, strict);
     }
 
-    public static long decodeNanos(final AsciiBuffer time, final int offset, final int length)
+    public static long decodeNanos(final AsciiBuffer time, final int offset, final int length, final boolean strict)
     {
-        return decodeFraction(time, offset, length, LONG_LENGTH_NANOS, NANOS_IN_SECOND);
+        return decodeFraction(time, offset, length, LONG_LENGTH_NANOS, NANOS_IN_SECOND, strict);
     }
 
     // A fraction could be a millisecond or a microsecond
@@ -93,7 +103,8 @@ public final class UtcTimeOnlyDecoder
         final int offset,
         final int length,
         final int expectedLength,
-        final long fractionsInSecond)
+        final long fractionsInSecond,
+        final boolean strict)
     {
         final int startHour = offset;
         final int endHour = startHour + 2;
@@ -114,7 +125,7 @@ public final class UtcTimeOnlyDecoder
         if (length < expectedLength)
         {
             fractionsLength = length - SECOND_PREFIX_LENGTH;
-            fractionMultiplier = fractionMultiplier(length);
+            fractionMultiplier = fractionMultiplier(length, strict);
         }
         else
         {
@@ -147,7 +158,7 @@ public final class UtcTimeOnlyDecoder
         }
     }
 
-    private static long fractionMultiplier(final int length)
+    private static long fractionMultiplier(final int length, final boolean strict)
     {
         switch (length)
         {
@@ -156,7 +167,14 @@ public final class UtcTimeOnlyDecoder
             case LONG_LENGTH_NANOS: return NANOS_IN_SECOND;
             case SHORT_LENGTH: return 1;
             default:
-                throw new IllegalArgumentException("Invalid length for a time: " + length);
+                if (strict)
+                {
+                    throw new IllegalArgumentException("Invalid length for a time: " + length);
+                }
+                else
+                {
+                    return PowerOf10.pow10(length - SECOND_PREFIX_LENGTH);
+                }
         }
     }
 }

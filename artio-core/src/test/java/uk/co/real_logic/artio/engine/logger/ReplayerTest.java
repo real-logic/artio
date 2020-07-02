@@ -73,7 +73,7 @@ public class ReplayerTest extends AbstractLogTest
 {
     private static final String DATE_TIME_STR = "19840521-15:00:00.000";
     private static final long DATE_TIME_EPOCH_MS =
-        new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
+        new UtcTimestampDecoder(true).decode(DATE_TIME_STR.getBytes(US_ASCII));
 
     public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
         ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=" + ORIGINAL_SENDING_TIME + "\00156=CCG\001" +

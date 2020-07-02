@@ -42,7 +42,7 @@ public class SessionParserTest
 
     private final SessionParser parser = new SessionParser(
         mockSession, validationStrategy, LangUtil::rethrowUnchecked,
-        false, messageInfo, null);
+        false, true, messageInfo, null);
 
     @Before
     public void setUp()

@@ -52,12 +52,12 @@ public class UtcTimestampDecoderInvalidCasesTest
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestamp()
     {
-        new UtcTimestampDecoder().decode(timestamp.getBytes(US_ASCII));
+        new UtcTimestampDecoder(true).decode(timestamp.getBytes(US_ASCII));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestampMicros()
     {
-        new UtcTimestampDecoder().decodeMicros(timestamp.getBytes(US_ASCII));
+        new UtcTimestampDecoder(true).decodeMicros(timestamp.getBytes(US_ASCII));
     }
 }

@@ -100,7 +100,7 @@ public class UtcTimestampDecoderValidCasesTest
 
     private void assertDecodeMillis(final int lengthWithMicroseconds)
     {
-        final long epochMillis = UtcTimestampDecoder.decode(buffer, 1, lengthWithMicroseconds);
+        final long epochMillis = UtcTimestampDecoder.decode(buffer, 1, lengthWithMicroseconds, true);
         assertEquals("Failed Millis testcase for: " + timestamp, expectedEpochMillis, epochMillis);
     }
 
@@ -129,7 +129,7 @@ public class UtcTimestampDecoderValidCasesTest
 
     private void assertDecodesMicros(final int length)
     {
-        final long epochMicros = UtcTimestampDecoder.decodeMicros(buffer, 1, length);
+        final long epochMicros = UtcTimestampDecoder.decodeMicros(buffer, 1, length, true);
         assertEquals("Failed Micros testcase for: " + buffer.getAscii(1, length),
             expectedEpochMicros, epochMicros);
     }
@@ -162,7 +162,7 @@ public class UtcTimestampDecoderValidCasesTest
 
     private void assertDecodesNanos(final int length)
     {
-        final long epochNanos = UtcTimestampDecoder.decodeNanos(buffer, 1, length);
+        final long epochNanos = UtcTimestampDecoder.decodeNanos(buffer, 1, length, true);
         assertEquals("Failed Nanos testcase for: " + timestamp, expectedEpochNanos, epochNanos);
     }
 
