@@ -117,5 +117,6 @@ public interface EngineEndPointHandler
 
     Action onInitiateILinkConnection(
         int libraryId, int port, long correlationId,
-        boolean reestablishConnection, String host, String accessKeyId);
+        boolean reestablishConnection, boolean useBackupHost,
+        String host, String accessKeyId, String backupHost);
 }

@@ -99,7 +99,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
     public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength() +
-        InitiateILinkConnectionEncoder.accessKeyIdHeaderLength();
+        InitiateILinkConnectionEncoder.accessKeyIdHeaderLength() +
+        InitiateILinkConnectionEncoder.backupHostHeaderLength();
     private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
         HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
     private static final int VALID_RESEND_REQUEST_LENGTH =
@@ -1324,11 +1325,15 @@ public class GatewayPublication extends ClaimablePublication
         final long correlationId,
         final boolean reEstablishLastConnection,
         final String host,
-        final String accessKeyId)
+        final String accessKeyId,
+        final boolean useBackupHost,
+        final String backupHost)
     {
         final byte[] hostBytes = bytes(host);
         final byte[] accessKeyIdBytes = bytes(accessKeyId);
-        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length + accessKeyIdBytes.length);
+        final byte[] backupHostBytes = bytes(backupHost);
+        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length + accessKeyIdBytes.length +
+            backupHostBytes.length);
         if (position < 0)
         {
             return position;
@@ -1343,8 +1348,10 @@ public class GatewayPublication extends ClaimablePublication
             .port(port)
             .correlationId(correlationId)
             .reestablishConnection(toBool(reEstablishLastConnection))
+            .useBackupHost(toBool(useBackupHost))
             .putHost(hostBytes, 0, hostBytes.length)
-            .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length);
+            .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length)
+            .putBackupHost(backupHostBytes, 0, backupHostBytes.length);
 
         bufferClaim.commit();
 

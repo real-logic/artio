@@ -62,6 +62,8 @@ public final class ILink3ConnectionConfiguration
     private final String accessKeyId;
     private final boolean reEstablishLastConnection;
     private final ILink3ConnectionHandler handler;
+    private final boolean useBackupHost;
+    private final String backupHost;
 
     /**
      * Load the ILink3SessionConfiguration from a properties file.
@@ -184,6 +186,16 @@ public final class ILink3ConnectionConfiguration
         return accessKeyId;
     }
 
+    public String backupHost()
+    {
+        return backupHost;
+    }
+
+    public boolean useBackupHost()
+    {
+        return useBackupHost;
+    }
+
     private void validate()
     {
         Verify.notNull(host, "host");
@@ -192,6 +204,11 @@ public final class ILink3ConnectionConfiguration
         Verify.notNull(userKey, "userKey");
         Verify.notNull(accessKeyId, "accessKeyId");
         Verify.notNull(handler, "handler");
+
+        if (useBackupHost)
+        {
+            Verify.notNull(backupHost, "backupHost");
+        }
 
         if (requestedKeepAliveIntervalInMs <= 0)
         {
@@ -241,7 +258,9 @@ public final class ILink3ConnectionConfiguration
         final long initialReceivedSequenceNumber,
         final String accessKeyId,
         final boolean reEstablishLastConnection,
-        final ILink3ConnectionHandler handler)
+        final ILink3ConnectionHandler handler,
+        final boolean useBackupHost,
+        final String backupHost)
     {
         this.host = host;
         this.port = port;
@@ -258,6 +277,8 @@ public final class ILink3ConnectionConfiguration
 
         this.reEstablishLastConnection = reEstablishLastConnection;
         this.handler = handler;
+        this.useBackupHost = useBackupHost;
+        this.backupHost = backupHost;
 
         validate();
     }
@@ -278,6 +299,8 @@ public final class ILink3ConnectionConfiguration
         private String accessKeyId;
         private boolean reEstablishLastConnection = false;
         private ILink3ConnectionHandler handler;
+        private boolean useBackupHost;
+        private String backupHost;
 
         public ILink3ConnectionConfiguration build()
         {
@@ -295,7 +318,9 @@ public final class ILink3ConnectionConfiguration
                 initialReceivedSequenceNumber,
                 accessKeyId,
                 reEstablishLastConnection,
-                handler);
+                handler,
+                useBackupHost,
+                backupHost);
         }
 
         /**
@@ -487,6 +512,30 @@ public final class ILink3ConnectionConfiguration
         public Builder handler(final ILink3ConnectionHandler handler)
         {
             this.handler = handler;
+            return this;
+        }
+
+        /**
+         * Sets whether you're connecting to the normal primary or the backup IP address. Used in failover scenarios.
+         *
+         * @param useBackupHost true to connect to the backup host
+         * @return this
+         */
+        public Builder useBackupHost(final boolean useBackupHost)
+        {
+            this.useBackupHost = useBackupHost;
+            return this;
+        }
+
+        /**
+         * Sets the backup host IP to connect to.
+         *
+         * @param backupHost the backup host IP to connect to.
+         * @return this
+         */
+        public Builder backupHost(final String backupHost)
+        {
+            this.backupHost = backupHost;
             return this;
         }
     }

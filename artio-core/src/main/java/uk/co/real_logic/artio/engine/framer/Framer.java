@@ -644,7 +644,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public Action onInitiateILinkConnection(
         final int libraryId, final int port, final long correlationId,
-        final boolean reestablishConnection, final String host, final String accessKeyId)
+        final boolean reestablishConnection, final boolean useBackupHost,
+        final String primaryHost, final String accessKeyId, final String backupHost)
     {
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
@@ -654,9 +655,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return CONTINUE;
         }
 
+        final String host = useBackupHost ? backupHost : primaryHost;
         final InetSocketAddress address = new InetSocketAddress(host, port);
         final ILink3Contexts iLink3Contexts = iLink3Contexts();
-        final ILink3Context context = iLink3Contexts.calculateUuid(port, host, accessKeyId, reestablishConnection);
+        final ILink3Context context = iLink3Contexts.calculateUuid(
+            port, primaryHost, accessKeyId, reestablishConnection);
         final int aeronSessionId = library.aeronSessionId();
         final Image image = librarySubscription.imageBySessionId(aeronSessionId);
         final long position = image.position();

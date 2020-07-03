@@ -25,6 +25,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.library.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 
@@ -77,14 +78,15 @@ public class ILink3TestServer
     private int skipTemplateId = NOT_SKIPPING;
 
     public ILink3TestServer(
-        final int port,
+        final ILink3ConnectionConfiguration config,
         final Runnable connectOperation,
         final TestSystem testSystem) throws IOException
     {
         this.testSystem = testSystem;
+        final String host = config.useBackupHost() ? config.backupHost() : config.host();
         try (ServerSocketChannel server = ServerSocketChannel
             .open()
-            .bind(new InetSocketAddress("localhost", port)))
+            .bind(new InetSocketAddress(host, config.port())))
         {
             server.configureBlocking(false);
 

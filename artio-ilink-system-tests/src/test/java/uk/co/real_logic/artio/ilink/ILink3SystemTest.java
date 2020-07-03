@@ -20,6 +20,7 @@ import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoPartyDetailsEncoder
 import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoTrdRegPublicationsEncoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.LangUtil;
 import org.agrona.collections.IntArrayList;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import org.hamcrest.Matcher;
@@ -35,6 +36,8 @@ import uk.co.real_logic.artio.system_tests.Backup;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.function.LongSupplier;
 
@@ -42,6 +45,7 @@ import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -720,7 +724,7 @@ public class ILink3SystemTest
         // Initiator missed receiving message 1
         testServer.writeEstablishmentAck(1, lastUuid, 1);
         acquireSession();
-        assertRecvSeqNo1();
+        assertRecvSeqNo(1);
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 1, 1);
@@ -741,7 +745,7 @@ public class ILink3SystemTest
         shouldEstablishConnectionAtBeginningOfWeek();
         sendNewOrderSingle();
         testServer.readNewOrderSingle(1);
-        assertRecvSeqNo1();
+        assertRecvSeqNo(1);
         testServer.writeExecutionReportStatus(1, false);
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
@@ -758,7 +762,7 @@ public class ILink3SystemTest
         // Initiator missed receiving message 2
         testServer.writeEstablishmentAck(2, lastUuid, 1);
         acquireSession();
-        assertRecvSeqNo1();
+        assertRecvSeqNo(1);
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 2, 1);
@@ -773,9 +777,9 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
-    private void assertRecvSeqNo1()
+    private void assertRecvSeqNo(final int nextRecvSeqNo)
     {
-        assertEquals(connection.nextRecvSeqNo(), 1);
+        assertEquals(connection.nextRecvSeqNo(), nextRecvSeqNo);
     }
 
     @Test
@@ -798,7 +802,7 @@ public class ILink3SystemTest
         // Initiator missed receiving message 1
         testServer.writeEstablishmentAck(0, lastUuid, 1);
         acquireSession();
-        assertRecvSeqNo1();
+        assertRecvSeqNo(1);
         agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
 
         terminateAndDisconnect();
@@ -900,6 +904,41 @@ public class ILink3SystemTest
         assertArtioShowsSessionDisconnected();
     }
 
+    @Test
+    public void shouldContinueSequenceWithBackup() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.writeExecutionReportStatus(1, false);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=2
+
+        final long lastUuid = connection.uuid();
+
+        connectToTestServer(connectionConfiguration()
+            .reEstablishLastConnection(true)
+            .useBackupHost(true));
+
+        testServer.expectedUuid(lastUuid);
+
+        readEstablish(2);
+        testServer.writeEstablishmentAck(1, lastUuid, 2);
+
+        acquireSession();
+        assertRecvSeqNo(2);
+        assertEquals(connection.nextSentSeqNo(), 2);
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(2);
+        testServer.writeExecutionReportStatus(2, false);
+
+        agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        terminateAndDisconnect();
+    }
+
     private void establishNewConnection() throws IOException
     {
         final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration();
@@ -983,8 +1022,9 @@ public class ILink3SystemTest
         final ILink3ConnectionConfiguration.Builder connectionConfiguration)
         throws IOException
     {
+        final ILink3ConnectionConfiguration config = connectionConfiguration.build();
         testServer = new ILink3TestServer(
-            port, () -> reply = library.initiate(connectionConfiguration.build()), testSystem);
+            config, () -> reply = library.initiate(config), testSystem);
     }
 
     private void assertConnectError(final Matcher<String> messageMatcher)
@@ -1016,15 +1056,25 @@ public class ILink3SystemTest
 
     private ILink3ConnectionConfiguration.Builder connectionConfiguration()
     {
-        return ILink3ConnectionConfiguration.builder()
-            .host("localhost")
-            .port(port)
-            .sessionId(SESSION_ID)
-            .firmId(FIRM_ID)
-            .userKey(USER_KEY)
-            .accessKeyId(ACCESS_KEY_ID)
-            .requestedKeepAliveIntervalInMs(testKeepAliveIntervalInMs)
-            .handler(handler);
+        try
+        {
+            return ILink3ConnectionConfiguration.builder()
+                .host("127.0.0.1")
+                // NB: only some systems (but not debian/ubuntu) this may generate the same ip address as the primary.
+                .backupHost(InetAddress.getLocalHost().getHostName())
+                .port(port)
+                .sessionId(SESSION_ID)
+                .firmId(FIRM_ID)
+                .userKey(USER_KEY)
+                .accessKeyId(ACCESS_KEY_ID)
+                .requestedKeepAliveIntervalInMs(testKeepAliveIntervalInMs)
+                .handler(handler);
+        }
+        catch (final UnknownHostException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     private void assertDisconnected()
