@@ -758,13 +758,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.aeronSessionId = aeronSessionId;
             this.position = position;
             this.address = address;
-
-            if (!reestablishConnection || context.newlyAllocated())
-            {
-                lastSentSequenceNumber = UNK_SESSION;
-                lastReceivedSequenceNumber = UNK_SESSION;
-                hasScannedIndex = true;
-            }
         }
 
         public long attempt()
@@ -783,15 +776,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             return inboundPublication.saveILinkConnect(
                 libraryId, correlationId, connectionId, context.uuid(), lastReceivedSequenceNumber,
-                lastSentSequenceNumber, context.newlyAllocated());
+                lastSentSequenceNumber, context.newlyAllocated(), context.lastUuid());
         }
 
         private void scanIndex()
         {
             if (sentSequenceNumberIndex.indexedPosition(aeronSessionId) > position)
             {
-                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(context.uuid());
-                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(context.uuid());
+                final long uuidToScan = context.lastUuid() == 0 ? context.uuid() : context.lastUuid();
+                lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(uuidToScan);
+                lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(uuidToScan);
                 hasScannedIndex = true;
             }
         }

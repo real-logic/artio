@@ -61,6 +61,7 @@ public class ILink3SystemTest
     static final String FIRM_ID = "DEFGH";
     static final String USER_KEY = "somethingprivate";
     static final String CL_ORD_ID = "123";
+    public static final int ER_STATUS_ID = ExecutionReportStatus532Decoder.TEMPLATE_ID;
 
     private FakeILink3ConnectionHandler handler = spy(new FakeILink3ConnectionHandler(NotAppliedResponse::gapfill));
 
@@ -197,7 +198,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(2);
         final IntArrayList messageIds = handler.messageIds();
         assertThat(messageIds, hasSize(1));
-        assertEquals(messageIds.getInt(0), ExecutionReportStatus532Decoder.TEMPLATE_ID);
+        assertEquals(messageIds.getInt(0), ER_STATUS_ID);
 
         terminateAndDisconnect();
     }
@@ -324,7 +325,7 @@ public class ILink3SystemTest
 
         final long lastUuid = connection.uuid();
 
-        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -345,7 +346,7 @@ public class ILink3SystemTest
         launchArtio();
 
         final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration()
-            .reEstablishLastSession(true);
+            .reEstablishLastConnection(true);
         connectToTestServer(connectionConfiguration);
 
         testServer.expectedUuid(lastUuid);
@@ -361,7 +362,7 @@ public class ILink3SystemTest
     {
         launch(true);
 
-        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
 
         establishConnection();
     }
@@ -388,7 +389,7 @@ public class ILink3SystemTest
             // Test that a gateway can be restarted and a new session established after the state reset.
             launchArtio();
             final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration()
-                .reEstablishLastSession(true);
+                .reEstablishLastConnection(true);
             connectToTestServer(connectionConfiguration);
             establishConnection();
             assertNotEquals(connection.uuid(), lastUuid);
@@ -677,7 +678,7 @@ public class ILink3SystemTest
 
         final long lastUuid = connection.uuid();
 
-        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
 
         testServer.expectedUuid(lastUuid);
 
@@ -694,6 +695,110 @@ public class ILink3SystemTest
         testServer.writeExecutionReportStatus(1, true);
 
         agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldRequestRetransmitForEstablishGapOnPreviousUuid() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = connection.uuid();
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish(1);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo1();
+
+        // retransmit message 1
+        testServer.acceptRetransRequest(lastUuid, 1, 1);
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeExecutionReportStatus(lastUuid, 1, true);
+
+        agreeRecvSeqNo(2);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID));
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldRequestRetransmitForEstablishGapOnUsedPreviousUuid() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        assertRecvSeqNo1();
+        testServer.writeExecutionReportStatus(1, false);
+        agreeRecvSeqNo(2);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = connection.uuid();
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish(1);
+        // Initiator missed receiving message 2
+        testServer.writeEstablishmentAck(2, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo1();
+
+        // retransmit message 1
+        testServer.acceptRetransRequest(lastUuid, 2, 1);
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeExecutionReportStatus(lastUuid, 2, true);
+
+        agreeRecvSeqNo(2);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID, ER_STATUS_ID));
+
+        terminateAndDisconnect();
+    }
+
+    private void assertRecvSeqNo1()
+    {
+        assertEquals(connection.nextRecvSeqNo(), 1);
+    }
+
+    @Test
+    public void shouldNotRequestRetransmitForNoEstablishGapOnPreviousUuid() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = connection.uuid();
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish(1);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(0, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo1();
         agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
 
         terminateAndDisconnect();
@@ -731,7 +836,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(2);
         terminateAndDisconnect();
         final long lastUuid = connection.uuid();
-        connectToTestServer(connectionConfiguration().reEstablishLastSession(true));
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
         testServer.expectedUuid(lastUuid);
         readEstablish(1);
 

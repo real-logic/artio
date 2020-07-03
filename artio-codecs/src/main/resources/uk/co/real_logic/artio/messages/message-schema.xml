@@ -455,6 +455,7 @@
         <field name="lastReceivedSequenceNumber" id="5" type="int64"/>
         <field name="lastSentSequenceNumber" id="6" type="int64"/>
         <field name="newlyAllocated" id="7" type="Bool"/>
+        <field name="lastUuid" id="8" type="uint64"/>
     </sbe:message>
 
     <sbe:message name="LibraryExtendPosition" id="60" description="" sinceVersion="9">

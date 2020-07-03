@@ -60,7 +60,7 @@ public final class ILink3ConnectionConfiguration
     private final long initialSentSequenceNumber;
     private final long initialReceivedSequenceNumber;
     private final String accessKeyId;
-    private final boolean reEstablishLastSession;
+    private final boolean reEstablishLastConnection;
     private final ILink3ConnectionHandler handler;
 
     /**
@@ -85,7 +85,7 @@ public final class ILink3ConnectionConfiguration
             INITIAL_SENT_SEQUENCE_NUMBER_PROP_NAME);
         getLongIfPresent(properties, builder::initialReceivedSequenceNumber,
             INITIAL_RECEIVED_SEQUENCE_NUMBER_PROP_NAME);
-        getIfPresent(properties, v -> builder.reEstablishLastSession(parseBoolean(v)),
+        getIfPresent(properties, v -> builder.reEstablishLastConnection(parseBoolean(v)),
             RE_ESTABLISH_LAST_SESSION_PROP_NAME);
 
         return builder;
@@ -169,9 +169,9 @@ public final class ILink3ConnectionConfiguration
         return initialReceivedSequenceNumber;
     }
 
-    public boolean reEstablishLastSession()
+    public boolean reEstablishLastConnection()
     {
-        return reEstablishLastSession;
+        return reEstablishLastConnection;
     }
 
     public ILink3ConnectionHandler handler()
@@ -240,7 +240,7 @@ public final class ILink3ConnectionConfiguration
         final long initialSentSequenceNumber,
         final long initialReceivedSequenceNumber,
         final String accessKeyId,
-        final boolean reEstablishLastSession,
+        final boolean reEstablishLastConnection,
         final ILink3ConnectionHandler handler)
     {
         this.host = host;
@@ -256,7 +256,7 @@ public final class ILink3ConnectionConfiguration
         this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
         this.accessKeyId = accessKeyId;
 
-        this.reEstablishLastSession = reEstablishLastSession;
+        this.reEstablishLastConnection = reEstablishLastConnection;
         this.handler = handler;
 
         validate();
@@ -276,7 +276,7 @@ public final class ILink3ConnectionConfiguration
         private long initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private String accessKeyId;
-        private boolean reEstablishLastSession = false;
+        private boolean reEstablishLastConnection = false;
         private ILink3ConnectionHandler handler;
 
         public ILink3ConnectionConfiguration build()
@@ -294,7 +294,7 @@ public final class ILink3ConnectionConfiguration
                 initialSentSequenceNumber,
                 initialReceivedSequenceNumber,
                 accessKeyId,
-                reEstablishLastSession,
+                reEstablishLastConnection,
                 handler);
         }
 
@@ -435,7 +435,7 @@ public final class ILink3ConnectionConfiguration
         /**
          * Sets the sequence number that is sent by your session upon session establishment. The default is
          * AUTOMATIC_INITIAL_SEQUENCE_NUMBER which will start from 1 if this is a new UUID or continuing from the
-         * last known sequence number if {@link #reEstablishLastSession(boolean)} is set to true.
+         * last known sequence number if {@link #reEstablishLastConnection(boolean)} is set to true.
          *
          * @param initialSentSequenceNumber the sequence that is sent by your session upon session establishment
          * @return this
@@ -449,7 +449,7 @@ public final class ILink3ConnectionConfiguration
         /**
          * Sets the sequence number that is expected by your session upon session establishment from the exchange.
          * The default is AUTOMATIC_INITIAL_SEQUENCE_NUMBER which will start from 1 if this is a new UUID or continuing
-         * from the last known sequence number if {@link #reEstablishLastSession(boolean)} is set to true.
+         * from the last known sequence number if {@link #reEstablishLastConnection(boolean)} is set to true.
          *
          * @param initialReceivedSequenceNumber the sequence number that is expected by your session upon session
          *                                      establishment from the exchange
@@ -468,12 +468,12 @@ public final class ILink3ConnectionConfiguration
          * <p>
          * Note: if this session has never connected before then a new UUID will be generated.
          *
-         * @param reEstablishLastSession true to re-establish the session, false otherwise.
+         * @param reEstablishLastConnection true to re-establish the connection, false otherwise.
          * @return this.
          */
-        public Builder reEstablishLastSession(final boolean reEstablishLastSession)
+        public Builder reEstablishLastConnection(final boolean reEstablishLastConnection)
         {
-            this.reEstablishLastSession = reEstablishLastSession;
+            this.reEstablishLastConnection = reEstablishLastConnection;
             return this;
         }
 

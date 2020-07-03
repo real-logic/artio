@@ -150,7 +150,7 @@ public final class InternalILink3Connection extends ILink3Connection
     private final CharFormatter retransmitFilled =
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
     private final CharFormatter retransmitFilledNext =
-        new CharFormatter("RetransmitFilledNext retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
+        new CharFormatter("RetransmitFilledNext uuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
@@ -167,6 +167,10 @@ public final class InternalILink3Connection extends ILink3Connection
     private final boolean newlyAllocated;
     private final long uuid;
     private final EpochNanoClock epochNanoClock;
+
+    private final long lastUuid;
+    private final long lastConnectionLastReceivedSequenceNumber;
+    private final long lastConnectionLastSentSequenceNumber;
 
     private InitiateILink3ConnectionReply initiateReply;
 
@@ -199,6 +203,7 @@ public final class InternalILink3Connection extends ILink3Connection
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final boolean newlyAllocated,
+        final long lastUuid,
         final EpochNanoClock epochNanoClock)
     {
         this.configuration = configuration;
@@ -218,8 +223,18 @@ public final class InternalILink3Connection extends ILink3Connection
             lastSentSequenceNumber, configuration.initialSentSequenceNumber()));
         nextRecvSeqNo(calculateInitialSequenceNumber(
             lastReceivedSequenceNumber, configuration.initialReceivedSequenceNumber()));
-        state = State.CONNECTED;
+
         this.uuid = uuid;
+        this.lastUuid = lastUuid;
+        this.lastConnectionLastReceivedSequenceNumber = calculateSequenceNumber(lastReceivedSequenceNumber);
+        this.lastConnectionLastSentSequenceNumber = calculateSequenceNumber(lastSentSequenceNumber);
+
+        state = State.CONNECTED;
+    }
+
+    private long calculateSequenceNumber(final long lookedUpSequenceNumber)
+    {
+        return lookedUpSequenceNumber == Session.UNKNOWN ? 0 : lookedUpSequenceNumber;
     }
 
     // PUBLIC API
@@ -410,7 +425,7 @@ public final class InternalILink3Connection extends ILink3Connection
     private long calculateInitialSequenceNumber(
         final long lastSequenceNumber, final long initialSequenceNumber)
     {
-        if (!this.configuration.reEstablishLastSession())
+        if (!this.configuration.reEstablishLastConnection())
         {
             return 1;
         }
@@ -677,7 +692,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollConnected()
     {
-        if (!configuration.reEstablishLastSession() || newlyAllocated)
+        if (!configuration.reEstablishLastConnection() || newlyAllocated)
         {
             return sendNegotiate() ? 1 : 0;
         }
@@ -793,13 +808,14 @@ public final class InternalILink3Connection extends ILink3Connection
         initiateReply.onComplete(this);
         nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
 
-        final long nextRecvSeqNo = this.nextRecvSeqNo;
-        if (previousUUID == uuid)
+        if (previousUUID == lastUuid)
         {
-            final long impliedNextRecvSeqNo = previousSeqNo + 1;
-            if (impliedNextRecvSeqNo > nextRecvSeqNo)
+            if (previousSeqNo > lastConnectionLastReceivedSequenceNumber)
             {
-                return onInvalidSequenceNumber(impliedNextRecvSeqNo, impliedNextRecvSeqNo);
+                final long impliedNextRecvSeqNo = previousSeqNo + 1;
+                final long oldNextRecvSeqNo = lastConnectionLastReceivedSequenceNumber + 1;
+                return onInvalidSequenceNumber(
+                    previousUUID, impliedNextRecvSeqNo, oldNextRecvSeqNo, impliedNextRecvSeqNo);
             }
         }
 
@@ -912,7 +928,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 if (expectedNextRecvSeqNo < nextSeqNo)
                 {
                     // sequence gap, initiate retransmission.
-                    return onInvalidSequenceNumber(nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
+                    return onInvalidSequenceNumber(uuid, nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
                 }
             }
             else
@@ -1041,7 +1057,7 @@ public final class InternalILink3Connection extends ILink3Connection
             {
                 if (seqNum > nextRetransmitSeqNo)
                 {
-                    final long position = onInvalidSequenceNumber(seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
+                    final long position = onInvalidSequenceNumber(uuid, seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
                     if (Pressure.isBackPressured(position))
                     {
                         return position;
@@ -1122,11 +1138,11 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
-        return onInvalidSequenceNumber(msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
+        return onInvalidSequenceNumber(uuid, msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
     }
 
     private long onInvalidSequenceNumber(
-        final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
+        final long uuid, final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
     {
         final long fromSeqNo = oldNextRecvSeqNo;
         final int totalMsgCount = (int)(msgSeqNum - oldNextRecvSeqNo);
@@ -1134,11 +1150,11 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
         {
-            final long position = sendRetransmitRequest(fromSeqNo, msgCount);
+            final long position = sendRetransmitRequest(uuid, fromSeqNo, msgCount);
             if (!Pressure.isBackPressured(position))
             {
-                addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
-                nextRecvSeqNo(newNextRecvSeqNo);
+                addRemainingRetransmitRequests(uuid, fromSeqNo, msgCount, totalMsgCount);
+                nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, uuid);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
@@ -1146,11 +1162,20 @@ public final class InternalILink3Connection extends ILink3Connection
         }
         else
         {
-            addRetransmitRequest(fromSeqNo, msgCount);
-            addRemainingRetransmitRequests(fromSeqNo, msgCount, totalMsgCount);
-            nextRecvSeqNo(newNextRecvSeqNo);
+            addRetransmitRequest(uuid, fromSeqNo, msgCount);
+            addRemainingRetransmitRequests(uuid, fromSeqNo, msgCount, totalMsgCount);
+            nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, uuid);
 
             return 1;
+        }
+    }
+
+    private void nextRecvSeqNoForCurrentUuid(final long newNextRecvSeqNo, final long uuid)
+    {
+        // we don't want to update newNextRecvSeqNo for an On EstablishAck retransmit request for the last uuid
+        if (this.uuid == uuid)
+        {
+            nextRecvSeqNo(newNextRecvSeqNo);
         }
     }
 
@@ -1165,13 +1190,15 @@ public final class InternalILink3Connection extends ILink3Connection
         }
         else
         {
+            final long uuid = retransmitRequest.uuid;
             final long fromSeqNo = retransmitRequest.fromSeqNo;
             final int msgCount = retransmitRequest.msgCount;
-            final long position = sendRetransmitRequest(fromSeqNo, msgCount);
+            final long position = sendRetransmitRequest(
+                uuid, fromSeqNo, msgCount);
 
             if (!Pressure.isBackPressured(position))
             {
-                DebugLogger.log(ILINK_SESSION, retransmitFilledNext, retransmitFillSeqNo, fromSeqNo, msgCount);
+                DebugLogger.log(ILINK_SESSION, retransmitFilledNext, uuid, retransmitFillSeqNo, fromSeqNo, msgCount);
                 retransmitRequests.pollFirst();
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
@@ -1184,7 +1211,7 @@ public final class InternalILink3Connection extends ILink3Connection
     }
 
     private void addRemainingRetransmitRequests(
-        final long initialFromSeqNo, final int initialMessagesRequested, final int totalMessageCount)
+        final long uuid, final long initialFromSeqNo, final int initialMessagesRequested, final int totalMessageCount)
     {
         final int retransmitRequestMsgLimit = configuration.retransmitRequestMessageLimit();
 
@@ -1194,19 +1221,19 @@ public final class InternalILink3Connection extends ILink3Connection
         while (messagesRequested < totalMessageCount)
         {
             final int msgCount = Math.min(totalMessageCount - messagesRequested, retransmitRequestMsgLimit);
-            addRetransmitRequest(fromSeqNo, msgCount);
+            addRetransmitRequest(uuid, fromSeqNo, msgCount);
 
             messagesRequested += msgCount;
             fromSeqNo += msgCount;
         }
     }
 
-    private void addRetransmitRequest(final long fromSeqNo, final int msgCount)
+    private void addRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
     {
-        retransmitRequests.offerLast(new RetransmitRequest(fromSeqNo, msgCount));
+        retransmitRequests.offerLast(new RetransmitRequest(uuid, fromSeqNo, msgCount));
     }
 
-    private long sendRetransmitRequest(final long fromSeqNo, final int msgCount)
+    private long sendRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
     {
         sentMessage();
         final long requestTimestamp = requestTimestamp();
@@ -1222,11 +1249,13 @@ public final class InternalILink3Connection extends ILink3Connection
 
     static final class RetransmitRequest
     {
+        final long uuid;
         final long fromSeqNo;
         final int msgCount;
 
-        RetransmitRequest(final long fromSeqNo, final int msgCount)
+        RetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
         {
+            this.uuid = uuid;
             this.fromSeqNo = fromSeqNo;
             this.msgCount = msgCount;
         }

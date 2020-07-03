@@ -457,6 +457,11 @@ public class ILink3TestServer
 
     public void writeExecutionReportStatus(final int sequenceNumber, final boolean possRetrans)
     {
+        writeExecutionReportStatus(uuid, sequenceNumber, possRetrans);
+    }
+
+    public void writeExecutionReportStatus(final long uuid, final int sequenceNumber, final boolean possRetrans)
+    {
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();
         wrap(executionReportStatus, ExecutionReportStatus532Encoder.BLOCK_LENGTH);
 
@@ -492,8 +497,13 @@ public class ILink3TestServer
 
     public void acceptRetransRequest(final long fromSeqNo, final int msgCount)
     {
-        final long requestTimestamp = readRetransmitRequest(fromSeqNo, msgCount);
-        writeRetransmission(requestTimestamp, fromSeqNo, msgCount);
+        acceptRetransRequest(uuid, fromSeqNo, msgCount);
+    }
+
+    public void acceptRetransRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    {
+        final long requestTimestamp = readRetransmitRequest(uuid, fromSeqNo, msgCount);
+        writeRetransmission(uuid, requestTimestamp, fromSeqNo, msgCount);
     }
 
     public void rejectRetransRequest(final int fromSeqNo, final int msgCount)
@@ -502,7 +512,8 @@ public class ILink3TestServer
         writeRetransitReject(requestTimestamp);
     }
 
-    private void writeRetransmission(final long requestTimestamp, final long fromSeqNo, final int msgCount)
+    private void writeRetransmission(
+        final long uuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
         final Retransmission509Encoder retransmission = new Retransmission509Encoder();
         wrap(retransmission, Retransmission509Encoder.BLOCK_LENGTH);
@@ -511,7 +522,8 @@ public class ILink3TestServer
             .uUID(uuid)
             .requestTimestamp(requestTimestamp)
             .fromSeqNo(fromSeqNo)
-            .msgCount(msgCount);
+            .msgCount(msgCount)
+            .splitMsg(SplitMsg.NULL_VAL);
 
         write();
     }
@@ -533,8 +545,13 @@ public class ILink3TestServer
 
     public long readRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
+        return readRetransmitRequest(uuid, fromSeqNo, msgCount);
+    }
+
+    public long readRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    {
         final RetransmitRequest508Decoder retransmitRequest = read(new RetransmitRequest508Decoder(), 0);
-        assertEquals(uuid, retransmitRequest.uUID());
+        assertEquals("uuid", uuid, retransmitRequest.uUID());
         final long requestTimestamp = retransmitRequest.requestTimestamp();
         assertEquals("fromSeqNo", fromSeqNo, retransmitRequest.fromSeqNo());
         assertEquals("msgCount", msgCount, retransmitRequest.msgCount());

@@ -1337,7 +1337,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
-        final boolean newlyAllocated)
+        final boolean newlyAllocated,
+        final long lastUuid)
     {
         if (libraryId == this.libraryId)
         {
@@ -1353,7 +1354,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final ILink3ConnectionConfiguration configuration = reply.configuration();
                 final ILink3Connection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
-                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated);
+                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final ILink3Subscription subscription = new ILink3Subscription(
                     AbstractILink3Parser.make(connection, THROW_ERRORS), connection);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
@@ -1373,7 +1374,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
-        final boolean newlyAllocated)
+        final boolean newlyAllocated,
+        final long lastUuid)
     {
         try
         {
@@ -1390,6 +1392,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 long.class,
                 boolean.class,
+                long.class,
                 EpochNanoClock.class);
 
             return (ILink3Connection)constructor.newInstance(
@@ -1404,6 +1407,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastReceivedSequenceNumber,
                 lastSentSequenceNumber,
                 newlyAllocated,
+                lastUuid,
                 this.configuration.epochNanoClock());
         }
         catch (final InvocationTargetException e)
@@ -1911,7 +1915,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public long saveInitiateILink(final long correlationId, final ILink3ConnectionConfiguration configuration)
     {
         return outboundPublication.saveInitiateILinkConnection(
-            libraryId, configuration.port(), correlationId, configuration.reEstablishLastSession(),
+            libraryId, configuration.port(), correlationId, configuration.reEstablishLastConnection(),
             configuration.host(), configuration.accessKeyId());
     }
 

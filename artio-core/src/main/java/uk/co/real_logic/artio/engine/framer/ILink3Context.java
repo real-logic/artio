@@ -17,18 +17,35 @@ package uk.co.real_logic.artio.engine.framer;
 
 final class ILink3Context
 {
-    private final long uuid;
+    private long uuid;
+    private long lastUuid;
     private boolean newlyAllocated;
 
-    ILink3Context(final long uuid, final boolean newlyAllocated)
+    ILink3Context(final long uuid, final long lastUuid, final boolean newlyAllocated)
     {
         this.uuid = uuid;
+        this.lastUuid = lastUuid;
         this.newlyAllocated = newlyAllocated;
     }
 
     long uuid()
     {
         return uuid;
+    }
+
+    public void uuid(final long uuid)
+    {
+        this.uuid = uuid;
+    }
+
+    public long lastUuid()
+    {
+        return lastUuid;
+    }
+
+    public void lastUuid(final long lastUuid)
+    {
+        this.lastUuid = lastUuid;
     }
 
     boolean newlyAllocated()

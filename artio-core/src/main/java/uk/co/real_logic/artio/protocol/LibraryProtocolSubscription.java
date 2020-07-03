@@ -344,7 +344,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             iLinkConnect.uuid(),
             iLinkConnect.lastReceivedSequenceNumber(),
             iLinkConnect.lastSentSequenceNumber(),
-            iLinkConnect.newlyAllocated() == Bool.TRUE);
+            iLinkConnect.newlyAllocated() == Bool.TRUE,
+            iLinkConnect.lastUuid());
     }
 
     private Action onReplayMessagesReply(
