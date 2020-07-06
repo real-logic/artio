@@ -473,7 +473,7 @@ public class Session
         final int sentSeqNum = newSentSeqNum();
         header
             .msgSeqNum(sentSeqNum)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encodeFrom(time(), MILLISECONDS));
 
         if (enableLastMsgSeqNumProcessed)
         {

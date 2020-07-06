@@ -35,6 +35,8 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.concurrent.TimeUnit;
+
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -319,7 +321,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         sequenceResetEncoder.header().msgSeqNum(heartbeatRangeSequenceNumberStart);
         sequenceResetEncoder.newSeqNo(heartbeatRangeSequenceNumberEnd);
         sequenceResetEncoder.header().sendingTime(
-            timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
+            timestampEncoder.buffer(), timestampEncoder.encodeFrom(System.currentTimeMillis(), TimeUnit.MILLISECONDS));
 
         final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
         final int encodedLength = Encoder.length(result);

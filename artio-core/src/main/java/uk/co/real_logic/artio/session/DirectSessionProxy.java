@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.util.AsciiFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
@@ -125,7 +126,7 @@ public class DirectSessionProxy implements SessionProxy
         this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
-        timestampEncoder.initialise(clock.time());
+        timestampEncoder.initialise(clock.time(), TimeUnit.MILLISECONDS);
     }
 
     public void fixDictionary(final FixDictionary dictionary)
@@ -420,7 +421,7 @@ public class DirectSessionProxy implements SessionProxy
     private void setupHeader(final SessionHeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)
     {
         final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
-        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.update(clock.time()));
+        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.updateFrom(clock.time(), TimeUnit.MILLISECONDS));
         header.msgSeqNum(msgSeqNo);
 
         if (lastMsgSeqNumProcessed != NO_LAST_MSG_SEQ_NUM_PROCESSED)
