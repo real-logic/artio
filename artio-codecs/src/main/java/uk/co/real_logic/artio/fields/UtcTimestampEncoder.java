@@ -92,7 +92,8 @@ public final class UtcTimestampEncoder
      * @param timeUnit the {@link TimeUnit} of the duration.
      * @return the length of the encoded data in the flyweight.
      */
-    public int encodeFrom(final long duration, TimeUnit timeUnit) {
+    public int encodeFrom(final long duration, final TimeUnit timeUnit)
+    {
         return encode(convertToThisTimeUnit(duration, timeUnit));
     }
 
@@ -121,7 +122,8 @@ public final class UtcTimestampEncoder
         }
     }
 
-    public int initialise(final long duration, TimeUnit timeUnit) {
+    public int initialise(final long duration, final TimeUnit timeUnit)
+    {
         return initialise(convertToThisTimeUnit(duration, timeUnit));
     }
 
@@ -187,7 +189,8 @@ public final class UtcTimestampEncoder
      * @param timeUnit the {@link TimeUnit} of the duration.
      * @return the length of the encoded data in the flyweight.
      */
-    public int updateFrom(final long duration, TimeUnit timeUnit) {
+    public int updateFrom(final long duration, final TimeUnit timeUnit)
+    {
         return update(convertToThisTimeUnit(duration, timeUnit));
     }
 
@@ -292,14 +295,17 @@ public final class UtcTimestampEncoder
             NANOS_FIELD_LENGTH);
     }
 
-    private long convertToThisTimeUnit(long duration, TimeUnit timeUnit) {
+    private long convertToThisTimeUnit(final long duration, final TimeUnit timeUnit)
+    {
         if (epochFractionPrecision == MILLISECONDS_EPOCH_FRACTION)
         {
             return timeUnit.toMillis(duration);
-        } else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
+        }
+        else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
         {
             return timeUnit.toMicros(duration);
-        } else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
+        }
+        else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
         {
             return timeUnit.toNanos(duration);
         }
