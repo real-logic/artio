@@ -48,6 +48,7 @@ import uk.co.real_logic.artio.validation.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
@@ -645,7 +646,7 @@ class GatewaySessions
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
             header.sendingTime(
-                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(epochClock.time()));
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encodeFrom(epochClock.time(), TimeUnit.MILLISECONDS));
             HeaderSetup.setup(logon.header(), header);
             customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 

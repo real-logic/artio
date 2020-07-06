@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.fields;
 
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.concurrent.TimeUnit;
+
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.*;
 
@@ -86,6 +88,18 @@ public final class UtcTimestampEncoder
     /**
      * Encode the current time into the buffer as an ascii UTC String
      *
+     * @param duration the current time as the number of specified time unit since the start of the UNIX Epoch.
+     * @param timeUnit the {@link TimeUnit} of the duration.
+     * @return the length of the encoded data in the flyweight.
+     */
+    public int encodeFrom(final long duration, final TimeUnit timeUnit)
+    {
+        return encode(convertToThisTimeUnit(duration, timeUnit));
+    }
+
+    /**
+     * Encode the current time into the buffer as an ascii UTC String
+     *
      * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the
      *                      start of the UNIX Epoch. The unit of this parameter should align with the constructor
      *                      parameter EpochFractionFormat.
@@ -106,6 +120,11 @@ public final class UtcTimestampEncoder
         {
             return encodeNanos(epochFraction, flyweight, 0);
         }
+    }
+
+    public int initialise(final long duration, final TimeUnit timeUnit)
+    {
+        return initialise(convertToThisTimeUnit(duration, timeUnit));
     }
 
     public int initialise(final long epochFraction)
@@ -161,6 +180,18 @@ public final class UtcTimestampEncoder
             localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
         return lengthWithFraction;
+    }
+
+    /**
+     * Update the current time into the buffer as an ascii UTC String
+     *
+     * @param duration the current time as the number of specified time unit since the start of the UNIX Epoch.
+     * @param timeUnit the {@link TimeUnit} of the duration.
+     * @return the length of the encoded data in the flyweight.
+     */
+    public int updateFrom(final long duration, final TimeUnit timeUnit)
+    {
+        return update(convertToThisTimeUnit(duration, timeUnit));
     }
 
     /**
@@ -262,6 +293,22 @@ public final class UtcTimestampEncoder
             NANOS_IN_SECOND,
             LENGTH_WITH_NANOSECONDS,
             NANOS_FIELD_LENGTH);
+    }
+
+    private long convertToThisTimeUnit(final long duration, final TimeUnit timeUnit)
+    {
+        if (epochFractionPrecision == MILLISECONDS_EPOCH_FRACTION)
+        {
+            return timeUnit.toMillis(duration);
+        }
+        else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
+        {
+            return timeUnit.toMicros(duration);
+        }
+        else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
+        {
+            return timeUnit.toNanos(duration);
+        }
     }
 
     private static int encodeFraction(

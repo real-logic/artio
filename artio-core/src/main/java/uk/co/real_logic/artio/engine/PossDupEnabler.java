@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -355,7 +356,7 @@ public class PossDupEnabler
         final int sendingTimeLength = possDupFinder.sendingTimeLength();
 
         final int sendingTimeClaimOffset = srcToClaim(sendingTimeOffset, srcOffset, claimOffset);
-        utcTimestampEncoder.encode(clock.time());
+        utcTimestampEncoder.encodeFrom(clock.time(), TimeUnit.MILLISECONDS);
         claimBuffer.putBytes(sendingTimeClaimOffset, utcTimestampEncoder.buffer(), 0, sendingTimeLength);
     }
 
