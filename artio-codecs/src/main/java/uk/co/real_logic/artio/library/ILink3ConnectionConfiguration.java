@@ -43,6 +43,8 @@ public final class ILink3ConnectionConfiguration
     public static final String FIRM_ID_PROP_NAME = "firm_id";
     public static final String USER_KEY_PROP_NAME = "user_key";
     public static final String ACCESS_KEY_ID_PROP_NAME = "access_key_id";
+    public static final String HOST_2 = "host_2";
+
     public static final String REQUESTED_KEEP_ALIVE_INTERVAL_IN_MS_PROP_NAME = "requestedKeepAliveIntervalInMs";
     public static final String INITIAL_SENT_SEQUENCE_NUMBER_PROP_NAME = "initialSentSequenceNumber";
     public static final String INITIAL_RECEIVED_SEQUENCE_NUMBER_PROP_NAME = "initialReceivedSequenceNumber";
@@ -79,7 +81,8 @@ public final class ILink3ConnectionConfiguration
             .sessionId(properties.getProperty(SESSION_ID_PROP_NAME))
             .firmId(properties.getProperty(FIRM_ID_PROP_NAME))
             .userKey(properties.getProperty(USER_KEY_PROP_NAME))
-            .accessKeyId(properties.getProperty(ACCESS_KEY_ID_PROP_NAME));
+            .accessKeyId(properties.getProperty(ACCESS_KEY_ID_PROP_NAME))
+            .backupHost(properties.getProperty(HOST_2));
 
         getIfPresent(properties, v -> builder.requestedKeepAliveIntervalInMs(parseInt(v)),
             REQUESTED_KEEP_ALIVE_INTERVAL_IN_MS_PROP_NAME);
