@@ -396,7 +396,7 @@ class SenderEndPoint
 
             if (bodyLength > (written + bytesPreviouslySent))
             {
-                tracker.moveSentPosition(written);
+                tracker.sentPosition = (position - remainingLength) + written;
                 return blockPosition(position, length, tracker);
             }
             else
@@ -514,11 +514,6 @@ class SenderEndPoint
         StreamTracker(final BlockablePosition blockablePosition)
         {
             this.blockablePosition = blockablePosition;
-        }
-
-        void moveSentPosition(final int delta)
-        {
-            sentPosition += delta;
         }
     }
 
