@@ -1650,6 +1650,10 @@ public class Session
                     lastResentMsgSeqNo = 0;
                     lastResendChunkMsgSeqNum = 0;
                     endOfResendRequestRange = 0;
+                    if (lastReceivedMsgSeqNum < newSeqNo)
+                    {
+                        lastReceivedMsgSeqNum(newSeqNo - 1);
+                    }
                 }
                 else
                 {
