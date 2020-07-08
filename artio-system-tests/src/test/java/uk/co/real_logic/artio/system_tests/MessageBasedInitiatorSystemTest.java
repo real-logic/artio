@@ -199,10 +199,8 @@ public class MessageBasedInitiatorSystemTest
             {
                 testSystem.poll();
 
-                return !session.awaitingResend();
+                return !session.awaitingResend() && session.lastReceivedMsgSeqNum() == 5;
             });
-
-            testSystem.poll();
 
             connection.readHeartbeat(testReqID);
         }
@@ -235,10 +233,8 @@ public class MessageBasedInitiatorSystemTest
             {
                 testSystem.poll();
 
-                return !session.awaitingResend();
+                return !session.awaitingResend() && session.lastReceivedMsgSeqNum() == 6;
             });
-
-            testSystem.poll();
 
             connection.readHeartbeat(testReqID);
         }
