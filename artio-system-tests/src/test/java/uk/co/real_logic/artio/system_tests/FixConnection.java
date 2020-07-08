@@ -423,7 +423,7 @@ final class FixConnection implements AutoCloseable
         final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
         final HeaderEncoder headerEncoder = sequenceResetEncoder.header();
 
-        setupHeader(headerEncoder, msgSeqNum, false);
+        setupHeader(headerEncoder, msgSeqNum, true);
         sequenceResetEncoder.newSeqNo(newMsgSeqNum)
             .gapFillFlag(true);
 
