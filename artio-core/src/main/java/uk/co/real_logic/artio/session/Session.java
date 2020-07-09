@@ -1031,11 +1031,6 @@ public class Session
         {
             if (origSendingTime == UNKNOWN)
             {
-                if (redact(position))
-                {
-                    return ABORT;
-                }
-
                 return checkPosition(proxy.sendReject(
                     newSentSeqNum(),
                     msgSeqNum,
@@ -1223,11 +1218,6 @@ public class Session
     private Action rejectDueToSendingTime(
         final int msgSeqNo, final char[] msgType, final int msgTypeLength, final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNo,
@@ -1453,11 +1443,6 @@ public class Session
             return null;
         }
 
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
         return checkPositionAndDisconnect(
             proxy.sendRejectWhilstNotLoggedOn(
                 newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM, sequenceIndex(), lastMsgSeqNumProcessed),
@@ -1591,11 +1576,6 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            if (redact(position))
-            {
-                return ABORT;
-            }
-
             return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
@@ -1853,11 +1833,6 @@ public class Session
         final int rejectReason,
         final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
         final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
             refSeqNum,
@@ -1899,11 +1874,6 @@ public class Session
     Action onInvalidMessageType(
         final int msgSeqNum, final char[] msgType, final int msgTypeLength, final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNum,
