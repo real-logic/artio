@@ -288,7 +288,6 @@ public class FramerContext
         return null;
     }
 
-
     public boolean offer(final AdminCommand command)
     {
         return adminCommands.offer(command);

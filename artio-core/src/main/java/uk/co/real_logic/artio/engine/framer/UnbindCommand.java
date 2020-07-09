@@ -6,6 +6,8 @@ class UnbindCommand implements AdminCommand, Reply<Void>
 {
     private volatile State state = State.EXECUTING;
 
+    private UnbindCommand concurrentUnbind;
+
     // thread-safe publication by writes to state after, and reads of state before its read.
     private Exception error;
     private final boolean disconnect;
@@ -23,12 +25,21 @@ class UnbindCommand implements AdminCommand, Reply<Void>
     void success()
     {
         state = State.COMPLETED;
+        if (concurrentUnbind != null)
+        {
+            concurrentUnbind.success();
+        }
     }
 
     void onError(final Exception error)
     {
         this.error = error;
         state = State.ERRORED;
+
+        if (concurrentUnbind != null)
+        {
+            concurrentUnbind.onError(error);
+        }
     }
 
     public Exception error()
@@ -58,5 +69,17 @@ class UnbindCommand implements AdminCommand, Reply<Void>
             ", state=" + state +
             ", error=" + error +
             '}';
+    }
+
+    public void addConcurrentUnbind(final UnbindCommand unbindCommand)
+    {
+        if (concurrentUnbind == null)
+        {
+            concurrentUnbind = unbindCommand;
+        }
+        else
+        {
+            concurrentUnbind.addConcurrentUnbind(unbindCommand);
+        }
     }
 }

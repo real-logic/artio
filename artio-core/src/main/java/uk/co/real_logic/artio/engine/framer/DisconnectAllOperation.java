@@ -31,6 +31,7 @@ class DisconnectAllOperation implements Continuation
     private final List<LiveLibraryInfo> libraries;
     private final List<GatewaySession> gatewaySessions;
     private final ReceiverEndPoints receiverEndPoints;
+    private final Runnable onSuccess;
 
     private Step step = Step.CLOSING_NOT_LOGGED_ON_RECEIVER_END_POINTS;
     private int libraryIndex = 0;
@@ -40,12 +41,14 @@ class DisconnectAllOperation implements Continuation
         final GatewayPublication inboundPublication,
         final List<LiveLibraryInfo> libraries,
         final List<GatewaySession> gatewaySessions,
-        final ReceiverEndPoints receiverEndPoints)
+        final ReceiverEndPoints receiverEndPoints,
+        final Runnable onSuccess)
     {
         this.inboundPublication = inboundPublication;
         this.libraries = libraries;
         this.gatewaySessions = gatewaySessions;
         this.receiverEndPoints = receiverEndPoints;
+        this.onSuccess = onSuccess;
     }
 
     public long attempt()
@@ -172,6 +175,8 @@ class DisconnectAllOperation implements Continuation
         }
 
         DebugLogger.log(LogTag.CLOSE, "Completed AWAITING_DISCONNECTS");
+
+        onSuccess.run();
         return 1;
     }
 

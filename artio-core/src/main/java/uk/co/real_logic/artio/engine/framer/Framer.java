@@ -176,7 +176,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
     private boolean performingDisconnectOperation = false;
-    private Reply<?> pendingUnbind = null;
+    private UnbindCommand pendingUnbind = null;
 
     // true if we should be bound, false otherwise
     // If we're in sole library mode and no library is connected we will be unbound.
@@ -2370,24 +2370,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         performingDisconnectOperation = true;
 
-        schedule(new UnitOfWork(
-            disconnectAllOperation(),
-            () ->
-            {
-                disconnectAllCommand.success();
-                return COMPLETE;
-            })
-        );
+        schedule(disconnectAllOperation(disconnectAllCommand::success));
     }
 
-    private DisconnectAllOperation disconnectAllOperation()
+    private DisconnectAllOperation disconnectAllOperation(final Runnable onSuccess)
     {
         return new DisconnectAllOperation(
             inboundPublication,
             new ArrayList<>(idToLibrary.values()),
             // Take a copy to avoid library sessions being acquired causing issues
             new ArrayList<>(gatewaySessions.sessions()),
-            receiverEndPoints);
+            receiverEndPoints,
+            onSuccess);
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)
@@ -2581,6 +2575,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onUnbind(final UnbindCommand unbindCommand)
     {
+        if (pendingUnbind != null)
+        {
+            pendingUnbind.addConcurrentUnbind(unbindCommand);
+        }
+
         if (soleLibraryMode && idToLibrary.isEmpty())
         {
             shouldBind = false;
@@ -2603,15 +2602,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             pendingUnbind = unbindCommand;
             performingDisconnectOperation = true;
-            schedule(new UnitOfWork(
-                disconnectAllOperation(),
-                () ->
-                {
-                    pendingUnbind = null;
-                    unbindCommand.success();
-                    return COMPLETE;
-                }
-            ));
+            schedule(disconnectAllOperation(() ->
+            {
+                pendingUnbind = null;
+                unbindCommand.success();
+            }));
         }
         else
         {
