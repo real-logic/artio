@@ -25,30 +25,27 @@ import java.util.List;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 
-class CloseOperation implements Continuation
+class DisconnectAllOperation implements Continuation
 {
     private final GatewayPublication inboundPublication;
     private final List<LiveLibraryInfo> libraries;
     private final List<GatewaySession> gatewaySessions;
     private final ReceiverEndPoints receiverEndPoints;
-    private final StartCloseCommand command;
 
     private Step step = Step.CLOSING_NOT_LOGGED_ON_RECEIVER_END_POINTS;
     private int libraryIndex = 0;
     private int gatewaySessionIndex = 0;
 
-    CloseOperation(
+    DisconnectAllOperation(
         final GatewayPublication inboundPublication,
         final List<LiveLibraryInfo> libraries,
         final List<GatewaySession> gatewaySessions,
-        final ReceiverEndPoints receiverEndPoints,
-        final StartCloseCommand command)
+        final ReceiverEndPoints receiverEndPoints)
     {
         this.inboundPublication = inboundPublication;
         this.libraries = libraries;
         this.gatewaySessions = gatewaySessions;
         this.receiverEndPoints = receiverEndPoints;
-        this.command = command;
     }
 
     public long attempt()
@@ -175,8 +172,6 @@ class CloseOperation implements Continuation
         }
 
         DebugLogger.log(LogTag.CLOSE, "Completed AWAITING_DISCONNECTS");
-        command.success();
-
         return 1;
     }
 

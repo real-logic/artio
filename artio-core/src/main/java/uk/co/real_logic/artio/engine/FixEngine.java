@@ -102,8 +102,23 @@ public final class FixEngine extends GatewayProcess
      */
     public Reply<?> unbind()
     {
-        return framerContext.bind(false);
+        return unbind(false);
     }
+
+    /**
+     * Unbinds the acceptor socket, and disconnects currently connected TCP connections if requested.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
+     *
+     * @param disconnect if currently connected connections need to be disconnected
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
+     */
+    public Reply<?> unbind(final boolean disconnect)
+    {
+        return framerContext.unbind(disconnect);
+    }
+
 
     /**
      * Binds the acceptor socket to the configured address. This only needs to be called if you had called
@@ -116,7 +131,7 @@ public final class FixEngine extends GatewayProcess
      */
     public Reply<?> bind()
     {
-        return framerContext.bind(true);
+        return framerContext.bind();
     }
 
     /**
