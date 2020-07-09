@@ -174,7 +174,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private ILink3Contexts iLink3Contexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
-    private boolean performingCloseOperation = false;
+
+    private boolean performingDisconnectOperation = false;
+    private Reply<?> pendingUnbind = null;
 
     // true if we should be bound, false otherwise
     // If we're in sole library mode and no library is connected we will be unbound.
@@ -564,7 +566,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumber,
                 SessionStatus.LIBRARY_NOTIFICATION));
 
-            if (performingCloseOperation)
+            if (performingDisconnectOperation)
             {
                 session.session().logoutAndDisconnect();
             }
@@ -596,7 +598,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
-        if (performingCloseOperation)
+        if (performingDisconnectOperation)
         {
             channel.close();
             return;
@@ -1399,7 +1401,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
-        if (performingCloseOperation)
+        if (performingDisconnectOperation)
         {
             // Do not do allow a new library to connect whilst performing end of day operations.
             return CONTINUE;
@@ -2362,19 +2364,30 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }));
     }
 
-    void onStartClose(final StartCloseCommand startCloseCommand)
+    void onStartClose(final DisconnectAllCommand disconnectAllCommand)
     {
         DebugLogger.log(LogTag.CLOSE, "Framer has started close operation");
 
-        performingCloseOperation = true;
+        performingDisconnectOperation = true;
 
-        schedule(new CloseOperation(
+        schedule(new UnitOfWork(
+            disconnectAllOperation(),
+            () ->
+            {
+                disconnectAllCommand.success();
+                return COMPLETE;
+            })
+        );
+    }
+
+    private DisconnectAllOperation disconnectAllOperation()
+    {
+        return new DisconnectAllOperation(
             inboundPublication,
             new ArrayList<>(idToLibrary.values()),
             // Take a copy to avoid library sessions being acquired causing issues
             new ArrayList<>(gatewaySessions.sessions()),
-            receiverEndPoints,
-            startCloseCommand));
+            receiverEndPoints);
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)
@@ -2542,27 +2555,67 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (soleLibraryMode && idToLibrary.isEmpty())
         {
-            shouldBind = bindCommand.bind();
+            shouldBind = true;
             bindCommand.success();
+            return;
+        }
+
+        if (pendingUnbind != null)
+        {
+            bindCommand.onError(new IllegalStateException("Unbind operation is in progress"));
             return;
         }
 
         try
         {
-            if (bindCommand.bind())
-            {
-                channelSupplier.bind();
-            }
-            else
-            {
-                channelSupplier.unbind();
-            }
-            shouldBind = bindCommand.bind();
+            performingDisconnectOperation = false;
+            channelSupplier.bind();
+            shouldBind = true;
             bindCommand.success();
         }
         catch (final Exception e)
         {
             bindCommand.onError(e);
+        }
+    }
+
+    void onUnbind(final UnbindCommand unbindCommand)
+    {
+        if (soleLibraryMode && idToLibrary.isEmpty())
+        {
+            shouldBind = false;
+            unbindCommand.success();
+            return;
+        }
+
+        try
+        {
+            channelSupplier.unbind();
+            shouldBind = false;
+        }
+        catch (final Exception e)
+        {
+            unbindCommand.onError(e);
+            return;
+        }
+
+        if (unbindCommand.disconnect())
+        {
+            pendingUnbind = unbindCommand;
+            performingDisconnectOperation = true;
+            schedule(new UnitOfWork(
+                disconnectAllOperation(),
+                () ->
+                {
+                    pendingUnbind = null;
+                    unbindCommand.success();
+                    return COMPLETE;
+                }
+            ));
+        }
+        else
+        {
+            unbindCommand.success();
         }
     }
 

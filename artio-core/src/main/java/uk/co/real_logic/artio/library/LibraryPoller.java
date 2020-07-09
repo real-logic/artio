@@ -102,9 +102,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final int CLOSED = 4;
 
     /**
-     * End of day operation has started
+     * Engine is disconnected by either closing or unbind operation
      */
-    private static final int ENGINE_CLOSE = 5;
+    private static final int ENGINE_DISCONNECT = 5;
 
     private static final ILink3Connection[] EMPTY_ILINK_CONNECTIONS = new ILink3Connection[0];
     private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
@@ -222,7 +222,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isAtEndOfDay()
     {
-        return state == ENGINE_CLOSE;
+        return state == ENGINE_DISCONNECT;
     }
 
     int libraryId()
@@ -521,7 +521,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 state = CONNECTING;
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
-            case ENGINE_CLOSE:
+            case ENGINE_DISCONNECT:
                 attemptEngineCloseBasedLogout();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
@@ -1445,7 +1445,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId)
         {
             DebugLogger.log(CLOSE, "Received engine close message, starting ENGINE_CLOSE operation");
-            state = ENGINE_CLOSE;
+            state = ENGINE_DISCONNECT;
 
             attemptEngineCloseBasedLogout();
         }

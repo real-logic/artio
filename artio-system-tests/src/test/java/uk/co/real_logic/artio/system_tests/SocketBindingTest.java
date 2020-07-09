@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -80,6 +81,23 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
             completeUnbind();
             connection.logoutAndAwaitReply();
         }
+    }
+
+    @Test
+    public void shouldDisconnectWhenRequestedWithUnbinding() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            completeUnbind(true);
+            connection.readLogout();
+            assertCannotConnect();
+        }
+
+        completeBind();
+        assertConnectable();
     }
 
     @Test
@@ -183,6 +201,28 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
         assertCannotConnect();
     }
 
+    @Test
+    public void shouldDisconnectWhenRequestedWithUnbindingSoleLibrary() throws IOException
+    {
+        setupSoleLibrary(false);
+
+        completeBind();
+
+        // Cannot connect yet as there's no library
+        assertCannotConnect();
+
+        final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        {
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                completeUnbind(true);
+                assertFalse(connection.isConnected());
+            }
+        }
+    }
+
     private void setupSoleLibrary(final boolean shouldBind)
     {
         setup(true, shouldBind, true, SOLE_LIBRARY);
@@ -197,7 +237,12 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
     private void completeUnbind()
     {
-        final Reply<?> unbindReply = engine.unbind();
+        completeUnbind(false);
+    }
+
+    private void completeUnbind(final boolean disconnect)
+    {
+        final Reply<?> unbindReply = engine.unbind(disconnect);
         awaitReply(unbindReply);
         assertEquals(unbindReply.toString(), Reply.State.COMPLETED, unbindReply.state());
     }

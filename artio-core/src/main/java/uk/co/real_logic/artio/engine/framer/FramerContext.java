@@ -215,7 +215,7 @@ public class FramerContext
     public void startClose()
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        final StartCloseCommand command = new StartCloseCommand();
+        final DisconnectAllCommand command = new DisconnectAllCommand();
         while (!adminCommands.offer(command))
         {
             idleStrategy.idle();
@@ -258,11 +258,11 @@ public class FramerContext
         return null;
     }
 
-    public Reply<?> bind(final boolean bind)
+    public Reply<?> bind()
     {
-        final BindCommand command = new BindCommand(bind);
+        final BindCommand command = new BindCommand();
 
-        if (bind && !configuration.hasBindAddress())
+        if (!configuration.hasBindAddress())
         {
             command.onError(new IllegalStateException("Missing address: EngineConfiguration.bindTo()"));
             return command;
@@ -275,6 +275,19 @@ public class FramerContext
 
         return null;
     }
+
+    public Reply<?> unbind(final boolean disconnect)
+    {
+        final UnbindCommand command = new UnbindCommand(disconnect);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
+    }
+
 
     public boolean offer(final AdminCommand command)
     {
