@@ -174,7 +174,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private ILink3Contexts iLink3Contexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
+
     private boolean performingDisconnectOperation = false;
+    private Reply<?> pendingUnbind = null;
 
     // true if we should be bound, false otherwise
     // If we're in sole library mode and no library is connected we will be unbound.
@@ -2519,6 +2521,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return;
         }
 
+        if (pendingUnbind != null)
+        {
+            bindCommand.onError(new IllegalStateException("Unbind operation is in progress"));
+            return;
+        }
+
         try
         {
             performingDisconnectOperation = false;
@@ -2554,11 +2562,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (unbindCommand.disconnect())
         {
+            pendingUnbind = unbindCommand;
             performingDisconnectOperation = true;
             schedule(new UnitOfWork(
                 disconnectAllOperation(),
                 () ->
                 {
+                    pendingUnbind = null;
                     unbindCommand.success();
                     return COMPLETE;
                 }
