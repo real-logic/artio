@@ -156,6 +156,10 @@ public class SessionParser
 
             return action;
         }
+        catch (final MalformedTagFormatException e)
+        {
+            return rejectAndHandleExceptionalMessage(e, messageType, e.refTagId(), position);
+        }
         catch (final AsciiNumberFormatException e)
         {
             // We should just ignore the message when the first three fields are out of order.
@@ -165,18 +169,19 @@ public class SessionParser
             }
             else
             {
-                return rejectAndHandleExceptionalMessage(e, messageType, position);
+                return rejectAndHandleExceptionalMessage(e, messageType, MISSING_INT, position);
             }
         }
         catch (final Exception e)
         {
-            return rejectAndHandleExceptionalMessage(e, messageType, position);
+            return rejectAndHandleExceptionalMessage(e, messageType, MISSING_INT, position);
         }
     }
 
-    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final long position)
+    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final int refTagId,
+        final long position)
     {
-        final Action action = rejectExceptionalMessage(messageType, position);
+        final Action action = rejectExceptionalMessage(messageType, refTagId, position);
 
         if (action == CONTINUE)
         {
@@ -186,42 +191,42 @@ public class SessionParser
         return action;
     }
 
-    private Action rejectExceptionalMessage(final long messageType, final long position)
+    private Action rejectExceptionalMessage(final long messageType, final int refTagId, final long position)
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logon.header(), position);
+            return onExceptionalMessage(logon.header(), refTagId, position);
         }
         else if (messageType == LOGOUT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logout.header(), position);
+            return onExceptionalMessage(logout.header(), refTagId, position);
         }
         else if (messageType == HEARTBEAT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(heartbeat.header(), position);
+            return onExceptionalMessage(heartbeat.header(), refTagId, position);
         }
         else if (messageType == REJECT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(reject.header(), position);
+            return onExceptionalMessage(reject.header(), refTagId, position);
         }
         else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(testRequest.header(), position);
+            return onExceptionalMessage(testRequest.header(), refTagId, position);
         }
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(sequenceReset.header(), position);
+            return onExceptionalMessage(sequenceReset.header(), refTagId, position);
         }
-        return onExceptionalMessage(header, position);
+        return onExceptionalMessage(header, MISSING_INT, position);
     }
 
-    private Action onExceptionalMessage(final SessionHeaderDecoder header, final long position)
+    private Action onExceptionalMessage(final SessionHeaderDecoder header, final int regTagId, final long position)
     {
         final int msgSeqNum = header.msgSeqNum();
 
         return session.onInvalidMessage(
             msgSeqNum,
-            MISSING_INT,
+            regTagId,
             header.msgType(),
             header.msgTypeLength(),
             SessionConstants.INCORRECT_DATA_FORMAT_FOR_VALUE,
@@ -267,14 +272,21 @@ public class SessionParser
     private long sendingTime(final SessionHeaderDecoder header)
     {
         final byte[] sendingTime = header.sendingTime();
-        return decodeTimestamp(sendingTime);
+        return decodeTimestamp(sendingTime, header.sendingTimeLength(), SENDING_TIME);
     }
 
-    private long decodeTimestamp(final byte[] sendingTime)
+    private long decodeTimestamp(final byte[] sendingTime, final int length, final int refTagId)
     {
-        return CODEC_VALIDATION_ENABLED ?
-            timestampDecoder.decode(sendingTime, sendingTime.length) :
-            MISSING_LONG;
+        try
+        {
+            return CODEC_VALIDATION_ENABLED ?
+                timestampDecoder.decode(sendingTime, length) :
+                MISSING_LONG;
+        }
+        catch (final Exception e)
+        {
+            throw new MalformedTagFormatException(refTagId, e);
+        }
     }
 
     private Action onAnyOtherMessage(final int offset, final int length, final long position)
@@ -323,7 +335,11 @@ public class SessionParser
 
     private long origSendingTime(final SessionHeaderDecoder header)
     {
-        return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
+        if (header.hasOrigSendingTime())
+        {
+            return decodeTimestamp(header.origSendingTime(), header.origSendingTimeLength(), ORIG_SENDING_TIME);
+        }
+        return UNKNOWN;
     }
 
     private Action onResendRequest(final int offset, final int length, final long position)

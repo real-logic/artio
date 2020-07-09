@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.hamcrest.MatcherAssert;
 import org.junit.Test;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
@@ -103,6 +104,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             final RejectDecoder reject = connection.readMessage(new RejectDecoder());
             assertEquals(1, reject.refSeqNum());
+            assertEquals(Constants.SENDING_TIME, reject.refTagID());
             assertEquals(LogonDecoder.MESSAGE_TYPE_AS_STRING, reject.refMsgTypeAsString());
 
             connection.logoutAndAwaitReply();
@@ -122,6 +124,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             final RejectDecoder reject = connection.readMessage(new RejectDecoder());
             assertEquals(2, reject.refSeqNum());
+            assertEquals(Constants.SENDING_TIME, reject.refTagID());
 
             connection.logoutAndAwaitReply();
         }
