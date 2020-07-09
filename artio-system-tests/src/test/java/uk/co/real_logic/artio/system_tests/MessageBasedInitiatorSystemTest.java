@@ -19,7 +19,11 @@ import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.OrdStatus;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.decoder.ExecutionReportDecoder;
@@ -35,13 +39,21 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
-import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingLibraryConfig;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.launchInitiatingEngine;
 
 // For reproducing error scenarios when initiating a connection
 public class MessageBasedInitiatorSystemTest
@@ -187,14 +199,47 @@ public class MessageBasedInitiatorSystemTest
             {
                 testSystem.poll();
 
-                return !session.awaitingResend();
+                return !session.awaitingResend() && session.lastReceivedMsgSeqNum() == 5;
             });
-
-            testSystem.poll();
 
             connection.readHeartbeat(testReqID);
         }
     }
+
+    @Test
+    public void shouldAcceptExtendedFillGap() throws IOException
+    {
+        final String testReqID = "thisIsATest";
+
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+
+            connection.msgSeqNum(4).logon(false);
+
+            final Session session = lookupSession();
+            assertTrue(session.awaitingResend());
+
+            // Receive resend request for missing messages.
+            final ResendRequestDecoder resendRequestDecoder = connection.readMessage(new ResendRequestDecoder());
+            assertEquals(1, resendRequestDecoder.beginSeqNo());
+            assertEquals(0, resendRequestDecoder.endSeqNo());
+
+            // Fill the gap
+            connection.sendGapFill(1, 6);
+            connection.msgSeqNum(6).sendTestRequest(testReqID);
+
+            Timing.assertEventuallyTrue("Session has caught up", () ->
+            {
+                testSystem.poll();
+
+                return !session.awaitingResend() && session.lastReceivedMsgSeqNum() == 6;
+            });
+
+            connection.readHeartbeat(testReqID);
+        }
+    }
+
 
     @Test
     public void shouldBeNotifiedOnDisconnect() throws IOException

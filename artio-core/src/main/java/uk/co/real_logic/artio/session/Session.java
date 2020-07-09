@@ -1650,6 +1650,12 @@ public class Session
                     lastResentMsgSeqNo = 0;
                     lastResendChunkMsgSeqNum = 0;
                     endOfResendRequestRange = 0;
+                    // if new sequence is beyond original sequence
+                    // accept it so that new messages will not cause resend request
+                    if (lastReceivedMsgSeqNum < newSeqNo)
+                    {
+                        lastReceivedMsgSeqNum(newSeqNo - 1);
+                    }
                 }
                 else
                 {
