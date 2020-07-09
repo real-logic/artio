@@ -50,10 +50,11 @@ public class ILinkReplayerSession extends ReplayerSession
         final ReplayQuery replayQuery,
         final int beginSeqNo,
         final int endSeqNo,
-        final long sessionId)
+        final long sessionId,
+        final Replayer replayer)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
-            sessionId, 0);
+            sessionId, 0, replayer);
 
         state = State.REPLAYING;
     }

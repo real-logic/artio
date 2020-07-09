@@ -20,7 +20,6 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
@@ -28,11 +27,6 @@ import static uk.co.real_logic.artio.LogTag.REPLAY;
 
 abstract class ReplayerSession implements ControlledFragmentHandler
 {
-    // Safe to share between multiple instances due to single threaded nature of the replayer
-    static final MessageHeaderDecoder MESSAGE_HEADER = new MessageHeaderDecoder();
-    static final MessageHeaderEncoder MESSAGE_HEADER_ENCODER = new MessageHeaderEncoder();
-    static final ReplayCompleteEncoder REPLAY_COMPLETE_ENCODER = new ReplayCompleteEncoder();
-
     private final int maxClaimAttempts;
     private final IdleStrategy idleStrategy;
 
@@ -45,6 +39,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     final int endSeqNo;
     final long sessionId;
     final int sequenceIndex;
+    final Replayer replayer;
 
     ReplayOperation replayOperation;
 
@@ -58,7 +53,8 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         final int beginSeqNo,
         final int endSeqNo,
         final long sessionId,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final Replayer replayer)
     {
         this.connectionId = connectionId;
         this.bufferClaim = bufferClaim;
@@ -70,6 +66,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         this.endSeqNo = endSeqNo;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
+        this.replayer = replayer;
     }
 
     void query()
@@ -113,10 +110,10 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     {
         if (claimBuffer(MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH))
         {
-            REPLAY_COMPLETE_ENCODER.wrapAndApplyHeader(
+            replayer.replayCompleteEncoder.wrapAndApplyHeader(
                 bufferClaim.buffer(),
                 bufferClaim.offset(),
-                MESSAGE_HEADER_ENCODER)
+                replayer.messageHeaderEncoder)
                 .connection(connectionId);
 
             bufferClaim.commit();

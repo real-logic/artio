@@ -66,6 +66,11 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final BufferClaim bufferClaim;
 
+    // Safe to share between multiple ReplayerSession instances due to single threaded nature of the Replayer
+    final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+    final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
+    final ReplayCompleteEncoder replayCompleteEncoder = new ReplayCompleteEncoder();
+
     // FIX specific state.
     private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
@@ -73,7 +78,14 @@ public class Replayer implements Agent, ControlledFragmentHandler
         "Received Resend Request for range: [%s, %s]%n");
     private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
         "Not processing Resend Request for %s because it has already disconnected %n");
-    private final FixReplayerSession.Formatters formatters = new FixReplayerSession.Formatters();
+
+    // For FixReplayerSession, safe to share rather than allocate for each FixReplayerSession
+    final CharFormatter completeNotRecentFormatter = new CharFormatter(
+        "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
+        "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
+    final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
+        "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
+        "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
 
     // ILink specific state
     private final LongHashSet iLinkConnectionIds = new LongHashSet();
@@ -326,7 +338,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
             final ILinkReplayerSession session = new ILinkReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
-                (int)beginSeqNo, (int)endSeqNo, sessionId);
+                (int)beginSeqNo, (int)endSeqNo, sessionId, this);
 
             session.query();
 
@@ -381,10 +393,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
             message,
             errorHandler,
             encoder,
-            formatters,
             bytesInBuffer,
             maxBytesInBuffer,
-            utcTimestampEncoder);
+            utcTimestampEncoder,
+            this);
 
         fixReplayerSession.query();
 

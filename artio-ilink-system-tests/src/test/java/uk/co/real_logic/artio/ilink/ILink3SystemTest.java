@@ -58,7 +58,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ILink3SystemTest
 {
-    private static final int TEST_KEEP_ALIVE_INTERVAL_IN_MS = 500;
+    private static final int TEST_KEEP_ALIVE_INTERVAL_IN_MS = 700;
 
     static final String ACCESS_KEY_ID = "12345678901234567890";
     static final String SESSION_ID = "ABC";

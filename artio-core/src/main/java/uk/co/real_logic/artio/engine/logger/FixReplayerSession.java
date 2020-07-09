@@ -35,7 +35,6 @@ import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -50,16 +49,6 @@ import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVer
 
 class FixReplayerSession extends ReplayerSession
 {
-    static class Formatters
-    {
-        private final CharFormatter completeNotRecentFormatter = new CharFormatter(
-            "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
-            "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
-        private final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
-            "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
-            "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
-    }
-
     private static final int NONE = -1;
     private static final byte[] NO_BYTES = new byte[0];
 
@@ -83,7 +72,6 @@ class FixReplayerSession extends ReplayerSession
     private final LongHashSet gapFillMessageTypes;
     private final ErrorHandler errorHandler;
     private final SequenceNumberExtractor sequenceNumberExtractor;
-    private final Formatters formatters;
     private final AtomicCounter bytesInBuffer;
     private final int maxBytesInBuffer;
 
@@ -110,19 +98,18 @@ class FixReplayerSession extends ReplayerSession
         final String message,
         final ErrorHandler errorHandler,
         final GapFillEncoder gapFillEncoder,
-        final Formatters formatters,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
-        final UtcTimestampEncoder utcTimestampEncoder)
+        final UtcTimestampEncoder utcTimestampEncoder,
+        final Replayer replayer)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
-            sessionId, sequenceIndex);
+            sessionId, sequenceIndex, replayer);
         this.replayHandler = replayHandler;
         this.gapFillMessageTypes = gapFillMessageTypes;
         this.message = message;
         this.errorHandler = errorHandler;
         this.gapFillEncoder = gapFillEncoder;
-        this.formatters = formatters;
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.bytesInBuffer = bytesInBuffer;
 
@@ -172,10 +159,10 @@ class FixReplayerSession extends ReplayerSession
     public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {
-        MESSAGE_HEADER.wrap(srcBuffer, srcOffset);
-        final int actingBlockLength = MESSAGE_HEADER.blockLength();
+        replayer.messageHeaderDecoder.wrap(srcBuffer, srcOffset);
+        final int actingBlockLength = replayer.messageHeaderDecoder.blockLength();
         final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
-        final int version = MESSAGE_HEADER.version();
+        final int version = replayer.messageHeaderDecoder.version();
 
         FIX_MESSAGE.wrap(
             srcBuffer,
@@ -248,7 +235,7 @@ class FixReplayerSession extends ReplayerSession
             final MutableAsciiBuffer gapFillBuffer = gapFillEncoder.buffer();
 
             FIX_MESSAGE_ENCODER
-                .wrapAndApplyHeader(destBuffer, destOffset, MESSAGE_HEADER_ENCODER)
+                .wrapAndApplyHeader(destBuffer, destOffset, replayer.messageHeaderEncoder)
                 .libraryId(ENGINE_LIBRARY_ID)
                 .messageType(SEQUENCE_RESET_MESSAGE_TYPE)
                 .session(this.sessionId)
@@ -328,7 +315,7 @@ class FixReplayerSession extends ReplayerSession
 
             DebugLogger.log(
                 REPLAY,
-                formatters.completeReplayGapfillFormatter,
+                replayer.completeReplayGapfillFormatter,
                 action.name(),
                 replayedMessages,
                 beginGapFillSeqNum,
@@ -345,7 +332,7 @@ class FixReplayerSession extends ReplayerSession
             final int expectedCount = endSeqNo - beginSeqNo + 1;
             DebugLogger.log(
                 REPLAY,
-                formatters.completeNotRecentFormatter,
+                replayer.completeNotRecentFormatter,
                 replayedMessages,
                 endSeqNo,
                 beginSeqNo,
