@@ -939,11 +939,24 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
+    @Test
+    public void shouldNotAllowDuplicateConnections() throws IOException
+    {
+        // The same session can be used to connect to different market segments but not
+        // the same external host simultaneously.
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        final Reply<ILink3Connection> reply = library.initiate(connectionConfiguration().build());
+        testSystem.awaitReply(reply);
+        assertEquals(Reply.State.ERRORED, reply.state());
+
+        final String message = reply.error().getMessage();
+        assertThat(message, containsString("Duplicate iLink3 Connection"));
+    }
+
     private void establishNewConnection() throws IOException
     {
-        final ILink3ConnectionConfiguration.Builder connectionConfiguration = connectionConfiguration();
-
-        connectToTestServer(connectionConfiguration);
+        connectToTestServer(connectionConfiguration());
 
         establishConnection();
     }

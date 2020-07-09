@@ -20,6 +20,8 @@ final class ILink3Context
     private long uuid;
     private long lastUuid;
     private boolean newlyAllocated;
+    private boolean primaryConnected;
+    private boolean backupConnected;
 
     ILink3Context(final long uuid, final long lastUuid, final boolean newlyAllocated)
     {
@@ -33,17 +35,17 @@ final class ILink3Context
         return uuid;
     }
 
-    public void uuid(final long uuid)
+    void uuid(final long uuid)
     {
         this.uuid = uuid;
     }
 
-    public long lastUuid()
+    long lastUuid()
     {
         return lastUuid;
     }
 
-    public void lastUuid(final long lastUuid)
+    void lastUuid(final long lastUuid)
     {
         this.lastUuid = lastUuid;
     }
@@ -53,8 +55,28 @@ final class ILink3Context
         return newlyAllocated;
     }
 
-    public void newlyAllocated(final boolean newlyAllocated)
+    void newlyAllocated(final boolean newlyAllocated)
     {
         this.newlyAllocated = newlyAllocated;
+    }
+
+    boolean primaryConnected()
+    {
+        return primaryConnected;
+    }
+
+    public void primaryConnected(final boolean connected)
+    {
+        this.primaryConnected = connected;
+    }
+
+    boolean backupConnected()
+    {
+        return backupConnected;
+    }
+
+    public void backupConnected(final boolean connected)
+    {
+        this.backupConnected = connected;
     }
 }

@@ -86,7 +86,9 @@ class ILink3Contexts
             final String host = contextDecoder.host();
             final String accessKeyId = contextDecoder.accessKeyId();
 
-            keyToContext.put(new ILink3Key(port, host, accessKeyId), new ILink3Context(uuid, 0, false));
+            keyToContext.put(
+                new ILink3Key(port, host, accessKeyId),
+                new ILink3Context(uuid, 0, false));
 
             offset = contextDecoder.limit();
         }
@@ -140,18 +142,6 @@ class ILink3Contexts
     private long microSecondTimestamp()
     {
         return epochNanoClock.nanoTime();
-    }
-
-    private ILink3Context lookupUuid(final ILink3Key key)
-    {
-        final ILink3Context context = keyToContext.get(key);
-        if (context != null)
-        {
-            context.newlyAllocated(false);
-            return context;
-        }
-
-        return allocateUuid(key);
     }
 
     int offset()

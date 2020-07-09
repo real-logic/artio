@@ -660,6 +660,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ILink3Contexts iLink3Contexts = iLink3Contexts();
         final ILink3Context context = iLink3Contexts.calculateUuid(
             port, primaryHost, accessKeyId, reestablishConnection);
+
+        if (checkDuplicateILinkConnection(libraryId, correlationId, useBackupHost, accessKeyId, address, context))
+        {
+            return CONTINUE;
+        }
+
         final int aeronSessionId = library.aeronSessionId();
         final Image image = librarySubscription.imageBySessionId(aeronSessionId);
         final long position = image.position();
@@ -693,6 +699,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
+                    if (useBackupHost)
+                    {
+                        context.backupConnected(true);
+                    }
+                    else
+                    {
+                        context.primaryConnected(true);
+                    }
 
                     iLink3SenderEndPoints.add(new ILink3SenderEndPoint(
                         connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId));
@@ -703,7 +717,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         errorHandler,
                         this,
                         inboundPublication,
-                        libraryId));
+                        libraryId,
+                        useBackupHost,
+                        context));
                 });
         }
         catch (final IOException ex)
@@ -715,6 +731,29 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    private boolean checkDuplicateILinkConnection(
+        final int libraryId,
+        final long correlationId,
+        final boolean useBackupHost,
+        final String accessKeyId,
+        final InetSocketAddress address,
+        final ILink3Context context)
+    {
+        // Check if we're ok
+        if ((useBackupHost && !context.backupConnected()) || (!useBackupHost && !context.primaryConnected()))
+        {
+            return false;
+        }
+
+        saveError(DUPLICATE_SESSION, libraryId, correlationId, String.format(
+            "Duplicate iLink3 Connection for (addr=%s,accessKeyId=%s,%s)",
+            address,
+            accessKeyId,
+            useBackupHost ? "backup" : "primary"));
+
+        return true;
     }
 
     private ILink3Contexts iLink3Contexts()

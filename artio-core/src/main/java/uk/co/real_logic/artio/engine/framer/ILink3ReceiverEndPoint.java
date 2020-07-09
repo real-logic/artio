@@ -40,6 +40,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
     private final ExclusivePublication inboundPublication;
+    private final boolean isBackup;
+    private final ILink3Context context;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -47,10 +49,15 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final int bufferSize,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final GatewayPublication publication, final int libraryId)
+        final GatewayPublication publication,
+        final int libraryId,
+        final boolean isBackup,
+        final ILink3Context context)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         inboundPublication = publication.dataPublication();
+        this.isBackup = isBackup;
+        this.context = context;
 
         makeHeader();
     }
@@ -67,7 +74,20 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     void removeEndpointFromFramer()
     {
+        trackDisconnect();
         framer.onILink3Disconnect(connectionId, null);
+    }
+
+    private void trackDisconnect()
+    {
+        if (isBackup)
+        {
+            context.backupConnected(false);
+        }
+        else
+        {
+            context.primaryConnected(false);
+        }
     }
 
     void disconnectContext()
@@ -181,6 +201,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     void closeResources()
     {
+        trackDisconnect();
+
         try
         {
             channel.close();

@@ -18,8 +18,6 @@ package uk.co.real_logic.artio.library;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.GatewayError;
 
-import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
-
 /**
  * .
  */
@@ -77,10 +75,7 @@ class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
 
     void onError(final GatewayError errorType, final String errorMessage)
     {
-        if (errorType == UNABLE_TO_CONNECT)
-        {
-            onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
-        }
+        onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
     }
 
     ILink3ConnectionConfiguration configuration()
