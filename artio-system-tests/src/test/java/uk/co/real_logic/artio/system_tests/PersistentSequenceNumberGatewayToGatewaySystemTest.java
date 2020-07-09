@@ -367,6 +367,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test
     public void shouldRejectIncorrectInitiatorSequenceNumber()
     {
+        printErrorMessages = false;
+
         launch(this::nothing);
         connectPersistingSessions();
 
