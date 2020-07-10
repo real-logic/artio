@@ -201,6 +201,7 @@ public class SessionParser
             {
                 session.logoutAndDisconnect();
             }
+            return action;
         }
         else if (messageType == LOGOUT_MESSAGE_TYPE)
         {
