@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
@@ -195,7 +196,11 @@ public class SessionParser
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logon.header(), refTagId, position);
+            final Action action = onExceptionalMessage(logon.header(), refTagId, position);
+            if (action != ABORT)
+            {
+                session.logoutAndDisconnect();
+            }
         }
         else if (messageType == LOGOUT_MESSAGE_TYPE)
         {
