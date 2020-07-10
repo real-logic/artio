@@ -217,7 +217,7 @@ public class SessionParser
         {
             return onExceptionalMessage(sequenceReset.header(), refTagId, position);
         }
-        return onExceptionalMessage(header, MISSING_INT, position);
+        return onExceptionalMessage(header, refTagId, position);
     }
 
     private Action onExceptionalMessage(final SessionHeaderDecoder header, final int regTagId, final long position)
