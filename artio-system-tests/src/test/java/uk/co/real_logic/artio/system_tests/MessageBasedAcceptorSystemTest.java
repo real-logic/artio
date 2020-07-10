@@ -94,7 +94,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     }
 
     @Test
-    public void shouldRejectExceptionalLogonMessage() throws IOException
+    public void shouldRejectExceptionalLogonMessageAndLogout() throws IOException
     {
         setup(true, true);
 
@@ -107,7 +107,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             assertEquals(Constants.SENDING_TIME, reject.refTagID());
             assertEquals(LogonDecoder.MESSAGE_TYPE_AS_STRING, reject.refMsgTypeAsString());
 
-            connection.logoutAndAwaitReply();
+            connection.readLogout();
         }
     }
 
