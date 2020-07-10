@@ -69,7 +69,8 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         notAppliedResponse.accept(response);
     }
 
-    public void onRetransmitReject(final String reason, final long requestTimestamp, final int errorCodes)
+    public void onRetransmitReject(
+        final String reason, final long lastUuid, final long requestTimestamp, final int errorCodes)
     {
 
     }

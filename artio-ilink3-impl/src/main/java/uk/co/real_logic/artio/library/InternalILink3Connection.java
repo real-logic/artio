@@ -149,8 +149,8 @@ public final class InternalILink3Connection extends ILink3Connection
     private final CharFormatter checkSeqNum = new CharFormatter("Checking msgSeqNum=%s,nextRecvSeqNo=%s%n");
     private final CharFormatter retransmitFilled =
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
-    private final CharFormatter retransmitFilledNext =
-        new CharFormatter("RetransmitFilledNext uuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
+    private final CharFormatter retransmitFilledNext = new CharFormatter(
+        "RetransmitFilledNext uuid=%s,lastUuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
@@ -170,7 +170,6 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private final long lastUuid;
     private final long lastConnectionLastReceivedSequenceNumber;
-    private final long lastConnectionLastSentSequenceNumber;
 
     private InitiateILink3ConnectionReply initiateReply;
 
@@ -227,7 +226,6 @@ public final class InternalILink3Connection extends ILink3Connection
         this.uuid = uuid;
         this.lastUuid = lastUuid;
         this.lastConnectionLastReceivedSequenceNumber = calculateSequenceNumber(lastReceivedSequenceNumber);
-        this.lastConnectionLastSentSequenceNumber = calculateSequenceNumber(lastSentSequenceNumber);
 
         state = State.CONNECTED;
     }
@@ -814,8 +812,9 @@ public final class InternalILink3Connection extends ILink3Connection
             {
                 final long impliedNextRecvSeqNo = previousSeqNo + 1;
                 final long oldNextRecvSeqNo = lastConnectionLastReceivedSequenceNumber + 1;
+                final long retransmitLastUuid = uUID == previousUUID ? lastUUIDNullValue() : previousUUID;
                 return onInvalidSequenceNumber(
-                    previousUUID, impliedNextRecvSeqNo, oldNextRecvSeqNo, impliedNextRecvSeqNo);
+                    retransmitLastUuid, impliedNextRecvSeqNo, oldNextRecvSeqNo, impliedNextRecvSeqNo);
             }
         }
 
@@ -928,7 +927,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 if (expectedNextRecvSeqNo < nextSeqNo)
                 {
                     // sequence gap, initiate retransmission.
-                    return onInvalidSequenceNumber(uuid, nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
+                    return onInvalidSequenceNumber(lastUUIDNullValue(), nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
                 }
             }
             else
@@ -1057,7 +1056,8 @@ public final class InternalILink3Connection extends ILink3Connection
             {
                 if (seqNum > nextRetransmitSeqNo)
                 {
-                    final long position = onInvalidSequenceNumber(uuid, seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
+                    final long position = onInvalidSequenceNumber(
+                        lastUUIDNullValue(), seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
                     if (Pressure.isBackPressured(position))
                     {
                         return position;
@@ -1138,11 +1138,11 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
-        return onInvalidSequenceNumber(uuid, msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
+        return onInvalidSequenceNumber(lastUUIDNullValue(), msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
     }
 
     private long onInvalidSequenceNumber(
-        final long uuid, final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
+        final long lastUuid, final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
     {
         final long fromSeqNo = oldNextRecvSeqNo;
         final int totalMsgCount = (int)(msgSeqNum - oldNextRecvSeqNo);
@@ -1150,11 +1150,11 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
         {
-            final long position = sendRetransmitRequest(uuid, fromSeqNo, msgCount);
+            final long position = sendRetransmitRequest(lastUuid, fromSeqNo, msgCount);
             if (!Pressure.isBackPressured(position))
             {
-                addRemainingRetransmitRequests(uuid, fromSeqNo, msgCount, totalMsgCount);
-                nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, uuid);
+                addRemainingRetransmitRequests(lastUuid, fromSeqNo, msgCount, totalMsgCount);
+                nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, lastUuid);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
@@ -1162,18 +1162,18 @@ public final class InternalILink3Connection extends ILink3Connection
         }
         else
         {
-            addRetransmitRequest(uuid, fromSeqNo, msgCount);
-            addRemainingRetransmitRequests(uuid, fromSeqNo, msgCount, totalMsgCount);
-            nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, uuid);
+            addRetransmitRequest(lastUuid, fromSeqNo, msgCount);
+            addRemainingRetransmitRequests(lastUuid, fromSeqNo, msgCount, totalMsgCount);
+            nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, lastUuid);
 
             return 1;
         }
     }
 
-    private void nextRecvSeqNoForCurrentUuid(final long newNextRecvSeqNo, final long uuid)
+    private void nextRecvSeqNoForCurrentUuid(final long newNextRecvSeqNo, final long lastUuid)
     {
         // we don't want to update newNextRecvSeqNo for an On EstablishAck retransmit request for the last uuid
-        if (this.uuid == uuid)
+        if (lastUuid == lastUUIDNullValue())
         {
             nextRecvSeqNo(newNextRecvSeqNo);
         }
@@ -1190,15 +1190,25 @@ public final class InternalILink3Connection extends ILink3Connection
         }
         else
         {
-            final long uuid = retransmitRequest.uuid;
+            final long lastUuid = retransmitRequest.lastUuid;
             final long fromSeqNo = retransmitRequest.fromSeqNo;
             final int msgCount = retransmitRequest.msgCount;
             final long position = sendRetransmitRequest(
-                uuid, fromSeqNo, msgCount);
+                lastUuid, fromSeqNo, msgCount);
 
             if (!Pressure.isBackPressured(position))
             {
-                DebugLogger.log(ILINK_SESSION, retransmitFilledNext, uuid, retransmitFillSeqNo, fromSeqNo, msgCount);
+                if (DebugLogger.isEnabled(ILINK_SESSION))
+                {
+                    retransmitFilledNext
+                        .clear()
+                        .with(uuid)
+                        .with(lastUuid)
+                        .with(retransmitFillSeqNo)
+                        .with(fromSeqNo)
+                        .with(msgCount);
+                    DebugLogger.log(ILINK_SESSION, retransmitFilledNext);
+                }
                 retransmitRequests.pollFirst();
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
@@ -1211,7 +1221,10 @@ public final class InternalILink3Connection extends ILink3Connection
     }
 
     private void addRemainingRetransmitRequests(
-        final long uuid, final long initialFromSeqNo, final int initialMessagesRequested, final int totalMessageCount)
+        final long lastUuid,
+        final long initialFromSeqNo,
+        final int initialMessagesRequested,
+        final int totalMessageCount)
     {
         final int retransmitRequestMsgLimit = configuration.retransmitRequestMessageLimit();
 
@@ -1221,23 +1234,23 @@ public final class InternalILink3Connection extends ILink3Connection
         while (messagesRequested < totalMessageCount)
         {
             final int msgCount = Math.min(totalMessageCount - messagesRequested, retransmitRequestMsgLimit);
-            addRetransmitRequest(uuid, fromSeqNo, msgCount);
+            addRetransmitRequest(lastUuid, fromSeqNo, msgCount);
 
             messagesRequested += msgCount;
             fromSeqNo += msgCount;
         }
     }
 
-    private void addRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    private void addRetransmitRequest(final long lastUuid, final long fromSeqNo, final int msgCount)
     {
-        retransmitRequests.offerLast(new RetransmitRequest(uuid, fromSeqNo, msgCount));
+        retransmitRequests.offerLast(new RetransmitRequest(lastUuid, fromSeqNo, msgCount));
     }
 
-    private long sendRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    private long sendRetransmitRequest(final long lastUuid, final long fromSeqNo, final int msgCount)
     {
         sentMessage();
         final long requestTimestamp = requestTimestamp();
-        return proxy.sendRetransmitRequest(uuid, lastUUIDNullValue(), requestTimestamp, fromSeqNo, msgCount);
+        return proxy.sendRetransmitRequest(uuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
     }
 
     public long onRetransmission(
@@ -1249,24 +1262,24 @@ public final class InternalILink3Connection extends ILink3Connection
 
     static final class RetransmitRequest
     {
-        final long uuid;
+        final long lastUuid;
         final long fromSeqNo;
         final int msgCount;
 
-        RetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+        RetransmitRequest(final long lastUuid, final long fromSeqNo, final int msgCount)
         {
-            this.uuid = uuid;
+            this.lastUuid = lastUuid;
             this.fromSeqNo = fromSeqNo;
             this.msgCount = msgCount;
         }
     }
 
     public long onRetransmitReject(
-        final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+        final String reason, final long uuid, final long lastUuid, final long requestTimestamp, final int errorCodes)
     {
-        checkUuid(uUID);
+        checkUuid(uuid);
 
-        handler.onRetransmitReject(reason, requestTimestamp, errorCodes);
+        handler.onRetransmitReject(reason, lastUuid, requestTimestamp, errorCodes);
 
         retransmitFilled();
 

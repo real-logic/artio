@@ -499,13 +499,13 @@ public class ILink3TestServer
 
     public void acceptRetransRequest(final long fromSeqNo, final int msgCount)
     {
-        acceptRetransRequest(uuid, fromSeqNo, msgCount);
+        acceptRetransRequest(RetransmitRequest508Decoder.lastUUIDNullValue(), fromSeqNo, msgCount);
     }
 
-    public void acceptRetransRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    public void acceptRetransRequest(final long lastUUID, final long fromSeqNo, final int msgCount)
     {
-        final long requestTimestamp = readRetransmitRequest(uuid, fromSeqNo, msgCount);
-        writeRetransmission(uuid, requestTimestamp, fromSeqNo, msgCount);
+        final long requestTimestamp = readRetransmitRequest(fromSeqNo, msgCount, lastUUID);
+        writeRetransmission(lastUUID, requestTimestamp, fromSeqNo, msgCount);
     }
 
     public void rejectRetransRequest(final int fromSeqNo, final int msgCount)
@@ -515,13 +515,14 @@ public class ILink3TestServer
     }
 
     private void writeRetransmission(
-        final long uuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
+        final long lastUUID, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
         final Retransmission509Encoder retransmission = new Retransmission509Encoder();
         wrap(retransmission, Retransmission509Encoder.BLOCK_LENGTH);
 
         retransmission
             .uUID(uuid)
+            .lastUUID(lastUUID)
             .requestTimestamp(requestTimestamp)
             .fromSeqNo(fromSeqNo)
             .msgCount(msgCount)
@@ -547,13 +548,14 @@ public class ILink3TestServer
 
     public long readRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
-        return readRetransmitRequest(uuid, fromSeqNo, msgCount);
+        return readRetransmitRequest(fromSeqNo, msgCount, RetransmitRequest508Decoder.lastUUIDNullValue());
     }
 
-    public long readRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
+    public long readRetransmitRequest(final long fromSeqNo, final int msgCount, final long lastUUID)
     {
         final RetransmitRequest508Decoder retransmitRequest = read(new RetransmitRequest508Decoder(), 0);
         assertEquals("uuid", uuid, retransmitRequest.uUID());
+        assertEquals("lastUUID", lastUUID, retransmitRequest.lastUUID());
         final long requestTimestamp = retransmitRequest.requestTimestamp();
         assertEquals("fromSeqNo", fromSeqNo, retransmitRequest.fromSeqNo());
         assertEquals("msgCount", msgCount, retransmitRequest.msgCount());

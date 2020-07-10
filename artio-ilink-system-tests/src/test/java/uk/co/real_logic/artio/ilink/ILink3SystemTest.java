@@ -666,7 +666,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(5001);
 
         verify(handler, times(2))
-            .onRetransmitReject(eq(RETRANSMIT_REJECT_REASON), anyLong(), eq(RETRANSMIT_REJECT_ERROR_CODES));
+            .onRetransmitReject(eq(RETRANSMIT_REJECT_REASON), anyLong(), anyLong(), eq(RETRANSMIT_REJECT_ERROR_CODES));
 
         terminateAndDisconnect();
     }

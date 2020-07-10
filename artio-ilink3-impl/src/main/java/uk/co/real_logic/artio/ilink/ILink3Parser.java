@@ -150,6 +150,7 @@ public class ILink3Parser extends AbstractILink3Parser
         return handler.onRetransmitReject(
             retransmitReject.reason(),
             retransmitReject.uUID(),
+            retransmitReject.lastUUID(),
             retransmitReject.requestTimestamp(),
             retransmitReject.errorCodes());
 //        retransmitReject.splitMsg()

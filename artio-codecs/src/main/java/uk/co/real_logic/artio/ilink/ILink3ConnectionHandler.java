@@ -59,12 +59,12 @@ public interface ILink3ConnectionHandler
 
     /**
      * Callback when Artio has received a RetransmitReject message. This can be used for error logging or handling.
-     *
      * @param reason the reason of the RetransmitReject message
+     * @param lastUuid the lastUuid of the RetransmitReject message
      * @param requestTimestamp the requestTimestamp of the RetransmitReject message
      * @param errorCodes the errorCodes of the RetransmitReject message
      */
-    void onRetransmitReject(String reason, long requestTimestamp, int errorCodes);
+    void onRetransmitReject(String reason, long lastUuid, long requestTimestamp, int errorCodes);
 
     /**
      * Notifies an application when a sequence message is received. Normally applications would not need to implement
