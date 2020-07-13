@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -223,7 +224,7 @@ public abstract class AbstractSessionTest
         verify(sessionProxy).sendReject(
             2,
             2,
-            MISSING_INT,
+            SessionConstants.ORIG_SENDING_TIME,
             MSG_TYPE_CHARS,
             MSG_TYPE_CHARS.length,
             REQUIRED_TAG_MISSING.representation(),
