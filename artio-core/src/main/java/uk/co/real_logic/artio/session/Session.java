@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.logger.Replayer;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
@@ -1034,7 +1035,7 @@ public class Session
                 return checkPosition(proxy.sendReject(
                     newSentSeqNum(),
                     msgSeqNum,
-                    MISSING_INT,
+                    SessionConstants.ORIG_SENDING_TIME,
                     msgType,
                     msgTypeLength,
                     REQUIRED_TAG_MISSING.representation(),
