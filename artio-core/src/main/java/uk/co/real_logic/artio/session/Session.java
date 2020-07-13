@@ -1032,15 +1032,13 @@ public class Session
         {
             if (origSendingTime == UNKNOWN)
             {
-                return checkPosition(proxy.sendReject(
-                    newSentSeqNum(),
+                return onInvalidMessage(
                     msgSeqNum,
                     SessionConstants.ORIG_SENDING_TIME,
                     msgType,
                     msgTypeLength,
                     REQUIRED_TAG_MISSING.representation(),
-                    sequenceIndex(),
-                    lastMsgSeqNumProcessed));
+                    position);
             }
             else if (origSendingTime > sendingTime)
             {
@@ -1219,15 +1217,13 @@ public class Session
     private Action rejectDueToSendingTime(
         final int msgSeqNo, final char[] msgType, final int msgTypeLength, final long position)
     {
-        return checkPosition(proxy.sendReject(
-            newSentSeqNum(),
+        return onInvalidMessage(
             msgSeqNo,
             SENDING_TIME,
             msgType,
             msgTypeLength,
             SENDINGTIME_ACCURACY_PROBLEM.representation(),
-            sequenceIndex(),
-            lastMsgSeqNumProcessed));
+            position);
     }
 
     private void incNextReceivedInboundMessageTime(final long time)
@@ -1577,6 +1573,13 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
+            // per FIX spec inbound msgSeqNum should not be increased in the case
+            // Test cases applicable to all FIX system: #11.c Receive Sequence-reset (Reset)
+            if (redact(position))
+            {
+                return ABORT;
+            }
+
             return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
@@ -1840,6 +1843,8 @@ public class Session
         final int rejectReason,
         final long position)
     {
+        messageInfo.isValid(false);
+
         final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
             refSeqNum,
@@ -1881,15 +1886,13 @@ public class Session
     Action onInvalidMessageType(
         final int msgSeqNum, final char[] msgType, final int msgTypeLength, final long position)
     {
-        return checkPosition(proxy.sendReject(
-            newSentSeqNum(),
+        return onInvalidMessage(
             msgSeqNum,
             MISSING_INT,
             msgType,
             msgTypeLength,
             INVALID_MSGTYPE.representation(),
-            sequenceIndex(),
-            lastMsgSeqNumProcessed));
+            position);
     }
 
     void disable()
