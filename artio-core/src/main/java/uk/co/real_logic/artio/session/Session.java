@@ -1573,10 +1573,13 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            messageInfo.isValid(false);
-
             // per FIX spec inbound msgSeqNum should not be increased in the case
             // Test cases applicable to all FIX system: #11.c Receive Sequence-reset (Reset)
+            if (redact(position))
+            {
+                return ABORT;
+            }
+
             return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
