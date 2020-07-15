@@ -1122,6 +1122,7 @@ public class ILink3SystemTest
     {
         startTerminate();
 
+        testServer.canSkip(Sequence506Decoder.TEMPLATE_ID);
         testServer.readTerminate();
         serverAcceptsTerminate();
     }
