@@ -19,9 +19,14 @@ import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
-import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.Clock;
+import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.GatewayProcess;
+import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -38,6 +43,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.NotConnectedException;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -49,17 +55,44 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.NEW_SEQ_NO;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.REJECT_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.RESEND_REQUEST_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SENDING_TIME;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.TEST_REQUEST_MESSAGE_TYPE_CHARS;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
-import static uk.co.real_logic.artio.fields.RejectReason.*;
+import static uk.co.real_logic.artio.fields.RejectReason.INVALID_MSGTYPE;
+import static uk.co.real_logic.artio.fields.RejectReason.REQUIRED_TAG_MISSING;
+import static uk.co.real_logic.artio.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
-import static uk.co.real_logic.artio.messages.DisconnectReason.*;
+import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.FIRST_MESSAGE_NOT_LOGON;
+import static uk.co.real_logic.artio.messages.DisconnectReason.INCORRECT_BEGIN_STRING;
+import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_SENDING_TIME;
+import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.MSG_SEQ_NO_MISSING;
+import static uk.co.real_logic.artio.messages.DisconnectReason.MSG_SEQ_NO_TOO_LOW;
+import static uk.co.real_logic.artio.messages.DisconnectReason.NEGATIVE_HEARTBEAT_INTERVAL;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
-import static uk.co.real_logic.artio.messages.SessionState.*;
+import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
+import static uk.co.real_logic.artio.messages.SessionState.CONNECTING;
+import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTING;
+import static uk.co.real_logic.artio.messages.SessionState.LOGGING_OUT;
+import static uk.co.real_logic.artio.messages.SessionState.LOGGING_OUT_AND_DISCONNECTING;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
-import static uk.co.real_logic.artio.session.InternalSession.*;
+import static uk.co.real_logic.artio.session.InternalSession.INITIAL_AWAITING_HEARTBEAT;
+import static uk.co.real_logic.artio.session.InternalSession.INITIAL_AWAITING_RESEND;
+import static uk.co.real_logic.artio.session.InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE;
+import static uk.co.real_logic.artio.session.InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM;
+import static uk.co.real_logic.artio.session.InternalSession.INITIAL_LAST_RESENT_MSG_SEQ_NO;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -98,13 +131,14 @@ public class Session
     protected final int libraryId;
     protected final SessionProxy proxy;
 
-    private final EpochClock epochClock;
+    private final EpochFractionClock epochClock;
     private final Clock clock;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
+    private final EpochFractionFormat epochFractionPrecision;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -159,7 +193,7 @@ public class Session
     public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock epochClock,
+        final EpochFractionClock epochClock,
         final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
@@ -205,11 +239,12 @@ public class Session
         this.clock = clock;
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
+        this.epochFractionPrecision = epochFractionPrecision;
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
         lastMsgSeqNumProcessed = this.enableLastMsgSeqNumProcessed ? 0 : NO_LAST_MSG_SEQ_NUM_PROCESSED;
-        timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
+        timestampEncoder = new UtcTimestampEncoder(this.epochFractionPrecision);
     }
 
     // ---------- PUBLIC API ----------
@@ -472,9 +507,10 @@ public class Session
     public int prepare(final SessionHeaderEncoder header)
     {
         final int sentSeqNum = newSentSeqNum();
+        final long sendingTime = epochClock.epochFractionTime(epochFractionPrecision);
         header
             .msgSeqNum(sentSeqNum)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encodeFrom(time(), MILLISECONDS));
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(sendingTime));
 
         if (enableLastMsgSeqNumProcessed)
         {

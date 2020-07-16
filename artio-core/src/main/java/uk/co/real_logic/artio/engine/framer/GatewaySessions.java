@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
@@ -40,14 +39,29 @@ import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.DirectSessionProxy;
+import uk.co.real_logic.artio.session.InternalSession;
+import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
+import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.SessionProxy;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.*;
+import uk.co.real_logic.artio.validation.AuthenticationProxy;
+import uk.co.real_logic.artio.validation.AuthenticationStrategy;
+import uk.co.real_logic.artio.validation.MessageValidationStrategy;
+import uk.co.real_logic.artio.validation.PersistenceLevel;
+import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -67,7 +81,7 @@ class GatewaySessions
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 
-    private final EpochClock epochClock;
+    private final EpochFractionClock epochClock;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -97,7 +111,7 @@ class GatewaySessions
         dictionary -> new UserRequestExtractor(dictionary, errorHandler);
 
     GatewaySessions(
-        final EpochClock epochClock,
+        final EpochFractionClock epochClock,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,

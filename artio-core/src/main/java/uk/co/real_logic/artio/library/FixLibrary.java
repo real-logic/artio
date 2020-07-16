@@ -29,6 +29,8 @@ import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.timing.LibraryTimers;
+import uk.co.real_logic.artio.util.CompositeEpochClock;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 
 import java.io.File;
 import java.util.List;
@@ -81,8 +83,10 @@ public class FixLibrary extends GatewayProcess
             initMonitoringAgent(timers.all(), configuration, null);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
+            final EpochFractionClock epochClock = new CompositeEpochClock(
+                new SystemEpochClock(), configuration.epochNanoClock());
             poller = new LibraryPoller(
-                configuration, timers, fixCounters, transport, this, new SystemEpochClock());
+                configuration, timers, fixCounters, transport, this, epochClock);
         }
         catch (final Exception e)
         {

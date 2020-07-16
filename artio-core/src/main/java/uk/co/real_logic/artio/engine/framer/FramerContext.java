@@ -18,7 +18,12 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import org.agrona.concurrent.QueuedPipe;
+import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
@@ -31,6 +36,8 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.EngineTimers;
+import uk.co.real_logic.artio.util.CompositeEpochClock;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +55,7 @@ public class FramerContext
     private static final int ADMIN_COMMAND_CAPACITY = 64;
 
     private final QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(ADMIN_COMMAND_CAPACITY);
-    private final SystemEpochClock epochClock = new SystemEpochClock();
+    private final EpochFractionClock epochClock;
 
     private final Framer framer;
 
@@ -92,6 +99,7 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerInboundLookup(),
             null);
 
+        epochClock = new CompositeEpochClock(new SystemEpochClock(), configuration.epochNanoClock());
         gatewaySessions = new GatewaySessions(
             epochClock,
             inboundPublication,

@@ -13,52 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine.framer;
+package uk.co.real_logic.artio.util;
 
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
-import uk.co.real_logic.artio.util.EpochFractionClock;
 
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-public class FakeEpochClock implements EpochFractionClock
+/**
+ * An implementation of {@link EpochFractionClock}
+ * Based internally on a combination of {@link EpochClock} and {@link EpochNanoClock}
+ */
+public class CompositeEpochClock implements EpochFractionClock
 {
-    private long time;
+    private final EpochClock clock;
+    private final EpochNanoClock nanoClock;
 
-    public FakeEpochClock()
+    public CompositeEpochClock(final EpochClock clock, final EpochNanoClock nanoClock)
     {
-        time = 0;
-    }
-
-    public void advanceSeconds(final int timeInSeconds)
-    {
-        advanceMilliSeconds(SECONDS.toMillis(timeInSeconds));
-    }
-
-    public void advanceMilliSeconds(final long duration)
-    {
-        time += duration;
+        this.clock = clock;
+        this.nanoClock = nanoClock;
     }
 
     public long time()
     {
-        return time;
+        return clock.time();
     }
 
-    @Override
     public long epochFractionTime(final EpochFractionFormat format)
     {
         switch (format)
         {
             case NANOSECONDS:
-                return TimeUnit.MILLISECONDS.toNanos(time);
+                return nanoClock.nanoTime();
 
             case MICROSECONDS:
-                return TimeUnit.MILLISECONDS.toMicros(time);
+                return TimeUnit.NANOSECONDS.toMicros(nanoClock.nanoTime());
 
             case MILLISECONDS:
-                return time;
+                return clock.time();
 
             default:
                 throw new RuntimeException("Unknown precision: " + format);

@@ -29,23 +29,50 @@ import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.LivenessDetector;
+import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
-import uk.co.real_logic.artio.protocol.*;
-import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.GatewayError;
+import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.messages.SessionStatus;
+import uk.co.real_logic.artio.messages.SlowStatus;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.LibraryEndPointHandler;
+import uk.co.real_logic.artio.protocol.LibraryProtocolSubscription;
+import uk.co.real_logic.artio.protocol.NotConnectedException;
+import uk.co.real_logic.artio.protocol.ProtocolHandler;
+import uk.co.real_logic.artio.protocol.ProtocolSubscription;
+import uk.co.real_logic.artio.session.AcceptorSession;
+import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.InitiatorSession;
+import uk.co.real_logic.artio.session.InternalSession;
+import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.SessionProxy;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
@@ -61,11 +88,18 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
-import static uk.co.real_logic.artio.LogTag.*;
+import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
+import static uk.co.real_logic.artio.LogTag.CLOSE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
@@ -129,7 +163,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Uniquely identifies library session
     private final int libraryId;
-    private final EpochClock epochClock;
+    private final EpochFractionClock epochClock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
@@ -193,7 +227,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixCounters fixCounters,
         final LibraryTransport transport,
         final FixLibrary fixLibrary,
-        final EpochClock epochClock)
+        final EpochFractionClock epochClock)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
