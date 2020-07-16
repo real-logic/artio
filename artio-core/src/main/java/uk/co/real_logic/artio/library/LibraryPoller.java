@@ -46,6 +46,8 @@ import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
@@ -130,6 +132,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // Uniquely identifies library session
     private final int libraryId;
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
@@ -208,6 +211,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.sessionExistsHandler = configuration.sessionExistsHandler();
         this.epochClock = epochClock;
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
+        this.epochFractionClock = EpochFractionClocks.create(
+            epochClock, configuration.epochNanoClock(), configuration.sessionEpochFractionFormat());
     }
 
     boolean isConnected()
@@ -1779,7 +1784,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
-            configuration.sessionEpochFractionFormat());
+            epochFractionClock);
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -1852,7 +1857,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
-            configuration.sessionEpochFractionFormat());
+            epochFractionClock);
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;

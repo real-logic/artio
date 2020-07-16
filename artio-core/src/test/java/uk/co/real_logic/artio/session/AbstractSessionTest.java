@@ -37,6 +37,8 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -80,6 +82,7 @@ public abstract class AbstractSessionTest
     DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();
+    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(fakeClock);
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
     SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);

@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Clock;
-import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -57,7 +56,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             SessionCustomisationStrategy.none(),
             messageInfo,
-            EpochFractionFormat.MILLISECONDS);
+            fakeEpochFractionClock);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(mockLogonListener);
         return acceptorSession;

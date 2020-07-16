@@ -19,10 +19,10 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
-import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 public class InitiatorSession extends InternalSession
@@ -51,7 +51,7 @@ public class InitiatorSession extends InternalSession
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
-        final EpochFractionFormat epochFractionPrecision)
+        final EpochFractionClock epochFractionClock)
     {
         super(
             heartbeatInterval,
@@ -74,7 +74,7 @@ public class InitiatorSession extends InternalSession
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
             messageInfo,
-            epochFractionPrecision);
+            epochFractionClock);
         this.resetSeqNum = resetSeqNum;
     }
 
