@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,11 @@
  */
 
 buildscript {
+    ext {
+        awsAccessKeyId = System.env.AWS_ACCESS_KEY_ID
+        awsSecretAccessKey = System.env.AWS_SECRET_ACCESS_KEY
+    }
+
     repositories {
         mavenCentral()
     }
@@ -675,13 +680,28 @@ subprojects {
     publishing {
         repositories {
             maven {
+                name = 'oss'
                 url = !isReleaseVersion ? snapshotUrl : repoUrl
                 credentials {
                     username = repoUsername
                     password = repoPassword
                 }
             }
+            maven {
+                name = 'private'
+                url = 's3://artio-repository/releases'
+                credentials(AwsCredentials) {
+                    accessKey = awsAccessKeyId
+                    secretKey = awsSecretAccessKey
+                }
+            }
         }
+    }
+}
+
+tasks.withType(PublishToMavenRepository) {
+    onlyIf {
+        isReleaseVersion
     }
 }
 
