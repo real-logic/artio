@@ -28,7 +28,6 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.logger.Replayer;
-import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -38,6 +37,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.NotConnectedException;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -99,6 +99,7 @@ public class Session
     protected final SessionProxy proxy;
 
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final Clock clock;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
@@ -177,7 +178,7 @@ public class Session
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
-        final EpochFractionFormat epochFractionPrecision)
+        final EpochFractionClock epochFractionClock)
     {
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
@@ -186,6 +187,7 @@ public class Session
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
         Verify.notNull(messageInfo, "messageInfo");
+        Verify.notNull(epochFractionClock, "epochFractionClock");
 
         this.messageInfo = messageInfo;
         this.epochClock = epochClock;
@@ -209,7 +211,8 @@ public class Session
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
         lastMsgSeqNumProcessed = this.enableLastMsgSeqNumProcessed ? 0 : NO_LAST_MSG_SEQ_NUM_PROCESSED;
-        timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
+        timestampEncoder = new UtcTimestampEncoder(epochFractionClock.epochFractionPrecision());
+        this.epochFractionClock = epochFractionClock;
     }
 
     // ---------- PUBLIC API ----------
@@ -474,7 +477,7 @@ public class Session
         final int sentSeqNum = newSentSeqNum();
         header
             .msgSeqNum(sentSeqNum)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encodeFrom(time(), MILLISECONDS));
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(epochFractionClock.epochFractionTime()));
 
         if (enableLastMsgSeqNumProcessed)
         {

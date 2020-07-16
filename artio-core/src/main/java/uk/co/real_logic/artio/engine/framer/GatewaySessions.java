@@ -42,6 +42,8 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
@@ -68,6 +70,7 @@ class GatewaySessions
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -132,6 +135,8 @@ class GatewaySessions
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.epochFractionPrecision = epochFractionPrecision;
+        this.epochFractionClock = EpochFractionClocks.create(epochClock, configuration.epochNanoClock(),
+            epochFractionPrecision);
 
         sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
@@ -201,7 +206,7 @@ class GatewaySessions
             gatewaySession.enableLastMsgSeqNumProcessed(),
             customisationStrategy,
             messageInfo,
-            epochFractionPrecision);
+            epochFractionClock);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
