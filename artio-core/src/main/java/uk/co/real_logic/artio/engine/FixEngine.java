@@ -380,9 +380,14 @@ public final class FixEngine extends GatewayProcess
 
                 framerContext.startClose();
 
-                closeAll(scheduler, engineContext, configuration, super::close);
-
-                isClosed = true;
+                try
+                {
+                    closeAll(scheduler, engineContext, configuration, super::close);
+                }
+                finally
+                {
+                    isClosed = true;
+                }
             }
         }
     }
