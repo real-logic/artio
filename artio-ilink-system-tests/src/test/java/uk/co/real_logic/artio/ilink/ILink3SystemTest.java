@@ -954,6 +954,28 @@ public class ILink3SystemTest
         assertThat(message, containsString("Duplicate iLink3 Connection"));
     }
 
+    @Test
+    public void shouldNotIncrementSequenceNumbersForRejectedBusinessMessages() throws IOException
+    {
+        // The same session can be used to connect to different market segments but not
+        // the same external host simultaneously.
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.sendBusinessRejectWithNullRefSeqNum();
+
+        testSystem.await("Failed to receive business reject",
+            () -> handler.messageIds().containsInt(BusinessReject521Decoder.TEMPLATE_ID));
+
+        assertEquals(1, connection.nextSentSeqNo());
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        terminateAndDisconnect();
+    }
+
     private void establishNewConnection() throws IOException
     {
         connectToTestServer(connectionConfiguration());

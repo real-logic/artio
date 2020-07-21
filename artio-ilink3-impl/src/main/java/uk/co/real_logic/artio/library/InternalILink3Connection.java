@@ -1087,6 +1087,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 {
                     nextRecvSeqNo(seqNum + 1);
 
+                    checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
                     handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
 
                     return 1;
@@ -1095,6 +1096,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 {
                     // We could queue this instead of just passing it on to the customer's application but this
                     // hasn't been requested as of yet
+                    checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
                     handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
 
                     return onInvalidSequenceNumber(seqNum);
@@ -1128,6 +1130,19 @@ public final class InternalILink3Connection extends ILink3Connection
             }
 
             return 1;
+        }
+    }
+
+    private void checkBusinessRejectSequenceNumber(
+        final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
+    {
+        if (templateId == BusinessReject521Decoder.TEMPLATE_ID)
+        {
+            businessReject.wrap(buffer, offset, blockLength, version);
+            if (businessReject.refSeqNum() == BusinessReject521Decoder.refSeqNumNullValue())
+            {
+                nextSentSeqNo--;
+            }
         }
     }
 

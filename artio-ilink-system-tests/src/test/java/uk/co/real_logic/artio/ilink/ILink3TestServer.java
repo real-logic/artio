@@ -567,4 +567,28 @@ public class ILink3TestServer
     {
         this.skipTemplateId = templateId;
     }
+
+    public void sendBusinessRejectWithNullRefSeqNum()
+    {
+        final BusinessReject521Encoder businessReject = new BusinessReject521Encoder();
+        wrap(businessReject, BusinessReject521Encoder.BLOCK_LENGTH);
+
+        businessReject
+            .seqNum(1)
+            .uUID(uuid)
+            .senderID(FIRM_ID)
+            .partyDetailsListReqID(1)
+            .sendingTimeEpoch(epochNanoClock.nanoTime())
+            .businessRejectRefID(1)
+            .location("LONDO")
+            .refSeqNum(BusinessReject521Encoder.refSeqNumNullValue())
+            .refTagID(BusinessReject521Encoder.refTagIDNullValue())
+            .businessRejectRefID(0)
+            .refMsgType("D")
+            .possRetransFlag(BooleanFlag.False)
+            .manualOrderIndicator(ManualOrdInd.Automated)
+            .splitMsg(SplitMsg.NULL_VAL);
+
+        write();
+    }
 }
