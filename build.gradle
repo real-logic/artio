@@ -34,7 +34,7 @@ plugins {
 def checkstyleVersion = '8.34'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13'
-def mockitoVersion = '3.4.4'
+def mockitoVersion = '3.4.6'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.23'
 
