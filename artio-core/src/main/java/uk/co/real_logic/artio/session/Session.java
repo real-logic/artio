@@ -76,6 +76,8 @@ public class Session
     static final short LOGGING_OUT_AND_DISCONNECTING_VALUE = 6;
     static final short AWAITING_LOGOUT_VALUE = 7;
     static final short DISCONNECTING_VALUE = 8;
+    static final short DISCONNECTED_VALUE = 9;
+    static final short DISABLED_VALUE = 10;
 
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
@@ -1959,6 +1961,12 @@ public class Session
                 }
 
                 return 1;
+            }
+
+            case DISCONNECTED_VALUE:
+            case DISABLED_VALUE:
+            {
+                return 0;
             }
 
             default:
