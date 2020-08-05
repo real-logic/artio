@@ -209,7 +209,7 @@ subprojects {
     jar {
         manifest.attributes(
             'Implementation-Title': 'Artio',
-            'Implementation-Version': "${archiveVersion}",
+            'Implementation-Version': archiveVersion,
             'Implementation-Vendor': 'Real Logic Limited'
         )
     }
