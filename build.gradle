@@ -344,8 +344,8 @@ project(':artio-ilink3-codecs') {
         }
 
         task copySbeIr (type: Copy) {
-            from generatedDir.absolutePath
-            include 'ilinkbinary.sbeir'
+            dependsOn 'generateMessages'
+            from generatedDir.absolutePath + "/ilinkbinary.sbeir"
             into outputClasses + '/iLinkBinary'
         }
     }
