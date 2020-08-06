@@ -344,7 +344,9 @@ public class SessionContexts
         {
             if (filePosition != OUT_OF_SPACE)
             {
-                filePosition = sectorFramer.claim(filePosition, BLOCK_LENGTH + compositeKeyLength);
+                final int length = (BLOCK_LENGTH + SessionIdEncoder.lastFixDictionaryHeaderLength() +
+                    fixDictionaryName.length() + compositeKeyLength);
+                filePosition = sectorFramer.claim(filePosition, length);
                 keyPosition = filePosition;
                 if (filePosition == OUT_OF_SPACE)
                 {
