@@ -260,15 +260,15 @@ project(':artio-codecs') {
 
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
-        generated.java.srcDir generatedDir
+        generated{
+            java.srcDir generatedDir
+            compileClasspath += configurations.codecGeneration
+        }
     }
 
     compileJava.dependsOn 'compileGeneratedJava'
 
-    compileGeneratedJava {
-        dependsOn 'generateMessages'
-        classpath += configurations.codecGeneration
-    }
+    compileGeneratedJava.dependsOn 'generateMessages'
 
     task generateMessages(type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
@@ -321,16 +321,15 @@ project(':artio-ilink3-codecs') {
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
-        generated.java.srcDir generatedDir
+        generated {
+            java.srcDir generatedDir
+            compileClasspath += configurations.codecGeneration
+        }
     }
 
     if (iLink3Enabled) {
         compileJava.dependsOn 'compileGeneratedJava'
-
-        compileGeneratedJava {
-            dependsOn 'generateMessages', 'copySbeIr'
-            classpath += configurations.codecGeneration
-        }
+        compileGeneratedJava.dependsOn 'generateMessages', 'copySbeIr'
 
         task generateMessages(type: JavaExec) {
             main = 'uk.co.real_logic.sbe.SbeTool'
@@ -416,15 +415,14 @@ project(':artio-session-codecs') {
 
     def generatedDir = file("$buildDir/generated-src")
     sourceSets {
-        generated.java.srcDir generatedDir
+        generated {
+            java.srcDir generatedDir
+            compileClasspath += configurations.codecGeneration
+        }
     }
 
     compileJava.dependsOn 'compileGeneratedJava'
-
-    compileGeneratedJava {
-        dependsOn 'generateCodecs', 'generateOtherCodecs'
-        classpath += configurations.codecGeneration
-    }
+    compileGeneratedJava.dependsOn 'generateCodecs', 'generateOtherCodecs'
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
