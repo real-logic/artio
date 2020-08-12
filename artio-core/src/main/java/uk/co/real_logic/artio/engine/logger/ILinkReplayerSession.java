@@ -24,6 +24,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
@@ -43,6 +44,7 @@ public class ILinkReplayerSession extends ReplayerSession
     private final AbstractILink3Parser iLink3Parser;
     private final AbstractILink3Proxy iLink3Proxy;
     private final AbstractILink3Offsets iLink3Offsets;
+    private final ILink3RetransmitHandler iLink3RetransmitHandler;
 
     private boolean mustSendSequenceMessage = false;
 
@@ -68,7 +70,9 @@ public class ILinkReplayerSession extends ReplayerSession
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ILinkMessageEncoder iLinkMessageEncoder,
         final AbstractILink3Parser iLink3Parser,
-        final AbstractILink3Proxy iLink3Proxy, final AbstractILink3Offsets iLink3Offsets)
+        final AbstractILink3Proxy iLink3Proxy,
+        final AbstractILink3Offsets iLink3Offsets,
+        final ILink3RetransmitHandler iLink3RetransmitHandler)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
@@ -78,6 +82,7 @@ public class ILinkReplayerSession extends ReplayerSession
         this.iLink3Parser = iLink3Parser;
         this.iLink3Proxy = iLink3Proxy;
         this.iLink3Offsets = iLink3Offsets;
+        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
 
         state = State.REPLAYING;
     }
@@ -131,6 +136,16 @@ public class ILinkReplayerSession extends ReplayerSession
         final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
             ILinkMessageDecoder.BLOCK_LENGTH;
         final int templateId = iLink3Parser.templateId(buffer, headerOffset);
+        final int blockLength = iLink3Parser.blockLength(buffer, headerOffset);
+        final int version = iLink3Parser.version(buffer, headerOffset);
+        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
+
+        iLink3RetransmitHandler.onReplayedBusinessMessage(
+            templateId,
+            buffer,
+            messageOffset,
+            blockLength,
+            version);
 
         if (gapfillOnRetransmitILinkTemplateIds.contains(templateId))
         {
@@ -141,7 +156,6 @@ public class ILinkReplayerSession extends ReplayerSession
         {
             if (mustSendSequenceMessage)
             {
-                final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
                 final int seqNum = iLink3Offsets.seqNum(templateId, buffer, messageOffset);
                 if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
                 {

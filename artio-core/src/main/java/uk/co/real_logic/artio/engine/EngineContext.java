@@ -216,6 +216,7 @@ public class EngineContext implements AutoCloseable
             configuration.gapfillOnReplayMessageTypes(),
             configuration.gapfillOnRetransmitILinkTemplateIds(),
             configuration.replayHandler(),
+            configuration.iLink3RetransmitHandler(),
             senderSequenceNumbers,
             new FixSessionCodecsFactory(epochFractionFormat),
             configuration.senderMaxBytesInBuffer(),

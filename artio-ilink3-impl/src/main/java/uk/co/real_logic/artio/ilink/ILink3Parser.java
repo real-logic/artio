@@ -63,6 +63,18 @@ public class ILink3Parser extends AbstractILink3Parser
         return header.templateId();
     }
 
+    public int blockLength(final DirectBuffer buffer, final int offset)
+    {
+        header.wrap(buffer, offset);
+        return header.blockLength();
+    }
+
+    public int version(final DirectBuffer buffer, final int offset)
+    {
+        header.wrap(buffer, offset);
+        return header.version();
+    }
+
     public long onMessage(final DirectBuffer buffer, final int start)
     {
         int offset = start + SOFH_LENGTH;

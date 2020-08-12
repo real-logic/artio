@@ -27,10 +27,12 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.InOrder;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.Backup;
@@ -81,6 +83,7 @@ public class ILink3SystemTest
     private Reply<ILink3Connection> reply;
     private ILink3Connection connection;
     private final ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
+    private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
 
     private boolean noExpectedError;
 
@@ -103,7 +106,8 @@ public class ILink3SystemTest
             .libraryAeronChannel(IPC_CHANNEL)
             .lookupDefaultAcceptorfixDictionary(false)
             .customErrorConsumer(errorConsumer)
-            .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds);
+            .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
+            .iLink3RetransmitHandler(retransmitHandler);
 
         engine = FixEngine.launch(engineConfig);
 
@@ -546,6 +550,22 @@ public class ILink3SystemTest
         });
 
         sendNewOrderSingle();
+
+        final InOrder inOrder = inOrder(retransmitHandler);
+        verifyOnReplayedBusinessMessage(inOrder, NewOrderSingle514Encoder.TEMPLATE_ID);
+        verifyOnReplayedBusinessMessage(inOrder, PartyDetailsDefinitionRequest518Encoder.TEMPLATE_ID);
+        verifyOnReplayedBusinessMessage(inOrder, NewOrderSingle514Encoder.TEMPLATE_ID);
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    private void verifyOnReplayedBusinessMessage(final InOrder inOrder, final int templateId)
+    {
+        inOrder.verify(retransmitHandler).onReplayedBusinessMessage(
+            eq(templateId),
+            any(),
+            anyInt(),
+            anyInt(),
+            anyInt());
     }
 
     @Test

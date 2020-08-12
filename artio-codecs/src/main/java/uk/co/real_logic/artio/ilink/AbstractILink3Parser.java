@@ -44,4 +44,8 @@ public abstract class AbstractILink3Parser
     public abstract long onMessage(DirectBuffer buffer, int offset);
 
     public abstract int templateId(DirectBuffer buffer, int offset);
+
+    public abstract int blockLength(DirectBuffer buffer, int offset);
+
+    public abstract int version(DirectBuffer buffer, int offset);
 }

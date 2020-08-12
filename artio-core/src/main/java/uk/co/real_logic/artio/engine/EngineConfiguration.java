@@ -148,6 +148,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         (buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType) ->
         {
         };
+    public static final ILink3RetransmitHandler DEFAULT_ILINK3_RETRANSMIT_HANDLER =
+        (templateId, buffer, offset, blockLength, version) ->
+        {
+        };
 
     /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
@@ -223,6 +227,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
+    private ILink3RetransmitHandler iLink3RetransmitHandler = DEFAULT_ILINK3_RETRANSMIT_HANDLER;
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
@@ -573,6 +578,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration replayHandler(final ReplayHandler replayHandler)
     {
         this.replayHandler = replayHandler;
+        return this;
+    }
+
+    /**
+     * Sets a handler that will be invoked when an iLink3 message is replayed.
+     *
+     * @param iLink3RetransmitHandler the replay handler
+     * @return this
+     */
+    public EngineConfiguration iLink3RetransmitHandler(final ILink3RetransmitHandler iLink3RetransmitHandler)
+    {
+        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
         return this;
     }
 
@@ -969,6 +986,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public ReplayHandler replayHandler()
     {
         return replayHandler;
+    }
+
+    public ILink3RetransmitHandler iLink3RetransmitHandler()
+    {
+        return iLink3RetransmitHandler;
     }
 
     public InitialAcceptedSessionOwner initialAcceptedSessionOwner()

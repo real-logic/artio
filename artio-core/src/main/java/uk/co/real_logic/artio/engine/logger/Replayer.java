@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -120,6 +121,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final String agentNamePrefix;
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
+    private final ILink3RetransmitHandler iLink3RetransmitHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final UtcTimestampEncoder utcTimestampEncoder;
 
@@ -136,6 +138,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final Set<String> gapfillOnReplayMessageTypes,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ReplayHandler replayHandler,
+        final ILink3RetransmitHandler iLink3RetransmitHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
         final int maxBytesInBuffer,
@@ -155,6 +158,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.clock = clock;
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
+        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.maxBytesInBuffer = maxBytesInBuffer;
@@ -355,7 +359,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             final ILinkReplayerSession session = new ILinkReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
-                iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get());
+                iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
+                iLink3RetransmitHandler);
 
             session.query();
 

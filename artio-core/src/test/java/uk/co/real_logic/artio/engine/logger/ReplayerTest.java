@@ -63,8 +63,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.artio.decoder.ExampleMessageDecoder.MESSAGE_TYPE;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
@@ -126,6 +125,7 @@ public class ReplayerTest extends AbstractLogTest
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             new IntHashSet(),
             replayHandler,
+            DEFAULT_ILINK3_RETRANSMIT_HANDLER,
             senderSequenceNumbers,
             new FakeFixSessionCodecsFactory(),
             DEFAULT_SENDER_MAX_BYTES_IN_BUFFER,
