@@ -23,6 +23,7 @@ import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -123,6 +124,7 @@ public class ReplayerTest extends AbstractLogTest
             DEFAULT_NAME_PREFIX,
             clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
+            new IntHashSet(),
             replayHandler,
             senderSequenceNumbers,
             new FakeFixSessionCodecsFactory(),

@@ -214,6 +214,7 @@ public class EngineContext implements AutoCloseable
             configuration.agentNamePrefix(),
             new SystemEpochClock(),
             configuration.gapfillOnReplayMessageTypes(),
+            configuration.gapfillOnRetransmitILinkTemplateIds(),
             configuration.replayHandler(),
             senderSequenceNumbers,
             new FixSessionCodecsFactory(epochFractionFormat),

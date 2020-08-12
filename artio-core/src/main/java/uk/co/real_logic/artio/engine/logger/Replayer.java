@@ -22,6 +22,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
@@ -37,9 +38,13 @@ import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.Lazy;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Set;
@@ -88,8 +93,13 @@ public class Replayer implements Agent, ControlledFragmentHandler
         "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
 
     // ILink specific state
+    private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
+    private final Lazy<AbstractILink3Parser> iLink3Parser;
+    private final Lazy<AbstractILink3Proxy> iLink3Proxy;
+    private final Lazy<AbstractILink3Offsets> iLink3Offsets;
     private final LongHashSet iLinkConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final ILinkMessageEncoder iLinkMessageEncoder = new ILinkMessageEncoder();
 
     private final Long2ObjectHashMap<ReplayChannel> connectionIdToReplayerChannel = new Long2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -124,6 +134,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final String agentNamePrefix,
         final EpochClock clock,
         final Set<String> gapfillOnReplayMessageTypes,
+        final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ReplayHandler replayHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
@@ -142,6 +153,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.inboundSubscription = inboundSubscription;
         this.agentNamePrefix = agentNamePrefix;
         this.clock = clock;
+        this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
@@ -154,6 +166,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
             gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
+
+        iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));
+        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler));
+        iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
     }
 
     public Action onFragment(
@@ -338,7 +354,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
             final ILinkReplayerSession session = new ILinkReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
-                (int)beginSeqNo, (int)endSeqNo, sessionId, this);
+                (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
+                iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get());
 
             session.query();
 

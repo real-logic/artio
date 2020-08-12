@@ -252,6 +252,7 @@ project(':artio-codecs') {
 
     dependencies {
         api "org.agrona:agrona:${agronaVersion}"
+        api "io.aeron:aeron-client:${aeronVersion}"
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
         api "uk.co.real-logic:sbe-tool:${sbeVersion}"
         api files('build/classes/java/generated')

@@ -22,6 +22,7 @@ import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import org.agrona.collections.IntArrayList;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -71,6 +72,7 @@ public class ILink3SystemTest
 
     private int testKeepAliveIntervalInMs = TEST_KEEP_ALIVE_INTERVAL_IN_MS;
     private final int port = unusedPort();
+    private final IntHashSet gapfillOnRetransmitILinkTemplateIds = new IntHashSet();
     private ArchivingMediaDriver mediaDriver;
     private TestSystem testSystem;
     private FixEngine engine;
@@ -100,7 +102,9 @@ public class ILink3SystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
             .lookupDefaultAcceptorfixDictionary(false)
-            .customErrorConsumer(errorConsumer);
+            .customErrorConsumer(errorConsumer)
+            .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds);
+
         engine = FixEngine.launch(engineConfig);
 
         testSystem = new TestSystem();
@@ -498,6 +502,42 @@ public class ILink3SystemTest
 
         testServer.readNewOrderSingle(1);
         testServer.readNewOrderSingle(2);
+
+        assertEventuallyTrue("Session never re-establishes", () ->
+        {
+            testSystem.poll();
+            return connection.state() == ILink3Connection.State.ESTABLISHED;
+        });
+
+        sendNewOrderSingle();
+    }
+
+    @Test
+    public void shouldSupportGapFillingRetransmits() throws IOException
+    {
+        gapfillOnRetransmitILinkTemplateIds.add(NewOrderSingle514Encoder.TEMPLATE_ID);
+
+        handler = new FakeILink3ConnectionHandler(NotAppliedResponse::retransmit);
+
+        launch(true);
+
+        establishNewConnection();
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+
+        sendPartyDetailsDefinitionRequest();
+        testServer.readPartyDetailsDefinitionRequest(2, 1);
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(3);
+
+        // Let's pretend we haven't received 1-3 and initiate a resend.
+        testServer.writeNotApplied(1, 3);
+
+        testServer.readSequence(2, NotLapsed);
+        testServer.readPartyDetailsDefinitionRequest(2, 1);
+        testServer.readSequence(4, NotLapsed);
 
         assertEventuallyTrue("Session never re-establishes", () ->
         {

@@ -31,7 +31,7 @@ import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
 
-public class ILink3Proxy
+public class ILink3Proxy extends AbstractILink3Proxy
 {
     public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
 
@@ -49,7 +49,7 @@ public class ILink3Proxy
     private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
 
-    private final long connectionId;
+    private long connectionId;
     private final ExclusivePublication publication;
     private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
     private final iLinkBinary.MessageHeaderEncoder iLinkMessageHeader = new iLinkBinary.MessageHeaderEncoder();
@@ -70,6 +70,11 @@ public class ILink3Proxy
     {
         this.connectionId = connectionId;
         this.publication = publication;
+    }
+
+    public void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
     }
 
     public long sendNegotiate(
@@ -168,6 +173,12 @@ public class ILink3Proxy
         commit();
 
         return position;
+    }
+
+    public long sendSequence(
+        final long uuid, final long nextSentSeqNo)
+    {
+        return sendSequence(uuid, nextSentSeqNo, FTI.Primary, KeepAliveLapsed.NotLapsed);
     }
 
     public long sendSequence(

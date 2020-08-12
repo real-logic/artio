@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -190,6 +191,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sessionIdBuffer;
     private MappedFile iLink3IdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
+    private IntHashSet gapfillOnRetransmitILinkTemplateIds = new IntHashSet();
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
     private AeronArchive.Context archiveContextClone;
     private Aeron.Context aeronContextClone;
@@ -543,6 +545,22 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration gapfillOnReplayMessageTypes(final Set<String> gapfillOnReplayMessageTypes)
     {
         this.gapfillOnReplayMessageTypes = gapfillOnReplayMessageTypes;
+        return this;
+    }
+
+    /**
+     * Sets the types of template ids that are gapfilled instead of replayed in an Ilink3 connection.
+     *
+     * When a NotApplied message is handled by retransmitting message not all messages need to be retransmitted.
+     * A gap fill here is implemented by sending a sequence message.
+     *
+     * @param gapfillOnRetransmitILinkTemplateIds the template ids to gap fill
+     * @return this
+     */
+    public EngineConfiguration gapfillOnRetransmitILinkTemplateIds(
+        final IntHashSet gapfillOnRetransmitILinkTemplateIds)
+    {
+        this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         return this;
     }
 
@@ -916,6 +934,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public Set<String> gapfillOnReplayMessageTypes()
     {
         return gapfillOnReplayMessageTypes;
+    }
+
+    public IntHashSet gapfillOnRetransmitILinkTemplateIds()
+    {
+        return gapfillOnRetransmitILinkTemplateIds;
     }
 
     public int senderMaxBytesInBuffer()

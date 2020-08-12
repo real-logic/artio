@@ -20,18 +20,31 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
 
 // In ILink cases the UUID is used as a sessionId
 public class ILinkReplayerSession extends ReplayerSession
 {
-    private static final ILinkMessageEncoder ILINK_MESSAGE_ENCODER = new ILinkMessageEncoder();
+    private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
+    private final ILinkMessageEncoder iLinkMessageEncoder;
+    private final AbstractILink3Parser iLink3Parser;
+    private final AbstractILink3Proxy iLink3Proxy;
+    private final AbstractILink3Offsets iLink3Offsets;
+
+    private boolean mustSendSequenceMessage = false;
 
     private enum State
     {
@@ -51,10 +64,20 @@ public class ILinkReplayerSession extends ReplayerSession
         final int beginSeqNo,
         final int endSeqNo,
         final long sessionId,
-        final Replayer replayer)
+        final Replayer replayer,
+        final IntHashSet gapfillOnRetransmitILinkTemplateIds,
+        final ILinkMessageEncoder iLinkMessageEncoder,
+        final AbstractILink3Parser iLink3Parser,
+        final AbstractILink3Proxy iLink3Proxy, final AbstractILink3Offsets iLink3Offsets)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
+
+        this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
+        this.iLinkMessageEncoder = iLinkMessageEncoder;
+        this.iLink3Parser = iLink3Parser;
+        this.iLink3Proxy = iLink3Proxy;
+        this.iLink3Offsets = iLink3Offsets;
 
         state = State.REPLAYING;
     }
@@ -68,6 +91,23 @@ public class ILinkReplayerSession extends ReplayerSession
     {
         switch (state)
         {
+            case SEND_COMPLETE_MESSAGE:
+            {
+                if (mustSendSequenceMessage)
+                {
+                    if (sendSequence(endSeqNo + 1))
+                    {
+                        mustSendSequenceMessage = false;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+
+                return sendCompleteMessage();
+            }
+
             case REPLAYING:
             {
                 if (replayOperation.attemptReplay())
@@ -76,11 +116,6 @@ public class ILinkReplayerSession extends ReplayerSession
                     state = State.SEND_COMPLETE_MESSAGE;
                 }
                 return false;
-            }
-
-            case SEND_COMPLETE_MESSAGE:
-            {
-                return sendCompleteMessage();
             }
 
             default:
@@ -92,11 +127,47 @@ public class ILinkReplayerSession extends ReplayerSession
     public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // Update connection id in case we're replaying from a previous connection.
-        ILINK_MESSAGE_ENCODER.wrap((MutableDirectBuffer)buffer, offset + MessageHeaderEncoder.ENCODED_LENGTH);
-        ILINK_MESSAGE_ENCODER.connection(connectionId);
+        final int encoderOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
+        final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
+            ILinkMessageDecoder.BLOCK_LENGTH;
+        final int templateId = iLink3Parser.templateId(buffer, headerOffset);
 
-        return Pressure.apply(publication.offer(buffer, offset, length));
+        if (gapfillOnRetransmitILinkTemplateIds.contains(templateId))
+        {
+            mustSendSequenceMessage = true;
+            return Action.CONTINUE;
+        }
+        else
+        {
+            if (mustSendSequenceMessage)
+            {
+                final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
+                final int seqNum = iLink3Offsets.seqNum(templateId, buffer, messageOffset);
+                if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
+                {
+                    if (sendSequence(seqNum))
+                    {
+                        mustSendSequenceMessage = false;
+                    }
+                    else
+                    {
+                        return Action.ABORT;
+                    }
+                }
+            }
+
+            // Update connection id in case we're replaying from a previous connection.
+            iLinkMessageEncoder.wrap((MutableDirectBuffer)buffer, encoderOffset);
+            iLinkMessageEncoder.connection(connectionId);
+
+            return Pressure.apply(publication.offer(buffer, offset, length));
+        }
+    }
+
+    private boolean sendSequence(final int nextSentSequenceNumber)
+    {
+        iLink3Proxy.connectionId(connectionId);
+        return !Pressure.isBackPressured(iLink3Proxy.sendSequence(sessionId, nextSentSequenceNumber));
     }
 
     public void close()
