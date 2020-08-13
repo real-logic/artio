@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 /**
@@ -32,6 +33,7 @@ public interface ILink3ConnectionHandler
      * <a href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/iLink+3+Application+Layer">CME
      * Documentation</a>. These may also be referred to as application layer messages.
      *
+     * @param connection the connection receiving this message
      * @param templateId the templateId of the iLink3 SBE message that you have received.
      * @param buffer the buffer containing the message.
      * @param offset the offset within the buffer at which your message starts.
@@ -40,6 +42,7 @@ public interface ILink3ConnectionHandler
      * @param possRetrans true of the possRetrans flag is set to true.
      */
     void onBusinessMessage(
+        ILink3Connection connection,
         int templateId,
         DirectBuffer buffer,
         int offset,
@@ -51,41 +54,48 @@ public interface ILink3ConnectionHandler
      * Callback when Artio has received a NotApplied message. The {@link NotAppliedResponse} parameter can be used
      * in order to get Artio to retransmit messages or use a Sequence message in order to fill the gap.
      *
+     * @param connection the connection receiving this message
      * @param fromSequenceNumber the fromSequenceNumber of the NotApplied message.
      * @param msgCount the msgCount of the NotApplied message.
      * @param response used to tell Artio how to respond to the NotApplied message.
      */
-    void onNotApplied(long fromSequenceNumber, long msgCount, NotAppliedResponse response);
+    void onNotApplied(ILink3Connection connection, long fromSequenceNumber, long msgCount, NotAppliedResponse response);
 
     /**
      * Callback when Artio has received a RetransmitReject message. This can be used for error logging or handling.
+     * @param connection the connection receiving this message
      * @param reason the reason of the RetransmitReject message
      * @param lastUuid the lastUuid of the RetransmitReject message
      * @param requestTimestamp the requestTimestamp of the RetransmitReject message
      * @param errorCodes the errorCodes of the RetransmitReject message
      */
-    void onRetransmitReject(String reason, long lastUuid, long requestTimestamp, int errorCodes);
+    void onRetransmitReject(
+        ILink3Connection connection, String reason, long lastUuid, long requestTimestamp, int errorCodes);
 
     /**
      * Notifies an application when a sequence message is received. Normally applications would not need to implement
      * this method or take any behaviour in response to a sequence message - Artio itself provides any session level
      * protocol responses. This method just exposes the event to applications for debugging or certification purposes.
      *
+     * @param connection the connection receiving this message
      * @param uuid the UUID of the sequence message.
      * @param nextSeqNo the next sequence number contained in the body of the sequence message.
      */
-    void onSequence(long uuid, long nextSeqNo);
+    void onSequence(ILink3Connection connection, long uuid, long nextSeqNo);
 
     /**
      * Callback when an error happens internally with the processing of a message in iLink3 that can't be handled
      * through normal protocol means.
      *
+     * @param connection the connection where this error has occurred.
      * @param ex the exception corresponding to an error
      */
-    void onError(Exception ex);
+    void onError(ILink3Connection connection, Exception ex);
 
     /**
      * Call when this connection is disconnected.
+     *
+     * @param connection the connection that was disconnected.
      */
-    void onDisconnect();
+    void onDisconnect(ILink3Connection connection);
 }

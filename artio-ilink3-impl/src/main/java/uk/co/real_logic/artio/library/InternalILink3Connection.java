@@ -907,7 +907,7 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         if (uUID != uuid())
         {
-            handler.onError(new IllegalResponseException("Invalid uuid=" + uUID + ",expected=" + uuid()));
+            handler.onError(this, new IllegalResponseException("Invalid uuid=" + uUID + ",expected=" + uuid()));
         }
     }
 
@@ -933,7 +933,7 @@ public final class InternalILink3Connection extends ILink3Connection
             else
             {
                 // low sequence number triggered disconnect
-                handler.onSequence(uUID, nextSeqNo);
+                handler.onSequence(this, uUID, nextSeqNo);
                 return position;
             }
 
@@ -943,7 +943,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 sendSequence(NotLapsed);
             }
 
-            handler.onSequence(uUID, nextSeqNo);
+            handler.onSequence(this, uUID, nextSeqNo);
         }
 
         return 1;
@@ -974,7 +974,7 @@ public final class InternalILink3Connection extends ILink3Connection
         {
             // Stop messages from being sent whilst a retransmit is underway.
             state = State.RETRANSMITTING;
-            handler.onNotApplied(fromSeqNo, msgCount, response);
+            handler.onNotApplied(this, fromSeqNo, msgCount, response);
             onReceivedMessage();
         }
 
@@ -1033,7 +1033,7 @@ public final class InternalILink3Connection extends ILink3Connection
     void unbindState()
     {
         state = State.UNBOUND;
-        handler.onDisconnect();
+        handler.onDisconnect(this);
     }
 
 //    private
@@ -1064,7 +1064,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     }
                 }
 
-                handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
+                handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, true);
 
                 if (seqNum == retransmitFillSeqNo)
                 {
@@ -1088,7 +1088,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     nextRecvSeqNo(seqNum + 1);
 
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+                    handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, false);
 
                     return 1;
                 }
@@ -1097,7 +1097,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     // We could queue this instead of just passing it on to the customer's application but this
                     // hasn't been requested as of yet
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    handler.onBusinessMessage(templateId, buffer, offset, blockLength, version, false);
+                    handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, false);
 
                     return onInvalidSequenceNumber(seqNum);
                 }
@@ -1294,7 +1294,7 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         checkUuid(uuid);
 
-        handler.onRetransmitReject(reason, lastUuid, requestTimestamp, errorCodes);
+        handler.onRetransmitReject(this, reason, lastUuid, requestTimestamp, errorCodes);
 
         retransmitFilled();
 

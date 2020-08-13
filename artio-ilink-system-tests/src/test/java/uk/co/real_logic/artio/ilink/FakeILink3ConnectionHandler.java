@@ -19,6 +19,7 @@ import iLinkBinary.ExecutionReportStatus532Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onBusinessMessage(
-        final int templateId,
+        final ILink3Connection connection, final int templateId,
         final DirectBuffer buffer,
         final int offset,
         final int blockLength,
@@ -63,30 +64,35 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onNotApplied(
-        final long fromSequenceNumber, final long msgCount, final NotAppliedResponse response)
+        final ILink3Connection connection,
+        final long fromSequenceNumber,
+        final long msgCount,
+        final NotAppliedResponse response)
     {
         hasReceivedNotApplied = true;
         notAppliedResponse.accept(response);
     }
 
     public void onRetransmitReject(
-        final String reason, final long lastUuid, final long requestTimestamp, final int errorCodes)
+        final ILink3Connection connection,
+        final String reason,
+        final long lastUuid,
+        final long requestTimestamp,
+        final int errorCodes)
     {
-
     }
 
-    public void onSequence(final long uuid, final long nextSeqNo)
+    public void onSequence(final ILink3Connection connection, final long uuid, final long nextSeqNo)
     {
     }
 
-    public void onError(final Exception ex)
+    public void onError(final ILink3Connection connection, final Exception ex)
     {
         exceptions.add(ex);
     }
 
-    public void onDisconnect()
+    public void onDisconnect(final ILink3Connection connection)
     {
-
     }
 
     public IntArrayList messageIds()
