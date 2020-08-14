@@ -139,8 +139,6 @@ public class SessionContexts
         if (needsUpgrading || requiresCompaction)
         {
             resetBuffer();
-            filePosition = HEADER_SIZE;
-
             compositeToContext.values().forEach(this::allocateNewSlot);
         }
     }
@@ -447,6 +445,7 @@ public class SessionContexts
     {
         buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
+        filePosition = HEADER_SIZE;
     }
 
     void updateSavedData(final SessionContext context, final int filePosition)
