@@ -1451,6 +1451,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             DebugLogger.log(CLOSE, "Received engine close message, starting ENGINE_CLOSE operation");
             state = ENGINE_DISCONNECT;
+            sessionLogoutIndex = 0;
 
             attemptEngineCloseBasedLogout();
         }
