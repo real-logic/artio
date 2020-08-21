@@ -286,6 +286,8 @@ public final class InternalILink3Connection extends ILink3Connection
     public void abort()
     {
         proxy.abort();
+
+        nextSentSeqNo--;
     }
 
     private void sentMessage()

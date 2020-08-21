@@ -147,14 +147,6 @@ public class ILink3SystemTest
     }
 
     @Test
-    public void shouldCloseShouldShutdownOpenConnections() throws IOException
-    {
-        launch(true);
-
-        establishNewConnection();
-    }
-
-    @Test
     public void shouldSupportInitiatorTerminateConnection() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();
@@ -201,6 +193,28 @@ public class ILink3SystemTest
     public void shouldExchangeBusinessMessage() throws IOException
     {
         shouldEstablishConnectionAtBeginningOfWeek();
+
+        sendNewOrderSingle();
+
+        testServer.readNewOrderSingle(1);
+        testServer.writeExecutionReportStatus(1, false);
+
+        agreeRecvSeqNo(2);
+        final IntArrayList messageIds = handler.messageIds();
+        assertThat(messageIds, hasSize(1));
+        assertEquals(messageIds.getInt(0), ER_STATUS_ID);
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldCorrectlyAbortBusinessMessage() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+
+        abortNewOrderSingle();
+        assertEquals("Sequence number has been incorrectly updated for aborted message",
+            1, connection.nextSentSeqNo());
 
         sendNewOrderSingle();
 
@@ -1187,6 +1201,20 @@ public class ILink3SystemTest
 
     private void sendNewOrderSingle()
     {
+        setupNewOrderSingle();
+
+        connection.commit();
+    }
+
+    private void abortNewOrderSingle()
+    {
+        setupNewOrderSingle();
+
+        connection.abort();
+    }
+
+    private void setupNewOrderSingle()
+    {
         final NewOrderSingle514Encoder newOrderSingle = new NewOrderSingle514Encoder();
         assertThat(connection.tryClaim(newOrderSingle), greaterThan(0L));
         newOrderSingle
@@ -1197,8 +1225,6 @@ public class ILink3SystemTest
             .clOrdID(CL_ORD_ID)
             .partyDetailsListReqID(1)
             .orderRequestID(1);
-
-        connection.commit();
     }
 
     private void terminateAndDisconnect()
