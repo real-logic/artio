@@ -705,6 +705,6 @@ tasks.withType(PublishToMavenRepository) {
 }
 
 wrapper {
-    gradleVersion = '6.5.1'
+    gradleVersion = '6.6'
     distributionType = 'ALL'
 }
