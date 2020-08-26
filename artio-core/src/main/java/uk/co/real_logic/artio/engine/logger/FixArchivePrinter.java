@@ -34,35 +34,56 @@ import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
  * java uk.co.real_logic.artio.engine.logger.FixArchivePrinter \
  *   --log-file-dir=artio-system-tests/acceptor-logs/ \
  *   --aeron-channel=aeron:ipc
+ *
+ * NB: this tool can also be used with iLink3 if the binary has been built with iLink3 support.
  */
 public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        String aeronDirectoryName = null;
-        String aeronChannel = null;
-        int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
-        int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
-        FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
-        boolean follow = false;
-        Class<? extends FixDictionary> fixDictionaryType = FixDictionary.findDefault();
+        new FixArchivePrinter().scan(args);
+    }
 
-        Predicate<SessionHeaderDecoder> headerPredicate = null;
 
+    private String aeronDirectoryName = null;
+    private String aeronChannel = null;
+    private int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+    private int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
+    private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
+    private boolean follow = false;
+    private boolean ilink = false;
+    private Class<? extends FixDictionary> fixDictionaryType = null;
+    private Predicate<SessionHeaderDecoder> headerPredicate = null;
+
+    private void scan(final String[] args)
+    {
+        parseArgs(args);
+        validateArgs();
+        scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
+            archiveScannerStreamId, fixDictionaryType);
+    }
+
+    private void parseArgs(final String[] args)
+    {
         for (final String arg : args)
         {
             final int eqIndex = arg.indexOf('=');
-            final String optionName = eqIndex != -1 ? arg.substring(2, eqIndex) : arg;
+            final String optionName = eqIndex != -1 ? arg.substring(2, eqIndex) : arg.substring(2);
 
             // Options without arguments
             switch (optionName)
             {
                 case "help":
                     printHelp();
-                    return;
+                    System.exit(0);
+                    break; // checkstyle
 
                 case "follow":
                     follow = true;
+                    break;
+
+                case "ilink":
+                    ilink = true;
                     break;
 
                 default:
@@ -131,19 +152,24 @@ public final class FixArchivePrinter
                     break;
             }
         }
+    }
+
+    private void validateArgs()
+    {
+        if (fixDictionaryType == null && !ilink)
+        {
+            fixDictionaryType = FixDictionary.findDefault();
+        }
 
         requiredArgument(aeronDirectoryName, "aeron-dir-name");
         requiredArgument(aeronChannel, "aeron-channel");
-
-        scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
-            archiveScannerStreamId, fixDictionaryType);
     }
 
     private static void requiredArgument(final int eqIndex)
     {
         if (eqIndex == -1)
         {
-            System.err.println("--help and --follow are the only options that don't take a value");
+            System.err.println("--ilink, --help and --follow are the only options that don't take a value");
             printHelp();
             System.exit(-1);
         }
@@ -159,7 +185,7 @@ public final class FixArchivePrinter
         final int archiveScannerStreamId,
         final Class<? extends FixDictionary> fixDictionaryType)
     {
-        final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
+        final FixDictionary fixDictionary = fixDictionaryType == null ? null : FixDictionary.of(fixDictionaryType);
         FixMessagePredicate predicate = otherPredicate;
         if (headerPredicate != null)
         {
@@ -176,6 +202,7 @@ public final class FixArchivePrinter
                 aeronChannel,
                 queryStreamId,
                 filterBy(FixArchivePrinter::print, predicate),
+                new LazyILinkMessagePrinter(queryStreamId),
                 follow,
                 archiveScannerStreamId);
         }
@@ -206,6 +233,15 @@ public final class FixArchivePrinter
             "Specifies the aeron channel that was used to by the engine",
             true);
 
+        printOption(
+            "fix-dictionary",
+            "The class name of the Fix Dictionary to use, default is used if this is not provided",
+            false);
+        printOption(
+            "ilink",
+            "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
+            " only ilink3 messages will be printed out",
+            false);
         printOption(
             "from",
             "Time in precision of CommonConfiguration.clock() that messages are not earlier than",
@@ -277,4 +313,5 @@ public final class FixArchivePrinter
     {
         System.out.println(message.body());
     }
+
 }
