@@ -28,10 +28,9 @@ public abstract class AbstractILink3Proxy
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy)cls.getConstructor(long.class, ExclusivePublication.class)
-                .newInstance(0, publication);
+            return (AbstractILink3Proxy)cls.getConstructors()[0].newInstance(0, publication, null);
         }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+        catch (final ClassNotFoundException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
             errorHandler.onError(e);

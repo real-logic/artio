@@ -44,7 +44,6 @@ public final class FixArchivePrinter
         new FixArchivePrinter().scan(args);
     }
 
-
     private String aeronDirectoryName = null;
     private String aeronChannel = null;
     private int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;

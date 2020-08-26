@@ -27,23 +27,21 @@ import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 public class PrintingILinkMessageConsumer implements ILinkMessageConsumer
 {
     private final MessageHeaderDecoder header = new MessageHeaderDecoder();
-    private final ILink3BusinessMessageLogger businessMessageLogger = new ILink3BusinessMessageLogger(this::log);
+    private final ILink3BusinessMessageDissector businessMessageLogger = new ILink3BusinessMessageDissector(this::log);
     private final StringBuilder builder = new StringBuilder();
 
     private final int inboundStreamId;
-
-    private boolean inbound;
 
     public PrintingILinkMessageConsumer(final int inboundStreamId)
     {
         this.inboundStreamId = inboundStreamId;
     }
 
-    private void log(final Consumer<StringBuilder> appendTo)
+    private void log(final String prefix, final Consumer<StringBuilder> appendTo)
     {
         final StringBuilder builder = this.builder;
         builder.setLength(0);
-        builder.append(inbound ? "> " : "< ");
+        builder.append(prefix);
         appendTo.accept(builder);
         System.out.println(builder);
     }
@@ -56,11 +54,10 @@ public class PrintingILinkMessageConsumer implements ILinkMessageConsumer
         final int templateId = this.header.templateId();
         final int blockLength = this.header.blockLength();
         final int version = this.header.version();
+        final boolean inbound = header.streamId() == inboundStreamId;
 
         offset += MessageHeaderEncoder.ENCODED_LENGTH;
 
-        inbound = header.streamId() == inboundStreamId;
-
-        businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version);
+        businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version, inbound);
     }
 }

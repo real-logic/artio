@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.ILINK_BUSINESS;
 
-public final class ILink3BusinessMessageLogger
+public final class ILink3BusinessMessageDissector
 {
     // Client -> Exchange
     private final NewOrderSingle514Decoder newOrderSingle = new NewOrderSingle514Decoder();
@@ -137,185 +137,205 @@ public final class ILink3BusinessMessageLogger
     private final Consumer<StringBuilder> quoteCancelAckAppendTo =
         quoteCancelAck::appendTo;
 
-    private final Consumer<Consumer<StringBuilder>> logger;
+    private final Logger logger;
 
-    public ILink3BusinessMessageLogger()
+    public ILink3BusinessMessageDissector()
     {
-        this(ILink3BusinessMessageLogger::logDefault);
+        this(ILink3BusinessMessageDissector::logDefault);
     }
 
-    public ILink3BusinessMessageLogger(final Consumer<Consumer<StringBuilder>> logger)
+    public ILink3BusinessMessageDissector(final Logger logger)
     {
         this.logger = logger;
     }
 
     public void onBusinessMessage(
-        final int templateId, final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final int templateId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final boolean inbound)
     {
-        onClientToExchangeMessage(templateId, buffer, offset, blockLength, version);
+        onClientToExchangeMessage(templateId, buffer, offset, blockLength, version, inbound);
 
-        onExchangeToClientMessage(templateId, buffer, offset, blockLength, version);
+        onExchangeToClientMessage(templateId, buffer, offset, blockLength, version, inbound);
     }
 
     private void onExchangeToClientMessage(
-        final int templateId, final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final int templateId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final boolean inbound)
     {
         switch (templateId)
         {
             case PartyDetailsDefinitionRequestAck519Decoder.TEMPLATE_ID:
                 partyDetailsDefinitionRequestAck.wrap(buffer, offset, blockLength, version);
-                log(partyDetailsDefinitionRequestAckAppendTo);
+                log(inbound, partyDetailsDefinitionRequestAckAppendTo);
                 break;
             case ExecutionReportNew522Decoder.TEMPLATE_ID:
                 executionReportNew.wrap(buffer, offset, blockLength, version);
-                log(executionReportNewAppendTo);
+                log(inbound, executionReportNewAppendTo);
                 break;
             case ExecutionReportReject523Decoder.TEMPLATE_ID:
                 executionReportReject.wrap(buffer, offset, blockLength, version);
-                log(executionReportRejectAppendTo);
+                log(inbound, executionReportRejectAppendTo);
                 break;
             case ExecutionReportElimination524Decoder.TEMPLATE_ID:
                 executionReportElimination.wrap(buffer, offset, blockLength, version);
-                log(executionReportEliminationAppendTo);
+                log(inbound, executionReportEliminationAppendTo);
                 break;
             case ExecutionReportTradeOutright525Decoder.TEMPLATE_ID:
                 executionReportTradeOutright.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeOutrightAppendTo);
+                log(inbound, executionReportTradeOutrightAppendTo);
                 break;
             case ExecutionReportTradeSpread526Decoder.TEMPLATE_ID:
                 executionReportTradeSpread.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeSpreadAppendTo);
+                log(inbound, executionReportTradeSpreadAppendTo);
                 break;
             case ExecutionReportTradeSpreadLeg527Decoder.TEMPLATE_ID:
                 executionReportTradeSpreadLeg.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeSpreadLegAppendTo);
+                log(inbound, executionReportTradeSpreadLegAppendTo);
                 break;
             case ExecutionReportModify531Decoder.TEMPLATE_ID:
                 executionReportModify.wrap(buffer, offset, blockLength, version);
-                log(executionReportModifyAppendTo);
+                log(inbound, executionReportModifyAppendTo);
                 break;
             case ExecutionReportStatus532Decoder.TEMPLATE_ID:
                 executionReportStatus.wrap(buffer, offset, blockLength, version);
-                log(executionReportStatusAppendTo);
+                log(inbound, executionReportStatusAppendTo);
                 break;
             case ExecutionReportCancel534Decoder.TEMPLATE_ID:
                 executionReportCancel.wrap(buffer, offset, blockLength, version);
-                log(executionReportCancelAppendTo);
+                log(inbound, executionReportCancelAppendTo);
                 break;
             case OrderCancelReject535Decoder.TEMPLATE_ID:
                 orderCancelReject.wrap(buffer, offset, blockLength, version);
-                log(orderCancelRejectAppendTo);
+                log(inbound, orderCancelRejectAppendTo);
                 break;
             case OrderCancelReplaceReject536Decoder.TEMPLATE_ID:
                 orderCancelReplaceReject.wrap(buffer, offset, blockLength, version);
-                log(orderCancelReplaceRejectAppendTo);
+                log(inbound, orderCancelReplaceRejectAppendTo);
                 break;
             case PartyDetailsListReport538Decoder.TEMPLATE_ID:
                 partyDetailsListReport.wrap(buffer, offset, blockLength, version);
-                log(partyDetailsListReportAppendTo);
+                log(inbound, partyDetailsListReportAppendTo);
                 break;
             case MassQuoteAck545Decoder.TEMPLATE_ID:
                 massQuoteAck.wrap(buffer, offset, blockLength, version);
-                log(massQuoteAckAppendTo);
+                log(inbound, massQuoteAckAppendTo);
                 break;
             case RequestForQuoteAck546Decoder.TEMPLATE_ID:
                 requestForQuoteAck.wrap(buffer, offset, blockLength, version);
-                log(requestForQuoteAckAppendTo);
+                log(inbound, requestForQuoteAckAppendTo);
                 break;
             case ExecutionReportTradeAddendumOutright548Decoder.TEMPLATE_ID:
                 executionReportTradeAddendumOutright.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeAddendumOutrightAppendTo);
+                log(inbound, executionReportTradeAddendumOutrightAppendTo);
                 break;
             case ExecutionReportTradeAddendumSpread549Decoder.TEMPLATE_ID:
                 executionReportTradeAddendumSpread.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeAddendumSpreadAppendTo);
+                log(inbound, executionReportTradeAddendumSpreadAppendTo);
                 break;
             case ExecutionReportTradeAddendumSpreadLeg550Decoder.TEMPLATE_ID:
                 executionReportTradeAddendumSpreadLeg.wrap(buffer, offset, blockLength, version);
-                log(executionReportTradeAddendumSpreadLegAppendTo);
+                log(inbound, executionReportTradeAddendumSpreadLegAppendTo);
                 break;
             case SecurityDefinitionResponse561Decoder.TEMPLATE_ID:
                 securityDefinitionResponse.wrap(buffer, offset, blockLength, version);
-                log(securityDefinitionResponseAppendTo);
+                log(inbound, securityDefinitionResponseAppendTo);
                 break;
             case OrderMassActionReport562Decoder.TEMPLATE_ID:
                 orderMassActionReport.wrap(buffer, offset, blockLength, version);
-                log(orderMassActionReportAppendTo);
+                log(inbound, orderMassActionReportAppendTo);
                 break;
             case QuoteCancelAck563Decoder.TEMPLATE_ID:
                 quoteCancelAck.wrap(buffer, offset, blockLength, version);
-                log(quoteCancelAckAppendTo);
+                log(inbound, quoteCancelAckAppendTo);
                 break;
         }
     }
 
     private void onClientToExchangeMessage(
-        final int templateId, final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final int templateId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final boolean inbound)
     {
         switch (templateId)
         {
             case NewOrderSingle514Decoder.TEMPLATE_ID:
                 newOrderSingle.wrap(buffer, offset, blockLength, version);
-                log(newOrderSingleAppendTo);
+                log(inbound, newOrderSingleAppendTo);
                 break;
             case OrderCancelReplaceRequest515Decoder.TEMPLATE_ID:
                 orderCancelReplaceRequest.wrap(buffer, offset, blockLength, version);
-                log(orderCancelReplaceRequestAppendTo);
+                log(inbound, orderCancelReplaceRequestAppendTo);
                 break;
             case OrderCancelRequest516Decoder.TEMPLATE_ID:
                 orderCancelRequest.wrap(buffer, offset, blockLength, version);
-                log(orderCancelRequestAppendTo);
+                log(inbound, orderCancelRequestAppendTo);
                 break;
             case MassQuote517Decoder.TEMPLATE_ID:
                 massQuote.wrap(buffer, offset, blockLength, version);
-                log(massQuoteAppendTo);
+                log(inbound, massQuoteAppendTo);
                 break;
             case QuoteCancel528Decoder.TEMPLATE_ID:
                 quoteCancel.wrap(buffer, offset, blockLength, version);
-                log(quoteCancelAppendTo);
+                log(inbound, quoteCancelAppendTo);
                 break;
             case OrderStatusRequest533Decoder.TEMPLATE_ID:
                 orderStatusRequest.wrap(buffer, offset, blockLength, version);
-                log(orderStatusRequestAppendTo);
+                log(inbound, orderStatusRequestAppendTo);
                 break;
             case OrderMassStatusRequest530Decoder.TEMPLATE_ID:
                 orderMassStatusRequest.wrap(buffer, offset, blockLength, version);
-                log(orderMassStatusRequestAppendTo);
+                log(inbound, orderMassStatusRequestAppendTo);
                 break;
             case OrderMassActionRequest529Decoder.TEMPLATE_ID:
                 orderMassActionRequest.wrap(buffer, offset, blockLength, version);
-                log(orderMassActionRequestAppendTo);
+                log(inbound, orderMassActionRequestAppendTo);
                 break;
             case NewOrderCross544Decoder.TEMPLATE_ID:
                 newOrderCross.wrap(buffer, offset, blockLength, version);
-                log(newOrderCrossAppendTo);
+                log(inbound, newOrderCrossAppendTo);
                 break;
             case RequestForQuote543Decoder.TEMPLATE_ID:
                 requestForQuote.wrap(buffer, offset, blockLength, version);
-                log(requestForQuoteAppendTo);
+                log(inbound, requestForQuoteAppendTo);
                 break;
             case SecurityDefinitionRequest560Decoder.TEMPLATE_ID:
                 securityDefinitionRequest.wrap(buffer, offset, blockLength, version);
-                log(securityDefinitionRequestAppendTo);
+                log(inbound, securityDefinitionRequestAppendTo);
                 break;
             case PartyDetailsDefinitionRequest518Decoder.TEMPLATE_ID:
                 partyDetailsDefinitionRequest.wrap(buffer, offset, blockLength, version);
-                log(partyDetailsDefinitionRequestAppendTo);
+                log(inbound, partyDetailsDefinitionRequestAppendTo);
                 break;
             case ExecutionAck539Decoder.TEMPLATE_ID:
                 executionAck.wrap(buffer, offset, blockLength, version);
-                log(executionAckAppendTo);
+                log(inbound, executionAckAppendTo);
                 break;
         }
     }
 
-    private void log(final Consumer<StringBuilder> appendTo)
+    private void log(final boolean inbound, final Consumer<StringBuilder> appendTo)
     {
-        logger.accept(appendTo);
+        logger.log(inbound ? "> " : "< ", appendTo);
     }
 
-    private static void logDefault(final Consumer<StringBuilder> appendTo)
+    private static void logDefault(final String prefix, final Consumer<StringBuilder> appendTo)
     {
-        DebugLogger.logSbeDecoder(ILINK_BUSINESS, "> ", appendTo);
+        DebugLogger.logSbeDecoder(ILINK_BUSINESS, prefix, appendTo);
+    }
+
+    public interface Logger
+    {
+        void log(String prefix, Consumer<StringBuilder> appendTo);
     }
 }

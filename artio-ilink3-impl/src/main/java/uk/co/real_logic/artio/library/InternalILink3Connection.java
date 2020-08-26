@@ -60,7 +60,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public final class InternalILink3Connection extends ILink3Connection
 {
-    private static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
+    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
 
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
 
@@ -151,7 +151,7 @@ public final class InternalILink3Connection extends ILink3Connection
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
     private final CharFormatter retransmitFilledNext = new CharFormatter(
         "RetransmitFilledNext uuid=%s,lastUuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
-    private final ILink3BusinessMessageLogger businessMessageLogger = new ILink3BusinessMessageLogger();
+    private final ILink3BusinessMessageDissector businessMessageLogger = new ILink3BusinessMessageDissector();
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
@@ -217,7 +217,7 @@ public final class InternalILink3Connection extends ILink3Connection
         this.newlyAllocated = newlyAllocated;
         this.epochNanoClock = epochNanoClock;
 
-        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
+        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication(), businessMessageLogger);
         offsets = new ILink3Offsets();
         nextSentSeqNo(calculateInitialSequenceNumber(
             lastSentSequenceNumber, configuration.initialSentSequenceNumber()));
@@ -1146,7 +1146,7 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         if (BUSINESS_MESSAGE_LOGGING_ENABLED)
         {
-            businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version);
+            businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
         }
 
         handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);
