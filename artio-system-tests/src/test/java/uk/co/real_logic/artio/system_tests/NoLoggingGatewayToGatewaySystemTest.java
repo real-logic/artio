@@ -28,8 +28,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-
     @Before
     public void launch()
     {
@@ -46,7 +44,6 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
             .deleteLogFileDirOnStart(true));
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);

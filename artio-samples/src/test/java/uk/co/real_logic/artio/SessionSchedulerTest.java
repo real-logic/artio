@@ -22,18 +22,18 @@ public class SessionSchedulerTest
 {
     private static final ZoneId LONDON = ZoneId.of("Europe/London");
 
-    private FixLibrary library = mock(FixLibrary.class);
-    private SessionConfiguration sessionConfiguration = mock(SessionConfiguration.class);
-    private ScheduledExecutorService timeEventPool = mock(ScheduledExecutorService.class);
-    private Session session = mock(Session.class);
+    private final FixLibrary library = mock(FixLibrary.class);
+    private final SessionConfiguration sessionConfiguration = mock(SessionConfiguration.class);
+    private final ScheduledExecutorService timeEventPool = mock(ScheduledExecutorService.class);
+    private final Session session = mock(Session.class);
     @SuppressWarnings("unchecked")
-    private Reply<Session> reply = mock(Reply.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final Reply<Session> reply = mock(Reply.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private SessionScheduler sessionScheduler;
 
     @Before
-    public void setup() throws Exception
+    public void setup()
     {
         SessionScheduler.timeEventPool = timeEventPool;
 

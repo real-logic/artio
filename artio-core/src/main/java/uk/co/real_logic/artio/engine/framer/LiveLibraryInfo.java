@@ -105,9 +105,34 @@ final class LiveLibraryInfo implements LibraryInfo
         allSessions.add(session);
     }
 
-    GatewaySession removeSession(final long connectionId)
+    void removeSessionByConnectionId(final long connectionId)
     {
-        return GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
+        GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
+    }
+
+    void offlineSession(final long connectionId)
+    {
+        final List<GatewaySession> sessions = this.allSessions;
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.connectionId() == connectionId)
+            {
+                session.goOffline();
+            }
+        }
+    }
+
+    GatewaySession removeSessionBySessionId(final long sessionId)
+    {
+        final int index = GatewaySessions.indexBySessionId(sessionId, allSessions);
+        return index == -1 ? null : allSessions.remove(index);
+    }
+
+    GatewaySession lookupSessionById(final long sessionId)
+    {
+        final int index = GatewaySessions.indexBySessionId(sessionId, allSessions);
+        return index == -1 ? null : allSessions.get(index);
     }
 
     public void removeSession(final GatewaySession gatewaySession)
@@ -164,21 +189,5 @@ final class LiveLibraryInfo implements LibraryInfo
     ConnectingSession connectionFinishesConnecting(final long correlationId)
     {
         return correlationIdToConnectingSession.remove(correlationId);
-    }
-
-    GatewaySession lookupSessionById(final long sessionId)
-    {
-        final List<GatewaySession> sessions = this.allSessions;
-        final int size = sessions.size();
-        for (int i = 0; i < size; i++)
-        {
-            final GatewaySession session = sessions.get(i);
-            if (session.sessionId() == sessionId)
-            {
-                return session;
-            }
-        }
-
-        return null;
     }
 }

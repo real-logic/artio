@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
@@ -70,6 +71,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertConnected(initiatingSession);
     };
 
+    private final ErrorCounter errorCounter = new ErrorCounter();
     private Runnable duringRestart = () -> dirsDeleteOnStart = false;
     private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
@@ -121,9 +123,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithCatchupReplayOfMissingMessages()
     {
-        printErrorMessages = false;
-
-        duringRestart = this::deleteAcceptorLogs;
+        duringRestart = () ->
+        {
+            dirsDeleteOnStart = false;
+            deleteAcceptorLogs();
+        };
 
         onAcquireSession = () -> assertReplyStatusWhenReplayRequested(OK);
 
@@ -146,7 +150,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final FixMessage gapFillMessage =
             testSystem.awaitMessageOf(acceptingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
-        final int newSeqNo = Integer.valueOf(gapFillMessage.get(Constants.NEW_SEQ_NO));
+        final int newSeqNo = Integer.parseInt(gapFillMessage.get(Constants.NEW_SEQ_NO));
         final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
 
         assertEquals("Y", gapFillFlag);
@@ -302,8 +306,69 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test
+    public void shouldNotAllowResendRequestSpamming()
+    {
+        printErrorMessages = false;
+
+        launch(this::nothing);
+
+        final ReplayCountChecker replayCountChecker =
+            ReplayCountChecker.start(acceptingEngine, testSystem, 1);
+
+        connectPersistingSessions();
+        // Send execution report with seqNum=1
+        final ReportFactory reportFactory = new ReportFactory();
+        final int messageCount = 100;
+        for (int i = 0; i < messageCount; i++)
+        {
+            assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+        }
+
+        final int lastSeqNum = messageCount + 1;
+        assertSequenceFromInitToAcceptAt(1, lastSeqNum);
+
+        logoutInitiatingSession();
+        assertSessionsDisconnected();
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        connectPersistingSessions();
+
+        final int replayRequests = 1000;
+        for (int i = 0; i < replayRequests; i++)
+        {
+            sendResendRequest(2, 0, initiatingOtfAcceptor, initiatingSession);
+        }
+
+        testSystem.awaitSend("Failed to requestDisconnect", () -> initiatingSession.requestDisconnect());
+        assertSessionDisconnected(acceptingSession);
+
+        testSystem.removeOperation(replayCountChecker);
+        replayCountChecker.assertBelowThreshold();
+
+        // Give the system some time to process and suppress resend requests.
+        testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                Thread.sleep(200);
+            }
+            catch (final InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+
+        assertThat(errorCounter.lastObservationCount(), lessThan(messageCount * 5));
+    }
+
+    @Test
     public void shouldRejectIncorrectInitiatorSequenceNumber()
     {
+        printErrorMessages = false;
+
         launch(this::nothing);
         connectPersistingSessions();
 
@@ -410,19 +475,32 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         launch(this::nothing);
         connectPersistingSessions();
+        assertEquals(0, acceptingSession.sequenceIndex());
         disconnectSessions();
         clearMessages();
 
         acquireAcceptingSession();
+        assertOfflineSession(acceptingSession.id(), acceptingSession);
+        assertEquals(0, acceptingSession.sequenceIndex());
 
         final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
         cannotConnectWithSequence(acceptorSequenceNumber, 1);
 
-        assertThat(acceptingSession.sendSequenceReset(1, 1),
+        assertEquals(0, acceptingSession.sequenceIndex());
+        assertThat(acceptingSession.trySendSequenceReset(1, 1),
             greaterThan(0L));
+        assertEquals(1, acceptingSession.sequenceIndex());
+
+        initiatingOtfAcceptor.messages().clear();
 
         onAcquireSession = this::nothing;
         connectPersistingSessions(1, 1, false);
+
+        final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
+        assertEquals(1, logon.messageSequenceNumber());
+
+        // Ensure that the sequenceIndex is correct after the reset
+        assertEquals(1, acceptingSession.sequenceIndex());
     }
 
     private void connectPersistingSessions()
@@ -452,10 +530,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(alwaysPersistent());
-        config.printErrorMessages(printErrorMessages);
+        if (!printErrorMessages)
+        {
+            config.customErrorConsumer(errorCounter);
+        }
         acceptingEngine = FixEngine.launch(config);
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
-        initiatingConfig.printErrorMessages(printErrorMessages);
+        if (!printErrorMessages)
+        {
+            initiatingConfig.customErrorConsumer(errorCounter);
+        }
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         // Use so that the SharedLibraryScheduler is integration tested
@@ -526,6 +610,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         firstConnectTimeRange = connectTimeRange;
 
         launch(this.beforeReconnect);
+
         connectPersistingSessions(
             initialSentSequenceNumber,
             initialReceivedSequenceNumber,

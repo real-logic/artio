@@ -17,11 +17,16 @@ package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
 import org.agrona.IoUtil;
+import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.errors.ErrorConsumer;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
+import uk.co.real_logic.artio.util.OffsetEpochNanoClock;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
@@ -211,10 +216,14 @@ public class CommonConfiguration
     public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;
     public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
 
+    public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
+
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private Clock clock = Clock.systemNanoTime();
+    private EpochNanoClock epochNanoClock = new OffsetEpochNanoClock();
     private boolean printErrorMessages = true;
+    private ErrorConsumer customErrorConsumer;
     private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
@@ -240,6 +249,8 @@ public class CommonConfiguration
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     private boolean gracefulShutdown = true;
     private boolean validateCompIdsOnEveryMessage = true;
+    private boolean validateTimeStrictly = true;
+    private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -375,6 +386,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
+    {
+        this.customErrorConsumer = customErrorConsumer;
+        return this;
+    }
+
     /**
      * Sets the idle strategy for the Error Printer thread.
      *
@@ -430,7 +447,7 @@ public class CommonConfiguration
     /**
      * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode messages
      * via
-     * {@link uk.co.real_logic.artio.session.Session#send(uk.co.real_logic.artio.builder.Encoder)}.
+     * {@link uk.co.real_logic.artio.session.Session#trySend(uk.co.real_logic.artio.builder.Encoder)}.
      *
      * This is also used as the size of buffer for messages that are sent by the Session management system itself.
      *
@@ -485,6 +502,18 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the clock used for producing requestTimestamp fields on iLink3 messages.
+     *
+     * @param epochNanoClock the clock used for producing requestTimestamp fields on iLink3 messages.
+     * @return this
+     */
+    public CommonConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        this.epochNanoClock = epochNanoClock;
+        return this;
+    }
+
     public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
     {
         this.inboundLibraryStream = inboundLibraryStream;
@@ -527,9 +556,35 @@ public class CommonConfiguration
      * @param validateCompIdsOnEveryMessage true to validate comp ids
      * @return this
      */
-    public CommonConfiguration setValidateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
+    public CommonConfiguration validateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
     {
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+        return this;
+    }
+
+    /**
+     * Set to true in order to validate that time from sender corresponds to FIX time format.
+     * See http://fixwiki.org/fixwiki/UTCTimestampDataType for details.
+     *
+     * @param validateTimeStrictly true to validate time matches format
+     * @return this
+     */
+    public CommonConfiguration validateTimeStrictly(final boolean validateTimeStrictly)
+    {
+        this.validateTimeStrictly = validateTimeStrictly;
+        return this;
+    }
+
+    /**
+     * Sets the time precision that the the session logic uses to encode time stamps.
+     *
+     * @param sessionEpochFractionFormat the format to use.
+     * @return this
+     */
+    public CommonConfiguration sessionEpochFractionFormat(final EpochFractionFormat sessionEpochFractionFormat)
+    {
+        Verify.notNull(sessionEpochFractionFormat, "sessionEpochFractionFormat");
+        this.sessionEpochFractionFormat = sessionEpochFractionFormat;
         return this;
     }
 
@@ -546,6 +601,11 @@ public class CommonConfiguration
     public boolean printErrorMessages()
     {
         return printErrorMessages;
+    }
+
+    public ErrorConsumer customErrorConsumer()
+    {
+        return customErrorConsumer;
     }
 
     public IdleStrategy monitoringThreadIdleStrategy()
@@ -633,6 +693,16 @@ public class CommonConfiguration
         return validateCompIdsOnEveryMessage;
     }
 
+    public boolean validateTimeStrictly()
+    {
+        return validateTimeStrictly;
+    }
+
+    public EpochFractionFormat sessionEpochFractionFormat()
+    {
+        return sessionEpochFractionFormat;
+    }
+
     protected void conclude(final String fixSuffix)
     {
         if (isConcluded.compareAndSet(false, true))
@@ -690,6 +760,11 @@ public class CommonConfiguration
     public Clock clock()
     {
         return clock;
+    }
+
+    public EpochNanoClock epochNanoClock()
+    {
+        return epochNanoClock;
     }
 
     public int inboundLibraryStream()

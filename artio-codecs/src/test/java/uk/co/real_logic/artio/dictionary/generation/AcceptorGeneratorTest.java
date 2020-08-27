@@ -29,33 +29,38 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.AcceptorGenerator.*;
+import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
 
 public class AcceptorGeneratorTest
 {
-    private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static ConstantGenerator constantGenerator =
-        new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
-    private static EnumGenerator enumGenerator =
-        new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
-    private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
+    private static final StringWriterOutputManager OUTPUT_MANAGER = new StringWriterOutputManager();
+    private static final ConstantGenerator CONSTANT_GENERATOR =
+        new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, OUTPUT_MANAGER);
+    private static final EnumGenerator ENUM_GENERATOR = new EnumGenerator(
+        MESSAGE_EXAMPLE, TEST_PACKAGE, OUTPUT_MANAGER);
+    private static final EncoderGenerator ENCODER_GENERATOR = new EncoderGenerator(
+        MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, OUTPUT_MANAGER, ValidationOn.class,
+        RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+    private static final DecoderGenerator DECODER_GENERATOR = new DecoderGenerator(
+        MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE, OUTPUT_MANAGER, ValidationOn.class,
         RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
         Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
-    private static AcceptorGenerator acceptorGenerator =
-        new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static final AcceptorGenerator ACCEPTOR_GENERATOR = new AcceptorGenerator(
+        MESSAGE_EXAMPLE, TEST_PACKAGE, OUTPUT_MANAGER);
     private static Class<?> acceptor;
     private static Class<?> decoder;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @BeforeClass
     public static void generate() throws Exception
     {
-        constantGenerator.generate();
-        enumGenerator.generate();
-        decoderGenerator.generate();
-        acceptorGenerator.generate();
-        final Map<String, CharSequence> sources = outputManager.getSources();
+        CONSTANT_GENERATOR.generate();
+        ENUM_GENERATOR.generate();
+        ENCODER_GENERATOR.generate();
+        DECODER_GENERATOR.generate();
+        ACCEPTOR_GENERATOR.generate();
+        final Map<String, CharSequence> sources = OUTPUT_MANAGER.getSources();
         acceptor = compileInMemory(TEST_PACKAGE + "." + DICTIONARY_ACCEPTOR, sources);
         decoder = acceptor.getClassLoader().loadClass(TEST_PACKAGE + "." + DICTIONARY_DECODER);
         if (acceptor == null || decoder == null)
@@ -117,5 +122,4 @@ public class AcceptorGeneratorTest
         decoder.getMethod(ON_MESSAGE, AsciiBuffer.class, int.class, int.class, long.class)
                .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
     }
-
 }

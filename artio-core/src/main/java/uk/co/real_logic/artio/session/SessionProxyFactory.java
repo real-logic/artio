@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 /**
@@ -34,5 +35,6 @@ public interface SessionProxyFactory
         EpochClock clock,
         long connectionId,
         int libraryId,
-        ErrorHandler errorHandler);
+        ErrorHandler errorHandler,
+        EpochFractionFormat epochFractionPrecision);
 }

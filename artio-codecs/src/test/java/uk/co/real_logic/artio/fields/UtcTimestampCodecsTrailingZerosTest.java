@@ -29,7 +29,7 @@ import static java.time.temporal.ChronoField.NANO_OF_SECOND;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoderValidCasesTest.*;
 
 public class UtcTimestampCodecsTrailingZerosTest
@@ -62,9 +62,17 @@ public class UtcTimestampCodecsTrailingZerosTest
         final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH_WITH_NANOSECONDS + 2]);
         buffer.putBytes(1, bytes);
 
-        final long epochNanos = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_NANOSECONDS);
+        // Normal
+        long result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_NANOSECONDS, true);
+        assertEquals(EPOCH_NANOS, result);
 
-        assertEquals(EPOCH_NANOS, epochNanos);
+        // Short
+        result = UtcTimestampDecoder.decodeNanos(buffer, 1, LENGTH_WITH_MICROSECONDS, true);
+        assertEquals(EPOCH_NANOS, result);
+
+        // Long
+        result = UtcTimestampDecoder.decode(buffer, 1, LENGTH_WITH_NANOSECONDS, true);
+        assertEquals(EPOCH_MILLIS, result);
     }
 
     @Test
@@ -127,7 +135,7 @@ public class UtcTimestampCodecsTrailingZerosTest
         final long epochFraction,
         final String expectedTimestampFraction,
         final int expectedLength,
-        final UtcTimestampEncoder.EpochFractionFormat format)
+        final EpochFractionFormat format)
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
         final int length = encoder.initialise(epochFraction);
@@ -160,7 +168,7 @@ public class UtcTimestampCodecsTrailingZerosTest
         final long epochFraction,
         final String expectedTimestampFraction,
         final int expectedLength,
-        final UtcTimestampEncoder.EpochFractionFormat format)
+        final EpochFractionFormat format)
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
         encoder.initialise(epochFraction - 1);

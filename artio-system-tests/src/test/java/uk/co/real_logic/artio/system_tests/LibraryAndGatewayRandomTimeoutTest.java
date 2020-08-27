@@ -43,14 +43,14 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
 {
-    private int aeronPort = unusedPort();
-    private int port = unusedPort();
+    private final int aeronPort = unusedPort();
+    private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private FixEngine initiatingEngine;
     private FixLibrary initiatingLibrary;
 
-    private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeHandler initiatingSessionHandler = new FakeHandler(initiatingOtfAcceptor);
+    private final FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
+    private final FakeHandler initiatingSessionHandler = new FakeHandler(initiatingOtfAcceptor);
 
     @Before
     public void launch()

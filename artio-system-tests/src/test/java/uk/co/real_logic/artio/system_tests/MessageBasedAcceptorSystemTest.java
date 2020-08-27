@@ -15,60 +15,38 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.archive.ArchivingMediaDriver;
-import org.agrona.CloseHelper;
 import org.hamcrest.MatcherAssert;
-import org.junit.After;
 import org.junit.Test;
-import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
-import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
-import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
-import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.system_tests.FixConnection.*;
+import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
 
-public class MessageBasedAcceptorSystemTest
+public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
-    private int port = unusedPort();
-
-    private ArchivingMediaDriver mediaDriver;
-    private FixEngine engine;
-    private FakeOtfAcceptor otfAcceptor;
-    private FakeHandler handler;
-    private FixLibrary library;
-    private TestSystem testSystem;
-
-    // Trying to reproduce
-    // > [8=FIX.4.4|9=0079|35=A|49=initiator|56=acceptor|34=1|52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
-    // < [8=FIX.4.4|9=0079|35=A|49=acceptor|56=initiator|34=1|52=20160825-10:24:57.920|98=0|108=30|141=N|10=013]
-    // < [8=FIX.4.4|9=0070|35=2|49=acceptor|56=initiator|34=3|52=20160825-10:25:27.766|7=1|16=0|10=061]
-
     @Test
     public void shouldComplyWithLogonBasedSequenceNumberResetOn()
         throws IOException
@@ -116,7 +94,7 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
-    public void shouldRejectExceptionalLogonMessage() throws IOException
+    public void shouldRejectExceptionalLogonMessageAndLogout() throws IOException
     {
         setup(true, true);
 
@@ -126,9 +104,10 @@ public class MessageBasedAcceptorSystemTest
 
             final RejectDecoder reject = connection.readMessage(new RejectDecoder());
             assertEquals(1, reject.refSeqNum());
+            assertEquals(Constants.SENDING_TIME, reject.refTagID());
             assertEquals(LogonDecoder.MESSAGE_TYPE_AS_STRING, reject.refMsgTypeAsString());
 
-            connection.logoutAndAwaitReply();
+            connection.readLogout();
         }
     }
 
@@ -145,6 +124,7 @@ public class MessageBasedAcceptorSystemTest
 
             final RejectDecoder reject = connection.readMessage(new RejectDecoder());
             assertEquals(2, reject.refSeqNum());
+            assertEquals(Constants.SENDING_TIME, reject.refTagID());
 
             connection.logoutAndAwaitReply();
         }
@@ -162,97 +142,6 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
-    public void shouldUnbindTcpPortWhenRequested() throws IOException
-    {
-        setup(true, true);
-
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
-
-        completeUnbind();
-
-        cannotConnect();
-    }
-
-    @Test
-    public void shouldRebindTcpPortWhenRequested() throws IOException
-    {
-        setup(true, true);
-
-        completeUnbind();
-
-        completeBind();
-
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
-    }
-
-    @Test
-    public void shouldHaveIdempotentBind() throws IOException
-    {
-        setup(true, true);
-
-        completeBind();
-
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
-
-        completeUnbind();
-        completeBind();
-        completeBind();
-
-        try (FixConnection ignore = FixConnection.initiate(port))
-        {
-        }
-    }
-
-    @Test
-    public void shouldHaveIdempotentUnbind() throws IOException
-    {
-        setup(true, true);
-
-        completeUnbind();
-        completeUnbind();
-
-        cannotConnect();
-    }
-
-    @Test
-    public void shouldReturnErrorWhenBindingWithoutAddress()
-    {
-        setup(true, false, false);
-
-        final Reply<?> reply = engine.bind();
-        SystemTestUtil.awaitReply(reply);
-        assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
-
-        assertEquals("Missing address: EngineConfiguration.bindTo()", reply.error().getMessage());
-    }
-
-    @Test
-    public void shouldNotDisconnectWhenUnbinding() throws IOException
-    {
-        setup(true, true);
-
-        try (FixConnection connection = FixConnection.initiate(port))
-        {
-            logon(connection);
-            completeUnbind();
-            connection.logoutAndAwaitReply();
-        }
-    }
-
-    @Test
-    public void shouldAllowBindingToBeDeferred() throws IOException
-    {
-        setup(true, false);
-        cannotConnect();
-    }
-
-    @Test
     public void shouldDisconnectConnectionWithNoLogonEngine() throws IOException
     {
         shouldDisconnectConnectionWithNoLogon(ENGINE);
@@ -265,58 +154,70 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
+    public void shouldDisconnectConnectionWithNoLogoutReply() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final Session session = acquireSession();
+            logoutSession(session);
+            assertSessionDisconnected(testSystem, session);
+
+            assertConnectionDisconnects(testSystem, connection);
+        }
+    }
+
+    @Test
     public void shouldSupportRapidLogonAndLogoutOperations() throws IOException
     {
-        setup(false, true, true, ENGINE);
+        setup(false, true, true);
 
-        final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
-        final FakeHandler handler = new FakeHandler(otfAcceptor);
-        final TestSystem testSystem = new TestSystem();
+        setupLibrary();
+
         final Session session;
 
-        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        try (FixConnection connection = FixConnection.initiate(port))
         {
-            try (FixConnection connection = FixConnection.initiate(port))
+            connection.logon(false);
+
+            handler.awaitSessionId(testSystem::poll);
+
+            session = acquireSession();
+
+            connection.readLogonReply();
+
+            connection.logout();
+        }
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            // The previous connection hasn't yet been detected as it's still active.
+            assertTrue(session.isActive());
+
+            connection.msgSeqNum(3);
+
+            connection.logon(false);
+
+            // During this loop the logout message for the disconnected connection is sent,
+            // But not received by the new connection.
+            Timing.assertEventuallyTrue("Library has disconnected old session", () ->
             {
-                connection.logon(false);
+                testSystem.poll();
 
-                handler.awaitSessionId(testSystem::poll);
+                return !handler.sessions().contains(session);
+            });
 
-                final long sessionId = handler.awaitSessionId(testSystem::poll);
-                handler.clearSessionExistsInfos();
-                session = acquireSession(handler, library, sessionId, testSystem);
-                assertNotNull(session);
+            // Use sequence number 3 to ensure that we're getting a logon reply
+            final LogonDecoder logonReply = connection.readLogonReply();
+            assertEquals(3, logonReply.header().msgSeqNum());
 
-                connection.readLogonReply();
-
-                connection.logout();
-            }
-
-            try (FixConnection connection = FixConnection.initiate(port))
-            {
-                // The previous connection hasn't yet been detected as it's still active.
-                assertTrue(session.isActive());
-
-                connection.msgSeqNum(3);
-
-                connection.logon(false);
-
-                // During this loop the logout message for the disconnected connection is sent,
-                // But not received by the new connection.
-                Timing.assertEventuallyTrue("Library has disconnected old session", () ->
-                {
-                    testSystem.poll();
-
-                    return !handler.sessions().contains(session);
-                });
-
-                // Use sequence number 3 to ensure that we're getting a logon reply
-                final LogonDecoder logonReply = connection.readLogonReply();
-                assertEquals(3, logonReply.header().msgSeqNum());
-
-                final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
-                assertEquals(4, logoutDecoder.header().msgSeqNum());
-            }
+            final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
+            assertEquals(4, logoutDecoder.header().msgSeqNum());
         }
     }
 
@@ -330,8 +231,7 @@ public class MessageBasedAcceptorSystemTest
         {
             logon(connection);
 
-            final long sessionId = handler.awaitSessionId(testSystem::poll);
-            final Session session = acquireSession(handler, library, sessionId, testSystem);
+            final Session session = acquireSession();
 
             final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
             connection.setupHeader(testRequestEncoder.header(), connection.acquireMsgSeqNum(), false);
@@ -386,6 +286,68 @@ public class MessageBasedAcceptorSystemTest
         }
     }
 
+    @Test
+    public void shouldSupportProxyV1Protocol() throws IOException
+    {
+        shouldSupportProxyProtocol(FixConnection::sendProxyV1Line, PROXY_SOURCE_IP, PROXY_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV1ProtocolLargest() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV1LargestLine, LARGEST_PROXY_SOURCE_IP, LARGEST_PROXY_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV4() throws IOException
+    {
+        shouldSupportProxyProtocol(FixConnection::sendProxyV2LineTcpV4, PROXY_SOURCE_IP, PROXY_V2_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV6() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV2LineTcpV6, PROXY_V2_IPV6_SOURCE_IP, PROXY_V2_IPV6_SOURCE_PORT);
+    }
+
+    @Test
+    public void shouldSupportProxyV2ProtocolTcpV6Localhost() throws IOException
+    {
+        shouldSupportProxyProtocol(
+            FixConnection::sendProxyV2LineTcpV6Localhost, "::1", PROXY_V2_IPV6_SOURCE_PORT);
+    }
+
+    private void shouldSupportProxyProtocol(
+        final Consumer<FixConnection> sendLine, final String proxySourceIp, final int proxySourcePort)
+        throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            sendLine.accept(connection);
+            logon(connection);
+
+            final Session session = acquireSession();
+
+            assertEquals(proxySourceIp, session.connectedHost());
+            assertEquals(proxySourcePort, session.connectedPort());
+        }
+    }
+
+    private Session acquireSession()
+    {
+        final long sessionId = handler.awaitSessionId(testSystem::poll);
+        handler.clearSessionExistsInfos();
+        final Session session = SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
+        assertNotNull(session);
+        return session;
+    }
+
     private void sleepToAwaitResend()
     {
         try
@@ -419,46 +381,8 @@ public class MessageBasedAcceptorSystemTest
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {
-                Timing.assertEventuallyTrue(
-                    "Never gets disconnected",
-                    () ->
-                    {
-                        library.poll(10);
-
-                        LockSupport.parkNanos(10_000);
-
-                        return !connection.isConnected();
-                    });
             }
         }
-    }
-
-    private void completeBind()
-    {
-        final Reply<?> bindReply = engine.bind();
-        SystemTestUtil.awaitReply(bindReply);
-        assertEquals(bindReply.toString(), Reply.State.COMPLETED, bindReply.state());
-    }
-
-    private void completeUnbind()
-    {
-        final Reply<?> unbindReply = engine.unbind();
-        SystemTestUtil.awaitReply(unbindReply);
-        assertEquals(unbindReply.toString(), Reply.State.COMPLETED, unbindReply.state());
-    }
-
-    private void cannotConnect() throws IOException
-    {
-        try
-        {
-            FixConnection.initiate(port);
-        }
-        catch (final ConnectException ignore)
-        {
-            return;
-        }
-
-        fail("expected ConnectException");
     }
 
     private void sendInvalidLogon(final FixConnection connection)
@@ -491,47 +415,6 @@ public class MessageBasedAcceptorSystemTest
         connection.send(encoder);
     }
 
-    private void setup(final boolean sequenceNumberReset, final boolean shouldBind)
-    {
-        setup(sequenceNumberReset, shouldBind, true);
-    }
-
-    private void setup(
-        final boolean sequenceNumberReset,
-        final boolean shouldBind,
-        final boolean provideBindingAddress)
-    {
-        setup(sequenceNumberReset, shouldBind, provideBindingAddress, InitialAcceptedSessionOwner.ENGINE);
-    }
-
-    private void setup(
-        final boolean sequenceNumberReset,
-        final boolean shouldBind,
-        final boolean provideBindingAddress,
-        final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
-    {
-        mediaDriver = launchMediaDriver();
-
-        delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = new EngineConfiguration()
-            .libraryAeronChannel(IPC_CHANNEL)
-            .monitoringFile(acceptorMonitoringFile("engineCounters"))
-            .logFileDir(ACCEPTOR_LOGS)
-            .initialAcceptedSessionOwner(initialAcceptedSessionOwner)
-            .noLogonDisconnectTimeoutInMs(500)
-            .sessionPersistenceStrategy(logon ->
-            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
-            .bindAtStartup(shouldBind);
-
-        if (provideBindingAddress)
-        {
-            config.bindTo("localhost", port);
-        }
-
-        config.printErrorMessages(false);
-        engine = FixEngine.launch(config);
-    }
-
     private void logonThenLogout() throws IOException
     {
         final FixConnection connection = FixConnection.initiate(port);
@@ -541,30 +424,5 @@ public class MessageBasedAcceptorSystemTest
         connection.logoutAndAwaitReply();
 
         connection.close();
-    }
-
-    private void logon(final FixConnection connection)
-    {
-        connection.logon(true);
-
-        final LogonDecoder logon = connection.readLogonReply();
-        assertTrue(logon.resetSeqNumFlag());
-    }
-
-    @After
-    public void tearDown()
-    {
-        if (testSystem == null)
-        {
-            close(engine);
-        }
-        else
-        {
-            testSystem.awaitBlocking(() -> CloseHelper.close(engine));
-        }
-
-        close(library);
-
-        cleanupMediaDriver(mediaDriver);
     }
 }

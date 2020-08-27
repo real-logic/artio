@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Adaptive Financial Consulting Ltd.
+ * Copyright 2020 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine;
+package uk.co.real_logic.artio.ilink;
 
-/**
- * Details of this configuration option are described on
- * {@link EngineConfiguration#initialAcceptedSessionOwner(InitialAcceptedSessionOwner)}
- */
-public enum InitialAcceptedSessionOwner
+// NB: This is an experimental API and is subject to change or potentially removal.
+public class IllegalResponseException extends RuntimeException
 {
-    ENGINE,
-    SOLE_LIBRARY
+    public IllegalResponseException(final String message)
+    {
+        super(message);
+    }
+
+    public IllegalResponseException(final String message, final Throwable cause)
+    {
+        super(message, cause);
+    }
+
+    public IllegalResponseException(final Throwable cause)
+    {
+        super(cause);
+    }
 }

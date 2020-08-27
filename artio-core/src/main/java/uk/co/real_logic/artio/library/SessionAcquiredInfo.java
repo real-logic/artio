@@ -30,7 +30,7 @@ import uk.co.real_logic.artio.messages.SlowStatus;
 public class SessionAcquiredInfo
 {
     private MetaDataStatus metaDataStatus;
-    private UnsafeBuffer metaDataBuffer = new UnsafeBuffer();
+    private final UnsafeBuffer metaDataBuffer = new UnsafeBuffer();
     private boolean isSlow;
 
     public MetaDataStatus metaDataStatus()

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import org.agrona.LangUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,13 +35,14 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 public class SessionParserTest
 {
     private static final long POSITION = 64;
-    private Session mockSession = mock(Session.class);
-    private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
-    private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
-    private OnMessageInfo messageInfo = mock(OnMessageInfo.class);
+    private final Session mockSession = mock(Session.class);
+    private final AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
+    private final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
+    private final OnMessageInfo messageInfo = mock(OnMessageInfo.class);
 
-    private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, false, messageInfo, null);
+    private final SessionParser parser = new SessionParser(
+        mockSession, validationStrategy, LangUtil::rethrowUnchecked,
+        false, true, messageInfo, null);
 
     @Before
     public void setUp()

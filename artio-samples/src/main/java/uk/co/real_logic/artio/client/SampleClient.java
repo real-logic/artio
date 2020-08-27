@@ -117,7 +117,7 @@ public final class SampleClient
                     final TestRequestEncoder testRequest = new TestRequestEncoder();
                     testRequest.testReqID("Hello World");
 
-                    session.send(testRequest);
+                    session.trySend(testRequest);
 
                     while (!"Hello World".equals(TEST_REQ_ID_FINDER.testReqId()))
                     {

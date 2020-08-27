@@ -49,7 +49,7 @@ public final class SampleServer
 
     private static Session session;
 
-    public static void main(final String[] args) throws Exception
+    public static void main(final String[] args)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_COMP_ID)
             .and(MessageValidationStrategy.senderCompId(Collections.singletonList(INITIATOR_COMP_ID)));

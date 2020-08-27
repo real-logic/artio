@@ -26,7 +26,6 @@ public final class SessionConstants
     public static final int MIN_MESSAGE_SIZE = FIXT_HEADER_LENGTH + 6;
 
     // Message Types
-
     public static final int BODY_LENGTH = 9;
     public static final int CHECKSUM = 10;
     public static final int MSG_SEQ_NO = 34;
@@ -62,6 +61,8 @@ public final class SessionConstants
     public static final String REJECT_MESSAGE_TYPE_STR = "3";
     public static final String SEQUENCE_RESET_TYPE_STR = "4";
     public static final String LOGOUT_MESSAGE_TYPE_STR = "5";
+
+    public static final byte SEQUENCE_RESET_TYPE_BYTE = (byte)'4';
 
     public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = HEARTBEAT_MESSAGE_TYPE_STR.toCharArray();

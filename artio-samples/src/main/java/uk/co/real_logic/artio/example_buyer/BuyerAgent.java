@@ -17,7 +17,7 @@ public class BuyerAgent implements Agent
 {
     private FixEngine gateway;
     private FixLibrary library;
-    private Buyer buyer = new Buyer();
+    private final Buyer buyer = new Buyer();
 
     @Override
     public void onStart()

@@ -50,14 +50,14 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
-import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
+import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
@@ -76,7 +76,8 @@ public final class SystemTestUtil
     static final String PASSWORD = "Uv1aegoh";
 
     private static final String HI_ID = "hi";
-    public static final long TEST_REPLY_TIMEOUT_IN_MS = 3_000;
+
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : 1_000;
 
     static
     {
@@ -108,7 +109,7 @@ public final class SystemTestUtil
         return position;
     }
 
-    static long sendTestRequest(final Session session, final String testReqID)
+    public static long sendTestRequest(final Session session, final String testReqID)
     {
         return sendTestRequest(session, testReqID, new FixDictionaryImpl());
     }
@@ -127,12 +128,12 @@ public final class SystemTestUtil
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
         testRequest.testReqID(testReqID);
 
-        final long position = session.send(testRequest);
+        final long position = session.trySend(testRequest);
         assertThat(position, greaterThan(0L));
         return position;
     }
 
-    private static void assertReceivedTestRequest(
+    static void assertReceivedTestRequest(
         final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to receive a test request message",
@@ -285,7 +286,6 @@ public final class SystemTestUtil
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
-            .sentPositionHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting")
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
@@ -360,7 +360,6 @@ public final class SystemTestUtil
     {
         return new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
-            .sentPositionHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
             .libraryName("initiating")
@@ -405,6 +404,18 @@ public final class SystemTestUtil
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();
+    }
+
+    public static void awaitLibraryDisconnect(final FixEngine engine)
+    {
+        assertEventuallyTrue(
+            () -> "libraries haven't disconnected yet",
+            () -> libraries(engine).size() == 1,
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
+        );
     }
 
     static List<LibraryInfo> libraries(final FixEngine engine, final TestSystem testSystem)
@@ -487,5 +498,22 @@ public final class SystemTestUtil
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
+    }
+
+    public static void assertSessionDisconnected(final TestSystem testSystem, final Session session)
+    {
+        assertEventuallyTrue("Session is still connected",
+            () ->
+            {
+                testSystem.poll();
+                return session.state() == DISCONNECTED;
+            });
+    }
+
+    public static long logoutSession(final Session session)
+    {
+        final long position = session.startLogout();
+        assertThat(position, greaterThan(0L));
+        return position;
     }
 }

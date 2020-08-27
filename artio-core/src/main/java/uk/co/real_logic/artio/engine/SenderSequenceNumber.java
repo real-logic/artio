@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * Per Session.
  */
-public class SenderSequenceNumber
+public class SenderSequenceNumber implements ReplayerCommand
 {
     private final long connectionId;
     private final AtomicCounter bytesInBuffer;
@@ -64,4 +64,10 @@ public class SenderSequenceNumber
     {
         senderSequenceNumbers.onSenderClosed(this);
     }
+
+    public void execute()
+    {
+        senderSequenceNumbers.onSenderSequenceNumber(this);
+    }
+
 }

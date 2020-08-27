@@ -21,7 +21,7 @@ package uk.co.real_logic.artio;
  */
 public abstract class AbstractDebugAppender
 {
-    public abstract class ThreadLocalAppender
+    public abstract static class ThreadLocalAppender
     {
         public abstract void log(LogTag logTag, StringBuilder stringBuilder);
     }

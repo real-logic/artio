@@ -19,11 +19,9 @@ import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
-import uk.co.real_logic.artio.FixCounters;
-import uk.co.real_logic.artio.GatewayProcess;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.StreamInformation;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.timing.EngineTimers;
@@ -55,10 +53,11 @@ public final class FixEngine extends GatewayProcess
     private final EngineConfiguration configuration;
     private final RecordingCoordinator recordingCoordinator;
 
-    private EngineScheduler scheduler;
+    private final EngineScheduler scheduler;
     private FramerContext framerContext;
     private EngineContext engineContext;
 
+    private volatile boolean startingClose = false;
     private volatile boolean isClosed = false;
 
     private final Object resetStateLock = new Object();
@@ -103,8 +102,23 @@ public final class FixEngine extends GatewayProcess
      */
     public Reply<?> unbind()
     {
-        return framerContext.bind(false);
+        return unbind(false);
     }
+
+    /**
+     * Unbinds the acceptor socket, and disconnects currently connected TCP connections if requested.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
+     *
+     * @param disconnect if currently connected connections need to be disconnected
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
+     */
+    public Reply<?> unbind(final boolean disconnect)
+    {
+        return framerContext.unbind(disconnect);
+    }
+
 
     /**
      * Binds the acceptor socket to the configured address. This only needs to be called if you had called
@@ -117,7 +131,7 @@ public final class FixEngine extends GatewayProcess
      */
     public Reply<?> bind()
     {
-        return framerContext.bind(true);
+        return framerContext.bind();
     }
 
     /**
@@ -176,14 +190,14 @@ public final class FixEngine extends GatewayProcess
         {
             if (!stateHasBeenReset)
             {
-                final ResetArchiveState resetArchiveState = new ResetArchiveState(configuration, backupLocation);
+                final ResetArchiveState resetArchiveState = new ResetArchiveState(
+                    configuration, backupLocation, recordingCoordinator);
                 resetArchiveState.resetState();
 
                 stateHasBeenReset = true;
             }
         }
     }
-
 
     /**
      * Gets session info for all sessions the FixEngine is aware of including offline ones.
@@ -239,9 +253,11 @@ public final class FixEngine extends GatewayProcess
             final AeronArchive aeronArchive =
                 configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
             recordingCoordinator = new RecordingCoordinator(
+                aeron,
                 aeronArchive,
                 configuration,
-                configuration.archiverIdleStrategy());
+                configuration.archiverIdleStrategy(),
+                errorHandler);
 
             final ExclusivePublication replayPublication = replayPublication();
             engineContext = new EngineContext(
@@ -254,7 +270,6 @@ public final class FixEngine extends GatewayProcess
                 recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration, aeronArchive);
-            recordingCoordinator.awaitReady();
         }
         catch (final Exception e)
         {
@@ -289,7 +304,8 @@ public final class FixEngine extends GatewayProcess
             replayImage("slow-replay", replaySessionId),
             timers,
             aeron.conductorAgentInvoker(),
-            recordingCoordinator);
+            recordingCoordinator
+        );
 
         engineContext.framerContext(framerContext);
     }
@@ -347,10 +363,10 @@ public final class FixEngine extends GatewayProcess
      * <code>FixLibrary</code> instances currently live in order for them to gracefully close as well. Therefore if you
      * close a <code>FixLibrary</code> before you call this method then the close operation could be delayed by up to
      * {@link uk.co.real_logic.artio.CommonConfiguration#replyTimeoutInMs()} in order for the <code>FixEngine</code>
-     * to timeout the <code>FixLibrary</code>.
+     * to timeout the <code>FixLibrary</code>. In order for graceful shutdown to successfully occur you should also
+     * ensure that any connected <code>FixLibrary</code> instances are regularly polled on their duty cycle.
      *
-     * This does not remove files associated with the engine, that are persistent
-     * over multiple runs of the engine.
+     * This does not remove files associated with the engine, that are persistent over multiple runs of the engine.
      */
     public void close()
     {
@@ -358,11 +374,20 @@ public final class FixEngine extends GatewayProcess
         {
             if (!isClosed)
             {
+                startingClose = true;
+
+                DebugLogger.log(LogTag.CLOSE, "Shutdown initiated through FixEngine.close()");
+
                 framerContext.startClose();
 
-                closeAll(scheduler, engineContext, configuration, super::close);
-
-                isClosed = true;
+                try
+                {
+                    closeAll(scheduler, engineContext, configuration, super::close);
+                }
+                finally
+                {
+                    isClosed = true;
+                }
             }
         }
     }
@@ -377,8 +402,47 @@ public final class FixEngine extends GatewayProcess
         return isClosed;
     }
 
+    /**
+     * Frees up space from the Aeron archive of messages. This operation does not remove all entries from the Aeron
+     * archive logs: only entries that are not part of the latest sequence index. That means that resend requests for
+     * the current sequence index can still be processed.
+     *
+     * Archive logs are pruned in chunks called segments - see the Aeron Archiver documentation for
+     * details. This means that if there are less than a segment's worth of messages that can be
+     * freed up then no space is pruned.
+     *
+     * @param recordingIdToMinimumPrunePositions the minimum positions to prune or <code>null</code> otherwise.
+     *                                           If you're archiving segments of the
+     *                                           Aeron archive log then this parameter can be used in order to stop
+     *                                           those segments from being removed. The hashmap should be initialised
+     *                                           with <code>new Long2LongHashMap(Aeron.NULL_VALUE)</code>.
+     * @return the positions pruned up to. This is a map from recording id to a pruned position if pruning has occurred.
+     *         It may be empty if no recordings have been pruned. <code>Aeron.NULL_VALUE</code> is used to denote
+     *         missing values in the map.
+     */
+    public Reply<Long2LongHashMap> pruneArchive(final Long2LongHashMap recordingIdToMinimumPrunePositions)
+    {
+        if (startingClose)
+        {
+            return engineContext.pruneArchive(new IllegalStateException("Unable to prune archive during shutdown."));
+        }
+
+        if (isClosed)
+        {
+            return engineContext.pruneArchive(new IllegalStateException("Unable to prune archive when closed."));
+        }
+
+        return engineContext.pruneArchive(recordingIdToMinimumPrunePositions);
+    }
+
     public EngineConfiguration configuration()
     {
         return configuration;
+    }
+
+    // Exceptions here are always on internal FixEngine threads and should not cause those threads to terminate.
+    protected boolean shouldRethrowExceptionInErrorHandler()
+    {
+        return false;
     }
 }

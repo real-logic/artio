@@ -24,7 +24,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.OrdType;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.decoder.NewOrderSingleDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -51,7 +54,7 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 @RunWith(Parameterized.class)
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final boolean PRINT_ERROR_MESSAGES = false;
+    private static final boolean PRINT_ERROR_MESSAGES = true;
 
     {
         acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -104,13 +107,13 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         if (SystemUtil.osName().startsWith("win"))
         {
             return Arrays.asList(new Object[][]{
-                {true},
+                {true}
             });
         }
         else
         {
             return Arrays.asList(new Object[][]{
-                {true}, // disable this test until it can be made to run consistently: {false}
+                {true}
             });
         }
     }
@@ -214,18 +217,17 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
         acceptingLibraryConfig.gracefulShutdown(shutdownCleanly);
-        acceptingLibrary = connect(acceptingLibraryConfig);
+        testSystem = new TestSystem();
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
 
         final LibraryConfiguration initiatingLibraryConfig =
             initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
         initiatingLibraryConfig.gracefulShutdown(shutdownCleanly);
-        initiatingLibrary = connect(initiatingLibraryConfig);
-
-        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
+        initiatingLibrary = testSystem.connect(initiatingLibraryConfig);
 
         final Reply<Session> reply = connectPersistentSessions(
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER, initiatorInitialReceivedSequenceNumber, false);
-        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
+        assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         acquireAcceptingSession();
     }
@@ -244,7 +246,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         newOrderSingle.instrument().symbol("MSFT");
         newOrderSingle.orderQtyData().orderQty(orderQty);
 
-        final long position = initiatingSession.send(newOrderSingle);
+        final long position = initiatingSession.trySend(newOrderSingle);
         assertThat(position, Matchers.greaterThan(0L));
     }
 }

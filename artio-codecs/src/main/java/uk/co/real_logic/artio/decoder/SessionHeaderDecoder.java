@@ -15,19 +15,33 @@
  */
 package uk.co.real_logic.artio.decoder;
 
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
 public interface SessionHeaderDecoder
 {
+    int decode(AsciiBuffer buffer, int offset, int length);
+
+    /**
+     * Resets the result of the decoder.
+     */
+    void reset();
+
     char[] beginString();
 
     int beginStringLength();
 
     int msgSeqNum();
 
+    byte[] origSendingTime();
+
     boolean hasOrigSendingTime();
 
-    byte[] origSendingTime();
+    int origSendingTimeLength();
+
+    String origSendingTimeAsString();
+
+    void origSendingTime(AsciiSequenceView view);
 
     int msgTypeLength();
 
@@ -43,17 +57,11 @@ public interface SessionHeaderDecoder
 
     byte[] sendingTime();
 
-    char[] targetCompID();
+    int sendingTimeLength();
 
-    int targetCompIDLength();
+    String sendingTimeAsString();
 
-    char[] targetSubID();
-
-    int targetSubIDLength();
-
-    char[] targetLocationID();
-
-    int targetLocationIDLength();
+    void sendingTime(AsciiSequenceView view);
 
     char[] senderCompID();
 
@@ -67,9 +75,17 @@ public interface SessionHeaderDecoder
 
     int senderLocationIDLength();
 
-    void reset();
+    char[] targetCompID();
 
-    int decode(AsciiBuffer asciiBuffer, int offset, int length);
+    int targetCompIDLength();
+
+    char[] targetSubID();
+
+    int targetSubIDLength();
+
+    char[] targetLocationID();
+
+    int targetLocationIDLength();
 
     boolean hasSenderLocationID();
 
@@ -90,4 +106,16 @@ public interface SessionHeaderDecoder
     String targetSubIDAsString();
 
     String targetLocationIDAsString();
+
+    void senderCompID(AsciiSequenceView view);
+
+    void senderSubID(AsciiSequenceView view);
+
+    void senderLocationID(AsciiSequenceView view);
+
+    void targetCompID(AsciiSequenceView view);
+
+    void targetSubID(AsciiSequenceView view);
+
+    void targetLocationID(AsciiSequenceView view);
 }

@@ -16,14 +16,14 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.Int2IntHashMap;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionDecoder;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionEncoder;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 
 /**
@@ -42,22 +42,47 @@ class IndexedPositionWriter
     private final int actingBlockLength = encoder.sbeBlockLength();
     private final int actingVersion = encoder.sbeSchemaVersion();
     private final IndexedPositionDecoder decoder = new IndexedPositionDecoder();
-    private final Int2IntHashMap recordOffsets = new Int2IntHashMap(MISSING_RECORD);
+    private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
+    private final RecordingIdLookup recordingIdLookup;
     private final ChecksumFramer checksumFramer;
+    private final Long2LongHashMap recheckSessions = new Long2LongHashMap(MISSING_RECORD);
 
     IndexedPositionWriter(
         final AtomicBuffer buffer,
         final ErrorHandler errorHandler,
         final int errorReportingOffset,
-        final String fileName)
+        final String fileName,
+        final RecordingIdLookup recordingIdLookup)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
+        this.recordingIdLookup = recordingIdLookup;
         checksumFramer = new ChecksumFramer(
             buffer, buffer.capacity(), errorHandler, errorReportingOffset, fileName);
         setupHeader();
+        initialiseOffsets();
+    }
+
+    private void initialiseOffsets()
+    {
+        int offset = HEADER_LENGTH;
+        while (true)
+        {
+            offset = checksumFramer.claim(offset, RECORD_LENGTH);
+            if (offset == OUT_OF_SPACE)
+            {
+                return;
+            }
+
+            decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+            if (decoder.position() != 0)
+            {
+                recordOffsets.put(decoder.recordingId(), offset);
+            }
+            offset += RECORD_LENGTH;
+        }
     }
 
     private void setupHeader()
@@ -85,9 +110,9 @@ class IndexedPositionWriter
 
     void indexedUpTo(final int aeronSessionId, final long recordingId, final long position)
     {
-        final Int2IntHashMap recordOffsets = this.recordOffsets;
+        final Long2LongHashMap recordOffsets = this.recordOffsets;
 
-        int offset = recordOffsets.get(aeronSessionId);
+        int offset = (int)recordOffsets.get(recordingId);
         if (offset == MISSING_RECORD)
         {
             final IndexedPositionDecoder decoder = this.decoder;
@@ -99,7 +124,7 @@ class IndexedPositionWriter
             while (true)
             {
                 offset = checksumFramer.claim(offset, RECORD_LENGTH);
-                if (position == OUT_OF_SPACE)
+                if (offset == OUT_OF_SPACE)
                 {
                     errorHandler.onError(new IllegalStateException(String.format(
                         "Unable to record new session (%d), indexed position buffer full",
@@ -115,7 +140,7 @@ class IndexedPositionWriter
                         .sessionId(aeronSessionId)
                         .recordingId(recordingId);
 
-                    recordOffsets.put(aeronSessionId, offset);
+                    recordOffsets.put(recordingId, offset);
                     putPosition(position, buffer, offset);
                     return;
                 }
@@ -147,5 +172,69 @@ class IndexedPositionWriter
     private void putPosition(final long position, final AtomicBuffer buffer, final int offset)
     {
         buffer.putLongVolatile(offset + POSITION_OFFSET, position);
+    }
+
+    public void trackPosition(final int aeronSessionId, final long endPosition)
+    {
+        recheckSessions.remove(aeronSessionId);
+        if (!checkPosition(aeronSessionId, endPosition))
+        {
+            recheckSessions.put(aeronSessionId, endPosition);
+        }
+    }
+
+    private boolean checkPosition(final int aeronSessionId, final long endPosition)
+    {
+        final long recordingId = recordingIdLookup.findRecordingId(aeronSessionId);
+        if (recordingId != NULL_RECORDING_ID)
+        {
+            indexedUpTo(aeronSessionId, recordingId, endPosition);
+            return true;
+        }
+        return false;
+    }
+
+    public int checkRecordings()
+    {
+        int work = 0;
+        final Long2LongHashMap.EntryIterator it = recheckSessions.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+            final int aeronSessionId = (int)it.getLongKey();
+            final long endPosition = it.getLongValue();
+            if (checkPosition(aeronSessionId, endPosition))
+            {
+                it.remove();
+                work++;
+            }
+        }
+        return work;
+    }
+
+    public void update(
+        final int aeronSessionId, final int templateId, final long endPosition, final long knownRecordingId)
+    {
+        long recordingId = knownRecordingId;
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            switch (templateId)
+            {
+                // May not have setup the recording id when these messages come in.
+                case LibraryConnectDecoder.TEMPLATE_ID:
+                case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                    trackPosition(aeronSessionId, endPosition);
+                    return;
+
+                // Outbound stream, so don't need to update the indexed position.
+                case ValidResendRequestDecoder.TEMPLATE_ID:
+                case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                    return;
+            }
+            recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        }
+
+        // For other messages block until the recording id is setup.
+        indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 }

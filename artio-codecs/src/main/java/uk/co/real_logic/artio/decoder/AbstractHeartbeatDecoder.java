@@ -15,13 +15,18 @@
  */
 package uk.co.real_logic.artio.decoder;
 
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractHeartbeatDecoder extends Decoder
 {
+    char[] testReqID();
+
     boolean hasTestReqID();
 
     int testReqIDLength();
 
-    char[] testReqID();
+    String testReqIDAsString();
+
+    void testReqID(AsciiSequenceView view);
 }

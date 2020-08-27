@@ -26,8 +26,8 @@ public class RetryManagerTest
 {
     private static final long CORRELATION_ID = 7357572283568605721L;
 
-    private UnitOfWork unitOfWork = mock(UnitOfWork.class);
-    private RetryManager retryManager = new RetryManager();
+    private final UnitOfWork unitOfWork = mock(UnitOfWork.class);
+    private final RetryManager retryManager = new RetryManager();
 
     @Test
     public void shouldNotRetryIfExecutedFirstTime()

@@ -16,6 +16,7 @@ import java.util.Set;
 
 import static java.net.StandardSocketOptions.*;
 import static java.nio.channels.SelectionKey.OP_CONNECT;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 
 public class DefaultTcpChannelSupplier extends TcpChannelSupplier
 {
@@ -33,7 +34,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         try
         {
             selector = Selector.open();
-            if (configuration.bindAtStartup())
+            if (configuration.bindAtStartup() && configuration.initialAcceptedSessionOwner() != SOLE_LIBRARY)
             {
                 bind();
             }

@@ -31,8 +31,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
+import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
+import static uk.co.real_logic.artio.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
@@ -45,15 +47,18 @@ public class SequenceNumberIndexReader implements AutoCloseable
     private final SectorFramer sectorFramer;
     private final IndexedPositionReader positions;
     private final ErrorHandler errorHandler;
+    private final RecordingIdLookup recordingIdLookup;
     private final RandomAccessFile metaDataFile;
 
     public SequenceNumberIndexReader(
         final AtomicBuffer inMemoryBuffer,
         final ErrorHandler errorHandler,
+        final RecordingIdLookup recordingIdLookup,
         final String metaDataDir)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.errorHandler = errorHandler;
+        this.recordingIdLookup = recordingIdLookup;
         final int positionTableOffset = positionTableOffset(inMemoryBuffer.capacity());
         sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
@@ -103,7 +108,12 @@ public class SequenceNumberIndexReader implements AutoCloseable
 
     public long indexedPosition(final int aeronSessionId)
     {
-        return positions.indexedPosition(aeronSessionId);
+        final long recordingId = recordingIdLookup.findRecordingId(aeronSessionId);
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            return UNKNOWN_POSITION;
+        }
+        return positions.indexedPosition(recordingId);
     }
 
     private void validateBuffer()

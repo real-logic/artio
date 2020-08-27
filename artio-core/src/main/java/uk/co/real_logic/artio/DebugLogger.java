@@ -26,9 +26,9 @@ import uk.co.real_logic.artio.util.CharFormatter;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.ServiceLoader;
+import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.CommonConfiguration.*;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
 
 /**
  * A logger purely for debug data. Not optimised for high performance logging, but all logging calls must be removable
@@ -57,7 +57,10 @@ public final class DebugLogger
         final LogTag tag,
         final CharFormatter formatter)
     {
-        THREAD_LOCAL.get().log(tag, formatter);
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().log(tag, formatter);
+        }
     }
 
     public static void log(
@@ -71,6 +74,22 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             formatter.clear().with(value);
+            THREAD_LOCAL.get().log(tag, formatter, buffer, offset, length);
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final CharFormatter formatter,
+        final long first,
+        final String second,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag))
+        {
+            formatter.clear().with(first).with(second);
             THREAD_LOCAL.get().log(tag, formatter, buffer, offset, length);
         }
     }
@@ -260,16 +279,6 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
-        final NewSentPositionEncoder encoder)
-    {
-        if (isEnabled(tag))
-        {
-            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
-        }
-    }
-
-    public static void logSbeMessage(
-        final LogTag tag,
         final LibraryTimeoutEncoder encoder)
     {
         if (isEnabled(tag))
@@ -391,13 +400,28 @@ public final class DebugLogger
     public static void logSbeMessage(
         final LogTag tag, final InitiateILinkConnectionEncoder encoder)
     {
-        // TODO
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
     }
 
     public static void logSbeMessage(
         final LogTag tag, final ILinkConnectEncoder encoder)
     {
-        // TODO
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag, final LibraryExtendPositionEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
     }
 
     public static void logSbeMessage(
@@ -406,6 +430,15 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeDecoder(
+        final LogTag tag, final String prefix, final Consumer<StringBuilder> appendTo)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeDecoder(tag, prefix, appendTo);
         }
     }
 
@@ -419,6 +452,19 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             THREAD_LOCAL.get().log(tag, prefixString, buffer, offset, length);
+        }
+    }
+
+    public static void logBytes(
+        final LogTag tag,
+        final String prefixString,
+        final ByteBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logBytes(tag, prefixString, buffer, offset, length);
         }
     }
 
@@ -624,6 +670,8 @@ public final class DebugLogger
         private final ConnectDecoder connect = new ConnectDecoder();
         private final ResetSessionIdsDecoder resetSessionIds = new ResetSessionIdsDecoder();
         private final LibraryTimeoutDecoder libraryTimeout = new LibraryTimeoutDecoder();
+        private final InitiateILinkConnectionDecoder initiateILinkConnection =
+            new InitiateILinkConnectionDecoder();
 
         // Engine -> Library
         private final ErrorDecoder error = new ErrorDecoder();
@@ -631,7 +679,6 @@ public final class DebugLogger
         private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
         private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
         private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
-        private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
         private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
         private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
         private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
@@ -643,6 +690,8 @@ public final class DebugLogger
         private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
         private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
         private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
+        private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
+        private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -901,20 +950,6 @@ public final class DebugLogger
 
         public void logSbeMessage(
             final LogTag tag,
-            final NewSentPositionEncoder encoder)
-        {
-            appendStart();
-            newSentPosition.wrap(
-                encoder.buffer(),
-                encoder.initialOffset(),
-                NewSentPositionEncoder.BLOCK_LENGTH,
-                NewSentPositionEncoder.SCHEMA_VERSION);
-            newSentPosition.appendTo(builder);
-            finish(tag);
-        }
-
-        public void logSbeMessage(
-            final LogTag tag,
             final LibraryTimeoutEncoder encoder)
         {
             appendStart();
@@ -1095,6 +1130,52 @@ public final class DebugLogger
             finish(tag);
         }
 
+        public void logSbeMessage(
+            final LogTag tag,
+            final LibraryExtendPositionEncoder encoder)
+        {
+            appendStart();
+            libraryExtendPosition.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                LibraryExtendPositionEncoder.BLOCK_LENGTH,
+                LibraryExtendPositionEncoder.SCHEMA_VERSION);
+            libraryExtendPosition.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final InitiateILinkConnectionEncoder encoder)
+        {
+            appendStart();
+            initiateILinkConnection.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                InitiateILinkConnectionEncoder.BLOCK_LENGTH,
+                InitiateILinkConnectionEncoder.SCHEMA_VERSION);
+            initiateILinkConnection.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ILinkConnectEncoder encoder)
+        {
+            appendStart();
+            iLinkConnect.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ILinkConnectEncoder.BLOCK_LENGTH,
+                ILinkConnectEncoder.SCHEMA_VERSION);
+            iLinkConnect.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeDecoder(final LogTag tag, final String prefix, final Consumer<StringBuilder> appendTo)
+        {
+            appendStart();
+            builder.append(prefix);
+            appendTo.accept(builder);
+            finish(tag);
+        }
+
         private void appendStart()
         {
             final StringBuilder builder = this.builder;
@@ -1113,6 +1194,40 @@ public final class DebugLogger
             final AsciiSequenceView asciiView = this.asciiView;
             asciiView.wrap(buffer, 0, length);
             builder.append(asciiView);
+            finish(tag);
+        }
+
+        public void logBytes(
+            final LogTag tag,
+            final String prefixString,
+            final ByteBuffer byteBuffer,
+            final int offset,
+            final int length)
+        {
+            appendStart();
+            final StringBuilder builder = this.builder;
+            builder.append(prefixString);
+
+            if (length == 0)
+            {
+                builder.append("{}");
+            }
+            else
+            {
+                builder.append('{');
+                for (int i = 0; i < length; i++)
+                {
+                    builder.append(byteBuffer.get(offset + i));
+                    if (i == length - 1)
+                    {
+                        builder.append('}');
+                    }
+                    else
+                    {
+                        builder.append(", ");
+                    }
+                }
+            }
             finish(tag);
         }
 
@@ -1182,6 +1297,7 @@ public final class DebugLogger
             final StringBuilder builder = this.builder;
             builder.append(prefixString);
             builder.append(suffixString);
+            finish(tag);
         }
 
         public void log(
@@ -1190,8 +1306,8 @@ public final class DebugLogger
         {
             appendStart();
             formatter.appendTo(builder);
+            finish(tag);
         }
-
 
         private void finish(final LogTag tag)
         {

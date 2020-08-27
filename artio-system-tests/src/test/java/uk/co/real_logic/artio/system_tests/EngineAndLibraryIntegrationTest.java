@@ -36,6 +36,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertFalse;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -51,6 +52,7 @@ public class EngineAndLibraryIntegrationTest
     private FixLibrary library;
     private FixLibrary library2;
 
+    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler sessionHandler = new FakeHandler(otfAcceptor);
     private final TestSystem testSystem = new TestSystem();
@@ -191,17 +193,31 @@ public class EngineAndLibraryIntegrationTest
         Thread.sleep(beyondTimeout);
         assertEventuallyTrue("engine fails to timeout library", () -> libraries(engine).size() == 1);
         // Poll until engine heartbeat messages are all read in order to force a library timeout
-        library.poll(10);
+        library.poll(50);
 
-        Thread.sleep(beyondTimeout);
-        testSystem.poll();
-        assertFalse("library still connected", library.isConnected());
+        assertEventuallyTrue("Library still connected", () ->
+        {
+            Thread.sleep(beyondTimeout);
+            testSystem.poll();
+            assertFalse("library still connected", library.isConnected());
+        });
 
         assertEventuallyTrue("library reconnect fails", () ->
         {
             testSystem.poll();
             return libraries(engine).size() == 2 && library.isConnected();
         });
+    }
+
+    @Test
+    public void shouldNotAllowClosingMidPoll()
+    {
+        fakeConnectHandler.shouldCloseOnConnect(true);
+
+        library = connectLibrary();
+        awaitLibraryConnect(library);
+
+        assertThat(fakeConnectHandler.exception(), isA(IllegalArgumentException.class));
     }
 
     @SafeVarargs
@@ -224,6 +240,7 @@ public class EngineAndLibraryIntegrationTest
         final LibraryConfiguration config = new LibraryConfiguration();
         config
             .sessionAcquireHandler(sessionHandler)
+            .libraryConnectHandler(fakeConnectHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .messageValidationStrategy(validationStrategy)
             .replyTimeoutInMs(SHORT_TIMEOUT_IN_MS);

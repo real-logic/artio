@@ -17,8 +17,6 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 
 public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySystemTest
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-
     @Before
     public void launch()
     {
@@ -33,7 +31,6 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);

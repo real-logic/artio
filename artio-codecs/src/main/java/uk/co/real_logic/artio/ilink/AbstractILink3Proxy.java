@@ -15,40 +15,31 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import org.agrona.sbe.MessageEncoderFlyweight;
+import io.aeron.ExclusivePublication;
+import org.agrona.ErrorHandler;
+
+import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractILink3Proxy
 {
+    public static AbstractILink3Proxy make(
+        final ExclusivePublication publication, final ErrorHandler errorHandler)
+    {
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
+            return (AbstractILink3Proxy)cls.getConstructors()[0].newInstance(0, publication, null);
+        }
+        catch (final ClassNotFoundException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            errorHandler.onError(e);
+            return null;
+        }
+    }
 
-    public static final int ARTIO_HEADER_LENGTH = 16;
+    public abstract void connectionId(long connectionId);
 
-    public abstract long sendNegotiate(
-        byte[] hMACSignature,
-        String accessKeyId,
-        long uuid,
-        long requestTimestamp,
-        String sessionId,
-        String firmId);
-
-    public abstract long sendEstablish(
-        byte[] hMACSignature,
-        String accessKeyId,
-        String tradingSystemName,
-        String tradingSystemVendor,
-        String tradingSystemVersion,
-        long uuid,
-        long requestTimestamp,
-        int nextSentSeqNo,
-        String sessionId,
-        String firmId,
-        int keepAliveInterval);
-
-    public abstract long sendTerminate(
-        String reason, long uuid, long requestTimestamp, int errorCodes);
-
-    public abstract long claimILinkMessage(
-        int messageLength,
-        MessageEncoderFlyweight message);
-
-    public abstract void commit();
+    public abstract long sendSequence(
+        long uuid, long nextSentSeqNo);
 }

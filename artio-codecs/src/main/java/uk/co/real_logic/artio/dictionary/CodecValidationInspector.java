@@ -53,7 +53,7 @@ public class CodecValidationInspector
 
         System.out.println("message = " + message);
 
-        CodecGenerationTool.main(new String[] {outputDirPath, dictionaryFile});
+        CodecGenerationTool.main(new String[]{ outputDirPath, dictionaryFile });
 
         final File outputDir = new File(outputDirPath);
         final List<File> files = new ArrayList<>();
@@ -66,7 +66,7 @@ public class CodecValidationInspector
         System.out.println("CODEC_VALIDATION_ENABLED = " + Validation.CODEC_VALIDATION_ENABLED);
         final URLClassLoader classLoader = new URLClassLoader(new URL[]{outputDir.toURI().toURL()});
         final Class<?> decoderClass = classLoader.loadClass(codecName);
-        final Decoder decoder = (Decoder)decoderClass.newInstance();
+        final Decoder decoder = (Decoder)decoderClass.getConstructor().newInstance();
         final MutableAsciiBuffer buffer = new MutableAsciiBuffer(message.getBytes(US_ASCII));
         final int length = buffer.capacity();
         final int decodedLength;
@@ -116,7 +116,7 @@ public class CodecValidationInspector
     }
 
     public static void compileOnDisk(final String className, final Collection<File> files)
-        throws ClassNotFoundException, IOException
+        throws IOException
     {
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (null == compiler)

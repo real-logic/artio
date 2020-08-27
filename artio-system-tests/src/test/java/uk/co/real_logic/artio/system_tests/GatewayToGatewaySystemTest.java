@@ -17,15 +17,13 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.UserRequestEncoder;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -39,9 +37,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.IntSupplier;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
@@ -63,8 +63,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 {
     private static final String NEW_PASSWORD = "ABCDEF";
 
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private CapturingAuthenticationStrategy auth;
+    private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
     @Before
     public void launch()
@@ -76,12 +76,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
         acceptingConfig.printErrorMessages(false);
+        acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
@@ -110,6 +110,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
 
         assertSequenceIndicesAre(0);
+
+        final long connectionId = acceptingSession.connectionId();
+        final ArgumentCaptor<Integer> sequenceNumberCaptor = ArgumentCaptor.forClass(int.class);
+        verify(messageTimingHandler, times(2))
+            .onMessage(sequenceNumberCaptor.capture(), eq(connectionId));
+        assertEquals(asList(1, 2), sequenceNumberCaptor.getAllValues());
     }
 
     @Test
@@ -179,7 +185,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         exampleMessage.testReqID(testReqID);
-        final long position = initiatingSession.send(exampleMessage);
+        final long position = initiatingSession.trySend(exampleMessage);
         assertThat(position, greaterThan(0L));
 
         return testSystem.awaitMessageOf(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
@@ -214,7 +220,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        initiatingSession.startLogout();
+        logoutSession(initiatingSession);
 
         assertSessionsDisconnected();
 
@@ -317,7 +323,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
         assertSequenceFromInitToAcceptAt(2, 2);
 
-        initiatingSession.startLogout();
+        logoutSession(initiatingSession);
 
         assertSequenceIndicesAre(0);
         assertSessionsDisconnected();
@@ -662,40 +668,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldNotAllowClosingMidPoll()
-    {
-        fakeConnectHandler.shouldCloseOnDisconnect();
-
-        acceptingEngine.close();
-
-        awaitIsConnected(false, acceptingLibrary);
-    }
-
-    @Test
-    public void shouldReconnectToBouncedGatewayViaIpc()
-    {
-        closeAcceptingEngine();
-
-        awaitIsConnected(false, acceptingLibrary);
-
-        launchAcceptingEngine();
-
-        awaitIsConnected(true, acceptingLibrary);
-    }
-
-    @Test
-    public void shouldReconnectToBouncedGatewayViaUdp()
-    {
-        closeInitiatingEngine();
-
-        awaitIsConnected(false, initiatingLibrary);
-
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
-
-        awaitIsConnected(true, initiatingLibrary);
-    }
-
     @Test
     public void shouldReconnectToBouncedGatewayWithoutTimeout()
     {
@@ -923,7 +895,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .password(PASSWORD)
             .newPassword(NEW_PASSWORD);
 
-        while (initiatingSession.send(userRequestEncoder) < 0)
+        while (initiatingSession.trySend(userRequestEncoder) < 0)
         {
             testSystem.poll();
 
@@ -1091,7 +1063,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .ordStatus(OrdStatus.FILLED)
             .side(Side.BUY);
         executionReport.instrument().symbol("IBM");
-        assertThat(acceptingSession.send(executionReport), greaterThan(0L));
+        assertThat(acceptingSession.trySend(executionReport), greaterThan(0L));
 
         testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
     }

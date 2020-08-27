@@ -110,7 +110,7 @@ public final class MessageApiExamples
                     .transactTime(System.currentTimeMillis());
 
                 // Having encoded the message, you can send it to the exchange via the session object.
-                session.send(orderSingle);
+                session.trySend(orderSingle);
 
                 // If you want to produce multiple messages and rapidly fire them off then you just
                 // need to update the fields in question and the other remain the side as your previous
@@ -119,13 +119,13 @@ public final class MessageApiExamples
                     .price(price.set(2010, 2))
                     .orderQty(quantity.set(20, 0));
 
-                session.send(orderSingle);
+                session.trySend(orderSingle);
 
                 orderSingle
                     .price(price.set(2020, 2))
                     .orderQty(quantity.set(30, 0));
 
-                session.send(orderSingle);
+                session.trySend(orderSingle);
             }
         }
     }

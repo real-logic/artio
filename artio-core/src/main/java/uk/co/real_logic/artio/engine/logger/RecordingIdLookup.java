@@ -37,27 +37,47 @@ public class RecordingIdLookup
         this.counters = counters;
     }
 
-    long getRecordingId(final int aeronSessionId)
+    public long getRecordingId(final int aeronSessionId)
     {
         long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
 
         while (recordingId == NULL_RECORDING_ID)
         {
-            final int counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
-            if (counterId != NULL_COUNTER_ID)
-            {
-                recordingId = RecordingPos.getRecordingId(counters, counterId);
-                if (recordingId != NULL_RECORDING_ID)
-                {
-                    aeronSessionIdToRecordingId.put(aeronSessionId, recordingId);
-                }
-            }
+            recordingId = checkRecordingId(aeronSessionId);
 
             archiverIdleStrategy.idle();
         }
 
         archiverIdleStrategy.reset();
 
+        return recordingId;
+    }
+
+    long findRecordingId(final int aeronSessionId)
+    {
+        long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
+
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            recordingId = checkRecordingId(aeronSessionId);
+        }
+
+        return recordingId;
+    }
+
+    private long checkRecordingId(final int aeronSessionId)
+    {
+        final int counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
+        if (counterId == NULL_COUNTER_ID)
+        {
+            return NULL_RECORDING_ID;
+        }
+
+        final long recordingId = RecordingPos.getRecordingId(counters, counterId);
+        if (recordingId != NULL_RECORDING_ID)
+        {
+            aeronSessionIdToRecordingId.put(aeronSessionId, recordingId);
+        }
         return recordingId;
     }
 

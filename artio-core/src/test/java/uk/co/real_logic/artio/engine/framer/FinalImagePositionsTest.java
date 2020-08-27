@@ -28,8 +28,8 @@ public class FinalImagePositionsTest
     private static final int SESSION_ID = 1;
     private static final long POSITION = 1024;
 
-    private Image image = mock(Image.class);
-    private FinalImagePositions finalImagePositions = new FinalImagePositions();
+    private final Image image = mock(Image.class);
+    private final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
     @Test
     public void shouldReturnUnknownIfNotNotified()

@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -41,12 +42,15 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
@@ -66,6 +70,7 @@ class GatewaySessions
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -78,11 +83,14 @@ class GatewaySessions
     private final long reasonableTransmissionTimeInMs;
     private final boolean logAllMessages;
     private final boolean validateCompIdsOnEveryMessage;
+    private final boolean validateTimeStrictly;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final Clock clock;
+    private final EpochFractionFormat epochFractionPrecision;
+    private final UtcTimestampEncoder sendingTimeEncoder;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -103,7 +111,8 @@ class GatewaySessions
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final EpochFractionFormat epochFractionPrecision)
     {
         this.epochClock = epochClock;
         this.inboundPublication = inboundPublication;
@@ -118,12 +127,18 @@ class GatewaySessions
         this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
         this.logAllMessages = configuration.logAllMessages();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
+        this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.clock();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.epochFractionPrecision = epochFractionPrecision;
+        this.epochFractionClock = EpochFractionClocks.create(epochClock, configuration.epochNanoClock(),
+            epochFractionPrecision);
+
+        sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
 
     static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
@@ -166,7 +181,8 @@ class GatewaySessions
             epochClock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
-            errorHandler);
+            errorHandler,
+            epochFractionPrecision);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
@@ -189,7 +205,8 @@ class GatewaySessions
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
             customisationStrategy,
-            messageInfo);
+            messageInfo,
+            epochFractionClock);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -201,6 +218,7 @@ class GatewaySessions
             validationStrategy,
             errorHandler,
             validateCompIdsOnEveryMessage,
+            validateTimeStrictly,
             messageInfo,
             sessionIdStrategy);
 
@@ -249,6 +267,11 @@ class GatewaySessions
     {
         final List<GatewaySession> sessions = this.sessions;
 
+        return indexBySessionId(sessionId, sessions);
+    }
+
+    static int indexBySessionId(final long sessionId, final List<GatewaySession> sessions)
+    {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final GatewaySession session = sessions.get(i);
@@ -258,7 +281,7 @@ class GatewaySessions
             }
         }
 
-        return -1;
+        return UNK_SESSION;
     }
 
     void releaseByConnectionId(final long connectionId)
@@ -313,10 +336,15 @@ class GatewaySessions
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
     {
         final int aeronSessionId = outboundPublication.id();
-        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
-        if (requiredPosition > 0 && sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+        final long initialPosition = outboundPublication.initialPosition();
+        // At requiredPosition=initialPosition there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > initialPosition)
         {
-            return false;
+            final long indexedPosition = sentSequenceNumberIndex.indexedPosition(aeronSessionId);
+            if (indexedPosition < requiredPosition)
+            {
+                return false;
+            }
         }
 
         final long sessionId = gatewaySession.sessionId();
@@ -371,7 +399,7 @@ class GatewaySessions
         private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final TcpChannel channel;
-        private final FixDictionary fixDictionary;
+        private FixDictionary fixDictionary;
         private final Framer framer;
         private final boolean resetSeqNum;
 
@@ -385,6 +413,7 @@ class GatewaySessions
         private Encoder encoder;
         private ByteBuffer encodeBuffer;
         private long lingerExpiryTimeInMs;
+        private Class<? extends FixDictionary> fixDictionaryClass;
 
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -447,7 +476,10 @@ class GatewaySessions
             {
                 onStrategyError("authentication", throwable, connectionId, "false", logon);
 
-                reject();
+                if (state != AuthenticationState.REJECTED)
+                {
+                    reject();
+                }
             }
         }
 
@@ -493,6 +525,14 @@ class GatewaySessions
             state = AuthenticationState.AUTHENTICATED;
         }
 
+        public void accept(final Class<? extends FixDictionary> fixDictionaryClass)
+        {
+            validateState();
+
+            this.fixDictionaryClass = fixDictionaryClass;
+            state = AuthenticationState.AUTHENTICATED;
+        }
+
         private void validateState()
         {
             // NB: simple best efforts state check to catch programming errors.
@@ -511,10 +551,13 @@ class GatewaySessions
             switch (state)
             {
                 case AUTHENTICATED:
-                    if (session != null)
+                    if (fixDictionaryClass != null && fixDictionary.getClass() != fixDictionaryClass)
                     {
-                        session.onAuthenticationResult();
+                        fixDictionary = FixDictionary.of(fixDictionaryClass);
+                        session.fixDictionary(fixDictionary);
                     }
+
+                    session.onAuthenticationResult();
                     onAuthenticated();
                     return false;
 
@@ -603,13 +646,12 @@ class GatewaySessions
         {
             encodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
 
-            final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
             final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(encodeBuffer);
 
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
             header.sendingTime(
-                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(epochClock.time()));
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encodeFrom(epochClock.time(), TimeUnit.MILLISECONDS));
             HeaderSetup.setup(logon.header(), header);
             customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 

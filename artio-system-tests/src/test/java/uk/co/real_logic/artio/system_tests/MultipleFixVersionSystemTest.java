@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -30,6 +31,7 @@ import uk.co.real_logic.artio.fixt.builder.HeaderEncoder;
 import uk.co.real_logic.artio.fixt.builder.LogonEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.other.Constants;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 
@@ -46,6 +48,11 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
 {
     private static final String FIXT_ACCEPTOR_LOGS = "fixt-acceptor-logs";
     private static final String FIXT_ACCEPTOR_ID = "fixt-acceptor";
+
+    private static final String OTHER_INITIATOR_ID = "otherInitiator";
+    private static final Class<? extends FixDictionary> OTHER_FIX_DICTIONARY =
+        uk.co.real_logic.artio.other.FixDictionaryImpl.class;
+    static final String TEST_VALUE = "test";
 
     private Session fixtInitiatingSession;
     private Session fixtAcceptingSession;
@@ -77,7 +84,6 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         configuration
             .sessionExistsHandler(acceptingHandler)
             .sessionAcquireHandler(acceptingHandler)
-            .sentPositionHandler(acceptingHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting")
             .sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));
@@ -94,7 +100,8 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(FIXT_ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .authenticationStrategy(new MultiVersionAuthenticationStrategy(OTHER_INITIATOR_ID, OTHER_FIX_DICTIONARY));
 
         acceptingConfiguration
             .overrideAcceptorFixDictionary(FixDictionaryImpl.class)
@@ -104,7 +111,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
     }
 
     @Test
-    public void messagesCanBeSentFromInitiatorToBothAcceptors()
+    public void shouldBeAbleToSendMessagesFromInitiatorToBothAcceptors()
     {
         connectSessions();
         connectFixTSessions();
@@ -113,7 +120,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
     }
 
     @Test
-    public void sessionsCanBeAcquired()
+    public void shouldBeAbleToAquireSessions()
     {
         connectSessions();
         acquireAcceptingSession();
@@ -131,6 +138,47 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals("FIXT.1.1", fixtAcceptingSession.beginString());
 
         assertHeaderHasApplVerId(acceptingOtfAcceptor);
+    }
+
+    @Test
+    public void shouldBeAbleToAcceptAFixVersionBasedUponLogonMessage()
+    {
+        connectOtherSession();
+
+        messagesCanBeExchanged();
+
+        acquireOtherAcceptingSession();
+
+        messagesCanBeExchanged();
+
+        assertEquals(OTHER_FIX_DICTIONARY, acceptingSession.fixDictionary().getClass());
+
+        // test field is added to messages with the specified fix dictionary
+        initiatingOtfAcceptor.messages().forEach(this::assertHasTestField);
+    }
+
+    private void assertHasTestField(final FixMessage msg)
+    {
+        assertEquals(msg.toString(), TEST_VALUE, msg.get(Constants.TEST_FIELD));
+    }
+
+    private void acquireOtherAcceptingSession()
+    {
+        acquireAcceptingSession(OTHER_INITIATOR_ID);
+    }
+
+    private void connectOtherSession()
+    {
+        final SessionConfiguration config = SessionConfiguration.builder()
+            .address("localhost", port)
+            .credentials(USERNAME, PASSWORD)
+            .senderCompId(OTHER_INITIATOR_ID)
+            .targetCompId(ACCEPTOR_ID)
+            .fixDictionary(OTHER_FIX_DICTIONARY)
+            .build();
+
+        final Reply<Session> reply = initiatingLibrary.initiate(config);
+        initiatingSession = completeConnectSessions(reply);
     }
 
     private void bothSessionsCanExchangeMessages()
@@ -210,6 +258,13 @@ class FixTSessionCustomisationStrategy implements SessionCustomisationStrategy
             {
                 header.applVerID(applVerID);
             }
+        }
+        // This is to test that messages are exchanged with the appropriate field
+        else if (sessionHeader instanceof uk.co.real_logic.artio.other.builder.HeaderEncoder)
+        {
+            final uk.co.real_logic.artio.other.builder.HeaderEncoder header =
+                (uk.co.real_logic.artio.other.builder.HeaderEncoder)sessionHeader;
+            header.testField(MultipleFixVersionSystemTest.TEST_VALUE);
         }
     }
 }

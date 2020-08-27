@@ -15,8 +15,18 @@
  */
 package uk.co.real_logic.artio.decoder;
 
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractLogoutDecoder extends Decoder
 {
+    char[] text();
+
+    boolean hasText();
+
+    int textLength();
+
+    String textAsString();
+
+    void text(AsciiSequenceView view);
 }

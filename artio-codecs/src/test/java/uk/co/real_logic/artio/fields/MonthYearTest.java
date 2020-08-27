@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Theories.class)
 public class MonthYearTest
 {
-    private MonthYear monthYear = new MonthYear();
+    private final MonthYear monthYear = new MonthYear();
 
     @DataPoints("validMonthYears")
     public static Iterable<Object[]> validMonthYears()

@@ -39,10 +39,10 @@ public class IndexedPositionTest
     private static final int RECORDING_ID = 3;
     private static final int OTHER_RECORDING_ID = 4;
 
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
-    private IndexedPositionWriter writer = newWriter();
-    private IndexedPositionReader reader = new IndexedPositionReader(buffer);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
+    private final IndexedPositionWriter writer = newWriter();
+    private final IndexedPositionReader reader = new IndexedPositionReader(buffer);
 
     @After
     public void noErrors()
@@ -57,7 +57,7 @@ public class IndexedPositionTest
 
         indexed(position, SESSION_ID, RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
+        hasPosition(position, RECORDING_ID);
     }
 
     @Test
@@ -71,7 +71,7 @@ public class IndexedPositionTest
 
         indexed(position, SESSION_ID, RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
+        hasPosition(position, RECORDING_ID);
     }
 
     @Test
@@ -83,8 +83,8 @@ public class IndexedPositionTest
         indexed(position, SESSION_ID, RECORDING_ID);
         indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
-        hasPosition(otherPosition, OTHER_SESSION_ID);
+        hasPosition(position, RECORDING_ID);
+        hasPosition(otherPosition, OTHER_RECORDING_ID);
 
         queriesLastPosition(position, otherPosition);
 
@@ -94,8 +94,8 @@ public class IndexedPositionTest
         indexed(position, SESSION_ID, RECORDING_ID);
         indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
-        hasPosition(position, SESSION_ID);
-        hasPosition(otherPosition, OTHER_SESSION_ID);
+        hasPosition(position, RECORDING_ID);
+        hasPosition(otherPosition, OTHER_RECORDING_ID);
 
         queriesLastPosition(position, otherPosition);
     }
@@ -112,7 +112,7 @@ public class IndexedPositionTest
     @Test
     public void shouldNotReadMissingPosition()
     {
-        hasPosition(UNKNOWN_POSITION, SESSION_ID);
+        hasPosition(UNKNOWN_POSITION, RECORDING_ID);
     }
 
     @Test
@@ -125,7 +125,7 @@ public class IndexedPositionTest
         writer.updateChecksums();
 
         newWriter();
-        assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(SESSION_ID));
+        assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(RECORDING_ID));
     }
 
     @Test
@@ -157,13 +157,14 @@ public class IndexedPositionTest
         writer.indexedUpTo(sessionId, recordingId, position);
     }
 
-    private void hasPosition(final long position, final int sessionId)
+    private void hasPosition(final long position, final int recordingId)
     {
-        assertEquals(position, reader.indexedPosition(sessionId));
+        assertEquals(position, reader.indexedPosition(recordingId));
     }
 
     private IndexedPositionWriter newWriter()
     {
-        return new IndexedPositionWriter(buffer, errorHandler, 0, "IndexedPosition");
+        return new IndexedPositionWriter(buffer, errorHandler, 0, "IndexedPosition",
+            null);
     }
 }

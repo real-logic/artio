@@ -31,8 +31,6 @@ import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.WriteMetaDataResponse;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
@@ -47,15 +45,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -65,8 +60,6 @@ import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEnc
  */
 public class SequenceNumberIndexWriter implements Index
 {
-    public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
-
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
     public static final long NO_REQUIRED_POSITION = -1000;
@@ -74,17 +67,13 @@ public class SequenceNumberIndexWriter implements Index
     static final int SEQUENCE_NUMBER_OFFSET = LastKnownSequenceNumberEncoder.sequenceNumberEncodingOffset();
     static final int MESSAGE_POSITION_OFFSET = LastKnownSequenceNumberEncoder.messagePositionEncodingOffset();
     static final int META_DATA_OFFSET = LastKnownSequenceNumberEncoder.metaDataPositionEncodingOffset();
+    public static final int RESET_SEQUENCE = 0;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
     private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
-    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
-    private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
-    private final AbstractILink3Offsets offsets = AbstractILink3Offsets.make();
-    private final AbstractILink3Parser parser = AbstractILink3Parser.make(null);
-    private final Long2LongHashMap connectionIdToILinkUuid;
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -108,10 +97,10 @@ public class SequenceNumberIndexWriter implements Index
     private final Path writablePath;
     private final Path passingPlacePath;
     private final int fileCapacity;
-    private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
     private final int indexedPositionsOffset;
-    private final IndexedPositionWriter positions;
+    private final IndexedPositionWriter positionWriter;
+    private final ILinkSequenceNumberExtractor iLinkSequenceNumberExtractor;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -121,7 +110,6 @@ public class SequenceNumberIndexWriter implements Index
     private final long indexFileStateFlushTimeoutInMs;
     private long lastUpdatedFileTimeInMs;
     private boolean hasSavedRecordSinceFileUpdate = false;
-    private boolean hasLoggedILink3ConfigurationError = false;
 
     public SequenceNumberIndexWriter(
         final AtomicBuffer inMemoryBuffer,
@@ -139,10 +127,13 @@ public class SequenceNumberIndexWriter implements Index
         this.errorHandler = errorHandler;
         this.streamId = streamId;
         this.fileCapacity = indexFile.buffer().capacity();
-        this.recordingIdLookup = recordingIdLookup;
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
-        this.connectionIdToILinkUuid = connectionIdToILinkUuid;
+
+        iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
+            connectionIdToILinkUuid, errorHandler,
+            (seqNum, uuid, messageSize, endPosition, aeronSessionId) ->
+            saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION));
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
@@ -159,11 +150,12 @@ public class SequenceNumberIndexWriter implements Index
         try
         {
             initialiseBuffer();
-            positions = new IndexedPositionWriter(
+            positionWriter = new IndexedPositionWriter(
                 positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
                 errorHandler,
                 indexedPositionsOffset,
-                "SequenceNumberIndex");
+                "SequenceNumberIndex",
+                recordingIdLookup);
 
             if (metaDataDir != null)
             {
@@ -230,6 +222,16 @@ public class SequenceNumberIndexWriter implements Index
         file.getFD().sync();
     }
 
+    public void onCatchup(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header,
+        final long recordingId)
+    {
+        onFragment(buffer, offset, length, header, recordingId);
+    }
+
     public void onFragment(
         final DirectBuffer buffer,
         final int srcOffset,
@@ -237,24 +239,33 @@ public class SequenceNumberIndexWriter implements Index
         final Header header)
     {
         final int streamId = header.streamId();
+        if (streamId == this.streamId)
+        {
+            onFragment(buffer, srcOffset, length, header, NULL_RECORDING_ID);
+        }
+    }
+
+    private void onFragment(
+        final DirectBuffer buffer,
+        final int srcOffset,
+        final int length,
+        final Header header,
+        final long recordingId)
+    {
         final long endPosition = header.position();
         final int aeronSessionId = header.sessionId();
 
-        if (streamId != this.streamId)
-        {
-            return;
-        }
+        int offset = srcOffset;
+        messageHeader.wrap(buffer, offset);
+
+        offset += messageHeader.encodedLength();
+        final int actingBlockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+        final int templateId = messageHeader.templateId();
 
         if ((header.flags() & BEGIN_FLAG) == BEGIN_FLAG)
         {
-            int offset = srcOffset;
-            messageHeader.wrap(buffer, offset);
-
-            offset += messageHeader.encodedLength();
-            final int actingBlockLength = messageHeader.blockLength();
-            final int version = messageHeader.version();
-
-            switch (messageHeader.templateId())
+            switch (templateId)
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
@@ -274,106 +285,43 @@ public class SequenceNumberIndexWriter implements Index
                 case ResetSequenceNumberDecoder.TEMPLATE_ID:
                 {
                     resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                    saveRecord(0, resetSequenceNumber.session(), endPosition, NO_REQUIRED_POSITION);
+                    resetSequenceNumber(resetSequenceNumber.session(), endPosition);
                     break;
                 }
 
                 case WriteMetaDataDecoder.TEMPLATE_ID:
                 {
                     writeMetaData.wrap(buffer, offset, actingBlockLength, version);
-
-                    final int libraryId = writeMetaData.libraryId();
-                    final long sessionId = writeMetaData.session();
-                    final long correlationId = writeMetaData.correlationId();
-                    final int metaDataOffset = writeMetaData.metaDataOffset();
-
-                    onWriteMetaData(libraryId, sessionId, correlationId, metaDataOffset);
+                    onWriteMetaData();
                     break;
                 }
 
                 case RedactSequenceUpdateDecoder.TEMPLATE_ID:
                 {
                     redactSequenceUpdate.wrap(buffer, offset, actingBlockLength, version);
-                    saveRecord(
-                        redactSequenceUpdate.correctSequenceNumber(),
-                        redactSequenceUpdate.session(),
-                        redactSequenceUpdate.position(),
-                        redactSequenceUpdate.position());
+                    onRedactSequenceUpdate();
                     break;
                 }
 
-                case ILinkMessageDecoder.TEMPLATE_ID:
+                default:
                 {
-                    onLinkMessage(buffer, endPosition, offset, actingBlockLength, version);
-                    break;
-                }
-
-                case ILinkConnectDecoder.TEMPLATE_ID:
-                {
-                    iLinkConnect.wrap(buffer, offset, actingBlockLength, version);
-                    connectionIdToILinkUuid.put(iLinkConnect.connection(), iLinkConnect.lastUuid());
+                    iLinkSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
                     break;
                 }
             }
         }
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
-
-        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
-        positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
+        positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
     }
 
-    private void onLinkMessage(
-        final DirectBuffer buffer,
-        final long endPosition,
-        final int offset,
-        final int actingBlockLength,
-        final int version)
+    private void onRedactSequenceUpdate()
     {
-        if (parser == null || offsets == null)
-        {
-            if (!hasLoggedILink3ConfigurationError)
-            {
-                hasLoggedILink3ConfigurationError = true;
-                errorHandler.onError(new IllegalStateException(
-                    "Configuration Issue: could not find ILink3Codes on the Engine classpath, despite " +
-                    "ILink3 message requiring processing. Sequence Index update ignored"));
-            }
-            return;
-        }
-
-        iLinkMessage.wrap(buffer, offset, actingBlockLength, version);
-        final long connectionId = iLinkMessage.connection();
-
-        final int sofhOffset = offset + ILinkMessageDecoder.BLOCK_LENGTH;
-        final int headerOffset = sofhOffset + SOFH_LENGTH;
-        final int templateId = parser.templateId(buffer, headerOffset);
-        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
-        final int possRetransOffset = offsets.possRetransOffset(templateId);
-        if (possRetransOffset != AbstractILink3Offsets.MISSING_OFFSET)
-        {
-            final int possRetrans = possRetrans(buffer, messageOffset, possRetransOffset);
-            if (possRetrans == BOOLEAN_FLAG_TRUE)
-            {
-                return;
-            }
-        }
-
-        final int seqNumOffset = offsets.seqNumOffset(templateId);
-        if (seqNumOffset != AbstractILink3Offsets.MISSING_OFFSET)
-        {
-            final int seqNum = buffer.getInt(messageOffset + seqNumOffset, LITTLE_ENDIAN);
-            final long sessionId = connectionIdToILinkUuid.get(connectionId);
-            if (sessionId != UNK_SESSION)
-            {
-                saveRecord(seqNum, sessionId, endPosition, NO_REQUIRED_POSITION);
-            }
-        }
-    }
-
-    private int possRetrans(final DirectBuffer buffer, final int messageOffset, final int possRetransOffset)
-    {
-        return (short)buffer.getByte(messageOffset + possRetransOffset) & 0xFF;
+        saveRecord(
+            redactSequenceUpdate.correctSequenceNumber(),
+            redactSequenceUpdate.session(),
+            redactSequenceUpdate.position(),
+            redactSequenceUpdate.position());
     }
 
     private boolean onFixMessage(
@@ -434,9 +382,13 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    private void onWriteMetaData(
-        final int libraryId, final long sessionId, final long correlationId, final int metaDataOffset)
+    private void onWriteMetaData()
     {
+        final int libraryId = writeMetaData.libraryId();
+        final long sessionId = writeMetaData.session();
+        final long correlationId = writeMetaData.correlationId();
+        final int metaDataOffset = writeMetaData.metaDataOffset();
+
         if (framerContext == null || metaDataFile == null)
         {
             writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
@@ -543,22 +495,29 @@ public class SequenceNumberIndexWriter implements Index
 
     public int doWork()
     {
+        int work = positionWriter.checkRecordings();
+
         if (hasSavedRecordSinceFileUpdate)
         {
             final long requiredUpdateTimeInMs = lastUpdatedFileTimeInMs + indexFileStateFlushTimeoutInMs;
             if (requiredUpdateTimeInMs < clock.time())
             {
                 updateFile();
-                return 1;
+                work++;
             }
         }
 
-        return CollectionUtil.removeIf(responsesToResend, sendResponseFunc);
+        return work + CollectionUtil.removeIf(responsesToResend, sendResponseFunc);
     }
 
     private boolean sendResponse(final WriteMetaDataResponse response)
     {
         return framerContext.offer(response);
+    }
+
+    void resetSequenceNumber(final long session, final long endPosition)
+    {
+        saveRecord(RESET_SEQUENCE, session, endPosition, NO_REQUIRED_POSITION);
     }
 
     void resetSequenceNumbers()
@@ -604,7 +563,7 @@ public class SequenceNumberIndexWriter implements Index
     private void updateFile()
     {
         checksumFramer.updateChecksums();
-        positions.updateChecksums();
+        positionWriter.updateChecksums();
         saveFile();
         flipFiles();
         hasSavedRecordSinceFileUpdate = false;
@@ -714,7 +673,7 @@ public class SequenceNumberIndexWriter implements Index
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
         // Inefficient, but only run once on startup, so not a big deal.
-        new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
+        new IndexedPositionReader(positionWriter.buffer()).readLastPosition(consumer);
     }
 
     private int saveRecord(
@@ -738,7 +697,7 @@ public class SequenceNumberIndexWriter implements Index
                 }
 
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
-                if (lastKnownDecoder.sequenceNumber() == 0)
+                if (lastKnownDecoder.sessionId() == 0)
                 {
                     // Don't redact if there's nothing to redact
                     if (requiredPosition == NO_REQUIRED_POSITION)
@@ -750,6 +709,7 @@ public class SequenceNumberIndexWriter implements Index
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
+                    recordOffsets.put(sessionId, position);
                     updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
                     return position;
                 }

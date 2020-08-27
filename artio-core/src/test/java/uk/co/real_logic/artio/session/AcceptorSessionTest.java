@@ -31,7 +31,7 @@ import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private AcceptorSession session = newAcceptorSession();
+    private final AcceptorSession session = newAcceptorSession();
 
     private AcceptorSession newAcceptorSession()
     {
@@ -55,7 +55,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             SessionCustomisationStrategy.none(),
-            messageInfo);
+            messageInfo,
+            fakeEpochFractionClock);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(mockLogonListener);
         return acceptorSession;

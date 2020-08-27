@@ -32,7 +32,7 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private InitiatorSession session;
+    private final InitiatorSession session;
     {
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,
@@ -54,7 +54,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             false,
             SessionCustomisationStrategy.none(),
-            messageInfo);
+            messageInfo,
+            fakeEpochFractionClock);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(mockLogonListener);
     }

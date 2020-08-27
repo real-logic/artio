@@ -30,8 +30,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-
     private DebugTcpChannelSupplier debugTcpChannelSupplier;
 
     @Before
@@ -72,7 +70,6 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         // Launch the acceptor
         launchAcceptingEngine();
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
 
         // Now it should connect

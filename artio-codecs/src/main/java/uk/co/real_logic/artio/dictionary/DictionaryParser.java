@@ -239,7 +239,19 @@ public final class DictionaryParser
                 final Field field = new Field(number, normalisedFieldName, type);
 
                 extractEnumValues(field.values(), node.getChildNodes());
-                fields.put(name, field);
+                final Field oldField = fields.put(name, field);
+                if (oldField != null)
+                {
+                    throw new IllegalStateException(String.format(
+                        "Cannot have the same field name defined twice; this is against the FIX spec." +
+                        "Details to follow:\n" +
+                        "Field : %1$s (%2$s)\n" +
+                        "Field : %3$s (%4$s)",
+                        field.name(),
+                        field.number(),
+                        oldField.name(),
+                        oldField.number()));
+                }
             });
 
         return fields;

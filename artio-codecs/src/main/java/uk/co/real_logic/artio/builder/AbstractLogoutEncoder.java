@@ -15,7 +15,39 @@
  */
 package uk.co.real_logic.artio.builder;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+
 public interface AbstractLogoutEncoder extends Encoder
 {
-    AbstractLogoutEncoder text(byte[] text, int length);
+    AbstractLogoutEncoder text(DirectBuffer value, int offset, int length);
+
+    AbstractLogoutEncoder text(DirectBuffer value, int length);
+
+    AbstractLogoutEncoder text(DirectBuffer value);
+
+    AbstractLogoutEncoder text(byte[] value, int offset, int length);
+
+    AbstractLogoutEncoder text(byte[] value, int length);
+
+    AbstractLogoutEncoder text(byte[] value);
+
+    boolean hasText();
+
+    String textAsString();
+
+    AbstractLogoutEncoder text(CharSequence value);
+
+    AbstractLogoutEncoder text(AsciiSequenceView value);
+
+    AbstractLogoutEncoder text(char[] value, int offset, int length);
+
+    AbstractLogoutEncoder text(char[] value, int length);
+
+    AbstractLogoutEncoder text(char[] value);
+
+    MutableDirectBuffer text();
+
+    void resetText();
 }

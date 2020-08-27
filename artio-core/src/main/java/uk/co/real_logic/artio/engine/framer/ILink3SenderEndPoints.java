@@ -39,4 +39,26 @@ public class ILink3SenderEndPoints
     {
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
+
+    void removeConnection(final long connectionId)
+    {
+        connectionIdToSenderEndpoint.remove(connectionId);
+    }
+
+    public Action onReplayComplete(final long connectionId)
+    {
+        final ILink3SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        if (senderEndPoint != null)
+        {
+            return senderEndPoint.onReplayComplete(connectionId);
+        }
+        return CONTINUE;
+    }
+
+    public String toString()
+    {
+        return "ILink3SenderEndPoints{" +
+            "connectionIdToSenderEndpoint=" + connectionIdToSenderEndpoint +
+            '}';
+    }
 }

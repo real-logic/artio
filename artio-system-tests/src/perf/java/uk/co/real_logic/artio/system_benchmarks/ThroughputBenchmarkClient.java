@@ -106,7 +106,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
         private final TestRequestEncoder testRequest;
         private final HeaderEncoder header;
 
-        private int seqNo = INITIAL_SEQ_NO;
+        private final int seqNo = INITIAL_SEQ_NO;
         private int senderLimit = senderLimit();
 
         private BenchmarkSession(final int i) throws IOException

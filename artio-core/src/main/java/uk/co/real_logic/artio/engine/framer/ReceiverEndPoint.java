@@ -16,23 +16,24 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 
 public abstract class ReceiverEndPoint
 {
     protected static final int SOCKET_DISCONNECTED = -1;
 
+    protected final GatewayPublication publication;
     protected final TcpChannel channel;
     protected final long connectionId;
     protected boolean hasDisconnected = false;
@@ -41,42 +42,30 @@ public abstract class ReceiverEndPoint
     protected final ErrorHandler errorHandler;
     protected final Framer framer;
 
+    protected int libraryId;
     protected int usedBufferData = 0;
     protected SelectionKey selectionKey;
 
     public ReceiverEndPoint(
+        final GatewayPublication publication,
         final TcpChannel channel,
         final long connectionId,
         final int bufferSize,
         final ErrorHandler errorHandler,
-        final Framer framer)
+        final Framer framer,
+        final int libraryId)
     {
+        Objects.requireNonNull(publication, "publication");
+
+        this.publication = publication;
         this.channel = channel;
         this.connectionId = connectionId;
         this.errorHandler = errorHandler;
         this.framer = framer;
+        this.libraryId = libraryId;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-    }
-
-    int readData() throws IOException
-    {
-        final int dataRead = channel.read(byteBuffer);
-        if (dataRead != SOCKET_DISCONNECTED)
-        {
-            if (dataRead > 0)
-            {
-                DebugLogger.log(FIX_MESSAGE_TCP, "Read     ", buffer, 0, dataRead);
-            }
-            usedBufferData += dataRead;
-        }
-        else
-        {
-            onDisconnectDetected();
-        }
-
-        return dataRead;
     }
 
     long connectionId()
@@ -112,7 +101,18 @@ public abstract class ReceiverEndPoint
 
     abstract void removeEndpointFromFramer();
 
-    abstract void disconnectEndpoint(DisconnectReason reason);
+    void disconnectEndpoint(final DisconnectReason reason)
+    {
+        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
+        disconnectContext();
+        if (selectionKey != null)
+        {
+            selectionKey.cancel();
+        }
+        hasDisconnected = true;
+    }
+
+    abstract void disconnectContext();
 
     abstract int poll();
 
@@ -122,4 +122,13 @@ public abstract class ReceiverEndPoint
 
     abstract void closeResources();
 
+    public void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
+    }
+
+    public int libraryId()
+    {
+        return libraryId;
+    }
 }

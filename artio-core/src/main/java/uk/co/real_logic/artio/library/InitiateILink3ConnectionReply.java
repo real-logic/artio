@@ -15,25 +15,21 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.exceptions.TimeoutException;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.GatewayError;
-
-import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
-import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 
 /**
  * .
  */
-class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
+class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
 {
-    private final ILink3SessionConfiguration configuration;
-    private long connectionId = NO_CONNECTION_ID;
+    private final ILink3ConnectionConfiguration configuration;
+    private boolean onTcpConnected = false;
 
-    InitiateILink3SessionReply(
+    InitiateILink3ConnectionReply(
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTime,
-        final ILink3SessionConfiguration configuration)
+        final ILink3ConnectionConfiguration configuration)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.configuration = configuration;
@@ -50,40 +46,40 @@ class InitiateILink3SessionReply extends LibraryReply<ILink3Session>
         requiresResend = position < 0;
     }
 
-    void onComplete(final ILink3Session result)
+    void onComplete(final ILink3Connection result)
     {
         libraryPoller.deregister(correlationId);
         super.onComplete(result);
     }
 
+    void onTcpConnected()
+    {
+        onTcpConnected = true;
+    }
+
     protected boolean onTimeout()
     {
-        // TODO: we need an equivalent of this.
-//        libraryPoller.onInitiatorSessionTimeout(correlationId, connectionId);
+        // In the iLink3 case - the reply timeout should only be for the connection itself.
+        // According to the iLink3 spec we should start a new countdown for the keepalive when
+        // waiting for the negotiate and establish messages separately.
 
-        return super.onTimeout();
+        if (!onTcpConnected)
+        {
+            libraryPoller.onTimeoutWaitingForConnection(correlationId);
+
+            super.onTimeout();
+        }
+
+        return true;
     }
 
     void onError(final GatewayError errorType, final String errorMessage)
     {
-        if (errorType == UNABLE_TO_CONNECT)
-        {
-            onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
-        }
+        onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
     }
 
-    ILink3SessionConfiguration configuration()
+    ILink3ConnectionConfiguration configuration()
     {
         return configuration;
-    }
-
-    void onNegotiateFailure()
-    {
-        onError(new TimeoutException("Timed out: no reply for Negotiate"));
-    }
-
-    public void onEstablishFailure()
-    {
-        onError(new TimeoutException("Timed out: no reply for Establish"));
     }
 }

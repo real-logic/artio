@@ -20,7 +20,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 
-import java.io.IOException;
 import java.util.List;
 
 public class HistogramLogAgent implements Agent
@@ -58,7 +57,7 @@ public class HistogramLogAgent implements Agent
         histogramHandler.onEndTimerIdentification();
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
         final long currentTimeInMs = milliClock.time();
 
@@ -73,7 +72,7 @@ public class HistogramLogAgent implements Agent
         return 0;
     }
 
-    private void logHistograms(final long currentTimeInMs) throws IOException
+    private void logHistograms(final long currentTimeInMs)
     {
         final List<Timer> timers = this.timers;
         final HistogramHandler histogramHandler = this.histogramHandler;

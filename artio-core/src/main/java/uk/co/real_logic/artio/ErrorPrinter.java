@@ -31,13 +31,13 @@ public class ErrorPrinter implements Agent
         configuration.libraryAeronChannel("").conclude();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
         final ErrorPrinter printer = new ErrorPrinter(
-            monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX, 0, null);
+            monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX, 0, null, null);
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
     }
 
-    private final ErrorConsumer errorConsumer =
+    private static final ErrorConsumer DEFAULT_ERROR_CONSUMER =
         (observationCount, firstObservationTimestampInMs, lastObservationTimestampInMs, encodedException) ->
         {
             System.err.println(encodedException);
@@ -47,6 +47,8 @@ public class ErrorPrinter implements Agent
                 firstObservationTimestampInMs,
                 lastObservationTimestampInMs);
         };
+
+    private final ErrorConsumer errorConsumer;
 
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
@@ -58,12 +60,14 @@ public class ErrorPrinter implements Agent
         final AtomicBuffer errorBuffer,
         final String agentNamePrefix,
         final long startTimeInMs,
-        final AeronArchive aeronArchive)
+        final AeronArchive aeronArchive,
+        final ErrorConsumer customErrorConsumer)
     {
         this.errorBuffer = errorBuffer;
         this.agentNamePrefix = agentNamePrefix;
         lastSeenErrorTimeInMs = startTimeInMs;
         this.aeronArchive = aeronArchive;
+        this.errorConsumer = customErrorConsumer == null ? DEFAULT_ERROR_CONSUMER : customErrorConsumer;
     }
 
     public int doWork()

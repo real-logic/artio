@@ -18,8 +18,10 @@ package uk.co.real_logic.artio;
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
+import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.timing.HistogramLogAgent;
 import uk.co.real_logic.artio.timing.Timer;
 
@@ -31,14 +33,14 @@ import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.artio.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 
-public class GatewayProcess implements AutoCloseable
+public abstract class GatewayProcess implements AutoCloseable
 {
     /** Common id used by messages in both engine and library */
     public static final long NO_CORRELATION_ID = 0;
 
     public static final long NO_CONNECTION_ID = -1;
 
-    private static long startTimeInMs = System.currentTimeMillis();
+    private static final long START_TIME_IN_MS = System.currentTimeMillis();
 
     private DistinctErrorLog distinctErrorLog;
 
@@ -55,6 +57,8 @@ public class GatewayProcess implements AutoCloseable
         initMonitoring(configuration);
         initAeron(configuration);
     }
+
+    protected abstract boolean shouldRethrowExceptionInErrorHandler();
 
     protected void initMonitoring(final CommonConfiguration configuration)
     {
@@ -77,7 +81,7 @@ public class GatewayProcess implements AutoCloseable
         final Aeron.Context context = configureAeronContext(configuration);
         aeron = Aeron.connect(context);
         CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
-        fixCounters = new FixCounters(aeron);
+        fixCounters = new FixCounters(aeron, this instanceof FixEngine);
     }
 
     public Agent conductorAgent()
@@ -124,6 +128,11 @@ public class GatewayProcess implements AutoCloseable
         ctx.errorHandler(
             (throwable) ->
             {
+                if (shouldRethrowExceptionInErrorHandler())
+                {
+                    LangUtil.rethrowUnchecked(throwable);
+                }
+
                 if (!(throwable instanceof ClosedByInterruptException))
                 {
                     errorHandler.onError(throwable);
@@ -154,8 +163,9 @@ public class GatewayProcess implements AutoCloseable
             agents.add(new ErrorPrinter(
                 monitoringFile.errorBuffer(),
                 configuration.agentNamePrefix(),
-                startTimeInMs,
-                aeronArchive));
+                START_TIME_IN_MS,
+                aeronArchive,
+                configuration.customErrorConsumer()));
         }
 
         if (!agents.isEmpty())
@@ -180,6 +190,7 @@ public class GatewayProcess implements AutoCloseable
         }
         else
         {
+            aeron.close();
             CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
             closeAll(monitoringFile);
         }

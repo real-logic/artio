@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.session.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -37,9 +38,6 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 {
     private static final int NO_TIMEOUT = -1;
 
-    private final long connectionId;
-    private SessionContext context;
-    private final String address;
     private final ConnectionType connectionType;
     private final boolean closedResendInterval;
     private final int resendRequestChunkSize;
@@ -52,6 +50,9 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
     private SenderEndPoint senderEndPoint;
 
     private long sessionId;
+    private long connectionId;
+    private String address;
+    private SessionContext context;
     private SessionParser sessionParser;
     private InternalSession session;
     private CompositeKey sessionKey;
@@ -112,6 +113,11 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 
     public String address()
     {
+        if (receiverEndPoint != null)
+        {
+            return receiverEndPoint.address();
+        }
+
         return address;
     }
 
@@ -475,5 +481,15 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
     public boolean isOffline()
     {
         return receiverEndPoint == null;
+    }
+
+    public void goOffline()
+    {
+        // Library retains ownership of a disconnected session, reset state to that of an offline GatewaySession object
+        connectionId = NO_CONNECTION_ID;
+        address = ":" + NO_CONNECTION_ID;
+        receiverEndPoint = null;
+        senderEndPoint = null;
+        onGatewaySessionLogon = null;
     }
 }

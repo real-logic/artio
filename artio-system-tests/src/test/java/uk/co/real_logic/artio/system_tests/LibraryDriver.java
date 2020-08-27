@@ -28,7 +28,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 final class LibraryDriver implements AutoCloseable
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final FixLibrary library;
@@ -49,7 +48,6 @@ final class LibraryDriver implements AutoCloseable
         this.testSystem = testSystem;
 
         final LibraryConfiguration configuration = configFactory.apply(handler);
-        configuration.libraryConnectHandler(fakeConnectHandler);
         library = testSystem.connect(configuration);
     }
 

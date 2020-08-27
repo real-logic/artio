@@ -27,10 +27,10 @@ import static uk.co.real_logic.artio.fields.UtcDateOnlyDecoder.LENGTH;
  * Equivalent to a Java format string of "yyyyMMdd-HH:mm:ss[.SSS]". The builtin parsers could cope with
  * this situation, but allocate and perform poorly.
  * <p>
- * If the final fraction of the second is expected to be in 3 characters and only supports up to
- * millisecond precision then you can use the normal {@link UtcTimestampDecoder#decode(AsciiBuffer, int, int)} method.
+ * If the final fraction of the second is expected to be in 3 characters and only supports up to millisecond precision
+ * then you can use the normal {@link UtcTimestampDecoder#decode(AsciiBuffer, int, int, boolean)} method.
  * Support for microsecond precision, eg: "yyyyMMdd-HH:mm:ss[.SSSSSS]" is provided through the
- * {@link UtcTimestampDecoder#decodeMicros(AsciiBuffer, int, int)} method.
+ * {@link UtcTimestampDecoder#decodeMicros(AsciiBuffer, int, int, boolean)} method.
  */
 public final class UtcTimestampDecoder
 {
@@ -49,11 +49,20 @@ public final class UtcTimestampDecoder
     private static final int TIME_OFFSET = LENGTH + 1;
 
     private final AsciiBuffer buffer = new MutableAsciiBuffer();
+    private final boolean strict;
+
+    /**
+     * @param strict if length of FIX encoded value has to be checked to match FIX specification
+     */
+    public UtcTimestampDecoder(final boolean strict)
+    {
+        this.strict = strict;
+    }
 
     public long decode(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decode(buffer, 0, length);
+        return decode(buffer, 0, length, strict);
     }
 
     public long decode(final byte[] bytes)
@@ -64,7 +73,7 @@ public final class UtcTimestampDecoder
     public long decodeMicros(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decodeMicros(buffer, 0, length);
+        return decodeMicros(buffer, 0, length, strict);
     }
 
     public long decodeMicros(final byte[] bytes)
@@ -75,7 +84,7 @@ public final class UtcTimestampDecoder
     public long decodeNanos(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decodeNanos(buffer, 0, length);
+        return decodeNanos(buffer, 0, length, strict);
     }
 
     public long decodeNanos(final byte[] bytes)
@@ -87,13 +96,14 @@ public final class UtcTimestampDecoder
      * @param timestamp a buffer containing the FIX encoded value of the timestamp in ASCII
      * @param offset the offset within the timestamp buffer where the value starts
      * @param length the length of the FIX encoded value in bytes / ASCII characters
+     * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of milliseconds since the Unix Epoch that represents this timestamp
      */
-    public static long decode(final AsciiBuffer timestamp, final int offset, final int length)
+    public static long decode(final AsciiBuffer timestamp, final int offset, final int length, final boolean strict)
     {
         final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
         final long millisecondOfDay = UtcTimeOnlyDecoder.decode(
-            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET);
+            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET, strict);
         return epochDay * MILLIS_IN_DAY + millisecondOfDay;
     }
 
@@ -101,13 +111,15 @@ public final class UtcTimestampDecoder
      * @param timestamp a buffer containing the FIX encoded value of the timestamp in ASCII
      * @param offset the offset within the timestamp buffer where the value starts
      * @param length the length of the FIX encoded value in bytes / ASCII characters
+     * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of microseconds since the Unix Epoch that represents this timestamp
      */
-    public static long decodeMicros(final AsciiBuffer timestamp, final int offset, final int length)
+    public static long decodeMicros(final AsciiBuffer timestamp, final int offset, final int length,
+        final boolean strict)
     {
         final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
         final long microsOfDay = UtcTimeOnlyDecoder.decodeMicros(
-            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET);
+            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET, strict);
         return epochDay * MICROS_IN_DAY + microsOfDay;
     }
 
@@ -115,13 +127,15 @@ public final class UtcTimestampDecoder
      * @param timestamp a buffer containing the FIX encoded value of the timestamp in ASCII
      * @param offset the offset within the timestamp buffer where the value starts
      * @param length the length of the FIX encoded value in bytes / ASCII characters
+     * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of nanoseconds since the Unix Epoch that represents this timestamp
      */
-    public static long decodeNanos(final AsciiBuffer timestamp, final int offset, final int length)
+    public static long decodeNanos(final AsciiBuffer timestamp, final int offset, final int length,
+        final boolean strict)
     {
         final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
         final long nanosOfDay = UtcTimeOnlyDecoder.decodeNanos(
-            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET);
+            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET, strict);
         return epochDay * NANOS_IN_DAY + nanosOfDay;
     }
 

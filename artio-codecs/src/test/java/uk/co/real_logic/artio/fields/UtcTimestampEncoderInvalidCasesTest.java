@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
 
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.MICROSECONDS;
 
 public class UtcTimestampEncoderInvalidCasesTest
 {

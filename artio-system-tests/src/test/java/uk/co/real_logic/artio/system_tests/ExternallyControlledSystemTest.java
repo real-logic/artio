@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -45,15 +46,14 @@ import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.withTimeout;
-import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private SessionWriter acceptingSessionWriter = null;
-    private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
+    private final FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
     {
         public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
         {
@@ -81,7 +81,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler)
-            .libraryConnectHandler(fakeConnectHandler)
             .sessionProxyFactory(this::sessionProxyFactory);
 
         acceptingLibrary = connect(acceptingLibraryConfig);
@@ -243,7 +242,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final EpochFractionFormat epochFractionPrecision)
     {
         sessionProxyRequests++;
         return fakeSessionProxy;

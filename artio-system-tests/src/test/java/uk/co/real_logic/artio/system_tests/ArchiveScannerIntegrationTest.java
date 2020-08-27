@@ -98,7 +98,6 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 
-    @SuppressWarnings("unchecked")
     private void assertArchiveContainsMessages(final String testReqIdPrefix)
     {
         final EngineConfiguration configuration = acceptingEngine.configuration();

@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
@@ -33,6 +32,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
@@ -46,7 +46,7 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 public class SessionParser
 {
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
+    private final UtcTimestampDecoder timestampDecoder;
 
     private AbstractLogonDecoder logon;
     private AbstractLogoutDecoder logout;
@@ -63,14 +63,15 @@ public class SessionParser
 
     private final Session session;
     private final MessageValidationStrategy validationStrategy;
-    private ErrorHandler errorHandler;
+    private final ErrorHandler errorHandler;
     private CompositeKey compositeKey;
 
     public SessionParser(
         final Session session,
         final MessageValidationStrategy validationStrategy,
-        final ErrorHandler errorHandler, // nullable
+        final ErrorHandler errorHandler,
         final boolean validateCompIdsOnEveryMessage,
+        final boolean validateTimeStrictly,
         final OnMessageInfo messageInfo,
         final SessionIdStrategy sessionIdStrategy)
     {
@@ -80,6 +81,7 @@ public class SessionParser
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
         this.messageInfo = messageInfo;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.timestampDecoder = new UtcTimestampDecoder(validateTimeStrictly);
     }
 
     public void fixDictionary(final FixDictionary fixDictionary)
@@ -155,6 +157,10 @@ public class SessionParser
 
             return action;
         }
+        catch (final MalformedTagFormatException e)
+        {
+            return rejectAndHandleExceptionalMessage(e, messageType, e.refTagId(), position);
+        }
         catch (final AsciiNumberFormatException e)
         {
             // We should just ignore the message when the first three fields are out of order.
@@ -164,18 +170,19 @@ public class SessionParser
             }
             else
             {
-                return rejectAndHandleExceptionalMessage(e, messageType, position);
+                return rejectAndHandleExceptionalMessage(e, messageType, MISSING_INT, position);
             }
         }
         catch (final Exception e)
         {
-            return rejectAndHandleExceptionalMessage(e, messageType, position);
+            return rejectAndHandleExceptionalMessage(e, messageType, MISSING_INT, position);
         }
     }
 
-    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final long position)
+    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final int refTagId,
+        final long position)
     {
-        final Action action = rejectExceptionalMessage(messageType, position);
+        final Action action = rejectExceptionalMessage(messageType, refTagId, position);
 
         if (action == CONTINUE)
         {
@@ -185,42 +192,47 @@ public class SessionParser
         return action;
     }
 
-    private Action rejectExceptionalMessage(final long messageType, final long position)
+    private Action rejectExceptionalMessage(final long messageType, final int refTagId, final long position)
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logon.header(), position);
+            final Action action = onExceptionalMessage(logon.header(), refTagId, position);
+            if (action != ABORT)
+            {
+                session.logoutAndDisconnect();
+            }
+            return action;
         }
         else if (messageType == LOGOUT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logout.header(), position);
+            return onExceptionalMessage(logout.header(), refTagId, position);
         }
         else if (messageType == HEARTBEAT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(heartbeat.header(), position);
+            return onExceptionalMessage(heartbeat.header(), refTagId, position);
         }
         else if (messageType == REJECT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(reject.header(), position);
+            return onExceptionalMessage(reject.header(), refTagId, position);
         }
         else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(testRequest.header(), position);
+            return onExceptionalMessage(testRequest.header(), refTagId, position);
         }
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(sequenceReset.header(), position);
+            return onExceptionalMessage(sequenceReset.header(), refTagId, position);
         }
-        return onExceptionalMessage(header, position);
+        return onExceptionalMessage(header, refTagId, position);
     }
 
-    private Action onExceptionalMessage(final SessionHeaderDecoder header, final long position)
+    private Action onExceptionalMessage(final SessionHeaderDecoder header, final int regTagId, final long position)
     {
         final int msgSeqNum = header.msgSeqNum();
 
         return session.onInvalidMessage(
             msgSeqNum,
-            MISSING_INT,
+            regTagId,
             header.msgType(),
             header.msgTypeLength(),
             SessionConstants.INCORRECT_DATA_FORMAT_FOR_VALUE,
@@ -266,14 +278,21 @@ public class SessionParser
     private long sendingTime(final SessionHeaderDecoder header)
     {
         final byte[] sendingTime = header.sendingTime();
-        return decodeTimestamp(sendingTime);
+        return decodeTimestamp(sendingTime, header.sendingTimeLength(), SENDING_TIME);
     }
 
-    private long decodeTimestamp(final byte[] sendingTime)
+    private long decodeTimestamp(final byte[] sendingTime, final int length, final int refTagId)
     {
-        return CODEC_VALIDATION_ENABLED ?
-            timestampDecoder.decode(sendingTime, sendingTime.length) :
-            MISSING_LONG;
+        try
+        {
+            return CODEC_VALIDATION_ENABLED ?
+                timestampDecoder.decode(sendingTime, length) :
+                MISSING_LONG;
+        }
+        catch (final Exception e)
+        {
+            throw new MalformedTagFormatException(refTagId, e);
+        }
     }
 
     private Action onAnyOtherMessage(final int offset, final int length, final long position)
@@ -322,7 +341,11 @@ public class SessionParser
 
     private long origSendingTime(final SessionHeaderDecoder header)
     {
-        return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
+        if (header.hasOrigSendingTime())
+        {
+            return decodeTimestamp(header.origSendingTime(), header.origSendingTimeLength(), ORIG_SENDING_TIME);
+        }
+        return UNKNOWN;
     }
 
     private Action onResendRequest(final int offset, final int length, final long position)
@@ -510,16 +533,7 @@ public class SessionParser
 
     private void onError(final Throwable throwable)
     {
-        // Library code should throw the exception to make users aware of it
-        // Engine code should log it through the normal error handling process.
-        if (errorHandler == null)
-        {
-            LangUtil.rethrowUnchecked(throwable);
-        }
-        else
-        {
-            errorHandler.onError(throwable);
-        }
+        errorHandler.onError(throwable);
     }
 
     private boolean resetSeqNumFlag(final AbstractLogonDecoder logon)

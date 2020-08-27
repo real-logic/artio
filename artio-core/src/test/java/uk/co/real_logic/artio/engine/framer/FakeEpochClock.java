@@ -30,7 +30,7 @@ public class FakeEpochClock implements EpochClock
 
     public void advanceSeconds(final int timeInSeconds)
     {
-        advanceMilliSeconds(SECONDS.toMillis((long)timeInSeconds));
+        advanceMilliSeconds(SECONDS.toMillis(timeInSeconds));
     }
 
     public void advanceMilliSeconds(final long duration)

@@ -75,7 +75,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static Class<?> allReqFieldTypesMessage;
     private static Class<?> enumTestMessage;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
@@ -122,12 +122,17 @@ public abstract class AbstractDecoderGeneratorTest
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
+            outputManager, validationClass, rejectUnknownField,
             rejectUnknownEnumValue, flyweightStringsEnabled, String.valueOf(rejectingUnknownEnumValue));
+        final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
+            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
+            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
 
         constantGenerator.generate();
         enumGenerator.generate();
         decoderGenerator.generate();
+        encoderGenerator.generate();
         return outputManager.getSources();
     }
 
@@ -334,8 +339,6 @@ public abstract class AbstractDecoderGeneratorTest
         assertValid(decoder);
     }
 
-    // TODO: update the examples to add this
-
     @Test
     public void setsMissingOptionalValues() throws Exception
     {
@@ -431,6 +434,30 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
         assertToStringAndAppendToMatches(decoder, containsString(STRING_GROUP_TWO_ELEMENTS));
+    }
+
+    @Test
+    public void shouldToStringRepeatingGroupsWithoutMutatingIterator() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+
+        assertHasNext(iterator);
+        Object group = iterator.next();
+        assertEquals(1, getGroupField(group));
+
+        assertThat(decoder.toString(), containsString(STRING_GROUP_TWO_ELEMENTS));
+
+        assertHasNext(iterator);
+        group = iterator.next();
+        assertEquals(2, getGroupField(group));
+        assertNotHasNext(iterator);
+    }
+
+    private void assertHasNext(final Iterator<?> iterator)
+    {
+        assertTrue("fails hasNext()", iterator.hasNext());
     }
 
     private void assertToStringAndAppendToMatches(final Decoder decoder, final Matcher<String> matcher)
@@ -589,8 +616,6 @@ public abstract class AbstractDecoderGeneratorTest
         assertInvalid(decoder, REQUIRED_TAG_MISSING, INT_FIELD_TAG);
     }
 
-    // heartbeatWithoutEnumValueValidation
-
     @Test
     public void shouldValidateMissingRequiredPriceFields() throws Exception
     {
@@ -601,6 +626,10 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
     }
+
+    // --------------------------------------------------------------
+    // Without Validation
+    // --------------------------------------------------------------
 
     @Test
     public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithoutValidation() throws Exception
@@ -997,7 +1026,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(SHORT_TIMESTAMP_MESSAGE);
 
         final byte[] someTime = getSomeTimeField(decoder);
-        final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder();
+        final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder(true);
         final long someTimeValue = someTimeDecoder.decode(someTime, someTime.length);
         assertEquals(0, someTimeValue);
 
@@ -1030,7 +1059,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(ZERO_REPEATING_GROUP_MESSAGE);
 
-        canNotIteratorOverRepeatingGroup(decoder);
+        assertNotHasNext(decoder);
     }
 
     @Test
@@ -1038,7 +1067,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
 
-        canNotIteratorOverRepeatingGroup(decoder);
+        assertNotHasNext(decoder);
     }
 
     @Test
@@ -1520,15 +1549,15 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
 
-        assertTrue(iterator.hasNext());
+        assertHasNext(iterator);
         Object group = iterator.next();
         assertEquals(1, getGroupField(group));
 
-        assertTrue(iterator.hasNext());
+        assertHasNext(iterator);
         group = iterator.next();
         assertEquals(2, getGroupField(group));
 
-        canNotIteratorOverRepeatingGroup(iterator);
+        assertNotHasNext(iterator);
     }
 
     private void canIterateOverGroupUsingForEach(final Decoder decoder) throws Exception
@@ -1546,15 +1575,15 @@ public abstract class AbstractDecoderGeneratorTest
 
     }
 
-    private void canNotIteratorOverRepeatingGroup(final Decoder decoder) throws Exception
+    private void assertNotHasNext(final Decoder decoder) throws Exception
     {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
-        canNotIteratorOverRepeatingGroup(iterator);
+        assertNotHasNext(iterator);
     }
 
-    private void canNotIteratorOverRepeatingGroup(final Iterator<?> iterator)
+    private void assertNotHasNext(final Iterator<?> iterator)
     {
-        assertFalse(iterator.hasNext());
+        assertFalse("hasNext() when it shouldn't", iterator.hasNext());
     }
 
     private void assertValidRepeatingGroupDecoded(final Decoder decoder) throws Exception

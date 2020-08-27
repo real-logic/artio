@@ -20,8 +20,8 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
-import uk.co.real_logic.artio.library.ILink3Session;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
@@ -31,10 +31,11 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.FixMatchers.isConnected;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -43,12 +44,14 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 public class TestSystem
 {
     private final List<FixLibrary> libraries;
+    private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;
 
     public TestSystem(final LockStepFramerEngineScheduler scheduler, final FixLibrary... libraries)
     {
         this.scheduler = scheduler;
         this.libraries = new ArrayList<>();
+        this.operations = new ArrayList<>();
         Collections.addAll(this.libraries, libraries);
     }
 
@@ -65,11 +68,17 @@ public class TestSystem
             scheduler.invokeFramer();
         }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
+        operations.forEach(Runnable::run);
     }
 
-    public void assertConnected()
+    public void addOperation(final Runnable operation)
     {
-        libraries.forEach((library) -> assertThat(library, isConnected()));
+        operations.add(operation);
+    }
+
+    public void removeOperation(final Runnable operation)
+    {
+        operations.remove(operation);
     }
 
     public void close(final FixLibrary library)
@@ -92,7 +101,24 @@ public class TestSystem
     public FixLibrary connect(final LibraryConfiguration configuration)
     {
         final FixLibrary library = FixLibrary.connect(configuration);
-        add(library);
+        try
+        {
+            add(library);
+            awaitConnected(library);
+
+            return library;
+        }
+        catch (final Exception e)
+        {
+            library.close();
+            LangUtil.rethrowUnchecked(e);
+            return library;
+        }
+    }
+
+    public void awaitConnected(final FixLibrary library)
+    {
+        assertThat(libraries, hasItem(library));
         assertEventuallyTrue(
             () -> "Unable to connect to engine",
             () ->
@@ -103,8 +129,6 @@ public class TestSystem
             },
             DEFAULT_TIMEOUT_IN_MS,
             () -> close(library));
-
-        return library;
     }
 
     public void awaitCompletedReplies(final Reply<?>... replies)
@@ -136,11 +160,17 @@ public class TestSystem
 
     public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
+        return awaitMessageOf(otfAcceptor, messageType, msg -> true);
+    }
+
+    public FixMessage awaitMessageOf(
+        final FakeOtfAcceptor otfAcceptor, final String messageType, final Predicate<FixMessage> predicate)
+    {
         return Timing.withTimeout("Never received " + messageType, () ->
         {
             poll();
 
-            return otfAcceptor.receivedMessage(messageType).findFirst();
+            return otfAcceptor.receivedMessage(messageType).filter(predicate).findFirst();
         },
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }
@@ -157,7 +187,7 @@ public class TestSystem
 
     public void send(final Session session, final Encoder encoder)
     {
-        awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.send(encoder));
+        awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.trySend(encoder));
     }
 
     public void awaitSend(final String message, final LongSupplier operation)
@@ -209,8 +239,8 @@ public class TestSystem
         return null;
     }
 
-    public void awaitUnbind(final ILink3Session session)
+    public void awaitUnbind(final ILink3Connection session)
     {
-        await("Failed to unbind session", () -> session.state() == ILink3Session.State.UNBOUND);
+        await("Failed to unbind session", () -> session.state() == ILink3Connection.State.UNBOUND);
     }
 }

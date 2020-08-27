@@ -17,11 +17,7 @@ package uk.co.real_logic.artio.engine;
 
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import org.agrona.concurrent.status.AtomicCounter;
-
-import java.util.function.Consumer;
 
 /**
  * For publishing the last sent sequence number to the replay system.
@@ -30,25 +26,17 @@ public class SenderSequenceNumbers
 {
     public static final int UNKNOWN_SESSION = -1;
 
-    private static final int CAPACITY = 10;
-
-    // Framer state
-    private final IdleStrategy framerIdleStrategy;
-
     // Written on Framer, Read on Indexer
-    private final OneToOneConcurrentArrayQueue<SenderSequenceNumber> queue
-        = new OneToOneConcurrentArrayQueue<>(CAPACITY);
+    private final ReplayerCommandQueue queue;
 
     // Indexer State
     private final Long2ObjectHashMap<SenderSequenceNumber> connectionIdToSequencePosition
         = new Long2ObjectHashMap<>();
     private final LongHashSet oldConnectionIds = new LongHashSet();
-    private final Consumer<SenderSequenceNumber> onSenderSequenceNumberFunc
-        = this::onSenderSequenceNumber;
 
-    public SenderSequenceNumbers(final IdleStrategy framerIdleStrategy)
+    public SenderSequenceNumbers(final ReplayerCommandQueue queue)
     {
-        this.framerIdleStrategy = framerIdleStrategy;
+        this.queue = queue;
     }
 
     // Called on Framer Thread
@@ -69,17 +57,7 @@ public class SenderSequenceNumbers
     // We receive the object to either add or remove it.
     private void enqueue(final SenderSequenceNumber senderSequenceNumber)
     {
-        while (!queue.offer(senderSequenceNumber))
-        {
-            framerIdleStrategy.idle();
-        }
-        framerIdleStrategy.reset();
-    }
-
-    // Called on Indexer Thread
-    public int poll()
-    {
-        return queue.drain(onSenderSequenceNumberFunc, CAPACITY);
+        queue.enqueue(senderSequenceNumber);
     }
 
     // Called on Indexer Thread
@@ -108,7 +86,7 @@ public class SenderSequenceNumbers
     }
 
     // Called on Indexer Thread
-    private void onSenderSequenceNumber(final SenderSequenceNumber senderSequenceNumber)
+    void onSenderSequenceNumber(final SenderSequenceNumber senderSequenceNumber)
     {
         final long connectionId = senderSequenceNumber.connectionId();
         if (connectionIdToSequencePosition.remove(connectionId) == null)

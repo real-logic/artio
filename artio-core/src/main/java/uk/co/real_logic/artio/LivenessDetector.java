@@ -133,6 +133,12 @@ public final class LivenessDetector
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
+    // Reset the connect timer for liveness purposes, but not to flip into the connected state
+    public void onConnectStep(final long timeInMs)
+    {
+        latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
+    }
+
     private boolean heartbeat(final long timeInMs)
     {
         try

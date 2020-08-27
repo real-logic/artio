@@ -31,11 +31,14 @@ import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -79,6 +82,7 @@ public abstract class AbstractSessionTest
     DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();
+    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(fakeClock);
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
     SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);
@@ -109,7 +113,7 @@ public abstract class AbstractSessionTest
             anyLong(),
             any(),
             anyInt(),
-            eq((DirectBuffer)null),
+            eq(null),
             eq(0))).thenReturn(POSITION);
 
         when(sessionProxy.sendResendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX), anyInt()))
@@ -223,7 +227,7 @@ public abstract class AbstractSessionTest
         verify(sessionProxy).sendReject(
             2,
             2,
-            MISSING_INT,
+            SessionConstants.ORIG_SENDING_TIME,
             MSG_TYPE_CHARS,
             MSG_TYPE_CHARS.length,
             REQUIRED_TAG_MISSING.representation(),
@@ -241,7 +245,7 @@ public abstract class AbstractSessionTest
 
         assertThat(session().lastSentMsgSeqNum(), lessThanOrEqualTo(1));
 
-        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
+        session().trySendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
         final int nextSequenceIndex = SEQUENCE_INDEX + 1;
         verify(sessionProxy).sendSequenceReset(anyInt(), eq(newSentSeqNo), eq(nextSequenceIndex), anyInt());
@@ -257,7 +261,7 @@ public abstract class AbstractSessionTest
 
         givenActive();
 
-        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
+        session().trySendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
         final String testReqId = "hello";
 
@@ -840,7 +844,7 @@ public abstract class AbstractSessionTest
     {
         sequenceNumbersAreThreeAndActive();
 
-        session().resetSequenceNumbers();
+        session().tryResetSequenceNumbers();
 
         verifySetsSentSequenceNumbersToTwo(SEQUENCE_INDEX + 1);
     }
@@ -1048,7 +1052,7 @@ public abstract class AbstractSessionTest
         testRequest.reset();
         testRequest.testReqID("testReqID");
         fakeClock.advanceMilliSeconds(nonSecondDurationInMs);
-        session().send(testRequest);
+        session().trySend(testRequest);
         return getSentMessage();
     }
 

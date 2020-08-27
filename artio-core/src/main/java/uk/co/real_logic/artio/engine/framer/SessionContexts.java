@@ -70,7 +70,7 @@ public class SessionContexts
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         null,
         Session.UNKNOWN,
-        (int)Session.UNKNOWN,
+        Session.UNKNOWN,
         Session.UNKNOWN_TIME,
         Session.UNKNOWN_TIME,
         null,
@@ -139,8 +139,6 @@ public class SessionContexts
         if (needsUpgrading || requiresCompaction)
         {
             resetBuffer();
-            filePosition = HEADER_SIZE;
-
             compositeToContext.values().forEach(this::allocateNewSlot);
         }
     }
@@ -199,7 +197,8 @@ public class SessionContexts
                 final FixDictionary thisDictionary = (dictionary == null) ?
                     FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
                 final SessionContext sessionContext = new SessionContext(compositeKey,
-                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
+                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
+                    sessionIdDecoder.initialOffset(),
                     initialSequenceIndex, thisDictionary);
                 compositeToContext.put(compositeKey, sessionContext);
 
@@ -343,7 +342,9 @@ public class SessionContexts
         {
             if (filePosition != OUT_OF_SPACE)
             {
-                filePosition = sectorFramer.claim(filePosition, BLOCK_LENGTH + compositeKeyLength);
+                final int length = (BLOCK_LENGTH + SessionIdEncoder.lastFixDictionaryHeaderLength() +
+                    fixDictionaryName.length() + compositeKeyLength);
+                filePosition = sectorFramer.claim(filePosition, length);
                 keyPosition = filePosition;
                 if (filePosition == OUT_OF_SPACE)
                 {
@@ -444,6 +445,7 @@ public class SessionContexts
     {
         buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
+        filePosition = HEADER_SIZE;
     }
 
     void updateSavedData(final SessionContext context, final int filePosition)

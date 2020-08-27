@@ -21,6 +21,7 @@ import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,11 +88,12 @@ public class FixArchiveScanner implements AutoCloseable
     public void scan(
         final String aeronChannel,
         final int queryStreamId,
-        final FixMessageConsumer handler,
+        final FixMessageConsumer fixHandler,
+        final ILinkMessageConsumer iLinkHandler,
         final boolean follow,
         final int archiveScannerStreamId)
     {
-        final LogEntryHandler logEntryHandler = new LogEntryHandler(handler);
+        final LogEntryHandler logEntryHandler = new LogEntryHandler(fixHandler, iLinkHandler);
         final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
 
         final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
@@ -142,6 +144,16 @@ public class FixArchiveScanner implements AutoCloseable
                 }
             });
         }
+    }
+
+    public void scan(
+        final String aeronChannel,
+        final int queryStreamId,
+        final FixMessageConsumer handler,
+        final boolean follow,
+        final int archiveScannerStreamId)
+    {
+        scan(aeronChannel, queryStreamId, handler, null, follow, archiveScannerStreamId);
     }
 
     private Image lookupImage(final Subscription replaySubscription, final int sessionId)

@@ -31,9 +31,8 @@ public interface LibraryEndPointHandler
 
     Action onRequestSessionReply(int toId, long replyToId, SessionReplyStatus status);
 
-    Action onNewSentPosition(int libraryId, long position);
-
-    Action onControlNotification(int libraryId, SessionsDecoder sessions);
+    Action onControlNotification(
+        int libraryId, InitialAcceptedSessionOwner initialAcceptedSessionOwner, SessionsDecoder sessions);
 
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
 
@@ -100,7 +99,15 @@ public interface LibraryEndPointHandler
         int libraryId,
         long correlationId,
         long connection,
-        long lastUuid,
-        int lastReceivedSequenceNumber,
-        int lastSentSequenceNumber);
+        long uuid,
+        long lastReceivedSequenceNumber,
+        long lastSentSequenceNumber,
+        boolean newlyAllocated,
+        long lastUuid);
+
+    Action onLibraryExtendPosition(
+        int libraryId, long correlationId, int newSessionId, long stopPosition, int initialTermId,
+        int termBufferLength, int mtuLength);
+
+    Action onReplayComplete(int libraryId, long connection);
 }

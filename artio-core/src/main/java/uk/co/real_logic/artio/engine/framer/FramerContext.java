@@ -40,7 +40,8 @@ import java.util.List;
  * Context that injects all the necessary information into different Framer classes.
  *
  * This enables many classes in the framer package to be package scoped as they don't
- * need the Fix Engine itself to touch them.
+ * need the Fix Engine itself to touch them. This isn't considered part of the public API
+ * and shouldn't be relied upon by Artio users.
  */
 public class FramerContext
 {
@@ -81,12 +82,15 @@ public class FramerContext
             configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
 
         this.inboundPublication = engineContext.inboundPublication();
-        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
+        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
+            outboundLibraryStreams.dataPublication("outboundPublication"));
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler, configuration.logFileDir());
+            configuration.sentSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerOutboundLookup(),
+            configuration.logFileDir());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler, null);
+            configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerInboundLookup(),
+            null);
 
         gatewaySessions = new GatewaySessions(
             epochClock,
@@ -100,7 +104,8 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            receivedSequenceNumberIndex,
+            configuration.sessionEpochFractionFormat());
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -109,7 +114,8 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers());
+            engineContext.senderSequenceNumbers(),
+            configuration.messageTimingHandler());
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
@@ -128,7 +134,7 @@ public class FramerContext
             engineContext.inboundReplayQuery(),
             outboundPublication,
             inboundPublication,
-            adminCommands,
+            this.adminCommands,
             sessionIdStrategy,
             sessionContexts,
             sentSequenceNumberIndex,
@@ -209,7 +215,7 @@ public class FramerContext
     public void startClose()
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        final StartCloseCommand command = new StartCloseCommand();
+        final DisconnectAllCommand command = new DisconnectAllCommand();
         while (!adminCommands.offer(command))
         {
             idleStrategy.idle();
@@ -252,11 +258,11 @@ public class FramerContext
         return null;
     }
 
-    public Reply<?> bind(final boolean bind)
+    public Reply<?> bind()
     {
-        final BindCommand command = new BindCommand(bind);
+        final BindCommand command = new BindCommand();
 
-        if (bind && !configuration.hasBindAddress())
+        if (!configuration.hasBindAddress())
         {
             command.onError(new IllegalStateException("Missing address: EngineConfiguration.bindTo()"));
             return command;
@@ -270,13 +276,26 @@ public class FramerContext
         return null;
     }
 
-    public boolean offer(final WriteMetaDataResponse response)
+    public Reply<?> unbind(final boolean disconnect)
     {
-        return adminCommands.offer(response);
+        final UnbindCommand command = new UnbindCommand(disconnect);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
+    }
+
+    public boolean offer(final AdminCommand command)
+    {
+        return adminCommands.offer(command);
     }
 
     public List<SessionInfo> allSessions()
     {
         return sessionContexts.allSessions();
     }
+
 }

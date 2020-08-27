@@ -72,7 +72,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         }
     }
 
-    void onMessage(
+    boolean onMessage(
         final int libraryId,
         final long connectionId,
         final DirectBuffer buffer,
@@ -85,7 +85,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         if (endPoint != null)
         {
             endPoint.onOutboundMessage(libraryId, buffer, offset, length, sequenceNumber, position, timeInMs);
+            return true;
         }
+
+        return false;
     }
 
     Action onReplayMessage(
@@ -164,9 +167,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
                 final int bodyLength = fixMessage.bodyLength();
                 final int libraryId = fixMessage.libraryId();
+                final int sequenceNumber = fixMessage.sequenceNumber();
                 return senderEndPoint.onSlowOutboundMessage(
                     buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs,
-                    metaDataLength);
+                    metaDataLength, sequenceNumber);
             }
         }
 

@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
@@ -96,16 +97,16 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesEncoder.BLOCK_LENGTH;
     private static final int REPLAY_MESSAGES_REPLY_LENGTH =
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
-
     public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength() +
-        InitiateILinkConnectionEncoder.accessKeyIdHeaderLength();
-
+        InitiateILinkConnectionEncoder.accessKeyIdHeaderLength() +
+        InitiateILinkConnectionEncoder.backupHostHeaderLength();
     private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
         HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
-
     private static final int VALID_RESEND_REQUEST_LENGTH =
         HEADER_LENGTH + ValidResendRequestEncoder.BLOCK_LENGTH + ValidResendRequestEncoder.bodyHeaderLength();
+    private static final int LIBRARY_EXTEND_POSITION_LENGTH =
+        HEADER_LENGTH + LibraryExtendPositionEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -121,7 +122,6 @@ public class GatewayPublication extends ClaimablePublication
     private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
-    private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
@@ -138,6 +138,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
+    private final LibraryExtendPositionEncoder libraryExtendPosition = new LibraryExtendPositionEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -917,26 +918,6 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveNewSentPosition(final int libraryId, final long sentPosition)
-    {
-        final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
-        if (position < 0)
-        {
-            return position;
-        }
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
-
-        newSentPosition.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId).position(sentPosition);
-
-        bufferClaim.commit();
-
-        logSbeMessage(GATEWAY_MESSAGE, newSentPosition);
-
-        return position;
-    }
-
     public long saveLibraryTimeout(final int libraryId, final long connectCorrelationId)
     {
         final long position = claim(LibraryTimeoutEncoder.BLOCK_LENGTH + HEADER_LENGTH);
@@ -960,7 +941,10 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveControlNotification(final int libraryId, final List<ConnectedSessionInfo> sessions)
+    public long saveControlNotification(
+        final int libraryId,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final List<ConnectedSessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(CONTROL_NOTIFICATION_LENGTH +
@@ -974,7 +958,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        controlNotification.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId);
+        controlNotification
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .initialAcceptedSessionOwner(initialAcceptedSessionOwner);
 
         final SessionsEncoder sessionsEncoder = controlNotification.sessionsCount(sessionsCount);
         for (int i = 0; i < sessionsCount; i++)
@@ -1300,8 +1287,8 @@ public class GatewayPublication extends ClaimablePublication
     public long saveValidResendRequest(
         final long sessionId,
         final long connectionId,
-        final int beginSequenceNumber,
-        final int endSequenceNumber,
+        final long beginSequenceNumber,
+        final long endSequenceNumber,
         final int sequenceIndex,
         final DirectBuffer bodyBuffer,
         final int bodyOffset,
@@ -1336,13 +1323,17 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final int port,
         final long correlationId,
-        final boolean reestablishConnection,
+        final boolean reEstablishLastConnection,
         final String host,
-        final String accessKeyId)
+        final String accessKeyId,
+        final boolean useBackupHost,
+        final String backupHost)
     {
         final byte[] hostBytes = bytes(host);
         final byte[] accessKeyIdBytes = bytes(accessKeyId);
-        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length + accessKeyIdBytes.length);
+        final byte[] backupHostBytes = bytes(backupHost);
+        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length + accessKeyIdBytes.length +
+            backupHostBytes.length);
         if (position < 0)
         {
             return position;
@@ -1356,9 +1347,11 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .port(port)
             .correlationId(correlationId)
-            .reestablishConnection(toBool(reestablishConnection))
+            .reestablishConnection(toBool(reEstablishLastConnection))
+            .useBackupHost(toBool(useBackupHost))
             .putHost(hostBytes, 0, hostBytes.length)
-            .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length);
+            .putAccessKeyId(accessKeyIdBytes, 0, accessKeyIdBytes.length)
+            .putBackupHost(backupHostBytes, 0, backupHostBytes.length);
 
         bufferClaim.commit();
 
@@ -1371,9 +1364,11 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final long correlationId,
         final long connectionId,
-        final long lastUuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long uuid,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated,
+        final long lastUuid)
     {
         final long position = claim(
             MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);
@@ -1390,13 +1385,44 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .correlationId(correlationId)
             .connection(connectionId)
-            .lastUuid(lastUuid)
+            .uuid(uuid)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .lastSentSequenceNumber(lastSentSequenceNumber);
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .newlyAllocated(toBool(newlyAllocated))
+            .lastUuid(lastUuid);
 
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, iLinkConnect);
+
+        return position;
+    }
+
+    public long saveLibraryExtendPosition(
+        final int libraryId, final long correlationId, final RecordingCoordinator.LibraryExtendPosition extend)
+    {
+        final long position = claim(LIBRARY_EXTEND_POSITION_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        libraryExtendPosition
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .sessionId(extend.newSessionId)
+            .stopPosition(extend.stopPosition)
+            .initialTermId(extend.initialTermId)
+            .termBufferLength(extend.termBufferLength)
+            .mtuLength(extend.mtuLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, libraryExtendPosition);
 
         return position;
     }
@@ -1420,11 +1446,4 @@ public class GatewayPublication extends ClaimablePublication
 
         return host.getBytes(UTF_8);
     }
-
-    public int maxPayloadLength()
-    {
-        return maxPayloadLength;
-    }
-
-
 }

@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 public class InitiatorSession extends InternalSession
@@ -49,7 +50,8 @@ public class InitiatorSession extends InternalSession
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final EpochFractionClock epochFractionClock)
     {
         super(
             heartbeatInterval,
@@ -71,7 +73,8 @@ public class InitiatorSession extends InternalSession
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
-            messageInfo);
+            messageInfo,
+            epochFractionClock);
         this.resetSeqNum = resetSeqNum;
     }
 

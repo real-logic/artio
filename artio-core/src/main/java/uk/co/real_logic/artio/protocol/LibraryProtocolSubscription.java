@@ -36,7 +36,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
     private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
     private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
-    private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
     private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
@@ -46,6 +45,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
     private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
+    private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -65,11 +66,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         switch (messageHeader.templateId())
         {
-            case NewSentPositionDecoder.TEMPLATE_ID:
-            {
-                return onNewSentPosition(buffer, offset, blockLength, version);
-            }
-
             case ManageSessionDecoder.TEMPLATE_ID:
             {
                 return onManageSession(buffer, offset, blockLength, version);
@@ -137,11 +133,37 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
             case ILinkConnectDecoder.TEMPLATE_ID:
             {
-                return onILinkConnectDecoder(buffer, offset, blockLength, version);
+                return onILinkConnect(buffer, offset, blockLength, version);
+            }
+
+            case LibraryExtendPositionDecoder.TEMPLATE_ID:
+            {
+                return onLibraryExtendPosition(buffer, offset, blockLength, version);
+            }
+
+            case ReplayCompleteDecoder.TEMPLATE_ID:
+            {
+                return onReplayComplete(buffer, offset, blockLength, version);
             }
         }
 
         return CONTINUE;
+    }
+
+    private Action onLibraryExtendPosition(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        libraryExtendPosition.wrap(buffer, offset, blockLength, version);
+
+        // Deliberately don't use as a heartbeat signal.
+        return handler.onLibraryExtendPosition(
+            libraryExtendPosition.libraryId(),
+            libraryExtendPosition.correlationId(),
+            libraryExtendPosition.sessionId(),
+            libraryExtendPosition.stopPosition(),
+            libraryExtendPosition.initialTermId(),
+            libraryExtendPosition.termBufferLength(),
+            libraryExtendPosition.mtuLength());
     }
 
     private Action onControlNotification(
@@ -160,6 +182,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         return handler.onControlNotification(
             libraryId,
+            controlNotification.initialAcceptedSessionOwner(),
             controlNotification.sessions());
     }
 
@@ -303,7 +326,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             readMetaDataReply.metaDataLength());
     }
 
-    private Action onILinkConnectDecoder(
+    private Action onILinkConnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         iLinkConnect.wrap(buffer, offset, blockLength, version);
@@ -318,9 +341,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             libraryId,
             iLinkConnect.correlationId(),
             iLinkConnect.connection(),
-            iLinkConnect.lastUuid(),
+            iLinkConnect.uuid(),
             iLinkConnect.lastReceivedSequenceNumber(),
-            iLinkConnect.lastSentSequenceNumber());
+            iLinkConnect.lastSentSequenceNumber(),
+            iLinkConnect.newlyAllocated() == Bool.TRUE,
+            iLinkConnect.lastUuid());
     }
 
     private Action onReplayMessagesReply(
@@ -355,17 +380,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             error.errorType(),
             error.replyToId(),
             error.message());
-    }
-
-    private Action onNewSentPosition(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        newSentPosition.wrap(buffer, offset, blockLength, version);
-        // Deliberately don't keepalive the heartbeat - may not be a cluster leader
-
-        return handler.onNewSentPosition(
-            newSentPosition.libraryId(),
-            newSentPosition.position());
     }
 
     private Action onManageSession(
@@ -442,5 +456,25 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         return handler.onEngineClose(libraryId);
     }
+
+    private Action onReplayComplete(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        replayComplete.wrap(buffer, offset, blockLength, version);
+        final long connection = replayComplete.connection();
+        final int libraryId = replayComplete.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+
+        if (ABORT == action)
+        {
+            return action;
+        }
+
+        return handler.onReplayComplete(libraryId, connection);
+    }
+
 
 }

@@ -27,8 +27,8 @@ import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.NANOS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.NANOSECONDS;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.MICROSECONDS;
+import static uk.co.real_logic.artio.fields.EpochFractionFormat.NANOSECONDS;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderUpdateValidCasesTest

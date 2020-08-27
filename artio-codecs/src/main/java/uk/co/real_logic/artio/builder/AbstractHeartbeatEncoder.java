@@ -15,9 +15,39 @@
  */
 package uk.co.real_logic.artio.builder;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+
 public interface AbstractHeartbeatEncoder extends Encoder
 {
-    AbstractHeartbeatEncoder testReqID(char[] testReqId, int testReqIdLength);
+    AbstractHeartbeatEncoder testReqID(DirectBuffer value, int offset, int length);
+
+    AbstractHeartbeatEncoder testReqID(DirectBuffer value, int length);
+
+    AbstractHeartbeatEncoder testReqID(DirectBuffer value);
+
+    AbstractHeartbeatEncoder testReqID(byte[] value, int offset, int length);
+
+    AbstractHeartbeatEncoder testReqID(byte[] value, int length);
+
+    AbstractHeartbeatEncoder testReqID(byte[] value);
+
+    boolean hasTestReqID();
+
+    String testReqIDAsString();
+
+    AbstractHeartbeatEncoder testReqID(CharSequence value);
+
+    AbstractHeartbeatEncoder testReqID(AsciiSequenceView value);
+
+    AbstractHeartbeatEncoder testReqID(char[] value, int offset, int length);
+
+    AbstractHeartbeatEncoder testReqID(char[] value, int length);
+
+    AbstractHeartbeatEncoder testReqID(char[] value);
+
+    MutableDirectBuffer testReqID();
 
     void resetTestReqID();
 }

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -27,19 +28,15 @@ import uk.co.real_logic.artio.storage.messages.ILink3ContextEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static uk.co.real_logic.artio.library.ILink3Session.MICROS_IN_MILLIS;
-import static uk.co.real_logic.artio.library.ILink3Session.NANOS_IN_MICROS;
 
-public class ILink3Contexts
+class ILink3Contexts
 {
     private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
-    private final Function<ILink3Key, ILink3Context> newUuid = this::newUuid;
     private final MappedFile mappedFile;
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
+    private final EpochNanoClock epochNanoClock;
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final ILink3ContextEncoder contextEncoder = new ILink3ContextEncoder();
@@ -47,13 +44,14 @@ public class ILink3Contexts
     private final int actingBlockLength = contextEncoder.sbeBlockLength();
     private final int actingVersion = contextEncoder.sbeSchemaVersion();
 
-    int offset;
+    private int offset;
 
-    public ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler)
+    ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
         this.errorHandler = errorHandler;
+        this.epochNanoClock = epochNanoClock;
         loadBuffer();
     }
 
@@ -88,28 +86,42 @@ public class ILink3Contexts
             final String host = contextDecoder.host();
             final String accessKeyId = contextDecoder.accessKeyId();
 
-            keyToContext.put(new ILink3Key(port, host, accessKeyId), new ILink3Context(uuid, offset));
+            keyToContext.put(
+                new ILink3Key(port, host, accessKeyId),
+                new ILink3Context(uuid, 0, false));
 
             offset = contextDecoder.limit();
         }
     }
 
-    public long calculateUuid(
+    ILink3Context calculateUuid(
         final int port, final String host, final String accessKeyId, final boolean reestablishConnection)
     {
         final ILink3Key key = new ILink3Key(port, host, accessKeyId);
 
-        if (reestablishConnection)
+        final ILink3Context context = keyToContext.get(key);
+        if (context != null)
         {
-            return lookupUuid(key);
+            context.lastUuid(context.uuid());
+            context.newlyAllocated(!reestablishConnection);
+
+            if (!reestablishConnection)
+            {
+                final long newUuid = microSecondTimestamp();
+                context.uuid(newUuid);
+            }
+
+            return context;
         }
 
         return allocateUuid(key);
     }
 
-    private long allocateUuid(final ILink3Key key)
+    private ILink3Context allocateUuid(final ILink3Key key)
     {
-        return newUuid(key).uuid;
+        final ILink3Context context = newUuid(key);
+        keyToContext.put(key, context);
+        return context;
     }
 
     private ILink3Context newUuid(final ILink3Key key)
@@ -122,21 +134,19 @@ public class ILink3Contexts
             .host(key.host)
             .accessKeyId(key.accessKeyId);
 
-        final ILink3Context context = new ILink3Context(newUuid, offset);
+        final ILink3Context context = new ILink3Context(newUuid, 0, true);
         offset = contextEncoder.limit();
-        keyToContext.put(key, context);
         return context;
-    }
-
-    private long lookupUuid(final ILink3Key key)
-    {
-        return keyToContext.computeIfAbsent(key, newUuid).uuid;
     }
 
     private long microSecondTimestamp()
     {
-        final long microseconds = (System.nanoTime() / NANOS_IN_MICROS) % MICROS_IN_MILLIS;
-        return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
+        return epochNanoClock.nanoTime();
+    }
+
+    int offset()
+    {
+        return offset;
     }
 
     public void close()
@@ -190,15 +200,4 @@ public class ILink3Contexts
         }
     }
 
-    private static final class ILink3Context
-    {
-        private final long uuid;
-        private final int position;
-
-        private ILink3Context(final long uuid, final int position)
-        {
-            this.uuid = uuid;
-            this.position = position;
-        }
-    }
 }

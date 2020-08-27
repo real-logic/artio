@@ -20,6 +20,7 @@ import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -28,6 +29,7 @@ import uk.co.real_logic.artio.util.AsciiFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
@@ -78,7 +80,7 @@ public class DirectSessionProxy implements SessionProxy
         }
     }
 
-    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder timestampEncoder;
 
     private FixDictionary dictionary;
     private AbstractLogonEncoder logon;
@@ -111,7 +113,8 @@ public class DirectSessionProxy implements SessionProxy
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final EpochFractionFormat epochFractionPrecision)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -122,7 +125,8 @@ public class DirectSessionProxy implements SessionProxy
         this.buffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
         this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
-        timestampEncoder.initialise(clock.time());
+        timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
+        timestampEncoder.initialise(clock.time(), TimeUnit.MILLISECONDS);
     }
 
     public void fixDictionary(final FixDictionary dictionary)
@@ -417,7 +421,7 @@ public class DirectSessionProxy implements SessionProxy
     private void setupHeader(final SessionHeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)
     {
         final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
-        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.update(clock.time()));
+        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.updateFrom(clock.time(), TimeUnit.MILLISECONDS));
         header.msgSeqNum(msgSeqNo);
 
         if (lastMsgSeqNumProcessed != NO_LAST_MSG_SEQ_NUM_PROCESSED)

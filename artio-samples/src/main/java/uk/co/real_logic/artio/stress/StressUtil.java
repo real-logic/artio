@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
 import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
@@ -37,10 +38,7 @@ final class StressUtil
         final String[] pool = new String[StressConfiguration.MESSAGE_POOL];
 
         final byte[] messageContent = new byte[MAX_LENGTH + 1];
-        for (int i = 0; i < messageContent.length; i++)
-        {
-            messageContent[i] = 'X';
-        }
+        Arrays.fill(messageContent, (byte)'X');
 
         for (int i = 0; i < pool.length; i++)
         {
@@ -74,7 +72,7 @@ final class StressUtil
             final String msg = messagePool[random.nextInt(messagePool.length)];
             testRequest.testReqID(msg);
 
-            while (session.send(testRequest) < 0)
+            while (session.trySend(testRequest) < 0)
             {
                 idleStrategy.idle(library.poll(1));
             }

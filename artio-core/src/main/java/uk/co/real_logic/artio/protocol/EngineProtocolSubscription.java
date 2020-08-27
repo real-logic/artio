@@ -309,7 +309,8 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             followerSessionRequest.correlationId(),
             buffer,
             offset + FOLLOWER_SESSION_REQUEST_LENGTH,
-            messageLength);
+            messageLength,
+            header);
     }
 
     private Action onWriteMetaData(
@@ -401,8 +402,10 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             initiateILinkConnection.port(),
             initiateILinkConnection.correlationId(),
             initiateILinkConnection.reestablishConnection() == Bool.TRUE,
+            initiateILinkConnection.useBackupHost() == Bool.TRUE,
             initiateILinkConnection.host(),
-            initiateILinkConnection.accessKeyId());
+            initiateILinkConnection.accessKeyId(),
+            initiateILinkConnection.backupHost());
     }
 
 }

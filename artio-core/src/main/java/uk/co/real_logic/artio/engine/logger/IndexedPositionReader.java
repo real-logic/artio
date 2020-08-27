@@ -47,7 +47,7 @@ class IndexedPositionReader
         sectorFramer = new SectorFramer(buffer.capacity());
     }
 
-    long indexedPosition(final int aeronSessionId)
+    long indexedPosition(final long recordingId)
     {
         final IndexedPositionDecoder decoder = this.decoder;
         final int actingBlockLength = this.actingBlockLength;
@@ -69,8 +69,7 @@ class IndexedPositionReader
             {
                 return UNKNOWN_POSITION;
             }
-            final int aeronSessionIdOfRecord = decoder.sessionId();
-            if (aeronSessionIdOfRecord == aeronSessionId)
+            if (decoder.recordingId() == recordingId)
             {
                 return position;
             }

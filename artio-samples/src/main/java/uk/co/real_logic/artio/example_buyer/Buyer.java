@@ -133,7 +133,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
         newOrderSingle.instrument().symbol("MSFT");
         newOrderSingle.orderQtyData().orderQty(orderQty);
 
-        final long position = session.send(newOrderSingle);
+        final long position = session.trySend(newOrderSingle);
         if (!Pressure.isBackPressured(position))
         {
             state = State.AWAITING_FILL;

@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 public class TimestampEncoderBenchmark
 {
-    private UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
     @Setup
     public void initialiseTimestamp()

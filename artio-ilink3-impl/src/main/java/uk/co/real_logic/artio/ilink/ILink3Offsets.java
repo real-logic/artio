@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.Negotiate500Encoder;
+import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.sbe.ir.Ir;
@@ -26,6 +27,8 @@ import uk.co.real_logic.sbe.ir.Token;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public class ILink3Offsets extends AbstractILink3Offsets
 {
@@ -41,6 +44,19 @@ public class ILink3Offsets extends AbstractILink3Offsets
 
     public ILink3Offsets()
     {
+        final Ir ir = loadSbeIr();
+        ir.messages().forEach(messageTokens ->
+        {
+            final Token beginMessage = messageTokens.get(0);
+            final int templateId = beginMessage.id();
+            findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
+            findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
+            findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
+        });
+    }
+
+    public static Ir loadSbeIr()
+    {
         try
         {
             final InputStream stream = Negotiate500Encoder.class.getResourceAsStream(SBE_IR_FILE);
@@ -53,20 +69,13 @@ public class ILink3Offsets extends AbstractILink3Offsets
             }
             try (IrDecoder irDecoder = new IrDecoder(ByteBuffer.wrap(bytes)))
             {
-                final Ir ir = irDecoder.decode();
-                ir.messages().forEach(messageTokens ->
-                {
-                    final Token beginMessage = messageTokens.get(0);
-                    final int templateId = beginMessage.id();
-                    findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
-                    findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
-                    findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
-                });
+                return irDecoder.decode();
             }
         }
         catch (final Exception e)
         {
             LangUtil.rethrowUnchecked(e);
+            return null;
         }
     }
 
@@ -97,5 +106,28 @@ public class ILink3Offsets extends AbstractILink3Offsets
     public int sendingTimeEpochOffset(final int templateId)
     {
         return templateIdToSendingTimeEpochOffset.get(templateId);
+    }
+
+    public int seqNum(final int templateId, final DirectBuffer buffer, final int messageOffset)
+    {
+        final int seqNumOffset = seqNumOffset(templateId);
+        if (seqNumOffset == MISSING_OFFSET)
+        {
+            return MISSING_OFFSET;
+        }
+
+        return buffer.getInt(messageOffset + seqNumOffset, LITTLE_ENDIAN);
+    }
+
+
+    public int possRetrans(final int templateId, final DirectBuffer buffer, final int messageOffset)
+    {
+        final int possRetransOffset = possRetransOffset(templateId);
+        if (possRetransOffset == MISSING_OFFSET)
+        {
+            return MISSING_OFFSET;
+        }
+
+        return (short)buffer.getByte(messageOffset + possRetransOffset) & 0xFF;
     }
 }

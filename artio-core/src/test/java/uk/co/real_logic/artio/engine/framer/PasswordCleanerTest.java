@@ -46,9 +46,33 @@ public class PasswordCleanerTest
         "8=FIX.4.4\0019=78\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\00198=0\001108=10\001141=N\00110=062\001";
 
+    private static final String EXAMPLE_LOGON_SHORT_PASSWORD =
+        "8=FIX.4.4\0019=98\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bobdobsdobs\001554=x\00110=062\001";
+
+    private static final String EXAMPLE_LOGON_EMPTY_PASSWORD =
+        "8=FIX.4.4\0019=97\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bobdobsdobs\001554=\00110=062\001";
+
+    private static final String EXPECTED_CLEANED_LOGON_SHORT_OR_EMPTY_PASSWORD =
+        "8=FIX.4.4\0019=101\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bobdobsdobs\001554=***\00110=062\001";
+
+    private static final String EXAMPLE_LOGON_SHORT_NAME_PASSWORD =
+        "8=FIX.4.4\0019=94\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bobdobs\001554=x\00110=062\001";
+
+    private static final String EXPECTED_CLEANED_LOGON_SHORT_NAME_PASSWORD =
+        "8=FIX.4.4\0019=097\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bobdobs\001554=***\00110=062\001";
+
     private static final String EXAMPLE_USER_REQUEST =
         "8=FIX.4.4\0019=116\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\001923=A\001924=3\001553=initiator\001554=Uv1aegoh\001925=newPassword\00110=062\001";
+
+    private static final String EXAMPLE_USER_REQUEST_SHORT_PASSWORD =
+        "8=FIX.4.4\0019=98\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001554=O\001925=N\00110=062\001";
 
     private static final String CLEAN_USER_REQUEST =
         "8=FIX.4.4\0019=103\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
@@ -57,6 +81,10 @@ public class PasswordCleanerTest
     private static final String EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER =
         "8=FIX.4.4\0019=116\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\001923=A\001924=3\001553=initiator\001925=newPassword\001554=Uv1aegoh\00110=062\001";
+
+    private static final String EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER_SHORT =
+        "8=FIX.4.4\0019=98\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001925=N\001554=O\00110=062\001";
 
     private static final String CLEAN_USER_REQUEST_FLIPPED_FIELD_ORDER =
         "8=FIX.4.4\0019=103\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
@@ -89,6 +117,23 @@ public class PasswordCleanerTest
         shouldCleanMessage(NO_PASSWORD_LOGON, NO_PASSWORD_LOGON);
     }
 
+    @Test
+    public void shouldCleanPasswordFromLogonWithShortPassword()
+    {
+        shouldCleanMessage(EXAMPLE_LOGON_SHORT_PASSWORD, EXPECTED_CLEANED_LOGON_SHORT_OR_EMPTY_PASSWORD);
+    }
+
+    @Test
+    public void shouldCleanPasswordFromLogonWithShortNamePassword()
+    {
+        shouldCleanMessage(EXAMPLE_LOGON_SHORT_NAME_PASSWORD, EXPECTED_CLEANED_LOGON_SHORT_NAME_PASSWORD);
+    }
+
+    @Test
+    public void shouldCleanPasswordFromLogonWithEmptyPassword()
+    {
+        shouldCleanMessage(EXAMPLE_LOGON_EMPTY_PASSWORD, EXPECTED_CLEANED_LOGON_SHORT_OR_EMPTY_PASSWORD);
+    }
 
     @Test
     public void shouldCleanPasswordsFromUserRequest()
@@ -97,9 +142,21 @@ public class PasswordCleanerTest
     }
 
     @Test
+    public void shouldCleanPasswordsFromUserRequestShort()
+    {
+        shouldCleanMessage(EXAMPLE_USER_REQUEST_SHORT_PASSWORD, CLEAN_USER_REQUEST);
+    }
+
+    @Test
     public void shouldCleanPasswordsFromUserRequestWithFieldsFlipped()
     {
         shouldCleanMessage(EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER, CLEAN_USER_REQUEST_FLIPPED_FIELD_ORDER);
+    }
+
+    @Test
+    public void shouldCleanPasswordsFromUserRequestWithFieldsFlippedShort()
+    {
+        shouldCleanMessage(EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER_SHORT, CLEAN_USER_REQUEST_FLIPPED_FIELD_ORDER);
     }
 
     private void shouldCleanMessage(final String inputMessage, final String expectedCleanedMessage)

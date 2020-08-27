@@ -49,7 +49,9 @@ public class ExchangeApplication
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
-            .libraryAeronChannel(IPC_CHANNEL);
+            .libraryAeronChannel(IPC_CHANNEL)
+            .logFileDir("exchange-application");
+
         configuration.authenticationStrategy(authenticationStrategy);
 
         cleanupOldLogFileDir(configuration);

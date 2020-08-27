@@ -28,11 +28,18 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.io.IOException;
+import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
 import java.util.Objects;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.agrona.BitUtil.SIZE_OF_CHAR;
+import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
@@ -50,6 +57,67 @@ import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
  */
 class FixReceiverEndPoint extends ReceiverEndPoint
 {
+    // See http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt for proxy protocol.
+
+    private static final byte[] PROXY_V1_SIG = "PROXY ".getBytes(US_ASCII);
+    private static final int PROXY_V1_SIG_LEN = PROXY_V1_SIG.length;
+
+    private static final byte[] PROXY_V2_SIG =
+        { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+    private static final int PROXY_V2_SIG_LEN = PROXY_V2_SIG.length;
+
+    private static final int PROXY_V2_VER_CMD_OFFSET = PROXY_V2_SIG_LEN;
+    private static final int PROXY_V2_VER_CMD_SIZE = 1;
+
+    private static final byte PROXY_V2_VER = 0x20;
+    private static final byte PROXY_V2_CMD_LOCAL = 0x00;
+    private static final byte PROXY_V2_CMD_PROXY = 0x01;
+
+    private static final int PROXY_V2_FAMILY_OFFSET = PROXY_V2_VER_CMD_OFFSET + PROXY_V2_VER_CMD_SIZE;
+    private static final int PROXY_V2_FAMILY_SIZE = 1;
+
+    private static final byte PROXY_V2_FAMILY_UNSPEC = 0x00;
+    private static final byte PROXY_V2_FAMILY_TCP_4 = 0x11;
+    private static final byte PROXY_V2_FAMILY_TCP_6 = 0x21;
+
+    private static final int PROXY_V2_BODY_LENGTH_OFFSET = PROXY_V2_FAMILY_OFFSET + PROXY_V2_FAMILY_SIZE;
+    private static final int PROXY_V2_BODY_LENGTH_SIZE = 2;
+
+    private static final int PROXY_V2_ADDRESS_OFFSET = PROXY_V2_BODY_LENGTH_OFFSET + PROXY_V2_BODY_LENGTH_SIZE;
+
+    /*struct { for TCP/UDP over IPv4, len = 12
+        uint32_t src_addr;
+        uint32_t dst_addr;
+        uint16_t src_port;
+        uint16_t dst_port;
+    } ipv4_addr; */
+    private static final int PROXY_V2_TCP4_ADDR_SIZE = 4;
+    private static final int PROXY_V2_TCP4_PORT_SIZE = 2;
+
+    private static final int PROXY_V2_TCP4_SRC_ADDR_OFFSET = PROXY_V2_ADDRESS_OFFSET;
+    private static final int PROXY_V2_TCP4_DST_ADDR_OFFSET = PROXY_V2_TCP4_SRC_ADDR_OFFSET + PROXY_V2_TCP4_ADDR_SIZE;
+    private static final int PROXY_V2_TCP4_SRC_PORT_OFFSET = PROXY_V2_TCP4_DST_ADDR_OFFSET + PROXY_V2_TCP4_ADDR_SIZE;
+    private static final int PROXY_V2_TCP4_DST_PORT_OFFSET = PROXY_V2_TCP4_SRC_PORT_OFFSET + PROXY_V2_TCP4_PORT_SIZE;
+
+    /*struct { for TCP/UDP over IPv6, len = 36
+            uint8_t  src_addr[16];
+            uint8_t  dst_addr[16];
+            uint16_t src_port;
+            uint16_t dst_port;
+        } ipv6_addr; */
+    private static final int PROXY_V2_TCP6_ADDR_SIZE = 16;
+    private static final int PROXY_V2_TCP6_PORT_SIZE = 2;
+    private static final int IPV6_DIGITS = 8;
+    private static final int[] IPV6_LOCALHOST_DIGITS = {0, 0, 0, 0, 0, 0, 0, 1};
+    private static final String IPV6_LOCALHOST = "::1:";
+
+    private static final int PROXY_V2_TCP6_SRC_ADDR_OFFSET = PROXY_V2_ADDRESS_OFFSET;
+    private static final int PROXY_V2_TCP6_DST_ADDR_OFFSET = PROXY_V2_TCP6_SRC_ADDR_OFFSET + PROXY_V2_TCP6_ADDR_SIZE;
+    private static final int PROXY_V2_TCP6_SRC_PORT_OFFSET = PROXY_V2_TCP6_DST_ADDR_OFFSET + PROXY_V2_TCP6_ADDR_SIZE;
+    private static final int PROXY_V2_TCP6_DST_PORT_OFFSET = PROXY_V2_TCP6_SRC_PORT_OFFSET + PROXY_V2_TCP6_PORT_SIZE;
+
+    private static final int PROXY_V2_MIN_LENGTH = PROXY_V2_TCP6_SRC_ADDR_OFFSET;
+
     private static final char INVALID_MESSAGE_TYPE = '-';
 
     private static final byte BODY_LENGTH_FIELD = 9;
@@ -67,15 +135,23 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private static final int UNKNOWN_INDEX_BACKPRESSURED = -2;
 
-    private final GatewayPublication publication;
+    static class FixReceiverEndPointFormatters
+    {
+        private final CharFormatter noProxyProtocol = new CharFormatter("No proxy protocol usage for connId=%s%n");
+        private final CharFormatter proxyV1Protocol = new CharFormatter(
+            "Proxy v1 detected for connId=%s,addr=%s,line=%s%n");
+        private final CharFormatter proxyV2Protocol = new CharFormatter(
+            "Proxy v2 detected for connId=%s,addr=%s,line=%s%n");
+    }
+
     private final SessionContexts sessionContexts;
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
     private final GatewaySessions gatewaySessions;
     private final Clock clock;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
+    private final FixReceiverEndPointFormatters formatters;
 
-    private int libraryId;
     private GatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
@@ -85,6 +161,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
     private long lastReadTimestamp;
+    private String address;
+    private boolean requiresProxyCheck = true;
 
     FixReceiverEndPoint(
         final TcpChannel channel,
@@ -100,23 +178,43 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final int libraryId,
         final GatewaySessions gatewaySessions,
         final Clock clock,
-        final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup)
+        final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
+        final FixReceiverEndPointFormatters formatters)
     {
-        super(channel, connectionId, bufferSize, errorHandler, framer);
-        Objects.requireNonNull(publication, "publication");
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
 
-        this.publication = publication;
+        this.formatters = formatters;
         this.sessionId = sessionId;
-        this.sequenceIndex = sequenceIndex;
+        this.sequenceIndex = sequenceIndex - 1; // Incremented on first logon
         this.sessionContexts = sessionContexts;
         this.messagesRead = messagesRead;
-        this.libraryId = libraryId;
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
+
+        address = channel.remoteAddress();
+    }
+
+    private int readData() throws IOException
+    {
+        final int dataRead = channel.read(byteBuffer);
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
+                DebugLogger.log(FIX_MESSAGE_TCP, "Read     ", buffer, usedBufferData, dataRead);
+            }
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnectDetected();
+        }
+
+        return dataRead;
     }
 
     int poll()
@@ -228,7 +326,9 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     // false - needs to be retried, aka back-pressured
     private boolean frameMessages(final long readTimestamp)
     {
-        int offset = 0;
+        final MutableAsciiBuffer buffer = this.buffer;
+        int offset = checkProxyLine(buffer);
+
         while (true)
         {
             if (usedBufferData < offset + SessionConstants.MIN_MESSAGE_SIZE) // Need more data
@@ -236,6 +336,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 // Need more data
                 break;
             }
+
             try
             {
                 final int startOfBodyLength = scanForBodyLength(offset, readTimestamp);
@@ -292,12 +393,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     if (requiresAuthentication())
                     {
                         startAuthenticationFlow(offset, length, messageType);
-
                         // Actually has a logon message in it's buffer, but we return true because it's not
                         // a back-pressure scenario.
                         return true;
                     }
-
+                    else if (messageType == LOGON_MESSAGE_TYPE)
+                    {
+                        sequenceIndex++;
+                    }
                     messagesRead.incrementOrdered();
                     if (!saveMessage(offset, messageType, length, readTimestamp))
                     {
@@ -322,6 +425,176 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return true;
     }
 
+    private int checkProxyLine(final MutableAsciiBuffer buffer)
+    {
+        if (requiresProxyCheck)
+        {
+            final int usedBufferData = this.usedBufferData;
+
+            if (usedBufferData > PROXY_V2_MIN_LENGTH && checkSignature(buffer, PROXY_V2_SIG))
+            {
+                return parseProxyV2(buffer);
+            }
+            else if (usedBufferData > 8 && checkSignature(buffer, PROXY_V1_SIG))
+            {
+                return parseProxyV1(buffer, usedBufferData);
+            }
+            else if (usedBufferData > PROXY_V2_MIN_LENGTH)
+            {
+                requiresProxyCheck = false;
+                DebugLogger.log(PROXY, formatters.noProxyProtocol, connectionId);
+            }
+        }
+
+        return 0;
+    }
+
+    private int parseProxyV2(final MutableAsciiBuffer buffer)
+    {
+        final byte verCmd = buffer.getByte(PROXY_V2_VER_CMD_OFFSET);
+
+        if ((verCmd & 0xF0) != PROXY_V2_VER)
+        {
+            // Bad protocol version
+            requiresProxyCheck = false;
+            return 0;
+        }
+
+        switch (verCmd & 0xF)
+        {
+            case PROXY_V2_CMD_PROXY:
+            {
+                final byte family = buffer.getByte(PROXY_V2_FAMILY_OFFSET);
+
+                switch (family)
+                {
+                    case PROXY_V2_FAMILY_TCP_4:
+                    {
+                        final int srcAddr = buffer.getInt(PROXY_V2_TCP4_SRC_ADDR_OFFSET, ByteOrder.BIG_ENDIAN);
+                        final int srcPort = buffer.getChar(PROXY_V2_TCP4_SRC_PORT_OFFSET, ByteOrder.BIG_ENDIAN);
+
+                        address = String.valueOf(0xFF & (srcAddr >> 24)) +
+                            '.' +
+                            (0xFF & (srcAddr >> 16)) +
+                            '.' +
+                            (0xFF & (srcAddr >> 8)) +
+                            '.' +
+                            (0xFF & srcAddr) +
+                            ':' +
+                            srcPort;
+                        break;
+                    }
+
+                    case PROXY_V2_FAMILY_TCP_6:
+                    {
+                        final int[] digits = new int[IPV6_DIGITS];
+                        for (int i = 0; i < IPV6_DIGITS; i++)
+                        {
+                            final int index = PROXY_V2_TCP6_SRC_ADDR_OFFSET + i * SIZE_OF_CHAR;
+                            digits[i] = buffer.getChar(index, ByteOrder.BIG_ENDIAN);
+                        }
+
+                        final StringBuilder addressBuilder = new StringBuilder();
+                        if (Arrays.equals(digits, IPV6_LOCALHOST_DIGITS))
+                        {
+                            addressBuilder.append(IPV6_LOCALHOST);
+                        }
+                        else
+                        {
+                            for (int i = 0; i < IPV6_DIGITS; i++)
+                            {
+                                addressBuilder.append(Integer.toHexString(digits[i]));
+                                addressBuilder.append(':');
+                            }
+                        }
+
+                        final int srcPort = buffer.getChar(PROXY_V2_TCP6_SRC_PORT_OFFSET, ByteOrder.BIG_ENDIAN);
+                        addressBuilder.append(srcPort);
+
+                        address = addressBuilder.toString();
+                        break;
+                    }
+
+                    case PROXY_V2_FAMILY_UNSPEC:
+                    // This default should never happen, but we'll skip things in case a malformed line is sent
+                    default:
+                    {
+                        break;
+                    }
+                }
+                break;
+            }
+
+            case PROXY_V2_CMD_LOCAL:
+            default: // Unknown command
+            {
+                // Deliberately blank.
+                break;
+            }
+        }
+
+        final int endIndex = PROXY_V2_ADDRESS_OFFSET + proxyV2BodyLength(buffer);
+        logProxyV2(buffer, endIndex);
+        requiresProxyCheck = false;
+        return endIndex;
+    }
+
+    private int parseProxyV1(final MutableAsciiBuffer buffer, final int usedBufferData)
+    {
+        int index = PROXY_V1_SIG_LEN;
+
+        // skip protocol version: TCP4 or TCP6
+        index = buffer.scan(index, usedBufferData, ' ') + 1;
+
+        int end = buffer.scan(index, usedBufferData, ' ');
+        final String sourceAddress = buffer.getAscii(index, end - index);
+
+        // skip destination address
+        index = buffer.scan(end + 1, usedBufferData, ' ') + 1;
+
+        end = buffer.scan(index, usedBufferData, ' ');
+        final String sourcePort = buffer.getAscii(index, end - index);
+        address = sourceAddress + ":" + sourcePort;
+
+        index = buffer.scan(index, usedBufferData, '\r') + 2;
+
+        DebugLogger.log(PROXY, formatters.proxyV1Protocol, connectionId, address, buffer, 0, index);
+        requiresProxyCheck = false;
+
+        return index;
+    }
+
+    private void logProxyV2(final MutableAsciiBuffer buffer, final int endIndex)
+    {
+        if (DebugLogger.isEnabled(PROXY))
+        {
+            final byte[] bytes = new byte[endIndex];
+            buffer.getBytes(0, bytes);
+            DebugLogger.log(PROXY, formatters.proxyV2Protocol
+                .clear()
+                .with(connectionId)
+                .with(address)
+                .with(Arrays.toString(bytes)));
+        }
+    }
+
+    private short proxyV2BodyLength(final MutableAsciiBuffer buffer)
+    {
+        return buffer.getShort(PROXY_V2_BODY_LENGTH_OFFSET, ByteOrder.BIG_ENDIAN);
+    }
+
+    private boolean checkSignature(final MutableAsciiBuffer buffer, final byte[] proxyV1Sig)
+    {
+        for (int i = 0; i < proxyV1Sig.length; i++)
+        {
+            if (buffer.getByte(i) != proxyV1Sig[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private int onInvalidBodyLength(final int offset, final int startOfChecksumTag, final long readTimestamp)
     {
         int checksumTagScanPoint = startOfChecksumTag + 1;
@@ -343,7 +616,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             return BREAK;
         }
 
-        if (saveInvalidMessage(offset, endOfMessage, readTimestamp))
+        if (saveInvalidMessage(offset, endOfMessage - offset, readTimestamp))
         {
             DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, endOfMessage - offset);
             return offset;
@@ -553,12 +826,12 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return saveInvalidMessage(offset, readTimestamp);
     }
 
-    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag, final long readTimestamp)
+    private boolean saveInvalidMessage(final int offset, final int length, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
             offset,
-            startOfChecksumTag,
+            length,
             libraryId,
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
@@ -577,7 +850,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final long position = publication.saveMessage(
             buffer,
             offset,
-            usedBufferData,
+            usedBufferData - offset,
             libraryId,
             INVALID_MESSAGE_TYPE,
             sessionId,
@@ -657,32 +930,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         completeDisconnect(AUTHENTICATION_TIMEOUT);
     }
 
-    void disconnectEndpoint(final DisconnectReason reason)
+    void disconnectContext()
     {
-        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
-
         sessionContexts.onDisconnect(sessionId);
-        if (selectionKey != null)
-        {
-            selectionKey.cancel();
-        }
-
-        hasDisconnected = true;
     }
 
     boolean hasDisconnected()
     {
         return hasDisconnected;
-    }
-
-    public int libraryId()
-    {
-        return libraryId;
-    }
-
-    public void libraryId(final int libraryId)
-    {
-        this.libraryId = libraryId;
     }
 
     void gatewaySession(final GatewaySession gatewaySession)
@@ -698,6 +953,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     void play()
     {
         isPaused = false;
+    }
+
+    String address()
+    {
+        return address;
     }
 
     public String toString()

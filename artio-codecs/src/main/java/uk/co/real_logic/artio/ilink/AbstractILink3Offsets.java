@@ -15,13 +15,16 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+
 import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractILink3Offsets
 {
     public static final int MISSING_OFFSET = -1;
 
-    public static AbstractILink3Offsets make()
+    public static AbstractILink3Offsets make(final ErrorHandler errorHandler)
     {
         try
         {
@@ -31,14 +34,18 @@ public abstract class AbstractILink3Offsets
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
+            errorHandler.onError(e);
             return null;
         }
     }
 
     public abstract int seqNumOffset(int templateId);
 
+    public abstract int seqNum(int templateId, DirectBuffer buffer, int messageOffset);
+
     public abstract int possRetransOffset(int templateId);
+
+    public abstract int possRetrans(int templateId, DirectBuffer buffer, int messageOffset);
 
     public abstract int sendingTimeEpochOffset(int templateId);
 }
-

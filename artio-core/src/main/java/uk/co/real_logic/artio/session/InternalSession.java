@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 /**
@@ -58,7 +59,8 @@ public class InternalSession extends Session implements AutoCloseable
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final EpochFractionClock epochFractionClock)
     {
         super(
             heartbeatIntervalInS,
@@ -80,7 +82,8 @@ public class InternalSession extends Session implements AutoCloseable
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
-            messageInfo);
+            messageInfo,
+            epochFractionClock);
     }
 
     public int poll(final long time)
@@ -245,7 +248,6 @@ public class InternalSession extends Session implements AutoCloseable
         fixDictionary(fixDictionary);
         address(address);
         refreshSequenceNumberCounters(counters);
-
     }
 
     public void lastReceivedMsgSeqNumOnly(final int value)

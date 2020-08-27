@@ -30,11 +30,14 @@ import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
 {
+    private static final String OUTBOUND_PUBLICATION = "outboundPublication";
+
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
     private final Clock clock;
 
+    private Streams outboundLibraryStreams;
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
     private GatewayPublication inboundPublication;
@@ -59,7 +62,7 @@ class LibraryTransport
         final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
         final IdleStrategy idleStrategy = configuration.libraryIdleStrategy();
 
-        final Streams outboundLibraryStreams = new Streams(
+        outboundLibraryStreams = new Streams(
             aeron,
             aeronChannel,
             printAeronStreamIdentifiers,
@@ -76,13 +79,12 @@ class LibraryTransport
             inboundPublication.close();
         }
 
-
         inboundSubscription = aeron.addSubscription(aeronChannel, inboundLibraryStream);
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
 
         outboundPublication = outboundLibraryStreams.gatewayPublication(
-            idleStrategy, "outboundPublication");
+            idleStrategy, outboundDataPublication(aeronChannel));
 
         final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, inboundLibraryStream);
         StreamInformation.print("inboundPublication", publication, printAeronStreamIdentifiers);
@@ -92,6 +94,21 @@ class LibraryTransport
             idleStrategy,
             clock,
             configuration.inboundMaxClaimAttempts());
+    }
+
+    void newOutboundPublication(final String aeronChannel)
+    {
+        outboundPublication.dataPublication(outboundDataPublication(aeronChannel));
+    }
+
+    private ExclusivePublication outboundDataPublication(final String aeronChannel)
+    {
+        final int outboundLibraryStream = configuration.outboundLibraryStream();
+        final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
+
+        final ExclusivePublication outboundData = aeron.addExclusivePublication(aeronChannel, outboundLibraryStream);
+        StreamInformation.print(OUTBOUND_PUBLICATION, outboundData, printAeronStreamIdentifiers);
+        return outboundData;
     }
 
     Subscription inboundSubscription()

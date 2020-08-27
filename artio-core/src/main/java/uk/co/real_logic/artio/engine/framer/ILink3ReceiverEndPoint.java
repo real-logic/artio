@@ -18,22 +18,30 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
-import static uk.co.real_logic.artio.ilink.AbstractILink3Proxy.ARTIO_HEADER_LENGTH;
+
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofh;
 
 class ILink3ReceiverEndPoint extends ReceiverEndPoint
 {
+    public static final int ARTIO_HEADER_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
+
     private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
     private final ExclusivePublication inboundPublication;
+    private final boolean isBackup;
+    private final ILink3Context context;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -41,10 +49,15 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final int bufferSize,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final ExclusivePublication inboundPublication)
+        final GatewayPublication publication,
+        final int libraryId,
+        final boolean isBackup,
+        final ILink3Context context)
     {
-        super(channel, connectionId, bufferSize, errorHandler, framer);
-        this.inboundPublication = inboundPublication;
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
+        inboundPublication = publication.dataPublication();
+        this.isBackup = isBackup;
+        this.context = context;
 
         makeHeader();
     }
@@ -61,18 +74,49 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     void removeEndpointFromFramer()
     {
-        // TODO
+        trackDisconnect();
+        framer.onILink3Disconnect(connectionId, null);
     }
 
-    void disconnectEndpoint(final DisconnectReason reason)
+    private void trackDisconnect()
     {
-        // TODO
+        if (isBackup)
+        {
+            context.backupConnected(false);
+        }
+        else
+        {
+            context.primaryConnected(false);
+        }
+    }
+
+    void disconnectContext()
+    {
+        // Not needed in iLink implementation
     }
 
     boolean retryFrameMessages()
     {
-        // TODO
-        return false;
+        return frameMessages();
+    }
+
+    private int readData() throws IOException
+    {
+        final int dataRead = channel.read(byteBuffer);
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
+                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Read     ", byteBuffer, usedBufferData, dataRead);
+            }
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnectDetected();
+        }
+
+        return dataRead;
     }
 
     int poll()
@@ -112,7 +156,7 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         while (usedBufferData > SOFH_LENGTH)
         {
             final int messageSize = readSofh(buffer, offset);
-            if ((offset + messageSize) > usedBufferData)
+            if (messageSize > usedBufferData)
             {
                 moveRemainingDataToBufferStart(offset);
                 return true;
@@ -157,6 +201,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
     void closeResources()
     {
+        trackDisconnect();
+
         try
         {
             channel.close();

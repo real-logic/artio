@@ -125,7 +125,7 @@ public class FramerTest
         .onInitiateLogon("local", "", "", "remote", "", "");
     private final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
 
-    private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
+    private final FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
     @SuppressWarnings("unchecked")
     private final ArgumentCaptor<List<ConnectedSessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
@@ -164,8 +164,6 @@ public class FramerTest
         when(mockReceiverEndPoint.connectionId()).then((inv) -> connectionId.getValue());
 
         when(mockSenderEndPoint.connectionId()).then((inv) -> connectionId.getValue());
-
-        when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.fixDictionary()).thenReturn(fixDictionary);
@@ -682,7 +680,7 @@ public class FramerTest
 
     private void saveControlNotification(final VerificationMode times)
     {
-        verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
+        verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), any(), sessionCaptor.capture());
     }
 
     private void verifyClientDisconnected()

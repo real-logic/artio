@@ -23,6 +23,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.util.Arrays;
+import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 
 import static org.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
@@ -252,5 +254,52 @@ class ReceiverEndPoints extends TransportPoller
     private void closeAll(final ReceiverEndPoint[] endPoints)
     {
         Stream.of(endPoints).forEach(receiverEndPoint -> receiverEndPoint.close(ENGINE_SHUTDOWN));
+    }
+
+    public void disconnectILinkConnections(final int libraryId, final LongConsumer removeFunc)
+    {
+        endPoints = disconnectILinkConnections(libraryId, endPoints, removeFunc);
+        requiredPollingEndPoints = disconnectILinkConnections(libraryId, requiredPollingEndPoints, removeFunc);
+        selectNowToForceProcessing();
+    }
+
+    static ReceiverEndPoint[] disconnectILinkConnections(
+        final int libraryId, final ReceiverEndPoint[] endPoints, final LongConsumer removeFunc)
+    {
+        int out = 0;
+        final int length = endPoints.length;
+        for (int i = 0; i < length; i++)
+        {
+            final ReceiverEndPoint endPoint = endPoints[i];
+            if (endPoint.libraryId() == libraryId && endPoint instanceof ILink3ReceiverEndPoint)
+            {
+                removeFunc.accept(endPoint.connectionId());
+                endPoint.close(DisconnectReason.LIBRARY_DISCONNECT);
+            }
+            else
+            {
+                endPoints[out] = endPoint;
+                out++;
+            }
+        }
+
+        if (out < length)
+        {
+            return Arrays.copyOf(endPoints, out);
+        }
+        else
+        {
+            return endPoints;
+        }
+    }
+
+    public String toString()
+    {
+        return "ReceiverEndPoints{" +
+            "errorHandler=" + errorHandler +
+            ", requiredPollingEndPoints=" + Arrays.toString(requiredPollingEndPoints) +
+            ", endPoints=" + Arrays.toString(endPoints) +
+            ", backpressuredEndPoint=" + backpressuredEndPoint +
+            '}';
     }
 }

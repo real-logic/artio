@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.MutableDirectBuffer;
+import uk.co.real_logic.artio.fields.DecimalFloat;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -38,6 +39,9 @@ public final class CodecUtil
     public static final char ENUM_UNKNOWN_CHAR = '\002';
     public static final int ENUM_UNKNOWN_INT = Integer.MAX_VALUE;
     public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
+
+    private static final char ZERO = '0';
+    private static final char DOT = '.';
 
     // NB: only valid for ASCII bytes.
     @Deprecated // Will be removed in a future version
@@ -224,6 +228,63 @@ public final class CodecUtil
         for (int i = offset; i < end; i++)
         {
             builder.append((char)buffer.getByte(i));
+        }
+    }
+
+    public static void appendFloat(final StringBuilder builder, final DecimalFloat price)
+    {
+        final long value = price.value();
+        final int scale = price.scale();
+
+        final long remainder;
+        if (value < 0)
+        {
+            builder.append('-');
+            remainder = -value;
+        }
+        else
+        {
+            remainder = value;
+        }
+
+        if (scale > 0)
+        {
+            final int start = builder.length();
+            builder.append(remainder);
+            final int digitsBeforeDot = builder.length() - start - scale;
+            if (digitsBeforeDot <= 0)
+            {
+                int cursor = start;
+                builder.insert(cursor++, ZERO);
+                builder.insert(cursor++, DOT);
+                final int numberOfZeros = -digitsBeforeDot;
+                for (int i = 0; i < numberOfZeros; i++)
+                {
+                    builder.insert(cursor, ZERO);
+                }
+            }
+            else
+            {
+                builder.insert(start + digitsBeforeDot, DOT);
+            }
+        }
+        else
+        {
+            builder.append(remainder);
+            final int trailingZeros = -scale;
+            if (trailingZeros > 0)
+            {
+                putTrailingZero(builder, trailingZeros);
+            }
+        }
+
+    }
+
+    private static void putTrailingZero(final StringBuilder builder, final int zerosCount)
+    {
+        for (int ix = 0; ix < zerosCount; ix++)
+        {
+            builder.append('0');
         }
     }
 }

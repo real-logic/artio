@@ -49,10 +49,8 @@ public final class BenchmarkConfiguration
             case "yield":
                 return new YieldingIdleStrategy();
 
-            case "backoff":
-                return backoffIdleStrategy();
-
             default:
+            case "backoff":
                 return backoffIdleStrategy();
         }
     }

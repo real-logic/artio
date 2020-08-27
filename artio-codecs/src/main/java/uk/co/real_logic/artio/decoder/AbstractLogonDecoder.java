@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.decoder;
 
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractLogonDecoder extends Decoder
@@ -23,11 +24,27 @@ public interface AbstractLogonDecoder extends Decoder
 
     boolean supportsUsername();
 
+    char[] username();
+
+    boolean hasUsername();
+
+    int usernameLength();
+
     String usernameAsString();
+
+    void username(AsciiSequenceView view);
 
     boolean supportsPassword();
 
+    char[] password();
+
+    boolean hasPassword();
+
+    int passwordLength();
+
     String passwordAsString();
+
+    void password(AsciiSequenceView view);
 
     boolean hasResetSeqNumFlag();
 

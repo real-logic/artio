@@ -19,5 +19,9 @@ public interface AbstractSequenceResetEncoder extends Encoder
 {
     AbstractSequenceResetEncoder newSeqNo(int value);
 
+    void resetNewSeqNo();
+
     AbstractSequenceResetEncoder gapFillFlag(boolean value);
+
+    void resetGapFillFlag();
 }

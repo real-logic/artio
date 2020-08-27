@@ -19,6 +19,7 @@ import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
@@ -35,6 +36,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
+import static uk.co.real_logic.artio.dictionary.generation.EncoderGenerator.encoderClassName;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.DECODER_OPTIONAL_SESSION_FIELDS;
@@ -106,12 +108,14 @@ public class DecoderGenerator extends Generator
     private Aggregate currentAggregate = null;
 
     private final int initialBufferSize;
+    private final String encoderPackage;
 
     public DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
         final String thisPackage,
         final String commonPackage,
+        final String encoderPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
         final Class<?> rejectUnknownFieldClass,
@@ -122,6 +126,7 @@ public class DecoderGenerator extends Generator
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
             rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled);
         this.initialBufferSize = initialBufferSize;
+        this.encoderPackage = encoderPackage;
     }
 
     public void generate()
@@ -136,7 +141,7 @@ public class DecoderGenerator extends Generator
             "MessageDecoder",
             (out) ->
             {
-                out.append(fileHeader(builderPackage));
+                out.append(fileHeader(thisPackage));
 
                 out.append(MESSAGE_DECODER);
             });
@@ -156,7 +161,7 @@ public class DecoderGenerator extends Generator
             className,
             (out) ->
             {
-                out.append(fileHeader(builderPackage));
+                out.append(fileHeader(thisPackage));
 
                 if (REQUIRED_SESSION_CODECS.contains(className))
                 {
@@ -167,9 +172,42 @@ public class DecoderGenerator extends Generator
                     out.append(importFor(SessionHeaderDecoder.class));
                 }
 
-                generateImports("Decoder", type, out);
+                generateImports("Decoder", type, out, Encoder.class);
+
+                importEncoders(aggregate, out);
+
                 generateAggregateClass(aggregate, type, className, out);
             });
+    }
+
+    private void importEncoders(final Aggregate aggregate, final Writer out) throws IOException
+    {
+        final String encoderFullClassName = encoderPackage + "." + encoderClassName(aggregate.name());
+        out.write(importFor(encoderFullClassName));
+
+        importChildEncoderClasses(aggregate, out, encoderFullClassName);
+    }
+
+    private void importChildEncoderClasses(
+        final Aggregate aggregate, final Writer out, final String encoderFullClassName) throws IOException
+    {
+        for (final Entry entry : aggregate.entries())
+        {
+            if (entry.isComponent())
+            {
+                final String componentClassName = encoderPackage + "." + encoderClassName(entry.name());
+                out.write(importFor(componentClassName));
+                importChildEncoderClasses(
+                    (Aggregate)entry.element(), out, componentClassName);
+            }
+            else if (entry.isGroup())
+            {
+                final String entryClassName = encoderClassName(entry.name());
+                out.write(importStaticFor(encoderFullClassName, entryClassName));
+                importChildEncoderClasses(
+                    (Aggregate)entry.element(), out, encoderFullClassName + "." + entryClassName);
+            }
+        }
     }
 
     private void generateAggregateClass(
@@ -218,7 +256,8 @@ public class DecoderGenerator extends Generator
         generateGetters(out, className, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
-        out.append(appendTo(aggregate, isMessage));
+        out.append(generateAppendTo(aggregate, isMessage));
+        out.append(generateToEncoder(aggregate));
         out.append("}\n");
         currentAggregate = parentAggregate;
     }
@@ -559,7 +598,7 @@ public class DecoderGenerator extends Generator
         final String validationCode = String.format(
             "%3$s        {\n" +
             "%3$s            int count = 0;\n" +
-            "%3$s            final %4$s iterator = %2$s.iterator();" +
+            "%3$s            final %4$s iterator = %2$s.iterator();\n" +
             "%3$s            for (final %1$s group : iterator)\n" +
             "%3$s            {\n" +
             "%3$s                count++;" +
@@ -638,7 +677,7 @@ public class DecoderGenerator extends Generator
         outputManager.withOutput(className,
             (out) ->
             {
-                out.append(fileHeader(builderPackage));
+                out.append(fileHeader(thisPackage));
                 final List<String> interfaces = component.allComponents()
                     .map((comp) -> decoderClassName((Aggregate)comp.element()))
                     .collect(toList());
@@ -646,7 +685,9 @@ public class DecoderGenerator extends Generator
                 final String interfaceExtension = interfaces.isEmpty() ? "" : " extends " +
                     String.join(", ", interfaces);
 
-                generateImports("Decoder", AggregateType.COMPONENT, out);
+                generateImports("Decoder", AggregateType.COMPONENT, out, Encoder.class);
+                importEncoders(component, out);
+
                 out.append(String.format(
                     "\npublic interface %1$s %2$s\n" +
                     "{\n\n",
@@ -739,7 +780,6 @@ public class DecoderGenerator extends Generator
 
     private void generateGetter(
         final Entry entry, final Writer out, final Set<String> missingOptionalFields)
-        throws IOException
     {
         entry.forEach(
             (field) -> out.append(fieldGetter(entry, field, missingOptionalFields)),
@@ -813,12 +853,12 @@ public class DecoderGenerator extends Generator
             generateGetter(entry, out, missingOptionalFields);
         }
 
-        generateMissingOptionalSessionFields(out, className, missingOptionalFields);
+        generateMissingOptionalSessionFields(out, missingOptionalFields);
         generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
     }
 
     private void generateMissingOptionalSessionFields(
-        final Writer out, final String className, final Set<String> missingOptionalFields)
+        final Writer out, final Set<String> missingOptionalFields)
         throws IOException
     {
         for (final String optionalField : missingOptionalFields)
@@ -826,11 +866,28 @@ public class DecoderGenerator extends Generator
             final String propertyName = formatPropertyName(optionalField);
 
             out.append(String.format(
+                "    public char[] %1$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
+                "    public boolean has%2$s()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
+                "    public int %1$sLength()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n" +
                 "    public String %1$sAsString()\n" +
                 "    {\n" +
                 "        throw new UnsupportedOperationException();\n" +
-                "    }\n",
-                propertyName));
+                "    }\n\n" +
+                "    public void %1$s(final AsciiSequenceView view)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n\n",
+                propertyName,
+                optionalField));
         }
     }
 
@@ -1079,7 +1136,7 @@ public class DecoderGenerator extends Generator
 
             case DATA:
             case XMLDATA:
-                // Length extracted separately from a preceeding field
+                // Length extracted separately from a preceding field
                 final Field associatedLengthField = field.associatedLengthField();
                 if (associatedLengthField == null)
                 {
@@ -1103,7 +1160,6 @@ public class DecoderGenerator extends Generator
             case MONTHYEAR:
                 decodeMethod = String.format("buffer.getBytes(%1$s, %1$sOffset, %1$sLength)", fieldName);
                 break;
-
 
             case BOOLEAN:
             case CHAR:
@@ -1459,7 +1515,7 @@ public class DecoderGenerator extends Generator
         return component
             .entries()
             .stream()
-            .map(this::entryAppendTo)
+            .map(this::generateEntryAppendTo)
             .collect(joining("\n"));
     }
 
@@ -1700,29 +1756,209 @@ public class DecoderGenerator extends Generator
 
     protected String groupEntryAppendTo(final Group group, final String name)
     {
+        final String numberField = group.numberField().name();
         return String.format(
             "    if (has%2$s)\n" +
             "    {\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
-            "    for (final %3$s %4$s : %5$s.iterator())\n" +
-            "    {\n" +
             "        indent(builder, level);\n" +
-            "        %4$s.appendTo(builder, level + 1);" +
-            "        if (%4$s.next() != null)\n" +
+            "        builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "        %3$s %4$s = this.%4$s;\n" +
+            "        for (int i = 0, size = this.%5$s; i < size; i++)\n" +
             "        {\n" +
-            "            builder.append(',');\n" +
+            "            indent(builder, level);\n" +
+            "            %4$s.appendTo(builder, level + 1);" +
+            "            if (%4$s.next() != null)\n" +
+            "            {\n" +
+            "                builder.append(',');\n" +
+            "            }\n" +
+            "            builder.append('\\n');\n" +
+            "            %4$s = %4$s.next();" +
             "        }\n" +
-            "        builder.append('\\n');\n" +
-            "    }\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"],\\n\");\n" +
+            "        indent(builder, level);\n" +
+            "        builder.append(\"],\\n\");\n" +
             "    }\n",
             name,
-            group.numberField().name(),
+            numberField,
             decoderClassName(name),
-            formatPropertyName(decoderClassName(name)),
-            iteratorFieldName(group));
+            formatPropertyName(name),
+            formatPropertyName(numberField));
+    }
+
+    private String generateToEncoder(final Aggregate aggregate)
+    {
+        final String entriesToEncoder = aggregate
+            .entries()
+            .stream()
+            .map(this::generateEntryToEncoder)
+            .collect(joining("\n"));
+        final String name = aggregate.name();
+
+        return String.format(
+            "    /**\n" +
+            "     * {@inheritDoc}\n" +
+            "     */" +
+            "    public %1$s toEncoder(final Encoder encoder)\n" +
+            "    {\n" +
+            "        return toEncoder((%1$s)encoder);\n" +
+            "    }\n\n" +
+            "    public %1$s toEncoder(final %1$s encoder)\n" +
+            "    {\n" +
+            "        encoder.reset();\n" +
+            "        %2$s" +
+            "        return encoder;\n" +
+            "    }\n\n",
+            encoderClassName(name),
+            entriesToEncoder);
+    }
+
+    private String generateEntryToEncoder(final Entry entry)
+    {
+        return generateEntryToEncoder(entry, "encoder");
+    }
+
+    private String generateEntryToEncoder(final Entry entry, final String encoderName)
+    {
+        if (isBodyLength(entry))
+        {
+            return "";
+        }
+
+        final Entry.Element element = entry.element();
+        final String name = entry.name();
+        if (element instanceof Field)
+        {
+            final Field field = (Field)element;
+            final String fieldToEncoder = fieldToEncoder(field, encoderName);
+
+            if (appendToChecksHasGetter(entry, field))
+            {
+                final String indentedFieldAppender = NEWLINE
+                    .matcher(fieldToEncoder)
+                    .replaceAll("    ");
+
+                return String.format(
+                    "if (has%1$s())\n" +
+                    "        {\n" +
+                    "        %2$s\n" +
+                    "        }\n",
+                    name,
+                    indentedFieldAppender);
+            }
+            else
+            {
+                return fieldToEncoder;
+            }
+        }
+        else if (element instanceof Group)
+        {
+            return groupEntryToEncoder((Group)element, name, encoderName);
+        }
+        else if (element instanceof Component)
+        {
+            return componentToEncoder((Component)element, encoderName);
+        }
+
+        return "";
+    }
+
+    protected String groupEntryToEncoder(final Group group, final String name, final String encoderName)
+    {
+        final String numberField = group.numberField().name();
+
+        return String.format(
+            "        if (has%1$s)\n" +
+            "        {\n" +
+            "            final int size = this.%4$s;\n" +
+            "            %2$s %3$s = this.%3$s;\n" +
+            "            %6$s %3$sEncoder = %5$s.%3$s(size);\n" +
+            "            for (int i = 0; i < size; i++)\n" +
+            "            {\n" +
+            "                if (%3$s != null)\n" +
+            "                {\n" +
+            "                    %3$s.toEncoder(%3$sEncoder);\n" +
+            "                    %3$s = %3$s.next();\n" +
+            "                    %3$sEncoder = %3$sEncoder.next();\n" +
+            "                }\n" +
+            "            }\n" +
+            "        }\n",
+            numberField,
+            decoderClassName(name),
+            formatPropertyName(name),
+            formatPropertyName(numberField),
+            encoderName,
+            encoderClassName(name));
+    }
+
+    protected String componentToEncoder(final Component component, final String encoderName)
+    {
+        final String name = component.name();
+        final String varName = formatPropertyName(name);
+
+        final String prefix = String.format(
+            "\n        final %1$s %2$s = %3$s.%2$s();",
+            encoderClassName(name),
+            varName,
+            encoderName);
+
+        return component
+            .entries()
+            .stream()
+            .map(entry -> generateEntryToEncoder(entry, varName))
+            .collect(joining("\n",
+                prefix,
+                "\n"));
+    }
+
+    private String fieldToEncoder(final Field field, final String encoderName)
+    {
+        final String fieldName = formatPropertyName(field.name());
+        switch (field.type())
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
+                return String.format("%2$s.%1$s(%1$s(), 0, %1$sLength());", fieldName, encoderName);
+
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
+            case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
+                return String.format("%2$s.%1$s(%1$s(), 0, %1$sLength());", fieldName, encoderName);
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+
+            case INT:
+            case LENGTH:
+            case BOOLEAN:
+            case CHAR:
+            case SEQNUM:
+            case DAYOFMONTH:
+                return String.format("%2$s.%1$s(%1$s());", fieldName, encoderName);
+
+            case DATA:
+            case XMLDATA:
+                final String lengthName = formatPropertyName(field.associatedLengthField().name());
+
+                return String.format("%3$s.%1$s(%1$s()); %3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
+
+            case NUMINGROUP:
+                // Deliberately blank since it gets set by the group ToEncoder logic.
+            default:
+                return "";
+        }
     }
 
     protected String optionalReset(final Field field, final String name)

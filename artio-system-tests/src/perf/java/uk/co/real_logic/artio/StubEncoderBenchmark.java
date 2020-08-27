@@ -31,14 +31,14 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 public class StubEncoderBenchmark
 {
-    private UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private LogonEncoder logonEncoder = new LogonEncoder();
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final LogonEncoder logonEncoder = new LogonEncoder();
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     // deliberately not static/final
-    private int sequenceNumber = 10;
-    private char[] password = "password".toCharArray();
-    private char[] username = "username".toCharArray();
+    private final int sequenceNumber = 10;
+    private final char[] password = "password".toCharArray();
+    private final char[] username = "username".toCharArray();
 
     @Setup
     public void setup()

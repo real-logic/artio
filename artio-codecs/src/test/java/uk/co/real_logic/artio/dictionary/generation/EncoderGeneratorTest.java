@@ -51,7 +51,7 @@ public class EncoderGeneratorTest
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @BeforeClass
     public static void generate() throws Exception

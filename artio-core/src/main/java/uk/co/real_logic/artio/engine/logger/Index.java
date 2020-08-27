@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 
 /**
  * Different indexes to be run on the archiver implement this interface.
@@ -38,6 +40,18 @@ public interface Index extends FragmentHandler, AutoCloseable
      * @param consumer a callback that receives each session id and position
      */
     void readLastPosition(IndexedPositionConsumer consumer);
+
+    /**
+     * Called on catchup replay on the start. Replay does not create a counter for recording,
+     * so it is provided to the method externally.
+     *
+     * @param buffer containing the data.
+     * @param offset at which the data begins.
+     * @param length of the data in bytes.
+     * @param header representing the meta data for the data.
+     * @param recordingId id of replayed recording
+     */
+    void onCatchup(DirectBuffer buffer, int offset, int length, Header header, long recordingId);
 
     /**
      * Optional method to perform some period work on the index, eg compaction or updating another system.

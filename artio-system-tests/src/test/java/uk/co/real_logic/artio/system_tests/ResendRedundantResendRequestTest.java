@@ -20,7 +20,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ResendRedundantResendRequestTest
 {
-    private int port = unusedPort();
+    private final int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;

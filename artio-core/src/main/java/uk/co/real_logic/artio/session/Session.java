@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
@@ -24,6 +25,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.logger.Replayer;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -33,7 +35,9 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.NotConnectedException;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -41,6 +45,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -63,7 +68,7 @@ import static uk.co.real_logic.artio.session.InternalSession.*;
  */
 public class Session
 {
-    public static final long UNKNOWN = -1;
+    public static final int UNKNOWN = -1;
     public static final long UNKNOWN_TIME = -1;
 
     static final short ACTIVE_VALUE = 3;
@@ -71,6 +76,8 @@ public class Session
     static final short LOGGING_OUT_AND_DISCONNECTING_VALUE = 6;
     static final short AWAITING_LOGOUT_VALUE = 7;
     static final short DISCONNECTING_VALUE = 8;
+    static final short DISCONNECTED_VALUE = 9;
+    static final short DISABLED_VALUE = 10;
 
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
@@ -85,7 +92,7 @@ public class Session
     private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
     private static final int NO_LOGOUT_REJECT_REASON = -1;
 
-    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder timestampEncoder;
 
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication outboundPublication;
@@ -94,6 +101,7 @@ public class Session
     protected final SessionProxy proxy;
 
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final Clock clock;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
@@ -132,6 +140,8 @@ public class Session
     private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
+    private long awaitingLogoutTimeoutInMs;
+
     private String username;
     private String password;
     private String connectedHost;
@@ -147,6 +157,7 @@ public class Session
     private SessionProcessHandler sessionProcessHandler;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
+    private FixDictionary fixDictionary;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -168,7 +179,8 @@ public class Session
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final EpochFractionClock epochFractionClock)
     {
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
@@ -177,6 +189,7 @@ public class Session
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
         Verify.notNull(messageInfo, "messageInfo");
+        Verify.notNull(epochFractionClock, "epochFractionClock");
 
         this.messageInfo = messageInfo;
         this.epochClock = epochClock;
@@ -200,6 +213,8 @@ public class Session
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
         lastMsgSeqNumProcessed = this.enableLastMsgSeqNumProcessed ? 0 : NO_LAST_MSG_SEQ_NUM_PROCESSED;
+        timestampEncoder = new UtcTimestampEncoder(epochFractionClock.epochFractionPrecision());
+        this.epochFractionClock = epochFractionClock;
     }
 
     // ---------- PUBLIC API ----------
@@ -373,16 +388,24 @@ public class Session
      * Sends a logout message and puts the session into the awaiting logout state.
      * <p>
      * This method will eventually also disconnect the Session, but it won't disconnect the session until you
-     * receive a logout message from your counter-party. That's the difference between this and
-     * <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
+     * receive a logout message from your counter-party or the heartbeat timeout elapses. That's the difference
+     * between this and <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
      *
      * @return the position of the sent message
      * @see Session#logoutAndDisconnect()
      */
     public long startLogout()
     {
-        final long position = sendLogout();
-        state(position < 0 ? LOGGING_OUT : AWAITING_LOGOUT);
+        final long position = trySendLogout();
+        if (position < 0)
+        {
+            state(LOGGING_OUT);
+        }
+        else
+        {
+            awaitingLogoutTimeoutInMs = time() + heartbeatIntervalInMs;
+            state(AWAITING_LOGOUT);
+        }
         return position;
     }
 
@@ -431,7 +454,7 @@ public class Session
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            position = sendLogout();
+            position = trySendLogout();
             if (position < 0)
             {
                 state(LOGGING_OUT_AND_DISCONNECTING);
@@ -456,7 +479,7 @@ public class Session
         final int sentSeqNum = newSentSeqNum();
         header
             .msgSeqNum(sentSeqNum)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(epochFractionClock.epochFractionTime()));
 
         if (enableLastMsgSeqNumProcessed)
         {
@@ -474,21 +497,38 @@ public class Session
     }
 
     /**
-     * Send a message on this session.
+     * Tries to send a message on this session. This send method returns after having attempted to write the message
+     * into an in memory log buffer. If the return value returned is {@link Publication#BACK_PRESSURED} or
+     * {@link Publication#ADMIN_ACTION} then the message won't have been written into the log buffer due to back
+     * pressure issues. A retry can be attempted later.
      *
      * @param encoder the encoder of the message to be sent
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      */
-    public long send(final Encoder encoder)
+    public long trySend(final Encoder encoder)
     {
-        return send(encoder, null, 0);
+        return trySend(encoder, null, 0);
     }
 
     /**
-     * Send a message on this session.
+     * @param encoder the encoder of the message to be sent
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(Encoder)
+     */
+    @Deprecated
+    public long send(final Encoder encoder)
+    {
+        return trySend(encoder);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param encoder              the encoder of the message to be sent
      * @param metaDataBuffer       the metadata to associate with this message.
@@ -497,9 +537,11 @@ public class Session
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
-    public long send(
+    public long trySend(
         final Encoder encoder,
         final DirectBuffer metaDataBuffer,
         final int metaDataUpdateOffset)
@@ -513,11 +555,28 @@ public class Session
         final int offset = Encoder.offset(result);
         final long type = encoder.messageType();
 
-        return send(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
+        return trySend(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
     }
 
     /**
-     * Send a message on this session.
+     * @param encoder              the encoder of the message to be sent
+     * @param metaDataBuffer       the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(Encoder, DirectBuffer, int)
+     */
+    @Deprecated
+    public long send(
+        final Encoder encoder,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
+        return trySend(encoder, metaDataBuffer, metaDataUpdateOffset);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param messageBuffer the buffer with the FIX message in to send
      * @param offset        the offset within the messageBuffer where the message starts
@@ -526,15 +585,34 @@ public class Session
      * @param messageType   the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      */
-    public long send(
+    public long trySend(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
-        return send(messageBuffer, offset, length, seqNum, messageType, null, 0);
+        return trySend(messageBuffer, offset, length, seqNum, messageType, null, 0);
     }
 
     /**
-     * Send a message on this session.
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset        the offset within the messageBuffer where the message starts
+     * @param length        the length of the message within the messageBuffer
+     * @param seqNum        the sequence number of the sent message
+     * @param messageType   the long encoded message type.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(DirectBuffer, int, int, int, long)
+     */
+    @Deprecated
+    public long send(
+        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
+    {
+        return trySend(messageBuffer, offset, length, seqNum, messageType);
+    }
+
+    /**
+     * Tries to send a message on this session. See {{@link #trySend(Encoder)}} for scenarios where this could fail.
      *
      * @param messageBuffer        the buffer with the FIX message in to send
      * @param offset               the offset within the messageBuffer where the message starts
@@ -545,9 +623,11 @@ public class Session
      * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @throws NotConnectedException if the underlying Publication to the FixEngine has been closed or its max position
+     *                               exceeded.
      * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
-    public long send(
+    public long trySend(
         final DirectBuffer messageBuffer,
         final int offset,
         final int length,
@@ -573,6 +653,31 @@ public class Session
     }
 
     /**
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset        the offset within the messageBuffer where the message starts
+     * @param length        the length of the message within the messageBuffer
+     * @param seqNum        the sequence number of the sent message
+     * @param messageType   the long encoded message type.
+     * @param metaDataBuffer       the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #trySend(DirectBuffer, int, int, int, long, DirectBuffer, int)
+     */
+    @Deprecated
+    public long send(
+        final DirectBuffer messageBuffer,
+        final int offset,
+        final int length,
+        final int seqNum,
+        final long messageType,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
+    {
+        return trySend(messageBuffer, offset, length, seqNum, messageType, metaDataBuffer, metaDataUpdateOffset);
+    }
+
+    /**
      * Check if the session is in a state where it can send a message.
      * <p>
      * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
@@ -592,13 +697,13 @@ public class Session
      * used to increase the sequence number of the session.
      * <p>
      * If you want to reset the sequence number back to 1 you should use
-     * {@link #resetSequenceNumbers()}.
+     * {@link #tryResetSequenceNumbers()}.
      *
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sendSequenceReset(
+    public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
         nextSequenceIndex(clock.time());
@@ -610,7 +715,21 @@ public class Session
     }
 
     /**
-     * Acts like {@link #sendSequenceReset(int, int)} but also resets the received sequence number.
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #trySendSequenceReset(int)
+     */
+    @Deprecated
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber)
+    {
+        return trySendSequenceReset(nextSentMessageSequenceNumber);
+    }
+
+    /**
+     * Acts like {@link #trySendSequenceReset(int)} but also resets the received sequence number. This method
+     * can be used to reset sequence numbers of offline sessions.
      *
      * @param nextSentMessageSequenceNumber     the new sequence number of the next message to be
      *                                          sent.
@@ -618,18 +737,35 @@ public class Session
      *                                          received.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sendSequenceReset(
+    public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber,
         final int nextReceivedMessageSequenceNumber)
     {
-        final long position = sendSequenceReset(nextSentMessageSequenceNumber);
-        lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
-        if (!redact(NO_REQUIRED_POSITION))
+        final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
+        // Do not reset the sequence index at this point.
+        lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
+        if (redact(NO_REQUIRED_POSITION))
         {
             this.sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
         }
 
         return position;
+    }
+
+    /**
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
+     *                                          received.
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #trySendSequenceReset(int, int)
+     */
+    @Deprecated
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber,
+        final int nextReceivedMessageSequenceNumber)
+    {
+        return trySendSequenceReset(nextSentMessageSequenceNumber, nextReceivedMessageSequenceNumber);
     }
 
     private void nextSequenceIndex(final long messageTime)
@@ -642,11 +778,11 @@ public class Session
      * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
      * sending a Logon message with ResetSeqNum flag set to Y.
      * <p>
-     * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int, int)}.
+     * If you want to send a sequence reset message then you should use {@link #trySendSequenceReset(int, int)}.
      *
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long resetSequenceNumbers()
+    public long tryResetSequenceNumbers()
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
@@ -662,6 +798,16 @@ public class Session
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
+    }
+
+    /**
+     * @return the position in the stream that corresponds to the end of this message.
+     * @see #tryResetSequenceNumbers()
+     */
+    @Deprecated
+    public long resetSequenceNumbers()
+    {
+        return tryResetSequenceNumbers();
     }
 
     public boolean isActive()
@@ -690,6 +836,8 @@ public class Session
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+        address("", Session.UNKNOWN);
+        connectionId(NO_CONNECTION_ID);
     }
 
     // Also checks the sequence index
@@ -753,6 +901,11 @@ public class Session
     public String beginString()
     {
         return beginString;
+    }
+
+    public FixDictionary fixDictionary()
+    {
+        return fixDictionary;
     }
 
     public Reply<ReplayMessagesStatus> replayReceivedMessages(
@@ -884,20 +1037,13 @@ public class Session
         {
             if (origSendingTime == UNKNOWN)
             {
-                if (redact(position))
-                {
-                    return ABORT;
-                }
-
-                return checkPosition(proxy.sendReject(
-                    newSentSeqNum(),
+                return onInvalidMessage(
                     msgSeqNum,
-                    MISSING_INT,
+                    SessionConstants.ORIG_SENDING_TIME,
                     msgType,
                     msgTypeLength,
                     REQUIRED_TAG_MISSING.representation(),
-                    sequenceIndex(),
-                    lastMsgSeqNumProcessed));
+                    position);
             }
             else if (origSendingTime > sendingTime)
             {
@@ -936,7 +1082,7 @@ public class Session
             }
             else if (msgSeqNum == lastResendChunkMsgSeqNum)
             {
-                final Action action = checkPosition(sendResendRequest(
+                final Action action = checkPosition(trySendResendRequest(
                     msgSeqNum + 1, // Effectively begin
                     endOfResendMsgSeqNum()));   // Effectively ideal end pre chunking
                 if (action == CONTINUE)
@@ -950,7 +1096,7 @@ public class Session
             {
                 if (sendRedundantResendRequests)
                 {
-                    return Pressure.apply(sendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
+                    return Pressure.apply(trySendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
                 }
                 else
                 {
@@ -997,7 +1143,7 @@ public class Session
 
     private Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
+        final long position = trySendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
         if (position >= 0)
         {
             awaitingResend = true;
@@ -1008,7 +1154,7 @@ public class Session
         return checkPosition(position);
     }
 
-    private long sendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
+    private long trySendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
         // Cap at a chunk size if specified, otherwise send 0 to indicate infinity or the receivedMsgSeqNo
         final boolean chunkedResend = resendRequestChunkSize != NO_RESEND_REQUEST_CHUNK_SIZE;
@@ -1052,6 +1198,7 @@ public class Session
             MSG_SEQ_NO_TOO_LOW);
     }
 
+    // true if needs backpressure / retry
     private boolean redact(final long position)
     {
         messageInfo.isValid(false);
@@ -1075,20 +1222,13 @@ public class Session
     private Action rejectDueToSendingTime(
         final int msgSeqNo, final char[] msgType, final int msgTypeLength, final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
-        return checkPosition(proxy.sendReject(
-            newSentSeqNum(),
+        return onInvalidMessage(
             msgSeqNo,
             SENDING_TIME,
             msgType,
             msgTypeLength,
             SENDINGTIME_ACCURACY_PROBLEM.representation(),
-            sequenceIndex(),
-            lastMsgSeqNumProcessed));
+            position);
     }
 
     private void incNextReceivedInboundMessageTime(final long time)
@@ -1305,11 +1445,6 @@ public class Session
             return null;
         }
 
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
         return checkPositionAndDisconnect(
             proxy.sendRejectWhilstNotLoggedOn(
                 newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM, sequenceIndex(), lastMsgSeqNumProcessed),
@@ -1443,6 +1578,8 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
+            // per FIX spec inbound msgSeqNum should not be increased in the case
+            // Test cases applicable to all FIX system: #11.c Receive Sequence-reset (Reset)
             if (redact(position))
             {
                 return ABORT;
@@ -1469,7 +1606,7 @@ public class Session
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(sendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo - 1));
+            final Action action = checkPosition(trySendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo - 1));
             if (action != ABORT)
             {
                 if (awaitingResend)
@@ -1502,12 +1639,18 @@ public class Session
                     lastResentMsgSeqNo = 0;
                     lastResendChunkMsgSeqNum = 0;
                     endOfResendRequestRange = 0;
+                    // if new sequence is beyond original sequence
+                    // accept it so that new messages will not cause resend request
+                    if (lastReceivedMsgSeqNum < newSeqNo)
+                    {
+                        lastReceivedMsgSeqNum(newSeqNo - 1);
+                    }
                 }
                 else
                 {
                     if (newSeqNo == lastResendChunkMsgSeqNum)
                     {
-                        final Action action = checkPosition(sendResendRequest(
+                        final Action action = checkPosition(trySendResendRequest(
                             newSeqNo,
                             endOfResendMsgSeqNum()));
                         if (action == CONTINUE)
@@ -1627,7 +1770,7 @@ public class Session
         nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
     }
 
-    private long sendLogout()
+    private long trySendLogout()
     {
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
@@ -1645,7 +1788,7 @@ public class Session
 
     void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis(heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);
@@ -1705,10 +1848,7 @@ public class Session
         final int rejectReason,
         final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
+        messageInfo.isValid(false);
 
         final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
@@ -1751,20 +1891,13 @@ public class Session
     Action onInvalidMessageType(
         final int msgSeqNum, final char[] msgType, final int msgTypeLength, final long position)
     {
-        if (redact(position))
-        {
-            return ABORT;
-        }
-
-        return checkPosition(proxy.sendReject(
-            newSentSeqNum(),
+        return onInvalidMessage(
             msgSeqNum,
             MISSING_INT,
             msgType,
             msgTypeLength,
             INVALID_MSGTYPE.representation(),
-            sequenceIndex(),
-            lastMsgSeqNumProcessed));
+            position);
     }
 
     void disable()
@@ -1810,11 +1943,30 @@ public class Session
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
-                final long position = sendLogout();
+                final long position = trySendLogout();
 
                 state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
 
                 return 1;
+            }
+
+            case AWAITING_LOGOUT_VALUE:
+            {
+                if (time > awaitingLogoutTimeoutInMs)
+                {
+                    if (!Pressure.isBackPressured(requestDisconnect()))
+                    {
+                        state(DISCONNECTING);
+                    }
+                }
+
+                return 1;
+            }
+
+            case DISCONNECTED_VALUE:
+            case DISABLED_VALUE:
+            {
+                return 0;
             }
 
             default:
@@ -1832,7 +1984,7 @@ public class Session
 
                 if (time >= nextRequiredInboundMessageTimeInMs)
                 {
-                    if (state == AWAITING_LOGOUT_VALUE || awaitingHeartbeat)
+                    if (awaitingHeartbeat)
                     {
                         // Drop when back pressured: retried on duty cycle
                         requestDisconnect();
@@ -1978,6 +2130,7 @@ public class Session
 
     void fixDictionary(final FixDictionary fixDictionary)
     {
+        this.fixDictionary = fixDictionary;
         proxy.fixDictionary(fixDictionary);
         this.beginString = fixDictionary.beginString();
     }

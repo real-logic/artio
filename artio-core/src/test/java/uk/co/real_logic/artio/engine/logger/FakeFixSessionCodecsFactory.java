@@ -16,11 +16,17 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 
 public class FakeFixSessionCodecsFactory extends FixSessionCodecsFactory
 {
+    public FakeFixSessionCodecsFactory()
+    {
+        super(EpochFractionFormat.MILLISECONDS);
+    }
+
     FixReplayerCodecs get(final long sessionId)
     {
-        return new FixReplayerCodecs(FixDictionary.findDefault());
+        return new FixReplayerCodecs(FixDictionary.findDefault(), timestampEncoder);
     }
 }

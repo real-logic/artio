@@ -15,26 +15,30 @@
  */
 package uk.co.real_logic.artio.library;
 
+import io.aeron.ChannelUri;
+import io.aeron.CommonContext;
 import io.aeron.ControlledFragmentAssembler;
-import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -42,10 +46,13 @@ import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.EpochFractionClock;
+import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -65,6 +72,7 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
@@ -96,21 +104,27 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final int CLOSED = 4;
 
     /**
-     * End of day operation has started
+     * Engine is disconnected by either closing or unbind operation
      */
-    private static final int ENGINE_CLOSE = 5;
+    private static final int ENGINE_DISCONNECT = 5;
+
+    private static final ILink3Connection[] EMPTY_ILINK_CONNECTIONS = new ILink3Connection[0];
+    private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
 
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private InternalILink3Session[] iLink3Sessions = new InternalILink3Session[0];
-    private final List<ILink3Session> unmodifiableILink3Sessions = new UnmodifiableWrapper<>(() -> iLink3Sessions);
+    private ILink3Connection[] iLink3Connections = EMPTY_ILINK_CONNECTIONS;
+    private final List<ILink3Connection> unmodifiableILink3Connections =
+        new UnmodifiableWrapper<>(() -> iLink3Connections);
 
-    private InternalSession[] sessions = new InternalSession[0];
-    private InternalSession[] pendingInitiatorSessions = new InternalSession[0];
+    private InternalSession[] sessions = EMPTY_SESSIONS;
+    private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
     private final List<Session> unmodifiableSessions = new UnmodifiableWrapper<>(() -> sessions);
 
     private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
+
+    private static final ErrorHandler THROW_ERRORS = LangUtil::rethrowUnchecked;
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
@@ -118,12 +132,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // Uniquely identifies library session
     private final int libraryId;
     private final EpochClock epochClock;
+    private final EpochFractionClock epochFractionClock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
     private final Timer receiveTimer;
     private final SessionExistsHandler sessionExistsHandler;
-    private final SentPositionHandler sentPositionHandler;
     private final boolean enginesAreClustered;
     private final FixCounters fixCounters;
 
@@ -147,7 +161,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
         "%s: Received Heartbeat from engine at timeInMs %s%n");
     private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s%n");
-    private final CharFormatter onDisconnectFormatter = new CharFormatter("%s: Library Disconnect %s, %s%n");
+    private final CharFormatter onDisconnectFormatter = new CharFormatter(
+        "%s: Session Disconnect @ Library %s, %s%n");
     private final CharFormatter sessionExistsFormatter = new CharFormatter(
         "onSessionExists: conn=%s, sess=%s, sentSeqNo=%s, recvSeqNo=%s%n");
 
@@ -156,6 +171,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
+    private InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private int state = CONNECTING;
 
     // State changed upon connect/reconnect
@@ -169,10 +185,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
-    private volatile Throwable remoteThrowable;
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
+    private Iterator<ILink3Subscription> iLink3LogoutIterator = null;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -193,9 +209,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionExistsHandler = configuration.sessionExistsHandler();
-        this.sentPositionHandler = configuration.sentPositionHandler();
         this.epochClock = epochClock;
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
+        this.epochFractionClock = EpochFractionClocks.create(
+            epochClock, configuration.epochNanoClock(), configuration.sessionEpochFractionFormat());
     }
 
     boolean isConnected()
@@ -210,7 +227,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isAtEndOfDay()
     {
-        return state == ENGINE_CLOSE;
+        return state == ENGINE_DISCONNECT;
     }
 
     int libraryId()
@@ -231,13 +248,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return new InitiateSessionReply(this, timeInMs() + configuration.timeoutInMs(), configuration);
     }
 
-    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    public Reply<ILink3Connection> initiate(final ILink3ConnectionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
         validateEndOfDay();
-        configuration.validate();
 
-        return new InitiateILink3SessionReply(
+        return new InitiateILink3ConnectionReply(
             this, timeInMs() + configuration.requestedKeepAliveIntervalInMs(), configuration);
     }
 
@@ -432,12 +448,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         if (connectionId == NO_CONNECTION_ID)
         {
-            // We've timed out when waiting for a connection to complete.
-
-            if (!saveMidConnectionDisconnect(correlationId))
-            {
-                tasks.add(() -> saveMidConnectionDisconnect(correlationId));
-            }
+            onTimeoutWaitingForConnection(correlationId);
         }
         else
         {
@@ -447,6 +458,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 tasks.add(() -> saveNoLogonRequestDisconnect(connectionId));
             }
+        }
+    }
+
+    void onTimeoutWaitingForConnection(final long correlationId)
+    {
+        if (!saveMidConnectionDisconnect(correlationId))
+        {
+            tasks.add(() -> saveMidConnectionDisconnect(correlationId));
         }
     }
 
@@ -489,11 +508,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final long timeInMs = timeInMs();
 
-        if (null != remoteThrowable)
-        {
-            LangUtil.rethrowUnchecked(remoteThrowable);
-        }
-
         switch (state)
         {
             case CONNECTED:
@@ -512,7 +526,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 state = CONNECTING;
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
-            case ENGINE_CLOSE:
+            case ENGINE_DISCONNECT:
                 attemptEngineCloseBasedLogout();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
@@ -531,11 +545,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         operations += pollPendingInitiatorSessions(timeInMs);
         operations += checkReplies(timeInMs);
         return operations;
-    }
-
-    void postExceptionToLibraryThread(final Throwable t)
-    {
-        this.remoteThrowable = t;
     }
 
     // -----------------------------------------------------------------------
@@ -656,7 +665,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // return true if sent, false otherwise
     private void sendLibraryConnect(final long timeInMs)
     {
-        // TODO: ban connecting from everything but library connect
         try
         {
             final long correlationId = ++currentCorrelationId;
@@ -735,11 +743,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             total += session.poll(timeInMs);
         }
 
-        final InternalILink3Session[] iLink3Sessions = this.iLink3Sessions;
-        for (int i = 0, size = iLink3Sessions.length; i < size; i++)
+        final ILink3Connection[] iLink3Connections = this.iLink3Connections;
+        for (int i = 0, size = iLink3Connections.length; i < size; i++)
         {
-            final InternalILink3Session session = iLink3Sessions[i];
-            total += session.poll(timeInMs);
+            final ILink3Connection connection = iLink3Connections[i];
+            total += connection.poll(timeInMs);
         }
 
         return total;
@@ -788,16 +796,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
         }
 
-        final Iterator<BooleanSupplier> tasksIt = tasks.iterator();
-        while (tasksIt.hasNext())
-        {
-            final BooleanSupplier task = tasksIt.next();
-
-            if (task.getAsBoolean())
-            {
-                tasksIt.remove();
-            }
-        }
+        CollectionUtil.removeIf(tasks, BooleanSupplier::getAsBoolean);
 
         return count;
     }
@@ -1167,7 +1166,26 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         DebugLogger.log(GATEWAY_MESSAGE, onDisconnectFormatter, libraryId, connectionId, reason.name());
-        if (libraryId == this.libraryId)
+        if (libraryId != this.libraryId)
+        {
+            return CONTINUE;
+        }
+
+        final boolean soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
+        if (soleLibraryMode)
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
+            {
+                return subscriber.onDisconnect(libraryId, reason);
+            }
+            else
+            {
+                // iLink3 doesn't behave any differently in sole library mode as it's an initiator connection.
+                onILink3Disconnect(connectionId);
+            }
+        }
+        else
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
             if (subscriber != null)
@@ -1191,9 +1209,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
                 return action;
             }
+            else
+            {
+                onILink3Disconnect(connectionId);
+            }
         }
 
         return CONTINUE;
+    }
+
+    private void onILink3Disconnect(final long connectionId)
+    {
+        final ILink3Subscription subscription = connectionIdToILink3Subscription.remove(connectionId);
+        if (subscription != null)
+        {
+            subscription.onDisconnect();
+            remove(subscription.session());
+        }
     }
 
     public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
@@ -1308,43 +1340,88 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long correlationId,
         final long connectionId,
         final long uuid,
-        final int lastReceivedSequenceNumber,
-        final int lastSentSequenceNumber)
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated,
+        final long lastUuid)
     {
         if (libraryId == this.libraryId)
         {
-            final InitiateILink3SessionReply reply =
-                (InitiateILink3SessionReply)correlationIdToReply.remove(correlationId);
+            final InitiateILink3ConnectionReply reply =
+                (InitiateILink3ConnectionReply)correlationIdToReply.remove(correlationId);
 
             if (reply != null)
             {
-                final ILink3SessionConfiguration configuration = reply.configuration();
-                final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final AbstractILink3Offsets offsets = AbstractILink3Offsets.make();
-                final InternalILink3Session session = new InternalILink3Session(
-                    proxy, offsets, configuration, connectionId, reply, outboundPublication, libraryId, this,
-                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber);
+                DebugLogger.log(FIX_CONNECTION, initiatorConnectFormatter, connectionId, libraryId);
+
+                reply.onTcpConnected();
+
+                final ILink3ConnectionConfiguration configuration = reply.configuration();
+                final ILink3Connection connection = makeILink3Connection(
+                    configuration, connectionId, reply, libraryId, this,
+                    uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final ILink3Subscription subscription = new ILink3Subscription(
-                    AbstractILink3Parser.make(session), session);
+                    AbstractILink3Parser.make(connection, THROW_ERRORS), connection);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
-                iLink3Sessions = ArrayUtil.add(iLink3Sessions, session);
+                iLink3Connections = ArrayUtil.add(iLink3Connections, connection);
             }
         }
 
         return CONTINUE;
     }
 
-    private AbstractILink3Proxy makeILink3Proxy(final long connectionId)
+    private ILink3Connection makeILink3Connection(
+        final ILink3ConnectionConfiguration configuration,
+        final long connectionId,
+        final InitiateILink3ConnectionReply initiateReply,
+        final int libraryId,
+        final LibraryPoller owner,
+        final long uuid,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated,
+        final long lastUuid)
     {
         try
         {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy)cls
-                .getConstructor(long.class, ExclusivePublication.class)
-                .newInstance(connectionId, outboundPublication.dataPublication());
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.library.InternalILink3Connection");
+            final Constructor<?> constructor = cls.getConstructor(
+                ILink3ConnectionConfiguration.class,
+                long.class,
+                InitiateILink3ConnectionReply.class,
+                GatewayPublication.class,
+                GatewayPublication.class,
+                int.class,
+                LibraryPoller.class,
+                long.class,
+                long.class,
+                long.class,
+                boolean.class,
+                long.class,
+                EpochNanoClock.class);
+
+            return (ILink3Connection)constructor.newInstance(
+                configuration,
+                connectionId,
+                initiateReply,
+                outboundPublication,
+                inboundPublication,
+                libraryId,
+                owner,
+                uuid,
+                lastReceivedSequenceNumber,
+                lastSentSequenceNumber,
+                newlyAllocated,
+                lastUuid,
+                this.configuration.epochNanoClock());
+        }
+        catch (final InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e.getTargetException());
+            return null;
         }
         catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
+            IllegalAccessException e)
         {
             LangUtil.rethrowUnchecked(e);
             return null;
@@ -1372,7 +1449,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            state = ENGINE_CLOSE;
+            DebugLogger.log(CLOSE, "Received engine close message, starting ENGINE_CLOSE operation");
+            state = ENGINE_DISCONNECT;
+            sessionLogoutIndex = 0;
 
             attemptEngineCloseBasedLogout();
         }
@@ -1385,9 +1464,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InternalSession[] sessions = this.sessions;
         final int length = sessions.length;
 
-        while (sessionLogoutIndex < length)
+        final int initialSessionLogoutIndex = this.sessionLogoutIndex;
+
+        while (this.sessionLogoutIndex < length)
         {
-            final InternalSession session = sessions[sessionLogoutIndex];
+            final InternalSession session = sessions[this.sessionLogoutIndex];
             final long position;
             if (session.state() == ACTIVE)
             {
@@ -1404,15 +1485,32 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 return;
             }
 
-            sessionLogoutIndex++;
+            this.sessionLogoutIndex++;
         }
 
-        final Iterator<ILink3Subscription> iLink3Iterator = connectionIdToILink3Subscription.values().iterator();
-        while (iLink3Iterator.hasNext())
+        // Don't repeatedly log this if you get back pressured below and re-attempt
+        if (sessionLogoutIndex != initialSessionLogoutIndex && length > 0)
         {
-            final ILink3Subscription iLink3Subscription = iLink3Iterator.next();
-            // TODO: backpressure
-            iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN);
+            DebugLogger.log(CLOSE, "Completed logging out FIX Sessions");
+        }
+
+        // Continue from previous position on backpressured re-attempts
+        if (iLink3LogoutIterator == null)
+        {
+            iLink3LogoutIterator = connectionIdToILink3Subscription.values().iterator();
+        }
+        while (iLink3LogoutIterator.hasNext())
+        {
+            final ILink3Subscription iLink3Subscription = iLink3LogoutIterator.next();
+            if (Pressure.isBackPressured(iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN)))
+            {
+                return;
+            }
+        }
+
+        if (!connectionIdToILink3Subscription.isEmpty())
+        {
+            DebugLogger.log(CLOSE, "Completed logging out ILink 3 Sessions");
         }
 
         // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.
@@ -1428,80 +1526,142 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
-    public Action onNewSentPosition(final int libraryId, final long position)
-    {
-        if (this.libraryId == libraryId)
-        {
-            return sentPositionHandler.onSendCompleted(position);
-        }
-
-        return CONTINUE;
-    }
-
-    public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
+    public Action onControlNotification(
+        final int libraryId,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final SessionsDecoder sessionsDecoder)
     {
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
             livenessDetector.onHeartbeat(timeInMs);
             state = CONNECTED;
+            this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
             DebugLogger.log(
                 LIBRARY_CONNECT,
                 controlNotificationFormatter,
                 libraryId,
                 timeInMs);
 
-            // TODO(Nick): This should be a new set, not the actual
-            // set as we remove all the ids to check for existence..
-            // Weirdly looks like this.sessionIds is never used anywhere else?
-            // Why do we have it then? Is the caching saving
-            // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
-            final LongHashSet sessionIds = this.sessionIds;
-            InternalSession[] sessions = this.sessions;
+            controlUpdateILinkSessions();
 
-            // copy session ids.
-            sessionIds.clear();
-            while (sessionsDecoder.hasNext())
+            return controlUpdateSessions(libraryId, sessionsDecoder);
+        }
+
+        return CONTINUE;
+    }
+
+    private void controlUpdateILinkSessions()
+    {
+        // We just disconnect everything.
+        if (iLink3Connections.length > 0)
+        {
+            for (final ILink3Connection session : iLink3Connections)
             {
-                sessionsDecoder.next();
-                sessionIds.add(sessionsDecoder.sessionId());
+                session.unbindState();
             }
+            iLink3Connections = new ILink3Connection[0];
+        }
 
-            for (int i = 0, size = sessions.length; i < size; i++)
+        connectionIdToILink3Subscription.clear();
+    }
+
+    private Action controlUpdateSessions(final int libraryId, final SessionsDecoder sessionsDecoder)
+    {
+        // TODO(Nick): This should be a new set, not the actual
+        // set as we remove all the ids to check for existence..
+        // Weirdly looks like this.sessionIds is never used anywhere else?
+        // Why do we have it then? Is the caching saving
+        // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
+        final LongHashSet sessionIds = this.sessionIds;
+        InternalSession[] sessions = this.sessions;
+
+        // copy session ids.
+        sessionIds.clear();
+        while (sessionsDecoder.hasNext())
+        {
+            sessionsDecoder.next();
+            sessionIds.add(sessionsDecoder.sessionId());
+        }
+
+        for (int i = 0, size = sessions.length; i < size; i++)
+        {
+            final InternalSession session = sessions[i];
+            final long sessionId = session.id();
+            if (!sessionIds.remove(sessionId))
             {
-                final InternalSession session = sessions[i];
-                final long sessionId = session.id();
-                if (!sessionIds.remove(sessionId))
+                final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
+                if (subscriber != null)
                 {
-                    final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
-                    if (subscriber != null)
-                    {
-                        subscriber.onTimeout(libraryId);
-                    }
-                    session.close();
-                    // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
-                    sessions = ArrayUtil.remove(sessions, i);
-                    size--;
+                    subscriber.onTimeout(libraryId);
                 }
-                else
-                {
-                    i++;
-                }
+                session.close();
+                // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
+                sessions = ArrayUtil.remove(sessions, i);
+                size--;
             }
-            this.sessions = sessions;
-
-            // sessions that the gateway thinks you have, that you don't
-            if (!sessionIds.isEmpty())
+            else
             {
-                final String msg = String.format(
-                    "The gateway thinks that we own the following session ids: %s", sessionIds);
-                configuration
-                    .gatewayErrorHandler()
-                    .onError(GatewayError.UNKNOWN_SESSION, libraryId, msg);
+                i++;
+            }
+        }
+        this.sessions = sessions;
+
+        // sessions that the gateway thinks you have, that you don't
+        if (!sessionIds.isEmpty())
+        {
+            final String msg = String.format(
+                "The gateway thinks that we own the following session ids: %s", sessionIds);
+            configuration
+                .gatewayErrorHandler()
+                .onError(GatewayError.UNKNOWN_SESSION, libraryId, msg);
+        }
+
+        // Commit to ensure that you leave the poll loop having reconnected successfully
+        return BREAK;
+    }
+
+    public Action onLibraryExtendPosition(
+        final int libraryId,
+        final long correlationId,
+        final int newSessionId,
+        final long stopPosition,
+        final int initialTermId,
+        final int termBufferLength,
+        final int mtuLength)
+    {
+        if (libraryId == this.libraryId &&
+            // Possible to receive resent extend position responses if we resent the library connect
+            // before the extend was received.
+            newSessionId != outboundPublication.id())
+        {
+            final long timeInMs = timeInMs();
+            resetNextEngineTimer(timeInMs);
+
+            final ChannelUri channelUri = ChannelUri.parse(currentAeronChannel);
+            channelUri.initialPosition(
+                stopPosition,
+                initialTermId,
+                termBufferLength);
+            RecordingCoordinator.setMtuLength(mtuLength, channelUri);
+            channelUri.put(CommonContext.SESSION_ID_PARAM_NAME, Integer.toString(newSessionId));
+            final String channel = channelUri.toString();
+            DebugLogger.log(LIBRARY_CONNECT, "Extended Library Position to: ", channel);
+            try
+            {
+                transport.newOutboundPublication(channel);
+            }
+            catch (final RegistrationException e)
+            {
+                // In this scenario we just retry again we randomly get generated a unique id
+                if (!e.getMessage().contains("existing publication has clashing session id"))
+                {
+                    throw e;
+                }
             }
 
-            // Commit to ensure that you leave the poll loop having reconnected successfully
-            return BREAK;
+            livenessDetector.onConnectStep(timeInMs);
+            sendLibraryConnect(timeInMs);
         }
 
         return CONTINUE;
@@ -1531,12 +1691,28 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final Session session = subscriber.session();
                 if (session.id() == sessionId)
                 {
-                    return Pressure.apply(session.resetSequenceNumbers());
+                    return Pressure.apply(session.tryResetSequenceNumbers());
                 }
             }
         }
 
         return Action.CONTINUE;
+    }
+
+    public Action onReplayComplete(final int libraryId, final long connection)
+    {
+        if (libraryId == this.libraryId)
+        {
+            final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connection);
+            if (subscription != null)
+            {
+                subscription.onReplayComplete();
+            }
+
+            return CONTINUE;
+        }
+
+        return CONTINUE;
     }
 
     // -----------------------------------------------------------------------
@@ -1554,7 +1730,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, validationStrategy,
-            null, configuration.validateCompIdsOnEveryMessage(), messageInfo, sessionIdStrategy);
+            THROW_ERRORS, configuration.validateCompIdsOnEveryMessage(), configuration.validateTimeStrictly(),
+            messageInfo, sessionIdStrategy);
         parser.sessionKey(compositeKey);
         parser.fixDictionary(fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
@@ -1607,7 +1784,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
-            messageInfo);
+            messageInfo,
+            epochFractionClock);
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -1679,7 +1857,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
-            messageInfo);
+            messageInfo,
+            epochFractionClock);
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;
@@ -1695,7 +1874,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             new SystemEpochClock(),
             connectionId,
             libraryId,
-            LangUtil::rethrowUnchecked);
+            LangUtil::rethrowUnchecked,
+            configuration.sessionEpochFractionFormat());
     }
 
     private void checkState()
@@ -1738,11 +1918,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
-    public long saveInitiateILink(final long correlationId, final ILink3SessionConfiguration configuration)
+    public long saveInitiateILink(final long correlationId, final ILink3ConnectionConfiguration configuration)
     {
         return outboundPublication.saveInitiateILinkConnection(
-            libraryId, configuration.port(), correlationId, configuration.reestablishLastSession(),
-            configuration.host(), configuration.accessKeyId());
+            libraryId, configuration.port(), correlationId, configuration.reEstablishLastConnection(),
+            configuration.host(), configuration.accessKeyId(), configuration.useBackupHost(),
+            configuration.backupHost());
     }
 
     void enqueueTask(final BooleanSupplier task)
@@ -1750,14 +1931,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         tasks.add(task);
     }
 
-    public List<ILink3Session> iLink3Sessions()
+    public List<ILink3Connection> iLink3Sessions()
     {
-        return unmodifiableILink3Sessions;
+        return unmodifiableILink3Connections;
     }
 
-    public void onUnbind(final ILink3Session session)
+    public void remove(final ILink3Connection session)
     {
-        iLink3Sessions = ArrayUtil.remove(iLink3Sessions, (InternalILink3Session)session);
+        iLink3Connections = ArrayUtil.remove(iLink3Connections, session);
+        connectionIdToILink3Subscription.remove(session.connectionId());
     }
 }
 

@@ -19,11 +19,15 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 class EndPointFactory
 {
+    private final FixReceiverEndPoint.FixReceiverEndPointFormatters formatters =
+        new FixReceiverEndPoint.FixReceiverEndPointFormatters();
+
     private final EngineConfiguration configuration;
     private final SessionContexts sessionContexts;
     private final GatewayPublication inboundLibraryPublication;
@@ -31,6 +35,7 @@ class EndPointFactory
     private final ErrorHandler errorHandler;
     private final GatewaySessions gatewaySessions;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final MessageTimingHandler messageTimingHandler;
 
     private SlowPeeker replaySlowPeeker;
 
@@ -41,7 +46,8 @@ class EndPointFactory
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
         final GatewaySessions gatewaySessions,
-        final SenderSequenceNumbers senderSequenceNumbers)
+        final SenderSequenceNumbers senderSequenceNumbers,
+        final MessageTimingHandler messageTimingHandler)
     {
         this.configuration = configuration;
         this.sessionContexts = sessionContexts;
@@ -50,6 +56,7 @@ class EndPointFactory
         this.errorHandler = errorHandler;
         this.gatewaySessions = gatewaySessions;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.messageTimingHandler = messageTimingHandler;
     }
 
     FixReceiverEndPoint receiverEndPoint(
@@ -74,7 +81,8 @@ class EndPointFactory
             libraryId,
             gatewaySessions,
             configuration.clock(),
-            framer.acceptorFixDictionaryLookup());
+            framer.acceptorFixDictionaryLookup(),
+            formatters);
     }
 
     SenderEndPoint senderEndPoint(
@@ -99,7 +107,8 @@ class EndPointFactory
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
             System.currentTimeMillis(),
-            senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer));
+            senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer),
+            messageTimingHandler);
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

@@ -22,9 +22,9 @@ import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -51,7 +51,6 @@ import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
-import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
@@ -88,9 +87,15 @@ public class AbstractGatewayToGatewaySystemTest
         closeAcceptingEngine();
 
         CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
+        closeAcceptingLibrary();
 
         cleanupMediaDriver(mediaDriver);
+    }
+
+    void closeAcceptingLibrary()
+    {
+        CloseHelper.close(acceptingLibrary);
+        testSystem.remove(acceptingLibrary);
     }
 
     void closeInitiatingEngine()
@@ -139,19 +144,14 @@ public class AbstractGatewayToGatewaySystemTest
         assertSessionsDisconnected();
     }
 
-    void logoutAcceptingSession()
+    long logoutAcceptingSession()
     {
-        logoutSession(acceptingSession);
+        return logoutSession(acceptingSession);
     }
 
     void logoutInitiatingSession()
     {
         logoutSession(initiatingSession);
-    }
-
-    private void logoutSession(final Session session)
-    {
-        assertThat(session.startLogout(), greaterThan(0L));
     }
 
     void assertSessionsDisconnected()
@@ -180,15 +180,15 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSessionDisconnected(final Session session)
     {
-        assertEventuallyTrue("Session is still connected",
-            () ->
-            {
-                testSystem.poll();
-                return session.state() == DISCONNECTED;
-            });
+        SystemTestUtil.assertSessionDisconnected(testSystem, session);
     }
 
     void assertNotSession(final FakeHandler sessionHandler, final Session session)
+    {
+        assertThat(sessionHandler.sessions(), not(hasItem(session)));
+    }
+
+    void assertHasSession(final FakeHandler sessionHandler, final Session session)
     {
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
@@ -201,10 +201,15 @@ public class AbstractGatewayToGatewaySystemTest
 
     void acquireAcceptingSession()
     {
+        acquireAcceptingSession(INITIATOR_ID);
+    }
+
+    void acquireAcceptingSession(final String initiatorId)
+    {
         final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
-        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(initiatorId, acceptingHandler.lastInitiatorCompId());
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", acceptingSession);
     }
@@ -299,7 +304,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         otfAcceptor.messages().clear();
 
-        while (session.send(resendRequest) < 0)
+        while (session.trySend(resendRequest) < 0)
         {
             Thread.yield();
         }
@@ -312,15 +317,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     void messagesCanBeExchanged(final Session session)
     {
-        final long position = messagesCanBeExchanged(session, initiatingOtfAcceptor);
-
-        assertEventuallyTrue("position never catches up",
-            () ->
-            {
-                testSystem.poll();
-
-                return initiatingHandler.sentPosition() >= position;
-            });
+        messagesCanBeExchanged(session, initiatingOtfAcceptor);
     }
 
     long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)
@@ -376,7 +373,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         acquireAcceptingSession();
 
-        acceptingSession.startLogout();
+        logoutSession(acceptingSession);
         assertSessionsDisconnected();
 
         assertAllMessagesHaveSequenceIndex(0);
@@ -485,7 +482,6 @@ public class AbstractGatewayToGatewaySystemTest
     void deleteAcceptorLogs()
     {
         delete(ACCEPTOR_LOGS);
-
     }
 
     void deleteClientLogs()

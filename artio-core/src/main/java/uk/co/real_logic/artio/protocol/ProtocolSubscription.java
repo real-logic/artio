@@ -20,10 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
-import uk.co.real_logic.artio.messages.DisconnectDecoder;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -34,7 +31,8 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
 {
     private static final Action UNKNOWN_TEMPLATE = null;
 
-    private final CharFormatter disconnectFormatter = new CharFormatter("FixSubscription Disconnect: %s%n");
+    private final CharFormatter disconnectFormatter = new CharFormatter(
+        "FixSubscription Disconnect: %s [%s]%n");
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -122,13 +120,17 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         disconnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = disconnect.libraryId();
         final long connectionId = disconnect.connection();
+        final DisconnectReason reason = disconnect.reason();
         if (DebugLogger.isEnabled(FIX_CONNECTION))
         {
-            DebugLogger.log(FIX_CONNECTION, disconnectFormatter.clear().with(connectionId));
+            DebugLogger.log(FIX_CONNECTION, disconnectFormatter.clear()
+                .with(connectionId)
+                .with(reason.toString()));
         }
 
-        return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
+        return protocolHandler.onDisconnect(libraryId, connectionId, reason);
     }
 
     private Action onFixMessage(

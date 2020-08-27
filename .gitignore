@@ -53,6 +53,8 @@ file-leak-detector-*
 */aeron-archive/*
 aeron-archive/
 buyer/
+buyer-archive/
+exchange-application/
 
 *-example
 artio-samples/src/main/java/uk/co/real_logic/artio/reproduction/

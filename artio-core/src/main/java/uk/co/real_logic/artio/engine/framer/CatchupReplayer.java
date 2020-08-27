@@ -26,15 +26,16 @@ import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.engine.logger.ReplayOperation;
-import uk.co.real_logic.artio.engine.logger.ReplayQuery;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.engine.logger.*;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
+import java.util.concurrent.TimeUnit;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -169,6 +170,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final SessionHeaderDecoder headerDecoder;
     private final ReplayFor replayFor;
     private final Formatters formatters;
+    private final EpochFractionFormat epochFractionFormat;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -198,7 +200,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewaySession session,
         final long catchupEndTimeInMs,
         final ReplayFor replayFor,
-        final Formatters formatters)
+        final Formatters formatters,
+        final EpochFractionFormat epochFractionFormat)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -217,6 +220,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
         this.replayFor = replayFor;
         this.formatters = formatters;
+        this.epochFractionFormat = epochFractionFormat;
     }
 
     private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)
@@ -284,7 +288,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (sequenceResetEncoder == null)
         {
             sequenceResetEncoder = session.fixDictionary().makeSequenceResetEncoder();
-            timestampEncoder = new UtcTimestampEncoder();
+            timestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
             encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
             sequenceResetEncoder.gapFillFlag(true);
 
@@ -317,7 +321,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         sequenceResetEncoder.header().msgSeqNum(heartbeatRangeSequenceNumberStart);
         sequenceResetEncoder.newSeqNo(heartbeatRangeSequenceNumberEnd);
         sequenceResetEncoder.header().sendingTime(
-            timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
+            timestampEncoder.buffer(), timestampEncoder.encodeFrom(System.currentTimeMillis(), TimeUnit.MILLISECONDS));
 
         final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
         final int encodedLength = Encoder.length(result);
@@ -392,13 +396,13 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     session.sessionId(), replayToSequenceNumber, replayToSequenceIndex);
 
                 replayOperation = inboundMessages.query(
-                    this,
                     session.sessionId(),
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     replayToSequenceNumber,
                     replayToSequenceIndex,
-                    CATCHUP);
+                    CATCHUP,
+                    new FixMessageTracker(CATCHUP, this, session.sessionId()));
 
                 state = State.REPLAYING;
 

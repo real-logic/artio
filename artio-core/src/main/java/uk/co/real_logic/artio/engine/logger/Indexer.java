@@ -20,6 +20,7 @@ import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ArchiveException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -114,18 +115,20 @@ public class Indexer implements Agent, ControlledFragmentHandler
                             // Only do 1 replay at a time
                             while (subscription.imageCount() != 1)
                             {
-                                idle(idleStrategy, aeronInvoker);
+                                idle(idleStrategy, aeronInvoker, 0);
                                 aeronArchive.checkForErrorResponse();
                             }
                             idleStrategy.reset();
 
                             final Image replayImage = subscription.imageAtIndex(0);
 
+                            final FragmentHandler handler = (buffer, offset, srcLength, header) ->
+                                index.onCatchup(buffer, offset, srcLength, header, recordingId);
+
                             while (replayImage.position() < recordingStoppedPosition)
                             {
-                                replayImage.poll(index, LIMIT);
-
-                                idle(idleStrategy, aeronInvoker);
+                                final int workCount = replayImage.poll(handler, LIMIT);
+                                idle(idleStrategy, aeronInvoker, workCount);
                             }
                             idleStrategy.reset();
                         }
@@ -139,14 +142,15 @@ public class Indexer implements Agent, ControlledFragmentHandler
         }
     }
 
-    private void idle(final IdleStrategy idleStrategy, final AgentInvoker aeronInvoker)
+    private void idle(final IdleStrategy idleStrategy, final AgentInvoker aeronInvoker, final int workCount)
     {
+        int totalWork = workCount;
         if (aeronInvoker != null)
         {
-            aeronInvoker.invoke();
+            totalWork += aeronInvoker.invoke();
         }
 
-        idleStrategy.idle();
+        idleStrategy.idle(totalWork);
     }
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)

@@ -4,17 +4,10 @@ import uk.co.real_logic.artio.Reply;
 
 class BindCommand implements AdminCommand, Reply<Void>
 {
-    private final boolean bind;
-
     private volatile State state = State.EXECUTING;
 
     // thread-safe publication by writes to state after, and reads of state before its read.
     private Exception error;
-
-    BindCommand(final boolean bind)
-    {
-        this.bind = bind;
-    }
 
     public void execute(final Framer framer)
     {
@@ -47,15 +40,10 @@ class BindCommand implements AdminCommand, Reply<Void>
         return state;
     }
 
-    boolean bind()
-    {
-        return bind;
-    }
 
     public String toString()
     {
         return "BindCommand{" +
-            "bind=" + bind +
             ", state=" + state +
             ", error=" + error +
             '}';

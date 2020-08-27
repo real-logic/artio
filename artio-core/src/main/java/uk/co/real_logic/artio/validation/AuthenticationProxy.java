@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 
 /**
  * Interface to notify the gateway whether a Logon should be authenticated or not. Either invoker accept or reject.
@@ -31,6 +32,15 @@ public interface AuthenticationProxy
      * successfully called.
      */
     void accept();
+
+    /**
+     * Call this method to accept the authentication and specify a FIX Dictionary based upon the logon message.
+     *
+     * @param fixDictionaryClass the FIX dictionary that you wish to use for this class.
+     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
+     * successfully called.
+     */
+    void accept(Class<? extends FixDictionary> fixDictionaryClass);
 
     /**
      * Call this method to reject the authentication.

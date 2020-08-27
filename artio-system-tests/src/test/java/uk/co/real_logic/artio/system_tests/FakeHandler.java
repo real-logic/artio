@@ -34,7 +34,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
 
 public class FakeHandler
-    implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
+    implements SessionHandler, SessionAcquireHandler, SessionExistsHandler
 {
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
@@ -45,7 +45,6 @@ public class FakeHandler
 
     private Session lastSession;
     private boolean hasDisconnected = false;
-    private long sentPosition;
     private boolean lastSessionWasSlow;
     private UnsafeBuffer lastSessionMetaData;
     private MetaDataStatus lastSessionMetaDataStatus;
@@ -148,12 +147,6 @@ public class FakeHandler
         return this;
     }
 
-    public Action onSendCompleted(final long position)
-    {
-        this.sentPosition = position;
-        return CONTINUE;
-    }
-
     public void onSessionExists(
         final FixLibrary library,
         final long surrogateSessionId,
@@ -214,11 +207,6 @@ public class FakeHandler
     public void clearSessionExistsInfos()
     {
         sessionExistsInfos.clear();
-    }
-
-    public long sentPosition()
-    {
-        return sentPosition;
     }
 
     long awaitSessionIdFor(

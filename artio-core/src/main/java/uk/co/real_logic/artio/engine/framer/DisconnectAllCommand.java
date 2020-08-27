@@ -17,14 +17,14 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.Reply;
 
-final class StartCloseCommand implements AdminCommand, Reply<Void>
+final class DisconnectAllCommand implements AdminCommand, Reply<Void>
 {
     private volatile State state = State.EXECUTING;
 
     // thread-safe publication by writes to state after, and reads of state before its read.
     private Exception error;
 
-    StartCloseCommand()
+    DisconnectAllCommand()
     {
     }
 

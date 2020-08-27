@@ -28,6 +28,7 @@ import static io.aeron.driver.ThreadingMode.SHARED;
 public class BuyerApplication
 {
     public static final String AERON_DIRECTORY_NAME = "buyer";
+    public static final String AERON_ARCHIVE_DIRECTORY_NAME = "buyer-archive";
     // Channels are specified in order to avoid a collision with the sample ExchangeApplication when running on the same
     // box
     public static final String RECORDING_EVENTS_CHANNEL = "aeron:udp?endpoint=localhost:9030";
@@ -46,7 +47,8 @@ public class BuyerApplication
             .threadingMode(ArchiveThreadingMode.SHARED)
             .deleteArchiveOnStart(true)
             .aeronDirectoryName(AERON_DIRECTORY_NAME)
-            .recordingEventsChannel(RECORDING_EVENTS_CHANNEL);
+            .recordingEventsChannel(RECORDING_EVENTS_CHANNEL)
+            .archiveDirectoryName(AERON_ARCHIVE_DIRECTORY_NAME);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext))
         {

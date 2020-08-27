@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Monotonic Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.fields;
 
-import org.agrona.DirectBuffer;
-
-// NB: This is an experimental API and is subject to change or potentially removal.
-public interface ILink3SessionHandler
+public enum EpochFractionFormat
 {
-    void onMessage(
-        DirectBuffer buffer,
-        int offset,
-        int length,
-        int libraryId,
-        ILink3Session session);
+    MILLISECONDS,
+    MICROSECONDS,
+    NANOSECONDS
 }
