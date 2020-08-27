@@ -18,7 +18,9 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
@@ -28,11 +30,13 @@ class LogEntryHandler implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
-    private final FixMessageConsumer handler;
+    private final FixMessageConsumer fixHandler;
+    private final ILinkMessageConsumer iLinkHandler;
 
-    LogEntryHandler(final FixMessageConsumer handler)
+    LogEntryHandler(final FixMessageConsumer fixHandler, final ILinkMessageConsumer iLinkHandler)
     {
-        this.handler = handler;
+        this.fixHandler = fixHandler;
+        this.iLinkHandler = iLinkHandler;
     }
 
     @SuppressWarnings("FinalParameters")
@@ -40,7 +44,8 @@ class LogEntryHandler implements FragmentHandler
         final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
-        if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
+        final int templateId = messageHeader.templateId();
+        if (templateId == FixMessageDecoder.TEMPLATE_ID)
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -53,7 +58,14 @@ class LogEntryHandler implements FragmentHandler
                 fixMessage.skipMetaData();
             }
 
-            handler.onMessage(fixMessage, buffer, offset, length, header);
+            fixHandler.onMessage(fixMessage, buffer, offset, length, header);
+        }
+        else if (templateId == ILinkMessageDecoder.TEMPLATE_ID)
+        {
+            offset += MessageHeaderDecoder.ENCODED_LENGTH;
+            offset += ILinkMessageDecoder.BLOCK_LENGTH;
+
+            iLinkHandler.onBusinessMessage(buffer, offset, header);
         }
     }
 }

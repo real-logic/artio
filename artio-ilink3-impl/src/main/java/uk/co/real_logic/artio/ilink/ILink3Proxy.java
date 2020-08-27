@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
+import static uk.co.real_logic.artio.library.InternalILink3Connection.BUSINESS_MESSAGE_LOGGING_ENABLED;
 
 public class ILink3Proxy extends AbstractILink3Proxy
 {
@@ -49,10 +50,9 @@ public class ILink3Proxy extends AbstractILink3Proxy
     private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
 
-    private long connectionId;
-    private final ExclusivePublication publication;
     private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
     private final iLinkBinary.MessageHeaderEncoder iLinkMessageHeader = new iLinkBinary.MessageHeaderEncoder();
+    private final iLinkBinary.MessageHeaderDecoder iLinkMessageHeaderDecoder = new iLinkBinary.MessageHeaderDecoder();
 
     private final Negotiate500Encoder negotiate = new Negotiate500Encoder();
     private final Establish503Encoder establish = new Establish503Encoder();
@@ -66,10 +66,19 @@ public class ILink3Proxy extends AbstractILink3Proxy
     private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
     private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
 
-    public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
+    private final ExclusivePublication publication;
+    private final ILink3BusinessMessageDissector businessMessageLogger;
+
+    private long connectionId;
+
+    public ILink3Proxy(
+        final long connectionId,
+        final ExclusivePublication publication,
+        final ILink3BusinessMessageDissector businessMessageLogger)
     {
         this.connectionId = connectionId;
         this.publication = publication;
+        this.businessMessageLogger = businessMessageLogger;
     }
 
     public void connectionId(final long connectionId)
@@ -269,6 +278,24 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
     public void commit()
     {
+        final BufferClaim bufferClaim = this.bufferClaim;
+
+        if (BUSINESS_MESSAGE_LOGGING_ENABLED && businessMessageLogger != null)
+        {
+            final MessageHeaderDecoder iLinkMessageHeaderDecoder = this.iLinkMessageHeaderDecoder;
+            final MutableDirectBuffer buffer = bufferClaim.buffer();
+            final int iLinkHeaderOffset = bufferClaim.offset() + ARTIO_HEADER_LENGTH + SOFH_LENGTH;
+            iLinkMessageHeaderDecoder.wrap(buffer, iLinkHeaderOffset);
+            final int iLinkMessageOffset = iLinkHeaderOffset + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
+            businessMessageLogger.onBusinessMessage(
+                iLinkMessageHeaderDecoder.templateId(),
+                buffer,
+                iLinkMessageOffset,
+                iLinkMessageHeaderDecoder.blockLength(),
+                iLinkMessageHeaderDecoder.version(),
+                false);
+        }
+
         bufferClaim.commit();
     }
 

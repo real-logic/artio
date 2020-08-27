@@ -26,11 +26,9 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
-import uk.co.real_logic.artio.ilink.ILink3Offsets;
-import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.ilink.IllegalResponseException;
+import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -62,6 +60,8 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
  */
 public final class InternalILink3Connection extends ILink3Connection
 {
+    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
+
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
 
     private static final String[] TERMINATE_ERROR_CODES = {
@@ -151,6 +151,7 @@ public final class InternalILink3Connection extends ILink3Connection
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
     private final CharFormatter retransmitFilledNext = new CharFormatter(
         "RetransmitFilledNext uuid=%s,lastUuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
+    private final ILink3BusinessMessageDissector businessMessageLogger = new ILink3BusinessMessageDissector();
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
@@ -216,7 +217,7 @@ public final class InternalILink3Connection extends ILink3Connection
         this.newlyAllocated = newlyAllocated;
         this.epochNanoClock = epochNanoClock;
 
-        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication());
+        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication(), businessMessageLogger);
         offsets = new ILink3Offsets();
         nextSentSeqNo(calculateInitialSequenceNumber(
             lastSentSequenceNumber, configuration.initialSentSequenceNumber()));
@@ -1066,7 +1067,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     }
                 }
 
-                handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, true);
+                onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
 
                 if (seqNum == retransmitFillSeqNo)
                 {
@@ -1090,7 +1091,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     nextRecvSeqNo(seqNum + 1);
 
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, false);
+                    onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
 
                     return 1;
                 }
@@ -1099,7 +1100,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     // We could queue this instead of just passing it on to the customer's application but this
                     // hasn't been requested as of yet
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, false);
+                    onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
 
                     return onInvalidSequenceNumber(seqNum);
                 }
@@ -1133,6 +1134,22 @@ public final class InternalILink3Connection extends ILink3Connection
 
             return 1;
         }
+    }
+
+    private void onBusinessMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int templateId,
+        final int blockLength,
+        final int version,
+        final boolean possRetrans)
+    {
+        if (BUSINESS_MESSAGE_LOGGING_ENABLED)
+        {
+            businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
+        }
+
+        handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);
     }
 
     private void checkBusinessRejectSequenceNumber(

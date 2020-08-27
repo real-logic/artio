@@ -81,7 +81,7 @@ public class FixMessageLogger implements Agent
         replaySubscription = aeron.addSubscription(libraryAeronChannel, outboundReplayStreamId);
 
         final LogEntryHandler logEntryHandler = new LogEntryHandler((message, buffer, offset, length, header) ->
-            fixMessageConsumer.accept(message.body()));
+            fixMessageConsumer.accept(message.body()), new LazyILinkMessagePrinter(inboundStreamId));
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
 

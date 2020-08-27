@@ -71,7 +71,12 @@ public enum LogTag
     /**
      * Prints out the ILink3 session messages.
      */
-    ILINK_SESSION;
+    ILINK_SESSION,
+
+    /**
+     * Prints out the ILink3 business layer messages.
+     */
+    ILINK_BUSINESS;
 
     private final char[] logStr;
 
