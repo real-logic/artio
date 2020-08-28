@@ -677,11 +677,19 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_TWICE_IN_MESSAGE);
 
-        assertFalse("Failed validation when it should have passed", decoder.validate());
+        assertFalse("Passed validation when it should have passed", decoder.validate());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
 
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldIgnoreFieldDefinedAtGroupLevelButAppearsAtTheMessageLevel() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_IN_REPEATING_GROUPS_APPEARS_OUTSIDE_OF_IT);
+
         assertTrue("Failed validation when it should have passed", decoder.validate());
     }
 

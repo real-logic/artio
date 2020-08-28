@@ -1430,19 +1430,18 @@ public class DecoderGenerator extends Generator
 
     private String unknownFieldPredicate(final AggregateType type)
     {
-        if (type == TRAILER)
+        switch (type)
         {
-            return REQUIRED_FIELDS + ".contains(tag)";
-        }
-        //HeaderDecoder has the special requirement of being used independently so cannot use context of message to
-        //determine if field is unknown
-        else if (type == HEADER)
-        {
-            return "true";
-        }
-        else
-        {
-            return "(trailer." + REQUIRED_FIELDS + ".contains(tag) || " + MESSAGE_FIELDS + ".contains(tag))";
+            case TRAILER:
+                return REQUIRED_FIELDS + ".contains(tag)";
+            case HEADER:
+                //HeaderDecoder has the special requirement of being used independently so cannot use context
+                // of message to determine if field is unknown
+                return "true";
+            case MESSAGE:
+                return "(trailer." + REQUIRED_FIELDS + ".contains(tag))";
+            default:
+                return "(trailer." + REQUIRED_FIELDS + ".contains(tag) || " + MESSAGE_FIELDS + ".contains(tag))";
         }
     }
 
