@@ -33,7 +33,7 @@ public final class SoleEngine
 
         System.out.println("Server Logs at " + configuration.logFileDir());
 
-        StressUtil.cleanupOldLogFileDir(configuration);
+//        StressUtil.cleanupOldLogFileDir(configuration);
 
         try (FixEngine ignore = FixEngine.launch(configuration))
         {
