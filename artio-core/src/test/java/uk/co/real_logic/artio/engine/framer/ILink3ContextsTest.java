@@ -139,13 +139,36 @@ public class ILink3ContextsTest
         assertOffset(offset);
     }
 
+    @Test
+    public void shouldReloadNotReestablishedUuidAfterRestart()
+    {
+        final ILink3Context firstContext = calculateUuid(false);
+        final long firstUuid = firstContext.uuid();
+
+        final ILink3Context secondContext = calculateUuid(false);
+        final long secondUuid = secondContext.uuid();
+        assertEquals(firstUuid, secondContext.lastUuid());
+        assertTrue(secondContext.newlyAllocated());
+        assertNotEquals(firstUuid, secondUuid);
+
+        final int offset = contexts.offset();
+
+        contexts.close();
+        newContexts();
+
+        final ILink3Context thirdContext = calculateUuid(true);
+        assertFalse(thirdContext.newlyAllocated());
+        assertEquals(secondUuid, thirdContext.lastUuid());
+        assertEquals(secondUuid, thirdContext.uuid());
+
+        assertOffset(offset);
+    }
+
     // Assert that we're not repeatedly growing the file with many reconnects with new offsets.
     private void assertOffset(final int offset)
     {
         assertEquals(offset, contexts.offset());
     }
-
-    // TODO: re-use entries in order to avoid file getting filed up
 
     private ILink3Context calculateUuid(final boolean reestablishConnection)
     {

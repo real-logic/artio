@@ -17,17 +17,20 @@ package uk.co.real_logic.artio.engine.framer;
 
 final class ILink3Context
 {
+    private final int offset;
+
     private long uuid;
     private long lastUuid;
     private boolean newlyAllocated;
     private boolean primaryConnected;
     private boolean backupConnected;
 
-    ILink3Context(final long uuid, final long lastUuid, final boolean newlyAllocated)
+    ILink3Context(final long uuid, final long lastUuid, final boolean newlyAllocated, final int offset)
     {
         this.uuid = uuid;
         this.lastUuid = lastUuid;
         this.newlyAllocated = newlyAllocated;
+        this.offset = offset;
     }
 
     long uuid()
@@ -78,5 +81,10 @@ final class ILink3Context
     public void backupConnected(final boolean connected)
     {
         this.backupConnected = connected;
+    }
+
+    public int offset()
+    {
+        return offset;
     }
 }
