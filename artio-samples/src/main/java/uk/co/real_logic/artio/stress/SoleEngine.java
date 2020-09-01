@@ -27,7 +27,8 @@ public final class SoleEngine
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", StressConfiguration.PORT)
             .logFileDir("stress-server-logs")
-            .libraryAeronChannel(AERON_CHANNEL);
+            .libraryAeronChannel(AERON_CHANNEL)
+            .errorIfDuplicateEngineDetected(false);
 
         configuration.replyTimeoutInMs(1000);
 

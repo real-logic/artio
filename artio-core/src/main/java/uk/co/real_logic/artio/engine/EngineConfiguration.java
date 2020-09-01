@@ -249,6 +249,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int maxConcurrentSessionReplays = DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
     private int replayPositionBufferSize = DEFAULT_REPLAY_POSITION_BUFFER_SIZE;
     private long duplicateEngineTimeoutInMs = DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS;
+    private boolean errorIfDuplicateEngineDetected = true;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -822,6 +823,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration errorIfDuplicateEngineDetected(final boolean errorIfDuplicateEngineDetected)
+    {
+        this.errorIfDuplicateEngineDetected = errorIfDuplicateEngineDetected;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -1054,6 +1061,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long duplicateEngineTimeoutInMs()
     {
         return duplicateEngineTimeoutInMs;
+    }
+
+    public boolean errorIfDuplicateEngineDetected()
+    {
+        return errorIfDuplicateEngineDetected;
     }
 
     /**

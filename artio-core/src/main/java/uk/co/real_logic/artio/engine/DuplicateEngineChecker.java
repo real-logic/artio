@@ -39,15 +39,18 @@ public class DuplicateEngineChecker implements Agent
     private final long duplicateEngineTimeoutInMs;
     private final File file;
     private final String logFileDir;
+    private final boolean errorIfDuplicateEngineDetected;
 
     private MappedByteBuffer mappedByteBuffer;
     private long nextDeadlineInMs;
 
-    public DuplicateEngineChecker(final long duplicateEngineTimeoutInMs, final String logFileDir)
+    public DuplicateEngineChecker(
+        final long duplicateEngineTimeoutInMs, final String logFileDir, final boolean errorIfDuplicateEngineDetected)
     {
         this.duplicateEngineTimeoutInMs = duplicateEngineTimeoutInMs;
         this.file = new File(logFileDir, FILE_NAME);
         this.logFileDir = logFileDir;
+        this.errorIfDuplicateEngineDetected = errorIfDuplicateEngineDetected;
     }
 
     public void check()
@@ -70,7 +73,7 @@ public class DuplicateEngineChecker implements Agent
             final String otherRuntimeName = engineInformationDecoder.runtimeName();
 
             final long latestEngineHeartbeatInMs = System.currentTimeMillis() - duplicateEngineTimeoutInMs;
-            if (heartbeatTimeInMs > latestEngineHeartbeatInMs)
+            if (heartbeatTimeInMs > latestEngineHeartbeatInMs && errorIfDuplicateEngineDetected)
             {
                 throw new IllegalStateException(String.format(
                     "Error starting Engine a duplicate Artio Engine instance might be running [%s] produced heartbeat" +

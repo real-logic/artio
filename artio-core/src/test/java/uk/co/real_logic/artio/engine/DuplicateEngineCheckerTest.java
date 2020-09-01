@@ -40,11 +40,11 @@ public class DuplicateEngineCheckerTest
     {
         final String thisDir = new File(".").getAbsolutePath();
         final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir);
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
         oldEngine.check();
 
         final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir);
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
 
         assertCheckThrows(newEngine);
     }
@@ -55,13 +55,13 @@ public class DuplicateEngineCheckerTest
         final long timeoutInMs = 10;
         final String thisDir = new File(".").getAbsolutePath();
         final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir);
+            timeoutInMs, thisDir, true);
         oldEngine.check();
 
         Thread.sleep(timeoutInMs);
 
         final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir);
+            timeoutInMs, thisDir, true);
         newEngine.check();
     }
 
@@ -71,14 +71,14 @@ public class DuplicateEngineCheckerTest
         final long timeoutInMs = 100;
         final String thisDir = new File(".").getAbsolutePath();
         final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir);
+            timeoutInMs, thisDir, true);
         oldEngine.check();
 
         Thread.sleep(timeoutInMs);
         assertEquals(1, oldEngine.doWork());
 
         final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir);
+            timeoutInMs, thisDir, true);
         assertCheckThrows(newEngine);
     }
 
@@ -87,7 +87,7 @@ public class DuplicateEngineCheckerTest
     {
         final String thisDir = new File(".").getAbsolutePath();
         final DuplicateEngineChecker engine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir);
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
         engine.check();
 
         assertTrue(FILE.exists());

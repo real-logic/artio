@@ -248,7 +248,8 @@ public final class FixEngine extends GatewayProcess
 
             duplicateEngineChecker = new DuplicateEngineChecker(
                 configuration.duplicateEngineTimeoutInMs(),
-                configuration.logFileDir());
+                configuration.logFileDir(),
+                configuration.errorIfDuplicateEngineDetected());
             duplicateEngineChecker.check();
 
             timers = new EngineTimers(configuration.clock());
