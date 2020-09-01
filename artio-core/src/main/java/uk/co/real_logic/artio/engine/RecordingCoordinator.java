@@ -52,6 +52,7 @@ import java.util.function.LongConsumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.CommonContext.MTU_LENGTH_PARAM_NAME;
+import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static io.aeron.archive.codecs.SourceLocation.LOCAL;
 import static io.aeron.archive.codecs.SourceLocation.REMOTE;
 import static io.aeron.driver.Configuration.publicationReservedSessionIdHigh;
@@ -282,6 +283,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             {
                 errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
                     " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
+            }
+
+            // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the
+            // Engine process with no clean shutdown and a running media driver. In order to hit this scenario you
+            // to restart the process rapidly as the media driver will eventually timeout the old process and stop the
+            // associated recording.
+            if (libraryExtendPosition.stopPosition == NULL_POSITION)
+            {
+                // We don't check the return value here because it returns false if the recording has stopped.
+                // This might happened if a timeout based stop occurs since the call to archive.listRecording.
+                archive.tryStopRecordingByIdentity(recordingId);
+                libraryExtendPosition.stopPosition = archive.getStopPosition(recordingId);
             }
         }
 
@@ -566,10 +579,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         public final int newSessionId;
         public final long recordingId;
-        public final long stopPosition;
         public final int initialTermId;
         public final int termBufferLength;
         public final int mtuLength;
+
+        public long stopPosition;
 
         LibraryExtendPosition(
             final int newSessionId,
@@ -585,6 +599,18 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             this.initialTermId = initialTermId;
             this.termBufferLength = termBufferLength;
             this.mtuLength = mtuLength;
+        }
+
+        public String toString()
+        {
+            return "LibraryExtendPosition{" +
+                "newSessionId=" + newSessionId +
+                ", recordingId=" + recordingId +
+                ", stopPosition=" + stopPosition +
+                ", initialTermId=" + initialTermId +
+                ", termBufferLength=" + termBufferLength +
+                ", mtuLength=" + mtuLength +
+                '}';
         }
     }
 
