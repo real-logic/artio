@@ -50,6 +50,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     {
         mediaDriver = launchMediaDriver();
 
+        // FixMessageLogger.main(new String[]{});
+
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.printErrorMessages(false);

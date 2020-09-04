@@ -18,11 +18,12 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.CommonConfiguration;
-
-import java.util.function.Consumer;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
@@ -44,7 +45,7 @@ public class FixMessageLogger implements Agent
     public static void main(final String[] args)
     {
         final FixMessageLogger logger = new FixMessageLogger(
-            System.out::println,
+            FixMessageLogger::print,
             new Aeron.Context(),
             IPC_CHANNEL,
             DEFAULT_INBOUND_LIBRARY_STREAM,
@@ -61,6 +62,16 @@ public class FixMessageLogger implements Agent
         AgentRunner.startOnThread(runner);
     }
 
+    private static void print(
+        final FixMessageDecoder fixMessageDecoder,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header)
+    {
+        System.out.printf("%s: %s%n", fixMessageDecoder.status(), fixMessageDecoder.body());
+    }
+
     private final Aeron aeron;
     private final Subscription outboundSubscription;
     private final Subscription inboundSubscription;
@@ -68,7 +79,7 @@ public class FixMessageLogger implements Agent
     private final FragmentAssembler fragmentAssembler;
 
     public FixMessageLogger(
-        final Consumer<String> fixMessageConsumer,
+        final FixMessageConsumer fixMessageConsumer,
         final Aeron.Context context,
         final String libraryAeronChannel,
         final int inboundStreamId,
@@ -80,8 +91,8 @@ public class FixMessageLogger implements Agent
         outboundSubscription = aeron.addSubscription(libraryAeronChannel, outboundStreamId);
         replaySubscription = aeron.addSubscription(libraryAeronChannel, outboundReplayStreamId);
 
-        final LogEntryHandler logEntryHandler = new LogEntryHandler((message, buffer, offset, length, header) ->
-            fixMessageConsumer.accept(message.body()), new LazyILinkMessagePrinter(inboundStreamId));
+        final LogEntryHandler logEntryHandler = new LogEntryHandler(
+            fixMessageConsumer, new LazyILinkMessagePrinter(inboundStreamId));
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
 
