@@ -273,6 +273,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             }
             else
             {
+                final int offset = this.pendingAcceptorLogonMsgOffset;
+                final int length = this.pendingAcceptorLogonMsgLength;
+                DebugLogger.log(FIX_MESSAGE, "Auth Reject ", buffer, offset, length);
+
                 completeDisconnect(pendingAcceptorLogon.reason());
             }
         }

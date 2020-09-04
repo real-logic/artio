@@ -77,7 +77,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test
-    public void logonsCanBeRejected()
+    public void shouldBeAbleToRejectLogons()
     {
         final Reply<Session> reply = acquireAuthProxy();
 
