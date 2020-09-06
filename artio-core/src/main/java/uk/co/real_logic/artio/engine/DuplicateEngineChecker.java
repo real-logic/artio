@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.IoUtil;
-import org.agrona.SystemUtil;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.storage.messages.EngineInformationDecoder;
@@ -31,6 +30,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class DuplicateEngineChecker implements Agent
 {
@@ -111,22 +112,14 @@ public class DuplicateEngineChecker implements Agent
         saveheartbeatTime(System.currentTimeMillis());
 
         mappedByteBuffer.force();
-        // Need to delete the old file on windows, on UNIX systems you can atomically move
-        if (SystemUtil.isWindows() && file.exists())
-        {
-            try
-            {
-                Files.delete(file.toPath());
-            }
-            catch (final IOException e)
-            {
-                throw new IllegalStateException(e);
-            }
-        }
 
-        if (!tempFile.renameTo(file))
+        try
         {
-            throw new IllegalStateException("Unable to move " + tempFile + " to " + file);
+            Files.move(tempFile.toPath(), file.toPath(), REPLACE_EXISTING);
+        }
+        catch (final IOException e)
+        {
+            throw new IllegalStateException(e);
         }
     }
 
