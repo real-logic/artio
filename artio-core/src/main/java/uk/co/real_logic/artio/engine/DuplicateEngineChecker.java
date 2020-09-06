@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.IoUtil;
+import org.agrona.SystemUtil;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.storage.messages.EngineInformationDecoder;
@@ -24,9 +25,11 @@ import uk.co.real_logic.artio.storage.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.MessageHeaderEncoder;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.MappedByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.UUID;
 
 public class DuplicateEngineChecker implements Agent
@@ -58,29 +61,36 @@ public class DuplicateEngineChecker implements Agent
         if (file.exists())
         {
             mappedByteBuffer = IoUtil.mapExistingFile(file, FILE_NAME);
-            buffer.wrap(mappedByteBuffer);
-
-            final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
-            final EngineInformationDecoder engineInformationDecoder = new EngineInformationDecoder();
-            messageHeaderDecoder.wrap(buffer, 0);
-            engineInformationDecoder.wrap(
-                buffer,
-                MessageHeaderDecoder.ENCODED_LENGTH,
-                messageHeaderDecoder.blockLength(),
-                messageHeaderDecoder.version());
-
-            final long heartbeatTimeInMs = engineInformationDecoder.heartbeatTimeInMs();
-            final String otherRuntimeName = engineInformationDecoder.runtimeName();
-
-            final long latestEngineHeartbeatInMs = System.currentTimeMillis() - duplicateEngineTimeoutInMs;
-            if (heartbeatTimeInMs > latestEngineHeartbeatInMs && errorIfDuplicateEngineDetected)
+            try
             {
-                throw new IllegalStateException(String.format(
-                    "Error starting Engine a duplicate Artio Engine instance might be running [%s] produced heartbeat" +
-                    " at %d, less than %d ms ago.",
-                    otherRuntimeName,
-                    heartbeatTimeInMs,
-                    duplicateEngineTimeoutInMs));
+                buffer.wrap(mappedByteBuffer);
+
+                final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+                final EngineInformationDecoder engineInformationDecoder = new EngineInformationDecoder();
+                messageHeaderDecoder.wrap(buffer, 0);
+                engineInformationDecoder.wrap(
+                    buffer,
+                    MessageHeaderDecoder.ENCODED_LENGTH,
+                    messageHeaderDecoder.blockLength(),
+                    messageHeaderDecoder.version());
+
+                final long heartbeatTimeInMs = engineInformationDecoder.heartbeatTimeInMs();
+                final String otherRuntimeName = engineInformationDecoder.runtimeName();
+
+                final long latestEngineHeartbeatInMs = System.currentTimeMillis() - duplicateEngineTimeoutInMs;
+                if (heartbeatTimeInMs > latestEngineHeartbeatInMs && errorIfDuplicateEngineDetected)
+                {
+                    throw new IllegalStateException(String.format(
+                        "Error starting Engine a duplicate Artio Engine instance might be running [%s] produced " +
+                        "heartbeat at %d, less than %d ms ago.",
+                        otherRuntimeName,
+                        heartbeatTimeInMs,
+                        duplicateEngineTimeoutInMs));
+                }
+            }
+            finally
+            {
+                IoUtil.unmap(mappedByteBuffer);
             }
         }
 
@@ -101,6 +111,19 @@ public class DuplicateEngineChecker implements Agent
         saveheartbeatTime(System.currentTimeMillis());
 
         mappedByteBuffer.force();
+        // Need to delete the old file on windows, on UNIX systems you can atomically move
+        if (SystemUtil.isWindows() && file.exists())
+        {
+            try
+            {
+                Files.delete(file.toPath());
+            }
+            catch (final IOException e)
+            {
+                throw new IllegalStateException(e);
+            }
+        }
+
         if (!tempFile.renameTo(file))
         {
             throw new IllegalStateException("Unable to move " + tempFile + " to " + file);
@@ -132,13 +155,19 @@ public class DuplicateEngineChecker implements Agent
 
     public void finalClose()
     {
-        if (mappedByteBuffer != null)
-        {
-            IoUtil.unmap(mappedByteBuffer);
-        }
+        unmap();
         if (file.exists())
         {
             file.delete();
+        }
+    }
+
+    void unmap()
+    {
+        if (mappedByteBuffer != null)
+        {
+            IoUtil.unmap(mappedByteBuffer);
+            IoUtil.unmap(buffer.byteBuffer());
         }
     }
 }

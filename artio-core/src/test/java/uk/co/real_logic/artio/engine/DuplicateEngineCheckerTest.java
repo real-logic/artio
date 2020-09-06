@@ -16,9 +16,7 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.IoUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
 
@@ -28,6 +26,10 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_DUPLICAT
 public class DuplicateEngineCheckerTest
 {
     private static final File FILE = new File(DuplicateEngineChecker.FILE_NAME);
+    private static final String THIS_DIR = new File(".").getAbsolutePath();
+
+    private DuplicateEngineChecker oldEngine;
+    private DuplicateEngineChecker newEngine;
 
     @Before
     public void startup()
@@ -35,16 +37,28 @@ public class DuplicateEngineCheckerTest
         IoUtil.deleteIfExists(FILE);
     }
 
+    @After
+    public void teardown()
+    {
+        if (oldEngine != null)
+        {
+            oldEngine.finalClose();
+        }
+        if (newEngine != null)
+        {
+            newEngine.finalClose();
+        }
+    }
+
     @Test
     public void shouldDetectDuplicate()
     {
-        final String thisDir = new File(".").getAbsolutePath();
-        final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
+        oldEngine = new DuplicateEngineChecker(
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, THIS_DIR, true);
         oldEngine.check();
 
-        final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
+        newEngine = new DuplicateEngineChecker(
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, THIS_DIR, true);
 
         assertCheckThrows(newEngine);
     }
@@ -53,15 +67,17 @@ public class DuplicateEngineCheckerTest
     public void shouldNotDetectDuplicateAfterTimeout() throws InterruptedException
     {
         final long timeoutInMs = 10;
-        final String thisDir = new File(".").getAbsolutePath();
-        final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir, true);
+        oldEngine = new DuplicateEngineChecker(
+            timeoutInMs, THIS_DIR, true);
         oldEngine.check();
+        // Simulate unclean shutdown - where the old process ends without removing the file :. no finalClose().
+        // Need to unmap to avoid windows file locking errors in tests.
+        oldEngine.unmap();
 
         Thread.sleep(timeoutInMs);
 
-        final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir, true);
+        newEngine = new DuplicateEngineChecker(
+            timeoutInMs, THIS_DIR, true);
         newEngine.check();
     }
 
@@ -69,25 +85,23 @@ public class DuplicateEngineCheckerTest
     public void shouldUpdateTimeoutOnDutyCycle() throws InterruptedException
     {
         final long timeoutInMs = 100;
-        final String thisDir = new File(".").getAbsolutePath();
-        final DuplicateEngineChecker oldEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir, true);
+        oldEngine = new DuplicateEngineChecker(
+            timeoutInMs, THIS_DIR, true);
         oldEngine.check();
 
         Thread.sleep(timeoutInMs);
         assertEquals(1, oldEngine.doWork());
 
-        final DuplicateEngineChecker newEngine = new DuplicateEngineChecker(
-            timeoutInMs, thisDir, true);
+        newEngine = new DuplicateEngineChecker(
+            timeoutInMs, THIS_DIR, true);
         assertCheckThrows(newEngine);
     }
 
     @Test
     public void shouldRemoveFileOnShutdown()
     {
-        final String thisDir = new File(".").getAbsolutePath();
         final DuplicateEngineChecker engine = new DuplicateEngineChecker(
-            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, thisDir, true);
+            DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS, THIS_DIR, true);
         engine.check();
 
         assertTrue(FILE.exists());
