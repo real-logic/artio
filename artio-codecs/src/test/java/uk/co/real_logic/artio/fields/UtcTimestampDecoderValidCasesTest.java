@@ -62,6 +62,7 @@ public class UtcTimestampDecoderValidCasesTest
             new Object[] {"20150225-17:51:32.000", true},
             new Object[] {"20150225-17:51:32.123", true},
             new Object[] {"20600225-17:51:32.123", true},
+            new Object[] {"19700101-00:00:00.000", true},
             new Object[] {"00010101-00:00:00.000", false},
             new Object[] {"00010101-00:00:00.001", false},
             new Object[] {"99991231-23:59:59.999", false}

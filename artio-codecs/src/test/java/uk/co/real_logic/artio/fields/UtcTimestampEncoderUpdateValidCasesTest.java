@@ -95,10 +95,32 @@ public class UtcTimestampEncoderUpdateValidCasesTest
     }
 
     @Test
+    public void canUpdateTimestampWithoutInitialize()
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder();
+
+        final int length = encoder.update(epochMillis);
+
+        assertEquals("encoded wrong length", expectedLength, length);
+        assertEquals(expectedTimestamp, new String(encoder.buffer(), 0, length, US_ASCII));
+    }
+
+    @Test
     public void canUpdateTimestampMicros()
     {
         final UtcTimestampEncoder encoder = new UtcTimestampEncoder(MICROSECONDS);
         encoder.initialise(otherEpochMicros);
+
+        final int length = encoder.update(epochMicros);
+
+        assertEquals("encoded wrong length", expectedLengthMicros, length);
+        assertEquals(expectedTimestampMicros, new String(encoder.buffer(), 0, length, US_ASCII));
+    }
+
+    @Test
+    public void canUpdateTimestampMicrosWithoutInitialise()
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(MICROSECONDS);
 
         final int length = encoder.update(epochMicros);
 
@@ -113,6 +135,20 @@ public class UtcTimestampEncoderUpdateValidCasesTest
         {
             final UtcTimestampEncoder encoder = new UtcTimestampEncoder(NANOSECONDS);
             encoder.initialise(otherEpochNanos);
+
+            final int length = encoder.update(epochNanos);
+
+            assertEquals("encoded wrong length", expectedLengthNanos, length);
+            assertEquals(expectedTimestampNanos, new String(encoder.buffer(), 0, length, US_ASCII));
+        }
+    }
+
+    @Test
+    public void canUpdateTimestampNanosWithoutInitialise()
+    {
+        if (validNanoSecondTestCase)
+        {
+            final UtcTimestampEncoder encoder = new UtcTimestampEncoder(NANOSECONDS);
 
             final int length = encoder.update(epochNanos);
 

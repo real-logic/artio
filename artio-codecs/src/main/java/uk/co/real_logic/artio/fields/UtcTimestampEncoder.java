@@ -204,7 +204,7 @@ public final class UtcTimestampEncoder
      */
     public int update(final long epochFraction)
     {
-        if (epochFraction > startOfNextDayInFraction || epochFraction < beginningOfDayInFraction)
+        if (epochFraction >= startOfNextDayInFraction || epochFraction < beginningOfDayInFraction)
         {
             return initialise(epochFraction);
         }
