@@ -1158,6 +1158,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
+    {
+        super.defaultHeartbeatIntervalInS(value);
+        return this;
+    }
+
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;

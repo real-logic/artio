@@ -40,7 +40,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-final class FixConnection implements AutoCloseable
+public final class FixConnection implements AutoCloseable
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
@@ -75,7 +75,7 @@ final class FixConnection implements AutoCloseable
     private final MutableAsciiBuffer asciiReadBuffer = new MutableAsciiBuffer(readBuffer);
     private int bytesRemaining = 0;
 
-    static FixConnection initiate(final int port) throws IOException
+    public static FixConnection initiate(final int port) throws IOException
     {
         return new FixConnection(
             SocketChannel.open(new InetSocketAddress("localhost", port)),
@@ -83,7 +83,7 @@ final class FixConnection implements AutoCloseable
             ACCEPTOR_ID);
     }
 
-    static FixConnection accept(final int port, final Runnable connectOperation) throws IOException
+    public static FixConnection accept(final int port, final Runnable connectOperation) throws IOException
     {
         try (ServerSocketChannel server = ServerSocketChannel
             .open()
@@ -238,7 +238,7 @@ final class FixConnection implements AutoCloseable
         send(0, length);
     }
 
-    void logon(final boolean resetSeqNumFlag)
+    public void logon(final boolean resetSeqNumFlag)
     {
         setupHeader(logon.header(), msgSeqNum++, false);
 
@@ -262,7 +262,7 @@ final class FixConnection implements AutoCloseable
         return this.msgSeqNum++;
     }
 
-    void logout()
+    public void logout()
     {
         setupHeader(logout.header(), msgSeqNum++, false);
 
@@ -290,7 +290,7 @@ final class FixConnection implements AutoCloseable
         }
     }
 
-    <T extends Decoder> T readMessage(final T decoder)
+    public <T extends Decoder> T readMessage(final T decoder)
     {
         try
         {
@@ -347,7 +347,7 @@ final class FixConnection implements AutoCloseable
         return read;
     }
 
-    void send(final Encoder encoder)
+    public void send(final Encoder encoder)
     {
         final long result = encoder.encode(writeAsciiBuffer, OFFSET);
         final int offset = Encoder.offset(result);
@@ -373,24 +373,24 @@ final class FixConnection implements AutoCloseable
         }
     }
 
-    LogonDecoder readLogonReply()
+    public LogonDecoder readLogonReply()
     {
         return readMessage(new LogonDecoder());
     }
 
-    RejectDecoder readReject()
+    public RejectDecoder readReject()
     {
         return readMessage(new RejectDecoder());
     }
 
-    void sendTestRequest(final String testReqID)
+    public void sendTestRequest(final String testReqID)
     {
         setupHeader(testRequestEncoder.header(), msgSeqNum++, false);
         testRequestEncoder.testReqID(testReqID);
         send(testRequestEncoder);
     }
 
-    HeartbeatDecoder readHeartbeat(final String testReqID)
+    public HeartbeatDecoder readHeartbeat(final String testReqID)
     {
         final HeartbeatDecoder heartbeat = readMessage(new HeartbeatDecoder());
         assertTrue(heartbeat.hasTestReqID());
@@ -403,7 +403,7 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
-    LogoutDecoder logoutAndAwaitReply()
+    public LogoutDecoder logoutAndAwaitReply()
     {
         logout();
 
