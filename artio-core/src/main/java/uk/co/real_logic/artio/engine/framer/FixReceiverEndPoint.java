@@ -273,6 +273,36 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             }
             else
             {
+                int offset = this.pendingAcceptorLogonMsgOffset;
+                int length = this.pendingAcceptorLogonMsgLength;
+                DirectBuffer buffer = this.buffer;
+
+                passwordCleaner.clean(buffer, offset, length);
+
+                offset = 0;
+                buffer = passwordCleaner.cleanedBuffer();
+                length = passwordCleaner.cleanedLength();
+
+                final long position = publication.saveMessage(
+                    buffer,
+                    offset,
+                    length,
+                    libraryId,
+                    LOGON_MESSAGE_TYPE,
+                    sessionId,
+                    sequenceIndex,
+                    connectionId,
+                    AUTH_REJECT,
+                    0,
+                    lastReadTimestamp);
+
+                if (Pressure.isBackPressured(position))
+                {
+                    return 1;
+                }
+
+                DebugLogger.log(FIX_MESSAGE, "Auth Reject ", buffer, offset, length);
+
                 completeDisconnect(pendingAcceptorLogon.reason());
             }
         }

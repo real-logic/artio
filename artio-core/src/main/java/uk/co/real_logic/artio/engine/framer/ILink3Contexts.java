@@ -88,7 +88,7 @@ class ILink3Contexts
 
             keyToContext.put(
                 new ILink3Key(port, host, accessKeyId),
-                new ILink3Context(uuid, 0, false));
+                new ILink3Context(uuid, 0, false, offset));
 
             offset = contextDecoder.limit();
         }
@@ -109,6 +109,10 @@ class ILink3Contexts
             {
                 final long newUuid = microSecondTimestamp();
                 context.uuid(newUuid);
+
+                contextEncoder
+                    .wrap(buffer, context.offset())
+                    .uuid(newUuid);
             }
 
             return context;
@@ -134,7 +138,7 @@ class ILink3Contexts
             .host(key.host)
             .accessKeyId(key.accessKeyId);
 
-        final ILink3Context context = new ILink3Context(newUuid, 0, true);
+        final ILink3Context context = new ILink3Context(newUuid, 0, true, offset);
         offset = contextEncoder.limit();
         return context;
     }

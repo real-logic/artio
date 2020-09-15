@@ -69,6 +69,7 @@
             <validValue name="INVALID_BODYLENGTH">2</validValue>
             <validValue name="INVALID">3</validValue>
             <validValue name="CATCHUP_REPLAY">4</validValue>
+            <validValue name="AUTH_REJECT">5</validValue>
         </enum>
         <enum name="DisconnectReason" encodingType="uint8">
             <validValue name="REMOTE_DISCONNECT"

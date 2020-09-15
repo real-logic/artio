@@ -158,6 +158,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final long DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS = 10_000;
     public static final long DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS = 60_000;
     public static final int DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS = 5;
+    public static final long DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS = SECONDS.toMillis(10);
 
     static
     {
@@ -247,6 +248,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MessageTimingHandler messageTimingHandler = null;
     private int maxConcurrentSessionReplays = DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
     private int replayPositionBufferSize = DEFAULT_REPLAY_POSITION_BUFFER_SIZE;
+    private long duplicateEngineTimeoutInMs = DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS;
+    private boolean errorIfDuplicateEngineDetected = true;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -814,6 +817,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration duplicateEngineTimeoutInMs(final long duplicateEngineTimeoutInMs)
+    {
+        this.duplicateEngineTimeoutInMs = duplicateEngineTimeoutInMs;
+        return this;
+    }
+
+    public EngineConfiguration errorIfDuplicateEngineDetected(final boolean errorIfDuplicateEngineDetected)
+    {
+        this.errorIfDuplicateEngineDetected = errorIfDuplicateEngineDetected;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -1043,6 +1058,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayPositionBufferSize;
     }
 
+    public long duplicateEngineTimeoutInMs()
+    {
+        return duplicateEngineTimeoutInMs;
+    }
+
+    public boolean errorIfDuplicateEngineDetected()
+    {
+        return errorIfDuplicateEngineDetected;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -1130,6 +1155,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
     {
         super.customErrorConsumer(customErrorConsumer);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
+    {
+        super.defaultHeartbeatIntervalInS(value);
         return this;
     }
 

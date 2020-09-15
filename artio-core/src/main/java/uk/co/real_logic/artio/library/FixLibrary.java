@@ -78,7 +78,7 @@ public class FixLibrary extends GatewayProcess
             scheduler.configure(configuration.aeronContext());
             init(configuration);
             final LibraryTimers timers = new LibraryTimers(configuration.clock());
-            initMonitoringAgent(timers.all(), configuration, null);
+            initMonitoringAgent(timers.all(), configuration, null, null);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
             poller = new LibraryPoller(

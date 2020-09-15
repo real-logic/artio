@@ -143,7 +143,10 @@ public abstract class GatewayProcess implements AutoCloseable
     }
 
     protected void initMonitoringAgent(
-        final List<Timer> timers, final CommonConfiguration configuration, final AeronArchive aeronArchive)
+        final List<Timer> timers,
+        final CommonConfiguration configuration,
+        final AeronArchive aeronArchive,
+        final Agent agent)
     {
         final List<Agent> agents = new ArrayList<>();
         if (TIME_MESSAGES)
@@ -166,6 +169,11 @@ public abstract class GatewayProcess implements AutoCloseable
                 START_TIME_IN_MS,
                 aeronArchive,
                 configuration.customErrorConsumer()));
+        }
+
+        if (agent != null)
+        {
+            agents.add(agent);
         }
 
         if (!agents.isEmpty())

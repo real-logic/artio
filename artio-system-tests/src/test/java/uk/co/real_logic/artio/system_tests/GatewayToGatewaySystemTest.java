@@ -39,6 +39,7 @@ import java.util.function.IntSupplier;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -70,6 +71,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void launch()
     {
         mediaDriver = launchMediaDriver();
+
+//        FixMessageLogger.main(new String[]{});
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
             .deleteLogFileDirOnStart(true);

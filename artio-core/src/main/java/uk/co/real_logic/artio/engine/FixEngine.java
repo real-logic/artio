@@ -49,6 +49,7 @@ public final class FixEngine extends GatewayProcess
 
     public static final int ENGINE_LIBRARY_ID = 0;
 
+    private final DuplicateEngineChecker duplicateEngineChecker;
     private final EngineTimers timers;
     private final EngineConfiguration configuration;
     private final RecordingCoordinator recordingCoordinator;
@@ -245,6 +246,12 @@ public final class FixEngine extends GatewayProcess
         {
             this.configuration = configuration;
 
+            duplicateEngineChecker = new DuplicateEngineChecker(
+                configuration.duplicateEngineTimeoutInMs(),
+                configuration.logFileDir(),
+                configuration.errorIfDuplicateEngineDetected());
+            duplicateEngineChecker.check();
+
             timers = new EngineTimers(configuration.clock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
@@ -269,7 +276,7 @@ public final class FixEngine extends GatewayProcess
                 aeronArchive,
                 recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
-            initMonitoringAgent(timers.all(), configuration, aeronArchive);
+            initMonitoringAgent(timers.all(), configuration, aeronArchive, duplicateEngineChecker);
         }
         catch (final Exception e)
         {
@@ -304,8 +311,7 @@ public final class FixEngine extends GatewayProcess
             replayImage("slow-replay", replaySessionId),
             timers,
             aeron.conductorAgentInvoker(),
-            recordingCoordinator
-        );
+            recordingCoordinator);
 
         engineContext.framerContext(framerContext);
     }
@@ -382,7 +388,7 @@ public final class FixEngine extends GatewayProcess
 
                 try
                 {
-                    closeAll(scheduler, engineContext, configuration, super::close);
+                    closeAll(scheduler, engineContext, configuration, super::close, duplicateEngineChecker::finalClose);
                 }
                 finally
                 {

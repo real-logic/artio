@@ -49,7 +49,6 @@ public class ExchangeSessionHandler implements SessionHandler
     {
     }
 
-    @Override
     public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
@@ -66,7 +65,6 @@ public class ExchangeSessionHandler implements SessionHandler
 
         if (messageType == NewOrderSingleDecoder.MESSAGE_TYPE)
         {
-
             newOrderSingle.decode(asciiBuffer, 0, length);
 
             if (!validOrder())
@@ -89,8 +87,8 @@ public class ExchangeSessionHandler implements SessionHandler
         newExecId();
 
         executionReport
-            .execType(ExecType.FILL)
-            .ordStatus(OrdStatus.FILLED)
+            .execType(ExecType.CANCELED)
+            .ordStatus(OrdStatus.CANCELED)
             .orderID(ORDER_ID_BUFFER, orderIdEncodedLength)
             .execID(EXEC_ID_BUFFER, execIdEncodedLength)
             .side(side);
