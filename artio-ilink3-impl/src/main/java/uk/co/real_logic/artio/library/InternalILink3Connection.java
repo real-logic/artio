@@ -502,7 +502,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (position > 0)
         {
-            resendTime = nextTimeoutInMs();
+            nextSendMessageTimeInMs = resendTime = nextTimeoutInMs();
             lastEstablishRequestTimestamp = requestTimestamp;
             state = State.SENT_ESTABLISH;
             return true;
@@ -807,7 +807,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
-        nextReceiveMessageTimeInMs = nextSendMessageTimeInMs = nextTimeoutInMs();
+        nextReceiveMessageTimeInMs = nextTimeoutInMs();
 
         if (previousUUID == lastUuid)
         {
