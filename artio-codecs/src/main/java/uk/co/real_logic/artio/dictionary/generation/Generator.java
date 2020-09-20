@@ -67,14 +67,14 @@ public abstract class Generator
     {
         final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
-            "    %3$s" +
-            "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
+            "%3$s" +
+            "    private final Trailer%1$s trailer = new Trailer%1$s();\n\n" +
             "    public Trailer%1$s trailer()\n" +
             "    {\n" +
             "        return trailer;\n" +
             "    }\n\n" +
 
-            "    private Header%1$s header = new Header%1$s(%2$s);\n\n" +
+            "    private final Header%1$s header = new Header%1$s(%2$s);\n\n" +
             "    public Header%1$s header()\n" +
             "    {\n" +
             "        return header;\n" +
@@ -470,9 +470,9 @@ public abstract class Generator
         if (hasCommonCompounds)
         {
             prefix =
-                "    builder.append(\"  \\\"header\\\": \");\n" +
-                "    header.appendTo(builder, level + 1);\n" +
-                "    builder.append(\"\\n\");\n";
+                "        builder.append(\"  \\\"header\\\": \");\n" +
+                "        header.appendTo(builder, level + 1);\n" +
+                "        builder.append(\"\\n\");\n";
         }
         else
         {
