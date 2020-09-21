@@ -265,6 +265,17 @@ public class RetransmitQueueTest
         handler.resetRetransmitTimedOut();
     }
 
+    @Test
+    public void shouldReplayBufferWhenReceivingSequenceMessage()
+    {
+        // @5,6,Seq8,done.
+        onExecutionReport(6, false);
+        connection.onSequence(connection.uuid(), 7, FTI.Primary, KeepAliveLapsed.NotLapsed);
+
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
+    }
+
     // TODO: gaps within the retransmit
     // TODO: gaps within the normal message sequence
     // TODO: shouldNotifyAndQueueReRequestWhenMaxSizeBreachedMultipleMessges with a gap in the retransmit if possible

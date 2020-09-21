@@ -243,6 +243,14 @@ public abstract class ILink3Connection
     public abstract long retransmitFillSeqNo();
 
     /**
+     * Gets the next sequence number that Artio expects to received in the current retransmit request. If there is no
+     * retransmit operation in process NOT_AWAITING_RETRANSMIT will be returned.
+     *
+     * @return the next sequence number that Artio expects to received in the current retransmit request.
+     */
+    public abstract long nextRetransmitSeqNo();
+
+    /**
      * Check if a message can be sent. This is when you're in the ESTABLISHED or AWAITING_KEEPALIVE state.
      *
      * @return true if a message can be sent, false otherwise

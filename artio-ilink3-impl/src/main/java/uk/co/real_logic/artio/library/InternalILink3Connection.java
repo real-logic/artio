@@ -444,6 +444,11 @@ public final class InternalILink3Connection extends ILink3Connection
         return retransmitFillSeqNo;
     }
 
+    public long nextRetransmitSeqNo()
+    {
+        return nextRetransmitSeqNo;
+    }
+
     // END PUBLIC API
 
     public long nextReceiveMessageTimeInMs()
@@ -985,6 +990,17 @@ public final class InternalILink3Connection extends ILink3Connection
                 {
                     // sequence gap, initiate retransmission.
                     return onInvalidSequenceNumber(lastUUIDNullValue(), nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
+                }
+                else if (retransmitFillTimeoutInMs != NOT_AWAITING_RETRANSMIT)
+                {
+                    // implied expectedNextRecvSeqNo == nextSeqNo
+                    // Sequence number at this point indicates that CME won't send any more retransmit requests
+                    // and we should consider the retransmit to be filled.
+                    final long filledPosition = retransmitFilled();
+                    if (Pressure.isBackPressured(filledPosition))
+                    {
+                        return filledPosition;
+                    }
                 }
             }
             else
