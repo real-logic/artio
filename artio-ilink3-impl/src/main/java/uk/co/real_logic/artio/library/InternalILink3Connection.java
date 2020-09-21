@@ -44,6 +44,7 @@ import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
@@ -183,6 +184,7 @@ public final class InternalILink3Connection extends ILink3Connection
     private long nextRecvSeqNo;
     private long nextSentSeqNo;
 
+    private long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
     private long nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
 
@@ -349,6 +351,7 @@ public final class InternalILink3Connection extends ILink3Connection
         final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
         if (!Pressure.isBackPressured(position))
         {
+            retransmitFillTimeoutInNs(requestTimestamp);
             nextRetransmitSeqNo = fromSeqNo;
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
         }
@@ -668,6 +671,14 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollEstablished(final long timeInMs)
     {
+        int events = 0;
+        final long retransmitFillTimeoutInMs = this.retransmitFillTimeoutInMs;
+        if (retransmitFillTimeoutInMs != NOT_AWAITING_RETRANSMIT && timeInMs >= retransmitFillTimeoutInMs)
+        {
+            handler.onRetransmitTimeout(this);
+            events++;
+        }
+
         if (timeInMs > nextReceiveMessageTimeInMs)
         {
             sendSequence(Lapsed);
@@ -675,12 +686,15 @@ public final class InternalILink3Connection extends ILink3Connection
             onReceivedMessage();
 
             this.state = State.AWAITING_KEEPALIVE;
+            events++;
         }
         else if (timeInMs > nextSendMessageTimeInMs)
         {
             sendSequence(NotLapsed);
+            events++;
         }
-        return 0;
+
+        return events;
     }
 
     private int pollSentEstablish(final long timeInMs)
@@ -1298,12 +1312,14 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
         {
-            final long position = sendRetransmitRequest(lastUuid, fromSeqNo, msgCount);
+            final long requestTimestamp = requestTimestamp();
+            final long position = sendRetransmitRequest(lastUuid, fromSeqNo, msgCount, requestTimestamp);
             if (!Pressure.isBackPressured(position))
             {
                 addRemainingRetransmitRequests(lastUuid, fromSeqNo, msgCount, totalMsgCount);
                 nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, lastUuid);
                 nextRetransmitSeqNo = fromSeqNo;
+                retransmitFillTimeoutInNs(requestTimestamp);
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
             return position;
@@ -1343,14 +1359,16 @@ public final class InternalILink3Connection extends ILink3Connection
             }
             nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
+            retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
         }
         else
         {
             final long lastUuid = retransmitRequest.lastUuid;
             final long fromSeqNo = retransmitRequest.fromSeqNo;
             final int msgCount = retransmitRequest.msgCount;
+            final long requestTimestamp = requestTimestamp();
             final long position = sendRetransmitRequest(
-                lastUuid, fromSeqNo, msgCount);
+                lastUuid, fromSeqNo, msgCount, requestTimestamp);
 
             if (!Pressure.isBackPressured(position))
             {
@@ -1366,6 +1384,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     DebugLogger.log(ILINK_SESSION, retransmitFilledNext);
                 }
                 retransmitRequests.pollFirst();
+                retransmitFillTimeoutInNs(requestTimestamp);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }
@@ -1374,6 +1393,11 @@ public final class InternalILink3Connection extends ILink3Connection
         }
 
         return 1;
+    }
+
+    private void retransmitFillTimeoutInNs(final long requestTimestampInNs)
+    {
+        retransmitFillTimeoutInMs = NANOSECONDS.toMillis(requestTimestampInNs);
     }
 
     private void processRetransmitQueue()
@@ -1423,10 +1447,10 @@ public final class InternalILink3Connection extends ILink3Connection
         retransmitRequests.offerLast(new RetransmitRequest(lastUuid, fromSeqNo, msgCount));
     }
 
-    private long sendRetransmitRequest(final long lastUuid, final long fromSeqNo, final int msgCount)
+    private long sendRetransmitRequest(
+        final long lastUuid, final long fromSeqNo, final int msgCount, final long requestTimestamp)
     {
         sentMessage();
-        final long requestTimestamp = requestTimestamp();
         return proxy.sendRetransmitRequest(uuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
     }
 

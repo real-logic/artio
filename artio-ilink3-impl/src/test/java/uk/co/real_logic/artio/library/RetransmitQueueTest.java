@@ -26,14 +26,16 @@ import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.library.ILink3Connection.NOT_AWAITING_RETRANSMIT;
+import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.DEFAULT_RETRANSMIT_TIMEOUT_IN_MS;
 
-public class RetransmitReorderBufferTest
+public class RetransmitQueueTest
 {
     private static final int LIBRARY_ID = 2;
     private static final long CONNECTION_ID = 3;
@@ -59,6 +61,7 @@ public class RetransmitReorderBufferTest
     private long nanoTime = System.nanoTime();
     private final EpochNanoClock clock = () -> nanoTime;
     private InternalILink3Connection connection;
+    private int expectedRetransmitQueueSize = 0;
 
     @Before
     public void setUp()
@@ -165,8 +168,11 @@ public class RetransmitReorderBufferTest
     @After
     public void done()
     {
-        assertEquals(0, connection.retransmitQueueSize());
+        assertEquals(expectedRetransmitQueueSize, connection.retransmitQueueSize());
         verifyNoMoreInteractions(proxy);
+
+        connection.poll(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS + 1);
+        assertFalse(handler.retransmitTimedOut());
     }
 
     @Test
@@ -246,11 +252,20 @@ public class RetransmitReorderBufferTest
         assertSeqNos(10, NOT_AWAITING_RETRANSMIT);
     }
 
-    // shouldNotifyWhenTimeoutBreached()
+    @Test
+    public void shouldNotifyWhenTimeoutBreached()
+    {
+        expectedRetransmitQueueSize = 492;
+
+        assertFalse("Wrong retransmitTimedOut", handler.retransmitTimedOut());
+        nanoTime += DEFAULT_RETRANSMIT_TIMEOUT_IN_MS + 1;
+        connection.poll(NANOSECONDS.toMillis(nanoTime));
+        assertTrue("Wrong retransmitTimedOut", handler.retransmitTimedOut());
+
+        handler.resetRetransmitTimedOut();
+    }
 
     // TODO: gaps within the retransmit
     // TODO: gaps within the normal message sequence
     // TODO: shouldNotifyAndQueueReRequestWhenMaxSizeBreachedMultipleMessges with a gap in the retransmit if possible
-
-    // TODO: also integrate interleaving case into system test
 }

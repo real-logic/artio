@@ -72,6 +72,10 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     {
     }
 
+    public void onRetransmitTimeout(final ILink3Connection connection)
+    {
+    }
+
     public void onSequence(final ILink3Connection connection, final long uuid, final long nextSeqNo)
     {
     }

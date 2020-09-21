@@ -19,6 +19,8 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 
+import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.*;
+
 /**
  * This handler should be implemented by anyone using Artio to connect to the iLink3 protocol. Your application code
  * will receive callbacks on these messages in response to business level messages. Artio handles session level
@@ -71,6 +73,14 @@ public interface ILink3ConnectionHandler
      */
     void onRetransmitReject(
         ILink3Connection connection, String reason, long lastUuid, long requestTimestamp, int errorCodes);
+
+    /**
+     * Callback triggered by a timeout on a retransmit request. See
+     * {@link Builder#retransmitNotificationTimeoutInMs(int)} for details.
+     *
+     * @param connection the connection that initiated the retransmit request.
+     */
+    void onRetransmitTimeout(ILink3Connection connection);
 
     /**
      * Notifies an application when a sequence message is received. Normally applications would not need to implement

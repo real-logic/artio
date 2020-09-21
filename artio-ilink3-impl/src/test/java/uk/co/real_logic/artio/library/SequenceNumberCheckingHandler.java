@@ -24,6 +24,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
 {
     private final ExecutionReportStatus532Decoder executionReportStatus = new ExecutionReportStatus532Decoder();
     private final LongArrayList sequenceNumbers = new LongArrayList();
+    private boolean retransmitTimedOut = false;
 
     public void onBusinessMessage(
         final ILink3Connection connection,
@@ -61,6 +62,21 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         final long requestTimestamp,
         final int errorCodes)
     {
+    }
+
+    public boolean retransmitTimedOut()
+    {
+        return retransmitTimedOut;
+    }
+
+    public void onRetransmitTimeout(final ILink3Connection connection)
+    {
+        retransmitTimedOut = true;
+    }
+
+    public void resetRetransmitTimedOut()
+    {
+        retransmitTimedOut = false;
     }
 
     public void onSequence(final ILink3Connection connection, final long uuid, final long nextSeqNo)
