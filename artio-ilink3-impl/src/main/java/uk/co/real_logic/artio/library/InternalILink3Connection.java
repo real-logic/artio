@@ -15,13 +15,9 @@
  */
 package uk.co.real_logic.artio.library;
 
-import iLinkBinary.BusinessReject521Decoder;
-import iLinkBinary.FTI;
-import iLinkBinary.KeepAliveLapsed;
+import iLinkBinary.*;
 import io.aeron.exceptions.TimeoutException;
-import org.agrona.DirectBuffer;
-import org.agrona.LangUtil;
-import org.agrona.MutableDirectBuffer;
+import org.agrona.*;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
@@ -51,6 +47,8 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
@@ -141,6 +139,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer();
     private static final long OK_POSITION = Long.MIN_VALUE;
+    private static final int HEADER_LENGTH = SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH;
 
     private final NotAppliedResponse response = new NotAppliedResponse();
     private final Deque<RetransmitRequest> retransmitRequests = new ArrayDeque<>();
@@ -151,10 +150,16 @@ public final class InternalILink3Connection extends ILink3Connection
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
     private final CharFormatter retransmitFilledNext = new CharFormatter(
         "RetransmitFilledNext uuid=%s,lastUuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
-    private final ILink3BusinessMessageDissector businessMessageLogger = new ILink3BusinessMessageDissector();
+    private final ILink3BusinessMessageDissector businessMessageLogger;
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
+
+    // Reorder buffer
+    private int retransmitQueueOffset = 0;
+    private final int maxRetransmitQueueSize;
+    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final ExpandableArrayBuffer retransmitQueue = new ExpandableArrayBuffer();
 
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
@@ -206,6 +211,27 @@ public final class InternalILink3Connection extends ILink3Connection
         final long lastUuid,
         final EpochNanoClock epochNanoClock)
     {
+        this(configuration, connectionId, initiateReply, outboundPublication, inboundPublication, libraryId,
+            owner, uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid, epochNanoClock,
+            new ILink3Proxy(connectionId, outboundPublication.dataPublication(), new ILink3BusinessMessageDissector()));
+    }
+
+    InternalILink3Connection(
+        final ILink3ConnectionConfiguration configuration,
+        final long connectionId,
+        final InitiateILink3ConnectionReply initiateReply,
+        final GatewayPublication outboundPublication,
+        final GatewayPublication inboundPublication,
+        final int libraryId,
+        final LibraryPoller owner,
+        final long uuid,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final boolean newlyAllocated,
+        final long lastUuid,
+        final EpochNanoClock epochNanoClock,
+        final ILink3Proxy proxy)
+    {
         this.configuration = configuration;
         this.connectionId = connectionId;
         this.initiateReply = initiateReply;
@@ -214,10 +240,14 @@ public final class InternalILink3Connection extends ILink3Connection
         this.libraryId = libraryId;
         this.owner = owner;
         this.handler = configuration.handler();
+        this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
         this.newlyAllocated = newlyAllocated;
         this.epochNanoClock = epochNanoClock;
+        this.proxy = proxy;
 
-        proxy = new ILink3Proxy(connectionId, outboundPublication.dataPublication(), businessMessageLogger);
+        businessMessageLogger = proxy.businessMessageLogger() == null ?
+            new ILink3BusinessMessageDissector() : proxy.businessMessageLogger();
+
         offsets = new ILink3Offsets();
         nextSentSeqNo(calculateInitialSequenceNumber(
             lastSentSequenceNumber, configuration.initialSentSequenceNumber()));
@@ -421,6 +451,16 @@ public final class InternalILink3Connection extends ILink3Connection
     public long nextSendMessageTimeInMs()
     {
         return nextSendMessageTimeInMs;
+    }
+
+    int retransmitQueueSize()
+    {
+        return retransmitQueueOffset;
+    }
+
+    void state(final State state)
+    {
+        this.state = state;
     }
 
     private long calculateInitialSequenceNumber(
@@ -1042,7 +1082,12 @@ public final class InternalILink3Connection extends ILink3Connection
 //    private
 
     public long onMessage(
-        final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
+        final DirectBuffer buffer,
+        final int offset,
+        final int templateId,
+        final int blockLength,
+        final int version,
+        final int totalLength)
     {
         onReceivedMessage();
 
@@ -1057,28 +1102,7 @@ public final class InternalILink3Connection extends ILink3Connection
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
             if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
-                if (seqNum > nextRetransmitSeqNo)
-                {
-                    final long position = onInvalidSequenceNumber(
-                        lastUUIDNullValue(), seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
-                    if (Pressure.isBackPressured(position))
-                    {
-                        return position;
-                    }
-                }
-
-                onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
-
-                if (seqNum == retransmitFillSeqNo)
-                {
-                    return retransmitFilled();
-                }
-                else
-                {
-                    nextRetransmitSeqNo = seqNum + 1;
-                }
-
-                return 1;
+                return onPossRetransMessage(buffer, offset, templateId, blockLength, version, seqNum);
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
@@ -1091,7 +1115,14 @@ public final class InternalILink3Connection extends ILink3Connection
                     nextRecvSeqNo(seqNum + 1);
 
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+                    if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
+                    {
+                        onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+                    }
+                    else
+                    {
+                        retransmitEnqueueMessage(buffer, offset, totalLength, seqNum);
+                    }
 
                     return 1;
                 }
@@ -1100,7 +1131,19 @@ public final class InternalILink3Connection extends ILink3Connection
                     // We could queue this instead of just passing it on to the customer's application but this
                     // hasn't been requested as of yet
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
-                    onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+                    // old callback for immediate processing:
+                    // onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+
+                    if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
+                    {
+                        // Don't check the enqueue - buffer should always be big enough for any iLink3 message.
+                        // TODO: add validation for the minimum buffer size
+                        retransmitEnqueueMessage(buffer, offset, totalLength, seqNum);
+                    }
+                    else
+                    {
+                        // TODO: gap in sequence numbers.
+                    }
 
                     return onInvalidSequenceNumber(seqNum);
                 }
@@ -1134,6 +1177,77 @@ public final class InternalILink3Connection extends ILink3Connection
 
             return 1;
         }
+    }
+
+    private long onPossRetransMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int templateId,
+        final int blockLength,
+        final int version,
+        final long seqNum)
+    {
+        if (seqNum > nextRetransmitSeqNo)
+        {
+            final long position = onInvalidSequenceNumber(
+                lastUUIDNullValue(), seqNum, nextRetransmitSeqNo, nextRecvSeqNo);
+            if (Pressure.isBackPressured(position))
+            {
+                return position;
+            }
+        }
+
+        onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+
+        if (seqNum == retransmitFillSeqNo)
+        {
+            return retransmitFilled();
+        }
+        else
+        {
+            nextRetransmitSeqNo = seqNum + 1;
+        }
+
+        return 1;
+    }
+
+    // returns true if the enqueue is successful
+    private void retransmitEnqueueMessage(
+        final DirectBuffer buffer, final int offset, final int totalLength, final long seqNum)
+    {
+        final int newQueueSize = retransmitQueueOffset + totalLength;
+
+        if (newQueueSize > maxRetransmitQueueSize)
+        {
+            // We've hit the maximum size of the retransmit queue, at this point we need to make sure that we don't
+            // drop the messages but we can't enqueue them, so we enqueue another retransmit request.
+
+            final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
+            if (retransmitRequest == null)
+            {
+                addRetransmitRequest(lastUuid, seqNum, 1);
+            }
+            else
+            {
+                final long fromSeqNo = retransmitRequest.fromSeqNo;
+                final int msgCount = retransmitRequest.msgCount;
+                // last message of the retransmit = fromSeqNo + msgCount - 1 and this is the next message
+                if (seqNum == (fromSeqNo + msgCount))
+                {
+                    retransmitRequest.msgCount++;
+                }
+                else
+                {
+                    addRetransmitRequest(lastUuid, seqNum, 1);
+                }
+            }
+
+            return;
+        }
+
+        final int headerOffset = offset - HEADER_LENGTH;
+        retransmitQueue.putBytes(retransmitQueueOffset, buffer, headerOffset, totalLength);
+        retransmitQueueOffset = newQueueSize;
     }
 
     private void onBusinessMessage(
@@ -1215,10 +1329,18 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private long retransmitFilled()
     {
+//        System.out.println("fill");
+        processRetransmitQueue();
+
         final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
         if (retransmitRequest == null)
         {
             DebugLogger.log(ILINK_SESSION, retransmitFilled, retransmitFillSeqNo);
+            final long nextSeqNoAfterRetransmit = retransmitFillSeqNo + 1;
+            if (nextRecvSeqNo < nextSeqNoAfterRetransmit)
+            {
+                nextRecvSeqNo = nextSeqNoAfterRetransmit;
+            }
             nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
         }
@@ -1252,6 +1374,27 @@ public final class InternalILink3Connection extends ILink3Connection
         }
 
         return 1;
+    }
+
+    private void processRetransmitQueue()
+    {
+        int offset = 0;
+        while (offset < retransmitQueueOffset)
+        {
+            final int length = readSofhMessageSize(retransmitQueue, offset);
+
+            final int headerOffset = offset + SOFH_LENGTH;
+            headerDecoder.wrap(retransmitQueue, headerOffset);
+            final int blockLength = headerDecoder.blockLength();
+            final int templateId = headerDecoder.templateId();
+            final int version = headerDecoder.version();
+
+            final int messageOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+            onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
+
+            offset += length;
+        }
+        retransmitQueueOffset = 0;
     }
 
     private void addRemainingRetransmitRequests(
@@ -1298,7 +1441,7 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         final long lastUuid;
         final long fromSeqNo;
-        final int msgCount;
+        int msgCount;
 
         RetransmitRequest(final long lastUuid, final long fromSeqNo, final int msgCount)
         {

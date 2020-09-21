@@ -135,7 +135,8 @@ public class ILink3Parser extends AbstractILink3Parser
 
             default:
             {
-                return handler.onMessage(buffer, offset, templateId, blockLength, version);
+                final int sofhMessageSize = SimpleOpenFramingHeader.readSofhMessageSize(buffer, start);
+                return handler.onMessage(buffer, offset, templateId, blockLength, version, sofhMessageSize);
             }
         }
     }

@@ -33,6 +33,7 @@ import static java.lang.Long.parseLong;
  */
 public final class ILink3ConnectionConfiguration
 {
+    public static final int DEFAULT_MAX_RETRANSMIT_QUEUE_SIZE = 1024 * 1024 * 128;
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
     public static final int KEEP_ALIVE_INTERVAL_MAX_VALUE = 65534;
     public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
@@ -66,6 +67,7 @@ public final class ILink3ConnectionConfiguration
     private final ILink3ConnectionHandler handler;
     private final boolean useBackupHost;
     private final String backupHost;
+    private final int maxRetransmitQueueSize;
 
     /**
      * Load the ILink3SessionConfiguration from a properties file.
@@ -199,6 +201,11 @@ public final class ILink3ConnectionConfiguration
         return useBackupHost;
     }
 
+    public int maxRetransmitQueueSize()
+    {
+        return maxRetransmitQueueSize;
+    }
+
     private void validate()
     {
         Verify.notNull(host, "host");
@@ -222,6 +229,12 @@ public final class ILink3ConnectionConfiguration
         if (port <= 0)
         {
             throw new IllegalArgumentException("port must be positive, but is: " + port);
+        }
+
+        if (maxRetransmitQueueSize <= 0)
+        {
+            throw new IllegalArgumentException(
+                "maxRetransmitQueueSize must be positive, but is: " + maxRetransmitQueueSize);
         }
     }
 
@@ -263,7 +276,8 @@ public final class ILink3ConnectionConfiguration
         final boolean reEstablishLastConnection,
         final ILink3ConnectionHandler handler,
         final boolean useBackupHost,
-        final String backupHost)
+        final String backupHost,
+        final int maxRetransmitQueueSize)
     {
         this.host = host;
         this.port = port;
@@ -282,6 +296,7 @@ public final class ILink3ConnectionConfiguration
         this.handler = handler;
         this.useBackupHost = useBackupHost;
         this.backupHost = backupHost;
+        this.maxRetransmitQueueSize = maxRetransmitQueueSize;
 
         validate();
     }
@@ -304,6 +319,7 @@ public final class ILink3ConnectionConfiguration
         private ILink3ConnectionHandler handler;
         private boolean useBackupHost;
         private String backupHost;
+        private int maxRetransmitQueueSize = DEFAULT_MAX_RETRANSMIT_QUEUE_SIZE;
 
         public ILink3ConnectionConfiguration build()
         {
@@ -323,7 +339,8 @@ public final class ILink3ConnectionConfiguration
                 reEstablishLastConnection,
                 handler,
                 useBackupHost,
-                backupHost);
+                backupHost,
+                maxRetransmitQueueSize);
         }
 
         /**
@@ -539,6 +556,20 @@ public final class ILink3ConnectionConfiguration
         public Builder backupHost(final String backupHost)
         {
             this.backupHost = backupHost;
+            return this;
+        }
+
+        /**
+         * Sets the maximum size for the retransmit queue. This is an in-memory on heap buffer that is used to queue
+         * received messages from a server that were sent out of order whilst a retransmit is occurring. The maximum
+         * allows users to stop OOME from occuring in the case of large retransmits.
+         *
+         * @param maxRetransmitQueueSize the maximum size for the retransmit queue.
+         * @return this
+         */
+        public Builder maxRetransmitQueueSizeInBytes(final int maxRetransmitQueueSize)
+        {
+            this.maxRetransmitQueueSize = maxRetransmitQueueSize;
             return this;
         }
     }

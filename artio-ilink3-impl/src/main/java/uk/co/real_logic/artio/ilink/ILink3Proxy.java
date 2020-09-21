@@ -81,6 +81,11 @@ public class ILink3Proxy extends AbstractILink3Proxy
         this.businessMessageLogger = businessMessageLogger;
     }
 
+    public ILink3BusinessMessageDissector businessMessageLogger()
+    {
+        return businessMessageLogger;
+    }
+
     public void connectionId(final long connectionId)
     {
         this.connectionId = connectionId;
