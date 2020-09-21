@@ -22,10 +22,10 @@ import uk.co.real_logic.artio.fields.*;
 import uk.co.real_logic.artio.util.float_parsing.AsciiBufferCharReader;
 import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
 
-
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 
 public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffer
 {
@@ -88,7 +88,14 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     @SuppressWarnings("FinalParameters")
     public int getInt(int startInclusive, final int endExclusive)
     {
-        return super.parseIntAscii(startInclusive, endExclusive - startInclusive);
+        try
+        {
+            return super.parseIntAscii(startInclusive, endExclusive - startInclusive);
+        }
+        catch (final AsciiNumberFormatException e)
+        {
+            return MISSING_INT;
+        }
     }
 
     public int getDigit(final int index)
