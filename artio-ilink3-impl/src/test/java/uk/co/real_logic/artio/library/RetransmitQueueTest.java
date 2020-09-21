@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -103,17 +104,14 @@ public class RetransmitQueueTest
         // We're ready for a retransmit in all cases
         assertSeqNos(6, 4);
 
-        verifyRetransmitRequest(2L, 3, -1);
+        verifyRetransmitRequest(2L, 3);
+
+        reset(proxy);
     }
 
     private void verifyRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
-        verifyRetransmitRequest(fromSeqNo, msgCount, UUID);
-    }
-
-    private void verifyRetransmitRequest(final long fromSeqNo, final int msgCount, final long lastUuid)
-    {
-        verify(proxy).sendRetransmitRequest(eq(UUID), eq(lastUuid), anyLong(), eq(fromSeqNo), eq(msgCount));
+        verify(proxy).sendRetransmitRequest(eq(UUID), eq(lastUUIDNullValue()), anyLong(), eq(fromSeqNo), eq(msgCount));
     }
 
     private void assertSeqNos(final long nextRecvSeqNo, final long retransmitFillSeqNo)
@@ -176,7 +174,7 @@ public class RetransmitQueueTest
     }
 
     @Test
-    public void shouldBufferWhenReceivingOutOfOrder()
+    public void shouldQueueWhenReceivingOutOfOrder()
     {
         // @5,2R,3R,4R,done.
         onExecutionReport(2, true);
@@ -266,7 +264,7 @@ public class RetransmitQueueTest
     }
 
     @Test
-    public void shouldReplayBufferWhenReceivingSequenceMessage()
+    public void shouldReplayQueueWhenReceivingSequenceMessage()
     {
         // @5,6,Seq8,done.
         onExecutionReport(6, false);
@@ -276,7 +274,40 @@ public class RetransmitQueueTest
         assertThat(handler.sequenceNumbers(), contains(5L, 6L));
     }
 
-    // TODO: gaps within the retransmit
-    // TODO: gaps within the normal message sequence
-    // TODO: shouldNotifyAndQueueReRequestWhenMaxSizeBreachedMultipleMessges with a gap in the retransmit if possible
+    @Test
+    public void shouldQueueRetransmitForRetransmitGapWithinRetransmit()
+    {
+        // @5,2R,3R,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(4, true);
+        onExecutionReport(6, false);
+
+        assertSeqNos(7, 3);
+        assertThat(handler.sequenceNumbers(), contains(2L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(3, 1);
+        onExecutionReport(3, true);
+        assertThat(handler.sequenceNumbers(), contains(3L, 4L, 5L, 6L));
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldQueueRetransmitForNormalGapWithinRetransmit()
+    {
+        // @5,7,2R,3R,4R,6,done.
+        onExecutionReport(7, false);
+        onExecutionReport(2, true);
+        onExecutionReport(3, true);
+        onExecutionReport(4, true);
+
+        assertSeqNos(8, 6);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(6, 1);
+        onExecutionReport(6, true);
+        assertThat(handler.sequenceNumbers(), contains(6L, 7L));
+        assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
+    }
 }
