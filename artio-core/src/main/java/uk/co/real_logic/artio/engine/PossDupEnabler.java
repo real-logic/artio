@@ -369,8 +369,8 @@ public class PossDupEnabler
     {
         final int frameBodyLengthOffset =
             claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + metaDataAdjustment;
-        final short frameBodyLength = (short)(messageLength + lengthDelta);
-        claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
+        final int frameBodyLength = messageLength + lengthDelta;
+        claimBuffer.putInt(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }
 
     private void updateBodyLengthAndChecksum(

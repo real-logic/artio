@@ -365,7 +365,7 @@ public class GatewayPublication extends ClaimablePublication
         final int srcLength, final int offset, final int metaDataLength, final MutableDirectBuffer destBuffer)
     {
         final int position = offset + FixMessageEncoder.BLOCK_LENGTH + metaDataHeaderLength() + metaDataLength;
-        destBuffer.putShort(position, (short)srcLength, LITTLE_ENDIAN);
+        destBuffer.putInt(position, srcLength, LITTLE_ENDIAN);
     }
 
     public long saveManageSession(
