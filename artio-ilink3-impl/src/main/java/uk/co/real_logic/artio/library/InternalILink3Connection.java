@@ -412,6 +412,11 @@ public final class InternalILink3Connection extends ILink3Connection
         return uuid;
     }
 
+    public long lastUuid()
+    {
+        return lastUuid;
+    }
+
     public long connectionId()
     {
         return connectionId;

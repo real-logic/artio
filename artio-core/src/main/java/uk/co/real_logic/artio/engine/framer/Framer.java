@@ -677,7 +677,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             context,
             aeronSessionId,
             position,
-            reestablishConnection,
             address);
         schedule(lookupInformation);
 
@@ -697,7 +696,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     }
 
                     DebugLogger.log(FIX_CONNECTION,
-                        initiatingSessionFormatter, context.uuid(), libraryId);
+                        initiatingSessionFormatter, context.connectUuid(), libraryId);
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
@@ -793,7 +792,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final ILink3Context context,
             final int aeronSessionId,
             final long position,
-            final boolean reestablishConnection,
             final InetSocketAddress address)
         {
             this.libraryId = libraryId;
@@ -819,15 +817,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             return inboundPublication.saveILinkConnect(
-                libraryId, correlationId, connectionId, context.uuid(), lastReceivedSequenceNumber,
-                lastSentSequenceNumber, context.newlyAllocated(), context.lastUuid());
+                libraryId, correlationId, connectionId, context.connectUuid(), lastReceivedSequenceNumber,
+                lastSentSequenceNumber, context.newlyAllocated(), context.connectLastUuid());
         }
 
         private void scanIndex()
         {
             if (sentSequenceNumberIndex.indexedPosition(aeronSessionId) > position)
             {
-                final long uuidToScan = context.lastUuid() == 0 ? context.uuid() : context.lastUuid();
+                final long uuidToScan = context.connectLastUuid() == 0 ?
+                    context.connectUuid() : context.connectLastUuid();
                 lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(uuidToScan);
                 lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(uuidToScan);
                 hasScannedIndex = true;

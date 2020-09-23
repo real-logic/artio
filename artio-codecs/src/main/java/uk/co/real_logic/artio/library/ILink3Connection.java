@@ -193,6 +193,13 @@ public abstract class ILink3Connection
     public abstract long uuid();
 
     /**
+     * Gets the UUID of the last success connection for this session.
+     *
+     * @return the UUID of the last success connection for this session.
+     */
+    public abstract long lastUuid();
+
+    /**
      * Gets the Artio connectionId of the current connection for this session.
      *
      * @return the Artio connectionId of the current connection for this session.

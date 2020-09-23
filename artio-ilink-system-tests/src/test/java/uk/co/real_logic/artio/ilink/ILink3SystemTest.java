@@ -51,6 +51,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -278,6 +279,11 @@ public class ILink3SystemTest
     {
         launch(true);
 
+        assertErrorConnectingToNonExistantServer();
+    }
+
+    private void assertErrorConnectingToNonExistantServer()
+    {
         reply = library.initiate(connectionConfiguration().build());
         assertConnectError(containsString("UNABLE_TO_CONNECT"));
     }
@@ -381,6 +387,7 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(1, lastUuid, 2);
 
         acquireSession();
+        assertEquals(connection.lastUuid(), lastUuid);
     }
 
     @Test
@@ -765,6 +772,7 @@ public class ILink3SystemTest
         // Initiator missed receiving message 1
         testServer.writeEstablishmentAck(1, lastUuid, 2);
         acquireSession();
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(1, 1);
@@ -800,6 +808,7 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(1, lastUuid, 1);
         acquireSession();
         assertRecvSeqNo(1);
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 1, 1);
@@ -812,6 +821,87 @@ public class ILink3SystemTest
         assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID));
 
         terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledgedInitialConnect() throws IOException
+    {
+        // First connect case - fails to connect, then next connect should show last uuid = 0
+        launch(true);
+
+        assertErrorConnectingToNonExistantServer();
+
+        establishNewConnection();
+
+        assertEquals(0, connection.lastUuid());
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledged() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = connection.uuid();
+
+        assertErrorConnectingToNonExistantServer();
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish(1);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo(1);
+
+        assertEquals(lastUuid, connection.lastUuid());
+
+        // retransmit message 1
+        testServer.acceptRetransRequest(lastUuid, 1, 1);
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeExecutionReportStatus(lastUuid, 1, true);
+
+        agreeRecvSeqNo(2);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID));
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledgedReconnect() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastLastUuid = connection.lastUuid();
+        final long lastUuid = connection.uuid();
+
+        assertErrorConnectingToNonExistantServer();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        testServer.expectedUuid(lastUuid);
+        readEstablish(2);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo(2);
+
+        assertEquals(lastUuid, connection.lastUuid());
+        assertEquals(lastUuid, connection.uuid());
+
+        testServer.acceptRetransRequest(1, 1);
     }
 
     @Test
@@ -838,6 +928,7 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(2, lastUuid, 1);
         acquireSession();
         assertRecvSeqNo(1);
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 2, 1);
@@ -1077,6 +1168,7 @@ public class ILink3SystemTest
         testSystem.awaitCompletedReplies(reply);
         connection = reply.resultIfPresent();
         assertNotNull(connection);
+        assertNotEquals(0, connection.uuid());
     }
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)

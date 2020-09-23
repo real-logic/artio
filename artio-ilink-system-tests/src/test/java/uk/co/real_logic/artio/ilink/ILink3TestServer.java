@@ -291,7 +291,7 @@ public class ILink3TestServer
         // TradingSystemInfo
 
         final long uuid = establish.uUID();
-        assertEquals(this.uuid, uuid);
+        assertEquals("Incorrect establish uuid", this.uuid, uuid);
 
         establishRequestTimestamp = establish.requestTimestamp();
         assertThat(establishRequestTimestamp, greaterThanOrEqualTo(negotiateRequestTimestamp));

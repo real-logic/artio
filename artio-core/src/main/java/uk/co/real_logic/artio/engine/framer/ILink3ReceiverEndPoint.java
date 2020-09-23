@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -37,6 +38,9 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 {
     public static final int ARTIO_HEADER_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
+
+    private static final int NEGOTIATION_RESPONSE = 501;
+    private static final int TEMPLATE_ID_OFFSET = SOFH_LENGTH + 2;
 
     private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
     private final ExclusivePublication inboundPublication;
@@ -152,6 +156,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
     // false iff back pressured
     private boolean frameMessages()
     {
+        final MutableAsciiBuffer buffer = this.buffer;
+
         int offset = 0;
         while (usedBufferData > SOFH_LENGTH)
         {
@@ -160,6 +166,11 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
             {
                 moveRemainingDataToBufferStart(offset);
                 return true;
+            }
+
+            if (readTemplateId(buffer, offset) == NEGOTIATION_RESPONSE)
+            {
+                context.confirmUuid();
             }
 
             final long position = inboundPublication.offer(
@@ -182,6 +193,11 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
 
         moveRemainingDataToBufferStart(offset);
         return true;
+    }
+
+    private int readTemplateId(final MutableAsciiBuffer buffer, final int offset)
+    {
+        return (buffer.getShort(offset + TEMPLATE_ID_OFFSET, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
     }
 
     private void moveRemainingDataToBufferStart(final int offset)

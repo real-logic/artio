@@ -88,7 +88,7 @@ class ILink3Contexts
 
             keyToContext.put(
                 new ILink3Key(port, host, accessKeyId),
-                new ILink3Context(uuid, 0, false, offset));
+                new ILink3Context(this, uuid, 0, uuid, 0, false, offset));
 
             offset = contextDecoder.limit();
         }
@@ -102,17 +102,18 @@ class ILink3Contexts
         final ILink3Context context = keyToContext.get(key);
         if (context != null)
         {
-            context.lastUuid(context.uuid());
+            context.connectLastUuid(context.uuid());
             context.newlyAllocated(!reestablishConnection);
 
             if (!reestablishConnection)
             {
                 final long newUuid = microSecondTimestamp();
-                context.uuid(newUuid);
-
-                contextEncoder
-                    .wrap(buffer, context.offset())
-                    .uuid(newUuid);
+                context.connectUuid(newUuid);
+            }
+            else
+            {
+                // We may have an invalid connect uuid from a failed connection at this point.
+                context.connectUuid(context.uuid());
             }
 
             return context;
@@ -123,14 +124,38 @@ class ILink3Contexts
 
     private ILink3Context allocateUuid(final ILink3Key key)
     {
-        final ILink3Context context = newUuid(key);
+        final ILink3Context context = newUuid();
         keyToContext.put(key, context);
         return context;
     }
 
-    private ILink3Context newUuid(final ILink3Key key)
+    private ILink3Context newUuid()
     {
         final long newUuid = microSecondTimestamp();
+        return new ILink3Context(this, 0, 0, newUuid, 0, true, offset);
+    }
+
+    void updateUuid(final ILink3Context context)
+    {
+        contextEncoder
+            .wrap(buffer, context.offset())
+            .uuid(context.uuid());
+    }
+
+    void saveNewUuid(final ILink3Context context)
+    {
+        final long newUuid = context.uuid();
+        ILink3Key key = null;
+
+        for (final Map.Entry<ILink3Key, ILink3Context> entry : keyToContext.entrySet())
+        {
+            if (entry.getValue() == context)
+            {
+                key = entry.getKey();
+                break;
+            }
+        }
+
         contextEncoder
             .wrap(buffer, offset)
             .uuid(newUuid)
@@ -138,9 +163,7 @@ class ILink3Contexts
             .host(key.host)
             .accessKeyId(key.accessKeyId);
 
-        final ILink3Context context = new ILink3Context(newUuid, 0, true, offset);
         offset = contextEncoder.limit();
-        return context;
     }
 
     private long microSecondTimestamp()

@@ -61,16 +61,18 @@ public class ILink3ContextsTest
     public void shouldLoadSavedUuid()
     {
         final ILink3Context oldUuid = calculateUuid(true);
-        final long firstUuid = oldUuid.uuid();
-        assertEquals(0, oldUuid.lastUuid());
+        final long firstUuid = oldUuid.connectUuid();
+        assertEquals(0, oldUuid.connectLastUuid());
         assertTrue(oldUuid.newlyAllocated());
+        oldUuid.confirmUuid();
 
         final int offset = contexts.offset();
 
         final ILink3Context secondUuid = calculateUuid(true);
         assertFalse(secondUuid.newlyAllocated());
-        assertEquals(firstUuid, secondUuid.lastUuid());
-        assertEquals(firstUuid, secondUuid.uuid());
+        assertEquals(firstUuid, secondUuid.connectLastUuid());
+        assertEquals(firstUuid, secondUuid.connectUuid());
+        secondUuid.confirmUuid();
 
         assertOffset(offset);
 
@@ -78,8 +80,8 @@ public class ILink3ContextsTest
         newContexts();
 
         final ILink3Context reloadedUuid = calculateUuid(true);
-        assertEquals(firstUuid, reloadedUuid.lastUuid());
-        assertEquals(firstUuid, reloadedUuid.uuid());
+        assertEquals(firstUuid, reloadedUuid.connectLastUuid());
+        assertEquals(firstUuid, reloadedUuid.connectUuid());
         assertFalse(reloadedUuid.newlyAllocated());
 
         assertOffset(offset);
@@ -89,16 +91,18 @@ public class ILink3ContextsTest
     public void shouldGenerateNewUuidForReinitializationCase()
     {
         final ILink3Context oldUuid = calculateUuid(false);
-        final long firstUuid = oldUuid.uuid();
-        assertEquals(0, oldUuid.lastUuid());
+        final long firstUuid = oldUuid.connectUuid();
+        assertEquals(0, oldUuid.connectLastUuid());
         assertTrue(oldUuid.newlyAllocated());
+        oldUuid.confirmUuid();
 
         final int offset = contexts.offset();
 
         final ILink3Context secondUuid = calculateUuid(false);
         assertTrue(secondUuid.newlyAllocated());
-        assertEquals(firstUuid, secondUuid.lastUuid());
-        assertNotEquals(firstUuid, secondUuid.uuid());
+        assertEquals(firstUuid, secondUuid.connectLastUuid());
+        assertNotEquals(firstUuid, secondUuid.connectUuid());
+        secondUuid.confirmUuid();
 
         assertOffset(offset);
     }
@@ -107,16 +111,18 @@ public class ILink3ContextsTest
     public void shouldRegenerateUuid()
     {
         final ILink3Context oldUuid = calculateUuid(false);
-        final long firstUuid = oldUuid.uuid();
-        assertEquals(0, oldUuid.lastUuid());
+        final long firstUuid = oldUuid.connectUuid();
+        assertEquals(0, oldUuid.connectLastUuid());
         assertTrue(oldUuid.newlyAllocated());
+        oldUuid.confirmUuid();
 
         final int offset = contexts.offset();
 
         final ILink3Context secondUuid = calculateUuid(true);
         assertFalse(secondUuid.newlyAllocated());
-        assertEquals(firstUuid, secondUuid.lastUuid());
-        assertEquals(firstUuid, secondUuid.uuid());
+        assertEquals(firstUuid, secondUuid.connectLastUuid());
+        assertEquals(firstUuid, secondUuid.connectUuid());
+        secondUuid.confirmUuid();
 
         assertOffset(offset);
 
@@ -124,17 +130,19 @@ public class ILink3ContextsTest
         newContexts();
 
         final ILink3Context reloadedUuid = calculateUuid(false);
-        final long secondUuidValue = reloadedUuid.uuid();
+        final long secondUuidValue = reloadedUuid.connectUuid();
         assertTrue(reloadedUuid.newlyAllocated());
-        assertEquals(firstUuid, reloadedUuid.lastUuid());
+        assertEquals(firstUuid, reloadedUuid.connectLastUuid());
         assertNotEquals(firstUuid, secondUuidValue);
+        reloadedUuid.confirmUuid();
 
         assertOffset(offset);
 
         final ILink3Context reloadedUuid2 = calculateUuid(true);
         assertFalse(reloadedUuid2.newlyAllocated());
-        assertEquals(secondUuidValue, reloadedUuid2.lastUuid());
-        assertEquals(secondUuidValue, reloadedUuid2.uuid());
+        assertEquals(secondUuidValue, reloadedUuid2.connectLastUuid());
+        assertEquals(secondUuidValue, reloadedUuid2.connectUuid());
+        reloadedUuid2.confirmUuid();
 
         assertOffset(offset);
     }
@@ -143,13 +151,15 @@ public class ILink3ContextsTest
     public void shouldReloadNotReestablishedUuidAfterRestart()
     {
         final ILink3Context firstContext = calculateUuid(false);
-        final long firstUuid = firstContext.uuid();
+        final long firstUuid = firstContext.connectUuid();
+        firstContext.confirmUuid();
 
         final ILink3Context secondContext = calculateUuid(false);
-        final long secondUuid = secondContext.uuid();
-        assertEquals(firstUuid, secondContext.lastUuid());
+        final long secondUuid = secondContext.connectUuid();
+        assertEquals(firstUuid, secondContext.connectLastUuid());
         assertTrue(secondContext.newlyAllocated());
         assertNotEquals(firstUuid, secondUuid);
+        secondContext.confirmUuid();
 
         final int offset = contexts.offset();
 
@@ -158,8 +168,9 @@ public class ILink3ContextsTest
 
         final ILink3Context thirdContext = calculateUuid(true);
         assertFalse(thirdContext.newlyAllocated());
-        assertEquals(secondUuid, thirdContext.lastUuid());
-        assertEquals(secondUuid, thirdContext.uuid());
+        assertEquals(secondUuid, thirdContext.connectLastUuid());
+        assertEquals(secondUuid, thirdContext.connectUuid());
+        thirdContext.confirmUuid();
 
         assertOffset(offset);
     }
