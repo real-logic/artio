@@ -63,6 +63,7 @@ public final class InternalILink3Connection extends ILink3Connection
     public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
 
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
+    private static final int INVALID_UUID_ERROR_CODE = 13;
 
     private static final String[] TERMINATE_ERROR_CODES = {
         "Finished: session is being terminated without finalization",
@@ -186,6 +187,7 @@ public final class InternalILink3Connection extends ILink3Connection
     private long nextSentSeqNo;
 
     private long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
+    private long retransmitUuid = NOT_AWAITING_RETRANSMIT;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
     private long retransmitContiguousSeqNo = NOT_AWAITING_RETRANSMIT;
     private long retransmitMaxSeqNo = NOT_AWAITING_RETRANSMIT;
@@ -355,6 +357,7 @@ public final class InternalILink3Connection extends ILink3Connection
         if (!Pressure.isBackPressured(position))
         {
             retransmitFillTimeoutInNs(requestTimestamp);
+            retransmitUuid = uuid;
             nextRetransmitSeqNo = fromSeqNo;
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
         }
@@ -1139,10 +1142,26 @@ public final class InternalILink3Connection extends ILink3Connection
                 return 1;
             }
 
+            final long uuid = offsets.uuid(templateId, buffer, offset);
+            if (uuid == MISSING_OFFSET)
+            {
+                return 1;
+            }
+
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
             if (possRetrans == BOOLEAN_FLAG_TRUE)
             {
-                return onPossRetransMessage(buffer, offset, templateId, blockLength, version, totalLength, seqNum);
+                return onPossRetransMessage(
+                    buffer, offset, templateId, blockLength, version, totalLength, seqNum, uuid);
+            }
+
+            if (uuid != this.uuid)
+            {
+                handler.onError(this, new IllegalStateException(String.format(
+                    "Have received invalid uuid: %d when it should be %d, disconnecting",
+                    uuid,
+                    this.uuid)));
+                return terminate("Invalid UUID", INVALID_UUID_ERROR_CODE);
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
@@ -1191,28 +1210,34 @@ public final class InternalILink3Connection extends ILink3Connection
         }
         else
         {
-            final long seqNum = offsets.seqNum(templateId, buffer, offset);
-            final boolean possRetrans = offsets.possRetrans(templateId, buffer, offset) == BOOLEAN_FLAG_TRUE;
-
-            if (DebugLogger.isEnabled(ILINK_SESSION))
-            {
-                unknownMessage.clear()
-                    .with(templateId)
-                    .with(blockLength)
-                    .with(version)
-                    .with(seqNum)
-                    .with(possRetrans);
-                DebugLogger.log(ILINK_SESSION, unknownMessage);
-
-                if (templateId == BusinessReject521Decoder.TEMPLATE_ID)
-                {
-                    businessReject.wrap(buffer, offset, blockLength, version);
-                    DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", businessRejectAppendTo);
-                }
-            }
-
-            return 1;
+            return onUnexpectedMessage(buffer, offset, templateId, blockLength, version);
         }
+    }
+
+    private int onUnexpectedMessage(
+        final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
+    {
+        final long seqNum = offsets.seqNum(templateId, buffer, offset);
+        final boolean possRetrans = offsets.possRetrans(templateId, buffer, offset) == BOOLEAN_FLAG_TRUE;
+
+        if (DebugLogger.isEnabled(ILINK_SESSION))
+        {
+            unknownMessage.clear()
+                .with(templateId)
+                .with(blockLength)
+                .with(version)
+                .with(seqNum)
+                .with(possRetrans);
+            DebugLogger.log(ILINK_SESSION, unknownMessage);
+
+            if (templateId == BusinessReject521Decoder.TEMPLATE_ID)
+            {
+                businessReject.wrap(buffer, offset, blockLength, version);
+                DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", businessRejectAppendTo);
+            }
+        }
+
+        return 1;
     }
 
     private long onPossRetransMessage(
@@ -1222,7 +1247,8 @@ public final class InternalILink3Connection extends ILink3Connection
         final int blockLength,
         final int version,
         final int totalLength,
-        final long seqNum)
+        final long seqNum,
+        final long uuid)
     {
         final long expectedSeqNo = this.nextRetransmitSeqNo;
         if (seqNum > expectedSeqNo)
@@ -1353,6 +1379,7 @@ public final class InternalILink3Connection extends ILink3Connection
             {
                 addRemainingRetransmitRequests(lastUuid, fromSeqNo, msgCount, totalMsgCount);
                 nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, lastUuid);
+                retransmitUuid(lastUuid);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillTimeoutInNs(requestTimestamp);
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
@@ -1369,6 +1396,11 @@ public final class InternalILink3Connection extends ILink3Connection
         }
     }
 
+    private void retransmitUuid(final long lastUuid)
+    {
+        retransmitUuid = lastUuid == lastUUIDNullValue() ? this.uuid : lastUuid;
+    }
+
     private void nextRecvSeqNoForCurrentUuid(final long newNextRecvSeqNo, final long lastUuid)
     {
         // we don't want to update newNextRecvSeqNo for an On EstablishAck retransmit request for the last uuid
@@ -1380,7 +1412,6 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private long retransmitFilled()
     {
-//        System.out.println("fill");
         processRetransmitQueue();
 
         final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
@@ -1388,10 +1419,11 @@ public final class InternalILink3Connection extends ILink3Connection
         {
             DebugLogger.log(ILINK_SESSION, retransmitFilled, retransmitFillSeqNo);
             final long nextSeqNoAfterRetransmit = retransmitFillSeqNo + 1;
-            if (nextRecvSeqNo < nextSeqNoAfterRetransmit)
+            if (retransmitUuid == this.uuid && nextRecvSeqNo < nextSeqNoAfterRetransmit)
             {
                 nextRecvSeqNo = nextSeqNoAfterRetransmit;
             }
+            retransmitUuid = NOT_AWAITING_RETRANSMIT;
             nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
             retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
@@ -1420,6 +1452,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 }
                 retransmitRequests.pollFirst();
                 retransmitFillTimeoutInNs(requestTimestamp);
+                retransmitUuid(lastUuid);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
             }

@@ -44,6 +44,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.function.LongSupplier;
 
+import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -812,13 +813,20 @@ public class ILink3SystemTest
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 1, 1);
-        testServer.writeExecutionReportStatus(1, false);
         testServer.writeExecutionReportStatus(lastUuid, 1, true);
 
-        agreeRecvSeqNo(2);
-        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeExecutionReportStatus(2, false);
 
-        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID));
+        agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        assertEquals(ILink3Connection.State.ESTABLISHED, connection.state());
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.readSequence(2, Lapsed);
+
+        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID, ER_STATUS_ID));
 
         terminateAndDisconnect();
     }

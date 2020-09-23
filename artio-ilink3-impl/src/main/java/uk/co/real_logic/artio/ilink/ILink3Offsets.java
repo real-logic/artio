@@ -33,12 +33,14 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 public class ILink3Offsets extends AbstractILink3Offsets
 {
     private final Int2IntHashMap templateIdToSeqNumOffset = new Int2IntHashMap(MISSING_OFFSET);
+    private final Int2IntHashMap templateIdToUuidOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToPossRetransOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToSendingTimeEpochOffset = new Int2IntHashMap(MISSING_OFFSET);
 
     public static final String SBE_IR_FILE = "ilinkbinary.sbeir";
 
     public static final int SEQ_NUM_ID = 9726;
+    public static final int UUID_ID = 39001;
     public static final int POSS_RETRANS_ID = 9765;
     public static final int SENDING_TIME_EPOCH_ID = 5297;
 
@@ -50,6 +52,7 @@ public class ILink3Offsets extends AbstractILink3Offsets
             final Token beginMessage = messageTokens.get(0);
             final int templateId = beginMessage.id();
             findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
+            findOffset(messageTokens, templateId, UUID_ID, templateIdToUuidOffset);
             findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
             findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
         });
@@ -119,6 +122,16 @@ public class ILink3Offsets extends AbstractILink3Offsets
         return buffer.getInt(messageOffset + seqNumOffset, LITTLE_ENDIAN);
     }
 
+    public long uuid(final int templateId, final DirectBuffer buffer, final int messageOffset)
+    {
+        final int uuidOffset = templateIdToUuidOffset.get(templateId);
+        if (uuidOffset == MISSING_OFFSET)
+        {
+            return MISSING_OFFSET;
+        }
+
+        return buffer.getLong(messageOffset + uuidOffset, LITTLE_ENDIAN);
+    }
 
     public int possRetrans(final int templateId, final DirectBuffer buffer, final int messageOffset)
     {
