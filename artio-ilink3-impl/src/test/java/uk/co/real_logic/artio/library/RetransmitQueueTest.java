@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -59,7 +60,7 @@ public class RetransmitQueueTest
     private final GatewayPublication inboundPublication = mock(GatewayPublication.class);
     private final SequenceNumberCheckingHandler handler = new SequenceNumberCheckingHandler();
     private final ILink3Proxy proxy = mock(ILink3Proxy.class);
-    private long nanoTime = System.nanoTime();
+    private long nanoTime = 10;
     private final EpochNanoClock clock = () -> nanoTime;
     private InternalILink3Connection connection;
     private int expectedRetransmitQueueSize = 0;
@@ -256,9 +257,13 @@ public class RetransmitQueueTest
         expectedRetransmitQueueSize = 492;
 
         assertFalse("Wrong retransmitTimedOut", handler.retransmitTimedOut());
-        nanoTime += DEFAULT_RETRANSMIT_TIMEOUT_IN_MS + 1;
+        nanoTime += MILLISECONDS.toNanos(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS) + 1;
         connection.poll(NANOSECONDS.toMillis(nanoTime));
         assertTrue("Wrong retransmitTimedOut", handler.retransmitTimedOut());
+        handler.resetRetransmitTimedOut();
+
+        connection.poll(NANOSECONDS.toMillis(nanoTime));
+        assertFalse("retransmitTimedOut called again unnecessarily", handler.retransmitTimedOut());
 
         handler.resetRetransmitTimedOut();
     }

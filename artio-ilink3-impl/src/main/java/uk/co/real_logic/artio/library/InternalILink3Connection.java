@@ -690,6 +690,8 @@ public final class InternalILink3Connection extends ILink3Connection
         {
             handler.onRetransmitTimeout(this);
             events++;
+            // suppress future calls.
+            this.retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
         }
 
         if (timeInMs > nextReceiveMessageTimeInMs)
@@ -999,7 +1001,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     // sequence gap, initiate retransmission.
                     return onInvalidSequenceNumber(lastUUIDNullValue(), nextSeqNo, expectedNextRecvSeqNo, nextSeqNo);
                 }
-                else if (retransmitFillTimeoutInMs != NOT_AWAITING_RETRANSMIT)
+                else if (retransmitFillSeqNo != NOT_AWAITING_RETRANSMIT)
                 {
                     // implied expectedNextRecvSeqNo == nextSeqNo
                     // Sequence number at this point indicates that CME won't send any more retransmit requests
@@ -1430,7 +1432,8 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private void retransmitFillTimeoutInNs(final long requestTimestampInNs)
     {
-        retransmitFillTimeoutInMs = NANOSECONDS.toMillis(requestTimestampInNs);
+        retransmitFillTimeoutInMs = NANOSECONDS.toMillis(requestTimestampInNs) +
+            configuration.retransmitNotificationTimeoutInMs();
     }
 
     private void processRetransmitQueue()
