@@ -41,7 +41,8 @@ public class RetransmitQueueTest
 {
     private static final int LIBRARY_ID = 2;
     private static final long CONNECTION_ID = 3;
-    private static final long UUID = 4;
+    private static final long LAST_UUID = 4;
+    private static final long UUID = 5;
     private static final long LAST_RECEIVED_SEQ_NO = 1;
     private static final long LAST_SENT_SEQ_NO = 1;
 
@@ -83,7 +84,7 @@ public class RetransmitQueueTest
         connection = new InternalILink3Connection(
             config,
             CONNECTION_ID,
-            null,
+            mock(InitiateILink3ConnectionReply.class),
             outboundPublication,
             inboundPublication,
             LIBRARY_ID,
@@ -92,12 +93,202 @@ public class RetransmitQueueTest
             LAST_RECEIVED_SEQ_NO,
             LAST_SENT_SEQ_NO,
             false,
-            UUID,
+            LAST_UUID,
             clock,
             proxy);
 
         verify(proxy).businessMessageLogger();
+    }
 
+    @After
+    public void done()
+    {
+        assertEquals(expectedRetransmitQueueSize, connection.retransmitQueueSize());
+        verifyNoMoreInteractions(proxy);
+
+        connection.poll(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS + 1);
+        assertFalse(handler.retransmitTimedOut());
+    }
+
+    @Test
+    public void shouldQueueWhenReceivingOutOfOrder()
+    {
+        setupRetransmit();
+
+        // @5,2R,3R,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(3, true);
+        onExecutionReport(4, true);
+        onExecutionReport(6, false);
+
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L));
+    }
+
+    @Test
+    public void shouldAcceptInterleaving()
+    {
+        setupRetransmit();
+
+        // @5,2R,6,3R,7,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(6, false);
+        onExecutionReport(3, true);
+        onExecutionReport(7, false);
+        onExecutionReport(4, true);
+
+        assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
+    }
+
+    @Test
+    public void shouldNotifyAndQueueReRequestWhenMaxSizeBreached()
+    {
+        setupRetransmit();
+
+        // buffer has size for 3 messages, this sends 4
+        // @5,2R,6,3R,7,8,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(6, false);
+        onExecutionReport(3, true);
+        onExecutionReport(7, false);
+        onExecutionReport(8, false);
+        onExecutionReport(4, true);
+
+        assertSeqNos(9, 8);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(8L, 1);
+
+        // fill the second retransmit request
+        onExecutionReport(8, true);
+        assertThat(handler.sequenceNumbers(), contains(8L));
+        assertSeqNos(9, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldNotifyAndQueueReRequestWhenMaxSizeBreachedMultipleMessges()
+    {
+        setupRetransmit();
+
+        // buffer has size for 3 messages, this sends 4
+        // @5,2R,6,3R,7,8,9,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(6, false);
+        onExecutionReport(3, true);
+        onExecutionReport(7, false);
+        onExecutionReport(8, false);
+        onExecutionReport(9, false);
+        onExecutionReport(4, true);
+
+        assertSeqNos(10, 9);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(8L, 2);
+
+        // fill the second retransmit request
+        onExecutionReport(8, true);
+        onExecutionReport(9, true);
+        assertThat(handler.sequenceNumbers(), contains(8L, 9L));
+        assertSeqNos(10, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldNotifyWhenTimeoutBreached()
+    {
+        setupRetransmit();
+
+        expectedRetransmitQueueSize = 492;
+
+        assertFalse("Wrong retransmitTimedOut", handler.retransmitTimedOut());
+        nanoTime += MILLISECONDS.toNanos(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS) + 1;
+        connection.poll(NANOSECONDS.toMillis(nanoTime));
+        assertTrue("Wrong retransmitTimedOut", handler.retransmitTimedOut());
+        handler.resetRetransmitTimedOut();
+
+        connection.poll(NANOSECONDS.toMillis(nanoTime));
+        assertFalse("retransmitTimedOut called again unnecessarily", handler.retransmitTimedOut());
+
+        handler.resetRetransmitTimedOut();
+    }
+
+    @Test
+    public void shouldReplayQueueWhenReceivingSequenceMessage()
+    {
+        setupRetransmit();
+
+        // @5,6,Seq8,done.
+        onExecutionReport(6, false);
+        connection.onSequence(connection.uuid(), 7, FTI.Primary, KeepAliveLapsed.NotLapsed);
+
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
+    }
+
+    @Test
+    public void shouldQueueRetransmitForRetransmitGapWithinRetransmit()
+    {
+        setupRetransmit();
+
+        // @5,2R,3R,4R,done.
+        onExecutionReport(2, true);
+        onExecutionReport(4, true);
+        onExecutionReport(6, false);
+
+        assertSeqNos(7, 3);
+        assertThat(handler.sequenceNumbers(), contains(2L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(3, 1);
+        onExecutionReport(3, true);
+        assertThat(handler.sequenceNumbers(), contains(3L, 4L, 5L, 6L));
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldQueueRetransmitForNormalGapWithinRetransmit()
+    {
+        setupRetransmit();
+
+        // @5,7,2R,3R,4R,6,done.
+        onExecutionReport(7, false);
+        onExecutionReport(2, true);
+        onExecutionReport(3, true);
+        onExecutionReport(4, true);
+
+        assertSeqNos(8, 6);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L));
+        handler.sequenceNumbers().clear();
+
+        verifyRetransmitRequest(6, 1);
+        onExecutionReport(6, true);
+        assertThat(handler.sequenceNumbers(), contains(6L, 7L));
+        assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldQueueWhenReceivingLastUuidRetransmit()
+    {
+        connection.state(ILink3Connection.State.SENT_ESTABLISH);
+
+        connection.onEstablishmentAck(UUID, 0, 1, 3, LAST_UUID, 1, 1);
+
+        verifyRetransmitRequest(2, 2, LAST_UUID);
+
+        onExecutionReport(2, false);
+        onExecutionReport(2, true, LAST_UUID);
+        onExecutionReport(3, false);
+        onExecutionReport(3, true, LAST_UUID);
+
+        assertSeqNos(4, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L));
+        assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
+    }
+
+    private void setupRetransmit()
+    {
         connection.state(ILink3Connection.State.ESTABLISHED);
 
         onExecutionReport(5, false);
@@ -112,7 +303,12 @@ public class RetransmitQueueTest
 
     private void verifyRetransmitRequest(final long fromSeqNo, final int msgCount)
     {
-        verify(proxy).sendRetransmitRequest(eq(UUID), eq(lastUUIDNullValue()), anyLong(), eq(fromSeqNo), eq(msgCount));
+        verifyRetransmitRequest(fromSeqNo, msgCount, lastUUIDNullValue());
+    }
+
+    private void verifyRetransmitRequest(final long fromSeqNo, final int msgCount, final long lastUuid)
+    {
+        verify(proxy).sendRetransmitRequest(eq(UUID), eq(lastUuid), anyLong(), eq(fromSeqNo), eq(msgCount));
     }
 
     private void assertSeqNos(final long nextRecvSeqNo, final long retransmitFillSeqNo)
@@ -123,6 +319,11 @@ public class RetransmitQueueTest
 
     private void onExecutionReport(final long sequenceNumber, final boolean possRetrans)
     {
+        onExecutionReport(sequenceNumber, possRetrans, UUID);
+    }
+
+    private void onExecutionReport(final long sequenceNumber, final boolean possRetrans, final long uuid)
+    {
         SimpleOpenFramingHeader.writeSofh(recvBuffer, 0, totalLength);
 
         final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
@@ -131,7 +332,7 @@ public class RetransmitQueueTest
 
         executionReportStatus
             .seqNum(sequenceNumber)
-            .uUID(UUID)
+            .uUID(uuid)
             .text("")
             .execID("123")
             .senderID(FIRM_ID)
@@ -162,157 +363,5 @@ public class RetransmitQueueTest
             totalLength);
 
         assertThat(position, Matchers.greaterThanOrEqualTo(0L));
-    }
-
-    @After
-    public void done()
-    {
-        assertEquals(expectedRetransmitQueueSize, connection.retransmitQueueSize());
-        verifyNoMoreInteractions(proxy);
-
-        connection.poll(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS + 1);
-        assertFalse(handler.retransmitTimedOut());
-    }
-
-    @Test
-    public void shouldQueueWhenReceivingOutOfOrder()
-    {
-        // @5,2R,3R,4R,done.
-        onExecutionReport(2, true);
-        onExecutionReport(3, true);
-        onExecutionReport(4, true);
-        onExecutionReport(6, false);
-
-        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L));
-    }
-
-    @Test
-    public void shouldAcceptInterleaving()
-    {
-        // @5,2R,6,3R,7,4R,done.
-        onExecutionReport(2, true);
-        onExecutionReport(6, false);
-        onExecutionReport(3, true);
-        onExecutionReport(7, false);
-        onExecutionReport(4, true);
-
-        assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
-    }
-
-    @Test
-    public void shouldNotifyAndQueueReRequestWhenMaxSizeBreached()
-    {
-        // buffer has size for 3 messages, this sends 4
-        // @5,2R,6,3R,7,8,4R,done.
-        onExecutionReport(2, true);
-        onExecutionReport(6, false);
-        onExecutionReport(3, true);
-        onExecutionReport(7, false);
-        onExecutionReport(8, false);
-        onExecutionReport(4, true);
-
-        assertSeqNos(9, 8);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
-        handler.sequenceNumbers().clear();
-
-        verifyRetransmitRequest(8L, 1);
-
-        // fill the second retransmit request
-        onExecutionReport(8, true);
-        assertThat(handler.sequenceNumbers(), contains(8L));
-        assertSeqNos(9, NOT_AWAITING_RETRANSMIT);
-    }
-
-    @Test
-    public void shouldNotifyAndQueueReRequestWhenMaxSizeBreachedMultipleMessges()
-    {
-        // buffer has size for 3 messages, this sends 4
-        // @5,2R,6,3R,7,8,9,4R,done.
-        onExecutionReport(2, true);
-        onExecutionReport(6, false);
-        onExecutionReport(3, true);
-        onExecutionReport(7, false);
-        onExecutionReport(8, false);
-        onExecutionReport(9, false);
-        onExecutionReport(4, true);
-
-        assertSeqNos(10, 9);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
-        handler.sequenceNumbers().clear();
-
-        verifyRetransmitRequest(8L, 2);
-
-        // fill the second retransmit request
-        onExecutionReport(8, true);
-        onExecutionReport(9, true);
-        assertThat(handler.sequenceNumbers(), contains(8L, 9L));
-        assertSeqNos(10, NOT_AWAITING_RETRANSMIT);
-    }
-
-    @Test
-    public void shouldNotifyWhenTimeoutBreached()
-    {
-        expectedRetransmitQueueSize = 492;
-
-        assertFalse("Wrong retransmitTimedOut", handler.retransmitTimedOut());
-        nanoTime += MILLISECONDS.toNanos(DEFAULT_RETRANSMIT_TIMEOUT_IN_MS) + 1;
-        connection.poll(NANOSECONDS.toMillis(nanoTime));
-        assertTrue("Wrong retransmitTimedOut", handler.retransmitTimedOut());
-        handler.resetRetransmitTimedOut();
-
-        connection.poll(NANOSECONDS.toMillis(nanoTime));
-        assertFalse("retransmitTimedOut called again unnecessarily", handler.retransmitTimedOut());
-
-        handler.resetRetransmitTimedOut();
-    }
-
-    @Test
-    public void shouldReplayQueueWhenReceivingSequenceMessage()
-    {
-        // @5,6,Seq8,done.
-        onExecutionReport(6, false);
-        connection.onSequence(connection.uuid(), 7, FTI.Primary, KeepAliveLapsed.NotLapsed);
-
-        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
-    }
-
-    @Test
-    public void shouldQueueRetransmitForRetransmitGapWithinRetransmit()
-    {
-        // @5,2R,3R,4R,done.
-        onExecutionReport(2, true);
-        onExecutionReport(4, true);
-        onExecutionReport(6, false);
-
-        assertSeqNos(7, 3);
-        assertThat(handler.sequenceNumbers(), contains(2L));
-        handler.sequenceNumbers().clear();
-
-        verifyRetransmitRequest(3, 1);
-        onExecutionReport(3, true);
-        assertThat(handler.sequenceNumbers(), contains(3L, 4L, 5L, 6L));
-        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
-    }
-
-    @Test
-    public void shouldQueueRetransmitForNormalGapWithinRetransmit()
-    {
-        // @5,7,2R,3R,4R,6,done.
-        onExecutionReport(7, false);
-        onExecutionReport(2, true);
-        onExecutionReport(3, true);
-        onExecutionReport(4, true);
-
-        assertSeqNos(8, 6);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L));
-        handler.sequenceNumbers().clear();
-
-        verifyRetransmitRequest(6, 1);
-        onExecutionReport(6, true);
-        assertThat(handler.sequenceNumbers(), contains(6L, 7L));
-        assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
     }
 }

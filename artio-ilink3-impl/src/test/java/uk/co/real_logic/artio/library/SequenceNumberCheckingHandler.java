@@ -24,6 +24,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
 {
     private final ExecutionReportStatus532Decoder executionReportStatus = new ExecutionReportStatus532Decoder();
     private final LongArrayList sequenceNumbers = new LongArrayList();
+    private final LongArrayList uuids = new LongArrayList();
     private boolean retransmitTimedOut = false;
 
     public void onBusinessMessage(
@@ -39,12 +40,18 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         {
             executionReportStatus.wrap(buffer, offset, blockLength, version);
             sequenceNumbers.add(executionReportStatus.seqNum());
+            uuids.add(executionReportStatus.uUID());
         }
     }
 
     public LongArrayList sequenceNumbers()
     {
         return sequenceNumbers;
+    }
+
+    public LongArrayList uuids()
+    {
+        return uuids;
     }
 
     public void onNotApplied(
