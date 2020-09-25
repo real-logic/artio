@@ -318,6 +318,36 @@ public class RetransmitQueueTest
         assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
     }
 
+    @Test
+    public void shouldNotifyAndQueueReRequestWhenMaxSizeMultipleMessgesBreachedLastUuidRetransmit()
+    {
+        setupLastUuidRetransmit();
+
+        // buffer has size for 3 messages, this sends 5
+        // RR 4,2-2, @1
+        onExecutionReport(2, false);
+        onExecutionReport(2, true, LAST_UUID);
+        onExecutionReport(3, false);
+        onExecutionReport(4, false);
+        onExecutionReport(5, false);
+        onExecutionReport(6, false);
+        onExecutionReport(3, true, LAST_UUID);
+
+        assertSeqNos(7, 6);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L, 4L));
+        assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID, UUID));
+        verifyRetransmitRequest(5, 2);
+        handler.sequenceNumbers().clear();
+        handler.uuids().clear();
+
+        // fill the second retransmit request
+        onExecutionReport(5, true);
+        onExecutionReport(6, true);
+        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
+        assertThat(handler.uuids(), contains(UUID, UUID));
+        assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+    }
+
     private void setupLastUuidRetransmit()
     {
         connection.state(ILink3Connection.State.SENT_ESTABLISH);
