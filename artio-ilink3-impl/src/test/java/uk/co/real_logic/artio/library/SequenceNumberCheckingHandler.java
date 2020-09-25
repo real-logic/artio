@@ -39,8 +39,11 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         if (templateId == ExecutionReportStatus532Decoder.TEMPLATE_ID)
         {
             executionReportStatus.wrap(buffer, offset, blockLength, version);
-            sequenceNumbers.add(executionReportStatus.seqNum());
-            uuids.add(executionReportStatus.uUID());
+            final long seqNum = executionReportStatus.seqNum();
+            final long uuid = executionReportStatus.uUID();
+
+            sequenceNumbers.add(seqNum);
+            uuids.add(uuid);
         }
     }
 

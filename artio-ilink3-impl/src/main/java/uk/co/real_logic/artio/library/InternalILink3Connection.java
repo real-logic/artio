@@ -352,7 +352,7 @@ public final class InternalILink3Connection extends ILink3Connection
         sentMessage();
         final long requestTimestamp = requestTimestamp();
         final long thisUuid = this.uuid;
-        final long lastUuid = uuid == thisUuid ? lastUUIDNullValue() : uuid;
+        final long lastUuid = lookupRetransmitLastUuid(uuid, thisUuid);
         final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
         if (!Pressure.isBackPressured(position))
         {
@@ -362,6 +362,11 @@ public final class InternalILink3Connection extends ILink3Connection
             retransmitFillSeqNo = fromSeqNo + msgCount - 1;
         }
         return position;
+    }
+
+    private long lookupRetransmitLastUuid(final long uuid, final long thisUuid)
+    {
+        return uuid == thisUuid ? lastUUIDNullValue() : uuid;
     }
 
     private long sendTerminate(
@@ -1255,8 +1260,9 @@ public final class InternalILink3Connection extends ILink3Connection
         {
             retransmitContiguousSeqNo = expectedSeqNo - 1;
 
+            final long retransmitLastUuid = lookupRetransmitLastUuid(uuid, this.uuid);
             final long position = onInvalidSequenceNumber(
-                lastUUIDNullValue(), seqNum, expectedSeqNo, nextRecvSeqNo);
+                retransmitLastUuid, seqNum, expectedSeqNo, nextRecvSeqNo);
             if (Pressure.isBackPressured(position))
             {
                 return position;
@@ -1502,14 +1508,15 @@ public final class InternalILink3Connection extends ILink3Connection
 
             final int messageOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
             final int seqNum = offsets.seqNum(templateId, retransmitQueue, messageOffset);
-            if (seqNum == retransmitContiguousSeqNo + 1)
+            final long messageUuid = offsets.uuid(templateId, retransmitQueue, messageOffset);
+            if (messageUuid == retransmitUuid && seqNum == retransmitContiguousSeqNo + 1)
             {
                 onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
                 retransmitContiguousSeqNo++;
             }
             else
             {
-                entries.add(new RetransmitQueueEntry(seqNum, offset));
+                entries.add(new RetransmitQueueEntry(messageUuid, seqNum, offset));
             }
 
             offset += length;
@@ -1631,18 +1638,28 @@ public final class InternalILink3Connection extends ILink3Connection
 
     static final class RetransmitQueueEntry implements Comparable<RetransmitQueueEntry>
     {
+        final long uuid;
         final long seqNum;
         final int offset;
 
-        RetransmitQueueEntry(final long seqNum, final int offset)
+        RetransmitQueueEntry(final long uuid, final long seqNum, final int offset)
         {
+            this.uuid = uuid;
             this.seqNum = seqNum;
             this.offset = offset;
         }
 
         public int compareTo(final RetransmitQueueEntry o)
         {
-            return Long.compare(seqNum, o.seqNum);
+            final int uuidCompare = Long.compare(uuid, o.uuid);
+            if (uuidCompare == 0)
+            {
+                return Long.compare(seqNum, o.seqNum);
+            }
+            else
+            {
+                return uuidCompare;
+            }
         }
     }
 

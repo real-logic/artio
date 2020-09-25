@@ -31,6 +31,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
@@ -271,11 +272,7 @@ public class RetransmitQueueTest
     @Test
     public void shouldQueueWhenReceivingLastUuidRetransmit()
     {
-        connection.state(ILink3Connection.State.SENT_ESTABLISH);
-
-        connection.onEstablishmentAck(UUID, 0, 1, 3, LAST_UUID, 1, 1);
-
-        verifyRetransmitRequest(2, 2, LAST_UUID);
+        setupLastUuidRetransmit();
 
         onExecutionReport(2, false);
         onExecutionReport(2, true, LAST_UUID);
@@ -285,6 +282,49 @@ public class RetransmitQueueTest
         assertSeqNos(4, NOT_AWAITING_RETRANSMIT);
         assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L));
         assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
+    }
+
+    @Test
+    public void shouldReplayQueueWhenReceivingLastUuidSequence()
+    {
+        setupLastUuidRetransmit();
+
+        onExecutionReport(2, false);
+        connection.onSequence(UUID, 3, FTI.Primary, KeepAliveLapsed.NotLapsed);
+
+        assertSeqNos(3, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(2L));
+        assertThat(handler.uuids(), contains(UUID));
+    }
+
+    @Test
+    public void shouldQueueRetransmitWithinLastUuidRetransmit()
+    {
+        setupLastUuidRetransmit();
+
+        onExecutionReport(2, false);
+        onExecutionReport(3, false);
+        onExecutionReport(3, true, LAST_UUID);
+
+        assertSeqNos(4, 2);
+        assertThat(handler.sequenceNumbers(), hasSize(0));
+        assertThat(handler.uuids(), hasSize(0));
+        verifyRetransmitRequest(2, 1, LAST_UUID);
+
+        onExecutionReport(2, true, LAST_UUID);
+
+        assertSeqNos(4, NOT_AWAITING_RETRANSMIT);
+        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L));
+        assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
+    }
+
+    private void setupLastUuidRetransmit()
+    {
+        connection.state(ILink3Connection.State.SENT_ESTABLISH);
+
+        connection.onEstablishmentAck(UUID, 0, 1, 3, LAST_UUID, 1, 1);
+
+        verifyRetransmitRequest(2, 2, LAST_UUID);
     }
 
     private void setupRetransmit()
