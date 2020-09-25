@@ -88,14 +88,13 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     @SuppressWarnings("FinalParameters")
     public int getInt(int startInclusive, final int endExclusive)
     {
-        try
-        {
-            return super.parseIntAscii(startInclusive, endExclusive - startInclusive);
-        }
-        catch (final AsciiNumberFormatException e)
+        final int length = endExclusive - startInclusive;
+        if (length == 0)
         {
             return MISSING_INT;
         }
+
+        return super.parseIntAscii(startInclusive, length);
     }
 
     public int getDigit(final int index)
