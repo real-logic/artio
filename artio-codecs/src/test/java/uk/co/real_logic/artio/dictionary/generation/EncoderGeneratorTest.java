@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.assertAppendToMatches;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
+import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
 public class EncoderGeneratorTest
@@ -109,7 +109,8 @@ public class EncoderGeneratorTest
     public void generatesSetters() throws Exception
     {
         heartbeat.getMethod(ON_BEHALF_OF_COMP_ID, CharSequence.class);
-        final Class<?> stringEnumClass = heartbeat.getClassLoader().loadClass(PARENT_PACKAGE + ".OnBehalfOfCompID");
+        final Class<?> stringEnumClass = heartbeat.getClassLoader()
+            .loadClass(DEFAULT_PARENT_PACKAGE + ".OnBehalfOfCompID");
         heartbeat.getMethod(ON_BEHALF_OF_COMP_ID, stringEnumClass);
     }
 
@@ -250,7 +251,7 @@ public class EncoderGeneratorTest
 
         setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
-            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            DEFAULT_PARENT_PACKAGE + ".OnBehalfOfCompID",
             "abc");
         assertOnBehalfOfCompIDValue(encoder, "abc");
     }
@@ -261,7 +262,7 @@ public class EncoderGeneratorTest
         final Object encoder = heartbeat.getConstructor().newInstance();
         setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
-            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            DEFAULT_PARENT_PACKAGE + ".OnBehalfOfCompID",
             "NULL_VAL"
         );
         assertOnBehalfOfCompIDValue(encoder, "");
@@ -275,7 +276,7 @@ public class EncoderGeneratorTest
         {
             setEnum(encoder,
                 ON_BEHALF_OF_COMP_ID,
-                PARENT_PACKAGE + ".OnBehalfOfCompID",
+                DEFAULT_PARENT_PACKAGE + ".OnBehalfOfCompID",
                 "ARTIO_UNKNOWN"
             );
         });
@@ -295,7 +296,7 @@ public class EncoderGeneratorTest
     public void intSettersByEnumWriteToFields() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ONE");
+        setEnum(encoder, INT_FIELD, DEFAULT_PARENT_PACKAGE + ".IntField", "ONE");
 
         assertEquals(1, getField(encoder, INT_FIELD));
     }
@@ -304,7 +305,7 @@ public class EncoderGeneratorTest
     public void intSettersByEnumDoesNothingForNullValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "NULL_VAL");
+        setEnum(encoder, INT_FIELD, DEFAULT_PARENT_PACKAGE + ".IntField", "NULL_VAL");
         assertEquals(0, getField(encoder, INT_FIELD));
     }
 
@@ -314,7 +315,7 @@ public class EncoderGeneratorTest
         final Object encoder = heartbeat.getConstructor().newInstance();
         assertThrows(EncodingException.class, () ->
         {
-            setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+            setEnum(encoder, INT_FIELD, DEFAULT_PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
         });
     }
 
@@ -716,12 +717,12 @@ public class EncoderGeneratorTest
         setEnum(
             encoder,
             INT_ENUM_REQ,
-            PARENT_PACKAGE + ".IntEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".IntEnumReq",
             "THIRTY");
         setEnum(
             encoder,
             STRING_ENUM_REQ,
-            PARENT_PACKAGE + ".StringEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".StringEnumReq",
             "GAMMA");
         encoder.encode(buffer, 1);
     }
@@ -734,12 +735,12 @@ public class EncoderGeneratorTest
         setEnum(
             encoder,
             CHAR_ENUM_REQ,
-            PARENT_PACKAGE + ".CharEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".CharEnumReq",
             "C");
         setEnum(
             encoder,
             STRING_ENUM_REQ,
-            PARENT_PACKAGE + ".StringEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".StringEnumReq",
             "GAMMA");
         encoder.encode(buffer, 1);
     }
@@ -752,12 +753,12 @@ public class EncoderGeneratorTest
         setEnum(
             encoder,
             CHAR_ENUM_REQ,
-            PARENT_PACKAGE + ".CharEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".CharEnumReq",
             "C");
         setEnum(
             encoder,
             INT_ENUM_REQ,
-            PARENT_PACKAGE + ".IntEnumReq",
+            DEFAULT_PARENT_PACKAGE + ".IntEnumReq",
             "THIRTY");
         encoder.encode(buffer, 1);
     }

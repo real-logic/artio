@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Real Logic Limited.
+ * Copyright 2013-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.Verify;
 
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.Character.isUpperCase;
@@ -28,16 +27,6 @@ public final class GenerationUtil
 {
     private static final int MESSAGE_TYPE_BITSHIFT = 8;
 
-    public static final String PARENT_PACKAGE =
-        System.getProperty("fix.codecs.parent_package", "uk.co.real_logic.artio");
-    public static final boolean FLYWEIGHTS_ENABLED = Boolean.getBoolean("fix.codecs.flyweight");
-    public static final Optional<Boolean> HARD_CODED_REJECT_UNKNOWN_EMUM_VALUES =
-        Optional.ofNullable(System.getProperty("reject.unknown.enum.value"))
-        .map(Boolean::parseBoolean);
-
-    public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
-    public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
-    public static final String DECODER_FLYWEIGHT_PACKAGE = PARENT_PACKAGE + ".decoder_flyweight";
     public static final String INDENT = "    ";
 
     private GenerationUtil()

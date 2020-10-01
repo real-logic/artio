@@ -27,8 +27,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
+import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
@@ -46,13 +45,13 @@ public final class ExampleDictionary
     public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
 
-    public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
-    public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
-    public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
+    public static final String EG_ENUM = DEFAULT_PARENT_PACKAGE + "." + "EgEnum";
+    public static final String OTHER_ENUM = DEFAULT_PARENT_PACKAGE + "." + "OtherEnum";
+    public static final String STRING_ENUM = DEFAULT_PARENT_PACKAGE + "." + "stringEnum";
 
-    public static final String TEST_PARENT_PACKAGE = PARENT_PACKAGE;
+    public static final String TEST_PARENT_PACKAGE = DEFAULT_PARENT_PACKAGE;
 
-    public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
+    public static final String TEST_PACKAGE = DEFAULT_PARENT_PACKAGE + ".builder.test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
     public static final String COMPONENT_ENCODER = TEST_PACKAGE + "." + EG_COMPONENT + "Encoder";

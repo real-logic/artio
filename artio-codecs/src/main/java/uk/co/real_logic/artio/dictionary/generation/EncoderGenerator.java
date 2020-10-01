@@ -48,7 +48,7 @@ import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
-public class EncoderGenerator extends Generator
+class EncoderGenerator extends Generator
 {
     private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
         "LogonEncoder",
@@ -162,7 +162,7 @@ public class EncoderGenerator extends Generator
 
     private final String beginString;  // e.g. "FIX.4.4"
 
-    public EncoderGenerator(
+    EncoderGenerator(
         final Dictionary dictionary,
         final String builderPackage,
         final String builderCommonPackage,

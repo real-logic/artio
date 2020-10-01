@@ -59,7 +59,6 @@ public abstract class Generator
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
     public static final Pattern NEWLINE = Pattern.compile("^", MULTILINE);
-    final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
@@ -96,6 +95,7 @@ public abstract class Generator
     protected final Class<?> rejectUnknownFieldClass;
     private final Class<?> rejectUnknownEnumValueClass;
     protected final boolean flyweightsEnabled;
+    protected final String codecRejectUnknownEnumValueEnabled;
 
     protected Generator(
         final Dictionary dictionary,

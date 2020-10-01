@@ -47,7 +47,7 @@ import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 
-public class FixDictionaryGenerator
+class FixDictionaryGenerator
 {
     private static final String TEMPLATE =
         "public class FixDictionaryImpl implements FixDictionary\n" +
@@ -77,7 +77,7 @@ public class FixDictionaryGenerator
     private final String decoderPackage;
     private final String parentPackage;
 
-    public FixDictionaryGenerator(
+    FixDictionaryGenerator(
         final Dictionary dictionary,
         final OutputManager outputManager,
         final String encoderPackage,

@@ -19,26 +19,22 @@ import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 
 import java.lang.reflect.Method;
 import java.util.Map;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.hasKey;
-
-import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
-
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public class EnumGeneratorTest
 {
@@ -192,7 +188,7 @@ public class EnumGeneratorTest
     private static Map<String, CharSequence> generateEnums()
     {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
-        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager);
+        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, DEFAULT_PARENT_PACKAGE, outputManager);
         enumGenerator.generate();
         return outputManager.getSources();
     }

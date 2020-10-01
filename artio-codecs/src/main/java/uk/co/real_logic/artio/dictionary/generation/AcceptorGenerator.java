@@ -28,7 +28,7 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHe
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
-public class AcceptorGenerator
+class AcceptorGenerator
 {
     public static final String ON_MESSAGE = "onMessage";
     public static final String DICTIONARY_DECODER = "DictionaryDecoder";
@@ -39,7 +39,7 @@ public class AcceptorGenerator
     private final String packageName;
     private final OutputManager outputManager;
 
-    public AcceptorGenerator(
+    AcceptorGenerator(
         final Dictionary dictionary,
         final String packageName,
         final OutputManager outputManager)

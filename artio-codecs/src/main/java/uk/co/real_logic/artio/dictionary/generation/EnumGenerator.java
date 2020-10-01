@@ -39,7 +39,7 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
-public final class EnumGenerator
+final class EnumGenerator
 {
     static final String NULL_VAL_NAME = "NULL_VAL";
     public static final String NULL_VAL_CHAR_AS_STRING = Character.toString(ENUM_MISSING_CHAR);
@@ -55,7 +55,7 @@ public final class EnumGenerator
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public EnumGenerator(
+    EnumGenerator(
         final Dictionary dictionary,
         final String builderPackage,
         final OutputManager outputManager)

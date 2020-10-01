@@ -51,7 +51,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 // evaluate utc parsing, adds about 100 nanos
 // remove the REQUIRED_FIELDS validation when there are no required fields
 
-public class DecoderGenerator extends Generator
+class DecoderGenerator extends Generator
 {
     private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
         "LogonDecoder",
@@ -110,7 +110,7 @@ public class DecoderGenerator extends Generator
     private final int initialBufferSize;
     private final String encoderPackage;
 
-    public DecoderGenerator(
+    DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
         final String thisPackage,
