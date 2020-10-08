@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.library;
 import iLinkBinary.*;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -25,6 +26,8 @@ import org.junit.Test;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+
+import java.util.stream.LongStream;
 
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -197,6 +200,44 @@ public class RetransmitQueueTest
     }
 
     @Test
+    public void shouldSupportQueueOrderingForGapsOver2500MessagesInLength()
+    {
+        // Setup large retransmit gaps
+        givenEstablished();
+        onExecutionReport(2510, false);
+        assertSeqNos(2511, 2501);
+        verifyRetransmitRequest(2L, 2500);
+        reset(proxy);
+
+        onExecutionReports(2, 1000);
+        onExecutionReport(2511, false);
+        onExecutionReports(1001, 2501);
+
+        assertThat(handler.sequenceNumbers(), containsRange(2, 2501));
+        handler.sequenceNumbers().clear();
+        assertSeqNos(2512, 2509);
+        verifyRetransmitRequest(2502L, 8);
+
+        // fill the second retransmit request
+        onExecutionReports(2502, 2509);
+        assertThat(handler.sequenceNumbers(), containsRange(2502, 2511));
+        assertSeqNos(2512, NOT_AWAITING_RETRANSMIT);
+    }
+
+    private Matcher<Iterable<? extends Long>> containsRange(final long from, final long toInclusive)
+    {
+        return contains(LongStream.rangeClosed(from, toInclusive).boxed().toArray(Long[]::new));
+    }
+
+    private void onExecutionReports(final int fromSequenceNumber, final int toSequenceNumberInclusive)
+    {
+        for (int sequenceNumber = fromSequenceNumber; sequenceNumber <= toSequenceNumberInclusive; sequenceNumber++)
+        {
+            onExecutionReport(sequenceNumber, true);
+        }
+    }
+
+    @Test
     public void shouldNotifyWhenTimeoutBreached()
     {
         setupRetransmit();
@@ -359,7 +400,7 @@ public class RetransmitQueueTest
 
     private void setupRetransmit()
     {
-        connection.state(ILink3Connection.State.ESTABLISHED);
+        givenEstablished();
 
         onExecutionReport(5, false);
 
@@ -369,6 +410,11 @@ public class RetransmitQueueTest
         verifyRetransmitRequest(2L, 3);
 
         reset(proxy);
+    }
+
+    private void givenEstablished()
+    {
+        connection.state(ILink3Connection.State.ESTABLISHED);
     }
 
     private void verifyRetransmitRequest(final long fromSeqNo, final int msgCount)

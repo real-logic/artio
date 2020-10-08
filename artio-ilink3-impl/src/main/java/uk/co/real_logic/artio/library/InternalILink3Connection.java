@@ -1014,7 +1014,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     // implied expectedNextRecvSeqNo == nextSeqNo
                     // Sequence number at this point indicates that CME won't send any more retransmit requests
                     // and we should consider the retransmit to be filled.
-                    final long filledPosition = retransmitFilled();
+                    final long filledPosition = onRetransmitFilled();
                     if (Pressure.isBackPressured(filledPosition))
                     {
                         return filledPosition;
@@ -1282,7 +1282,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (seqNum == retransmitFillSeqNo)
         {
-            return retransmitFilled();
+            return onRetransmitFilled();
         }
         else
         {
@@ -1416,7 +1416,7 @@ public final class InternalILink3Connection extends ILink3Connection
         }
     }
 
-    private long retransmitFilled()
+    private long onRetransmitFilled()
     {
         processRetransmitQueue();
 
@@ -1540,10 +1540,13 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private void processInOrderRetransmitQueue()
     {
+        final long expectedFirstSeqNo = retransmitFillSeqNo + 1;
+
         // Simple retransmit queue case - messages are all in order and can all be sent.
         final ExpandableArrayBuffer retransmitQueue = this.retransmitQueue;
         final MessageHeaderDecoder headerDecoder = this.headerDecoder;
         int offset = 0;
+        boolean first = true;
         while (offset < retransmitQueueOffset)
         {
             final int length = readSofhMessageSize(retransmitQueue, offset);
@@ -1556,6 +1559,20 @@ public final class InternalILink3Connection extends ILink3Connection
 
             final int messageOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
             final int seqNum = offsets.seqNum(templateId, retransmitQueue, messageOffset);
+
+            if (first)
+            {
+                if (seqNum > expectedFirstSeqNo)
+                {
+                    // If a resend request over 2500 in size has been sent then we will have batched the resend
+                    // request into chunks and we don't want to resend a contiguous queue until we receive the all the
+                    // resend messages
+                    return;
+                }
+
+                first = false;
+            }
+
             if (retransmitMaxSeqNo == NOT_AWAITING_RETRANSMIT || seqNum <= retransmitMaxSeqNo)
             {
                 onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
@@ -1670,7 +1687,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         handler.onRetransmitReject(this, reason, lastUuid, requestTimestamp, errorCodes);
 
-        retransmitFilled();
+        onRetransmitFilled();
 
         return 1;
     }
