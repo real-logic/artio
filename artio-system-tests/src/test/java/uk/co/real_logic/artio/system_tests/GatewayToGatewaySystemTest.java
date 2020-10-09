@@ -115,10 +115,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
 
         final long connectionId = acceptingSession.connectionId();
-        final ArgumentCaptor<Integer> sequenceNumberCaptor = ArgumentCaptor.forClass(int.class);
+        final ArgumentCaptor<Long> sequenceNumberCaptor = ArgumentCaptor.forClass(long.class);
         verify(messageTimingHandler, times(2))
             .onMessage(sequenceNumberCaptor.capture(), eq(connectionId));
-        assertEquals(asList(1, 2), sequenceNumberCaptor.getAllValues());
+        assertEquals(asList(1L, 2L), sequenceNumberCaptor.getAllValues());
     }
 
     @Test

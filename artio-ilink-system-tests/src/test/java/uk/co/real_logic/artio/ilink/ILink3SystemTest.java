@@ -30,12 +30,10 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
-import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.Backup;
+import uk.co.real_logic.artio.system_tests.MessageTimingCaptor;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
@@ -86,6 +84,7 @@ public class ILink3SystemTest
     private ILink3Connection connection;
     private final ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
     private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
+    private final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
 
     private boolean noExpectedError;
 
@@ -109,7 +108,8 @@ public class ILink3SystemTest
             .lookupDefaultAcceptorfixDictionary(false)
             .customErrorConsumer(errorConsumer)
             .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
-            .iLink3RetransmitHandler(retransmitHandler);
+            .iLink3RetransmitHandler(retransmitHandler)
+            .messageTimingHandler(messageTimingCaptor);
 
         engine = FixEngine.launch(engineConfig);
 
@@ -207,6 +207,8 @@ public class ILink3SystemTest
         assertEquals(messageIds.getInt(0), ER_STATUS_ID);
 
         terminateAndDisconnect();
+
+        messageTimingCaptor.verifyConsecutiveSequenceNumbers(1);
     }
 
     @Test

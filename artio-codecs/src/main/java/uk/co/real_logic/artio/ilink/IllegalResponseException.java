@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-// NB: This is an experimental API and is subject to change or potentially removal.
 public class IllegalResponseException extends RuntimeException
 {
     public IllegalResponseException(final String message)

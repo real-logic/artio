@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.Negotiate500Encoder;
+import iLinkBinary.NewOrderSingle514Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2IntHashMap;
@@ -49,13 +50,39 @@ public class ILink3Offsets extends AbstractILink3Offsets
         final Ir ir = loadSbeIr();
         ir.messages().forEach(messageTokens ->
         {
-            final Token beginMessage = messageTokens.get(0);
-            final int templateId = beginMessage.id();
+            final int templateId = templateId(messageTokens);
             findOffset(messageTokens, templateId, SEQ_NUM_ID, templateIdToSeqNumOffset);
             findOffset(messageTokens, templateId, UUID_ID, templateIdToUuidOffset);
             findOffset(messageTokens, templateId, POSS_RETRANS_ID, templateIdToPossRetransOffset);
             findOffset(messageTokens, templateId, SENDING_TIME_EPOCH_ID, templateIdToSendingTimeEpochOffset);
+
+            // sanity check static offset assumptions on startup.
+            // Lowest template id for an application message (ie a message with a seq num
+            if (templateId >= NewOrderSingle514Decoder.TEMPLATE_ID)
+            {
+                final int seqNumOffset = templateIdToSeqNumOffset.get(templateId);
+                if (!(ispartyDetailsOffset(templateId, seqNumOffset) ||
+                    seqNumOffset == NORMAL_CLIENT_MSG_SEQ_NUM_OFFSET ||
+                    seqNumOffset == EXCHANGE_MSG_SEQ_NUM_OFFSET))
+                {
+                    throw new IllegalStateException(String.format(
+                        "Invalid assumption: template %d has a non-standard sequence number offset of %d",
+                        templateId,
+                        seqNumOffset));
+                }
+            }
         });
+    }
+
+    private boolean ispartyDetailsOffset(final int templateId, final int seqNumOffset)
+    {
+        return templateId == PARTY_DETAILS_LIST_REQUEST_ID && seqNumOffset == PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET;
+    }
+
+    private int templateId(final List<Token> messageTokens)
+    {
+        final Token beginMessage = messageTokens.get(0);
+        return beginMessage.id();
     }
 
     public static Ir loadSbeIr()

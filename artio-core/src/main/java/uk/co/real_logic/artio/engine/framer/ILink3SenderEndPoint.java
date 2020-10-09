@@ -23,6 +23,7 @@ import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
@@ -33,6 +34,9 @@ import java.nio.ByteBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.clientSeqNum;
+import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class ILink3SenderEndPoint
 {
@@ -50,6 +54,7 @@ public class ILink3SenderEndPoint
     private final ErrorHandler errorHandler;
     private final ExclusivePublication inboundPublication;
     private final int libraryId;
+    private final MessageTimingHandler messageTimingHandler;
 
     private int reattemptBytesWritten = NO_REATTEMPT;
 
@@ -58,13 +63,15 @@ public class ILink3SenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
-        final int libraryId)
+        final int libraryId,
+        final MessageTimingHandler messageTimingHandler)
     {
         this.connectionId = connectionId;
         this.channel = channel;
         this.errorHandler = errorHandler;
         this.inboundPublication = inboundPublication;
         this.libraryId = libraryId;
+        this.messageTimingHandler = messageTimingHandler;
     }
 
     public Action onMessage(final DirectBuffer directBuffer, final int offset)
@@ -89,6 +96,7 @@ public class ILink3SenderEndPoint
 
                 buffer.limit(startLimit).position(startPosition);
             }
+
             final int totalWritten = reattemptBytesWritten + written;
             if (totalWritten < messageSize)
             {
@@ -98,6 +106,16 @@ public class ILink3SenderEndPoint
             }
             else
             {
+                if (messageTimingHandler != null)
+                {
+                    final int sbeHeaderOffset = offset + SOFH_LENGTH;
+                    final long sequenceNumber = clientSeqNum(directBuffer, sbeHeaderOffset);
+                    if (sequenceNumber != MISSING_OFFSET)
+                    {
+                        messageTimingHandler.onMessage(sequenceNumber, connectionId);
+                    }
+                }
+
                 this.reattemptBytesWritten = NO_REATTEMPT;
             }
         }

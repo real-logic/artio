@@ -47,7 +47,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 
     private FixDictionary fixDictionary;
     private FixReceiverEndPoint receiverEndPoint;
-    private SenderEndPoint senderEndPoint;
+    private FixSenderEndPoint senderEndPoint;
 
     private long sessionId;
     private long connectionId;
@@ -80,7 +80,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         final ConnectionType connectionType,
         final CompositeKey sessionKey,
         final FixReceiverEndPoint receiverEndPoint,
-        final SenderEndPoint senderEndPoint,
+        final FixSenderEndPoint senderEndPoint,
         final Consumer<GatewaySession> onGatewaySessionLogon,
         final boolean closedResendInterval,
         final int resendRequestChunkSize,

@@ -16,14 +16,16 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
-import org.agrona.collections.IntArrayList;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -280,24 +282,3 @@ public class SlowConsumerTest
     }
 }
 
-class MessageTimingCaptor implements MessageTimingHandler
-{
-
-    private final IntArrayList sequenceNumbers = new IntArrayList();
-
-    public void onMessage(final int sequenceNumber, final long connectionId)
-    {
-        sequenceNumbers.add(sequenceNumber);
-    }
-
-    void verifyConsecutiveSequenceNumbers(final int lastSentMsgSeqNum)
-    {
-        assertThat(sequenceNumbers, hasSize(lastSentMsgSeqNum));
-        for (int i = 0; i < lastSentMsgSeqNum; i++)
-        {
-            final int sequenceNumber = sequenceNumbers.getInt(i);
-            assertEquals(i + 1, sequenceNumber);
-        }
-    }
-
-}

@@ -48,6 +48,7 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.clientSeqNum;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
@@ -295,11 +296,7 @@ public final class InternalILink3Connection extends ILink3Connection
             final MutableDirectBuffer buffer = message.buffer();
             final int messageOffset = message.offset();
 
-            final int seqNumOffset = offsets.seqNumOffset(templateId);
-            if (seqNumOffset != MISSING_OFFSET)
-            {
-                buffer.putInt(messageOffset + seqNumOffset, (int)nextSentSeqNo++, LITTLE_ENDIAN);
-            }
+            clientSeqNum(templateId, buffer, messageOffset, nextSentSeqNo++);
 
             // NB: possRetrans field does not need to be set because it is always false in this claim API
             // and the false byte is 0, which is what Aeron buffers are initialised to.
