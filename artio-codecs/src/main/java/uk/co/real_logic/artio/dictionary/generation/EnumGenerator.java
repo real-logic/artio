@@ -229,6 +229,10 @@ final class EnumGenerator
             case MULTIPLESTRINGVALUE:
             case MULTIPLECHARVALUE:
             case STRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
                 return "    public static boolean isValid(final CharArrayWrapper key)\n" +
                        "    {\n" +
                        "        return charMap.containsKey(key);\n" +
@@ -261,6 +265,10 @@ final class EnumGenerator
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
             case MULTIPLECHARVALUE:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
 
                 final String entries = allValues
                     .stream()
@@ -298,10 +306,6 @@ final class EnumGenerator
     {
         switch (type)
         {
-            case CURRENCY:
-            case EXCHANGE:
-            case COUNTRY:
-            case LANGUAGE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:

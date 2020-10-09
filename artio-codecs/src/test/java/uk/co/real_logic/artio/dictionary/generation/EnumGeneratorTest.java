@@ -30,6 +30,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.CODEC_LOGGING;
 import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
@@ -42,14 +43,20 @@ public class EnumGeneratorTest
     private static Class<?> egEnumClass;
     private static Class<?> otherEnumClass;
     private static Class<?> stringEnumClass;
+    private static Class<?> currencyEnumClass;
 
     @BeforeClass
     public static void generate() throws Exception
     {
         sources = generateEnums();
+        if (CODEC_LOGGING)
+        {
+            System.err.println(sources);
+        }
         egEnumClass = compileEgEnum(sources);
         otherEnumClass = compile(OTHER_ENUM, sources);
         stringEnumClass = compile(STRING_ENUM, sources);
+        currencyEnumClass = compile(CURRENCY_ENUM, sources);
     }
 
     @Test
@@ -57,6 +64,8 @@ public class EnumGeneratorTest
     {
         assertNotNull("Failed to generate a class", egEnumClass);
         assertTrue("Generated class isn't an enum", egEnumClass.isEnum());
+
+        assertNotNull(currencyEnumClass);
     }
 
     @Test

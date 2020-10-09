@@ -221,13 +221,48 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
-        assertEquals("one", getMethod(decoder, STRING_ENUM_RF + "AsString"));
-        assertEquals("ONE", getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
+        assertEquals("one", getStringEnumAsString(decoder));
+        assertEquals("ONE", getStringEnumAsEnum(decoder));
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        assertEquals("", getMethod(decoder, STRING_ENUM_RF + "AsString"));
-        assertEquals(UNKNOWN_NAME, getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
+        assertEquals("", getStringEnumAsString(decoder));
+        assertEquals(UNKNOWN_NAME, getStringEnumAsEnum(decoder));
+    }
+
+    private String getStringEnumAsEnum(final Decoder decoder) throws Throwable
+    {
+        return getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString();
+    }
+
+    private Object getStringEnumAsString(final Decoder decoder) throws Throwable
+    {
+        return getMethod(decoder, STRING_ENUM_RF + "AsString");
+    }
+
+    @Test
+    public void shouldNotRetainCurrencyEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = createRequiredFieldMessageDecoder();
+        decode(RF_ALL_FIELDS, decoder);
+        assertValid(decoder);
+        assertEquals("GBP", getCurrencyEnumAsString(decoder));
+        assertEquals("Pound", getCurrencyEnumAsEnum(decoder));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals("", getCurrencyEnumAsString(decoder));
+        assertEquals(UNKNOWN_NAME, getCurrencyEnumAsEnum(decoder));
+    }
+
+    private String getCurrencyEnumAsEnum(final Decoder decoder) throws Throwable
+    {
+        return getMethod(decoder, CURRENCY_ENUM_RF + "AsEnum").toString();
+    }
+
+    private Object getCurrencyEnumAsString(final Decoder decoder) throws Throwable
+    {
+        return getMethod(decoder, CURRENCY_ENUM_RF + "AsString");
     }
 
     @Test
@@ -808,12 +843,7 @@ public abstract class AbstractDecoderGeneratorTest
     public void shouldSkipFieldUnknownToMessageButDefinedInFIXSpec() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
-
-        if (!decoder.validate())
-        {
-            fail("Failed validation with reason: " + RejectReason.decode(decoder.rejectReason()) +
-                " for tag: " + decoder.invalidTagId());
-        }
+        assertValid(decoder);
 
         Object group = get(decoder, "secondEgGroupGroup");
         assertEquals("TOM", get(group, "secondGroupFieldAsString"));
@@ -1803,10 +1833,11 @@ public abstract class AbstractDecoderGeneratorTest
 
     private void assertValid(final Decoder decoder)
     {
-        final boolean isValid = decoder.validate();
-        assertTrue(String.format(
-            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
-            isValid);
+        if (!decoder.validate())
+        {
+            fail("Failed validation with reason: " + RejectReason.decode(decoder.rejectReason()) +
+                " for tag: " + decoder.invalidTagId());
+        }
     }
 
     private void assertInvalid(final Decoder decoder)
