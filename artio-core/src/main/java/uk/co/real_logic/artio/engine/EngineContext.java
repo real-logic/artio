@@ -223,7 +223,8 @@ public class EngineContext implements AutoCloseable
             replayerCommandQueue,
             epochFractionFormat,
             fixCounters.currentReplayCount(),
-            configuration.maxConcurrentSessionReplays());
+            configuration.maxConcurrentSessionReplays(),
+            configuration.epochNanoClock());
     }
 
     private void newIndexers()

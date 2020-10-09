@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -42,10 +43,12 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
     private static final int NEGOTIATION_RESPONSE = 501;
     private static final int TEMPLATE_ID_OFFSET = SOFH_LENGTH + 2;
 
+    private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
     private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
     private final ExclusivePublication inboundPublication;
     private final boolean isBackup;
     private final ILink3Context context;
+    private final EpochNanoClock epochNanoClock;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -56,19 +59,20 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final GatewayPublication publication,
         final int libraryId,
         final boolean isBackup,
-        final ILink3Context context)
+        final ILink3Context context,
+        final EpochNanoClock epochNanoClock)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         inboundPublication = publication.dataPublication();
         this.isBackup = isBackup;
         this.context = context;
+        this.epochNanoClock = epochNanoClock;
 
         makeHeader();
     }
 
     private void makeHeader()
     {
-        final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
         final MessageHeaderEncoder header = new MessageHeaderEncoder();
 
         iLinkMessage
@@ -172,6 +176,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
             {
                 context.confirmUuid();
             }
+
+            iLinkMessage.enqueueTime(epochNanoClock.nanoTime());
 
             final long position = inboundPublication.offer(
                 headerBuffer,

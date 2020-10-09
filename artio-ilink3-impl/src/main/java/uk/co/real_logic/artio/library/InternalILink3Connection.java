@@ -221,7 +221,8 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         this(configuration, connectionId, initiateReply, outboundPublication, inboundPublication, libraryId,
             owner, uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid, epochNanoClock,
-            new ILink3Proxy(connectionId, outboundPublication.dataPublication(), new ILink3BusinessMessageDissector()));
+            new ILink3Proxy(connectionId, outboundPublication.dataPublication(), new ILink3BusinessMessageDissector(),
+            epochNanoClock));
     }
 
     InternalILink3Connection(
@@ -287,8 +288,10 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         validateCanSend();
 
+        final long timestamp = requestTimestamp();
+
         final long position = proxy.claimILinkMessage(
-            message.sbeBlockLength() + variableLength, message);
+            message.sbeBlockLength() + variableLength, message, timestamp);
 
         if (position > 0)
         {
@@ -304,7 +307,7 @@ public final class InternalILink3Connection extends ILink3Connection
             final int sendingTimeEpochOffset = offsets.sendingTimeEpochOffset(templateId);
             if (sendingTimeEpochOffset != MISSING_OFFSET)
             {
-                buffer.putLong(messageOffset + sendingTimeEpochOffset, requestTimestamp(), LITTLE_ENDIAN);
+                buffer.putLong(messageOffset + sendingTimeEpochOffset, timestamp, LITTLE_ENDIAN);
             }
         }
 

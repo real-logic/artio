@@ -27,6 +27,7 @@ import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
@@ -112,6 +113,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ReplayerCommandQueue replayerCommandQueue;
     private final AtomicCounter currentReplayCount;
     private final int maxConcurrentSessionReplays;
+    private final EpochNanoClock epochNanoClock;
     private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
@@ -145,7 +147,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final ReplayerCommandQueue replayerCommandQueue,
         final EpochFractionFormat epochFractionFormat,
         final AtomicCounter currentReplayCount,
-        final int maxConcurrentSessionReplays)
+        final int maxConcurrentSessionReplays,
+        final EpochNanoClock epochNanoClock)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -165,6 +168,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.replayerCommandQueue = replayerCommandQueue;
         this.currentReplayCount = currentReplayCount;
         this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
+        this.epochNanoClock = epochNanoClock;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -172,7 +176,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));
-        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler));
+        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, epochNanoClock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
     }
 
@@ -360,7 +364,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
-                iLink3RetransmitHandler);
+                iLink3RetransmitHandler, epochNanoClock);
 
             session.query();
 

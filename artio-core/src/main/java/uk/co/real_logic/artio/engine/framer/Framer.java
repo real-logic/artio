@@ -721,7 +721,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         inboundPublication,
                         libraryId,
                         useBackupHost,
-                        context));
+                        context,
+                        configuration.epochNanoClock()));
                 });
         }
         catch (final IOException ex)
