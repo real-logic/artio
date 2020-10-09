@@ -128,11 +128,13 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     @Test(timeout = 10_000L)
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
-        writeMessageWithSessionWriter();
+        final long writerSessionId = writeMessageWithSessionWriter();
 
         fakeSessionProxy.sequenceNumberAdjustment = 1;
 
         shouldRoundTripMessagesViaExternalSystem();
+
+        assertEquals(acceptingSession.id(), writerSessionId);
 
         final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(3, 1);
         assertEquals("Y", resentNewOrderSingle.possDup());
@@ -170,7 +172,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         return receivedNewOrderSingle;
     }
 
-    private void writeMessageWithSessionWriter()
+    private long writeMessageWithSessionWriter()
     {
         final HeaderEncoder headerEncoder = new HeaderEncoder()
             .senderCompID(INITIATOR_ID)
@@ -183,6 +185,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final SessionWriter sessionWriter = reply.resultIfPresent();
 
         writeMessageWith(sessionWriter, 1);
+
+        return sessionWriter.id();
     }
 
     private void writeMessageWith(final SessionWriter sessionWriter, final int msgSeqNum)
