@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
@@ -26,10 +26,12 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 
-class LogEntryHandler implements FragmentHandler
+class LogEntryHandler implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
+
     private final FixMessageConsumer fixHandler;
     private final ILinkMessageConsumer iLinkHandler;
 
@@ -40,17 +42,19 @@ class LogEntryHandler implements FragmentHandler
     }
 
     @SuppressWarnings("FinalParameters")
-    public void onFragment(
+    public Action onFragment(
         final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
         final int templateId = messageHeader.templateId();
+        final int blockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+
         if (templateId == FixMessageDecoder.TEMPLATE_ID)
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-            final int version = messageHeader.version();
-            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), version);
+            fixMessage.wrap(buffer, offset, blockLength, version);
 
             if (version >= metaDataSinceVersion())
             {
@@ -63,9 +67,14 @@ class LogEntryHandler implements FragmentHandler
         else if (templateId == ILinkMessageDecoder.TEMPLATE_ID)
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+            iLinkMessage.wrap(buffer, offset, blockLength, version);
+
             offset += ILinkMessageDecoder.BLOCK_LENGTH;
 
-            iLinkHandler.onBusinessMessage(buffer, offset, header);
+            iLinkHandler.onBusinessMessage(iLinkMessage, buffer, offset, header);
         }
+
+        return Action.CONTINUE;
     }
 }

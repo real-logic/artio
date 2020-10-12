@@ -15,11 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.Aeron;
-import io.aeron.FragmentAssembler;
-import io.aeron.Image;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 
@@ -94,9 +92,10 @@ public class FixArchiveScanner implements AutoCloseable
         final int archiveScannerStreamId)
     {
         final LogEntryHandler logEntryHandler = new LogEntryHandler(fixHandler, iLinkHandler);
-        final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
+        final ControlledFragmentAssembler fragmentAssembler = new ControlledFragmentAssembler(logEntryHandler);
 
         final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
+        final List<CompletenessChecker> positionCheckers = new ArrayList<>();
 
         try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
         {
@@ -136,13 +135,26 @@ public class FixArchiveScanner implements AutoCloseable
                         archiveScannerStreamId);
 
                     final Image image = lookupImage(replaySubscription, sessionId);
-
-                    while (stopPosition == NULL_POSITION || image.position() < stopPosition)
-                    {
-                        idleStrategy.idle(image.poll(fragmentAssembler, 10));
-                    }
+                    positionCheckers.add(new CompletenessChecker(image, stopPosition));
                 }
             });
+
+            while (true)
+            {
+                final int received = replaySubscription.controlledPoll(fragmentAssembler, 10);
+
+                // Don't need to do this check in follow mode as we're just going to keep running.
+                if (!follow && received == 0)
+                {
+                    CollectionUtil.removeIf(positionCheckers, CompletenessChecker::isComplete);
+                    if (positionCheckers.isEmpty())
+                    {
+                        break;
+                    }
+                }
+
+                idleStrategy.idle(received);
+            }
         }
     }
 
@@ -226,6 +238,23 @@ public class FixArchiveScanner implements AutoCloseable
                 ", startPosition=" + startPosition +
                 ", stopPosition=" + stopPosition +
                 '}';
+        }
+    }
+
+    static class CompletenessChecker
+    {
+        final Image image;
+        final long stopPosition;
+
+        CompletenessChecker(final Image image, final long stopPosition)
+        {
+            this.image = image;
+            this.stopPosition = stopPosition;
+        }
+
+        boolean isComplete()
+        {
+            return image.position() >= stopPosition;
         }
     }
 

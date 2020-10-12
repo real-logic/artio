@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
-import io.aeron.FragmentAssembler;
+import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -76,7 +76,7 @@ public class FixMessageLogger implements Agent
     private final Subscription outboundSubscription;
     private final Subscription inboundSubscription;
     private final Subscription replaySubscription;
-    private final FragmentAssembler fragmentAssembler;
+    private final ControlledFragmentAssembler fragmentAssembler;
 
     public FixMessageLogger(
         final FixMessageConsumer fixMessageConsumer,
@@ -93,15 +93,15 @@ public class FixMessageLogger implements Agent
 
         final LogEntryHandler logEntryHandler = new LogEntryHandler(
             fixMessageConsumer, new LazyILinkMessagePrinter(inboundStreamId));
-        fragmentAssembler = new FragmentAssembler(logEntryHandler);
+        fragmentAssembler = new ControlledFragmentAssembler(logEntryHandler);
     }
 
     public int doWork()
     {
         return
-            inboundSubscription.poll(fragmentAssembler, 10) +
-            outboundSubscription.poll(fragmentAssembler, 10) +
-            replaySubscription.poll(fragmentAssembler, 10);
+            inboundSubscription.controlledPoll(fragmentAssembler, 10) +
+            outboundSubscription.controlledPoll(fragmentAssembler, 10) +
+            replaySubscription.controlledPoll(fragmentAssembler, 10);
     }
 
     public void onClose()

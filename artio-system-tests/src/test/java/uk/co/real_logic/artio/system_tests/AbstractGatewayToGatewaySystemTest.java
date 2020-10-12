@@ -476,16 +476,6 @@ public class AbstractGatewayToGatewaySystemTest
             .resetSeqNum(resetSeqNum)
             .build();
 
-        if (initiatingEngine.configuration().epochNanoClock() != nanoClock)
-        {
-            fail("INIT FAIL");
-        }
-
-        if (acceptingEngine.configuration().epochNanoClock() != nanoClock)
-        {
-            fail("INIT FAIL");
-        }
-
         connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         testSystem.awaitReply(reply);

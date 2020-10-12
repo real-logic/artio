@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.util.Lazy;
 
 final class LazyILinkMessagePrinter implements ILinkMessageConsumer
@@ -36,8 +37,9 @@ final class LazyILinkMessagePrinter implements ILinkMessageConsumer
         this.inboundStreamId = inboundStreamId;
     }
 
-    public void onBusinessMessage(final DirectBuffer buffer, final int offset, final Header header)
+    public void onBusinessMessage(
+        final ILinkMessageDecoder iLinkMessage, final DirectBuffer buffer, final int offset, final Header header)
     {
-        lazyDelegate.get().onBusinessMessage(buffer, offset, header);
+        lazyDelegate.get().onBusinessMessage(iLinkMessage, buffer, offset, header);
     }
 }
