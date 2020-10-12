@@ -19,10 +19,10 @@ import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
@@ -146,7 +146,7 @@ public class GatewayPublication extends ClaimablePublication
     private final InitiateILinkConnectionEncoder initiateILinkConnection = new InitiateILinkConnectionEncoder();
     private final ILinkConnectEncoder iLinkConnect = new ILinkConnectEncoder();
 
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final int maxPayloadLength;
     private final int maxInitialBodyLength;
 
@@ -154,7 +154,7 @@ public class GatewayPublication extends ClaimablePublication
         final ExclusivePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
-        final Clock clock,
+        final EpochNanoClock clock,
         final int maxClaimAttempts)
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
@@ -186,7 +186,7 @@ public class GatewayPublication extends ClaimablePublication
             connectionId,
             status,
             sequenceNumber,
-            clock.time());
+            clock.nanoTime());
     }
 
     public long saveMessage(
@@ -214,7 +214,7 @@ public class GatewayPublication extends ClaimablePublication
             connectionId,
             status,
             sequenceNumber,
-            clock.time(),
+            clock.nanoTime(),
             metaDataBuffer,
             metaDataUpdateOffset);
     }

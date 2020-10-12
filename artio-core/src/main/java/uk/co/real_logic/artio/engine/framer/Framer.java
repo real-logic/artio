@@ -127,7 +127,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock epochClock;
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
@@ -210,7 +210,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final RecordingCoordinator recordingCoordinator)
     {
         this.epochClock = epochClock;
-        this.clock = configuration.clock();
+        this.clock = configuration.epochNanoClock();
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
@@ -1107,7 +1107,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = newConnectionId();
             final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryClass);
             sessionContext.onLogon(
-                resetSequenceNumber || sequenceNumberType == TRANSIENT, clock.time(), fixDictionary);
+                resetSequenceNumber || sequenceNumberType == TRANSIENT, clock.nanoTime(), fixDictionary);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
                 channel,
@@ -1270,7 +1270,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
-                context.onSequenceReset(clock.time());
+                context.onSequenceReset(clock.nanoTime());
             }
         }
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
@@ -1286,7 +1286,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 decoder.decode(asciiBuffer, offset, length);
                 if (!decoder.hasGapFillFlag() || !decoder.gapFillFlag())
                 {
-                    context.onSequenceReset(clock.time());
+                    context.onSequenceReset(clock.nanoTime());
                 }
             }
         }

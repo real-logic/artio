@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,6 +45,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
 {
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final int aeronPort = unusedPort();
     private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
@@ -109,7 +112,7 @@ public class LibraryAndGatewayRandomTimeoutTest
 
     private void launchEngine()
     {
-        final EngineConfiguration initiatingConfig = initiatingConfig(aeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(aeronPort, nanoClock);
         initiatingConfig.printErrorMessages(false);
         initiatingConfig.deleteLogFileDirOnStart(true);
         initiatingEngine = FixEngine.launch(initiatingConfig);

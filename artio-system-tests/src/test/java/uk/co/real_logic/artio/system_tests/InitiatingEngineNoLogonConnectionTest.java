@@ -19,7 +19,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
@@ -66,9 +65,8 @@ public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGate
         deleteLogs();
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
-        initiatingEngine = FixEngine.launch(initiatingConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort, nanoClock));
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(initiatingLibrary);
     }
 

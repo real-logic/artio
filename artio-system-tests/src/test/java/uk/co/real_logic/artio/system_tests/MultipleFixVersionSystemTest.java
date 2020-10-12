@@ -66,11 +66,12 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         mediaDriver = launchMediaDriver();
 
         launchMultiVersionAcceptingEngine();
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
         connectMultiVersionAcceptingLibrary();
 
-        final LibraryConfiguration configuration = initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
+        final LibraryConfiguration configuration = initiatingLibraryConfig(
+            libraryAeronPort, initiatingHandler, nanoClock);
         configuration.sessionCustomisationStrategy(new FixTSessionCustomisationStrategy(FIX50));
         initiatingLibrary = connect(configuration);
 

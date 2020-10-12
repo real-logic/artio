@@ -16,11 +16,11 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.engine.MappedFile;
-import uk.co.real_logic.artio.util.OffsetEpochNanoClock;
 
 import java.io.File;
 

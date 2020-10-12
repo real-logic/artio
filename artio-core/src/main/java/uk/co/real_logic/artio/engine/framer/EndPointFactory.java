@@ -80,7 +80,7 @@ class EndPointFactory
             errorHandler,
             libraryId,
             gatewaySessions,
-            configuration.clock(),
+            configuration.epochNanoClock(),
             framer.acceptorFixDictionaryLookup(),
             formatters);
     }

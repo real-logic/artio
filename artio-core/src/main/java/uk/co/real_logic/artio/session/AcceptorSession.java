@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.session;
 
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -30,7 +30,7 @@ public class AcceptorSession extends InternalSession
         final int defaultInterval,
         final long connectionId,
         final EpochClock epochClock,
-        final Clock clock,
+        final EpochNanoClock clock,
         final SessionProxy proxy,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,

@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.session;
 
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.Test;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -37,7 +37,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
-            Clock.systemNanoTime(),
+            new OffsetEpochNanoClock(),
             sessionProxy,
             mock(GatewayPublication.class),
             mockPublication,

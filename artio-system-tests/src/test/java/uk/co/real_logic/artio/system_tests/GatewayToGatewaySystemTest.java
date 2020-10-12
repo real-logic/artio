@@ -74,7 +74,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
 //        FixMessageLogger.main(new String[]{});
 
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
@@ -82,11 +82,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
@@ -291,7 +291,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
+        try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(
+            libraryAeronPort, initiatingSessionHandler2, nanoClock)))
         {
             acceptingHandler.clearSessionExistsInfos();
             final Reply<Session> reply = testSystem.awaitReply(initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID));
@@ -526,7 +527,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
     {
-        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
+        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem, nanoClock))
         {
             assertEquals(1, library2.awaitSessionId());
         }
@@ -546,7 +547,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         clearMessages();
 
         launchAcceptingEngine();
-        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler, nanoClock));
 
         wireSessions();
         messagesCanBeExchanged();
@@ -572,7 +573,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         launchAcceptingEngine();
 
-        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler));
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
 
         initiatingEngineHasLibraryConnected();
 
@@ -640,7 +641,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
 
-        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
+        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem, nanoClock))
         {
             final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
@@ -754,7 +755,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertAccSeqNum(2, 2, 0);
 
-        final TimeRange timeRange = new TimeRange();
+        final TimeRange timeRange = new TimeRange(acceptingEngine.configuration().epochNanoClock());
         resetSequenceNumbersViaEngineApi();
         testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
         timeRange.end();
@@ -769,7 +770,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final TimeRange timeRange = new TimeRange();
+        final TimeRange timeRange = new TimeRange(initiatingEngine.configuration().epochNanoClock());
         final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
         replyCompleted(resetSequenceNumber);
         timeRange.end();
@@ -1008,7 +1009,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingHandler.clearSessionExistsInfos();
 
         try (FixLibrary initiatingLibrary2 = testSystem.connect(
-            initiatingLibraryConfig(libraryAeronPort, initiatingHandler)))
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock)))
         {
             assertTrue(initiatingLibrary.isConnected());
 
@@ -1159,7 +1160,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void acceptingEngineHasSessionAndLibraryIsNotified()
     {
-        engineHasSessionAndLibraryIsNotified(LibraryDriver.accepting(testSystem), acceptingEngine, acceptingSession);
+        final LibraryDriver driver = LibraryDriver.accepting(testSystem, nanoClock);
+        engineHasSessionAndLibraryIsNotified(driver, acceptingEngine, acceptingSession);
     }
 
     private void initiatingEngineHasSessionAndLibraryIsNotified()

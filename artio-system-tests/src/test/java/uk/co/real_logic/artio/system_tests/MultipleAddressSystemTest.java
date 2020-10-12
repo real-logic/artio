@@ -43,16 +43,16 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         mediaDriver = launchMediaDriver(context);
 
         acceptingEngine = FixEngine.launch(
-            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
                 .scheduler(new LowResourceEngineScheduler())
                 .deleteLogFileDirOnStart(true));
 
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(true);
         initiatingConfig.printErrorMessages(false);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(initiatingLibrary);
     }
 

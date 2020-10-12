@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
@@ -64,6 +66,8 @@ public class AbstractGatewayToGatewaySystemTest
     protected int libraryAeronPort = unusedPort();
     protected ArchivingMediaDriver mediaDriver;
     protected TestSystem testSystem;
+
+    final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
     FixEngine acceptingEngine;
     FixEngine initiatingEngine;
@@ -216,7 +220,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     void connectSessions()
     {
-        connectTimeRange = new TimeRange();
+        connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         completeConnectInitiatingSession(reply);
         connectTimeRange.end();
@@ -339,7 +343,7 @@ public class AbstractGatewayToGatewaySystemTest
     void launchAcceptingEngine()
     {
         acceptingEngine = FixEngine.launch(
-            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock));
     }
 
     void assertSequenceIndicesAre(final int sequenceIndex)
@@ -472,7 +476,17 @@ public class AbstractGatewayToGatewaySystemTest
             .resetSeqNum(resetSeqNum)
             .build();
 
-        connectTimeRange = new TimeRange();
+        if (initiatingEngine.configuration().epochNanoClock() != nanoClock)
+        {
+            fail("INIT FAIL");
+        }
+
+        if (acceptingEngine.configuration().epochNanoClock() != nanoClock)
+        {
+            fail("INIT FAIL");
+        }
+
+        connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         testSystem.awaitReply(reply);
         connectTimeRange.end();

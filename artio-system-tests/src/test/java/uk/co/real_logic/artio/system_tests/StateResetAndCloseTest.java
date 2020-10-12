@@ -109,18 +109,18 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final int initiatorInitialSentSequenceNumber,
         final int initialReceivedSequenceNumber)
     {
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
 
         final LibraryConfiguration initiatingLibraryConfig =
-            initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock);
         initiatingLibrary = connect(initiatingLibraryConfig);
 
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);

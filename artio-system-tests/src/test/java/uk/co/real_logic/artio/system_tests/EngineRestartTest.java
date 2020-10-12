@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.Test;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -25,6 +27,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class EngineRestartTest
 {
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
+
     @Test
     public void shouldRestartWithoutSessions()
     {
@@ -33,11 +37,11 @@ public class EngineRestartTest
         {
             mediaDriver = TestFixtures.launchMediaDriver();
             final int port = TestFixtures.unusedPort();
-            try (FixEngine ignore = SystemTestUtil.launchInitiatingEngine(port))
+            try (FixEngine ignore = SystemTestUtil.launchInitiatingEngine(port, nanoClock))
             {
             }
 
-            try (FixEngine ignore = launchInitiatingEngineWithSameLogs(port))
+            try (FixEngine ignore = launchInitiatingEngineWithSameLogs(port, nanoClock))
             {
             }
         }
@@ -58,13 +62,13 @@ public class EngineRestartTest
             final int port = TestFixtures.unusedPort();
             delete(SystemTestUtil.CLIENT_LOGS);
 
-            final EngineConfiguration firstInitiatingConfig = initiatingConfig(port);
+            final EngineConfiguration firstInitiatingConfig = initiatingConfig(port, nanoClock);
             try (FixEngine ignore = FixEngine.launch(firstInitiatingConfig))
             {
                 firstInitiatingConfig.logInboundMessages(false).logOutboundMessages(false);
             }
 
-            final EngineConfiguration secondInitiatingConfig = initiatingConfig(port)
+            final EngineConfiguration secondInitiatingConfig = initiatingConfig(port, nanoClock)
                 .printStartupWarnings(false);
             try (FixEngine ignore = FixEngine.launch(secondInitiatingConfig))
             {

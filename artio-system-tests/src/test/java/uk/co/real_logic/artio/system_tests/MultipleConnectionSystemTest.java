@@ -24,10 +24,10 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
         mediaDriver = launchMediaDriver();
 
         launchAcceptingEngine();
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
 
         testSystem = new TestSystem(initiatingLibrary, acceptingLibrary);

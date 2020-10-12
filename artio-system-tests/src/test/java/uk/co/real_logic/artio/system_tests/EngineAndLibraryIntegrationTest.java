@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
@@ -47,6 +49,7 @@ public class EngineAndLibraryIntegrationTest
 {
     private static final int SHORT_TIMEOUT_IN_MS = 100;
 
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
@@ -80,7 +83,7 @@ public class EngineAndLibraryIntegrationTest
 
     private void launchEngine(final int replyTimeoutInMs)
     {
-        final EngineConfiguration config = acceptingConfig(unusedPort(), ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config = acceptingConfig(unusedPort(), ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         config.deleteLogFileDirOnStart(true);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);

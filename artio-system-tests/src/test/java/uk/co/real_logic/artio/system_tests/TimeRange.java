@@ -15,18 +15,27 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.concurrent.EpochNanoClock;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
 public class TimeRange
 {
-    private final long startTime = System.nanoTime();
+    private final EpochNanoClock clock;
+    private final long startTime;
     private long endTime;
+
+    public TimeRange(final EpochNanoClock clock)
+    {
+        this.clock = clock;
+        startTime = clock.nanoTime();
+    }
 
     public void end()
     {
-        endTime = System.nanoTime();
+        endTime = clock.nanoTime();
     }
 
     public void assertWithinRange(final long time)

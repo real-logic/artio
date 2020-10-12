@@ -254,7 +254,7 @@ public final class FixEngine extends GatewayProcess
                 configuration.errorIfDuplicateEngineDetected());
             duplicateEngineChecker.check();
 
-            timers = new EngineTimers(configuration.clock());
+            timers = new EngineTimers(configuration.epochNanoClock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);

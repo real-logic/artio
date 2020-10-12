@@ -18,16 +18,16 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 
 public final class Streams
 {
     private final int streamId;
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final Aeron aeron;
     private final String aeronChannel;
     private final boolean printAeronStreamIdentifiers;
@@ -41,7 +41,7 @@ public final class Streams
         final boolean printAeronStreamIdentifiers,
         final AtomicCounter failedPublications,
         final int streamId,
-        final Clock clock,
+        final EpochNanoClock clock,
         final int maxClaimAttempts,
         final RecordingCoordinator recordingCoordinator)
     {

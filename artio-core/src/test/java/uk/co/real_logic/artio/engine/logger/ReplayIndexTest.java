@@ -26,16 +26,12 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NoOpIdleStrategy;
-import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -384,7 +380,7 @@ public class ReplayIndexTest extends AbstractLogTest
             otherPublication,
             mock(AtomicCounter.class),
             new YieldingIdleStrategy(),
-            Clock.systemNanoTime(),
+            new OffsetEpochNanoClock(),
             DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
     }
 

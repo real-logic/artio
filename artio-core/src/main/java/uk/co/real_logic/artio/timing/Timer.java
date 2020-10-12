@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.timing;
 
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.SingleWriterRecorder;
-import uk.co.real_logic.artio.Clock;
+import org.agrona.concurrent.EpochNanoClock;
 
 import static uk.co.real_logic.artio.CommonConfiguration.TIME_MESSAGES;
 
@@ -28,13 +28,13 @@ public class Timer
     // Only written to on recording thread
     private final SingleWriterRecorder recorder = new SingleWriterRecorder(NUMBER_OF_SIGNIFICANT_VALUE_DIGITS);
 
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final int id;
     private final String name;
     // Only accessed upon logging thread
     private Histogram histogram;
 
-    public Timer(final Clock clock, final String name, final int id)
+    public Timer(final EpochNanoClock clock, final String name, final int id)
     {
         this.clock = clock;
         this.name = name;
@@ -45,7 +45,7 @@ public class Timer
     {
         if (TIME_MESSAGES)
         {
-            final long time = clock.time();
+            final long time = clock.nanoTime();
             final long duration = time - timestamp;
             recordValue(duration);
             return time;

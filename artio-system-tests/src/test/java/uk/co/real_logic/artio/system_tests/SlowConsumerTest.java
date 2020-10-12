@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Timing;
@@ -55,6 +57,7 @@ public class SlowConsumerTest
     private static final int BUFFER_CAPACITY = 16 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
@@ -269,14 +272,14 @@ public class SlowConsumerTest
     private void setup(final int senderMaxBytesInBuffer, final MessageTimingCaptor messageTimingCaptor)
     {
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
-        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .scheduler(scheduler);
         config.deleteLogFileDirOnStart(true);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         config.messageTimingHandler(messageTimingCaptor);
         engine = FixEngine.launch(config);
         testSystem = new TestSystem(scheduler);
-        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
+        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler, nanoClock);
         libraryConfiguration.outboundMaxClaimAttempts(1);
         library = testSystem.connect(libraryConfiguration);
     }

@@ -78,7 +78,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {
@@ -364,7 +364,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     {
         otfAcceptor = new FakeOtfAcceptor();
         handler = new FakeHandler(otfAcceptor);
-        final LibraryConfiguration configuration = acceptingLibraryConfig(handler);
+        final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
         configuration.messageValidationStrategy(MessageValidationStrategy.none());
         library = connect(configuration);
         testSystem = new TestSystem(library);
@@ -377,7 +377,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {

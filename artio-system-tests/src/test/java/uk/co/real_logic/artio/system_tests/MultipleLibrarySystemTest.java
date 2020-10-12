@@ -25,8 +25,8 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         mediaDriver = launchMediaDriver();
 
         launchAcceptingEngine();
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(initiatingLibrary);
 
         connectSessions();
@@ -39,7 +39,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         {
             DebugLogger.log(LogTag.FIX_TEST, "Iteration: " + i);
 
-            acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+            acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler, nanoClock));
 
             while (!acceptingLibrary.isConnected())
             {
