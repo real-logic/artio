@@ -229,6 +229,10 @@ class IndexedPositionWriter
                 // Outbound stream, so don't need to update the indexed position.
                 case ValidResendRequestDecoder.TEMPLATE_ID:
                 case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                case ControlNotificationDecoder.TEMPLATE_ID:
+                case EndOfDayDecoder.TEMPLATE_ID:
+                case DisconnectDecoder.TEMPLATE_ID:
+                case ConnectDecoder.TEMPLATE_ID:
                     return;
             }
             recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
