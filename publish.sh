@@ -5,8 +5,10 @@ set -eu
 TAG_NAME="$1"
 
 echo "Checking out requested tag: $TAG_NAME"
-
 git checkout "$TAG_NAME"
+
+echo "Checking correct Java version (1.8) in use"
+java -version 2>&1 | grep '1.8'
 
 echo "Building binary to upload"
 
