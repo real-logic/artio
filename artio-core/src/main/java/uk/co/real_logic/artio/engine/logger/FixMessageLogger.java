@@ -16,13 +16,13 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
-import io.aeron.ControlledFragmentAssembler;
-import io.aeron.Subscription;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.Verify;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
@@ -42,22 +42,94 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND
  */
 public class FixMessageLogger implements Agent
 {
+    public static class Configuration
+    {
+        private static final int DEFAULT_COMPACTION_SIZE = 64 * 1024;
+
+        private FixMessageConsumer fixMessageConsumer;
+        private Aeron.Context context;
+        private String libraryAeronChannel = IPC_CHANNEL;
+        private int inboundStreamId = DEFAULT_INBOUND_LIBRARY_STREAM;
+        private int outboundStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+        private int outboundReplayStreamId = DEFAULT_OUTBOUND_REPLAY_STREAM;
+        private int compactionSize = DEFAULT_COMPACTION_SIZE;
+        private ILinkMessageConsumer iLinkMessageConsumer;
+
+        public Configuration fixMessageConsumer(final FixMessageConsumer fixMessageConsumer)
+        {
+            this.fixMessageConsumer = fixMessageConsumer;
+            return this;
+        }
+
+        public Configuration iLinkMessageConsumer(final ILinkMessageConsumer iLinkMessageConsumer)
+        {
+            this.iLinkMessageConsumer = iLinkMessageConsumer;
+            return this;
+        }
+
+        public Configuration context(final Aeron.Context context)
+        {
+            this.context = context;
+            return this;
+        }
+
+        public Configuration libraryAeronChannel(final String libraryAeronChannel)
+        {
+            this.libraryAeronChannel = libraryAeronChannel;
+            return this;
+        }
+
+        public Configuration inboundStreamId(final int inboundStreamId)
+        {
+            this.inboundStreamId = inboundStreamId;
+            return this;
+        }
+
+        public Configuration outboundStreamId(final int outboundStreamId)
+        {
+            this.outboundStreamId = outboundStreamId;
+            return this;
+        }
+
+        public Configuration outboundReplayStreamId(final int outboundReplayStreamId)
+        {
+            this.outboundReplayStreamId = outboundReplayStreamId;
+            return this;
+        }
+
+        public Configuration compactionSize(final int compactionSize)
+        {
+            this.compactionSize = compactionSize;
+            return this;
+        }
+
+        void conclude()
+        {
+            Verify.notNull(fixMessageConsumer, "fixMessageConsumer");
+
+            if (compactionSize <= 0)
+            {
+                throw new IllegalArgumentException("Compaction size must be positive, but is: " + compactionSize);
+            }
+
+            if (context == null)
+            {
+                context = new Aeron.Context();
+            }
+        }
+    }
+
     public static void main(final String[] args)
     {
-        final FixMessageLogger logger = new FixMessageLogger(
-            FixMessageLogger::print,
-            new Aeron.Context(),
-            IPC_CHANNEL,
-            DEFAULT_INBOUND_LIBRARY_STREAM,
-            DEFAULT_OUTBOUND_LIBRARY_STREAM,
-            DEFAULT_OUTBOUND_REPLAY_STREAM);
+        final Configuration configuration = new Configuration()
+            .fixMessageConsumer(FixMessageLogger::print);
+        final FixMessageLogger logger = new FixMessageLogger(configuration);
 
         final AgentRunner runner = new AgentRunner(
             CommonConfiguration.backoffIdleStrategy(),
             Throwable::printStackTrace,
             null,
-            logger
-        );
+            logger);
 
         AgentRunner.startOnThread(runner);
     }
@@ -72,12 +144,10 @@ public class FixMessageLogger implements Agent
         System.out.printf("%s: %s%n", fixMessageDecoder.status(), fixMessageDecoder.body());
     }
 
+    private final StreamTimestampZipper zipper;
     private final Aeron aeron;
-    private final Subscription outboundSubscription;
-    private final Subscription inboundSubscription;
-    private final Subscription replaySubscription;
-    private final ControlledFragmentAssembler fragmentAssembler;
 
+    @Deprecated
     public FixMessageLogger(
         final FixMessageConsumer fixMessageConsumer,
         final Aeron.Context context,
@@ -86,22 +156,34 @@ public class FixMessageLogger implements Agent
         final int outboundStreamId,
         final int outboundReplayStreamId)
     {
-        aeron = Aeron.connect(context);
-        inboundSubscription = aeron.addSubscription(libraryAeronChannel, inboundStreamId);
-        outboundSubscription = aeron.addSubscription(libraryAeronChannel, outboundStreamId);
-        replaySubscription = aeron.addSubscription(libraryAeronChannel, outboundReplayStreamId);
+        this(new Configuration()
+            .fixMessageConsumer(fixMessageConsumer)
+            .context(context)
+            .libraryAeronChannel(libraryAeronChannel)
+            .inboundStreamId(inboundStreamId)
+            .outboundStreamId(outboundStreamId)
+            .outboundReplayStreamId(outboundReplayStreamId));
+    }
 
-        final LogEntryHandler logEntryHandler = new LogEntryHandler(
-            fixMessageConsumer, new LazyILinkMessagePrinter(inboundStreamId));
-        fragmentAssembler = new ControlledFragmentAssembler(logEntryHandler);
+    public FixMessageLogger(
+        final Configuration configuration)
+    {
+        configuration.conclude();
+        aeron = Aeron.connect(configuration.context);
+        zipper = new StreamTimestampZipper(
+            aeron,
+            configuration.libraryAeronChannel,
+            configuration.fixMessageConsumer,
+            configuration.iLinkMessageConsumer,
+            configuration.compactionSize,
+            configuration.inboundStreamId,
+            configuration.outboundStreamId,
+            configuration.outboundReplayStreamId);
     }
 
     public int doWork()
     {
-        return
-            inboundSubscription.controlledPoll(fragmentAssembler, 10) +
-            outboundSubscription.controlledPoll(fragmentAssembler, 10) +
-            replaySubscription.controlledPoll(fragmentAssembler, 10);
+        return zipper.poll();
     }
 
     public void onClose()
@@ -112,5 +194,15 @@ public class FixMessageLogger implements Agent
     public String roleName()
     {
         return "FixMessageLogger";
+    }
+
+    int bufferPosition()
+    {
+        return zipper.bufferPosition();
+    }
+
+    int bufferCapacity()
+    {
+        return zipper.bufferCapacity();
     }
 }
