@@ -1195,5 +1195,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(compositeKey.localCompId(), sessionId.localCompId());
         assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
-
 }

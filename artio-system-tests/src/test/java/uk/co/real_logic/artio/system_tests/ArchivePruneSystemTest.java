@@ -39,7 +39,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-
     @Before
     public void launch()
     {

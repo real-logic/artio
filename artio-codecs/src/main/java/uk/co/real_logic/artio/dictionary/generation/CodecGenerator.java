@@ -32,12 +32,11 @@ public final class CodecGenerator
 
         final String outputPath = configuration.outputPath();
         final boolean allowDuplicates = configuration.allowDuplicateFields();
-        final InputStream[] fileStreams = configuration.fileStreams();
         final DictionaryParser parser = new DictionaryParser(allowDuplicates);
         final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
 
         Dictionary dictionary = null;
-        for (final InputStream fileStream : fileStreams)
+        for (final InputStream fileStream : configuration.fileStreams())
         {
             try
             {

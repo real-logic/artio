@@ -144,9 +144,7 @@ class ILink3Contexts
 
     void saveNewUuid(final ILink3Context context)
     {
-        final long newUuid = context.uuid();
         ILink3Key key = null;
-
         for (final Map.Entry<ILink3Key, ILink3Context> entry : keyToContext.entrySet())
         {
             if (entry.getValue() == context)
@@ -156,9 +154,14 @@ class ILink3Contexts
             }
         }
 
+        if (null == key)
+        {
+            throw new IllegalStateException("expected to find key");
+        }
+
         contextEncoder
             .wrap(buffer, offset)
-            .uuid(newUuid)
+            .uuid(context.uuid())
             .port(key.port)
             .host(key.host)
             .accessKeyId(key.accessKeyId);

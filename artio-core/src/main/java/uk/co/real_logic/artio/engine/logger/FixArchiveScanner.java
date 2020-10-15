@@ -99,52 +99,53 @@ public class FixArchiveScanner implements AutoCloseable
 
         try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
         {
-            archiveLocations.forEach(archiveLocation ->
-            {
-                final long recordingId = archiveLocation.recordingId;
-                final boolean stillArchiving = archiveLocation.stopPosition == NULL_POSITION;
-
-                final long stopPosition;
-                final long length;
-                if (stillArchiving)
+            archiveLocations.forEach(
+                (archiveLocation) ->
                 {
-                    if (follow)
+                    final long recordingId = archiveLocation.recordingId;
+                    final boolean stillArchiving = archiveLocation.stopPosition == NULL_POSITION;
+
+                    final long stopPosition;
+                    final long length;
+                    if (stillArchiving)
                     {
-                        length = NULL_LENGTH;
-                        stopPosition = NULL_POSITION;
+                        if (follow)
+                        {
+                            length = NULL_LENGTH;
+                            stopPosition = NULL_POSITION;
+                        }
+                        else
+                        {
+                            stopPosition = aeronArchive.getRecordingPosition(recordingId);
+                            length = stopPosition - archiveLocation.startPosition;
+                        }
                     }
                     else
                     {
-                        stopPosition = aeronArchive.getRecordingPosition(recordingId);
+                        stopPosition = archiveLocation.stopPosition;
                         length = stopPosition - archiveLocation.startPosition;
                     }
-                }
-                else
-                {
-                    stopPosition = archiveLocation.stopPosition;
-                    length = stopPosition - archiveLocation.startPosition;
-                }
 
-                if (length != 0)
-                {
-                    final int sessionId = (int)aeronArchive.startReplay(
-                        recordingId,
-                        archiveLocation.startPosition,
-                        length,
-                        IPC_CHANNEL,
-                        archiveScannerStreamId);
+                    if (length != 0)
+                    {
+                        final int sessionId = (int)aeronArchive.startReplay(
+                            recordingId,
+                            archiveLocation.startPosition,
+                            length,
+                            IPC_CHANNEL,
+                            archiveScannerStreamId);
 
-                    final Image image = lookupImage(replaySubscription, sessionId);
-                    positionCheckers.add(new CompletenessChecker(image, stopPosition));
-                }
-            });
+                        final Image image = lookupImage(replaySubscription, sessionId);
+                        positionCheckers.add(new CompletenessChecker(image, stopPosition));
+                    }
+                });
 
             while (true)
             {
                 final int received = replaySubscription.controlledPoll(fragmentAssembler, 10);
 
                 // Don't need to do this check in follow mode as we're just going to keep running.
-                if (!follow && received == 0)
+                if (0 == received && !follow)
                 {
                     CollectionUtil.removeIf(positionCheckers, CompletenessChecker::isComplete);
                     if (positionCheckers.isEmpty())
