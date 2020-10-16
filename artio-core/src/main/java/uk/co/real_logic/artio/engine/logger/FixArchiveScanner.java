@@ -144,8 +144,8 @@ public class FixArchiveScanner implements AutoCloseable
             {
                 final int received = replaySubscription.controlledPoll(fragmentAssembler, 10);
 
-                // Don't need to do this check in follow mode as we're just going to keep running.
-                if (0 == received && !follow)
+                // Don't need to do this check in follow mode as we're just going to keep running and not terminate.
+                if (0 == received && !follow) // lgtm [java/constant-loop-condition]
                 {
                     CollectionUtil.removeIf(positionCheckers, CompletenessChecker::isComplete);
                     if (positionCheckers.isEmpty())

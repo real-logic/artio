@@ -184,7 +184,8 @@ public class CodecConfiguration
                         xmlFile));
                 }
 
-                fileStreams[i] = new FileInputStream(xmlFile);
+                // Closed by CodecGenerator
+                fileStreams[i] = new FileInputStream(xmlFile); // lgtm [java/input-resource-leak]
             }
         }
     }

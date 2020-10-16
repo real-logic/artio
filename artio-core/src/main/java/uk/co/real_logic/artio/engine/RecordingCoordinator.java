@@ -283,6 +283,10 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             {
                 errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
                     " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
+                if (libraryExtendPosition == null)
+                {
+                    return null;
+                }
             }
 
             // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the

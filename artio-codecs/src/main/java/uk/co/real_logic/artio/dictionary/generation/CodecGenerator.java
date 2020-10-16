@@ -29,86 +29,88 @@ public final class CodecGenerator
     public static void generate(final CodecConfiguration configuration) throws Exception
     {
         configuration.conclude();
+        final InputStream[] fileStreams = configuration.fileStreams();
 
-        final String outputPath = configuration.outputPath();
-        final boolean allowDuplicates = configuration.allowDuplicateFields();
-        final DictionaryParser parser = new DictionaryParser(allowDuplicates);
-        final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
-
-        Dictionary dictionary = null;
-        for (final InputStream fileStream : configuration.fileStreams())
+        try
         {
-            try
+            final String outputPath = configuration.outputPath();
+            final boolean allowDuplicates = configuration.allowDuplicateFields();
+            final DictionaryParser parser = new DictionaryParser(allowDuplicates);
+            final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
+
+            Dictionary dictionary = null;
+
+            for (final InputStream fileStream : fileStreams)
             {
                 dictionary = parser.parse(fileStream, dictionary);
             }
-            finally
-            {
-                fileStream.close();
-            }
-        }
 
-        final String parentPackage = configuration.parentPackage();
-        final String encoderPackage = parentPackage + ".builder";
-        final String decoderPackage = parentPackage + ".decoder";
-        final String decoderFlyweightPackage = parentPackage + ".decoder_flyweight";
+            final String parentPackage = configuration.parentPackage();
+            final String encoderPackage = parentPackage + ".builder";
+            final String decoderPackage = parentPackage + ".decoder";
+            final String decoderFlyweightPackage = parentPackage + ".decoder_flyweight";
 
-        final PackageOutputManager parentOutput = new PackageOutputManager(outputPath, parentPackage);
-        final PackageOutputManager decoderOutput = new PackageOutputManager(outputPath, decoderPackage);
-        final PackageOutputManager encoderOutput = new PackageOutputManager(outputPath, encoderPackage);
+            final PackageOutputManager parentOutput = new PackageOutputManager(outputPath, parentPackage);
+            final PackageOutputManager decoderOutput = new PackageOutputManager(outputPath, decoderPackage);
+            final PackageOutputManager encoderOutput = new PackageOutputManager(outputPath, encoderPackage);
 
-        new EnumGenerator(dictionary, parentPackage, parentOutput).generate();
-        new ConstantGenerator(dictionary, parentPackage, parentOutput).generate();
+            new EnumGenerator(dictionary, parentPackage, parentOutput).generate();
+            new ConstantGenerator(dictionary, parentPackage, parentOutput).generate();
 
-        new FixDictionaryGenerator(
-            dictionary,
-            parentOutput,
-            encoderPackage,
-            decoderPackage,
-            parentPackage).generate();
+            new FixDictionaryGenerator(
+                dictionary,
+                parentOutput,
+                encoderPackage,
+                decoderPackage,
+                parentPackage).generate();
 
-        new EncoderGenerator(
-            dictionary,
-            encoderPackage,
-            parentPackage,
-            encoderOutput,
-            Validation.class,
-            RejectUnknownField.class,
-            RejectUnknownEnumValue.class,
-            codecRejectUnknownEnumValueEnabled).generate();
-
-        new DecoderGenerator(
-            dictionary,
-            1,
-            decoderPackage,
-            parentPackage,
-            encoderPackage,
-            decoderOutput,
-            Validation.class,
-            RejectUnknownField.class,
-            RejectUnknownEnumValue.class,
-            false,
-            codecRejectUnknownEnumValueEnabled).generate();
-
-        new PrinterGenerator(dictionary, decoderPackage, decoderOutput).generate();
-        new AcceptorGenerator(dictionary, decoderPackage, decoderOutput).generate();
-
-        if (configuration.flyweightsEnabled())
-        {
-            final PackageOutputManager flyweightDecoderOutput =
-                new PackageOutputManager(outputPath, decoderFlyweightPackage);
+            new EncoderGenerator(
+                dictionary,
+                encoderPackage,
+                parentPackage,
+                encoderOutput,
+                Validation.class,
+                RejectUnknownField.class,
+                RejectUnknownEnumValue.class,
+                codecRejectUnknownEnumValueEnabled).generate();
 
             new DecoderGenerator(
                 dictionary,
                 1,
-                decoderFlyweightPackage,
+                decoderPackage,
                 parentPackage,
-                encoderPackage, flyweightDecoderOutput,
+                encoderPackage,
+                decoderOutput,
                 Validation.class,
                 RejectUnknownField.class,
                 RejectUnknownEnumValue.class,
-                true,
+                false,
                 codecRejectUnknownEnumValueEnabled).generate();
+
+            new PrinterGenerator(dictionary, decoderPackage, decoderOutput).generate();
+            new AcceptorGenerator(dictionary, decoderPackage, decoderOutput).generate();
+
+            if (configuration.flyweightsEnabled())
+            {
+                final PackageOutputManager flyweightDecoderOutput =
+                    new PackageOutputManager(outputPath, decoderFlyweightPackage);
+
+                new DecoderGenerator(
+                    dictionary,
+                    1,
+                    decoderFlyweightPackage,
+                    parentPackage,
+                    encoderPackage, flyweightDecoderOutput,
+                    Validation.class,
+                    RejectUnknownField.class,
+                    RejectUnknownEnumValue.class,
+                    true,
+                    codecRejectUnknownEnumValueEnabled).generate();
+            }
+        }
+        finally
+        {
+            Exceptions.closeAll(fileStreams);
         }
     }
 }
