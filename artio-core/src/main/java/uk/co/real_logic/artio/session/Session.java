@@ -2156,7 +2156,7 @@ public class Session
     {
         closeCounters();
         receivedMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
-        sentMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
+        sentMsgSeqNo = counters.sentMsgSeqNo(connectionId);
     }
 
     /**
