@@ -64,7 +64,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 {
     public static final int MOST_RECENT_MESSAGE = 0;
 
-    private static final long TIMESTAMP_MESSAGE_INTERVAL = SECONDS.toNanos(10);
+    private static final long TIMESTAMP_MESSAGE_INTERVAL = SECONDS.toNanos(2);
 
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
         ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -186,8 +186,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, nanoClock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
 
-
-        nextTimestampMessageInNs = nanoClock.nanoTime() + nextTimestampMessageInNs;
+        nextTimestampMessageInNs = nanoClock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
         replayerTimestampEncoder
             .wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
     }
@@ -453,7 +452,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private void sendTimestampMessage()
     {
         final long timeInNs = nanoClock.nanoTime();
-        if (nextTimestampMessageInNs > timeInNs)
+        if (timeInNs > nextTimestampMessageInNs)
         {
             replayerTimestampEncoder.timestamp(timeInNs);
             final long position = publication.offer(timestampBuffer);
