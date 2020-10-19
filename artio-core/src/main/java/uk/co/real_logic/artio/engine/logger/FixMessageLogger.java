@@ -132,6 +132,8 @@ public class FixMessageLogger implements Agent
             logger);
 
         AgentRunner.startOnThread(runner);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(runner::close));
     }
 
     private static void print(
@@ -146,6 +148,7 @@ public class FixMessageLogger implements Agent
 
     private final StreamTimestampZipper zipper;
     private final Aeron aeron;
+    private volatile boolean closed = false;
 
     @Deprecated
     public FixMessageLogger(
@@ -188,7 +191,13 @@ public class FixMessageLogger implements Agent
 
     public void onClose()
     {
-        aeron.close();
+        if (!closed)
+        {
+            closed = true;
+
+            zipper.onClose();
+            aeron.close();
+        }
     }
 
     public String roleName()

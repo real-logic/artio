@@ -163,6 +163,24 @@ public class StreamTimestampZipper
         owner.minBufferedTimestamp = position.timestamp;
     }
 
+    public void onClose()
+    {
+        final LogEntryHandler logEntryHandler = this.logEntryHandler;
+        final List<BufferedPosition> positions = this.positions;
+        final int size = positions.size();
+
+        positions.sort(TIMESTAMP_COMPARATOR);
+
+        for (int i = 0; i < size; i++)
+        {
+            final BufferedPosition position = positions.get(i);
+            logEntryHandler.onBufferedMessage(position.offset, position.length);
+        }
+
+        positions.clear();
+        reorderBufferOffset = 0;
+    }
+
     static class BufferedPosition
     {
         final StreamPoller owner;
@@ -181,7 +199,7 @@ public class StreamTimestampZipper
         public String toString()
         {
             return "BufferedPosition{" +
-                "owner=" + owner +
+                "owner=" + owner.subscription.streamId() +
                 ", timestamp=" + timestamp +
                 ", offset=" + offset +
                 ", length=" + length +

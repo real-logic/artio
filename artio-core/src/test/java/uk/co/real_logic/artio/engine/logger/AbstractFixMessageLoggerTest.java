@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.driver.MediaDriver;
-import org.agrona.DirectBuffer;
 import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
@@ -35,10 +34,12 @@ import uk.co.real_logic.artio.messages.ReplayerTimestampDecoder;
 import uk.co.real_logic.artio.messages.ReplayerTimestampEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import java.util.function.BooleanSupplier;
+
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
@@ -46,8 +47,6 @@ import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGT
 
 public abstract class AbstractFixMessageLoggerTest
 {
-    static final byte[] FAKE_FIX_MESSAGE = "ABCDEFGHI".getBytes(US_ASCII);
-    static final DirectBuffer FAKE_MESSAGE_BUFFER = new UnsafeBuffer(FAKE_FIX_MESSAGE);
     static final int LIBRARY_ID = 1;
     static final long SESSION_ID = 2;
     static final int SEQUENCE_INDEX = 3;
@@ -60,7 +59,13 @@ public abstract class AbstractFixMessageLoggerTest
 
     private final FixMessageConsumer fixConsumer = (message, buffer, offset, length, header) ->
     {
-        timestamps.add(message.timestamp());
+        final long timestamp = message.timestamp();
+
+        timestamps.add(timestamp);
+
+        final String body = message.body().trim();
+        final long messageNumber = Long.parseLong(body);
+        assertEquals(timestamp, messageNumber);
     };
 
     private MediaDriver mediaDriver;
@@ -120,6 +125,15 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(outboundPublication, 10);
         assertEventuallyReceives(2);
         assertThat(timestamps, contains(8L, 9L));
+        timestamps.clear();
+
+        onMessage(outboundPublication, 11);
+        assertEventuallyReads(1);
+
+        assertThat(timestamps, hasSize(0));
+        logger.onClose();
+        assertThat(timestamps, contains(10L, 11L));
+        assertEquals("failed to reshuffle", 0, logger.bufferPosition());
     }
 
     private void assertEventuallyReceives(final int messageCount)
@@ -130,6 +144,27 @@ public abstract class AbstractFixMessageLoggerTest
             {
                 logger.doWork();
                 return timestamps.size() == messageCount;
+            },
+            1000,
+            () ->
+            {
+            });
+    }
+
+    private void assertEventuallyReads(final int messageCount)
+    {
+        Timing.assertEventuallyTrue(
+            () -> "Failed to receive a message: " + timestamps,
+            new BooleanSupplier()
+            {
+                int read = 0;
+
+                @Override
+                public boolean getAsBoolean()
+                {
+                    read += logger.doWork();
+                    return read >= messageCount;
+                }
             },
             1000,
             () ->

@@ -15,16 +15,21 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 
 public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 {
+    static final byte[] FAKE_FIX_MESSAGE = "                  ".getBytes(US_ASCII);
+    static final UnsafeBuffer FAKE_MESSAGE_BUFFER = new UnsafeBuffer(FAKE_FIX_MESSAGE);
+
     {
         compactionSize = 500;
     }
@@ -37,6 +42,7 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 
     void onMessage(final GatewayPublication inboundPublication, final int timestamp)
     {
+        FAKE_MESSAGE_BUFFER.putIntAscii(0, timestamp);
         final long position = inboundPublication.saveMessage(
             FAKE_MESSAGE_BUFFER,
             0,
