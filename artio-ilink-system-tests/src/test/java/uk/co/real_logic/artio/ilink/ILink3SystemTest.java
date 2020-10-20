@@ -357,6 +357,11 @@ public class ILink3SystemTest
 
         connectToTestServer(connectionConfiguration());
 
+        rejectNegotiate();
+    }
+
+    private void rejectNegotiate()
+    {
         readNegotiate();
 
         testServer.writeNegotiateReject();
@@ -393,6 +398,21 @@ public class ILink3SystemTest
 
         readEstablish(2);
         testServer.writeEstablishmentAck(1, lastUuid, 2);
+
+        acquireSession();
+    }
+
+    @Test
+    public void shouldSupportReestablishingConnectionsAfterNegotiateReject() throws IOException
+    {
+        // Reject Negotiate
+        launch(true);
+        connectToTestServer(connectionConfiguration());
+        rejectNegotiate();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        establishConnection();
 
         acquireSession();
     }

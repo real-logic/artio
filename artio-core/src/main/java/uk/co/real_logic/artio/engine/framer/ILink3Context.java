@@ -137,4 +137,16 @@ final class ILink3Context
     {
         return connectUuid;
     }
+
+    public String toString()
+    {
+        return "ILink3Context{connectLastUuid=" + connectLastUuid +
+            ", connectUuid=" + connectUuid +
+            ", uuid=" + uuid +
+            ", lastUuid=" + lastUuid +
+            ", newlyAllocated=" + newlyAllocated +
+            ", primaryConnected=" + primaryConnected +
+            ", backupConnected=" + backupConnected +
+            '}';
+    }
 }

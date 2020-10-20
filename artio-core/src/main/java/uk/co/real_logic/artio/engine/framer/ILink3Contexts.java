@@ -100,12 +100,18 @@ class ILink3Contexts
         final ILink3Key key = new ILink3Key(port, host, accessKeyId);
 
         final ILink3Context context = keyToContext.get(key);
+
         if (context != null)
         {
-            context.connectLastUuid(context.uuid());
-            context.newlyAllocated(!reestablishConnection);
+            final long connectLastUuid = context.uuid();
+            context.connectLastUuid(connectLastUuid);
 
-            if (!reestablishConnection)
+            // connectLastUuid == 0 implies that we're attempting to re-establish a connection that failed on its
+            // last attempt, also its first of the week, so we need to generate a new UUID
+            final boolean newlyAllocated = !reestablishConnection || connectLastUuid == 0;
+
+            context.newlyAllocated(newlyAllocated);
+            if (newlyAllocated)
             {
                 final long newUuid = microSecondTimestamp();
                 context.connectUuid(newUuid);
@@ -113,7 +119,7 @@ class ILink3Contexts
             else
             {
                 // We may have an invalid connect uuid from a failed connection at this point.
-                context.connectUuid(context.uuid());
+                context.connectUuid(connectLastUuid);
             }
 
             return context;
