@@ -30,7 +30,10 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
+import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.Backup;
 import uk.co.real_logic.artio.system_tests.MessageTimingCaptor;
@@ -321,6 +324,30 @@ public class ILink3SystemTest
         readNegotiate();
         assertConnectError(containsString(""));
         assertDisconnected();
+    }
+
+    @Test
+    public void shouldAllowReconnectAfterNegotiateDisconnect() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        readNegotiate();
+
+        assertConnectError(containsString(""));
+
+        // Print an error if it occurs
+        testSystem.addOperation(() ->
+        {
+            if (reply != null && reply.hasErrored())
+            {
+                throw (RuntimeException)reply.error();
+            }
+        });
+
+        establishNewConnection();
     }
 
     @Test
