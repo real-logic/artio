@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.CloseHelper;
-import org.hamcrest.Matchers;
+import org.agrona.collections.IntHashSet;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -54,11 +54,19 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
     }
 
     @Test
-    public void canScanArchiveWhilstGatewayRunning()
+    public void canScanArchiveWhilstGatewayRunningOneStream()
     {
         setupAndExchangeMessages();
 
-        assertArchiveContainsMessages("hi");
+        assertOutboundArchiveContainsMessages("hi");
+    }
+
+    @Test
+    public void canScanArchiveWhilstGatewayRunningBothStreams()
+    {
+        setupAndExchangeMessages();
+
+        assertArchiveContainsBothMessages("hi");
     }
 
     @Test
@@ -74,21 +82,36 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
 
         assertInitiatingSequenceIndexIs(0);
 
-        assertArchiveContainsMessages(largeTestReqId());
+        assertOutboundArchiveContainsMessages(largeTestReqId());
     }
 
     @Test
-    public void canScanArchiveWhenGatewayStopped()
+    public void canScanArchiveWhenGatewayStoppedOneStream()
     {
         setupAndExchangeMessages();
 
+        closeLibrariesAndEngines();
+
+        assertOutboundArchiveContainsMessages("hi");
+    }
+
+    @Test
+    public void canScanArchiveWhenGatewayStoppedBothStreams()
+    {
+        setupAndExchangeMessages();
+
+        closeLibrariesAndEngines();
+
+        assertArchiveContainsBothMessages("hi");
+    }
+
+    private void closeLibrariesAndEngines()
+    {
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
 
         CloseHelper.close(initiatingEngine);
         CloseHelper.close(acceptingEngine);
-
-        assertArchiveContainsMessages("hi");
     }
 
     private void setupAndExchangeMessages()
@@ -98,15 +121,31 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 
-    private void assertArchiveContainsMessages(final String testReqIdPrefix)
+    private void assertOutboundArchiveContainsMessages(final String testReqIdPrefix)
     {
         final EngineConfiguration configuration = acceptingEngine.configuration();
         final List<String> messages = getMessagesFromArchive(
             configuration, configuration.outboundLibraryStream());
 
         assertThat(messages.toString(), messages, hasItems(
-            Matchers.containsString("35=A\00149=acceptor\00156=initiator\00134=1"),
-            Matchers.containsString("\001112=" + testReqIdPrefix)));
+            containsString("35=A\00149=acceptor\00156=initiator\00134=1"),
+            containsString("\001112=" + testReqIdPrefix)));
+    }
+
+    private void assertArchiveContainsBothMessages(final String testReqIdPrefix)
+    {
+        final EngineConfiguration configuration = acceptingEngine.configuration();
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(configuration.outboundLibraryStream());
+        queryStreamIds.add(configuration.inboundLibraryStream());
+        final List<String> messages = getMessagesFromArchive(configuration, queryStreamIds);
+
+        final List<String> first4Messages = messages.subList(0, 4);
+        assertThat(messages.toString(), first4Messages, contains(
+            containsString("35=A\00149=initiator\00156=acceptor\00134=1"),
+            containsString("35=A\00149=acceptor\00156=initiator\00134=1"),
+            containsString("35=1\00149=initiator\00156=acceptor\00134=2"),
+            containsString("\001112=" + testReqIdPrefix)));
     }
 
 }

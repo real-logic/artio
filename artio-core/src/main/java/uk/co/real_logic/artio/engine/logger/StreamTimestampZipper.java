@@ -15,9 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.Aeron;
 import io.aeron.FragmentAssembler;
-import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -52,19 +50,16 @@ public class StreamTimestampZipper
     private int reorderBufferOffset;
 
     public StreamTimestampZipper(
-        final Aeron aeron,
-        final String libraryAeronChannel,
         final FixMessageConsumer fixMessageConsumer,
         final ILinkMessageConsumer iLinkMessageConsumer,
         final int compactionSize,
-        final int... streamIds)
+        final Poller... pollers)
     {
         this.compactionSize = compactionSize;
-        pollers = new StreamPoller[streamIds.length];
-        for (int i = 0; i < streamIds.length; i++)
+        this.pollers = new StreamPoller[pollers.length];
+        for (int i = 0; i < pollers.length; i++)
         {
-            final int streamId = streamIds[i];
-            pollers[i] = new StreamPoller(aeron.addSubscription(libraryAeronChannel, streamId));
+            this.pollers[i] = new StreamPoller(pollers[i]);
         }
         logEntryHandler = new LogEntryHandler(fixMessageConsumer, iLinkMessageConsumer);
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
@@ -159,8 +154,8 @@ public class StreamTimestampZipper
             }
         }
 
-        // If there is nothing else in the queue make it the max handled position
-        owner.minBufferedTimestamp = position.timestamp;
+        // Nothing else in the queue
+        owner.minBufferedTimestamp = 0;
     }
 
     public void onClose()
@@ -199,7 +194,7 @@ public class StreamTimestampZipper
         public String toString()
         {
             return "BufferedPosition{" +
-                "owner=" + owner.subscription.streamId() +
+                "owner=" + owner.poller.streamId() +
                 ", timestamp=" + timestamp +
                 ", offset=" + offset +
                 ", length=" + length +
@@ -225,13 +220,13 @@ public class StreamTimestampZipper
 
     class StreamPoller
     {
-        private final Subscription subscription;
+        private final Poller poller;
         // initially 0, if no timestamps buffered then it was the max handled timestamp
         private long minBufferedTimestamp;
 
-        StreamPoller(final Subscription subscription)
+        StreamPoller(final Poller poller)
         {
-            this.subscription = subscription;
+            this.poller = poller;
         }
 
         public int poll(final StreamPoller[] pollers, final FragmentAssembler fragmentAssembler)
@@ -239,10 +234,10 @@ public class StreamTimestampZipper
             final long minOtherTimestamp = findMinOtherTimestamp(pollers, this);
             logEntryHandler.reset(minOtherTimestamp, this);
 
-            final int read = subscription.poll(fragmentAssembler, 10);
+            final int read = poller.poll(fragmentAssembler);
 
             final long minBufferedTimestampByPoll = logEntryHandler.minBufferedTimestamp;
-            if (minBufferedTimestampByPoll != 0)
+            if (minBufferedTimestampByPoll != 0 && minBufferedTimestamp == 0)
             {
                 minBufferedTimestamp = minBufferedTimestampByPoll;
             }
@@ -404,5 +399,12 @@ public class StreamTimestampZipper
                 iLinkHandler.onBusinessMessage(iLinkMessage, buffer, offset, null);
             }
         }
+    }
+
+    public interface Poller
+    {
+        int poll(FragmentAssembler fragmentAssembler);
+
+        int streamId();
     }
 }

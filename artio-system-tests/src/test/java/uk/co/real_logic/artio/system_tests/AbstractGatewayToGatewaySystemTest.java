@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -521,11 +522,18 @@ public class AbstractGatewayToGatewaySystemTest
 
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)
     {
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(queryStreamId);
+        return getMessagesFromArchive(configuration, queryStreamIds);
+    }
+
+    List<String> getMessagesFromArchive(final EngineConfiguration configuration, final IntHashSet queryStreamIds)
+    {
         final List<String> messages = new ArrayList<>();
         final FixMessageConsumer fixMessageConsumer =
             (message, buffer, offset, length, header) -> messages.add(message.body());
 
-        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+        final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
             .idleStrategy(CommonConfiguration.backoffIdleStrategy());
 
@@ -533,8 +541,9 @@ public class AbstractGatewayToGatewaySystemTest
         {
             scanner.scan(
                 configuration.libraryAeronChannel(),
-                queryStreamId,
+                queryStreamIds,
                 fixMessageConsumer,
+                null,
                 false,
                 DEFAULT_ARCHIVE_SCANNER_STREAM);
         }

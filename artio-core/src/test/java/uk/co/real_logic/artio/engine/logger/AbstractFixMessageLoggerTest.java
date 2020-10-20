@@ -72,6 +72,10 @@ public abstract class AbstractFixMessageLoggerTest
     private Aeron aeron;
     private FixMessageLogger logger;
 
+    private GatewayPublication inboundPublication;
+    private GatewayPublication outboundPublication;
+    private ExclusivePublication replayStream;
+
     void setup(final ILinkMessageConsumer iLinkMessageConsumer)
     {
         mediaDriver = TestFixtures.launchJustMediaDriver();
@@ -82,6 +86,12 @@ public abstract class AbstractFixMessageLoggerTest
             .iLinkMessageConsumer(iLinkMessageConsumer)
             .compactionSize(compactionSize);
         logger = new FixMessageLogger(config);
+
+        inboundPublication = newPublication(DEFAULT_INBOUND_LIBRARY_STREAM);
+        outboundPublication = newPublication(DEFAULT_OUTBOUND_LIBRARY_STREAM);
+        replayStream = aeron.addExclusivePublication(
+            IPC_CHANNEL,
+            DEFAULT_OUTBOUND_REPLAY_STREAM);
     }
 
     @After
@@ -94,12 +104,6 @@ public abstract class AbstractFixMessageLoggerTest
     @Test
     public void shouldReOrderMessagesByTimestamp()
     {
-        final GatewayPublication inboundPublication = newPublication(DEFAULT_INBOUND_LIBRARY_STREAM);
-        final GatewayPublication outboundPublication = newPublication(DEFAULT_OUTBOUND_LIBRARY_STREAM);
-        final ExclusivePublication replayStream = aeron.addExclusivePublication(
-            IPC_CHANNEL,
-            DEFAULT_OUTBOUND_REPLAY_STREAM);
-
         onMessage(inboundPublication, 2);
         onMessage(inboundPublication, 3);
         onMessage(inboundPublication, 4);
@@ -133,6 +137,38 @@ public abstract class AbstractFixMessageLoggerTest
         assertThat(timestamps, hasSize(0));
         logger.onClose();
         assertThat(timestamps, contains(10L, 11L));
+        assertEquals("failed to reshuffle", 0, logger.bufferPosition());
+    }
+
+    @Test
+    public void shouldReOrderMessagesByTimestampIntermediatePolling()
+    {
+        // poll
+        onMessage(inboundPublication, 1);
+        onMessage(inboundPublication, 3);
+        assertEventuallyReads(2);
+        assertThat(timestamps, hasSize(0));
+
+        logger.doWork();
+
+        // poll
+        onMessage(inboundPublication, 5);
+        assertEventuallyReads(1);
+        assertThat(timestamps, hasSize(0));
+
+        // poll
+        onMessage(outboundPublication, 2);
+        onMessage(outboundPublication, 4);
+        onMessage(outboundPublication, 6);
+        onReplayerTimestamp(replayStream, 10);
+        assertEventuallyReads(4);
+        assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L));
+        timestamps.clear();
+        logger.onClose();
+
+        assertThat(timestamps, contains(6L));
+        timestamps.clear();
+
         assertEquals("failed to reshuffle", 0, logger.bufferPosition());
     }
 

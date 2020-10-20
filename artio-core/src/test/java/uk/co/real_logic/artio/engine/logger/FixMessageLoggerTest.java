@@ -27,8 +27,8 @@ import static org.hamcrest.Matchers.greaterThan;
 
 public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 {
-    static final byte[] FAKE_FIX_MESSAGE = "                  ".getBytes(US_ASCII);
-    static final UnsafeBuffer FAKE_MESSAGE_BUFFER = new UnsafeBuffer(FAKE_FIX_MESSAGE);
+    final byte[] fakeFixMessage = "                  ".getBytes(US_ASCII);
+    final UnsafeBuffer fakeMessageBuffer = new UnsafeBuffer(fakeFixMessage);
 
     {
         compactionSize = 500;
@@ -42,11 +42,11 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 
     void onMessage(final GatewayPublication inboundPublication, final int timestamp)
     {
-        FAKE_MESSAGE_BUFFER.putIntAscii(0, timestamp);
+        fakeMessageBuffer.putIntAscii(0, timestamp);
         final long position = inboundPublication.saveMessage(
-            FAKE_MESSAGE_BUFFER,
+            fakeMessageBuffer,
             0,
-            FAKE_MESSAGE_BUFFER.capacity(),
+            fakeMessageBuffer.capacity(),
             LIBRARY_ID,
             LogonDecoder.MESSAGE_TYPE,
             SESSION_ID,

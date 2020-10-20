@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
+import io.aeron.Subscription;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
@@ -24,6 +26,8 @@ import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+
+import java.util.stream.IntStream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
@@ -44,7 +48,7 @@ public class FixMessageLogger implements Agent
 {
     public static class Configuration
     {
-        private static final int DEFAULT_COMPACTION_SIZE = 64 * 1024;
+        public static final int DEFAULT_COMPACTION_SIZE = 64 * 1024;
 
         private FixMessageConsumer fixMessageConsumer;
         private Aeron.Context context;
@@ -173,15 +177,20 @@ public class FixMessageLogger implements Agent
     {
         configuration.conclude();
         aeron = Aeron.connect(configuration.context);
+
+        final String libraryAeronChannel = configuration.libraryAeronChannel;
+        final SubscriptionPoller[] pollers = IntStream.of(
+            configuration.inboundStreamId,
+            configuration.outboundStreamId,
+            configuration.outboundReplayStreamId)
+            .mapToObj(id -> new SubscriptionPoller(aeron.addSubscription(libraryAeronChannel, id)))
+            .toArray(SubscriptionPoller[]::new);
+
         zipper = new StreamTimestampZipper(
-            aeron,
-            configuration.libraryAeronChannel,
             configuration.fixMessageConsumer,
             configuration.iLinkMessageConsumer,
             configuration.compactionSize,
-            configuration.inboundStreamId,
-            configuration.outboundStreamId,
-            configuration.outboundReplayStreamId);
+            pollers);
     }
 
     public int doWork()
@@ -213,5 +222,25 @@ public class FixMessageLogger implements Agent
     int bufferCapacity()
     {
         return zipper.bufferCapacity();
+    }
+
+    private static final class SubscriptionPoller implements StreamTimestampZipper.Poller
+    {
+        private final Subscription subscription;
+
+        private SubscriptionPoller(final Subscription subscription)
+        {
+            this.subscription = subscription;
+        }
+
+        public int poll(final FragmentAssembler fragmentAssembler)
+        {
+            return subscription.poll(fragmentAssembler, 10);
+        }
+
+        public int streamId()
+        {
+            return subscription.streamId();
+        }
     }
 }
