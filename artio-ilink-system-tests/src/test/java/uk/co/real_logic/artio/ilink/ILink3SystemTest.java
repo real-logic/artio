@@ -418,6 +418,22 @@ public class ILink3SystemTest
     }
 
     @Test
+    public void shouldSupportReestablishingConnectionsAfterNegotiateTimeout() throws IOException
+    {
+        launch(true);
+        connectToTestServer(connectionConfiguration());
+        readNegotiate();
+        readNegotiate();
+        assertConnectError(containsString(""));
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        establishConnection();
+
+        acquireSession();
+    }
+
+    @Test
     public void shouldSupportReestablishingConnectionsAfterRestart() throws IOException
     {
         shouldExchangeBusinessMessage();
