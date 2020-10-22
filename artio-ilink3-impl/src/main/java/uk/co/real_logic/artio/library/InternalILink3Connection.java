@@ -1185,7 +1185,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     }
                     else
                     {
-                        retransmitEnqueueMessage(buffer, offset, totalLength, seqNum);
+                        enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
                     }
 
                     return 1;
@@ -1196,7 +1196,7 @@ public final class InternalILink3Connection extends ILink3Connection
                     // hasn't been requested as of yet
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
 
-                    retransmitEnqueueMessage(buffer, offset, totalLength, seqNum);
+                    enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
                     if (retransmitFillSeqNo != NOT_AWAITING_RETRANSMIT)
                     {
                         // Detected a gap within the normal sequence of messages,
@@ -1268,16 +1268,25 @@ public final class InternalILink3Connection extends ILink3Connection
                 return position;
             }
 
-            retransmitEnqueueMessage(buffer, offset, totalLength, seqNum);
+            enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
         }
         else
         {
-            if (seqNum == retransmitContiguousSeqNo + 1)
+            final long nextRetransmitContiguousSeqNo = retransmitContiguousSeqNo + 1;
+            if (seqNum == nextRetransmitContiguousSeqNo)
             {
                 retransmitContiguousSeqNo = seqNum;
             }
 
-            onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+            // nextRetransmitContiguousSeqNo == 0 if all the received messages are in order
+            if (nextRetransmitContiguousSeqNo == 0 || seqNum == nextRetransmitContiguousSeqNo)
+            {
+                onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+            }
+            else
+            {
+                enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
+            }
         }
 
         if (seqNum == retransmitFillSeqNo)
@@ -1293,7 +1302,7 @@ public final class InternalILink3Connection extends ILink3Connection
     }
 
     // returns true if the enqueue is successful
-    private void retransmitEnqueueMessage(
+    private void enqueueRetransmitMessage(
         final DirectBuffer buffer, final int offset, final int totalLength, final long seqNum)
     {
         final int newQueueSize = retransmitQueueOffset + totalLength;
@@ -1650,6 +1659,15 @@ public final class InternalILink3Connection extends ILink3Connection
             this.lastUuid = lastUuid;
             this.fromSeqNo = fromSeqNo;
             this.msgCount = msgCount;
+        }
+
+        public String toString()
+        {
+            return "RetransmitRequest{" +
+                "lastUuid=" + lastUuid +
+                ", fromSeqNo=" + fromSeqNo +
+                ", msgCount=" + msgCount +
+                '}';
         }
     }
 

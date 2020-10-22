@@ -126,7 +126,7 @@ public class RetransmitQueueTest
         onExecutionReport(6, false);
 
         assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L));
+        assertSequenceNumbers(contains(2L, 3L, 4L, 5L, 6L));
     }
 
     @Test
@@ -142,7 +142,7 @@ public class RetransmitQueueTest
         onExecutionReport(4, true);
 
         assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
+        assertSequenceNumbers(contains(2L, 3L, 4L, 5L, 6L, 7L));
     }
 
     @Test
@@ -160,15 +160,20 @@ public class RetransmitQueueTest
         onExecutionReport(4, true);
 
         assertSeqNos(9, 8);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
-        handler.sequenceNumbers().clear();
+        assertSequenceNumbers(contains(2L, 3L, 4L, 5L, 6L, 7L));
+        clearSequenceNumbers();
 
         verifyRetransmitRequest(8L, 1);
 
         // fill the second retransmit request
         onExecutionReport(8, true);
-        assertThat(handler.sequenceNumbers(), contains(8L));
+        assertSequenceNumbers(contains(8L));
         assertSeqNos(9, NOT_AWAITING_RETRANSMIT);
+    }
+
+    private void clearSequenceNumbers()
+    {
+        handler.sequenceNumbers().clear();
     }
 
     @Test
@@ -187,15 +192,15 @@ public class RetransmitQueueTest
         onExecutionReport(4, true);
 
         assertSeqNos(10, 9);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L, 6L, 7L));
-        handler.sequenceNumbers().clear();
+        assertSequenceNumbers(contains(2L, 3L, 4L, 5L, 6L, 7L));
+        clearSequenceNumbers();
 
         verifyRetransmitRequest(8L, 2);
 
         // fill the second retransmit request
         onExecutionReport(8, true);
         onExecutionReport(9, true);
-        assertThat(handler.sequenceNumbers(), contains(8L, 9L));
+        assertSequenceNumbers(contains(8L, 9L));
         assertSeqNos(10, NOT_AWAITING_RETRANSMIT);
     }
 
@@ -213,28 +218,15 @@ public class RetransmitQueueTest
         onExecutionReport(2511, false);
         onExecutionReports(1001, 2501);
 
-        assertThat(handler.sequenceNumbers(), containsRange(2, 2501));
-        handler.sequenceNumbers().clear();
+        assertSequenceNumbers(containsRange(2, 2501));
+        clearSequenceNumbers();
         assertSeqNos(2512, 2509);
         verifyRetransmitRequest(2502L, 8);
 
         // fill the second retransmit request
         onExecutionReports(2502, 2509);
-        assertThat(handler.sequenceNumbers(), containsRange(2502, 2511));
+        assertSequenceNumbers(containsRange(2502, 2511));
         assertSeqNos(2512, NOT_AWAITING_RETRANSMIT);
-    }
-
-    private Matcher<Iterable<? extends Long>> containsRange(final long from, final long toInclusive)
-    {
-        return contains(LongStream.rangeClosed(from, toInclusive).boxed().toArray(Long[]::new));
-    }
-
-    private void onExecutionReports(final int fromSequenceNumber, final int toSequenceNumberInclusive)
-    {
-        for (int sequenceNumber = fromSequenceNumber; sequenceNumber <= toSequenceNumberInclusive; sequenceNumber++)
-        {
-            onExecutionReport(sequenceNumber, true);
-        }
     }
 
     @Test
@@ -266,7 +258,7 @@ public class RetransmitQueueTest
         connection.onSequence(connection.uuid(), 7, FTI.Primary, KeepAliveLapsed.NotLapsed);
 
         assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
+        assertSequenceNumbers(contains(5L, 6L));
     }
 
     @Test
@@ -280,12 +272,12 @@ public class RetransmitQueueTest
         onExecutionReport(6, false);
 
         assertSeqNos(7, 3);
-        assertThat(handler.sequenceNumbers(), contains(2L));
-        handler.sequenceNumbers().clear();
+        assertSequenceNumbers(contains(2L));
+        clearSequenceNumbers();
 
         verifyRetransmitRequest(3, 1);
         onExecutionReport(3, true);
-        assertThat(handler.sequenceNumbers(), contains(3L, 4L, 5L, 6L));
+        assertSequenceNumbers(contains(3L, 4L, 5L, 6L));
         assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
     }
 
@@ -301,12 +293,12 @@ public class RetransmitQueueTest
         onExecutionReport(4, true);
 
         assertSeqNos(8, 6);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 4L, 5L));
-        handler.sequenceNumbers().clear();
+        assertSequenceNumbers(contains(2L, 3L, 4L, 5L));
+        clearSequenceNumbers();
 
         verifyRetransmitRequest(6, 1);
         onExecutionReport(6, true);
-        assertThat(handler.sequenceNumbers(), contains(6L, 7L));
+        assertSequenceNumbers(contains(6L, 7L));
         assertSeqNos(8, NOT_AWAITING_RETRANSMIT);
     }
 
@@ -321,7 +313,7 @@ public class RetransmitQueueTest
         onExecutionReport(3, true, LAST_UUID);
 
         assertSeqNos(4, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L));
+        assertSequenceNumbers(contains(2L, 3L, 2L, 3L));
         assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
     }
 
@@ -334,7 +326,7 @@ public class RetransmitQueueTest
         connection.onSequence(UUID, 3, FTI.Primary, KeepAliveLapsed.NotLapsed);
 
         assertSeqNos(3, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L));
+        assertSequenceNumbers(contains(2L));
         assertThat(handler.uuids(), contains(UUID));
     }
 
@@ -348,14 +340,14 @@ public class RetransmitQueueTest
         onExecutionReport(3, true, LAST_UUID);
 
         assertSeqNos(4, 2);
-        assertThat(handler.sequenceNumbers(), hasSize(0));
+        assertReceivedNoSequenceNumbers();
         assertThat(handler.uuids(), hasSize(0));
         verifyRetransmitRequest(2, 1, LAST_UUID);
 
         onExecutionReport(2, true, LAST_UUID);
 
         assertSeqNos(4, NOT_AWAITING_RETRANSMIT);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L));
+        assertSequenceNumbers(contains(2L, 3L, 2L, 3L));
         assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID));
     }
 
@@ -375,18 +367,53 @@ public class RetransmitQueueTest
         onExecutionReport(3, true, LAST_UUID);
 
         assertSeqNos(7, 6);
-        assertThat(handler.sequenceNumbers(), contains(2L, 3L, 2L, 3L, 4L));
+        assertSequenceNumbers(contains(2L, 3L, 2L, 3L, 4L));
         assertThat(handler.uuids(), contains(LAST_UUID, LAST_UUID, UUID, UUID, UUID));
         verifyRetransmitRequest(5, 2);
-        handler.sequenceNumbers().clear();
+        clearSequenceNumbers();
         handler.uuids().clear();
 
         // fill the second retransmit request
         onExecutionReport(5, true);
         onExecutionReport(6, true);
-        assertThat(handler.sequenceNumbers(), contains(5L, 6L));
+        assertSequenceNumbers(contains(5L, 6L));
         assertThat(handler.uuids(), contains(UUID, UUID));
         assertSeqNos(7, NOT_AWAITING_RETRANSMIT);
+    }
+
+    @Test
+    public void shouldNotHandoffNonContiguousReplayedMessagesAfterSequenceGapInRetransmit()
+    {
+        givenEstablished();
+        connection.nextRecvSeqNo(2566);
+
+        onExecutionReport(2572, false);
+        assertSeqNos(2573, 2571);
+        verifyRetransmitRequest(2566, 6);
+        reset(proxy);
+        assertReceivedNoSequenceNumbers();
+
+        onExecutionReport(2566, true);
+        onExecutionReport(2567, true);
+        assertSequenceNumbers(contains(2566L, 2567L));
+        clearSequenceNumbers();
+
+        // detects next retransmit and queues it
+        onExecutionReport(2570, true);
+        // deems current retransmit complete
+        onExecutionReport(2571, true);
+        verifyRetransmitRequest(2568, 2);
+        assertSeqNos(2573, 2569);
+
+        onExecutionReport(2568, true);
+        onExecutionReport(2569, true);
+        assertSequenceNumbers(contains(2568L, 2569L, 2570L, 2571L, 2572L));
+        assertSeqNos(2573, NOT_AWAITING_RETRANSMIT);
+    }
+
+    private void assertSequenceNumbers(final Matcher<Iterable<? extends Long>> matcher)
+    {
+        assertThat(handler.sequenceNumbers().toString(), handler.sequenceNumbers(), matcher);
     }
 
     private void setupLastUuidRetransmit()
@@ -479,5 +506,23 @@ public class RetransmitQueueTest
             totalLength);
 
         assertThat(position, Matchers.greaterThanOrEqualTo(0L));
+    }
+
+    private Matcher<Iterable<? extends Long>> containsRange(final long from, final long toInclusive)
+    {
+        return contains(LongStream.rangeClosed(from, toInclusive).boxed().toArray(Long[]::new));
+    }
+
+    private void onExecutionReports(final int fromSequenceNumber, final int toSequenceNumberInclusive)
+    {
+        for (int sequenceNumber = fromSequenceNumber; sequenceNumber <= toSequenceNumberInclusive; sequenceNumber++)
+        {
+            onExecutionReport(sequenceNumber, true);
+        }
+    }
+
+    private void assertReceivedNoSequenceNumbers()
+    {
+        assertThat(handler.sequenceNumbers(), hasSize(0));
     }
 }
