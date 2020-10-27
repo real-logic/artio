@@ -21,13 +21,19 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import java.util.stream.IntStream;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 
 public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 {
-    final byte[] fakeFixMessage = "                  ".getBytes(US_ASCII);
+    final byte[] fakeFixMessage = IntStream
+        .range(0, String.valueOf(Long.MIN_VALUE).length())
+        .mapToObj(i -> " ").collect(joining()).getBytes(US_ASCII);
+
     final UnsafeBuffer fakeMessageBuffer = new UnsafeBuffer(fakeFixMessage);
 
     {
@@ -40,9 +46,9 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
         setup(null);
     }
 
-    void onMessage(final GatewayPublication inboundPublication, final int timestamp)
+    void onMessage(final GatewayPublication inboundPublication, final long timestamp)
     {
-        fakeMessageBuffer.putIntAscii(0, timestamp);
+        fakeMessageBuffer.putLongAscii(0, timestamp);
         final long position = inboundPublication.saveMessage(
             fakeMessageBuffer,
             0,
@@ -53,7 +59,7 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
             SEQUENCE_INDEX,
             CONNECTION_ID,
             MessageStatus.OK,
-            timestamp,
+            (int)timestamp,
             timestamp);
         assertThat(position, greaterThan(0L));
     }

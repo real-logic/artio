@@ -74,7 +74,7 @@ public abstract class AbstractFixMessageLoggerTest
 
     private GatewayPublication inboundPublication;
     private GatewayPublication outboundPublication;
-    private ExclusivePublication replayStream;
+    private ExclusivePublication replayPublication;
 
     void setup(final ILinkMessageConsumer iLinkMessageConsumer)
     {
@@ -89,7 +89,7 @@ public abstract class AbstractFixMessageLoggerTest
 
         inboundPublication = newPublication(DEFAULT_INBOUND_LIBRARY_STREAM);
         outboundPublication = newPublication(DEFAULT_OUTBOUND_LIBRARY_STREAM);
-        replayStream = aeron.addExclusivePublication(
+        replayPublication = aeron.addExclusivePublication(
             IPC_CHANNEL,
             DEFAULT_OUTBOUND_REPLAY_STREAM);
     }
@@ -111,7 +111,7 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(outboundPublication, 5);
         onMessage(outboundPublication, 7);
         onMessage(inboundPublication, 6);
-        onReplayerTimestamp(replayStream, 10);
+        onReplayerTimestamp(replayPublication, 10);
 
         assertEventuallyReceives(6);
         assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L, 6L));
@@ -160,7 +160,7 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(outboundPublication, 2);
         onMessage(outboundPublication, 4);
         onMessage(outboundPublication, 6);
-        onReplayerTimestamp(replayStream, 10);
+        onReplayerTimestamp(replayPublication, 10);
         assertEventuallyReads(4);
         assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L));
         timestamps.clear();
@@ -170,6 +170,38 @@ public abstract class AbstractFixMessageLoggerTest
         timestamps.clear();
 
         assertEquals("failed to reshuffle", 0, logger.bufferPosition());
+    }
+
+    @Test
+    public void shouldReproduce408()
+    {
+        onReplayerTimestamp(replayPublication, 2603784345086081384L);
+        // repro: "timestamlp: 1603784345083768784 | maxTimestampToHandle: 0
+        // repro: "timestamlp: 1603784345086081384 | maxTimestampToHandle: 0
+        onMessage(inboundPublication, 1603784345083768784L);
+        onMessage(outboundPublication, 1603784345086081384L);
+        assertEventuallyReads(3);
+
+        // repro: "timestamlp: 1603784353083726763 | maxTimestampToHandle: 1603784345086081384"
+        onMessage(inboundPublication, 1603784353083726763L);
+        assertEventuallyReads(1);
+        assertThat(timestamps, contains(1603784345083768784L, 1603784345086081384L));
+        timestamps.clear();
+
+        // repro: "timestamlp: 1603784385370784481 | maxTimestampToHandle: 1603784345740665746"
+        // repro: "timestamlp: 1603784353083726763 | minHandleTimestamp:1603784345740665746"
+        onMessage(outboundPublication, 1603784345740665746L);
+        assertEventuallyReads(1);
+        onMessage(inboundPublication, 1603784385370784481L);
+        assertEventuallyReads(1);
+        assertThat(timestamps, contains(1603784345740665746L));
+        timestamps.clear();
+
+        // Simulate receiving more messages later that flush the last two through
+        onMessage(inboundPublication, 2603784353083726763L);
+        onMessage(outboundPublication, 2603784353083726763L);
+        assertEventuallyReads(1);
+        assertThat(timestamps, contains(1603784353083726763L, 1603784385370784481L));
     }
 
     private void assertEventuallyReceives(final int messageCount)
@@ -208,7 +240,7 @@ public abstract class AbstractFixMessageLoggerTest
             });
     }
 
-    abstract void onMessage(GatewayPublication inboundPublication, int timestamp);
+    abstract void onMessage(GatewayPublication inboundPublication, long timestamp);
 
     private void onReplayerTimestamp(final ExclusivePublication replayStream, final long timestampInNs)
     {

@@ -39,7 +39,7 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
         setup(iLinkMessageConsumer);
     }
 
-    void onMessage(final GatewayPublication publication, final int timestamp)
+    void onMessage(final GatewayPublication publication, final long timestamp)
     {
         final ILink3Proxy proxy = new ILink3Proxy(1, publication.dataPublication(), null, null);
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();

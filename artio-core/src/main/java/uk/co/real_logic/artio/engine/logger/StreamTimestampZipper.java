@@ -91,10 +91,11 @@ public class StreamTimestampZipper
         {
             final BufferedPosition position = it.next();
             final long timestamp = position.timestamp;
-            final long minHandleTimestamp = findMinOtherTimestamp(pollers, position.owner);
+            final long minHandledTimestamp = findMinOtherTimestamp(pollers, position.owner);
 
-            if (timestamp <= minHandleTimestamp)
+            if (timestamp <= minHandledTimestamp)
             {
+//                System.out.println("timestamp = " + timestamp + " | minHandledTimestamp: " + minHandledTimestamp);
                 logEntryHandler.onBufferedMessage(position.offset, position.length);
                 read++;
                 it.remove();
@@ -301,6 +302,8 @@ public class StreamTimestampZipper
                 }
 
                 final long timestamp = fixMessage.timestamp();
+
+//                System.out.println("timestamp = " + timestamp + " | maxTimestampToHandle: " + maxTimestampToHandle);
 
                 // hand off the first message you see, otherwise buffer it.
                 if (timestamp <= maxTimestampToHandle)
