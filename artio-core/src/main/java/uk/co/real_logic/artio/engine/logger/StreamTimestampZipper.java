@@ -91,11 +91,11 @@ public class StreamTimestampZipper
         {
             final BufferedPosition position = it.next();
             final long timestamp = position.timestamp;
-            final long minHandledTimestamp = findMinOtherTimestamp(pollers, position.owner);
+            final long timestampLowWaterMark = findMinLowWaterMark(pollers, position.owner);
 
-            if (timestamp <= minHandledTimestamp)
+            if (timestamp <= timestampLowWaterMark)
             {
-//                System.out.println("timestamp = " + timestamp + " | minHandledTimestamp: " + minHandledTimestamp);
+                position.owner.handledTimestamp(timestamp);
                 logEntryHandler.onBufferedMessage(position.offset, position.length);
                 read++;
                 it.remove();
@@ -126,6 +126,7 @@ public class StreamTimestampZipper
                 }
 
                 final int length = position.length;
+                position.offset = reorderBufferOffset;
                 reorderBuffer.putBytes(reorderBufferOffset, reorderBuffer, offset, length);
                 reorderBufferOffset += length;
             }
@@ -150,13 +151,13 @@ public class StreamTimestampZipper
         {
             if (remainingPosition.owner == owner)
             {
+                // don't go through method here because this might increase the min buffered timestamp.
                 owner.minBufferedTimestamp = remainingPosition.timestamp;
                 return;
             }
         }
 
-        // Nothing else in the queue
-        owner.minBufferedTimestamp = 0;
+        owner.nothingBuffered();
     }
 
     public void onClose()
@@ -181,7 +182,7 @@ public class StreamTimestampZipper
     {
         final StreamPoller owner;
         final long timestamp;
-        final int offset;
+        int offset;
         final int length;
 
         BufferedPosition(final StreamPoller owner, final long timestamp, final int offset, final int length)
@@ -221,9 +222,11 @@ public class StreamTimestampZipper
 
     class StreamPoller
     {
+        private static final long NOTHING_BUFFERED = -1;
+
         private final Poller poller;
-        // initially 0, if no timestamps buffered then it was the max handled timestamp
-        private long minBufferedTimestamp;
+        private long minBufferedTimestamp = NOTHING_BUFFERED;
+        private long maxHandledTimestamp;
 
         StreamPoller(final Poller poller)
         {
@@ -232,32 +235,53 @@ public class StreamTimestampZipper
 
         public int poll(final StreamPoller[] pollers, final FragmentAssembler fragmentAssembler)
         {
-            final long minOtherTimestamp = findMinOtherTimestamp(pollers, this);
+            final long minOtherTimestamp = findMinLowWaterMark(pollers, this);
             logEntryHandler.reset(minOtherTimestamp, this);
+            return poller.poll(fragmentAssembler);
+        }
 
-            final int read = poller.poll(fragmentAssembler);
+        // This is the position at which it is safe for other streams to emit below.
+        long timestampLowWaterMark()
+        {
+            return minBufferedTimestamp == NOTHING_BUFFERED ? maxHandledTimestamp : minBufferedTimestamp;
+        }
 
-            final long minBufferedTimestampByPoll = logEntryHandler.minBufferedTimestamp;
-            if (minBufferedTimestampByPoll != 0 && minBufferedTimestamp == 0)
+        void handledTimestamp(final long timestamp)
+        {
+            // always >= previous timestamp.
+            maxHandledTimestamp = timestamp;
+        }
+
+        void bufferedTimestamp(final long timestamp)
+        {
+            if (minBufferedTimestamp == NOTHING_BUFFERED)
             {
-                minBufferedTimestamp = minBufferedTimestampByPoll;
+                minBufferedTimestamp = timestamp;
             }
-            return read;
+            else
+            {
+                minBufferedTimestamp = min(minBufferedTimestamp, timestamp);
+            }
+        }
+
+        public void nothingBuffered()
+        {
+            minBufferedTimestamp = NOTHING_BUFFERED;
         }
     }
 
-    private static long findMinOtherTimestamp(final StreamPoller[] pollers, final StreamPoller owner)
+    private static long findMinLowWaterMark(final StreamPoller[] pollers, final StreamPoller owner)
     {
-        long minOtherTimestamp = Long.MAX_VALUE;
+        long timestampLowWaterMark = Long.MAX_VALUE;
         for (int i = 0; i < pollers.length; i++)
         {
             final StreamPoller poller = pollers[i];
             if (poller != owner)
             {
-                minOtherTimestamp = min(minOtherTimestamp, poller.minBufferedTimestamp);
+                timestampLowWaterMark = min(timestampLowWaterMark, poller.timestampLowWaterMark());
             }
         }
-        return minOtherTimestamp;
+        return timestampLowWaterMark;
     }
 
     class LogEntryHandler implements FragmentHandler
@@ -272,7 +296,6 @@ public class StreamTimestampZipper
 
         StreamPoller owner;
         long maxTimestampToHandle;
-        long minBufferedTimestamp;
 
         LogEntryHandler(final FixMessageConsumer fixHandler, final ILinkMessageConsumer iLinkHandler)
         {
@@ -303,20 +326,15 @@ public class StreamTimestampZipper
 
                 final long timestamp = fixMessage.timestamp();
 
-//                System.out.println("timestamp = " + timestamp + " | maxTimestampToHandle: " + maxTimestampToHandle);
-
                 // hand off the first message you see, otherwise buffer it.
                 if (timestamp <= maxTimestampToHandle)
                 {
+                    owner.handledTimestamp(timestamp);
                     fixHandler.onMessage(fixMessage, buffer, offset, length, header);
                 }
                 else
                 {
-                    if (minBufferedTimestamp == 0)
-                    {
-                        minBufferedTimestamp = timestamp;
-                    }
-
+                    owner.bufferedTimestamp(timestamp);
                     reorderBuffer.putBytes(reorderBufferOffset, buffer, start, length);
                     positions.add(new BufferedPosition(owner, timestamp, reorderBufferOffset, length));
                     reorderBufferOffset += length;
@@ -328,10 +346,7 @@ public class StreamTimestampZipper
 
                 replayerTimestamp.wrap(buffer, offset, blockLength, version);
                 final long timestamp = replayerTimestamp.timestamp();
-                if (minBufferedTimestamp == 0)
-                {
-                    minBufferedTimestamp = timestamp;
-                }
+                owner.handledTimestamp(timestamp);
             }
             else if (templateId == ILinkMessageDecoder.TEMPLATE_ID)
             {
@@ -345,15 +360,12 @@ public class StreamTimestampZipper
 
                 if (timestamp <= maxTimestampToHandle)
                 {
+                    owner.handledTimestamp(timestamp);
                     iLinkHandler.onBusinessMessage(iLinkMessage, buffer, offset, header);
                 }
                 else
                 {
-                    if (minBufferedTimestamp == 0)
-                    {
-                        minBufferedTimestamp = timestamp;
-                    }
-
+                    owner.bufferedTimestamp(timestamp);
                     reorderBuffer.putBytes(reorderBufferOffset, buffer, start, length);
                     positions.add(new BufferedPosition(owner, timestamp, reorderBufferOffset, length));
                     reorderBufferOffset += length;
@@ -364,7 +376,6 @@ public class StreamTimestampZipper
         void reset(final long minOtherTimestamp, final StreamPoller owner)
         {
             maxTimestampToHandle = minOtherTimestamp;
-            minBufferedTimestamp = 0;
             this.owner = owner;
         }
 

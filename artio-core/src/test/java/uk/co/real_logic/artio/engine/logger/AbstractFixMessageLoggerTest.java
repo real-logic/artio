@@ -134,7 +134,7 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(outboundPublication, 11);
         assertEventuallyReads(1);
 
-        assertThat(timestamps, hasSize(0));
+        assertNoTimestamps();
         logger.onClose();
         assertThat(timestamps, contains(10L, 11L));
         assertEquals("failed to reshuffle", 0, logger.bufferPosition());
@@ -147,14 +147,14 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(inboundPublication, 1);
         onMessage(inboundPublication, 3);
         assertEventuallyReads(2);
-        assertThat(timestamps, hasSize(0));
+        assertNoTimestamps();
 
         logger.doWork();
 
         // poll
         onMessage(inboundPublication, 5);
         assertEventuallyReads(1);
-        assertThat(timestamps, hasSize(0));
+        assertNoTimestamps();
 
         // poll
         onMessage(outboundPublication, 2);
@@ -172,36 +172,39 @@ public abstract class AbstractFixMessageLoggerTest
         assertEquals("failed to reshuffle", 0, logger.bufferPosition());
     }
 
+    // From issue #408
     @Test
-    public void shouldReproduce408()
+    public void shouldHandleSubsequentReplayTimestampsCorrectly()
     {
-        onReplayerTimestamp(replayPublication, 2603784345086081384L);
-        // repro: "timestamlp: 1603784345083768784 | maxTimestampToHandle: 0
-        // repro: "timestamlp: 1603784345086081384 | maxTimestampToHandle: 0
-        onMessage(inboundPublication, 1603784345083768784L);
-        onMessage(outboundPublication, 1603784345086081384L);
+        // outbound = 2, inbound = 1
+        onMessage(outboundPublication, 1603800570460284857L);
+        onMessage(inboundPublication, 1603800570513023097L);
+        onReplayerTimestamp(replayPublication, 1603800571498664415L);
         assertEventuallyReads(3);
-
-        // repro: "timestamlp: 1603784353083726763 | maxTimestampToHandle: 1603784345086081384"
-        onMessage(inboundPublication, 1603784353083726763L);
-        assertEventuallyReads(1);
-        assertThat(timestamps, contains(1603784345083768784L, 1603784345086081384L));
+        assertThat(timestamps, contains(1603800570460284857L));
         timestamps.clear();
 
-        // repro: "timestamlp: 1603784385370784481 | maxTimestampToHandle: 1603784345740665746"
-        // repro: "timestamlp: 1603784353083726763 | minHandleTimestamp:1603784345740665746"
-        onMessage(outboundPublication, 1603784345740665746L);
+        onMessage(outboundPublication, 1603800578520566892L);
         assertEventuallyReads(1);
-        onMessage(inboundPublication, 1603784385370784481L);
-        assertEventuallyReads(1);
-        assertThat(timestamps, contains(1603784345740665746L));
+        assertThat(timestamps, contains(1603800570513023097L));
         timestamps.clear();
 
-        // Simulate receiving more messages later that flush the last two through
-        onMessage(inboundPublication, 2603784353083726763L);
-        onMessage(outboundPublication, 2603784353083726763L);
+        onMessage(inboundPublication, 1603800581079423921L);
         assertEventuallyReads(1);
-        assertThat(timestamps, contains(1603784353083726763L, 1603784385370784481L));
+        assertNoTimestamps();
+
+        onMessage(outboundPublication, 1603800586520278849L);
+        assertEventuallyReads(1);
+        assertNoTimestamps();
+
+        onMessage(inboundPublication, 1603800591079715485L);
+        assertEventuallyReads(1);
+        assertNoTimestamps();
+
+        // finally a replay timestamp flushes out the previous messages
+        onReplayerTimestamp(replayPublication, 1603800591079715486L);
+        assertEventuallyReads(1);
+        assertThat(timestamps, contains(1603800578520566892L, 1603800581079423921L, 1603800586520278849L));
     }
 
     private void assertEventuallyReceives(final int messageCount)
@@ -266,5 +269,10 @@ public abstract class AbstractFixMessageLoggerTest
             CommonConfiguration.backoffIdleStrategy(),
             clock,
             1);
+    }
+
+    private void assertNoTimestamps()
+    {
+        assertThat(timestamps, hasSize(0));
     }
 }
