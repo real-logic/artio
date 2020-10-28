@@ -782,12 +782,18 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private void onNegotiateFailure()
     {
-        initiateReply.onError(new TimeoutException("Timed out: no reply for Negotiate"));
+        onReplyError(new TimeoutException("Timed out: no reply for Negotiate"));
     }
 
     private void onEstablishFailure()
     {
-        initiateReply.onError(new TimeoutException("Timed out: no reply for Establish"));
+        onReplyError(new TimeoutException("Timed out: no reply for Establish"));
+    }
+
+    private void onReplyError(final Exception error)
+    {
+        initiateReply.onError(error);
+        initiateReply = null;
     }
 
     public long trySendSequence()
@@ -861,8 +867,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private void connectionError(final Exception error)
     {
-        initiateReply.onError(error);
-        initiateReply = null;
+        onReplyError(error);
 
         requestDisconnect(FAILED_AUTHENTICATION);
         owner.remove(this);
@@ -884,6 +889,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
+        initiateReply = null;
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
 
         if (previousUUID == lastUuid)
@@ -962,10 +968,12 @@ public final class InternalILink3Connection extends ILink3Connection
         // The exchange initiated termination
         else
         {
-            if (errorCodes >= 2 && errorCodes < TERMINATE_ERROR_CODES.length)
+            final String terminateErrorReason = terminateErrorReason(errorCodes);
+            if (terminateErrorReason != null)
             {
-                DebugLogger.log(ILINK_SESSION, TERMINATE_ERROR_CODES[errorCodes]);
+                DebugLogger.log(ILINK_SESSION, terminateErrorReason);
             }
+
             sendTerminateAck(reason, errorCodes);
         }
 
@@ -974,11 +982,32 @@ public final class InternalILink3Connection extends ILink3Connection
         return 1;
     }
 
+    private String terminateErrorReason(final int errorCodes)
+    {
+        if (errorCodes >= 2 && errorCodes < TERMINATE_ERROR_CODES.length)
+        {
+            return TERMINATE_ERROR_CODES[errorCodes];
+        }
+
+        return null;
+    }
+
     private void sendTerminateAck(final String reason, final int errorCodes)
     {
         final long position = sendTerminate(reason, errorCodes, State.UNBOUND, State.RESEND_TERMINATE_ACK);
         if (position > 0)
         {
+            if (initiateReply != null)
+            {
+                final String terminateErrorReason = terminateErrorReason(errorCodes);
+                String message = "Connection Terminated: reason=" + reason;
+                if (terminateErrorReason != null)
+                {
+                    message += ",errorCode=" + terminateErrorReason;
+                }
+                onReplyError(new IllegalStateException(message));
+            }
+
             fullyUnbind();
         }
     }
@@ -1125,6 +1154,13 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         state = State.UNBOUND;
         handler.onDisconnect(this);
+
+        // Complete the reply if we're in the process of trying to establish a connection and we haven't provided
+        // a more specific reason for a disconnect to happen.
+        if (initiateReply != null)
+        {
+            onReplyError(new TimeoutException("Unbound due to Timeout"));
+        }
     }
 
 //    private

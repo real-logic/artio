@@ -164,11 +164,7 @@ public class ILink3SystemTest
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
-        testServer.writeTerminate();
-
-        testSystem.awaitUnbind(connection);
-
-        testServer.readTerminate();
+        terminateFromServer();
 
         assertDisconnected();
     }
@@ -1215,6 +1211,25 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
+    @Test
+    public void shouldNotifyReplyWithErrorOnPreEstablishTermination() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
+
+        testServer.writeTerminate();
+        testServer.readTerminate();
+
+        assertConnectError(containsString("Connection Terminated"));
+    }
+
+
     private void establishNewConnection() throws IOException
     {
         connectToTestServer(connectionConfiguration());
@@ -1406,5 +1421,14 @@ public class ILink3SystemTest
         testServer.writeTerminate();
         testSystem.awaitUnbind(connection);
         assertDisconnected();
+    }
+
+    private void terminateFromServer()
+    {
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(connection);
+
+        testServer.readTerminate();
     }
 }
