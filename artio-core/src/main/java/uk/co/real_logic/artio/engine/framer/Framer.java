@@ -722,7 +722,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         libraryId,
                         useBackupHost,
                         context,
-                        configuration.epochNanoClock()));
+                        configuration.epochNanoClock(),
+                        correlationId));
                 });
         }
         catch (final IOException ex)
@@ -1218,7 +1219,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             library));
     }
 
-    private void saveError(final GatewayError error, final int libraryId, final long replyToId, final String message)
+    void saveError(final GatewayError error, final int libraryId, final long replyToId, final String message)
     {
         schedule(() -> inboundPublication.saveError(error, libraryId, replyToId, message));
     }

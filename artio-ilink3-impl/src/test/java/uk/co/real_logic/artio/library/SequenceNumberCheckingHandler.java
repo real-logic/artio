@@ -19,6 +19,7 @@ import iLinkBinary.ExecutionReportStatus532Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 
 public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
 {
@@ -97,7 +98,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     {
     }
 
-    public void onDisconnect(final ILink3Connection connection)
+    public void onDisconnect(final ILink3Connection connection, final DisconnectReason reason)
     {
     }
 }

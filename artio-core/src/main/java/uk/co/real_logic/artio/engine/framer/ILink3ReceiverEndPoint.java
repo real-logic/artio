@@ -30,10 +30,11 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
-
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofh;
+import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_ILINK_MESSAGE;
+import static uk.co.real_logic.artio.messages.GatewayError.EXCEPTION;
 
 class ILink3ReceiverEndPoint extends ReceiverEndPoint
 {
@@ -49,6 +50,7 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
     private final boolean isBackup;
     private final ILink3Context context;
     private final EpochNanoClock epochNanoClock;
+    private final long correlationId;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -60,13 +62,15 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final int libraryId,
         final boolean isBackup,
         final ILink3Context context,
-        final EpochNanoClock epochNanoClock)
+        final EpochNanoClock epochNanoClock,
+        final long correlationId)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         inboundPublication = publication.dataPublication();
         this.isBackup = isBackup;
         this.context = context;
         this.epochNanoClock = epochNanoClock;
+        this.correlationId = correlationId;
 
         makeHeader();
     }
@@ -142,7 +146,12 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         catch (final ClosedChannelException ex)
         {
             onDisconnectDetected();
-            return 1;
+        }
+        catch (final IllegalArgumentException ex)
+        {
+            errorHandler.onError(ex);
+            saveError(ex);
+            completeDisconnect(INVALID_ILINK_MESSAGE);
         }
         catch (final Exception ex)
         {
@@ -152,9 +161,16 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
                 errorHandler.onError(ex);
             }
 
+            saveError(ex);
             onDisconnectDetected();
-            return 1;
         }
+
+        return 1;
+    }
+
+    private void saveError(final Exception ex)
+    {
+        framer.saveError(EXCEPTION, libraryId, correlationId, ex.getMessage());
     }
 
     // false iff back pressured

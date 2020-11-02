@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.ilink;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.*;
 
@@ -106,6 +107,7 @@ public interface ILink3ConnectionHandler
      * Call when this connection is disconnected.
      *
      * @param connection the connection that was disconnected.
+     * @param reason the reason for the disconnection.
      */
-    void onDisconnect(ILink3Connection connection);
+    void onDisconnect(ILink3Connection connection, DisconnectReason reason);
 }

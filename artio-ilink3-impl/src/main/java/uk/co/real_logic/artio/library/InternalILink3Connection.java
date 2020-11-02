@@ -52,8 +52,7 @@ import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRU
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
-import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 
 /**
  * External users should never rely on this API.
@@ -1146,19 +1145,19 @@ public final class InternalILink3Connection extends ILink3Connection
     {
         requestDisconnect(LOGOUT);
         owner.remove(this);
-        unbindState();
+        unbindState(APPLICATION_DISCONNECT);
     }
 
-    void unbindState()
+    void unbindState(final DisconnectReason reason)
     {
         state = State.UNBOUND;
-        handler.onDisconnect(this);
+        handler.onDisconnect(this, reason);
 
         // Complete the reply if we're in the process of trying to establish a connection and we haven't provided
         // a more specific reason for a disconnect to happen.
         if (initiateReply != null)
         {
-            onReplyError(new TimeoutException("Unbound due to Timeout"));
+            onReplyError(new Exception("Unbound due to: " + reason));
         }
     }
 

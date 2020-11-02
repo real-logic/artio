@@ -33,8 +33,14 @@ public final class SimpleOpenFramingHeader
 
     public static void writeSofh(final MutableDirectBuffer buffer, final int offset, final int messageSize)
     {
+        writeSofh(buffer, offset, messageSize, CME_ENCODING_TYPE);
+    }
+
+    public static void writeSofh(
+        final MutableDirectBuffer buffer, final int offset, final int messageSize, final short encodingType)
+    {
         buffer.putShort(offset + SOFH_MSG_SIZE_OFFSET, (short)messageSize, ByteOrder.LITTLE_ENDIAN);
-        buffer.putShort(offset + SOFH_ENCODING_OFFSET, CME_ENCODING_TYPE, ByteOrder.LITTLE_ENDIAN);
+        buffer.putShort(offset + SOFH_ENCODING_OFFSET, encodingType, ByteOrder.LITTLE_ENDIAN);
     }
 
     public static int readSofhMessageSize(final DirectBuffer buffer, final int offset)
