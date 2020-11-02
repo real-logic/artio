@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
+import iLinkBinary.OrderMassActionReport562Encoder.NoAffectedOrdersEncoder;
 import iLinkBinary.PartyDetailsDefinitionRequest518Decoder.NoPartyDetailsDecoder;
 import iLinkBinary.PartyDetailsDefinitionRequest518Decoder.NoTrdRegPublicationsDecoder;
 import org.agrona.LangUtil;
@@ -48,6 +49,8 @@ import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
 
 public class ILink3TestServer
 {
+    public static final int NO_AFFECTED_ORDERS_COUNT = 60;
+
     private static final int NOT_SKIPPING = -1;
     private static final int BUFFER_SIZE = 8 * 1024;
 
@@ -494,6 +497,52 @@ public class ILink3TestServer
 
         executionReportStatus.price().mantissa(1);
         executionReportStatus.stopPx().mantissa(2);
+
+        write();
+    }
+
+    public void writeMassActionReport(final int sequenceNumber)
+    {
+        final OrderMassActionReport562Encoder orderMassActionReport = new OrderMassActionReport562Encoder();
+        final int totalLength = ExecutionReportStatus532Encoder.BLOCK_LENGTH + NoAffectedOrdersEncoder.HEADER_SIZE +
+            NO_AFFECTED_ORDERS_COUNT * NoAffectedOrdersEncoder.sbeBlockLength();
+        wrap(orderMassActionReport, totalLength);
+
+        orderMassActionReport
+            .seqNum(sequenceNumber)
+            .uUID(uuid)
+            .senderID(FIRM_ID)
+            .partyDetailsListReqID(1)
+            .transactTime(epochNanoClock.nanoTime())
+            .sendingTimeEpoch(epochNanoClock.nanoTime())
+            .orderRequestID(1)
+            .massActionReportID(1)
+            .securityGroup("abcdef")
+            .location("LONDO")
+            .securityID(1)
+            .delayDuration(OrderMassActionReport562Encoder.delayDurationNullValue())
+            .massActionResponse(MassActionResponse.Accepted)
+            .manualOrderIndicator(ManualOrdIndReq.Automated)
+            .massActionScope(MassActionScope.All)
+            .totalAffectedOrders(NO_AFFECTED_ORDERS_COUNT)
+            .lastFragment(BooleanFlag.True)
+            .massActionRejectReason(OrderMassActionReport562Encoder.massActionRejectReasonNullValue())
+            .marketSegmentID(OrderMassActionReport562Encoder.marketSegmentIDNullValue())
+            .massCancelRequestType(MassCxlReqTyp.NULL_VAL)
+            .side(SideNULL.NULL_VAL)
+            .ordType(MassActionOrdTyp.NULL_VAL)
+            .timeInForce(MassCancelTIF.NULL_VAL)
+            .splitMsg(SplitMsg.NULL_VAL)
+            .liquidityFlag(BooleanNULL.NULL_VAL)
+            .possRetransFlag(BooleanFlag.False)
+            .delayToTime(OrderMassActionReport562Encoder.delayToTimeNullValue());
+
+        final NoAffectedOrdersEncoder noAffectedOrders =
+            orderMassActionReport.noAffectedOrdersCount(NO_AFFECTED_ORDERS_COUNT);
+        for (int i = 0; i < NO_AFFECTED_ORDERS_COUNT; i++)
+        {
+            noAffectedOrders.next().origCIOrdID(CL_ORD_ID).affectedOrderID(i).cxlQuantity(2);
+        }
 
         write();
     }

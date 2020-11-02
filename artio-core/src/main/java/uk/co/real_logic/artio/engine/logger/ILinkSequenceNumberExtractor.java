@@ -27,7 +27,7 @@ import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
-import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_AND_END_FLAGS;
+import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
@@ -65,7 +65,7 @@ class ILinkSequenceNumberExtractor
     {
         final long endPosition = header.position();
 
-        if ((header.flags() & BEGIN_AND_END_FLAGS) == BEGIN_AND_END_FLAGS)
+        if ((header.flags() & BEGIN_FLAG) == BEGIN_FLAG)
         {
             int offset = srcOffset;
             messageHeader.wrap(buffer, offset);
@@ -74,7 +74,6 @@ class ILinkSequenceNumberExtractor
             final int actingBlockLength = messageHeader.blockLength();
             final int version = messageHeader.version();
             final int templateId = messageHeader.templateId();
-
 
             switch (templateId)
             {

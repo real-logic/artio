@@ -241,7 +241,21 @@ public class ILink3SystemTest
 
         testServer.readPartyDetailsDefinitionRequest(1, 1);
 
+        // Receive some larger variable length messages as well.
+        assertEquals(1, connection.nextRecvSeqNo());
+        final int numMessages = 10;
+        for (int i = 0; i < numMessages; i++)
+        {
+            testServer.writeMassActionReport(1 + i);
+        }
+        final int nextRecvSeqNo = 1 + numMessages;
+        agreeRecvSeqNo(nextRecvSeqNo);
+
         terminateAndDisconnect();
+
+        // Re-establish connection and ensure that large messages have updated the sequence index.
+        reestablishConnection();
+        assertEquals(nextRecvSeqNo, connection.nextRecvSeqNo());
     }
 
     private void sendPartyDetailsDefinitionRequest()
@@ -386,6 +400,11 @@ public class ILink3SystemTest
     {
         shouldExchangeBusinessMessage();
 
+        reestablishConnection();
+    }
+
+    private void reestablishConnection() throws IOException
+    {
         final long lastUuid = connection.uuid();
 
         connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
