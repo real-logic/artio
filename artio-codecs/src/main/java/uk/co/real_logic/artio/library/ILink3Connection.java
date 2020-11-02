@@ -274,6 +274,6 @@ public abstract class ILink3Connection
 
     abstract void fullyUnbind();
 
-    abstract void unbindState();
+    abstract void unbindState(DisconnectReason reason);
 
 }

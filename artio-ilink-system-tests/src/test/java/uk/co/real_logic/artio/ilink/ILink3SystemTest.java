@@ -89,11 +89,11 @@ public class ILink3SystemTest
     private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
     private final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
 
-    private boolean noExpectedError;
+    private boolean expectedError;
 
-    public void launch(final boolean noExpectedError)
+    public void launch(final boolean expectedError)
     {
-        this.noExpectedError = noExpectedError;
+        this.expectedError = expectedError;
         delete(CLIENT_LOGS);
 
         mediaDriver = launchMediaDriver();
@@ -131,7 +131,7 @@ public class ILink3SystemTest
         closeArtio();
         cleanupMediaDriver(mediaDriver);
 
-        if (!noExpectedError)
+        if (!expectedError)
         {
             verifyNoInteractions(errorConsumer);
         }
@@ -439,7 +439,7 @@ public class ILink3SystemTest
         connectToTestServer(connectionConfiguration());
         readNegotiate();
         readNegotiate();
-        assertConnectError(containsString(""));
+        assertConnectError(containsString("no reply for Negotiate"));
 
         connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
 
@@ -1248,6 +1248,21 @@ public class ILink3SystemTest
         assertConnectError(containsString("Connection Terminated"));
     }
 
+    @Test
+    public void shouldNotifyReplyWithErrorForInvalidHeader() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.useInvalidEncodingType((short)25972);
+        testServer.writeNegotiateResponse();
+
+        assertConnectError(
+            either(containsString("Unsupported Encoding Type: 25972 should be -13570"))
+            .or(containsString("Unbound due to: INVALID_ILINK_MESSAGE")));
+    }
 
     private void establishNewConnection() throws IOException
     {

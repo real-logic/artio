@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     private final Consumer<NotAppliedResponse> notAppliedResponse;
 
     private boolean hasReceivedNotApplied;
+    private DisconnectReason disconnectReason;
 
     public FakeILink3ConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -97,8 +99,14 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         exceptions.add(ex);
     }
 
-    public void onDisconnect(final ILink3Connection connection)
+    public void onDisconnect(final ILink3Connection connection, final DisconnectReason reason)
     {
+        this.disconnectReason = reason;
+    }
+
+    public DisconnectReason disconnectReason()
+    {
+        return disconnectReason;
     }
 
     public IntArrayList messageIds()

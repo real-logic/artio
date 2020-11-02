@@ -40,9 +40,9 @@ class ILink3Subscription
         return session.requestDisconnect(reason);
     }
 
-    public void onDisconnect()
+    public void onDisconnect(final DisconnectReason reason)
     {
-        session.unbindState();
+        session.unbindState(reason);
     }
 
     public void onReplayComplete()

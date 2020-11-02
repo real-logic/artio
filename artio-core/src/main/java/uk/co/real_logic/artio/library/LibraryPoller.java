@@ -1182,7 +1182,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 // iLink3 doesn't behave any differently in sole library mode as it's an initiator connection.
-                onILink3Disconnect(connectionId);
+                onILink3Disconnect(connectionId, reason);
             }
         }
         else
@@ -1211,19 +1211,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                onILink3Disconnect(connectionId);
+                onILink3Disconnect(connectionId, reason);
             }
         }
 
         return CONTINUE;
     }
 
-    private void onILink3Disconnect(final long connectionId)
+    private void onILink3Disconnect(final long connectionId, final DisconnectReason reason)
     {
         final ILink3Subscription subscription = connectionIdToILink3Subscription.remove(connectionId);
         if (subscription != null)
         {
-            subscription.onDisconnect();
+            subscription.onDisconnect(reason);
             remove(subscription.session());
         }
     }
@@ -1348,7 +1348,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId)
         {
             final InitiateILink3ConnectionReply reply =
-                (InitiateILink3ConnectionReply)correlationIdToReply.remove(correlationId);
+                (InitiateILink3ConnectionReply)correlationIdToReply.get(correlationId);
 
             if (reply != null)
             {
@@ -1558,7 +1558,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             for (final ILink3Connection session : iLink3Connections)
             {
-                session.unbindState();
+                session.unbindState(DisconnectReason.LIBRARY_DISCONNECT);
             }
             iLink3Connections = new ILink3Connection[0];
         }

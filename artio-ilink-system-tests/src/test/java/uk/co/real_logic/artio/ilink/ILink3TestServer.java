@@ -78,6 +78,7 @@ public class ILink3TestServer
     private long negotiateRequestTimestamp;
     private int requestedKeepAliveInterval;
     private int skipTemplateId = NOT_SKIPPING;
+    private short encodingType = CME_ENCODING_TYPE;
 
     public ILink3TestServer(
         final ILink3ConnectionConfiguration config,
@@ -193,7 +194,7 @@ public class ILink3TestServer
     private void wrap(final MessageEncoderFlyweight messageEncoder, final int length)
     {
         final int messageSize = ILINK_HEADER_LENGTH + length;
-        writeSofh(unsafeWriteBuffer, 0, messageSize);
+        writeSofh(unsafeWriteBuffer, 0, messageSize, encodingType);
         DebugLogger.log(FIX_TEST, "wrap messageSize=", String.valueOf(messageSize));
 
         iLinkHeaderEncoder
@@ -640,5 +641,10 @@ public class ILink3TestServer
             .splitMsg(SplitMsg.NULL_VAL);
 
         write();
+    }
+
+    public void useInvalidEncodingType(final short encodingType)
+    {
+        this.encodingType = encodingType;
     }
 }
