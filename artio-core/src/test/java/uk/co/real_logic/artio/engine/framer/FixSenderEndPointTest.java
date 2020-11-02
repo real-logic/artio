@@ -39,7 +39,7 @@ import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-public class SenderEndPointTest
+public class FixSenderEndPointTest
 {
     private static final long CONNECTION_ID = 1;
     private static final int LIBRARY_ID = 2;
@@ -64,7 +64,7 @@ public class SenderEndPointTest
     private final SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
     private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
-    private final SenderEndPoint endPoint = new SenderEndPoint(
+    private final FixSenderEndPoint endPoint = new FixSenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
         libraryBlockablePosition,

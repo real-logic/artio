@@ -21,12 +21,12 @@ import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
-import uk.co.real_logic.artio.util.OffsetEpochNanoClock;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
@@ -220,7 +220,6 @@ public class CommonConfiguration
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
-    private Clock clock = Clock.systemNanoTime();
     private EpochNanoClock epochNanoClock = new OffsetEpochNanoClock();
     private boolean printErrorMessages = true;
     private ErrorConsumer customErrorConsumer;
@@ -491,18 +490,6 @@ public class CommonConfiguration
     }
 
     /**
-     * Sets the clock to be used for recording timestamping messages.
-     *
-     * @param clock the clock to be used for recording timestamping messages.
-     * @return this
-     */
-    public CommonConfiguration clock(final Clock clock)
-    {
-        this.clock = clock;
-        return this;
-    }
-
-    /**
      * Sets the clock used for producing requestTimestamp fields on iLink3 messages.
      *
      * @param epochNanoClock the clock used for producing requestTimestamp fields on iLink3 messages.
@@ -755,11 +742,6 @@ public class CommonConfiguration
     public static IdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
-    }
-
-    public Clock clock()
-    {
-        return clock;
     }
 
     public EpochNanoClock epochNanoClock()

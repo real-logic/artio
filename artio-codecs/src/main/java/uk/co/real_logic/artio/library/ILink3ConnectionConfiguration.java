@@ -33,7 +33,9 @@ import static java.lang.Long.parseLong;
  */
 public final class ILink3ConnectionConfiguration
 {
+    public static final int DEFAULT_MAX_RETRANSMIT_QUEUE_SIZE = 1024 * 1024 * 128;
     public static final int DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL = 10_000;
+    public static final int DEFAULT_RETRANSMIT_TIMEOUT_IN_MS = 30_000;
     public static final int KEEP_ALIVE_INTERVAL_MAX_VALUE = 65534;
     public static final long AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1L;
 
@@ -66,6 +68,8 @@ public final class ILink3ConnectionConfiguration
     private final ILink3ConnectionHandler handler;
     private final boolean useBackupHost;
     private final String backupHost;
+    private final int maxRetransmitQueueSize;
+    private final int retransmitNotificationTimeoutInMs;
 
     /**
      * Load the ILink3SessionConfiguration from a properties file.
@@ -199,6 +203,21 @@ public final class ILink3ConnectionConfiguration
         return useBackupHost;
     }
 
+    public int maxRetransmitQueueSize()
+    {
+        return maxRetransmitQueueSize;
+    }
+
+    public int retransmitNotificationTimeoutInMs()
+    {
+        return retransmitNotificationTimeoutInMs;
+    }
+
+    public int retransmitRequestMessageLimit()
+    {
+        return 2500;
+    }
+
     private void validate()
     {
         Verify.notNull(host, "host");
@@ -223,6 +242,18 @@ public final class ILink3ConnectionConfiguration
         {
             throw new IllegalArgumentException("port must be positive, but is: " + port);
         }
+
+        if (maxRetransmitQueueSize <= 0)
+        {
+            throw new IllegalArgumentException(
+                "maxRetransmitQueueSize must be positive, but is: " + maxRetransmitQueueSize);
+        }
+
+        if (retransmitNotificationTimeoutInMs <= 0)
+        {
+            throw new IllegalArgumentException(
+                "retransmitNotificationTimeoutInMs must be positive, but is: " + retransmitNotificationTimeoutInMs);
+        }
     }
 
     public String toString()
@@ -239,12 +270,9 @@ public final class ILink3ConnectionConfiguration
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
             ", accessKeyId=" + accessKeyId +
             ", handler=" + handler +
+            ", maxRetransmitQueueSize=" + maxRetransmitQueueSize +
+            ", retransmitNotificationTimeoutInMs=" + retransmitNotificationTimeoutInMs +
             '}';
-    }
-
-    public int retransmitRequestMessageLimit()
-    {
-        return 2500;
     }
 
     private ILink3ConnectionConfiguration(
@@ -263,7 +291,9 @@ public final class ILink3ConnectionConfiguration
         final boolean reEstablishLastConnection,
         final ILink3ConnectionHandler handler,
         final boolean useBackupHost,
-        final String backupHost)
+        final String backupHost,
+        final int maxRetransmitQueueSize,
+        final int retransmitNotificationTimeoutInMs)
     {
         this.host = host;
         this.port = port;
@@ -282,6 +312,8 @@ public final class ILink3ConnectionConfiguration
         this.handler = handler;
         this.useBackupHost = useBackupHost;
         this.backupHost = backupHost;
+        this.maxRetransmitQueueSize = maxRetransmitQueueSize;
+        this.retransmitNotificationTimeoutInMs = retransmitNotificationTimeoutInMs;
 
         validate();
     }
@@ -304,6 +336,8 @@ public final class ILink3ConnectionConfiguration
         private ILink3ConnectionHandler handler;
         private boolean useBackupHost;
         private String backupHost;
+        private int maxRetransmitQueueSize = DEFAULT_MAX_RETRANSMIT_QUEUE_SIZE;
+        private int retransmitNotificationTimeoutInMs = DEFAULT_RETRANSMIT_TIMEOUT_IN_MS;
 
         public ILink3ConnectionConfiguration build()
         {
@@ -323,7 +357,9 @@ public final class ILink3ConnectionConfiguration
                 reEstablishLastConnection,
                 handler,
                 useBackupHost,
-                backupHost);
+                backupHost,
+                maxRetransmitQueueSize,
+                retransmitNotificationTimeoutInMs);
         }
 
         /**
@@ -539,6 +575,37 @@ public final class ILink3ConnectionConfiguration
         public Builder backupHost(final String backupHost)
         {
             this.backupHost = backupHost;
+            return this;
+        }
+
+        /**
+         * Sets the maximum size for the retransmit queue. This is an in-memory on heap buffer that is used to queue
+         * received messages from a server that were sent out of order whilst a retransmit is occurring. The maximum
+         * allows users to stop OOME from occuring in the case of large retransmits.
+         *
+         * @param maxRetransmitQueueSize the maximum size for the retransmit queue.
+         * @return this
+         */
+        public Builder maxRetransmitQueueSizeInBytes(final int maxRetransmitQueueSize)
+        {
+            this.maxRetransmitQueueSize = maxRetransmitQueueSize;
+            return this;
+        }
+
+        /**
+         * Sets a timeout used in retransmit operations. The timeout is started when a retransmit request is sent. If
+         * this timeout is breached then the {@link ILink3ConnectionHandler#onRetransmitTimeout(ILink3Connection)}
+         * method will be invoked. This notification could be used to cancel the retransmit or inform operators,
+         * traders or algorithms that it's taking a while to get sequence numbers back into sync. The timeout
+         * doesn't not in and of itself cancel the retransmit request - just call the callback.
+         *
+         * @param retransmitNotificationTimeoutInMs timeout for receiving a notification when retransmit operations
+         *                                          take too long to be filled.
+         * @return this
+         */
+        public Builder retransmitNotificationTimeoutInMs(final int retransmitNotificationTimeoutInMs)
+        {
+            this.retransmitNotificationTimeoutInMs = retransmitNotificationTimeoutInMs;
             return this;
         }
     }

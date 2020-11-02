@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -43,7 +43,7 @@ public class InternalSession extends Session implements AutoCloseable
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
-        final Clock clock,
+        final EpochNanoClock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication inboundPublication,

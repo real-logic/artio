@@ -27,8 +27,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
+import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
@@ -46,13 +45,14 @@ public final class ExampleDictionary
     public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
 
-    public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
-    public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
-    public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
+    public static final String EG_ENUM = DEFAULT_PARENT_PACKAGE + "." + "EgEnum";
+    public static final String OTHER_ENUM = DEFAULT_PARENT_PACKAGE + "." + "OtherEnum";
+    public static final String STRING_ENUM = DEFAULT_PARENT_PACKAGE + "." + "stringEnum";
+    public static final String CURRENCY_ENUM = DEFAULT_PARENT_PACKAGE + "." + "CurrencyEnum";
 
-    public static final String TEST_PARENT_PACKAGE = PARENT_PACKAGE;
+    public static final String TEST_PARENT_PACKAGE = DEFAULT_PARENT_PACKAGE;
 
-    public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
+    public static final String TEST_PACKAGE = DEFAULT_PARENT_PACKAGE + ".builder.test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
     public static final String COMPONENT_ENCODER = TEST_PACKAGE + "." + EG_COMPONENT + "Encoder";
@@ -95,6 +95,7 @@ public final class ExampleDictionary
     public static final String STRING_ENUM_RF = "StringEnumRF";
     public static final String INT_ENUM_RF = "IntEnumRF";
     public static final String CHAR_ENUM_RF = "CharEnumRF";
+    public static final String CURRENCY_ENUM_RF = "CurrencyEnumRF";
 
     public static final String STRING_ENUM_REQ = "stringEnumReq";
     public static final String INT_ENUM_REQ = "intEnumReq";
@@ -424,8 +425,8 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=0049\00135=ET\001511=d\001512=40\00110=209\001";
 
     public static final String RF_ALL_FIELDS =
-        "8=FIX.4.4\0019=0049\00135=Z\001700=one\001701=10\001702=b\001703=123.456\001" +
-        "704=one\001705=10\001706=b\00110=209\001";
+        "8=FIX.4.4\0019=0057\00135=Z\001700=one\001701=10\001702=b\001703=123.456\001" +
+        "704=one\001705=10\001706=b\001707=GBP\00110=209\001";
 
     public static final String RF_NO_FIELDS =
         "8=FIX.4.4\0019=0049\00135=Z\00110=209\001";
@@ -643,7 +644,8 @@ public final class ExampleDictionary
             .addValue("-1", "NEG_ONE").addValue("10", "TEN"));
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 706, CHAR_ENUM_RF, CHAR)
             .addValue("a", "APPLE").addValue("b", "BANANA"));
-
+        allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 707, CURRENCY_ENUM_RF, CURRENCY)
+            .addValue("USD", "US_Dollar").addValue("GBP", "Pound"));
 
         final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, allReqFieldTypesMessage,
             enumTestMessage);
@@ -657,7 +659,7 @@ public final class ExampleDictionary
 
     private static Dictionary buildFieldExample()
     {
-        final Field egEnum = new Field(123, "EgEnum", Type.CHAR)
+        final Field egEnum = new Field(123, "EgEnum", CHAR)
             .addValue("a", "AnEntry")
             .addValue("b", "AnotherEntry");
 
@@ -666,15 +668,19 @@ public final class ExampleDictionary
             .addValue("12", "AnotherEntry")
             .addValue("99", "ThirdEntry");
 
-        final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
+        final Field stringEnum = new Field(126, "stringEnum", STRING)
             .addValue("0", "_0")
             .addValue("A", "_A")
             .addValue("AA", "_AAA");
 
-        final Field multiStringValueEnum = new Field(126, "multiStringValueEnum", Type.MULTIPLESTRINGVALUE)
+        final Field multiStringValueEnum = new Field(126, "multiStringValueEnum", MULTIPLESTRINGVALUE)
             .addValue("0", "_0")
             .addValue("A", "_A")
             .addValue("AA", "_AAA");
+
+        final Field currencyEnum = new Field(707, "CurrencyEnum", CURRENCY)
+            .addValue("USD", "US_Dollar")
+            .addValue("GBP", "Pound");
 
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
@@ -682,6 +688,7 @@ public final class ExampleDictionary
         fieldEgFields.put("stringEnum", stringEnum);
         fieldEgFields.put("multiStringValueEnum", multiStringValueEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
+        fieldEgFields.put("currencyEnum", currencyEnum);
 
         return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, "FIX", 4, 4);
     }

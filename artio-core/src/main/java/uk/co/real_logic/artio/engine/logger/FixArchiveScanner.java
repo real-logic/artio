@@ -20,16 +20,17 @@ import io.aeron.FragmentAssembler;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static io.aeron.archive.client.AeronArchive.NULL_LENGTH;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
-import static java.util.Comparator.comparingLong;
+import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
 
 /**
  * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
@@ -40,20 +41,26 @@ import static java.util.Comparator.comparingLong;
  */
 public class FixArchiveScanner implements AutoCloseable
 {
+    private static final int FRAGMENT_LIMIT = 10;
+
+    private static final ReversePositionComparator BY_REVERSE_POSITION = new ReversePositionComparator();
+
     private final Aeron aeron;
     private final AeronArchive aeronArchive;
     private final IdleStrategy idleStrategy;
+    private final int compactionSize;
 
-    public static class Context
+    public static class Configuration
     {
         private String aeronDirectoryName;
         private IdleStrategy idleStrategy;
+        private int compactionSize = DEFAULT_COMPACTION_SIZE;
 
-        public Context()
+        public Configuration()
         {
         }
 
-        public Context aeronDirectoryName(final String aeronDirectoryName)
+        public Configuration aeronDirectoryName(final String aeronDirectoryName)
         {
             this.aeronDirectoryName = aeronDirectoryName;
             return this;
@@ -64,7 +71,7 @@ public class FixArchiveScanner implements AutoCloseable
             return aeronDirectoryName;
         }
 
-        public Context idleStrategy(final IdleStrategy idleStrategy)
+        public Configuration idleStrategy(final IdleStrategy idleStrategy)
         {
             this.idleStrategy = idleStrategy;
             return this;
@@ -74,76 +81,27 @@ public class FixArchiveScanner implements AutoCloseable
         {
             return idleStrategy;
         }
+
+        public Configuration compactionSize(final int compactionSize)
+        {
+            this.compactionSize = compactionSize;
+            return this;
+        }
+
+        public int compactionSize()
+        {
+            return compactionSize;
+        }
     }
 
-    public FixArchiveScanner(final Context context)
+    public FixArchiveScanner(final Configuration configuration)
     {
-        this.idleStrategy = context.idleStrategy();
+        this.idleStrategy = configuration.idleStrategy();
+        compactionSize = configuration.compactionSize;
 
-        final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(context.aeronDirectoryName());
+        final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(configuration.aeronDirectoryName());
         aeron = Aeron.connect(aeronContext);
         aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron).ownsAeronClient(true));
-    }
-
-    public void scan(
-        final String aeronChannel,
-        final int queryStreamId,
-        final FixMessageConsumer fixHandler,
-        final ILinkMessageConsumer iLinkHandler,
-        final boolean follow,
-        final int archiveScannerStreamId)
-    {
-        final LogEntryHandler logEntryHandler = new LogEntryHandler(fixHandler, iLinkHandler);
-        final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
-
-        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
-
-        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
-        {
-            archiveLocations.forEach(archiveLocation ->
-            {
-                final long recordingId = archiveLocation.recordingId;
-                final boolean stillArchiving = archiveLocation.stopPosition == NULL_POSITION;
-
-                final long stopPosition;
-                final long length;
-                if (stillArchiving)
-                {
-                    if (follow)
-                    {
-                        length = NULL_LENGTH;
-                        stopPosition = NULL_POSITION;
-                    }
-                    else
-                    {
-                        stopPosition = aeronArchive.getRecordingPosition(recordingId);
-                        length = stopPosition - archiveLocation.startPosition;
-                    }
-                }
-                else
-                {
-                    stopPosition = archiveLocation.stopPosition;
-                    length = stopPosition - archiveLocation.startPosition;
-                }
-
-                if (length != 0)
-                {
-                    final int sessionId = (int)aeronArchive.startReplay(
-                        recordingId,
-                        archiveLocation.startPosition,
-                        length,
-                        IPC_CHANNEL,
-                        archiveScannerStreamId);
-
-                    final Image image = lookupImage(replaySubscription, sessionId);
-
-                    while (stopPosition == NULL_POSITION || image.position() < stopPosition)
-                    {
-                        idleStrategy.idle(image.poll(fragmentAssembler, 10));
-                    }
-                }
-            });
-        }
     }
 
     public void scan(
@@ -156,23 +114,78 @@ public class FixArchiveScanner implements AutoCloseable
         scan(aeronChannel, queryStreamId, handler, null, follow, archiveScannerStreamId);
     }
 
-    private Image lookupImage(final Subscription replaySubscription, final int sessionId)
+    public void scan(
+        final String aeronChannel,
+        final int queryStreamId,
+        final FixMessageConsumer fixHandler,
+        final ILinkMessageConsumer iLinkHandler,
+        final boolean follow,
+        final int archiveScannerStreamId)
     {
-        Image image = null;
-
-        while (image == null)
-        {
-            idleStrategy.idle();
-            image = replaySubscription.imageBySessionId(sessionId);
-        }
-        idleStrategy.reset();
-
-        return image;
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(queryStreamId);
+        scan(aeronChannel, queryStreamIds, fixHandler, iLinkHandler, follow, archiveScannerStreamId);
     }
 
-    private List<ArchiveLocation> lookupArchiveLocations(final String aeronChannel, final int queryStreamId)
+    public void scan(
+        final String aeronChannel,
+        final IntHashSet queryStreamIds,
+        final FixMessageConsumer fixHandler,
+        final ILinkMessageConsumer iLinkHandler,
+        final boolean follow,
+        final int archiveScannerStreamId)
+    {
+        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
+        {
+            final RecordingPoller[] pollers = queryStreamIds
+                .stream()
+                .map(id -> makePoller(id, replaySubscription, follow, aeronChannel))
+                .toArray(RecordingPoller[]::new);
+
+            final StreamTimestampZipper timestampZipper = new StreamTimestampZipper(
+                fixHandler, iLinkHandler, compactionSize, pollers);
+
+            while (true)
+            {
+                final int received = timestampZipper.poll();
+
+                // Don't need to do this check in follow mode as we're just going to keep running and not terminate.
+                if (0 == received && !follow) // lgtm [java/constant-loop-condition]
+                {
+                    if (checkCompletion(pollers))
+                    {
+                        timestampZipper.onClose();
+                        idleStrategy.reset();
+                        return;
+                    }
+                }
+
+                idleStrategy.idle(received);
+            }
+        }
+    }
+
+    private boolean checkCompletion(final RecordingPoller[] pollers)
+    {
+        for (final RecordingPoller poller : pollers)
+        {
+            if (!poller.isComplete())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private RecordingPoller makePoller(
+        final int queryStreamId,
+        final Subscription replaySubscription,
+        final boolean follow,
+        final String aeronChannel)
     {
         final List<ArchiveLocation> archiveLocations = new ArrayList<>();
+
         aeronArchive.listRecordingsForUri(
             0,
             Integer.MAX_VALUE,
@@ -193,21 +206,50 @@ public class FixArchiveScanner implements AutoCloseable
             streamId,
             strippedChannel,
             originalChannel,
-            sourceIdentity) -> archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition)));
+            sourceIdentity) ->
+            {
+                archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
+            });
 
-        // Any uncompleted recording is at the end
-        archiveLocations.sort(comparingLong(ArchiveLocation::stopPosition).reversed());
+        if (!follow)
+        {
+            for (final ArchiveLocation location : archiveLocations)
+            {
+                if (location.stopPosition == NULL_POSITION)
+                {
+                    location.stopPosition = aeronArchive.getRecordingPosition(location.recordingId);
+                }
+            }
+        }
 
-        return archiveLocations;
+        archiveLocations.sort(BY_REVERSE_POSITION);
+
+        return new RecordingPoller(replaySubscription, queryStreamId, archiveLocations);
+    }
+
+    static class ReversePositionComparator implements Comparator<ArchiveLocation>
+    {
+        public int compare(final ArchiveLocation archiveLocation1, final ArchiveLocation archiveLocation2)
+        {
+            return -1 * Long.compare(getStopPosition(archiveLocation1), getStopPosition(archiveLocation2));
+        }
+
+        long getStopPosition(final ArchiveLocation archiveLocation)
+        {
+            final long stopPosition = archiveLocation.stopPosition;
+            return stopPosition == NULL_POSITION ? Long.MAX_VALUE : stopPosition;
+        }
     }
 
     static class ArchiveLocation
     {
         final long recordingId;
         final long startPosition;
-        final long stopPosition;
 
-        ArchiveLocation(final long recordingId, final long startPosition, final long stopPosition)
+        long stopPosition;
+
+        ArchiveLocation(
+            final long recordingId, final long startPosition, final long stopPosition)
         {
             this.recordingId = recordingId;
             this.startPosition = startPosition;
@@ -219,6 +261,11 @@ public class FixArchiveScanner implements AutoCloseable
             return stopPosition;
         }
 
+        public long length()
+        {
+            return startPosition == NULL_POSITION ? NULL_POSITION : stopPosition - startPosition;
+        }
+
         public String toString()
         {
             return "ArchiveReplayInfo{" +
@@ -226,6 +273,88 @@ public class FixArchiveScanner implements AutoCloseable
                 ", startPosition=" + startPosition +
                 ", stopPosition=" + stopPosition +
                 '}';
+        }
+    }
+
+    class RecordingPoller implements StreamTimestampZipper.Poller
+    {
+        private final List<ArchiveLocation> archiveLocations;
+        private final Subscription replaySubscription;
+        private final int streamId;
+
+        long stopPosition;
+        Image image;
+
+        RecordingPoller(
+            final Subscription replaySubscription, final int streamId, final List<ArchiveLocation> archiveLocations)
+        {
+            this.replaySubscription = replaySubscription;
+            this.streamId = streamId;
+            this.archiveLocations = archiveLocations;
+        }
+
+        boolean isComplete()
+        {
+            return stopPosition != NULL_POSITION && image == null && archiveLocations.isEmpty();
+        }
+
+        public int poll(final FragmentAssembler fragmentAssembler)
+        {
+            if (image == null)
+            {
+                if (archiveLocations.isEmpty())
+                {
+                    return 0;
+                }
+
+                final ArchiveLocation archiveLocation = archiveLocations.remove(archiveLocations.size() - 1);
+
+                if (archiveLocation.length() != 0)
+                {
+                    final int sessionId = (int)aeronArchive.startReplay(
+                        archiveLocation.recordingId,
+                        archiveLocation.startPosition,
+                        archiveLocation.length(),
+                        IPC_CHANNEL,
+                        replaySubscription.streamId());
+
+                    image = lookupImage(sessionId);
+                    stopPosition = archiveLocation.stopPosition;
+                }
+
+                return 1;
+            }
+            else
+            {
+                if (image.position() >= stopPosition)
+                {
+                    image = null;
+                    return 1;
+                }
+                else
+                {
+                    return image.poll(fragmentAssembler, FRAGMENT_LIMIT);
+                }
+            }
+        }
+
+        public int streamId()
+        {
+            return streamId;
+        }
+
+        private Image lookupImage(final int sessionId)
+        {
+            Image image = null;
+
+            while (image == null)
+            {
+                idleStrategy.idle();
+                image = replaySubscription.imageBySessionId(sessionId);
+            }
+            idleStrategy.reset();
+
+            return image;
         }
     }
 

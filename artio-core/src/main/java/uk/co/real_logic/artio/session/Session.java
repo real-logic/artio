@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -102,7 +103,7 @@ public class Session
 
     private final EpochClock epochClock;
     private final EpochFractionClock epochFractionClock;
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
     private final GatewayPublication inboundPublication;
@@ -163,7 +164,7 @@ public class Session
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
-        final Clock clock,
+        final EpochNanoClock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication inboundPublication,
@@ -706,7 +707,7 @@ public class Session
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        nextSequenceIndex(clock.time());
+        nextSequenceIndex(clock.nanoTime());
         final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
@@ -786,7 +787,7 @@ public class Session
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
-        nextSequenceIndex(clock.time());
+        nextSequenceIndex(clock.nanoTime());
         final long position = proxy.sendLogon(
             sentSeqNum,
             heartbeatIntervalInS,
@@ -845,7 +846,7 @@ public class Session
     {
         if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
-            nextSequenceIndex(clock.time());
+            nextSequenceIndex(clock.nanoTime());
         }
 
         lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
@@ -855,7 +856,7 @@ public class Session
 
     /**
      * This returns the time of the last received logon message for the current session. The source
-     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * of time here is configured from your {@link CommonConfiguration#epochNanoClock(EpochNanoClock)}.
      * This defaults to nanoseconds but it can be any precision that you configure.
      *
      * @return the time of the last received logon message for the current session.
@@ -867,7 +868,7 @@ public class Session
 
     /**
      * This returns the time of the last sequence number reset. The source
-     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * of time here is configured from your {@link CommonConfiguration#epochNanoClock(EpochNanoClock)}.
      * This defaults to nanoseconds but it can be any precision that you configure.
      *
      * @return the time of the last sequence number reset.
@@ -1262,7 +1263,7 @@ public class Session
             return action;
         }
 
-        final long logonTime = clock.time();
+        final long logonTime = clock.nanoTime();
 
         if (resetSeqNumFlag)
         {
@@ -2155,7 +2156,7 @@ public class Session
     {
         closeCounters();
         receivedMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
-        sentMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
+        sentMsgSeqNo = counters.sentMsgSeqNo(connectionId);
     }
 
     /**

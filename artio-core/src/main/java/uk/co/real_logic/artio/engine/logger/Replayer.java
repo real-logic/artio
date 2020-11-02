@@ -25,9 +25,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -51,7 +49,9 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 
 /**
  * The replayer responds to resend requests with data from the log of sent messages.
@@ -64,8 +64,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
 {
     public static final int MOST_RECENT_MESSAGE = 0;
 
+    private static final long TIMESTAMP_MESSAGE_INTERVAL = SECONDS.toNanos(2);
+
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
-        MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+        ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     static final int SIZE_OF_LENGTH_FIELD = FixMessageDecoder.bodyHeaderLength();
     private static final int POLL_LIMIT = 10;
 
@@ -102,6 +104,12 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final ILinkMessageEncoder iLinkMessageEncoder = new ILinkMessageEncoder();
 
+    // Timestamp state
+    private final UnsafeBuffer timestampBuffer = new UnsafeBuffer(new byte[
+        ENCODED_LENGTH + ReplayerTimestampDecoder.BLOCK_LENGTH]);
+    private final ReplayerTimestampEncoder replayerTimestampEncoder = new ReplayerTimestampEncoder();
+    private long nextTimestampMessageInNs;
+
     private final Long2ObjectHashMap<ReplayChannel> connectionIdToReplayerChannel = new Long2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
@@ -112,6 +120,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ReplayerCommandQueue replayerCommandQueue;
     private final AtomicCounter currentReplayCount;
     private final int maxConcurrentSessionReplays;
+    private final EpochNanoClock nanoClock;
     private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
@@ -145,7 +154,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final ReplayerCommandQueue replayerCommandQueue,
         final EpochFractionFormat epochFractionFormat,
         final AtomicCounter currentReplayCount,
-        final int maxConcurrentSessionReplays)
+        final int maxConcurrentSessionReplays,
+        final EpochNanoClock nanoClock)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -165,6 +175,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.replayerCommandQueue = replayerCommandQueue;
         this.currentReplayCount = currentReplayCount;
         this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
+        this.nanoClock = nanoClock;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -172,8 +183,12 @@ public class Replayer implements Agent, ControlledFragmentHandler
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));
-        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler));
+        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, nanoClock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
+
+        nextTimestampMessageInNs = nanoClock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
+        replayerTimestampEncoder
+            .wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
     }
 
     public Action onFragment(
@@ -181,7 +196,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     {
         messageHeader.wrap(buffer, start);
         final int templateId = messageHeader.templateId();
-        final int offset = start + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int offset = start + ENCODED_LENGTH;
         final int blockLength = messageHeader.blockLength();
         final int version = messageHeader.version();
 
@@ -360,7 +375,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
-                iLink3RetransmitHandler);
+                iLink3RetransmitHandler, nanoClock);
 
             session.query();
 
@@ -427,9 +442,25 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     public int doWork()
     {
+        sendTimestampMessage();
+
         int work = replayerCommandQueue.poll();
         work += pollReplayerChannels();
         return work + inboundSubscription.controlledPoll(this, POLL_LIMIT);
+    }
+
+    private void sendTimestampMessage()
+    {
+        final long timeInNs = nanoClock.nanoTime();
+        if (timeInNs > nextTimestampMessageInNs)
+        {
+            replayerTimestampEncoder.timestamp(timeInNs);
+            final long position = publication.offer(timestampBuffer);
+            if (position > 0)
+            {
+                nextTimestampMessageInNs = timeInNs + TIMESTAMP_MESSAGE_INTERVAL;
+            }
+        }
     }
 
     private int pollReplayerChannels()

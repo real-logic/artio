@@ -16,14 +16,18 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
-import org.agrona.collections.IntArrayList;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -53,6 +57,7 @@ public class SlowConsumerTest
     private static final int BUFFER_CAPACITY = 16 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final int port = unusedPort();
     private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
@@ -267,37 +272,16 @@ public class SlowConsumerTest
     private void setup(final int senderMaxBytesInBuffer, final MessageTimingCaptor messageTimingCaptor)
     {
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
-        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .scheduler(scheduler);
         config.deleteLogFileDirOnStart(true);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         config.messageTimingHandler(messageTimingCaptor);
         engine = FixEngine.launch(config);
         testSystem = new TestSystem(scheduler);
-        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
+        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler, nanoClock);
         libraryConfiguration.outboundMaxClaimAttempts(1);
         library = testSystem.connect(libraryConfiguration);
     }
 }
 
-class MessageTimingCaptor implements MessageTimingHandler
-{
-
-    private final IntArrayList sequenceNumbers = new IntArrayList();
-
-    public void onMessage(final int sequenceNumber, final long connectionId)
-    {
-        sequenceNumbers.add(sequenceNumber);
-    }
-
-    void verifyConsecutiveSequenceNumbers(final int lastSentMsgSeqNum)
-    {
-        assertThat(sequenceNumbers, hasSize(lastSentMsgSeqNum));
-        for (int i = 0; i < lastSentMsgSeqNum; i++)
-        {
-            final int sequenceNumber = sequenceNumbers.getInt(i);
-            assertEquals(i + 1, sequenceNumber);
-        }
-    }
-
-}

@@ -28,19 +28,19 @@ import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
+class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
-    private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
     private final LongToIntFunction libraryLookup = this::libraryLookup;
 
     private int libraryLookup(final long sessionId)
     {
-        for (final SenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
+        for (final FixSenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
         {
             if (senderEndPoint.sessionId() == sessionId)
             {
@@ -53,19 +53,19 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
     private long timeInMs;
 
-    SenderEndPoints(final ErrorHandler errorHandler)
+    FixSenderEndPoints(final ErrorHandler errorHandler)
     {
         this.errorHandler = errorHandler;
     }
 
-    public void add(final SenderEndPoint senderEndPoint)
+    public void add(final FixSenderEndPoint senderEndPoint)
     {
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
 
     void removeConnection(final long connectionId)
     {
-        final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.remove(connectionId);
+        final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.remove(connectionId);
         if (senderEndPoint != null)
         {
             senderEndPoint.close();
@@ -81,7 +81,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final int sequenceNumber,
         final long position)
     {
-        final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onOutboundMessage(libraryId, buffer, offset, length, sequenceNumber, position, timeInMs);
@@ -94,7 +94,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     Action onReplayMessage(
         final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
     {
-        final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             return endPoint.onReplayMessage(buffer, offset, length, timeInMs, position);
@@ -115,7 +115,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final long position,
         final int metaDataLength)
     {
-        final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position, metaDataLength);
@@ -160,7 +160,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), version);
             final long connectionId = fixMessage.connection();
 
-            final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+            final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
                 final int metaDataLength = fixMessage.skipMetaData();
@@ -179,7 +179,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
     Action onReplayComplete(final long connectionId)
     {
-        final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
         {
             return senderEndPoint.onReplayComplete();
@@ -191,7 +191,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     {
         connectionIdToSenderEndpoint
             .values()
-            .forEach(SenderEndPoint::close);
+            .forEach(FixSenderEndPoint::close);
     }
 
     void timeInMs(final long timeInMs)
@@ -202,7 +202,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     int checkTimeouts(final long timeInMs)
     {
         int count = 0;
-        for (final SenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
+        for (final FixSenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
         {
             if (senderEndPoint.checkTimeouts(timeInMs))
             {

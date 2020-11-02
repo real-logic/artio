@@ -18,8 +18,8 @@ package uk.co.real_logic.artio.library;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
@@ -35,7 +35,7 @@ class LibraryTransport
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
-    private final Clock clock;
+    private final EpochNanoClock clock;
 
     private Streams outboundLibraryStreams;
     private Subscription inboundSubscription;
@@ -50,7 +50,7 @@ class LibraryTransport
         this.configuration = configuration;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.clock = configuration.clock();
+        this.clock = configuration.epochNanoClock();
     }
 
     void initStreams(final String aeronChannel)

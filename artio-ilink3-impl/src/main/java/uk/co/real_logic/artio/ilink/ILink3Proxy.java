@@ -19,6 +19,7 @@ import iLinkBinary.*;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
@@ -68,17 +69,25 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
     private final ExclusivePublication publication;
     private final ILink3BusinessMessageDissector businessMessageLogger;
+    private final EpochNanoClock epochNanoClock;
 
     private long connectionId;
 
     public ILink3Proxy(
         final long connectionId,
         final ExclusivePublication publication,
-        final ILink3BusinessMessageDissector businessMessageLogger)
+        final ILink3BusinessMessageDissector businessMessageLogger,
+        final EpochNanoClock epochNanoClock)
     {
         this.connectionId = connectionId;
         this.publication = publication;
         this.businessMessageLogger = businessMessageLogger;
+        this.epochNanoClock = epochNanoClock;
+    }
+
+    public ILink3BusinessMessageDissector businessMessageLogger()
+    {
+        return businessMessageLogger;
     }
 
     public void connectionId(final long connectionId)
@@ -96,7 +105,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Negotiate500Encoder negotiate = this.negotiate;
 
-        final long position = claimILinkMessage(NEGOTIATE_LENGTH, negotiate);
+        final long position = claimILinkMessage(NEGOTIATE_LENGTH, negotiate, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -133,7 +142,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Establish503Encoder establish = this.establish;
 
-        final long position = claimILinkMessage(ESTABLISH_LENGTH, establish);
+        final long position = claimILinkMessage(ESTABLISH_LENGTH, establish, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -164,7 +173,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Terminate507Encoder terminate = this.terminate;
 
-        final long position = claimILinkMessage(Terminate507Encoder.BLOCK_LENGTH, terminate);
+        final long position = claimILinkMessage(Terminate507Encoder.BLOCK_LENGTH, terminate, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -195,7 +204,7 @@ public class ILink3Proxy extends AbstractILink3Proxy
     {
         final Sequence506Encoder sequence = this.sequence;
 
-        final long position = claimILinkMessage(Sequence506Encoder.BLOCK_LENGTH, sequence);
+        final long position = claimILinkMessage(Sequence506Encoder.BLOCK_LENGTH, sequence, timestamp());
         if (position < 0)
         {
             return position;
@@ -214,12 +223,18 @@ public class ILink3Proxy extends AbstractILink3Proxy
         return position;
     }
 
+    private long timestamp()
+    {
+        return epochNanoClock.nanoTime();
+    }
+
     public long sendRetransmitRequest(
         final long uuid, final long lastUuid, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
         final RetransmitRequest508Encoder retransmitRequest = this.retransmitRequest;
 
-        final long position = claimILinkMessage(RetransmitRequest508Encoder.BLOCK_LENGTH, retransmitRequest);
+        final long position = claimILinkMessage(
+            RetransmitRequest508Encoder.BLOCK_LENGTH, retransmitRequest, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -241,7 +256,8 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
     public long claimILinkMessage(
         final int messageLength,
-        final MessageEncoderFlyweight message)
+        final MessageEncoderFlyweight message,
+        final long timestamp)
     {
         final BufferClaim bufferClaim = this.bufferClaim;
         final long position = publication.tryClaim(ILINK_MESSAGE_HEADER + messageLength, bufferClaim);
@@ -255,7 +271,8 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
         iLinkMessage
             .wrapAndApplyHeader(buffer, offset, messageHeader)
-            .connection(connectionId);
+            .connection(connectionId)
+            .enqueueTime(timestamp);
 
         offset += ARTIO_HEADER_LENGTH;
 

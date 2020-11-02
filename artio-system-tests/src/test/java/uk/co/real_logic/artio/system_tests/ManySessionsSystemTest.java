@@ -62,7 +62,7 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
                 .logFileDir(ACCEPTOR_LOGS)
                 .scheduler(new LowResourceEngineScheduler()));
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
         final LibraryConfiguration acceptingLibraryConfig = new LibraryConfiguration()
             .sessionExistsHandler(acceptingHandler)
@@ -71,7 +71,7 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
             .libraryName("accepting");
 
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 

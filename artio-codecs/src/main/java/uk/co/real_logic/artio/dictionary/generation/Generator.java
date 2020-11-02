@@ -59,7 +59,6 @@ public abstract class Generator
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
     public static final Pattern NEWLINE = Pattern.compile("^", MULTILINE);
-    final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
@@ -67,14 +66,14 @@ public abstract class Generator
     {
         final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
-            "    %3$s" +
-            "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
+            "%3$s" +
+            "    private final Trailer%1$s trailer = new Trailer%1$s();\n\n" +
             "    public Trailer%1$s trailer()\n" +
             "    {\n" +
             "        return trailer;\n" +
             "    }\n\n" +
 
-            "    private Header%1$s header = new Header%1$s(%2$s);\n\n" +
+            "    private final Header%1$s header = new Header%1$s(%2$s);\n\n" +
             "    public Header%1$s header()\n" +
             "    {\n" +
             "        return header;\n" +
@@ -96,6 +95,7 @@ public abstract class Generator
     protected final Class<?> rejectUnknownFieldClass;
     private final Class<?> rejectUnknownEnumValueClass;
     protected final boolean flyweightsEnabled;
+    protected final String codecRejectUnknownEnumValueEnabled;
 
     protected Generator(
         final Dictionary dictionary,
@@ -470,9 +470,9 @@ public abstract class Generator
         if (hasCommonCompounds)
         {
             prefix =
-                "    builder.append(\"  \\\"header\\\": \");\n" +
-                "    header.appendTo(builder, level + 1);\n" +
-                "    builder.append(\"\\n\");\n";
+                "        builder.append(\"  \\\"header\\\": \");\n" +
+                "        header.appendTo(builder, level + 1);\n" +
+                "        builder.append(\"\\n\");\n";
         }
         else
         {

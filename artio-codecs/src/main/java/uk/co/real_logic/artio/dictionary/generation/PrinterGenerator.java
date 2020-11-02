@@ -31,7 +31,7 @@ import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.deco
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 
-public class PrinterGenerator
+class PrinterGenerator
 {
     private static final String CLASS_NAME = "PrinterImpl";
     private static final String CLASS_DECLARATION =
@@ -44,7 +44,7 @@ public class PrinterGenerator
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public PrinterGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    PrinterGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;

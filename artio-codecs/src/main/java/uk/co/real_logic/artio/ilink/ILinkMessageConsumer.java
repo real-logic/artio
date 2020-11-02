@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.ilink;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
+import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -31,11 +32,12 @@ public interface ILinkMessageConsumer
      * Callback for receiving iLink3 business messages. Details of business messages can be found in the
      * <a href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/iLink+3+Application+Layer">CME
      * Documentation</a>. These may also be referred to as application layer messages.
-     *  @param buffer the buffer containing the message.
+     * @param iLinkMessage the header of the iLink message containing a local timestamp.
+     * @param buffer the buffer containing the message.
      * @param offset the offset within the buffer at which your message starts.
      * @param header the Aeron header value for the fragment
      */
-    void onBusinessMessage(DirectBuffer buffer, int offset, Header header);
+    void onBusinessMessage(ILinkMessageDecoder iLinkMessage, DirectBuffer buffer, int offset, Header header);
 
     static ILinkMessageConsumer makePrinter(final int inboundStreamId)
     {

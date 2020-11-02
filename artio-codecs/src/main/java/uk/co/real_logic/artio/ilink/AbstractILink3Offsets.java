@@ -17,12 +17,23 @@ package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
 
 import java.lang.reflect.InvocationTargetException;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
 
 public abstract class AbstractILink3Offsets
 {
     public static final int MISSING_OFFSET = -1;
+
+    static final int NORMAL_CLIENT_MSG_SEQ_NUM_OFFSET = 17;
+    static final int PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET = 16;
+    static final int EXCHANGE_MSG_SEQ_NUM_OFFSET = 0;
+    static final int MINIMUM_BUSINESS_MSG_TEMPLATE_ID = 514;
+    static final int PARTY_DETAILS_LIST_REQUEST_ID = 537;
+    static final int TEMPLATE_ID_OFFSET = 2;
 
     public static AbstractILink3Offsets make(final ErrorHandler errorHandler)
     {
@@ -37,6 +48,48 @@ public abstract class AbstractILink3Offsets
             errorHandler.onError(e);
             return null;
         }
+    }
+
+    // Optimised path for sequence numbers based upon common patterns.
+    public static long clientSeqNum(final DirectBuffer buffer, final int sbeHeaderOffset)
+    {
+        final int templateId = buffer.getShort(sbeHeaderOffset + TEMPLATE_ID_OFFSET, LITTLE_ENDIAN) & 0xFFFF;
+        if (templateId < MINIMUM_BUSINESS_MSG_TEMPLATE_ID)
+        {
+            return MISSING_OFFSET;
+        }
+
+        final int messageOffset = sbeHeaderOffset + ILINK_MESSAGE_HEADER_LENGTH;
+        final int fieldOffset = clientSeqNumOffset(templateId);
+        return seqNum(buffer, messageOffset + fieldOffset);
+    }
+
+    public static void clientSeqNum(
+        final int templateId, final MutableDirectBuffer buffer, final int messageOffset, final long seqNum)
+    {
+        final int fieldOffset = clientSeqNumOffset(templateId);
+        seqNum(buffer, messageOffset + fieldOffset, seqNum);
+    }
+
+    private static int clientSeqNumOffset(final int templateId)
+    {
+        return templateId == PARTY_DETAILS_LIST_REQUEST_ID ?
+            PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET : NORMAL_CLIENT_MSG_SEQ_NUM_OFFSET;
+    }
+
+    public static long exchangeSeqNum(final DirectBuffer buffer, final int messageOffset)
+    {
+        return seqNum(buffer, messageOffset + EXCHANGE_MSG_SEQ_NUM_OFFSET);
+    }
+
+    private static long seqNum(final DirectBuffer buffer, final int index)
+    {
+        return buffer.getInt(index, LITTLE_ENDIAN) & 0xFFFF_FFFFL;
+    }
+
+    private static void seqNum(final MutableDirectBuffer buffer, final int index, final long seqNum)
+    {
+        buffer.putInt(index, (int)seqNum, LITTLE_ENDIAN);
     }
 
     public abstract int seqNumOffset(int templateId);

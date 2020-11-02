@@ -26,21 +26,21 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '6.0.0' apply false
+    id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
     id 'net.researchgate.release' version '2.8.1'
     id "com.github.ben-manes.versions" version "0.33.0"
 }
 
-def checkstyleVersion = '8.36'
+def checkstyleVersion = '8.36.2'
 def hamcrestVersion = '2.2'
-def junitVersion = '4.13'
-def mockitoVersion = '3.5.10'
+def junitVersion = '4.13.1'
+def mockitoVersion = '3.5.15'
 def hdrHistogramVersion = '2.1.12'
-def jmhVersion = '1.25.2'
+def jmhVersion = '1.26'
 
-def aeronVersion = '1.29.0'
-def agronaVersion = '1.6.0'
-def sbeVersion = '1.19.0'
+def aeronVersion = '1.31.0'
+def agronaVersion = '1.8.0'
+def sbeVersion = '1.20.3'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false

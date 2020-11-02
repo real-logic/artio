@@ -37,6 +37,11 @@ public final class SimpleOpenFramingHeader
         buffer.putShort(offset + SOFH_ENCODING_OFFSET, CME_ENCODING_TYPE, ByteOrder.LITTLE_ENDIAN);
     }
 
+    public static int readSofhMessageSize(final DirectBuffer buffer, final int offset)
+    {
+        return buffer.getShort(offset + SOFH_MSG_SIZE_OFFSET, ByteOrder.LITTLE_ENDIAN) & 0xFFFF;
+    }
+
     public static int readSofh(final DirectBuffer buffer, final int offset)
     {
         final int messageSize = readSofhMessageSize(buffer, offset);
@@ -47,10 +52,5 @@ public final class SimpleOpenFramingHeader
                 "Unsupported Encoding Type: " + encodingType + " should be " + CME_ENCODING_TYPE);
         }
         return messageSize;
-    }
-
-    public static int readSofhMessageSize(final DirectBuffer buffer, final int offset)
-    {
-        return buffer.getShort(offset + SOFH_MSG_SIZE_OFFSET, ByteOrder.LITTLE_ENDIAN) & 0xFFFF;
     }
 }

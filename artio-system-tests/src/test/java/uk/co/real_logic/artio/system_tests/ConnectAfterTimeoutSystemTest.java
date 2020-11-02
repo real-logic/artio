@@ -40,7 +40,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         mediaDriver = launchMediaDriver();
 
         delete(CLIENT_LOGS);
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.channelSupplierFactory(config ->
         {
             debugTcpChannelSupplier = new DebugTcpChannelSupplier(config);
@@ -48,7 +48,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         });
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(initiatingLibrary);
     }
 
@@ -69,7 +69,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
 
         // Launch the acceptor
         launchAcceptingEngine();
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
 
         // Now it should connect

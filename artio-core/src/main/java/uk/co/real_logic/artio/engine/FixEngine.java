@@ -213,7 +213,10 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Gets the session id associated with some combination of id fields
+     * Gets the session id associated with some combination of id fields.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
      *
      * @param localCompId the senderCompId of messages sent by the gateway on this session.
      * @param remoteCompId the senderCompId of messages received by the gateway on this session.
@@ -225,7 +228,6 @@ public final class FixEngine extends GatewayProcess
      *                        or <code>null</code> if not used in session identification.
      * @param remoteLocationId the senderLocationId of messages received by the gateway on this session
      *                         or <code>null</code> if not used in session identification.
-     *
      * @return the reply object asynchronously wrapping the session id
      */
     public Reply<Long> lookupSessionId(
@@ -252,7 +254,7 @@ public final class FixEngine extends GatewayProcess
                 configuration.errorIfDuplicateEngineDetected());
             duplicateEngineChecker.check();
 
-            timers = new EngineTimers(configuration.clock());
+            timers = new EngineTimers(configuration.epochNanoClock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);

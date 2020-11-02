@@ -51,7 +51,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 // evaluate utc parsing, adds about 100 nanos
 // remove the REQUIRED_FIELDS validation when there are no required fields
 
-public class DecoderGenerator extends Generator
+class DecoderGenerator extends Generator
 {
     private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
         "LogonDecoder",
@@ -110,7 +110,7 @@ public class DecoderGenerator extends Generator
     private final int initialBufferSize;
     private final String encoderPackage;
 
-    public DecoderGenerator(
+    DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
         final String thisPackage,
@@ -197,8 +197,7 @@ public class DecoderGenerator extends Generator
             {
                 final String componentClassName = encoderPackage + "." + encoderClassName(entry.name());
                 out.write(importFor(componentClassName));
-                importChildEncoderClasses(
-                    (Aggregate)entry.element(), out, componentClassName);
+                importChildEncoderClasses((Aggregate)entry.element(), out, componentClassName);
             }
             else if (entry.isGroup())
             {
@@ -476,12 +475,12 @@ public class DecoderGenerator extends Generator
         return generateFieldDictionary(allGroupFields, ALL_GROUP_FIELDS, true);
     }
 
-    private String generateFieldDictionary(final Collection<Field> fields, final String name,
-        final boolean shouldGenerateValidationGating)
+    private String generateFieldDictionary(
+        final Collection<Field> fields, final String name, final boolean shouldGenerateValidationGating)
     {
         final String addFields = fields
             .stream()
-            .map((field) -> addField(field, name, "            "))
+            .map((field) -> addField(field, name, shouldGenerateValidationGating ? "            " : "        "))
             .collect(joining());
         final String generatedFieldEntryCode;
 
@@ -500,7 +499,7 @@ public class DecoderGenerator extends Generator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
+            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n\n" +
             "    {\n" +
             "%3$s" +
             "    }\n\n",
@@ -553,12 +552,12 @@ public class DecoderGenerator extends Generator
                     "          int %1$sOffset = 0;\n" +
                     "          for (int i = 0; i < %1$sLength; i++)\n" +
                     "          {\n" +
-                    "            if (%1$s()[i] == ' ')\n" +
-                    "            {\n" +
-                    "              %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
+                    "              if (%1$s()[i] == ' ')\n" +
+                    "              {\n" +
+                    "                  %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
                     "%2$s" +
-                    "                %1$sOffset = i + 1;\n" +
-                    "            }\n" +
+                    "                  %1$sOffset = i + 1;\n" +
+                    "              }\n" +
                     "          }\n" +
                     "          %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
                     "%2$s",
@@ -732,7 +731,7 @@ public class DecoderGenerator extends Generator
         out.append("\n");
         aggregate
             .entries()
-            .forEach(t ->
+            .forEach((t) ->
             {
                 try
                 {
@@ -846,7 +845,7 @@ public class DecoderGenerator extends Generator
         throws IOException
     {
         final List<String> optionalFields = DECODER_OPTIONAL_SESSION_FIELDS.get(className);
-        final Set<String> missingOptionalFields = (optionalFields == null) ? emptySet() : new HashSet<>(optionalFields);
+        final Set<String> missingOptionalFields = optionalFields == null ? emptySet() : new HashSet<>(optionalFields);
 
         for (final Entry entry : entries)
         {
@@ -897,7 +896,7 @@ public class DecoderGenerator extends Generator
     {
         final Aggregate parentAggregate = currentAggregate;
         currentAggregate = component;
-        wrappedForEachEntry(component, out, entry -> generateGetter(entry, out, missingOptionalFields));
+        wrappedForEachEntry(component, out, (entry) -> generateGetter(entry, out, missingOptionalFields));
         currentAggregate = parentAggregate;
     }
 
@@ -1370,9 +1369,9 @@ public class DecoderGenerator extends Generator
 
             "                missingRequiredFields.remove(tag);\n" +
             "                seenFieldCount++;\n" +
-            "            }\n" +
+            "            }\n\n" +
             "            switch (tag)\n" +
-            "            {\n\n";
+            "            {\n";
         final String body = entries.stream()
             .map(this::decodeEntry)
             .collect(joining("\n", "", "\n"));
@@ -1663,7 +1662,7 @@ public class DecoderGenerator extends Generator
                 break;
             case DATA:
             case XMLDATA:
-                // Length extracted separately from a preceeding field
+                // Length extracted separately from a preceding field
                 final String associatedFieldName = formatPropertyName(field.associatedLengthField().name());
                 if (flyweightsEnabled)
                 {
@@ -1795,7 +1794,7 @@ public class DecoderGenerator extends Generator
         return String.format(
             "    /**\n" +
             "     * {@inheritDoc}\n" +
-            "     */" +
+            "     */\n" +
             "    public %1$s toEncoder(final Encoder encoder)\n" +
             "    {\n" +
             "        return toEncoder((%1$s)encoder);\n" +
@@ -1902,7 +1901,7 @@ public class DecoderGenerator extends Generator
         return component
             .entries()
             .stream()
-            .map(entry -> generateEntryToEncoder(entry, varName))
+            .map((entry) -> generateEntryToEncoder(entry, varName))
             .collect(joining("\n",
                 prefix,
                 "\n"));

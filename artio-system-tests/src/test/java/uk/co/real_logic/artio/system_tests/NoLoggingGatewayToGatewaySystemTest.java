@@ -33,19 +33,19 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
     {
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .logInboundMessages(false)
             .logOutboundMessages(false)
             .deleteLogFileDirOnStart(true));
 
-        initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort)
+        initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort, nanoClock)
             .logInboundMessages(false)
             .logOutboundMessages(false)
             .deleteLogFileDirOnStart(true));
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();

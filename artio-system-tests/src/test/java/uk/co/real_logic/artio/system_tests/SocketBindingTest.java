@@ -144,7 +144,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             assertCannotConnect();
 
@@ -161,7 +161,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             assertConnectable();
         }
@@ -179,7 +179,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             assertConnectable();
         }
@@ -192,7 +192,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
         }
 
@@ -213,7 +213,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler, nanoClock))
         {
             try (FixConnection connection = FixConnection.initiate(port))
             {

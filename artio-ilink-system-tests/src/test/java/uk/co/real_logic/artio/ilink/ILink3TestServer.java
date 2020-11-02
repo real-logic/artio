@@ -38,8 +38,7 @@ import java.nio.channels.SocketChannel;
 import static iLinkBinary.NegotiationResponse501Encoder.credentialsHeaderLength;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
@@ -240,6 +239,8 @@ public class ILink3TestServer
 
         uuid = negotiate.uUID();
         negotiateRequestTimestamp = negotiate.requestTimestamp();
+
+        assertNotEquals(0, uuid);
     }
 
     public long uuid()
@@ -291,7 +292,7 @@ public class ILink3TestServer
         // TradingSystemInfo
 
         final long uuid = establish.uUID();
-        assertEquals(this.uuid, uuid);
+        assertEquals("Incorrect establish uuid", this.uuid, uuid);
 
         establishRequestTimestamp = establish.requestTimestamp();
         assertThat(establishRequestTimestamp, greaterThanOrEqualTo(negotiateRequestTimestamp));

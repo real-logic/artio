@@ -27,9 +27,8 @@ public interface MessageTimingHandler
 {
     /**
      * Called when a message is written to the TCP stack.
-     *
-     * @param sequenceNumber the sequence number of the message being sent.
+     *  @param sequenceNumber the sequence number of the message being sent.
      * @param connectionId the connection id of the connection that the message is sent on.
      */
-    void onMessage(int sequenceNumber, long connectionId);
+    void onMessage(long sequenceNumber, long connectionId);
 }

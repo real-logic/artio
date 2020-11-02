@@ -80,12 +80,12 @@ class EndPointFactory
             errorHandler,
             libraryId,
             gatewaySessions,
-            configuration.clock(),
+            configuration.epochNanoClock(),
             framer.acceptorFixDictionaryLookup(),
             formatters);
     }
 
-    SenderEndPoint senderEndPoint(
+    FixSenderEndPoint senderEndPoint(
         final TcpChannel channel,
         final long connectionId,
         final int libraryId,
@@ -94,7 +94,7 @@ class EndPointFactory
     {
         final String remoteAddress = channel.remoteAddress();
         final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, remoteAddress);
-        return new SenderEndPoint(
+        return new FixSenderEndPoint(
             connectionId,
             libraryId,
             libraryBlockablePosition,

@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,6 +62,7 @@ public class MessageBasedInitiatorSystemTest
 {
     private static final int LOGON_SEQ_NUM = 2;
 
+    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final int fixPort = unusedPort();
@@ -77,9 +80,9 @@ public class MessageBasedInitiatorSystemTest
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        engine = launchInitiatingEngine(libraryAeronPort);
+        engine = launchInitiatingEngine(libraryAeronPort, nanoClock);
         testSystem = new TestSystem();
-        library = testSystem.connect(initiatingLibraryConfig(libraryAeronPort, handler));
+        library = testSystem.connect(initiatingLibraryConfig(libraryAeronPort, handler, nanoClock));
     }
 
     @Test

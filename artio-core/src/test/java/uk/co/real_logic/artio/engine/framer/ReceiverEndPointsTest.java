@@ -20,7 +20,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.function.LongConsumer;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.co.real_logic.artio.engine.framer.ReceiverEndPoints.disconnectILinkConnections;

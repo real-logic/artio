@@ -21,6 +21,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -45,6 +46,7 @@ public class ILinkReplayerSession extends ReplayerSession
     private final AbstractILink3Proxy iLink3Proxy;
     private final AbstractILink3Offsets iLink3Offsets;
     private final ILink3RetransmitHandler iLink3RetransmitHandler;
+    private final EpochNanoClock epochNanoClock;
 
     private boolean mustSendSequenceMessage = false;
 
@@ -72,7 +74,8 @@ public class ILinkReplayerSession extends ReplayerSession
         final AbstractILink3Parser iLink3Parser,
         final AbstractILink3Proxy iLink3Proxy,
         final AbstractILink3Offsets iLink3Offsets,
-        final ILink3RetransmitHandler iLink3RetransmitHandler)
+        final ILink3RetransmitHandler iLink3RetransmitHandler,
+        final EpochNanoClock epochNanoClock)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
@@ -83,6 +86,7 @@ public class ILinkReplayerSession extends ReplayerSession
         this.iLink3Proxy = iLink3Proxy;
         this.iLink3Offsets = iLink3Offsets;
         this.iLink3RetransmitHandler = iLink3RetransmitHandler;
+        this.epochNanoClock = epochNanoClock;
 
         state = State.REPLAYING;
     }
@@ -171,8 +175,10 @@ public class ILinkReplayerSession extends ReplayerSession
             }
 
             // Update connection id in case we're replaying from a previous connection.
-            iLinkMessageEncoder.wrap((MutableDirectBuffer)buffer, encoderOffset);
-            iLinkMessageEncoder.connection(connectionId);
+            iLinkMessageEncoder
+                .wrap((MutableDirectBuffer)buffer, encoderOffset)
+                .connection(connectionId)
+                /*.enqueueTime(epochNanoClock.nanoTime())*/;
 
             return Pressure.apply(publication.offer(buffer, offset, length));
         }

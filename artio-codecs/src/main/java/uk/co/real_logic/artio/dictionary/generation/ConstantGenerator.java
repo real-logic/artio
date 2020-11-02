@@ -28,7 +28,7 @@ import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.addF
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 
-public class ConstantGenerator
+class ConstantGenerator
 {
     static final String CLASS_NAME = "Constants";
 
@@ -39,7 +39,7 @@ public class ConstantGenerator
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public ConstantGenerator(
+    ConstantGenerator(
         final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;

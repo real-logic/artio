@@ -17,6 +17,9 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
@@ -64,6 +67,8 @@ public class AbstractGatewayToGatewaySystemTest
     protected int libraryAeronPort = unusedPort();
     protected ArchivingMediaDriver mediaDriver;
     protected TestSystem testSystem;
+
+    final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
     FixEngine acceptingEngine;
     FixEngine initiatingEngine;
@@ -216,7 +221,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     void connectSessions()
     {
-        connectTimeRange = new TimeRange();
+        connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         completeConnectInitiatingSession(reply);
         connectTimeRange.end();
@@ -339,7 +344,7 @@ public class AbstractGatewayToGatewaySystemTest
     void launchAcceptingEngine()
     {
         acceptingEngine = FixEngine.launch(
-            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock));
     }
 
     void assertSequenceIndicesAre(final int sequenceIndex)
@@ -472,7 +477,7 @@ public class AbstractGatewayToGatewaySystemTest
             .resetSeqNum(resetSeqNum)
             .build();
 
-        connectTimeRange = new TimeRange();
+        connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         testSystem.awaitReply(reply);
         connectTimeRange.end();
@@ -517,11 +522,18 @@ public class AbstractGatewayToGatewaySystemTest
 
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)
     {
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(queryStreamId);
+        return getMessagesFromArchive(configuration, queryStreamIds);
+    }
+
+    List<String> getMessagesFromArchive(final EngineConfiguration configuration, final IntHashSet queryStreamIds)
+    {
         final List<String> messages = new ArrayList<>();
         final FixMessageConsumer fixMessageConsumer =
             (message, buffer, offset, length, header) -> messages.add(message.body());
 
-        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+        final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
             .idleStrategy(CommonConfiguration.backoffIdleStrategy());
 
@@ -529,8 +541,9 @@ public class AbstractGatewayToGatewaySystemTest
         {
             scanner.scan(
                 configuration.libraryAeronChannel(),
-                queryStreamId,
+                queryStreamIds,
                 fixMessageConsumer,
+                null,
                 false,
                 DEFAULT_ARCHIVE_SCANNER_STREAM);
         }

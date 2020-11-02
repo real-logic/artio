@@ -38,7 +38,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-class SenderEndPoint
+class FixSenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
@@ -61,7 +61,7 @@ class SenderEndPoint
     private long sendingTimeoutTimeInMs;
     private boolean replayPaused;
 
-    SenderEndPoint(
+    FixSenderEndPoint(
         final long connectionId,
         final int libraryId,
         final BlockablePosition outboundBlockablePosition,

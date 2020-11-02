@@ -279,17 +279,21 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             it.remove();
 
             final int count = archive.listRecording(recordingId, this);
-            if (count != 1)
+            if (count != 1 || null == libraryExtendPosition)
             {
                 errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
                     " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
+                if (libraryExtendPosition == null)
+                {
+                    return null;
+                }
             }
 
             // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the
             // Engine process with no clean shutdown and a running media driver. In order to hit this scenario you
             // to restart the process rapidly as the media driver will eventually timeout the old process and stop the
             // associated recording.
-            if (libraryExtendPosition.stopPosition == NULL_POSITION)
+            while (libraryExtendPosition.stopPosition == NULL_POSITION)
             {
                 // We don't check the return value here because it returns false if the recording has stopped.
                 // This might happened if a timeout based stop occurs since the call to archive.listRecording.

@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="10"
+                   version="13"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -18,7 +18,7 @@
             <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8"/>
         </composite>
         <composite name="AsciiString">
-            <type name="length" primitiveType="uint16"/>
+            <type name="length" primitiveType="uint32" maxValue="2147483647"/>
             <type name="varData" primitiveType="char" length="0"/>
         </composite>
         <composite name="groupSizeEncoding" description="Repeating group dimensions">
@@ -522,6 +522,7 @@
     <sbe:message name="ILinkMessage" id="58" description="ILink3 Message Header"
                  sinceVersion="8">
         <field name="connection" id="1" type="ConnectionId"/>
+        <field name="enqueueTime" id="2" type="Timestamp" sinceVersion="12"/>
     </sbe:message>
 
     <!-- Messages From either Library or Engine outbound -->
@@ -540,6 +541,11 @@
         <field name="endSequenceNumber" id="4" type="uint32"/>
         <field name="SequenceIndex" id="5" type="int32"/>
         <data name="body" id="6" type="AsciiString"/>
+    </sbe:message>
+
+    <!-- Replay Stream Only messages -->
+    <sbe:message name="ReplayerTimestamp" id="61" description="" sinceVersion="13">
+        <field name="timestamp" id="0" type="Timestamp"/>
     </sbe:message>
 
 </sbe:messageSchema>

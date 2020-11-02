@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.IoUtil;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matcher;
@@ -205,24 +206,25 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    static FixEngine launchInitiatingEngine(final int libraryAeronPort)
+    static FixEngine launchInitiatingEngine(final int libraryAeronPort, final EpochNanoClock nanoClock)
     {
-        return launchInitiatingEngine(libraryAeronPort, true);
+        return launchInitiatingEngine(libraryAeronPort, true, nanoClock);
     }
 
-    static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
+    static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort, final EpochNanoClock nanoClock)
     {
-        return launchInitiatingEngine(libraryAeronPort, false);
+        return launchInitiatingEngine(libraryAeronPort, false, nanoClock);
     }
 
-    static FixEngine launchInitiatingEngine(final int libraryAeronPort, final boolean deleteDirOnStart)
+    static FixEngine launchInitiatingEngine(
+        final int libraryAeronPort, final boolean deleteDirOnStart, final EpochNanoClock nanoClock)
     {
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(deleteDirOnStart);
         return FixEngine.launch(initiatingConfig);
     }
 
-    static EngineConfiguration initiatingConfig(final int libraryAeronPort)
+    static EngineConfiguration initiatingConfig(final int libraryAeronPort, final EpochNanoClock nanoClock)
     {
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
@@ -230,6 +232,7 @@ public final class SystemTestUtil
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+        configuration.epochNanoClock(nanoClock);
         configuration.agentNamePrefix("init-");
 
         return configuration;
@@ -247,19 +250,22 @@ public final class SystemTestUtil
     static EngineConfiguration acceptingConfig(
         final int port,
         final String acceptorId,
-        final String initiatorId)
+        final String initiatorId,
+        final EpochNanoClock nanoClock)
     {
-        return acceptingConfig(port, acceptorId, initiatorId, ACCEPTOR_LOGS);
+        return acceptingConfig(port, acceptorId, initiatorId, ACCEPTOR_LOGS, nanoClock);
     }
 
     static EngineConfiguration acceptingConfig(
         final int port,
         final String acceptorId,
         final String initiatorId,
-        final String acceptorLogs)
+        final String acceptorLogs,
+        final EpochNanoClock nanoClock)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
-        final MessageValidationStrategy validationStrategy = setupCommonConfig(acceptorId, initiatorId, configuration);
+        final MessageValidationStrategy validationStrategy = setupCommonConfig(
+            acceptorId, initiatorId, nanoClock, configuration);
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
         configuration.authenticationStrategy(authenticationStrategy);
 
@@ -278,10 +284,10 @@ public final class SystemTestUtil
     }
 
     static LibraryConfiguration acceptingLibraryConfig(
-        final FakeHandler sessionHandler)
+        final FakeHandler sessionHandler, final EpochNanoClock nanoClock)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, libraryConfiguration);
+        setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, nanoClock, libraryConfiguration);
 
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
@@ -294,13 +300,17 @@ public final class SystemTestUtil
     }
 
     static MessageValidationStrategy setupCommonConfig(
-        final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
+        final String acceptorId,
+        final String initiatorId,
+        final EpochNanoClock nanoClock,
+        final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId, INITIATOR_ID2)));
 
         configuration
-            .messageValidationStrategy(validationStrategy);
+            .messageValidationStrategy(validationStrategy)
+            .epochNanoClock(nanoClock);
 
         return validationStrategy;
     }
@@ -351,19 +361,23 @@ public final class SystemTestUtil
         return session;
     }
 
-    static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
+    static FixLibrary newInitiatingLibrary(
+        final int libraryAeronPort, final FakeHandler sessionHandler, final EpochNanoClock nanoClock)
     {
-        return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
+        return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler, nanoClock));
     }
 
-    static LibraryConfiguration initiatingLibraryConfig(final int libraryAeronPort, final FakeHandler sessionHandler)
+    static LibraryConfiguration initiatingLibraryConfig(
+        final int libraryAeronPort, final FakeHandler sessionHandler, final EpochNanoClock nanoClock)
     {
-        return new LibraryConfiguration()
+        final LibraryConfiguration config = new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
             .libraryName("initiating")
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+        config.epochNanoClock(nanoClock);
+        return config;
     }
 
     public static FixLibrary connect(final LibraryConfiguration configuration)
@@ -383,9 +397,9 @@ public final class SystemTestUtil
         return library;
     }
 
-    static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
+    static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler, final EpochNanoClock nanoClock)
     {
-        return connect(acceptingLibraryConfig(sessionHandler));
+        return connect(acceptingLibraryConfig(sessionHandler, nanoClock));
     }
 
     static void assertConnected(final Session session)

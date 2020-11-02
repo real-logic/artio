@@ -36,6 +36,7 @@ import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.system_tests.Backup;
+import uk.co.real_logic.artio.system_tests.MessageTimingCaptor;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.function.LongSupplier;
 
+import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -51,6 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -84,6 +87,7 @@ public class ILink3SystemTest
     private ILink3Connection connection;
     private final ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
     private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
+    private final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
 
     private boolean noExpectedError;
 
@@ -107,7 +111,8 @@ public class ILink3SystemTest
             .lookupDefaultAcceptorfixDictionary(false)
             .customErrorConsumer(errorConsumer)
             .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
-            .iLink3RetransmitHandler(retransmitHandler);
+            .iLink3RetransmitHandler(retransmitHandler)
+            .messageTimingHandler(messageTimingCaptor);
 
         engine = FixEngine.launch(engineConfig);
 
@@ -159,11 +164,7 @@ public class ILink3SystemTest
     {
         shouldEstablishConnectionAtBeginningOfWeek();
 
-        testServer.writeTerminate();
-
-        testSystem.awaitUnbind(connection);
-
-        testServer.readTerminate();
+        terminateFromServer();
 
         assertDisconnected();
     }
@@ -205,6 +206,8 @@ public class ILink3SystemTest
         assertEquals(messageIds.getInt(0), ER_STATUS_ID);
 
         terminateAndDisconnect();
+
+        messageTimingCaptor.verifyConsecutiveSequenceNumbers(1);
     }
 
     @Test
@@ -278,6 +281,11 @@ public class ILink3SystemTest
     {
         launch(true);
 
+        assertErrorConnectingToNonExistantServer();
+    }
+
+    private void assertErrorConnectingToNonExistantServer()
+    {
         reply = library.initiate(connectionConfiguration().build());
         assertConnectError(containsString("UNABLE_TO_CONNECT"));
     }
@@ -315,12 +323,41 @@ public class ILink3SystemTest
     }
 
     @Test
+    public void shouldAllowReconnectAfterNegotiateDisconnect() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        readNegotiate();
+
+        assertConnectError(containsString(""));
+
+        // Print an error if it occurs
+        testSystem.addOperation(() ->
+        {
+            if (reply != null && reply.hasErrored())
+            {
+                throw (RuntimeException)reply.error();
+            }
+        });
+
+        establishNewConnection();
+    }
+
+    @Test
     public void shouldSupportNegotiationReject() throws IOException
     {
         launch(true);
 
         connectToTestServer(connectionConfiguration());
 
+        rejectNegotiate();
+    }
+
+    private void rejectNegotiate()
+    {
         readNegotiate();
 
         testServer.writeNegotiateReject();
@@ -362,6 +399,37 @@ public class ILink3SystemTest
     }
 
     @Test
+    public void shouldSupportReestablishingConnectionsAfterNegotiateReject() throws IOException
+    {
+        // Reject Negotiate
+        launch(true);
+        connectToTestServer(connectionConfiguration());
+        rejectNegotiate();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        establishConnection();
+
+        acquireSession();
+    }
+
+    @Test
+    public void shouldSupportReestablishingConnectionsAfterNegotiateTimeout() throws IOException
+    {
+        launch(true);
+        connectToTestServer(connectionConfiguration());
+        readNegotiate();
+        readNegotiate();
+        assertConnectError(containsString(""));
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        establishConnection();
+
+        acquireSession();
+    }
+
+    @Test
     public void shouldSupportReestablishingConnectionsAfterRestart() throws IOException
     {
         shouldExchangeBusinessMessage();
@@ -381,6 +449,7 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(1, lastUuid, 2);
 
         acquireSession();
+        assertEquals(connection.lastUuid(), lastUuid);
     }
 
     @Test
@@ -765,6 +834,7 @@ public class ILink3SystemTest
         // Initiator missed receiving message 1
         testServer.writeEstablishmentAck(1, lastUuid, 2);
         acquireSession();
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(1, 1);
@@ -800,6 +870,66 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(1, lastUuid, 1);
         acquireSession();
         assertRecvSeqNo(1);
+        assertEquals(lastUuid, connection.lastUuid());
+
+        // retransmit message 1
+        testServer.acceptRetransRequest(lastUuid, 1, 1);
+        testServer.writeExecutionReportStatus(lastUuid, 1, true);
+
+        testServer.writeExecutionReportStatus(1, false);
+        testServer.writeExecutionReportStatus(2, false);
+
+        agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+        assertEquals(ILink3Connection.State.ESTABLISHED, connection.state());
+
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.readSequence(2, Lapsed);
+
+        assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID, ER_STATUS_ID));
+
+        terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledgedInitialConnect() throws IOException
+    {
+        // First connect case - fails to connect, then next connect should show last uuid = 0
+        launch(true);
+
+        assertErrorConnectingToNonExistantServer();
+
+        establishNewConnection();
+
+        assertEquals(0, connection.lastUuid());
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledged() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastUuid = connection.uuid();
+
+        assertErrorConnectingToNonExistantServer();
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish(1);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo(1);
+
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 1, 1);
@@ -812,6 +942,35 @@ public class ILink3SystemTest
         assertThat(handler.messageIds(), contains(ER_STATUS_ID, ER_STATUS_ID));
 
         terminateAndDisconnect();
+    }
+
+    @Test
+    public void shouldOnlyPersistLastUuidWhenAcknowledgedReconnect() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        terminateAndDisconnect();
+        // nextSent=2,nextRecv=1
+
+        final long lastLastUuid = connection.lastUuid();
+        final long lastUuid = connection.uuid();
+
+        assertErrorConnectingToNonExistantServer();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        testServer.expectedUuid(lastUuid);
+        readEstablish(2);
+        // Initiator missed receiving message 1
+        testServer.writeEstablishmentAck(1, lastUuid, 1);
+        acquireSession();
+        assertRecvSeqNo(2);
+
+        assertEquals(lastUuid, connection.lastUuid());
+        assertEquals(lastUuid, connection.uuid());
+
+        testServer.acceptRetransRequest(1, 1);
     }
 
     @Test
@@ -838,6 +997,7 @@ public class ILink3SystemTest
         testServer.writeEstablishmentAck(2, lastUuid, 1);
         acquireSession();
         assertRecvSeqNo(1);
+        assertEquals(lastUuid, connection.lastUuid());
 
         // retransmit message 1
         testServer.acceptRetransRequest(lastUuid, 2, 1);
@@ -1051,6 +1211,25 @@ public class ILink3SystemTest
         terminateAndDisconnect();
     }
 
+    @Test
+    public void shouldNotifyReplyWithErrorOnPreEstablishTermination() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
+
+        testServer.writeTerminate();
+        testServer.readTerminate();
+
+        assertConnectError(containsString("Connection Terminated"));
+    }
+
+
     private void establishNewConnection() throws IOException
     {
         connectToTestServer(connectionConfiguration());
@@ -1077,6 +1256,7 @@ public class ILink3SystemTest
         testSystem.awaitCompletedReplies(reply);
         connection = reply.resultIfPresent();
         assertNotNull(connection);
+        assertNotEquals(0, connection.uuid());
     }
 
     private void writeExecutionReports(final int fromSeqNo, final int msgCount)
@@ -1241,5 +1421,14 @@ public class ILink3SystemTest
         testServer.writeTerminate();
         testSystem.awaitUnbind(connection);
         assertDisconnected();
+    }
+
+    private void terminateFromServer()
+    {
+        testServer.writeTerminate();
+
+        testSystem.awaitUnbind(connection);
+
+        testServer.readTerminate();
     }
 }

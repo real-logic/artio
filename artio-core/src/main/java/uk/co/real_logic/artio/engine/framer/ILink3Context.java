@@ -19,16 +19,31 @@ final class ILink3Context
 {
     private final int offset;
 
+    // holds the last uuid whilst we're connecting but before we're sure that we've connected
+    private long connectLastUuid;
+    private long connectUuid;
+
+    private final ILink3Contexts iLink3Contexts;
     private long uuid;
     private long lastUuid;
     private boolean newlyAllocated;
     private boolean primaryConnected;
     private boolean backupConnected;
 
-    ILink3Context(final long uuid, final long lastUuid, final boolean newlyAllocated, final int offset)
+    ILink3Context(
+        final ILink3Contexts iLink3Contexts,
+        final long uuid,
+        final long lastUuid,
+        final long connectUuid,
+        final long connectLastUuid,
+        final boolean newlyAllocated,
+        final int offset)
     {
+        this.iLink3Contexts = iLink3Contexts;
         this.uuid = uuid;
         this.lastUuid = lastUuid;
+        this.connectLastUuid = connectLastUuid;
+        this.connectUuid = connectUuid;
         this.newlyAllocated = newlyAllocated;
         this.offset = offset;
     }
@@ -86,5 +101,52 @@ final class ILink3Context
     public int offset()
     {
         return offset;
+    }
+
+    public void confirmUuid()
+    {
+        uuid = connectUuid;
+        lastUuid = connectLastUuid;
+
+        if (lastUuid == 0)
+        {
+            iLink3Contexts.saveNewUuid(this);
+        }
+        else
+        {
+            iLink3Contexts.updateUuid(this);
+        }
+    }
+
+    public void connectLastUuid(final long uuid)
+    {
+        this.connectLastUuid = uuid;
+    }
+
+    public long connectLastUuid()
+    {
+        return connectLastUuid;
+    }
+
+    public void connectUuid(final long newUuid)
+    {
+        connectUuid = newUuid;
+    }
+
+    public long connectUuid()
+    {
+        return connectUuid;
+    }
+
+    public String toString()
+    {
+        return "ILink3Context{connectLastUuid=" + connectLastUuid +
+            ", connectUuid=" + connectUuid +
+            ", uuid=" + uuid +
+            ", lastUuid=" + lastUuid +
+            ", newlyAllocated=" + newlyAllocated +
+            ", primaryConnected=" + primaryConnected +
+            ", backupConnected=" + backupConnected +
+            '}';
     }
 }

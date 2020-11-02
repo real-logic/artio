@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
@@ -148,7 +148,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
     private final GatewaySessions gatewaySessions;
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
@@ -177,7 +177,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final ErrorHandler errorHandler,
         final int libraryId,
         final GatewaySessions gatewaySessions,
-        final Clock clock,
+        final EpochNanoClock clock,
         final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
         final FixReceiverEndPointFormatters formatters)
     {
@@ -231,7 +231,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         try
         {
-            final long latestReadTimestamp = clock.time();
+            final long latestReadTimestamp = clock.nanoTime();
             final int bytesRead = readData();
             if (frameMessages(bytesRead == 0 ? lastReadTimestamp : latestReadTimestamp))
             {

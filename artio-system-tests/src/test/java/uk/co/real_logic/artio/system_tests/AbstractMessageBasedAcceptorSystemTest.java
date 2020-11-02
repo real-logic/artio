@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -35,6 +37,8 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUE
 public class AbstractMessageBasedAcceptorSystemTest
 {
     int port = unusedPort();
+
+    final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
     ArchivingMediaDriver mediaDriver;
     FixEngine engine;

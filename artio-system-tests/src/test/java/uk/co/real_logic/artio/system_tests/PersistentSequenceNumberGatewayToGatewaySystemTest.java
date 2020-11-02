@@ -528,14 +528,14 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             TestFixtures.TERM_BUFFER_LENGTH,
             dirsDeleteOnStart));
 
-        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         config.sessionPersistenceStrategy(alwaysPersistent());
         if (!printErrorMessages)
         {
             config.customErrorConsumer(errorCounter);
         }
         acceptingEngine = FixEngine.launch(config);
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         if (!printErrorMessages)
         {
             initiatingConfig.customErrorConsumer(errorCounter);
@@ -545,9 +545,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
 
-        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler).scheduler(libraryScheduler));
+        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler, nanoClock).scheduler(libraryScheduler));
 
-        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler)
+        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock)
             .scheduler(libraryScheduler));
 
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);

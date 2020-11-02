@@ -109,4 +109,14 @@ public class SessionWriter
     {
         return publication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
+
+    /**
+     * Gets the the id the session that this is a writer for.
+     *
+     * @return the id the session that this is a writer for.
+     */
+    public long id()
+    {
+        return id;
+    }
 }

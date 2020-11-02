@@ -44,19 +44,19 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     {
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true)
             .initialAcceptedSessionOwner(SOLE_LIBRARY);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(true);
         initiatingConfig.initialAcceptedSessionOwner(SOLE_LIBRARY);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler));
+        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock));
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 

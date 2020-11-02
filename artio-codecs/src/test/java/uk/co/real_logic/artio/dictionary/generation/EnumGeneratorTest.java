@@ -19,26 +19,23 @@ import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 
 import java.lang.reflect.Method;
 import java.util.Map;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.hasKey;
-
-import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
-
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.CODEC_LOGGING;
+import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public class EnumGeneratorTest
 {
@@ -46,14 +43,20 @@ public class EnumGeneratorTest
     private static Class<?> egEnumClass;
     private static Class<?> otherEnumClass;
     private static Class<?> stringEnumClass;
+    private static Class<?> currencyEnumClass;
 
     @BeforeClass
     public static void generate() throws Exception
     {
         sources = generateEnums();
+        if (CODEC_LOGGING)
+        {
+            System.err.println(sources);
+        }
         egEnumClass = compileEgEnum(sources);
         otherEnumClass = compile(OTHER_ENUM, sources);
         stringEnumClass = compile(STRING_ENUM, sources);
+        currencyEnumClass = compile(CURRENCY_ENUM, sources);
     }
 
     @Test
@@ -61,6 +64,8 @@ public class EnumGeneratorTest
     {
         assertNotNull("Failed to generate a class", egEnumClass);
         assertTrue("Generated class isn't an enum", egEnumClass.isEnum());
+
+        assertNotNull(currencyEnumClass);
     }
 
     @Test
@@ -192,7 +197,7 @@ public class EnumGeneratorTest
     private static Map<String, CharSequence> generateEnums()
     {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
-        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager);
+        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, DEFAULT_PARENT_PACKAGE, outputManager);
         enumGenerator.generate();
         return outputManager.getSources();
     }

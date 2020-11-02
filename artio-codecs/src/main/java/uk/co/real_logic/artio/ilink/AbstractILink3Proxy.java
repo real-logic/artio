@@ -17,18 +17,20 @@ package uk.co.real_logic.artio.ilink;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochNanoClock;
 
 import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractILink3Proxy
 {
     public static AbstractILink3Proxy make(
-        final ExclusivePublication publication, final ErrorHandler errorHandler)
+        final ExclusivePublication publication, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy)cls.getConstructors()[0].newInstance(0, publication, null);
+            return (AbstractILink3Proxy)cls.getConstructors()[0].newInstance(
+                0, publication, null, epochNanoClock);
         }
         catch (final ClassNotFoundException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)

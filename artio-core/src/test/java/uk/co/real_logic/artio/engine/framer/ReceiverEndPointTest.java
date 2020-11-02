@@ -18,13 +18,13 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -81,7 +81,7 @@ public class ReceiverEndPointTest
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
     private FixReceiverEndPoint endPoint;
-    private final Clock mockClock = mock(Clock.class);
+    private final EpochNanoClock mockClock = mock(EpochNanoClock.class);
 
     private AcceptorLogonResult createSuccessfulPendingAuth()
     {
@@ -116,7 +116,7 @@ public class ReceiverEndPointTest
                 return null;
             }).when(framer).schedule(any(Continuation.class));
 
-        when(mockClock.time()).thenReturn(TIMESTAMP);
+        when(mockClock.nanoTime()).thenReturn(TIMESTAMP);
     }
 
     private void givenLogonResult(final AcceptorLogonResult logonResult)

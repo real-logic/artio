@@ -26,6 +26,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
@@ -132,7 +133,8 @@ public class ReplayerTest extends AbstractLogTest
             mock(ReplayerCommandQueue.class),
             EpochFractionFormat.MILLISECONDS,
             currentReplayCounter,
-            DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS);
+            DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
+            new OffsetEpochNanoClock());
     }
 
     private void setReplayedMessages(final int replayedMessages)

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -25,6 +26,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
@@ -44,9 +46,10 @@ public final class FixArchivePrinter
         new FixArchivePrinter().scan(args);
     }
 
+    private final IntHashSet queryStreamIds = new IntHashSet();
     private String aeronDirectoryName = null;
     private String aeronChannel = null;
-    private int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+    private int inboundStreamId = DEFAULT_INBOUND_LIBRARY_STREAM;
     private int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
@@ -58,7 +61,7 @@ public final class FixArchivePrinter
     {
         parseArgs(args);
         validateArgs();
-        scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
+        scanArchive(aeronDirectoryName, aeronChannel, queryStreamIds, predicate, follow, headerPredicate,
             archiveScannerStreamId, fixDictionaryType);
     }
 
@@ -131,7 +134,7 @@ public final class FixArchivePrinter
                     break;
 
                 case "query-stream-id":
-                    queryStreamId = Integer.parseInt(optionValue);
+                    queryStreamIds.add(Integer.parseInt(optionValue));
                     break;
 
                 case "archive-scanner-stream-id":
@@ -160,6 +163,11 @@ public final class FixArchivePrinter
             fixDictionaryType = FixDictionary.findDefault();
         }
 
+        if (queryStreamIds.isEmpty())
+        {
+            queryStreamIds.add(DEFAULT_OUTBOUND_LIBRARY_STREAM);
+        }
+
         requiredArgument(aeronDirectoryName, "aeron-dir-name");
         requiredArgument(aeronChannel, "aeron-channel");
     }
@@ -177,7 +185,7 @@ public final class FixArchivePrinter
     private static void scanArchive(
         final String aeronDirectoryName,
         final String aeronChannel,
-        final int queryStreamId,
+        final IntHashSet queryStreamIds,
         final FixMessagePredicate otherPredicate,
         final boolean follow,
         final Predicate<SessionHeaderDecoder> headerPredicate,
@@ -191,17 +199,17 @@ public final class FixArchivePrinter
             predicate = whereHeader(fixDictionary, headerPredicate).and(predicate);
         }
 
-        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+        final FixArchiveScanner.Configuration configuration = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(aeronDirectoryName)
             .idleStrategy(CommonConfiguration.backoffIdleStrategy());
 
-        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
+        try (FixArchiveScanner scanner = new FixArchiveScanner(configuration))
         {
             scanner.scan(
                 aeronChannel,
-                queryStreamId,
+                queryStreamIds,
                 filterBy(FixArchivePrinter::print, predicate),
-                new LazyILinkMessagePrinter(queryStreamId),
+                new LazyILinkMessagePrinter(DEFAULT_INBOUND_LIBRARY_STREAM),
                 follow,
                 archiveScannerStreamId);
         }
@@ -280,8 +288,8 @@ public final class FixArchivePrinter
         printOption(
             "query-stream-id",
             "Only print messages where the query-stream-id matches this." +
-            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream()" +
-            " Defaults to sent.",
+            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream().  " +
+            "Defaults to outbound. Can be used twice in order to print both inbound and outbound streams.",
             false);
         printOption(
             "follow",

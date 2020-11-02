@@ -24,7 +24,6 @@ import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.*;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
@@ -51,7 +50,7 @@ public class EngineContext implements AutoCloseable
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
 
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final EngineConfiguration configuration;
     private final ErrorHandler errorHandler;
     private final FixCounters fixCounters;
@@ -88,7 +87,7 @@ public class EngineContext implements AutoCloseable
         this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.clock = configuration.clock();
+        this.clock = configuration.epochNanoClock();
         this.replayPublication = replayPublication;
         this.aeronArchive = aeronArchive;
         this.recordingCoordinator = recordingCoordinator;
@@ -223,7 +222,8 @@ public class EngineContext implements AutoCloseable
             replayerCommandQueue,
             epochFractionFormat,
             fixCounters.currentReplayCount(),
-            configuration.maxConcurrentSessionReplays());
+            configuration.maxConcurrentSessionReplays(),
+            configuration.epochNanoClock());
     }
 
     private void newIndexers()

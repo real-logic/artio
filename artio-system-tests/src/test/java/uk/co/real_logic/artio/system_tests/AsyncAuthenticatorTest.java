@@ -52,18 +52,18 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         // FixMessageLogger.main(new String[]{});
 
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.printErrorMessages(false);
         acceptingConfig.authenticationStrategy(auth);
         acceptingConfig.authenticationTimeoutInMs(AUTHENTICATION_TIMEOUT_IN_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 

@@ -19,8 +19,8 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -88,7 +88,7 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
-    private final Clock clock;
+    private final EpochNanoClock clock;
     private final EpochFractionFormat epochFractionPrecision;
     private final UtcTimestampEncoder sendingTimeEncoder;
 
@@ -128,7 +128,7 @@ class GatewaySessions
         this.logAllMessages = configuration.logAllMessages();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.validateTimeStrictly = configuration.validateTimeStrictly();
-        this.clock = configuration.clock();
+        this.clock = configuration.epochNanoClock();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
@@ -688,7 +688,7 @@ class GatewaySessions
 
             final boolean isOfflineReconnect = framer.onLogonMessageReceived(session, sessionContext.sessionId());
 
-            final long logonTime = clock.time();
+            final long logonTime = clock.nanoTime();
             sessionContext.onLogon(resetSeqNum, logonTime, fixDictionary);
             session.initialResetSeqNum(resetSeqNum);
             session.fixDictionary(fixDictionary);

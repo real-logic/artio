@@ -39,7 +39,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-
     @Before
     public void launch()
     {
@@ -47,10 +46,10 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
         newAcceptingEngine(true);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
         newAcceptingLibrary();
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
@@ -58,12 +57,12 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
     private void newAcceptingLibrary()
     {
-        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler));
+        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
     }
 
     private void newAcceptingEngine(final boolean deleteLogFileDirOnStart)
     {
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
         acceptingConfig.printErrorMessages(true);
         acceptingEngine = FixEngine.launch(acceptingConfig);

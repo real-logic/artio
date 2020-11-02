@@ -46,16 +46,16 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     {
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true);
         acceptingConfig.printErrorMessages(false);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();

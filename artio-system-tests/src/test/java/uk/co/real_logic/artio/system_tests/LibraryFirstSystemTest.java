@@ -43,7 +43,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         waitLessThanReplyTimeout();
 
         launchAcceptingEngine();
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
 
         acceptingLibrary = acceptingLibraryFuture.get();
         initiatingLibrary = initiatingLibraryFuture.get();
@@ -80,11 +80,12 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
     private Future<FixLibrary> newInitiatingLibrary()
     {
-        return threadPool.submit(() -> SystemTestUtil.newInitiatingLibrary(libraryAeronPort, initiatingHandler));
+        return threadPool.submit(() -> SystemTestUtil.newInitiatingLibrary(
+            libraryAeronPort, initiatingHandler, nanoClock));
     }
 
     private Future<FixLibrary> newAcceptingLibrary()
     {
-        return threadPool.submit(() -> SystemTestUtil.newAcceptingLibrary(acceptingHandler));
+        return threadPool.submit(() -> SystemTestUtil.newAcceptingLibrary(acceptingHandler, nanoClock));
     }
 }

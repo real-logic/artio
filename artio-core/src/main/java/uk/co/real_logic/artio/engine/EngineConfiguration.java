@@ -24,7 +24,6 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.errors.ErrorConsumer;
-import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
@@ -1110,15 +1109,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
     {
         super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration clock(final Clock clock)
-    {
-        super.clock(clock);
         return this;
     }
 

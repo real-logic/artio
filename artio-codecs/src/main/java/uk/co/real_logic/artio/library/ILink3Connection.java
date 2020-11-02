@@ -193,6 +193,13 @@ public abstract class ILink3Connection
     public abstract long uuid();
 
     /**
+     * Gets the UUID of the last success connection for this session.
+     *
+     * @return the UUID of the last success connection for this session.
+     */
+    public abstract long lastUuid();
+
+    /**
      * Gets the Artio connectionId of the current connection for this session.
      *
      * @return the Artio connectionId of the current connection for this session.
@@ -241,6 +248,14 @@ public abstract class ILink3Connection
      * @return the next received sequence number that will fill the current retransmit request.
      */
     public abstract long retransmitFillSeqNo();
+
+    /**
+     * Gets the next sequence number that Artio expects to received in the current retransmit request. If there is no
+     * retransmit operation in process NOT_AWAITING_RETRANSMIT will be returned.
+     *
+     * @return the next sequence number that Artio expects to received in the current retransmit request.
+     */
+    public abstract long nextRetransmitSeqNo();
 
     /**
      * Check if a message can be sent. This is when you're in the ESTABLISHED or AWAITING_KEEPALIVE state.
