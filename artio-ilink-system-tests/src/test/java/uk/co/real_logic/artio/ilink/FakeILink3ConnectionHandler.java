@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.OrderMassActionReport562Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.library.ILink3Connection;
@@ -23,6 +24,9 @@ import uk.co.real_logic.artio.library.NotAppliedResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.ilink.ILink3TestServer.NO_AFFECTED_ORDERS_COUNT;
 
 public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
 {
@@ -43,7 +47,8 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onBusinessMessage(
-        final ILink3Connection connection, final int templateId,
+        final ILink3Connection connection,
+        final int templateId,
         final DirectBuffer buffer,
         final int offset,
         final int blockLength,
@@ -51,6 +56,13 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         final boolean possRetrans)
     {
         messageIds.add(templateId);
+
+        if (templateId == OrderMassActionReport562Decoder.TEMPLATE_ID)
+        {
+            final OrderMassActionReport562Decoder decoder = new OrderMassActionReport562Decoder();
+            decoder.wrap(buffer, offset, blockLength, version);
+            assertEquals(NO_AFFECTED_ORDERS_COUNT, decoder.noAffectedOrders().count());
+        }
     }
 
     public void onNotApplied(

@@ -47,8 +47,7 @@ import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.clientSeqNum;
+import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.*;
 import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
@@ -1177,7 +1176,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (state == State.ESTABLISHED)
         {
-            final long seqNum = offsets.seqNum(templateId, buffer, offset);
+            final long seqNum = exchangeSeqNum(buffer, offset);
             if (seqNum == MISSING_OFFSET)
             {
                 return 1;
