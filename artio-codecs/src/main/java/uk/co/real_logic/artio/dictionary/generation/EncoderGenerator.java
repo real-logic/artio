@@ -269,7 +269,7 @@ class EncoderGenerator extends Generator
             interfaces = emptyList();
         }
         out.append(classDeclaration(className, interfaces, type == GROUP));
-        out.append(constructor(aggregate, type, dictionary));
+        out.append(constructor(className, aggregate, type, dictionary));
         if (isMessage)
         {
             out.append(commonCompoundImports("Encoder", false, ""));
@@ -336,7 +336,8 @@ class EncoderGenerator extends Generator
         );
     }
 
-    private String constructor(final Aggregate aggregate, final AggregateType type, final Dictionary dictionary)
+    private String constructor(
+        final String className, final Aggregate aggregate, final AggregateType type, final Dictionary dictionary)
     {
         if (type == AggregateType.MESSAGE)
         {
@@ -352,22 +353,22 @@ class EncoderGenerator extends Generator
                 "    {\n" +
                 "        return %sL;\n" +
                 "    }\n\n" +
-                "    public %sEncoder()\n" +
+                "    public %s()\n" +
                 "    {\n" +
                 "%s" +
                 "    }\n\n",
                 packedType,
-                aggregate.name(),
+                className,
                 msgType);
         }
         else if (type == AggregateType.HEADER)
         {
             return String.format(
-                "    public %sEncoder()\n" +
+                "    public %s()\n" +
                 "    {\n" +
                 "        beginString(DEFAULT_BEGIN_STRING);\n" +
                 "    }\n\n",
-                aggregate.name());
+                className);
         }
         else
         {

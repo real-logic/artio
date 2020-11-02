@@ -44,6 +44,7 @@ public final class ExampleDictionary
     public static final String EG_COMPONENT = "EgComponent";
     public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
+    public static final String LOWERCASE_MESSAGE = "lowerCaseMessage";
 
     public static final String EG_ENUM = DEFAULT_PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = DEFAULT_PARENT_PACKAGE + "." + "OtherEnum";
@@ -612,6 +613,9 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(groupForAdmin);
         fieldsMessage.optionalEntry(nestedComponent);
 
+        final Message lowerCaseMessage = new Message(LOWERCASE_MESSAGE, "LC", ADMIN);
+        lowerCaseMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));
+
         final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
         enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
             .addValue("a", "A")
@@ -647,8 +651,8 @@ public final class ExampleDictionary
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 707, CURRENCY_ENUM_RF, CURRENCY)
             .addValue("USD", "US_Dollar").addValue("GBP", "Pound"));
 
-        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, allReqFieldTypesMessage,
-            enumTestMessage);
+        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, lowerCaseMessage,
+            allReqFieldTypesMessage, enumTestMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
