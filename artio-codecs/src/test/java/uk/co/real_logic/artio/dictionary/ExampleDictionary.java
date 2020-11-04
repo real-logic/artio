@@ -48,7 +48,7 @@ public final class ExampleDictionary
 
     public static final String EG_ENUM = DEFAULT_PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = DEFAULT_PARENT_PACKAGE + "." + "OtherEnum";
-    public static final String STRING_ENUM = DEFAULT_PARENT_PACKAGE + "." + "stringEnum";
+    public static final String STRING_ENUM = DEFAULT_PARENT_PACKAGE + "." + "StringEnum";
     public static final String CURRENCY_ENUM = DEFAULT_PARENT_PACKAGE + "." + "CurrencyEnum";
 
     public static final String TEST_PARENT_PACKAGE = DEFAULT_PARENT_PACKAGE;
@@ -623,7 +623,7 @@ public final class ExampleDictionary
         enumTestMessage.optionalEntry(registerField(messageEgFields, 502, "IntEnumOpt", INT)
             .addValue("10", "TEN")
             .addValue("20", "TWENTY"));
-        enumTestMessage.optionalEntry(registerField(messageEgFields, 503, "StringEnumOpt", STRING)
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 503, "stringEnumOpt", STRING)
             .addValue("alpha", "ALPHA")
             .addValue("beta", "BETA"));
         enumTestMessage.requiredEntry(registerField(messageEgFields, 511, "CharEnumReq", CHAR)

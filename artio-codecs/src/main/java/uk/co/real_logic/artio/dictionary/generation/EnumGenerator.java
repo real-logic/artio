@@ -38,6 +38,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 
 final class EnumGenerator
 {
@@ -54,6 +55,11 @@ final class EnumGenerator
     private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
+
+    static String enumName(final String name)
+    {
+        return formatClassName(name);
+    }
 
     EnumGenerator(
         final Dictionary dictionary,
@@ -82,7 +88,7 @@ final class EnumGenerator
 
     private void generateEnum(final Field field)
     {
-        final String enumName = field.name();
+        final String enumName = enumName(field.name());
         final Type type = field.type();
         final List<Value> values = field.values();
         final String nullValue;
