@@ -40,6 +40,7 @@ import static java.util.Collections.*;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.enumName;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
@@ -502,7 +503,7 @@ class EncoderGenerator extends Generator
         final String hasAssign = String.format("        has%s = true;\n", name);
 
         final String enumSetter = hasEnumGenerated(field) && !field.type().isMultiValue() ?
-            enumSetter(className, fieldName, field.name()) : "";
+            enumSetter(className, fieldName, enumName(field.name())) : "";
 
         final Function<String, String> generateSetter =
             (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter);

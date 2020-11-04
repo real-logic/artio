@@ -38,6 +38,7 @@ import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EncoderGenerator.encoderClassName;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.enumName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.DECODER_OPTIONAL_SESSION_FIELDS;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -539,7 +540,7 @@ class DecoderGenerator extends Generator
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
             "            return false;\n" +
             "        }\n",
-            name,
+            enumName(name),
             propertyName,
             tagNumber,
             isPrimitive ? "()" : "Wrapper");
@@ -1032,16 +1033,16 @@ class DecoderGenerator extends Generator
             (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
             "%1$s.decode(%2$s())" :
             "%1$s.decode(%2$s)",
-            name,
+            enumName(name),
             fieldName);
         final String enumStringBasedWrapperField =
             String.format("    private final CharArrayWrapper %1$sWrapper = new CharArrayWrapper();\n", fieldName);
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
             String.format(
             "%4$s" +
-            "    public %1$s %2$sAsEnum()\n" +
+            "    public %6$s %2$sAsEnum()\n" +
             "    {\n" +
-            (!entry.required() ? "        if (!has%1$s)\n return %1$s.%5$s;\n" : "") +
+            (!entry.required() ? "        if (!has%1$s)\n return %6$s.%5$s;\n" : "") +
             (type.isStringBased() ? "        %2$sWrapper.wrap(%2$s(), %2$sLength);\n" : "") +
             "        return %3$s;\n" +
             "    }\n\n",
@@ -1049,7 +1050,8 @@ class DecoderGenerator extends Generator
             fieldName,
             enumValueDecoder,
             enumStringBasedWrapperField,
-            NULL_VAL_NAME
+            NULL_VAL_NAME,
+            enumName(name)
         ) : field.type().isMultiValue() ? enumStringBasedWrapperField : "";
 
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
