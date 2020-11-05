@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
@@ -39,7 +40,7 @@ public class FixMessageTracker extends MessageTracker
         this.sessionId = sessionId;
     }
 
-    public ControlledFragmentHandler.Action onFragment(
+    public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         messageHeaderDecoder.wrap(buffer, offset);
@@ -72,7 +73,7 @@ public class FixMessageTracker extends MessageTracker
                 DebugLogger.log(logTag, formatter, buffer, bodyOffset, bodyLength);
             }
 
-            final ControlledFragmentHandler.Action action = messageHandler.onFragment(buffer, offset, length, header);
+            final Action action = messageHandler.onFragment(buffer, offset, length, header);
             if (action != ABORT)
             {
                 count++;

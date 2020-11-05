@@ -49,11 +49,12 @@ public class ErrorPrinter implements Agent
         };
 
     private final ErrorConsumer errorConsumer;
+    private final EpochClock clock;
 
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
 
-    private long lastSeenErrorTimeInMs;
+    private long lastPollTimeInMs;
     private final AeronArchive aeronArchive;
 
     public ErrorPrinter(
@@ -63,36 +64,48 @@ public class ErrorPrinter implements Agent
         final AeronArchive aeronArchive,
         final ErrorConsumer customErrorConsumer)
     {
+        this(errorBuffer, agentNamePrefix, startTimeInMs, aeronArchive, customErrorConsumer, new SystemEpochClock());
+    }
+
+    public ErrorPrinter(
+        final AtomicBuffer errorBuffer,
+        final String agentNamePrefix,
+        final long startTimeInMs,
+        final AeronArchive aeronArchive,
+        final ErrorConsumer customErrorConsumer,
+        final EpochClock clock)
+    {
         this.errorBuffer = errorBuffer;
         this.agentNamePrefix = agentNamePrefix;
-        lastSeenErrorTimeInMs = startTimeInMs;
+        lastPollTimeInMs = startTimeInMs;
         this.aeronArchive = aeronArchive;
         this.errorConsumer = customErrorConsumer == null ? DEFAULT_ERROR_CONSUMER : customErrorConsumer;
+        this.clock = clock;
     }
 
     public int doWork()
     {
+        int work = 0;
         if (aeronArchive != null)
         {
             final String errorResponse = aeronArchive.pollForErrorResponse();
             if (errorResponse != null)
             {
                 System.err.println(errorResponse);
+                work++;
             }
         }
 
-        final long timeInMs = System.currentTimeMillis();
-        if (timeInMs > lastSeenErrorTimeInMs)
+        final long timeInMs = clock.time();
+        final long lastPolledTimeInMs = lastPollTimeInMs;
+        if (timeInMs > lastPolledTimeInMs)
         {
-            final int errors = ErrorLogReader.read(errorBuffer, errorConsumer, lastSeenErrorTimeInMs);
-            if (errors > 0)
-            {
-                lastSeenErrorTimeInMs = timeInMs;
-            }
-            return errors;
+            this.lastPollTimeInMs = timeInMs;
+            final int errors = ErrorLogReader.read(errorBuffer, errorConsumer, lastPolledTimeInMs + 1);
+            work += errors;
         }
 
-        return 0;
+        return work;
     }
 
     public String roleName()
