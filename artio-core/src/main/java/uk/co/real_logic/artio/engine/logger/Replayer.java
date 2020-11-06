@@ -30,7 +30,6 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
@@ -52,6 +51,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
+import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 
 /**
  * The replayer responds to resend requests with data from the log of sent messages.
@@ -179,7 +179,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
-            gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
+            gapFillMessageTypes.add(packMessageType(messageTypeAsString)));
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));

@@ -18,36 +18,10 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType;
 
 public class GenerationUtilTest
 {
-
-    @Test
-    public void shouldGenerateDifferentMessageTypeIdentifiers()
-    {
-        assertNotEquals(packMessageType("AL"), packMessageType("AM"));
-        assertNotEquals(packMessageType("AL"), packMessageType("AN"));
-        assertNotEquals(packMessageType("AR"), packMessageType("AQ"));
-        assertNotEquals(packMessageType("BC"), packMessageType("BB"));
-        assertNotEquals(packMessageType("BD"), packMessageType("BE"));
-        assertNotEquals(packMessageType("BG"), packMessageType("BF"));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void willFailToGeneratePackedMessageTypeWithMoreThan8Characters()
-    {
-        packMessageType("ABCDEFGHI");
-    }
-
-    @Test
-    public void supportsPackingMessageTypesOfLength7()
-    {
-        assertNotEquals(packMessageType("ABCDEFGH"), packMessageType("ABCDEFG"));
-    }
-
     @Test
     public void shouldReplaceIDWithIdInConstantName()
     {

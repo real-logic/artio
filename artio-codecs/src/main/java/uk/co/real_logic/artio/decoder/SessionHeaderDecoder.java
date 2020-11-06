@@ -47,6 +47,13 @@ public interface SessionHeaderDecoder
 
     char[] msgType();
 
+    /**
+     * Gets the packed message type from the decoded message.
+     *
+     * @return packed message type.
+     */
+    long messageType();
+
     boolean hasPossResend();
 
     boolean possResend();

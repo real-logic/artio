@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.fields.*;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -170,6 +171,7 @@ class DecoderGenerator extends Generator
                 }
                 else if (type == HEADER)
                 {
+                    out.append(importFor(MessageTypeEncoding.class));
                     out.append(importFor(SessionHeaderDecoder.class));
                 }
 
@@ -274,7 +276,8 @@ class DecoderGenerator extends Generator
             .collect(toList());
     }
 
-    private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
+    private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type)
+        throws IOException
     {
         if (type == HEADER)
         {
@@ -285,6 +288,28 @@ class DecoderGenerator extends Generator
                 "        this(new TrailerDecoder());\n" +
                 "    }\n\n");
             wrapTrailerInConstructor(out, aggregate);
+
+            generatePackedMessageTypeMethod(out);
+        }
+    }
+
+    private void generatePackedMessageTypeMethod(final Writer out) throws IOException
+    {
+        if (flyweightsEnabled)
+        {
+            out.append(
+                "    public long messageType()\n" +
+                "    {\n" +
+                "        return buffer.getMessageType(msgTypeOffset, msgTypeLength);\n" +
+                "    }\n\n");
+        }
+        else
+        {
+            out.append(
+                "    public long messageType()\n" +
+                "    {\n" +
+                "        return MessageTypeEncoding.packMessageType(msgType(), msgTypeLength());\n" +
+                "    }\n\n");
         }
     }
 

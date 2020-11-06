@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
+import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
 public abstract class AbstractDecoderGeneratorTest
@@ -1396,6 +1397,16 @@ public abstract class AbstractDecoderGeneratorTest
         assertRejectReason(decoder2, RejectReason.REQUIRED_TAG_MISSING);
         assertRejectReason(decoder3, RejectReason.VALUE_IS_INCORRECT);
         assertRejectReason(decoder4, RejectReason.REQUIRED_TAG_MISSING);
+    }
+
+    @Test
+    public void shouldExtractPackedMessageType() throws Throwable
+    {
+        final Decoder decoder = createRequiredFieldMessageDecoder();
+        decode(RF_ALL_FIELDS, decoder);
+
+        final long messageType = decoder.header().messageType();
+        assertEquals(packMessageType("Z"), messageType);
     }
 
     private void assertRejectReason(final Decoder decoder, final RejectReason expectedReason)

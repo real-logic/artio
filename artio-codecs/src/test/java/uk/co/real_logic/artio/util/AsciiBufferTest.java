@@ -31,8 +31,6 @@ public class AsciiBufferTest
     private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1024 * 16]);
 
     private int value;
-    private int second;
-    private int third;
 
     @Before
     public void setUp()
@@ -91,7 +89,7 @@ public class AsciiBufferTest
     {
         putAscii("0");
 
-        value = buffer.getMessageType(0, 1);
+        final long value = buffer.getMessageType(0, 1);
 
         assertEquals('0', value);
     }
@@ -101,7 +99,7 @@ public class AsciiBufferTest
     {
         putAscii("D");
 
-        value = buffer.getMessageType(0, 1);
+        final long value = buffer.getMessageType(0, 1);
 
         assertEquals('D', value);
     }
@@ -111,7 +109,7 @@ public class AsciiBufferTest
     {
         putAscii("AO");
 
-        value = buffer.getMessageType(0, 2);
+        final long value = buffer.getMessageType(0, 2);
 
         assertEquals(20289, value);
     }
@@ -120,13 +118,13 @@ public class AsciiBufferTest
     public void shouldGenerateTwoCharMessageTypes()
     {
         putAscii("AM");
-        value = buffer.getMessageType(0, 2);
+        final long value = buffer.getMessageType(0, 2);
 
         putAscii("AL");
-        second = buffer.getMessageType(0, 2);
+        final long second = buffer.getMessageType(0, 2);
 
         putAscii("AQ");
-        third = buffer.getMessageType(0, 2);
+        final long third = buffer.getMessageType(0, 2);
 
         assertNotEquals(value, second);
         assertNotEquals(second, third);

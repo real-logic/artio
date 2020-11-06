@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
 
 import java.util.HashMap;
 import java.util.List;
@@ -448,7 +448,7 @@ public final class ExampleDictionary
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
-    public static final long OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    public static final long OTHER_MESSAGE_TYPE_PACKED = MessageTypeEncoding.packMessageType(OTHER_MESSAGE_TYPE);
     public static final int INT_FIELD_TAG = 116;
 
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";

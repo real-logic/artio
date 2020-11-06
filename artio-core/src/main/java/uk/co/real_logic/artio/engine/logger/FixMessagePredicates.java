@@ -15,25 +15,23 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.collections.LongHashSet;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.BufferAsciiSequence;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
-
-import org.agrona.ExpandableArrayBuffer;
-import org.agrona.collections.LongHashSet;
-
-
-import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
-import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.BufferAsciiSequence;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 /**
  * Filters to be used in conjunction with {@link FixArchiveScanner}.
@@ -120,7 +118,7 @@ public final class FixMessagePredicates
     {
         final LongHashSet hashSet = new LongHashSet();
         Stream.of(messageTypes)
-            .mapToLong(GenerationUtil::packMessageType)
+            .mapToLong(MessageTypeEncoding::packMessageType)
             .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }

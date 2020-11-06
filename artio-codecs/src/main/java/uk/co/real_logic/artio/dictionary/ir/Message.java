@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.ir;
 
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType;
+import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 
 public final class Message extends Aggregate
 {

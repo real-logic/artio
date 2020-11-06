@@ -160,17 +160,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return new String(buff, 0, length, US_ASCII);
     }
 
-    public int getMessageType(final int offset, final int length)
+    public long getMessageType(final int offset, final int length)
     {
-        // message types can only be 1 or 2 bytes in size
-        if (length == 1)
-        {
-            return getByte(offset);
-        }
-        else
-        {
-            return getShort(offset);
-        }
+        return MessageTypeEncoding.packMessageType(byteArray(), addressOffset(), offset, length);
     }
 
     @SuppressWarnings("FinalParameters")

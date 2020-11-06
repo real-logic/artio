@@ -65,7 +65,7 @@ public interface AsciiBuffer extends DirectBuffer
      */
     String getAscii(int offset, int length);
 
-    int getMessageType(int offset, int length);
+    long getMessageType(int offset, int length);
 
     DecimalFloat getFloat(DecimalFloat number, int offset, int length);
 

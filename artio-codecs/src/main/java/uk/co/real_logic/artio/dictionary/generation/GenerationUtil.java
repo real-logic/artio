@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.Verify;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
 
 import java.util.stream.Stream;
 
@@ -25,7 +26,7 @@ import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
-    private static final int MESSAGE_TYPE_BITSHIFT = 8;
+    public static final int MESSAGE_TYPE_BITSHIFT = 8;
 
     public static final String INDENT = "    ";
 
@@ -33,29 +34,25 @@ public final class GenerationUtil
     {
     }
 
+    /**
+     * Deprecated in favour of {@link uk.co.real_logic.artio.util.MessageTypeEncoding#packMessageType(String)}.
+     *
+     * @param messageType message type as ascii string.
+     *
+     * @return the packed message type.
+     */
+    @Deprecated
+    public static long packMessageType(final String messageType)
+    {
+        return MessageTypeEncoding.packMessageType(messageType);
+    }
+
     public static String fileHeader(final String packageName)
     {
         return String.format(
             "/* Generated Fix Gateway message codec */\n" +
-            "package %s;\n\n",
+                "package %s;\n\n",
             packageName);
-    }
-
-    public static long packMessageType(final String messageType)
-    {
-        if (messageType.length() > 8)
-        {
-            throw new IllegalArgumentException("Message types longer than 8 are not supported yet");
-        }
-
-        long packed = 0;
-        for (int index = 0; index < messageType.length(); index++)
-        {
-            final int asciiValue = (byte)messageType.charAt(index);
-            packed |= asciiValue << (MESSAGE_TYPE_BITSHIFT * index);
-        }
-
-        return packed;
     }
 
     public static String constantName(final String name)

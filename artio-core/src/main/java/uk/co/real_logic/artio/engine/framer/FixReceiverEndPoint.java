@@ -821,7 +821,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
     }
 
-    private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
+    private long getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
         final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
         if (buffer.getByte(start + 2) == START_OF_HEADER)

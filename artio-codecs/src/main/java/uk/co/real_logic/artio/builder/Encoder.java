@@ -53,6 +53,11 @@ public interface Encoder extends CharAppender
      */
     void reset();
 
+    /**
+     * Gets the long encoded message type of the message in question.
+     *
+     * @return the message type.
+     */
     long messageType();
 
     SessionHeaderEncoder header();
