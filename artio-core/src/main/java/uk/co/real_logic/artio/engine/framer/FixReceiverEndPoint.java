@@ -960,9 +960,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         completeDisconnect(AUTHENTICATION_TIMEOUT);
     }
 
-    void disconnectContext()
+    void cleanupDisconnectState(final DisconnectReason reason)
     {
         sessionContexts.onDisconnect(sessionId);
+        gatewaySessions.onDisconnect(sessionId, connectionId, reason);
     }
 
     boolean hasDisconnected()

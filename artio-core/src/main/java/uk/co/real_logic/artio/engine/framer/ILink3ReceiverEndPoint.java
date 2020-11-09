@@ -22,6 +22,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -102,7 +103,7 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         }
     }
 
-    void disconnectContext()
+    void cleanupDisconnectState(final DisconnectReason reason)
     {
         // Not needed in iLink implementation
     }

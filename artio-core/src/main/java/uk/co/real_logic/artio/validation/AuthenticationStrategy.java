@@ -84,10 +84,31 @@ public interface AuthenticationStrategy
      * object and processed as normal (sequence number updates, validation, etc.) just without the password fields.
      *
      * @param userRequest the user request message that has been received.
-     * @param sessionId the session of the session that received the message
+     * @param sessionId the session id of the session that received the message
      */
     default void onUserRequest(
         final AbstractUserRequestDecoder userRequest, final long sessionId)
+    {
+        // Deliberately blank for backwards compatibility
+    }
+
+    /**
+     * Callback when a connection gets disconnected. This can be used to correlate with authentication events
+     * or to cleanup resources associated with an authentication. In order to correlate authentication requests the
+     * connection id parameter can be used. This will be the same passed value that is returned from
+     * {@link AuthenticationProxy#connectionId()} when the authentication attempt originally happened.
+     *
+     * Note that at the time that the authentication strategy is invoked that the session id has not yet been assigned
+     * to the session, only the connection id. So only the connection id can be used to correlate the authentication and
+     * disconnect events. The session id is provided in order to correlation with other information or events relating
+     * to the session generally.
+     *
+     * @param sessionId the session id of the session that has disconnected
+     * @param connectionId the connection id of the session that has disconnected.
+     */
+    default void onDisconnect(
+        final long sessionId,
+        final long connectionId)
     {
         // Deliberately blank for backwards compatibility
     }

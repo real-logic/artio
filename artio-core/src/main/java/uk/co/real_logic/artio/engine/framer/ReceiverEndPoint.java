@@ -104,7 +104,7 @@ public abstract class ReceiverEndPoint
     void disconnectEndpoint(final DisconnectReason reason)
     {
         framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
-        disconnectContext();
+        cleanupDisconnectState(reason);
         if (selectionKey != null)
         {
             selectionKey.cancel();
@@ -112,7 +112,7 @@ public abstract class ReceiverEndPoint
         hasDisconnected = true;
     }
 
-    abstract void disconnectContext();
+    abstract void cleanupDisconnectState(DisconnectReason reason);
 
     abstract int poll();
 

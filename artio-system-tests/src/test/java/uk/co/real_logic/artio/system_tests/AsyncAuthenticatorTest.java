@@ -226,6 +226,45 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.verifyNoBlockingCalls();
     }
 
+    @Test
+    public void shouldNotifyAuthStrategyUponAcceptorLogoff()
+    {
+        notifyAuthStrategyUpon(this::logoutAcceptingSession);
+    }
+
+    @Test
+    public void shouldNotifyAuthStrategyUponInitiatorLogoff()
+    {
+        notifyAuthStrategyUpon(this::logoutInitiatingSession);
+    }
+
+    @Test
+    public void shouldNotifyAuthStrategyUponAcceptorDisconnect()
+    {
+        notifyAuthStrategyUpon(() -> testSystem.awaitDisconnect(acceptingSession));
+    }
+
+    @Test
+    public void shouldNotifyAuthStrategyUponInitiatorDisconnect()
+    {
+        notifyAuthStrategyUpon(() -> testSystem.awaitDisconnect(initiatingSession));
+    }
+
+    private void notifyAuthStrategyUpon(final Runnable disconnector)
+    {
+        shouldConnectedAcceptedAuthentications();
+        acquireAcceptingSession();
+        final long connectionId = acceptingSession.connectionId();
+
+        disconnector.run();
+        assertSessionsDisconnected();
+
+        testSystem.await("Failed to disconnect", () -> auth.hasDisconnected);
+        assertEquals(acceptingSession.id(), auth.disconnectSessionId);
+        assertEquals(connectionId, auth.disconnectConnectionId);
+        assertEquals(connectionId, auth.authConnectionId);
+    }
+
     private RejectEncoder newRejectEncoder()
     {
         final RejectEncoder rejectEncoder = new RejectEncoder();
@@ -263,8 +302,14 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         private volatile boolean blockingAuthenticateCalled;
         private volatile AuthenticationProxy authProxy;
 
+        private long authConnectionId;
+        private long disconnectSessionId;
+        private long disconnectConnectionId;
+        private volatile boolean hasDisconnected;
+
         public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
         {
+            authConnectionId = authProxy.connectionId();
             this.authProxy = authProxy;
 
             assertThat(authProxy.remoteAddress(), containsString("127.0.0.1"));
@@ -310,6 +355,15 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         void reset()
         {
             authProxy = null;
+        }
+
+        public void onDisconnect(
+            final long sessionId,
+            final long connectionId)
+        {
+            this.disconnectSessionId = sessionId;
+            this.disconnectConnectionId = connectionId;
+            hasDisconnected = true;
         }
     }
 }

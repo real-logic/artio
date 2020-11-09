@@ -372,6 +372,13 @@ class GatewaySessions
         extractor.onUserRequest(buffer, offset, length, authenticationStrategy, connectionId, sessionId);
     }
 
+    void onDisconnect(final long sessionId, final long connectionId, final DisconnectReason reason)
+    {
+        authenticationStrategy.onDisconnect(
+            sessionId,
+            connectionId);
+    }
+
     // We put the gateway session in our list of sessions to poll in order to check engine level timeouts,
     // But we aren't actually acquiring the session.
     void track(final GatewaySession gatewaySession)
@@ -397,6 +404,7 @@ class GatewaySessions
 
         private final SessionIdStrategy sessionIdStrategy;
         private final AbstractLogonDecoder logon;
+        private final long connectionId;
         private final SessionContexts sessionContexts;
         private final TcpChannel channel;
         private FixDictionary fixDictionary;
@@ -428,6 +436,7 @@ class GatewaySessions
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
+            this.connectionId = connectionId;
             this.sessionContexts = sessionContexts;
             this.channel = channel;
             this.fixDictionary = fixDictionary;
@@ -755,10 +764,14 @@ class GatewaySessions
             this.state = AuthenticationState.REJECTED;
         }
 
-        @Override
         public boolean isAccepted()
         {
             return AuthenticationState.ACCEPTED == state;
+        }
+
+        public long connectionId()
+        {
+            return connectionId;
         }
     }
 }

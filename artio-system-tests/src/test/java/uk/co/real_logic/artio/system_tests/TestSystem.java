@@ -206,6 +206,11 @@ public class TestSystem
             });
     }
 
+    public void awaitDisconnect(final Session session)
+    {
+        await("Failed to disconnect: " + session, () -> session.requestDisconnect() > 0);
+    }
+
     public void awaitBlocking(final Runnable operation)
     {
         awaitBlocking(() ->

@@ -71,4 +71,13 @@ public interface AuthenticationProxy
      * @return the remote IP address and port of the system
      */
     String remoteAddress();
+
+    /**
+     * Gets the connection id that uniquely identifies this individual connection. This can be used to correlate
+     * logon operations with disconnect callbacks to
+     * {@link AuthenticationStrategy#onDisconnect(long, long)}.
+     *
+     * @return the connection id.
+     */
+    long connectionId();
 }
