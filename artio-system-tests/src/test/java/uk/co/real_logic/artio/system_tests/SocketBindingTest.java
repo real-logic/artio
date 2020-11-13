@@ -22,9 +22,7 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import java.io.IOException;
 import java.net.ConnectException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -230,8 +228,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
     private void completeBind()
     {
-        final Reply<?> bindReply = engine.bind();
-        awaitReply(bindReply);
+        final Reply<?> bindReply = Reply.await(engine.bind());
         assertEquals(bindReply.toString(), Reply.State.COMPLETED, bindReply.state());
     }
 
@@ -242,8 +239,7 @@ public class SocketBindingTest extends AbstractMessageBasedAcceptorSystemTest
 
     private void completeUnbind(final boolean disconnect)
     {
-        final Reply<?> unbindReply = engine.unbind(disconnect);
-        awaitReply(unbindReply);
+        final Reply<?> unbindReply = Reply.await(engine.unbind(disconnect));
         assertEquals(unbindReply.toString(), Reply.State.COMPLETED, unbindReply.state());
     }
 
