@@ -130,6 +130,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
+    public void shouldEnsureThatSequenceNumberAfterResendRequest()
+    {
+        final String testReqID = "AAA";
+        acquireAcceptingSession();
+
+        final FixMessage message1 = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        clearMessages();
+        final FixMessage message2 = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        final int lastSequenceNumber = message2.messageSequenceNumber();
+
+        final int sequenceNumber = acceptorSendsResendRequest(message1.messageSequenceNumber());
+
+        final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_MESSAGE_AS_STR, false);
+        assertEquals(testReqID, resentMessage.testReqId());
+        acceptingOtfAcceptor.messages().clear();
+
+        assertSequenceIndicesAre(0);
+
+        final FixMessage nextMessage = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        assertEquals(lastSequenceNumber + 1, nextMessage.messageSequenceNumber());
+    }
+
+    @Test
     public void shouldProcessDuplicateResendRequests()
     {
         final String testReqID = "AAA";
@@ -180,8 +203,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_MESSAGE_AS_STR, false);
         assertEquals(testReqID, resentMessage.testReqId());
+        acceptingOtfAcceptor.messages().clear();
 
         assertSequenceIndicesAre(0);
+
+        final FixMessage nextMessage = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        assertEquals(sequenceNumber + 1, nextMessage.messageSequenceNumber());
     }
 
     private FixMessage exchangeExampleMessageFromInitiatorToAcceptor(final String testReqID)
