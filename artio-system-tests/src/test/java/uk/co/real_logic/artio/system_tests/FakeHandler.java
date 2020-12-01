@@ -32,6 +32,7 @@ import java.util.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 public class FakeHandler
     implements SessionHandler, SessionAcquireHandler, SessionExistsHandler
@@ -52,6 +53,10 @@ public class FakeHandler
     private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
     private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer(lastMessageBuffer);
     private int lastMessageLength = 0;
+
+    private boolean hasTimedOut = false;
+    private int timedOutLibraryId;
+    private Session timedOutSession;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -108,6 +113,31 @@ public class FakeHandler
 
     public void onTimeout(final int libraryId, final Session session)
     {
+        hasTimedOut = true;
+        timedOutLibraryId = libraryId;
+        timedOutSession = session;
+    }
+
+    public boolean hasTimedOut()
+    {
+        return hasTimedOut;
+    }
+
+    public int timedOutLibraryId()
+    {
+        return timedOutLibraryId;
+    }
+
+    public Session timedOutSession()
+    {
+        return timedOutSession;
+    }
+
+    public void resetTimedOut()
+    {
+        hasTimedOut = false;
+        timedOutLibraryId = ENGINE_LIBRARY_ID;
+        timedOutSession = null;
     }
 
     public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)

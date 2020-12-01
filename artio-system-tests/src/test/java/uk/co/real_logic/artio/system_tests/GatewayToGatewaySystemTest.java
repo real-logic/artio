@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.Aeron;
+import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.status.CountersReader;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -44,6 +47,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.FixCounters.FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID;
+import static uk.co.real_logic.artio.FixCounters.lookupCounterIds;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -213,12 +218,30 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private FixMessage exchangeExampleMessageFromInitiatorToAcceptor(final String testReqID)
     {
+        return exchangeExampleMessage(testReqID, initiatingSession, acceptingOtfAcceptor);
+    }
+
+    private FixMessage exchangeExampleMessageFromAcceptorToInitiator(final String testReqID)
+    {
+        return exchangeExampleMessage(testReqID, acceptingSession, initiatingOtfAcceptor);
+    }
+
+    private FixMessage exchangeExampleMessage(
+        final String testReqID, final Session fromSession, final FakeOtfAcceptor toAcceptor)
+    {
+        sendExampleMessage(testReqID, fromSession);
+
+        final FixMessage fixMessage = testSystem.awaitMessageOf(
+            toAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR, msg -> msg.testReqId().equals(testReqID));
+        return fixMessage;
+    }
+
+    private void sendExampleMessage(final String testReqID, final Session fromSession)
+    {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         exampleMessage.testReqID(testReqID);
-        final long position = initiatingSession.trySend(exampleMessage);
+        final long position = fromSession.trySend(exampleMessage);
         assertThat(position, greaterThan(0L));
-
-        return testSystem.awaitMessageOf(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
     }
 
     @Test
@@ -233,6 +256,68 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertMessageResent(sequenceNumber, SEQUENCE_RESET_MESSAGE_AS_STR, true);
 
         assertSequenceIndicesAre(0);
+    }
+
+    // Test exists to replicate a faily complex bug involving a sequence number issue after a library timeout.
+    @Test
+    public void shouldNotSendDuplicateSequenceNumbersAfterTimeout()
+    {
+        acquireAcceptingSession();
+
+        // Timeout the library from the engine's perspective.
+        testSystem.remove(acceptingLibrary);
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        // Test that Trigger the invalid l
+        sendExampleMessage("FAIL", acceptingSession);
+
+        // Wait for the library to detect the timeout internally.
+        testSystem.add(acceptingLibrary);
+        testSystem.await("Library failed to detect timeout", acceptingHandler::hasTimedOut);
+
+        assertThat(acceptingLibrary.sessions(), hasSize(0));
+        assertEquals(DISABLED, acceptingSession.state());
+
+        final Reply<SessionReplyStatus> reply = acceptingLibrary.requestSession(
+            acceptingSession.id(), NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, 5_000);
+
+        assertThrows(
+            "Failed to block the sending of a message after timing out",
+            IllegalStateException.class,
+            () -> sendExampleMessage("FAIL", acceptingSession));
+
+        testSystem.awaitReply(reply);
+        assertEquals(reply.toString(), Reply.State.COMPLETED, reply.state());
+        assertSame(acceptingSession, acceptingHandler.lastSession());
+
+        exchangeExampleMessageFromAcceptorToInitiator("4");
+
+        // Check that we didn't receive any duplicate sequence numbers
+        final List<Integer> receivedSequenceNumbers = initiatingOtfAcceptor.messageSequenceNumbers();
+        final IntHashSet uniqueReceivedNumbers = new IntHashSet();
+        uniqueReceivedNumbers.addAll(receivedSequenceNumbers);
+        assertEquals(uniqueReceivedNumbers + " vs " + receivedSequenceNumbers,
+            uniqueReceivedNumbers.size(), receivedSequenceNumbers.size());
+
+        // Ensure that the session is still active.
+        assertConnected(initiatingSession);
+        assertConnected(acceptingSession);
+
+        assertInvalidLibraryAttempts(acceptingSession.connectionId());
+    }
+
+    private void assertInvalidLibraryAttempts(final long connectionId)
+    {
+        final String connectionIdStr = String.valueOf(connectionId);
+        try (Aeron aeron = Aeron.connect(acceptingEngine.configuration().aeronContextClone()))
+        {
+            final CountersReader countersReader = aeron.countersReader();
+            final IntHashSet ids = lookupCounterIds(INVALID_LIBRARY_ATTEMPTS_TYPE_ID, countersReader,
+                label -> label.contains(connectionIdStr));
+            final IntHashSet.IntIterator counterIdIt = ids.iterator();
+            assertTrue(counterIdIt.hasNext());
+            assertThat(countersReader.getCounterValue(counterIdIt.nextValue()), greaterThan(0L));
+        }
     }
 
     @Test

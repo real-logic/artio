@@ -422,9 +422,14 @@ public final class SystemTestUtil
 
     public static void awaitLibraryDisconnect(final FixEngine engine)
     {
+        awaitLibraryDisconnect(engine, null);
+    }
+
+    public static void awaitLibraryDisconnect(final FixEngine engine, final TestSystem testSystem)
+    {
         assertEventuallyTrue(
             () -> "libraries haven't disconnected yet",
-            () -> libraries(engine).size() == 1,
+            () -> libraries(engine, testSystem).size() == 1,
             AWAIT_TIMEOUT,
             () ->
             {
@@ -439,7 +444,10 @@ public final class SystemTestUtil
             "No reply from: " + reply,
             () ->
             {
-                testSystem.poll();
+                if (testSystem != null)
+                {
+                    testSystem.poll();
+                }
 
                 return !reply.isExecuting();
             });

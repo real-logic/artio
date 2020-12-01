@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 
 public class FixCounters implements AutoCloseable
 {
@@ -64,11 +65,17 @@ public class FixCounters implements AutoCloseable
     public static IntHashSet lookupCounterIds(
         final FixCountersId counterTypeId, final CountersReader countersReader)
     {
+        return lookupCounterIds(counterTypeId, countersReader, label -> true);
+    }
+
+    public static IntHashSet lookupCounterIds(
+        final FixCountersId counterTypeId, final CountersReader countersReader, final Predicate<String> labelCheck)
+    {
         final int requiredTypeId = counterTypeId.id();
         final IntHashSet counterIds = new IntHashSet();
         countersReader.forEach((counterId, typeId, keyBuffer, label) ->
         {
-            if (typeId == requiredTypeId)
+            if (typeId == requiredTypeId && labelCheck.test(label))
             {
                 counterIds.add(counterId);
             }

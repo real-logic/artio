@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
@@ -192,4 +193,8 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
             .forEach((message) -> assertThat(message.toString(), message, matcher));
     }
 
+    public List<Integer> messageSequenceNumbers()
+    {
+        return messages().stream().map(FixMessage::messageSequenceNumber).collect(toList());
+    }
 }

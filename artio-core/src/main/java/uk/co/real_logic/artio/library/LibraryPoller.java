@@ -1595,9 +1595,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 {
                     subscriber.onTimeout(libraryId);
                 }
-                session.close();
+                session.disable();
                 // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
                 sessions = ArrayUtil.remove(sessions, i);
+                cacheSession(session);
                 size--;
             }
             else
