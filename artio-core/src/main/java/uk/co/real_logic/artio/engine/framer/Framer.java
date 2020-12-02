@@ -118,7 +118,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
     private final Predicate<LiveLibraryInfo> retryAcquireLibrarySessionsFunc = this::retryAcquireLibrarySessions;
-    private final Consumer<GatewaySession> onSessionlogon = this::onSessionLogon;
+    private final Consumer<GatewaySession> onSessionLogon = this::onSessionLogon;
     private final CatchupReplayer.Formatters catchupReplayFormatters = new CatchupReplayer.Formatters();
     // Both connection id to library id maps
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
@@ -264,82 +264,84 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
-        replaySubscriber = new ImageControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
-        {
-            public Action onMessage(
-                final DirectBuffer buffer,
-                final int offset,
-                final int length,
-                final int libraryId,
-                final long connectionId,
-                final long sessionId,
-                final int sequenceIndex,
-                final long messageType,
-                final long timestamp,
-                final MessageStatus status,
-                final int sequenceNumber,
-                final long position,
-                final int metaDataLength)
+        replaySubscriber = new ImageControlledFragmentAssembler(ProtocolSubscription.of(
+            new ProtocolHandler()
             {
-                return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
-            }
+                public Action onMessage(
+                    final DirectBuffer buffer,
+                    final int offset,
+                    final int length,
+                    final int libraryId,
+                    final long connectionId,
+                    final long sessionId,
+                    final int sequenceIndex,
+                    final long messageType,
+                    final long timestamp,
+                    final MessageStatus status,
+                    final int sequenceNumber,
+                    final long position,
+                    final int metaDataLength)
+                {
+                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
+                }
 
-            public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-            {
-                // Should never be replayed.
-                return Action.CONTINUE;
-            }
+                public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+                {
+                    // Should never be replayed.
+                    return Action.CONTINUE;
+                }
 
-            public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+                public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+                {
+                    return iLink3SenderEndPoints.onMessage(connectionId, buffer, offset);
+                }
+            },
+            new ReplayProtocolSubscription((connectionId) ->
             {
-                return iLink3SenderEndPoints.onMessage(connectionId, buffer, offset);
-            }
-        },
-        new ReplayProtocolSubscription(connectionId ->
-        {
-            final Action action = fixSenderEndPoints.onReplayComplete(connectionId);
-            if (action != ABORT)
-            {
-                return iLink3SenderEndPoints.onReplayComplete(connectionId);
-            }
-            return action;
-        })),
-        0,
-        true);
+                final Action action = fixSenderEndPoints.onReplayComplete(connectionId);
+                if (action != ABORT)
+                {
+                    return iLink3SenderEndPoints.onReplayComplete(connectionId);
+                }
+                return action;
+            })),
+            0,
+            true);
 
-        replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
-        {
-            public Action onMessage(
-                final DirectBuffer buffer,
-                final int offset,
-                final int length,
-                final int libraryId,
-                final long connectionId,
-                final long sessionId,
-                final int sequenceIndex,
-                final long messageType,
-                final long timestamp,
-                final MessageStatus status,
-                final int sequenceNumber,
-                final long position,
-                final int metaDataLength)
+        replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(
+            new ProtocolHandler()
             {
-                return fixSenderEndPoints.onSlowReplayMessage(
-                    connectionId, buffer, offset, length, position, metaDataLength);
-            }
+                public Action onMessage(
+                    final DirectBuffer buffer,
+                    final int offset,
+                    final int length,
+                    final int libraryId,
+                    final long connectionId,
+                    final long sessionId,
+                    final int sequenceIndex,
+                    final long messageType,
+                    final long timestamp,
+                    final MessageStatus status,
+                    final int sequenceNumber,
+                    final long position,
+                    final int metaDataLength)
+                {
+                    return fixSenderEndPoints.onSlowReplayMessage(
+                        connectionId, buffer, offset, length, position, metaDataLength);
+                }
 
-            public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-            {
-                // Should never be replayed.
-                return Action.CONTINUE;
-            }
+                public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+                {
+                    // Should never be replayed.
+                    return Action.CONTINUE;
+                }
 
-            public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
-            {
-                return CONTINUE;
-            }
-        },
-        new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)));
+                public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+                {
+                    return CONTINUE;
+                }
+            },
+            new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)));
 
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
@@ -1333,7 +1335,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionKey,
             receiverEndPoint,
             senderEndPoint,
-            this.onSessionlogon,
+            this.onSessionLogon,
             closedResendInterval,
             resendRequestChunkSize,
             sendRedundantResendRequests,
@@ -2319,7 +2321,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void logSoleLibraryError()
     {
         errorHandler.onError(new IllegalStateException(
-            "Error, invalid numbers of libraryies: " + idToLibrary.size() + " whilst in sole library mode"));
+            "Error, invalid numbers of libraries: " + idToLibrary.size() + " whilst in sole library mode"));
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)
@@ -2748,7 +2750,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
 
-                // Accptors are adjusted here - symmetrically with the non initialAcceptedSessionOwner=SOLE_LIBRARY
+                // Acceptors are adjusted here - symmetrically with the non initialAcceptedSessionOwner=SOLE_LIBRARY
                 // case, whilst Initiator configuration is always adjusted on the library side.
                 if (connectionType == ACCEPTOR)
                 {
