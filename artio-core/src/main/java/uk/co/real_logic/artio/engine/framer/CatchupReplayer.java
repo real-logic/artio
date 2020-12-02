@@ -250,8 +250,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
         final long messageType = MessageTypeExtractor.getMessageType(messageDecoder);
 
-        final int metaDataLength = messageDecoder.skipMetaData();
-        final int metaDataAdjustment = version >= metaDataSinceVersion() ? metaDataLength + metaDataHeaderLength() : 0;
+        messageDecoder.skipMetaData();
 
         final int messageLength = messageDecoder.bodyLength();
         final int messageOffset = messageDecoder.limit() + bodyHeaderLength();

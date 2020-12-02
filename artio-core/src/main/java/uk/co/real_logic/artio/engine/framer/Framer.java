@@ -255,7 +255,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
         endPointFactory.replaySlowPeeker(replaySlowPeeker);
 
-
         engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
         librarySubscriber = new ControlledFragmentAssembler(
             ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
@@ -341,7 +340,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return CONTINUE;
                 }
             },
-            new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)));
+            new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)), 0, true);
 
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
