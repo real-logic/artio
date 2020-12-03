@@ -39,6 +39,10 @@ import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJ
 @RunWith(Parameterized.class)
 public class ToEncoderDecoderGeneratorTest
 {
+    public static final String ENCODED_MESSAGE_OTHER_TIMESTAMP =
+        "8=FIX.4.4\0019=81\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001200=3\001119=123\001127=19800101-00:00:00.001\00110=199\001";
+
     private static final int BUFFER_SIZE = 1024;
 
     private static Class<? extends Decoder> heartbeatDecoder;
@@ -168,9 +172,18 @@ public class ToEncoderDecoderGeneratorTest
         final Encoder returnedEncoder = decoder.toEncoder(encoder);
         assertSame(encoder, returnedEncoder);
 
+        assertEncodesCorrectly(encoder, offset);
+
+        // Test that encoders copy and don't wrap the timestamp field
+        decodeBuffer.putAscii(offset, ENCODED_MESSAGE_OTHER_TIMESTAMP);
+        decoder.decode(decodeBuffer, offset, ENCODED_MESSAGE_OTHER_TIMESTAMP.length());
+        assertEncodesCorrectly(encoder, offset);
+    }
+
+    private void assertEncodesCorrectly(final Encoder encoder, final int offset)
+    {
         final MutableAsciiBuffer encodeBuffer = new MutableAsciiBuffer(new byte[BUFFER_SIZE]);
         final long result = encoder.encode(encodeBuffer, offset);
-
         final int length = Encoder.length(result);
         final int outputOffset = Encoder.offset(result);
 

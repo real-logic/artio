@@ -84,6 +84,7 @@
             <field name="OrdStatus" required="Y"/>
             <component name="Instrument" required="Y"/>
             <field name="Side" required="Y"/>
+            <field name="TransactTime" required="N"/>
         </message>
     </messages>
     <components>

@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
+import java.util.Arrays;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public final class CodecUtil
@@ -218,6 +220,34 @@ public final class CodecUtil
         for (int i = 0; i < length; i++)
         {
             builder.append((char)dataField[i]);
+        }
+    }
+
+    public static void copyInto(
+        final MutableDirectBuffer buffer, final byte[] data, final int offset, final int length)
+    {
+        final byte[] dest = buffer.byteArray();
+        if (dest != null && dest.length >= length)
+        {
+            System.arraycopy(data, offset, dest, 0, length);
+        }
+        else
+        {
+            buffer.wrap(Arrays.copyOfRange(data, offset, offset + length));
+        }
+    }
+
+    public static byte[] copyInto(
+        final byte[] dest, final byte[] data, final int offset, final int length)
+    {
+        if (dest != null && dest.length >= length)
+        {
+            System.arraycopy(data, offset, dest, 0, length);
+            return dest;
+        }
+        else
+        {
+            return Arrays.copyOfRange(data, offset, offset + length);
         }
     }
 

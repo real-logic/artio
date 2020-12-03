@@ -1829,7 +1829,7 @@ class DecoderGenerator extends Generator
             "    public %1$s toEncoder(final %1$s encoder)\n" +
             "    {\n" +
             "        encoder.reset();\n" +
-            "        %2$s" +
+            "%2$s" +
             "        return encoder;\n" +
             "    }\n\n",
             encoderClassName(name),
@@ -1853,25 +1853,20 @@ class DecoderGenerator extends Generator
         if (element instanceof Field)
         {
             final Field field = (Field)element;
-            final String fieldToEncoder = fieldToEncoder(field, encoderName);
 
             if (appendToChecksHasGetter(entry, field))
             {
-                final String indentedFieldAppender = NEWLINE
-                    .matcher(fieldToEncoder)
-                    .replaceAll("    ");
-
                 return String.format(
-                    "if (has%1$s())\n" +
+                    "        if (has%1$s())\n" +
                     "        {\n" +
-                    "        %2$s\n" +
+                    "%2$s\n" +
                     "        }\n",
                     name,
-                    indentedFieldAppender);
+                    indentedFieldToEncoder(encoderName, field, "            "));
             }
             else
             {
-                return fieldToEncoder;
+                return indentedFieldToEncoder(encoderName, field, "        ");
             }
         }
         else if (element instanceof Group)
@@ -1884,6 +1879,14 @@ class DecoderGenerator extends Generator
         }
 
         return "";
+    }
+
+    private String indentedFieldToEncoder(final String encoderName, final Field field, final String replacement)
+    {
+        final String fieldToEncoder = fieldToEncoder(field, encoderName);
+        return NEWLINE
+            .matcher(fieldToEncoder)
+            .replaceAll(replacement);
     }
 
     protected String groupEntryToEncoder(final Group group, final String name, final String encoderName)
@@ -1956,7 +1959,7 @@ class DecoderGenerator extends Generator
             case MONTHYEAR:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return String.format("%2$s.%1$s(%1$s(), 0, %1$sLength());", fieldName, encoderName);
+                return String.format("%2$s.%1$sAsCopy(%1$s(), 0, %1$sLength());", fieldName, encoderName);
 
             case FLOAT:
             case PRICE:
@@ -1977,7 +1980,8 @@ class DecoderGenerator extends Generator
             case XMLDATA:
                 final String lengthName = formatPropertyName(field.associatedLengthField().name());
 
-                return String.format("%3$s.%1$s(%1$s()); %3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
+                return String.format(
+                    "%3$s.%1$sAsCopy(%1$s(), 0, %2$s());%n%3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
 
             case NUMINGROUP:
                 // Deliberately blank since it gets set by the group ToEncoder logic.

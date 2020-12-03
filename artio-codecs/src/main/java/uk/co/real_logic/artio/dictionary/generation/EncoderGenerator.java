@@ -545,7 +545,8 @@ class EncoderGenerator extends Generator
             case DATA:
             case XMLDATA:
                 // DATA fields always come with their own Length field defined by the schema
-                return generateSetter.apply("byte[]");
+                return generateSetter.apply("byte[]") +
+                    generateCopyingDataSetter(className, fieldName, name, hasAssign);
 
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
@@ -558,6 +559,22 @@ class EncoderGenerator extends Generator
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
+    }
+
+    private String generateCopyingDataSetter(
+        final String className, final String fieldName, final String name, final String hasAssign)
+    {
+        return String.format(
+            "    public %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        %1$s = copyInto(%1$s, value, offset, length);\n" +
+            "%4$s" +
+            "        return this;\n" +
+            "    }\n\n",
+            fieldName,
+            className,
+            name,
+            hasAssign);
     }
 
     private void generateGroup(
@@ -612,6 +629,13 @@ class EncoderGenerator extends Generator
             "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s.wrap(value);\n" +
+            "        %1$sOffset = offset;\n" +
+            "        %1$sLength = length;\n" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        copyInto(%1$s, value, offset, length);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
@@ -699,12 +723,12 @@ class EncoderGenerator extends Generator
         final String enumSetter)
     {
         return String.format(
-            "    %s %s %s;\n\n" +
-            "%s" +
-            "    public %s %3$s(%2$s value)\n" +
+            "    %1$s %2$s %3$s;\n\n" +
+            "%4$s" +
+            "    public %5$s %3$s(%2$s value)\n" +
             "    {\n" +
             "        %3$s = value;\n" +
-            "%s" +
+            "%6$s" +
             "        return this;\n" +
             "    }\n\n" +
             "    public %2$s %3$s()\n" +
