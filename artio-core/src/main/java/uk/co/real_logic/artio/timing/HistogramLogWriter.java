@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -78,7 +80,13 @@ class HistogramLogWriter implements HistogramHandler
     {
         try
         {
-            return FileChannel.open(Paths.get(logFile), WRITE, CREATE, TRUNCATE_EXISTING);
+            final Path path = Paths.get(logFile);
+            final Path parent = path.getParent();
+            if (!Files.exists(parent))
+            {
+                Files.createDirectories(parent);
+            }
+            return FileChannel.open(path, WRITE, CREATE, TRUNCATE_EXISTING);
         }
         catch (final IOException ex)
         {

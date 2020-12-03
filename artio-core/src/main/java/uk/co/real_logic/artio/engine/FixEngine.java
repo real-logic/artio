@@ -63,6 +63,7 @@ public final class FixEngine extends GatewayProcess
 
     private final Object resetStateLock = new Object();
     private volatile boolean stateHasBeenReset = false;
+    private boolean launched = false;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -254,10 +255,10 @@ public final class FixEngine extends GatewayProcess
                 configuration.errorIfDuplicateEngineDetected());
             duplicateEngineChecker.check();
 
-            timers = new EngineTimers(configuration.epochNanoClock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);
+            timers = new EngineTimers(configuration.epochNanoClock(), fixCounters.negativeTimestamps());
             final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
             final AeronArchive aeronArchive =
                 configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
@@ -360,6 +361,8 @@ public final class FixEngine extends GatewayProcess
             conductorAgent(),
             recordingCoordinator);
 
+        launched = true;
+
         return this;
     }
 
@@ -386,7 +389,10 @@ public final class FixEngine extends GatewayProcess
 
                 DebugLogger.log(LogTag.CLOSE, "Shutdown initiated through FixEngine.close()");
 
-                framerContext.startClose();
+                if (launched)
+                {
+                    framerContext.startClose();
+                }
 
                 try
                 {

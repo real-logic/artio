@@ -76,14 +76,6 @@ public abstract class GatewayProcess implements AutoCloseable
             };
     }
 
-    protected void initAeron(final CommonConfiguration configuration)
-    {
-        final Aeron.Context context = configureAeronContext(configuration);
-        aeron = Aeron.connect(context);
-        CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
-        fixCounters = new FixCounters(aeron, this instanceof FixEngine);
-    }
-
     public Agent conductorAgent()
     {
         final AgentInvoker invoker = aeron.conductorAgentInvoker();
@@ -120,6 +112,14 @@ public abstract class GatewayProcess implements AutoCloseable
                 // Deliberately blank to stop the agent from gracefully closing
             }
         };
+    }
+
+    protected void initAeron(final CommonConfiguration configuration)
+    {
+        final Aeron.Context context = configureAeronContext(configuration);
+        aeron = Aeron.connect(context);
+        CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
+        fixCounters = new FixCounters(aeron, this instanceof FixEngine);
     }
 
     protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)

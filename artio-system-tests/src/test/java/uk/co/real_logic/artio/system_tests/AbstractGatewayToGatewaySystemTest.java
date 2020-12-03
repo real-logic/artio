@@ -100,17 +100,32 @@ public class AbstractGatewayToGatewaySystemTest
     void closeAcceptingLibrary()
     {
         CloseHelper.close(acceptingLibrary);
-        testSystem.remove(acceptingLibrary);
+        if (testSystem != null)
+        {
+            testSystem.remove(acceptingLibrary);
+        }
     }
 
     void closeInitiatingEngine()
     {
-        testSystem.awaitBlocking(() -> CloseHelper.close(initiatingEngine));
+        closeEngine(initiatingEngine);
     }
 
     void closeAcceptingEngine()
     {
-        testSystem.awaitBlocking(() -> CloseHelper.close(acceptingEngine));
+        closeEngine(acceptingEngine);
+    }
+
+    private void closeEngine(final FixEngine engine)
+    {
+        if (testSystem != null)
+        {
+            testSystem.awaitBlocking(() -> CloseHelper.close(engine));
+        }
+        else
+        {
+            CloseHelper.close(engine);
+        }
     }
 
     void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)

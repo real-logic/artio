@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.timing;
 
 import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.status.AtomicCounter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,10 +27,10 @@ public class EngineTimers
     private final Timer sendTimer;
     private final List<Timer> timers;
 
-    public EngineTimers(final EpochNanoClock clock)
+    public EngineTimers(final EpochNanoClock clock, final AtomicCounter negativeTimestamps)
     {
-        outboundTimer = new Timer(clock, "Outbound", 1);
-        sendTimer = new Timer(clock, "Send", 2);
+        outboundTimer = new Timer(clock, "Outbound", 1, negativeTimestamps);
+        sendTimer = new Timer(clock, "Send", 2, negativeTimestamps);
         timers = Arrays.asList(outboundTimer, sendTimer);
     }
 

@@ -335,7 +335,7 @@ public class LibraryPollerTest
                 .libraryAeronChannels(libraryAeronChannels)
                 .sessionAcquireHandler(sessionAcquireHandler)
                 .libraryConnectHandler(connectHandler),
-            new LibraryTimers(clock::time),
+            new LibraryTimers(clock::time, mock(AtomicCounter.class)),
             counters,
             transport,
             fixLibrary,

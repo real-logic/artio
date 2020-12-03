@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
+import static uk.co.real_logic.artio.FixCounters.FixCountersId.*;
+
 public class FixCounters implements AutoCloseable
 {
     private static final int MINIMUM_ARTIO_TYPE_ID = 10_000;
@@ -40,7 +42,8 @@ public class FixCounters implements AutoCloseable
         INVALID_LIBRARY_ATTEMPTS_TYPE_ID(10_005),
         SENT_MSG_SEQ_NO_TYPE_ID(10_006),
         RECV_MSG_SEQ_NO_TYPE_ID(10_007),
-        CURRENT_REPLAY_COUNT_TYPE_ID(10_008);
+        CURRENT_REPLAY_COUNT_TYPE_ID(10_008),
+        NEGATIVE_TIMESTAMP_TYPE_ID(10_009);
 
         final int id;
 
@@ -60,6 +63,7 @@ public class FixCounters implements AutoCloseable
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
     private final AtomicCounter currentReplayCount;
+    private final AtomicCounter negativeTimestamps;
     private final Aeron aeron;
 
     public static IntHashSet lookupCounterIds(
@@ -88,12 +92,14 @@ public class FixCounters implements AutoCloseable
         this.aeron = aeron;
         aeron.addUnavailableCounterHandler((countersReader, registrationId, counterId) ->
             counters.removeIf(counter -> counter.id() == counterId));
-        failedInboundPublications = newCounter(FixCountersId.FAILED_INBOUND_TYPE_ID.id(),
+        failedInboundPublications = newCounter(FAILED_INBOUND_TYPE_ID.id(),
                 "Failed offer to inbound publication");
-        failedOutboundPublications = newCounter(FixCountersId.FAILED_OUTBOUND_TYPE_ID.id(),
+        failedOutboundPublications = newCounter(FAILED_OUTBOUND_TYPE_ID.id(),
                 "Failed offer to outbound publication");
-        failedReplayPublications = newCounter(FixCountersId.FAILED_REPLAY_TYPE_ID.id(),
+        failedReplayPublications = newCounter(FAILED_REPLAY_TYPE_ID.id(),
                 "Failed offer to replay publication");
+
+        negativeTimestamps = newCounter(NEGATIVE_TIMESTAMP_TYPE_ID.id(), "negative timestamps");
 
         if (isEngine)
         {
@@ -124,6 +130,11 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter currentReplayCount()
     {
         return currentReplayCount;
+    }
+
+    public AtomicCounter negativeTimestamps()
+    {
+        return negativeTimestamps;
     }
 
     public AtomicCounter messagesRead(final long connectionId, final String address)

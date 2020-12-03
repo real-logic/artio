@@ -19,6 +19,7 @@ import org.HdrHistogram.Histogram;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +57,7 @@ public class HistogramLoggingTest
         when(clock.time()).thenReturn(110L, 220L, 330L, 440L);
 
         file = File.createTempFile("histogram", "tmp");
-        timer = new Timer(clock::time, NAME, 1);
+        timer = new Timer(clock::time, NAME, 1, mock(AtomicCounter.class));
         writer = new HistogramLogAgent(
             Collections.singletonList(timer),
             file.getAbsolutePath(),
