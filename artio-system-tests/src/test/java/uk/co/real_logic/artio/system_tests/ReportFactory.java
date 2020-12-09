@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.ExecType;
 import uk.co.real_logic.artio.OrdStatus;
@@ -33,12 +33,18 @@ public class ReportFactory
 
     private final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
     private final byte[] encodeBuffer = new byte[SIZE_OF_ASCII_LONG];
-    private int encodedLength;
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
 
-    public ControlledFragmentHandler.Action sendReport(final Session session, final Side side)
+    public Action sendReport(final Session session, final Side side)
     {
-        encodedLength = encoder.putLongAscii(0, session.lastSentMsgSeqNum());
+        setupReport(side, session.lastSentMsgSeqNum());
+
+        return Pressure.apply(session.trySend(executionReport));
+    }
+
+    public ExecutionReportEncoder setupReport(final Side side, final int execAndOrderId)
+    {
+        final int encodedLength = encoder.putLongAscii(0, execAndOrderId);
 
         executionReport.orderID(encodeBuffer, encodedLength)
             .execID(encodeBuffer, encodedLength);
@@ -49,6 +55,6 @@ public class ReportFactory
 
         executionReport.instrument().symbol(MSFT.getBytes(US_ASCII));
 
-        return Pressure.apply(session.trySend(executionReport));
+        return executionReport;
     }
 }
