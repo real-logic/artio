@@ -158,6 +158,13 @@ public class TestSystem
         return reply;
     }
 
+    public <T> Reply<T> awaitCompletedReply(final Reply<T> reply)
+    {
+        awaitReply(reply);
+        assertEquals(reply.toString(), COMPLETED, reply.state());
+        return reply;
+    }
+
     public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
         return awaitMessageOf(otfAcceptor, messageType, msg -> true);
@@ -223,25 +230,32 @@ public class TestSystem
     public <T> T awaitBlocking(final Callable<T> operation)
     {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
-        final Future<T> future = executor.submit(operation);
-
-        while (!future.isDone())
-        {
-            poll();
-
-            Thread.yield();
-        }
-
         try
         {
-            return future.get();
-        }
-        catch (final InterruptedException | ExecutionException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+            final Future<T> future = executor.submit(operation);
 
-        return null;
+            while (!future.isDone())
+            {
+                poll();
+
+                Thread.yield();
+            }
+
+            try
+            {
+                return future.get();
+            }
+            catch (final InterruptedException | ExecutionException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+
+            return null;
+        }
+        finally
+        {
+            executor.shutdown();
+        }
     }
 
     public void awaitUnbind(final ILink3Connection session)

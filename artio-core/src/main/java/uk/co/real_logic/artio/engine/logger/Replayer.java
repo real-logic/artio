@@ -83,7 +83,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final CharFormatter receivedResendFormatter = new CharFormatter(
-        "Received Resend Request for range: [%s, %s]%n");
+        "Received Resend Request for inclusive range: [%s, %s]%n");
     private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
         "Not processing Resend Request for %s because it has already disconnected %n");
 

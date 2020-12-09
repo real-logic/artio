@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,7 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acquireSession;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -467,6 +470,38 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
         assertEquals("Y", executionReport.possDup());
     }
+
+    @Test
+    public void shouldStoreAndForwardMessagesSentWithNewSession()
+    {
+        launch(this::nothing);
+
+        final HeaderEncoder headerEncoder = new HeaderEncoder()
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
+
+        final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
+            acceptingLibrary.followerSession(headerEncoder, TEST_TIMEOUT));
+        final SessionWriter sessionWriter = followerSession.resultIfPresent();
+        final long sessionId = sessionWriter.id();
+
+        acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+        assertOfflineSession(sessionId, acceptingSession);
+
+        // Send a test execution report offline that can be replayed
+        final ReportFactory reportFactory = new ReportFactory();
+        assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
+
+        final FixMessage executionReport = testSystem.awaitMessageOf(
+            initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
+        assertEquals("Y", executionReport.possDup());
+    }
+
+    // WhilstOfflineWithFollowerSession
 
     @Test
     public void shouldResetSequenceNumbersOfOfflineSessions()

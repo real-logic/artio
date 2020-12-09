@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNKNOWN_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
@@ -202,7 +203,6 @@ public class Session
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
-        sequenceIndex(sequenceIndex);
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
@@ -210,6 +210,16 @@ public class Session
         this.clock = clock;
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
+
+        // If we're an offline session that has never been corrected then we need to set the initial sequence index.
+        if (state == DISCONNECTED && sequenceIndex == UNKNOWN_SEQUENCE_INDEX)
+        {
+            sequenceIndex(0);
+        }
+        else
+        {
+            sequenceIndex(sequenceIndex);
+        }
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
