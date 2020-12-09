@@ -132,8 +132,10 @@ public class SequenceNumberIndexWriter implements Index
 
         iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
             connectionIdToILinkUuid, errorHandler,
-            (seqNum, uuid, messageSize, endPosition, aeronSessionId) ->
-            saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION));
+            (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
+            // When possRetrans=true we should only update if the number is actually higher as
+            // possRetrans=true messages can be interleaved with normal messages /or/ the last message
+            saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION, possRetrans));
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
@@ -321,7 +323,8 @@ public class SequenceNumberIndexWriter implements Index
             redactSequenceUpdate.correctSequenceNumber(),
             redactSequenceUpdate.session(),
             redactSequenceUpdate.position(),
-            redactSequenceUpdate.position());
+            redactSequenceUpdate.position(),
+            false);
     }
 
     private boolean onFixMessage(
@@ -365,7 +368,7 @@ public class SequenceNumberIndexWriter implements Index
         final int msgSeqNum = sequenceNumberExtractor.extract(buffer, offset, messageFrame.bodyLength());
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
         {
-            final int position = saveRecord(msgSeqNum, sessionId, messagePosition, NO_REQUIRED_POSITION);
+            final int position = saveRecord(msgSeqNum, sessionId, messagePosition, NO_REQUIRED_POSITION, false);
             if (metaDataLength > 0 && position > 0)
             {
                 writeMetaDataToFile(position, metaDataWriteBuffer, metaDataOffset, metaDataLength);
@@ -517,7 +520,7 @@ public class SequenceNumberIndexWriter implements Index
 
     void resetSequenceNumber(final long session, final long endPosition)
     {
-        saveRecord(RESET_SEQUENCE, session, endPosition, NO_REQUIRED_POSITION);
+        saveRecord(RESET_SEQUENCE, session, endPosition, NO_REQUIRED_POSITION, false);
     }
 
     void resetSequenceNumbers()
@@ -680,7 +683,8 @@ public class SequenceNumberIndexWriter implements Index
         final int newSequenceNumber,
         final long sessionId,
         final long messagePosition,
-        final long requiredPosition)
+        final long requiredPosition,
+        final boolean incrementRequired)
     {
         int position = (int)recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -710,7 +714,8 @@ public class SequenceNumberIndexWriter implements Index
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
                     recordOffsets.put(sessionId, position);
-                    updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
+                    updateSequenceNumber(
+                        newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired);
                     return position;
                 }
 
@@ -719,42 +724,59 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
+            updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired);
             return position;
         }
     }
 
     private void updateSequenceNumber(
-        final int newSequenceNumber, final int recordOffset, final long messagePosition, final long requiredPosition)
+        final int newSequenceNumber,
+        final int recordOffset,
+        final long messagePosition,
+        final long requiredPosition,
+        final boolean incrementRequired)
     {
         if (requiredPosition != NO_REQUIRED_POSITION && getMessagePosition(recordOffset) != requiredPosition)
         {
             return;
         }
-        final int oldSequenceNumber = getSequenceNumber(recordOffset);
 
-        putMessagePosition(recordOffset, messagePosition);
-        putSequenceNumber(recordOffset, newSequenceNumber);
-        // When sequence number resets then old metadata has expired
-        if (oldSequenceNumber > newSequenceNumber)
+        final int oldSequenceNumber = getSequenceNumber(recordOffset);
+        // Increment required in the case of an iLink3 possRetrans
+        if (incrementRequired)
         {
-            final int oldMetaDataPosition = getMetaData(recordOffset);
-            if (oldMetaDataPosition != NO_META_DATA)
+            if (newSequenceNumber > oldSequenceNumber)
             {
-                putMetaDataField(recordOffset, NO_META_DATA);
-                try
-                {
-                    metaDataFile.seek(oldMetaDataPosition);
-                    final int metaDataLength = metaDataFile.readInt();
-                    updateMetaDataFile(oldMetaDataPosition, new byte[metaDataLength], metaDataLength);
-                }
-                catch (final IOException e)
-                {
-                    errorHandler.onError(e);
-                }
+                putMessagePosition(recordOffset, messagePosition);
+                putSequenceNumber(recordOffset, newSequenceNumber);
+                hasSavedRecordSinceFileUpdate = true;
             }
         }
-        hasSavedRecordSinceFileUpdate = true;
+        else
+        {
+            putMessagePosition(recordOffset, messagePosition);
+            putSequenceNumber(recordOffset, newSequenceNumber);
+            // When sequence number resets then old metadata has expired
+            if (oldSequenceNumber > newSequenceNumber)
+            {
+                final int oldMetaDataPosition = getMetaData(recordOffset);
+                if (oldMetaDataPosition != NO_META_DATA)
+                {
+                    putMetaDataField(recordOffset, NO_META_DATA);
+                    try
+                    {
+                        metaDataFile.seek(oldMetaDataPosition);
+                        final int metaDataLength = metaDataFile.readInt();
+                        updateMetaDataFile(oldMetaDataPosition, new byte[metaDataLength], metaDataLength);
+                    }
+                    catch (final IOException e)
+                    {
+                        errorHandler.onError(e);
+                    }
+                }
+            }
+            hasSavedRecordSinceFileUpdate = true;
+        }
     }
 
     private void createNewRecord(

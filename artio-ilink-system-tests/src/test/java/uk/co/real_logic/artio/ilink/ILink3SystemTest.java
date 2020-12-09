@@ -1264,6 +1264,83 @@ public class ILink3SystemTest
             .or(containsString("Unbound due to: INVALID_ILINK_MESSAGE")));
     }
 
+    // Replicate a bug report where the sequence numbers weren't updated after a reconnect / retransmit
+    @Test
+    public void shouldSaveHighestSequenceNumberWhenLastMessageIsPossRetrans() throws IOException
+    {
+        final long lastUuid = initiatorDisconnectedMissingMessage2();
+
+        // retransmit message 2
+        testServer.acceptRetransRequest(2, 1);
+        testServer.writeExecutionReportStatus(2, true);
+        agreeRecvSeqNo(3);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        reconnectWithRetransmitRequest(lastUuid, 2, 3);
+    }
+
+    @Test
+    public void shouldSaveHighestSequenceNumberWhenLastMessageIsNotPossRetrans() throws IOException
+    {
+        final long lastUuid = initiatorDisconnectedMissingMessage2();
+
+        // retransmit message 2 and send 3
+        testServer.acceptRetransRequest(2, 1);
+        testServer.writeExecutionReportStatus(3, false);
+        testServer.writeExecutionReportStatus(2, true);
+        agreeRecvSeqNo(4);
+        agreeRetransmitFillSeqNo(NOT_AWAITING_RETRANSMIT);
+
+        reconnectWithRetransmitRequest(lastUuid, 3, 4);
+    }
+
+    private void reconnectWithRetransmitRequest(
+        final long lastUuid, final int previousSeqNo, final int nextSeqNo) throws IOException
+    {
+        remoteServerDisconnect();
+
+        // We don't ask for message 2 to be retransmitted a second time
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+        testServer.expectedUuid(lastUuid);
+        readEstablish(2);
+        testServer.writeEstablishmentAck(previousSeqNo, lastUuid, nextSeqNo);
+        acquireSession();
+        assertEquals(NOT_AWAITING_RETRANSMIT, connection.retransmitFillSeqNo());
+        assertEquals(lastUuid, connection.lastUuid());
+    }
+
+    private long initiatorDisconnectedMissingMessage2() throws IOException
+    {
+        shouldEstablishConnectionAtBeginningOfWeek();
+        sendNewOrderSingle();
+        testServer.readNewOrderSingle(1);
+        testServer.writeExecutionReportStatus(1, false);
+        agreeRecvSeqNo(2);
+        remoteServerDisconnect();
+        // nextSent=2,nextRecv=2
+        // Pretend that message 2 was dropped during the failure.
+
+        final long lastUuid = connection.uuid();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+        testServer.expectedUuid(lastUuid);
+
+        // Initiator missed receiving message 2
+        readEstablish(2);
+        testServer.writeEstablishmentAck(2, lastUuid, 3);
+        acquireSession();
+        assertEquals(2, connection.retransmitFillSeqNo());
+        assertEquals(lastUuid, connection.lastUuid());
+        return lastUuid;
+    }
+
+    private void remoteServerDisconnect()
+    {
+        testServer.disconnect();
+        testSystem.awaitUnbind(connection);
+        assertArtioShowsSessionDisconnected();
+    }
+
     private void establishNewConnection() throws IOException
     {
         connectToTestServer(connectionConfiguration());

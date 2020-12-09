@@ -128,11 +128,7 @@ class ILinkSequenceNumberExtractor
         final int headerOffset = sofhOffset + SOFH_LENGTH;
         final int templateId = parser.templateId(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
-        final int possRetrans = offsets.possRetrans(templateId, buffer, messageOffset);
-        if (possRetrans == BOOLEAN_FLAG_TRUE)
-        {
-            return;
-        }
+        final boolean possRetrans = offsets.possRetrans(templateId, buffer, messageOffset) == BOOLEAN_FLAG_TRUE;
 
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
         if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
@@ -140,7 +136,7 @@ class ILinkSequenceNumberExtractor
             final long uuid = connectionIdToILinkUuid.get(connectionId);
             if (uuid != UNK_SESSION)
             {
-                handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId);
+                handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans);
             }
         }
     }

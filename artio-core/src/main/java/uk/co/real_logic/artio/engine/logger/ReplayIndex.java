@@ -101,7 +101,7 @@ public class ReplayIndex implements Index
 
         iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
             connectionIdToILinkUuid, errorHandler,
-            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId) ->
+            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
                 sessionIndex(uuid)
                 .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID));
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);

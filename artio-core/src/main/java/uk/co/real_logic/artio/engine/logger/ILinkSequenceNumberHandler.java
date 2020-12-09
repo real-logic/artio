@@ -17,5 +17,6 @@ package uk.co.real_logic.artio.engine.logger;
 
 public interface ILinkSequenceNumberHandler
 {
-    void onSequenceNumber(int seqNum, long uuid, int length, long endPosition, int aeronSessionId);
+    void onSequenceNumber(
+        int seqNum, long uuid, int length, long endPosition, int aeronSessionId, boolean possRetrans);
 }

@@ -393,6 +393,18 @@ public class ILink3TestServer
         DebugLogger.logSbeDecoder(ILINK_SESSION, "TS: ", request::appendTo);
     }
 
+    public void disconnect()
+    {
+        try
+        {
+            socket.close();
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+    }
+
     public void assertDisconnected()
     {
         final boolean disconnected = testSystem.awaitBlocking(() ->
