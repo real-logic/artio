@@ -147,9 +147,24 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
     {
         final SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
-        channel.register(selector, OP_CONNECT, channelHandler);
         configure(channel);
-        channel.connect(address);
+        try
+        {
+            channel.connect(address);
+        }
+        catch (final Exception e)
+        {
+            try
+            {
+                channel.close();
+            }
+            catch (final IOException ce)
+            {
+                e.addSuppressed(ce);
+            }
+            throw e;
+        }
+        channel.register(selector, OP_CONNECT, channelHandler);
         openingSocketChannels.add(channel);
     }
 
