@@ -1067,9 +1067,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final String msg =
             "You need to enable the logging of inbound and outbound messages on your EngineConfiguration" +
-            "in order to initiate a connection with persistent sequence numbers. " +
-            "logInboundMessages = " + logInboundMessages +
-            "logOutboundMessages = " + logOutboundMessages;
+            " in order to initiate a connection with persistent sequence numbers." +
+            " logInboundMessages = " + logInboundMessages +
+            " logOutboundMessages = " + logOutboundMessages;
 
         saveError(INVALID_CONFIGURATION, libraryId, correlationId, msg);
 
