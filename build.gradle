@@ -196,16 +196,6 @@ subprojects {
         }
     }
 
-    task javadocJar(type: Jar) {
-        archiveClassifier.set('javadoc')
-        from javadoc
-    }
-
-    task sourcesJar(type: Jar) {
-        archiveClassifier.set('sources')
-        from sourceSets.main.allSource
-    }
-
     jar {
         manifest.attributes(
             'Implementation-Title': 'Artio',
@@ -261,7 +251,7 @@ project(':artio-codecs') {
 
     def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
-        generated{
+        generated {
             java.srcDir generatedDir
             compileClasspath += configurations.codecGeneration
         }
@@ -286,6 +276,14 @@ project(':artio-codecs') {
 
     jar {
         from sourceSets.generated.output
+    }
+
+    sourcesJar {
+        from sourceSets.generated.java
+    }
+
+    javadoc {
+        source += sourceSets.generated.java
     }
 
     checkstyleGenerated.enabled = false
@@ -348,6 +346,14 @@ project(':artio-ilink3-codecs') {
             from generatedDir.absolutePath + "/ilinkbinary.sbeir"
             into outputClasses + '/iLinkBinary'
         }
+    }
+
+    sourcesJar {
+        from sourceSets.generated.java
+    }
+
+    javadoc {
+        source += sourceSets.generated.java
     }
 
     jar {
@@ -446,6 +452,14 @@ project(':artio-session-codecs') {
         from sourceSets.generated.output
     }
 
+    sourcesJar {
+        from sourceSets.generated.java
+    }
+
+    javadoc {
+        source += sourceSets.generated.java
+    }
+
     publishing {
         publications {
             artioSessionCodecs(MavenPublication) {
@@ -494,6 +508,14 @@ project(':artio-session-fixt-codecs') {
 
     jar {
         from sourceSets.generated.output
+    }
+
+    sourcesJar {
+        from sourceSets.generated.java
+    }
+
+    javadoc {
+        source += sourceSets.generated.java
     }
 
     publishing {
