@@ -63,4 +63,16 @@ public interface Encoder extends CharAppender
     SessionHeaderEncoder header();
 
     void resetMessage();
+
+    /**
+     * Copies the field values on the other Encoder to be the same as this Encoder. This also sets all child components
+     * and repeating group values to be the same.
+     *
+     * This method also resets the encoder before any fields are set so that missing values within this Encoder are
+     * also missing within the other Encoder.
+     *
+     * @param otherEncoder the encoder to set the values of.
+     * @return the encoder passed as an argument.
+     */
+    Encoder copyTo(Encoder otherEncoder);
 }

@@ -29,48 +29,31 @@ import java.util.Collection;
 import java.util.Map;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.CODEC_LOGGING;
 import static uk.co.real_logic.artio.dictionary.generation.Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
+import static uk.co.real_logic.artio.dictionary.generation.ToEncoderDecoderGeneratorTest.assertEncodesCorrectly;
 
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
-public class ToEncoderDecoderGeneratorTest
+public class CopyToEncoderGeneratorTest
 {
-    public static final String ENCODED_MESSAGE_OTHER_TIMESTAMP =
-        "8=FIX.4.4\0019=81\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
-        "\001118=Y\001200=3\001119=123\001127=19800101-00:00:00.001\00110=199\001";
-
     private static final int BUFFER_SIZE = 1024;
 
     private static Class<? extends Decoder> heartbeatDecoder;
     private static Class<? extends Encoder> heartbeatEncoder;
 
-    private static Class<? extends Decoder> flyweightHeartbeatDecoder;
-    private static Class<? extends Encoder> flyweightHeartbeatEncoder;
-
     @BeforeClass
-    public static void generateClasses() throws ClassNotFoundException
+    public static void setUp() throws ClassNotFoundException
     {
-        Map<String, CharSequence> sources = generateClasses(false);
-
+        final Map<String, CharSequence> sources = generateClasses();
         heartbeatDecoder = decoder(sources);
         if (heartbeatDecoder == null || CODEC_LOGGING)
         {
             System.out.println(sources);
         }
         heartbeatEncoder = encoder(heartbeatDecoder);
-
-        sources = generateClasses(true);
-
-        flyweightHeartbeatDecoder = decoder(sources);
-        if (flyweightHeartbeatDecoder == null || CODEC_LOGGING)
-        {
-            System.out.println(sources);
-        }
-        flyweightHeartbeatEncoder = encoder(flyweightHeartbeatDecoder);
     }
 
     private static Class<? extends Encoder> encoder(final Class<?> decoder) throws ClassNotFoundException
@@ -84,7 +67,7 @@ public class ToEncoderDecoderGeneratorTest
         return (Class<? extends Decoder>)compileInMemory(HEARTBEAT_DECODER, sources);
     }
 
-    private static Map<String, CharSequence> generateClasses(final boolean flyweightStringsEnabled)
+    private static Map<String, CharSequence> generateClasses()
     {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
@@ -93,7 +76,7 @@ public class ToEncoderDecoderGeneratorTest
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, TEST_PACKAGE, outputManager, ValidationOn.class,
-            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, flyweightStringsEnabled,
+            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, false,
             RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
@@ -137,21 +120,15 @@ public class ToEncoderDecoderGeneratorTest
 
     private final String testCaseMessage;
 
-    public ToEncoderDecoderGeneratorTest(final String testCaseMessage)
+    public CopyToEncoderGeneratorTest(final String testCaseMessage)
     {
         this.testCaseMessage = testCaseMessage;
     }
 
     @Test
-    public void shouldToEncoderProvidedEncoder() throws Exception
+    public void shouldCopyToEncoder() throws Exception
     {
         shouldToEncoderProvidedEncoder(heartbeatDecoder, heartbeatEncoder);
-    }
-
-    @Test
-    public void shouldToEncoderProvidedEncoderFlyweight() throws Exception
-    {
-        shouldToEncoderProvidedEncoder(flyweightHeartbeatDecoder, flyweightHeartbeatEncoder);
     }
 
     private void shouldToEncoderProvidedEncoder(
@@ -163,30 +140,15 @@ public class ToEncoderDecoderGeneratorTest
 
         final int offset = 1;
         final int messageLength = testCaseMessage.length();
-
         final MutableAsciiBuffer decodeBuffer = new MutableAsciiBuffer(new byte[BUFFER_SIZE]);
         decodeBuffer.putAscii(offset, testCaseMessage);
 
         decoder.decode(decodeBuffer, offset, messageLength);
 
-        final Encoder returnedEncoder = decoder.toEncoder(encoder);
-        assertSame(encoder, returnedEncoder);
+        decoder.toEncoder(encoder);
 
-        assertEncodesCorrectly(testCaseMessage, encoder, offset);
-
-        // Test that encoders copy and don't wrap the timestamp field
-        decodeBuffer.putAscii(offset, ENCODED_MESSAGE_OTHER_TIMESTAMP);
-        decoder.decode(decodeBuffer, offset, ENCODED_MESSAGE_OTHER_TIMESTAMP.length());
-        assertEncodesCorrectly(testCaseMessage, encoder, offset);
-    }
-
-    public static void assertEncodesCorrectly(final String testCaseMessage, final Encoder encoder, final int offset)
-    {
-        final MutableAsciiBuffer encodeBuffer = new MutableAsciiBuffer(new byte[BUFFER_SIZE]);
-        final long result = encoder.encode(encodeBuffer, offset);
-        final int length = Encoder.length(result);
-        final int outputOffset = Encoder.offset(result);
-
-        assertEquals(testCaseMessage, encodeBuffer.getAscii(outputOffset, length));
+        final Encoder otherEncoder = heartbeatEncoder.getConstructor().newInstance();
+        assertSame(encoder.copyTo(otherEncoder), otherEncoder);
+        assertEncodesCorrectly(testCaseMessage, otherEncoder, offset);
     }
 }

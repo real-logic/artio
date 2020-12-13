@@ -60,11 +60,6 @@ class EncoderGenerator extends Generator
         "TestRequestEncoder",
         "SequenceResetEncoder"));
 
-    private static final String SUFFIX =
-        "        buffer.putSeparator(position);\n" +
-        "        position++;\n" +
-        "%s";
-
     private static final String TRAILER_ENCODE_PREFIX =
         "    // |10=...|\n" +
         "    long finishMessage(final MutableAsciiBuffer buffer, final int messageStart, final int offset)\n" +
@@ -294,6 +289,7 @@ class EncoderGenerator extends Generator
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
         out.append(generateAppendTo(aggregate, isMessage));
+        out.append(generateCopyTo(aggregate));
         out.append("}\n");
     }
 
@@ -902,31 +898,26 @@ class EncoderGenerator extends Generator
             (mustCheckFlag || mustCheckLength) && entry.required() && !"MsgSeqNum".equals(name);
 
         final String enablingPrefix;
+        final boolean needsIndent;
         if (mustCheckFlag)
         {
-            enablingPrefix = String.format("        if (has%s) {\n", name);
+            enablingPrefix = String.format("        if (has%s)\n        {\n", name);
+            needsIndent = true;
         }
         else if (mustCheckLength)
         {
-            enablingPrefix = String.format("        if (%sLength > 0) {\n", fieldName);
+            enablingPrefix = String.format("        if (%sLength > 0)\n        {\n", fieldName);
+            needsIndent = true;
         }
         else
         {
             enablingPrefix = "";
-        }
-        String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
-
-        if (needsMissingThrow)
-        {
-            enablingSuffix = enablingSuffix +
-                "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-                "        {\n" +
-                "            throw new EncodingException(\"Missing Field: " + name + "\");\n" +
-                "        }\n";
+            needsIndent = false;
         }
 
+        final String enablingSuffix = enablingSuffix(name, mustCheckFlag, mustCheckLength, needsMissingThrow);
         final String tag = formatTag(fieldName, enablingPrefix);
-
+        final String indent = indent(needsIndent);
         switch (type)
         {
             case INT:
@@ -934,7 +925,7 @@ class EncoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return putValue(fieldName, tag, "Int", enablingSuffix);
+                return putValue(fieldName, tag, "Int", enablingSuffix, indent);
 
             case FLOAT:
             case PRICE:
@@ -942,13 +933,13 @@ class EncoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return putValue(fieldName, tag, "Float", enablingSuffix);
+                return putValue(fieldName, tag, "Float", enablingSuffix, indent);
 
             case CHAR:
-                return putValue(fieldName, tag, "Char", enablingSuffix);
+                return putValue(fieldName, tag, "Char", enablingSuffix, indent);
 
             case BOOLEAN:
-                return putValue(fieldName, tag, "Boolean", enablingSuffix);
+                return putValue(fieldName, tag, "Boolean", enablingSuffix, indent);
 
             case STRING:
             case MULTIPLEVALUESTRING:
@@ -965,39 +956,56 @@ class EncoderGenerator extends Generator
             case UTCDATEONLY:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return encodeStringField(fieldName, enablingSuffix, tag);
+                return encodeStringField(fieldName, enablingSuffix, tag, indent);
 
             case DATA:
             case XMLDATA:
                 return String.format(
-                    "%s" +
-                    "        buffer.putBytes(position, %s);\n" +
-                    "        position += %2$s.length;\n" +
-                    SUFFIX,
+                    "%1$s" +
+                    "%4$s        buffer.putBytes(position, %2$s);\n" +
+                    "%4$s        position += %2$s.length;\n" +
+                    "%4$s        buffer.putSeparator(position);\n" +
+                    "%4$s        position++;\n" +
+                    "%3$s",
                     tag,
                     fieldName,
-                    enablingSuffix);
+                    enablingSuffix,
+                    indent);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }
 
-    private String encodeStringField(final String fieldName, final String optionalSuffix, final String tag)
+    private String enablingSuffix(
+        final String name, final boolean mustCheckFlag, final boolean mustCheckLength, final boolean needsMissingThrow)
     {
-        return formatEncoder(fieldName, optionalSuffix, tag,
-        "        buffer.putBytes(position, %s, %2$sOffset, %2$sLength);\n" +
-            "        position += %2$sLength;\n");
+        String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
+        if (needsMissingThrow)
+        {
+            enablingSuffix = enablingSuffix +
+                "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+                "        {\n" +
+                "            throw new EncodingException(\"Missing Field: " + name + "\");\n" +
+                "        }\n";
+        }
+        return enablingSuffix;
     }
 
-    private String formatEncoder(
-        final String fieldName, final String optionalSuffix, final String tag, final String format)
+    private String encodeStringField(
+        final String fieldName, final String optionalSuffix, final String tag, final String indent)
     {
         return String.format(
-            "%s" + format + SUFFIX,
+            "%1$s" +
+            "%4$s        buffer.putBytes(position, %2$s, %2$sOffset, %2$sLength);\n" +
+            "%4$s        position += %2$sLength;\n" +
+            "%4$s        buffer.putSeparator(position);\n" +
+            "%4$s        position++;\n" +
+            "%3$s",
             tag,
             fieldName,
-            optionalSuffix);
+            optionalSuffix,
+            indent);
     }
 
     private String encodeGroup(final Entry entry)
@@ -1008,7 +1016,7 @@ class EncoderGenerator extends Generator
             "        if (%2$s != null)\n" +
             "        {\n" +
             "            position += %2$s.encode(buffer, position, %3$s);\n" +
-            "        }\n",
+            "        }\n\n",
             encodeField(group.numberField()),
             formatPropertyName(group.name()),
             formatPropertyName(group.numberField().name()));
@@ -1024,24 +1032,39 @@ class EncoderGenerator extends Generator
 
     private String formatTag(final String fieldName, final String optionalPrefix)
     {
+        final String indent = indent(!optionalPrefix.isEmpty());
         return String.format(
-            "%s" +
-            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);\n" +
-            "        position += %2$sHeaderLength;\n",
+            "%1$s" +
+            "%3$s        buffer.putBytes(position, %2$sHeader, 0, %2$sHeaderLength);\n" +
+            "%3$s        position += %2$sHeaderLength;\n",
             optionalPrefix,
-            fieldName);
+            fieldName,
+            indent);
     }
 
-    private String putValue(final String fieldName, final String tag, final String type, final String optionalSuffix)
+    private String indent(final boolean needsIndent)
+    {
+        return needsIndent ? "    " : "";
+    }
+
+    private String putValue(
+        final String fieldName,
+        final String tag,
+        final String type,
+        final String optionalSuffix,
+        final String indent)
     {
         return String.format(
-            "%s" +
-            "        position += buffer.put%sAscii(position, %s);\n" +
-            SUFFIX,
+            "%1$s" +
+            "%5$s        position += buffer.put%2$sAscii(position, %3$s);\n" +
+            "%5$s        buffer.putSeparator(position);\n" +
+            "%5$s        position++;\n" +
+            "%4$s",
             tag,
             type,
             fieldName,
-            optionalSuffix);
+            optionalSuffix,
+            indent);
     }
 
     private void precomputedHeaders(final Writer out, final List<Entry> entries) throws IOException
@@ -1162,31 +1185,202 @@ class EncoderGenerator extends Generator
         final Entry numberField = group.numberField();
 
         return String.format(
-            "    if (has%2$s)\n" +
-            "    {\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
-            "    final int %3$s = this.%3$s;\n" +
-            "    %5$s %4$s = this.%4$s;\n" +
-            "    for (int i = 0; i < %3$s; i++)\n" +
-            "    {\n" +
-            "        indent(builder, level);\n" +
-            "        %4$s.appendTo(builder, level + 1);" +
-            "        if (i < (%3$s - 1))\n" +
+            "        if (has%2$s)\n" +
             "        {\n" +
-            "            builder.append(',');\n" +
-            "        }\n" +
-            "        builder.append('\\n');\n" +
-            "        %4$s = %4$s.next();\n" +
-            "    }\n" +
-            "    indent(builder, level);\n" +
-            "    builder.append(\"],\\n\");\n" +
-            "    }\n",
+            "            indent(builder, level);\n" +
+            "            builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "            final int %3$s = this.%3$s;\n" +
+            "            %5$s %4$s = this.%4$s;\n" +
+            "            for (int i = 0; i < %3$s; i++)\n" +
+            "            {\n" +
+            "                indent(builder, level);\n" +
+            "                %4$s.appendTo(builder, level + 1);\n" +
+            "                if (i < (%3$s - 1))\n" +
+            "                {\n" +
+            "                    builder.append(',');\n" +
+            "                }\n" +
+            "                builder.append('\\n');\n" +
+            "                %4$s = %4$s.next();\n" +
+            "            }\n" +
+            "            indent(builder, level);\n" +
+            "            builder.append(\"],\\n\");\n" +
+            "        }\n",
             name,
             group.numberField().name(),
             formatPropertyName(numberField.name()),
             formatPropertyName(name),
             encoderClassName(name));
+    }
+
+
+    private String generateCopyTo(final Aggregate aggregate)
+    {
+        final String entriesCopyTo = aggregate
+            .entries()
+            .stream()
+            .map(this::generateEntryCopyTo)
+            .collect(joining("\n"));
+        final String name = aggregate.name();
+
+        return String.format(
+            "    /**\n" +
+            "     * {@inheritDoc}\n" +
+            "     */\n" +
+            "    public %1$s copyTo(final Encoder encoder)\n" +
+            "    {\n" +
+            "        return copyTo((%1$s)encoder);\n" +
+            "    }\n\n" +
+            "    public %1$s copyTo(final %1$s encoder)\n" +
+            "    {\n" +
+            "        encoder.reset();\n" +
+            "%2$s" +
+            "        return encoder;\n" +
+            "    }\n\n",
+            encoderClassName(name),
+            entriesCopyTo);
+    }
+
+    private String generateEntryCopyTo(final Entry entry)
+    {
+        return generateEntryCopyTo(entry, "encoder");
+    }
+
+    private String generateEntryCopyTo(final Entry entry, final String encoderName)
+    {
+        if (isBodyLength(entry))
+        {
+            return "";
+        }
+
+        final Entry.Element element = entry.element();
+        final String name = entry.name();
+        if (element instanceof Field)
+        {
+            final Field field = (Field)element;
+
+            if (appendToChecksHasGetter(entry, field))
+            {
+                return String.format(
+                    "        if (has%1$s())\n" +
+                        "        {\n" +
+                        "%2$s\n" +
+                        "        }\n",
+                    name,
+                    indentedFieldCopyTo(encoderName, field, "            "));
+            }
+            else
+            {
+                return indentedFieldCopyTo(encoderName, field, "        ");
+            }
+        }
+        else if (element instanceof Group)
+        {
+            return groupEntryCopyTo((Group)element, name, encoderName);
+        }
+        else if (element instanceof Component)
+        {
+            return componentCopyTo((Component)element, encoderName);
+        }
+
+        return "";
+    }
+
+    private String indentedFieldCopyTo(final String encoderName, final Field field, final String replacement)
+    {
+        final String fieldCopyTo = fieldCopyTo(field, encoderName);
+        return NEWLINE
+            .matcher(fieldCopyTo)
+            .replaceAll(replacement);
+    }
+
+    protected String groupEntryCopyTo(final Group group, final String name, final String encoderName)
+    {
+        final String numberField = group.numberField().name();
+
+        return String.format(
+            "        if (has%1$s)\n" +
+            "        {\n" +
+            "            final int size = this.%4$s;\n" +
+            "            %2$s %3$s = this.%3$s;\n" +
+            "            %6$s %3$sEncoder = %5$s.%3$s(size);\n" +
+            "            for (int i = 0; i < size; i++)\n" +
+            "            {\n" +
+            "                if (%3$s != null)\n" +
+            "                {\n" +
+            "                    %3$s.copyTo(%3$sEncoder);\n" +
+            "                    %3$s = %3$s.next();\n" +
+            "                    %3$sEncoder = %3$sEncoder.next();\n" +
+            "                }\n" +
+            "            }\n" +
+            "        }\n",
+            numberField,
+            encoderClassName(name),
+            formatPropertyName(name),
+            formatPropertyName(numberField),
+            encoderName,
+            encoderClassName(name));
+    }
+
+    protected String componentCopyTo(final Component component, final String encoderName)
+    {
+        final String name = component.name();
+        final String varName = formatPropertyName(name);
+
+        return String.format(
+            "\n        %1$s.copyTo(%2$s.%1$s());",
+            varName,
+            encoderName);
+    }
+
+    private String fieldCopyTo(final Field field, final String encoderName)
+    {
+        final String fieldName = formatPropertyName(field.name());
+        switch (field.type())
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
+            case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
+                return String.format("%2$s.%1$sAsCopy(%1$s.byteArray(), 0, %1$sLength);", fieldName, encoderName);
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+
+            case INT:
+            case LENGTH:
+            case BOOLEAN:
+            case CHAR:
+            case SEQNUM:
+            case DAYOFMONTH:
+                return String.format("%2$s.%1$s(%1$s());", fieldName, encoderName);
+
+            case DATA:
+            case XMLDATA:
+                final String lengthName = formatPropertyName(field.associatedLengthField().name());
+
+                return String.format(
+                    "%3$s.%1$sAsCopy(%1$s(), 0, %2$s());%n%3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
+
+            case NUMINGROUP:
+                // Deliberately blank since it gets set by the group CopyTo logic.
+            default:
+                return "";
+        }
     }
 
     protected String optionalReset(final Field field, final String name)

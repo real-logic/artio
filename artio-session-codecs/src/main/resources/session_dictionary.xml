@@ -208,6 +208,5 @@
             <value enum="2" description="FILL"/>
             <value enum="4" description="CANCELED"/>
         </field>
-
     </fields>
 </fix>

@@ -15,12 +15,15 @@
  */
 package uk.co.real_logic.artio.message_examples;
 
+import uk.co.real_logic.artio.OrdType;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.SampleUtil;
-import uk.co.real_logic.artio.builder.OrderSingleEncoder;
+import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -31,8 +34,6 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import java.util.Collections;
 
 import static java.util.Collections.singletonList;
-import static uk.co.real_logic.artio.builder.OrdType.Market;
-import static uk.co.real_logic.artio.builder.Side.Sell;
 
 /**
  * Example of what sending an OrderSingle message would be like using the API.
@@ -95,35 +96,36 @@ public final class MessageApiExamples
                 // Specific encoders are generated for each type of message
                 // from the same dictionary as the decoders.
                 final DecimalFloat price = new DecimalFloat(2000, 2);
-                final DecimalFloat quantity = new DecimalFloat(10, 0);
 
-                final OrderSingleEncoder orderSingle = new OrderSingleEncoder();
+                final UtcTimestampEncoder transactTime = new UtcTimestampEncoder();
+                final int transactTimeLength = transactTime.encode(System.currentTimeMillis());
+                final NewOrderSingleEncoder orderSingle = new NewOrderSingleEncoder();
+
+                // The API would follow a fluent style for setting up the different FIX message fields.
                 orderSingle
                     .clOrdID("1")
-                    .handlInst('1')
-                    .ordType(Market)
-                    // The API would follow a fluent style for setting up the different FIX message fields.
-                    .side(Sell)
-                    .symbol("MSFT")
-                    .price(price)
-                    .orderQty(quantity)
-                    .transactTime(System.currentTimeMillis());
+                    .side(Side.BUY)
+                    .transactTime(transactTime.buffer(), transactTimeLength)
+                    .ordType(OrdType.MARKET)
+                    .price(price);
 
                 // Having encoded the message, you can send it to the exchange via the session object.
-                session.trySend(orderSingle);
+                final long position = session.trySend(orderSingle);
+                if (position < 0L)
+                {
+                    // Message has failed to send due to backpressure if this is the case.
+                }
 
                 // If you want to produce multiple messages and rapidly fire them off then you just
                 // need to update the fields in question and the other remain the side as your previous
                 // usage.
                 orderSingle
-                    .price(price.set(2010, 2))
-                    .orderQty(quantity.set(20, 0));
+                    .price(price.set(2010, 2));
 
                 session.trySend(orderSingle);
 
                 orderSingle
-                    .price(price.set(2020, 2))
-                    .orderQty(quantity.set(30, 0));
+                    .price(price.set(2020, 2));
 
                 session.trySend(orderSingle);
             }
