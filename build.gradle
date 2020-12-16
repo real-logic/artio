@@ -352,9 +352,10 @@ project(':artio-ilink3-codecs') {
         from sourceSets.generated.java
     }
 
-    javadoc {
+    // TODO: re-enable this once https://github.com/real-logic/simple-binary-encoding/issues/826 is resolved
+    /*javadoc {
         source += sourceSets.generated.java
-    }
+    }*/
 
     jar {
         from sourceSets.generated.output
