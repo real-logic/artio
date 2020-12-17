@@ -794,8 +794,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
 
     private long allFixSessionsRequest(final long correlationId)
     {
-        // TODO: handle reentrancy
-
         final LongHashSet seenSessions = this.requestAllSessionSeenSessions;
         try
         {
@@ -817,7 +815,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
                 if (!seenSessions.contains(sessionInfo.sessionId()))
                 {
                     final SessionContext context = (SessionContext)sessionInfo;
-                    replySession(sessionsEncoder, NO_CONNECTION_ID, "", sessionInfo, context.lastLogonTime());
+                    final long lastLogonTime = context.lastLogonTime();
+                    replySession(sessionsEncoder, NO_CONNECTION_ID, "", sessionInfo, lastLogonTime, false);
                 }
             }
 
@@ -841,7 +840,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
             final long connectionId = gatewaySession.connectionId();
             final String address = gatewaySession.address();
 
-            replySession(sessionsEncoder, connectionId, address, gatewaySession, gatewaySession.lastLogonTime());
+            final boolean isSlowConsumer = fixSenderEndPoints.isSlowConsumer(connectionId);
+
+            replySession(
+                sessionsEncoder, connectionId, address, gatewaySession, gatewaySession.lastLogonTime(), isSlowConsumer);
 
             seenSessions.add(gatewaySession.sessionId());
         }
@@ -852,7 +854,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
         final long connectionId,
         final String address,
         final SessionInfo sessionInfo,
-        final long lastLogonTime)
+        final long lastLogonTime,
+        final boolean isSlowConsumer)
     {
         final long sessionId = sessionInfo.sessionId();
         final CompositeKey sessionKey = sessionInfo.sessionKey();
@@ -867,6 +870,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastLogonTime(lastLogonTime)
             .sequenceIndex(sessionInfo.sequenceIndex())
+            .slowStatus(isSlowConsumer ? SlowStatus.SLOW : SlowStatus.NOT_SLOW)
             .address(address)
             .localCompId(sessionKey.localCompId())
             .localSubId(sessionKey.localSubId())

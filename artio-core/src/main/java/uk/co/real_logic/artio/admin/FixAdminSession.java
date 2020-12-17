@@ -36,6 +36,7 @@ public class FixAdminSession implements SessionInfo
     private final int lastSentMsgSeqNum;
     private final int connectedPort;
     private final int sequenceIndex;
+    private final boolean isSlow;
 
     public FixAdminSession(
         final long sessionId,
@@ -44,6 +45,7 @@ public class FixAdminSession implements SessionInfo
         final int lastSentMsgSeqNum,
         final long lastLogonTime,
         final int sequenceIndex,
+        final boolean isSlow,
         final String address,
         final CompositeKey sessionKey)
     {
@@ -52,6 +54,7 @@ public class FixAdminSession implements SessionInfo
         this.lastReceivedMsgSeqNum = lastReceivedMsgSeqNum;
         this.lastSentMsgSeqNum = lastSentMsgSeqNum;
         this.lastLogonTime = lastLogonTime;
+        this.isSlow = isSlow;
         final ParsedAddress parsed = ParsedAddress.parse(address);
         this.connectedHost = parsed.host();
         this.connectedPort = parsed.port();
@@ -159,5 +162,34 @@ public class FixAdminSession implements SessionInfo
     public boolean isConnected()
     {
         return connectionId != GatewayProcess.NO_CONNECTION_ID;
+    }
+
+    /**
+     * Gets whether the session is slow or not. If the session is not currently connected then this method will
+     * return true.
+     *
+     * @see <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">
+     *     Slow Consumer Support.</a>
+     * @return true if slow, false otherwise.
+     */
+    public boolean isSlow()
+    {
+        return isSlow;
+    }
+
+    public String toString()
+    {
+        return "FixAdminSession{" +
+            "lastLogonTime=" + lastLogonTime +
+            ", connectedHost='" + connectedHost + '\'' +
+            ", sessionKey=" + sessionKey +
+            ", sessionId=" + sessionId +
+            ", connectionId=" + connectionId +
+            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+            ", connectedPort=" + connectedPort +
+            ", sequenceIndex=" + sequenceIndex +
+            ", isSlow=" + isSlow +
+            '}';
     }
 }

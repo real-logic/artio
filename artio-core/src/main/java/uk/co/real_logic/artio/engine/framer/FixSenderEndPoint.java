@@ -450,7 +450,7 @@ class FixSenderEndPoint
     }
 
     // Only access on Framer thread
-    private boolean isSlowConsumer()
+    boolean isSlowConsumer()
     {
         return bytesInBufferWeak() > 0;
     }

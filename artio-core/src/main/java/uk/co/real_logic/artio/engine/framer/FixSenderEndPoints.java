@@ -194,6 +194,12 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             .forEach(FixSenderEndPoint::close);
     }
 
+    public boolean isSlowConsumer(final long connectionId)
+    {
+        final FixSenderEndPoint fixSenderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        return fixSenderEndPoint != null && fixSenderEndPoint.isSlowConsumer();
+    }
+
     void timeInMs(final long timeInMs)
     {
         this.timeInMs = timeInMs;

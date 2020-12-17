@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.session;
 
 public class ParsedAddress
 {
+    public static final ParsedAddress NO_ADDRESS = new ParsedAddress("", Session.UNKNOWN);
+
     private final String host;
     private final int port;
 
@@ -28,6 +30,11 @@ public class ParsedAddress
 
     public static ParsedAddress parse(final String address)
     {
+        if (address.isEmpty())
+        {
+            return NO_ADDRESS;
+        }
+
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);

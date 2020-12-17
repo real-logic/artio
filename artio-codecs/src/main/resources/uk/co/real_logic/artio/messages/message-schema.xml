@@ -564,6 +564,7 @@
             <field name="lastSentSequenceNumber" id="4" type="int32"/>
             <field name="lastLogonTime" id="5" type="Timestamp" />
             <field name="sequenceIndex" id="6" type="SequenceIndex" />
+            <field name="slowStatus" id="15" type="SlowStatus"/>
 
             <data name="address" id="8" type="Utf8String"/>
             <data name="localCompId" id="9" type="Utf8String"/>

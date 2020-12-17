@@ -19,11 +19,13 @@ import org.agrona.CloseHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.admin.ArtioAdmin;
 import uk.co.real_logic.artio.admin.ArtioAdminConfiguration;
 import uk.co.real_logic.artio.admin.FixAdminSession;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 
@@ -72,32 +74,86 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         acquireAcceptingSession();
         messagesCanBeExchanged();
 
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+            assertFalse(artioAdmin.isClosed());
+
+            final List<FixAdminSession> allFixSessions = artioAdmin.allFixSessions();
+            assertThat(allFixSessions, hasSize(1));
+
+            assertSessionEquals(acceptingSession, allFixSessions.get(0));
+
+            artioAdmin.close();
+            assertTrue(artioAdmin.isClosed());
+
+            artioAdmin.close();
+            assertTrue("Close not idempotent", artioAdmin.isClosed());
+        });
+    }
+
+    @Test
+    public void shouldQueryMultipleSessions()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+
+        // Create another session that will then be disconnected
+        Reply<Session> successfulReply = initiate(initiatingLibrary, port, INITIATOR_ID3, ACCEPTOR_ID);
+        final Session offlineSession = completeConnectSessions(successfulReply);
+        logoutSession(offlineSession);
+        assertSessionDisconnected(offlineSession);
+
+        // A second session, temporarily gateway managed
+        successfulReply = initiate(initiatingLibrary, port, INITIATOR_ID2, ACCEPTOR_ID);
+        final Session otherInitSession = completeConnectSessions(successfulReply);
+        messagesCanBeExchanged(otherInitSession);
+        assertThat(acceptingLibrary.sessions(), hasSize(1));
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            final List<FixAdminSession> allFixSessions = artioAdmin.allFixSessions();
+            assertThat(allFixSessions, hasSize(3));
+
+            FixAdminSession fixAdminSession = allFixSessions.get(0);
+            assertTrue(fixAdminSession.isConnected());
+            assertEquals(INITIATOR_ID2, fixAdminSession.sessionKey().remoteCompId());
+            assertEquals(otherInitSession.lastSentMsgSeqNum(), fixAdminSession.lastReceivedMsgSeqNum());
+            assertEquals(otherInitSession.lastReceivedMsgSeqNum(), fixAdminSession.lastSentMsgSeqNum());
+
+            assertSessionEquals(acceptingSession, allFixSessions.get(1));
+
+            fixAdminSession = allFixSessions.get(2);
+            assertFalse(fixAdminSession.isConnected());
+            assertEquals(INITIATOR_ID3, fixAdminSession.sessionKey().remoteCompId());
+            assertEquals(2, fixAdminSession.lastReceivedMsgSeqNum());
+            assertEquals(2, fixAdminSession.lastSentMsgSeqNum());
+        });
+    }
+
+    private void assertSessionEquals(final Session session, final FixAdminSession adminSession)
+    {
+        assertEquals(session.connectionId(), adminSession.connectionId());
+        assertEquals(session.connectedHost(), adminSession.connectedHost());
+        assertEquals(session.connectedPort(), adminSession.connectedPort());
+        assertEquals(session.id(), adminSession.sessionId());
+        assertEquals(session.compositeKey().toString(), adminSession.sessionKey().toString());
+        connectTimeRange.assertWithinRange(adminSession.lastLogonTime());
+        assertEquals(session.lastReceivedMsgSeqNum(), adminSession.lastReceivedMsgSeqNum());
+        assertEquals(session.lastSentMsgSeqNum(), adminSession.lastSentMsgSeqNum());
+        assertTrue(adminSession.isConnected());
+        assertFalse(adminSession.isSlow());
+    }
+
+    private void launchArtioAdmin()
+    {
         final ArtioAdminConfiguration config = new ArtioAdminConfiguration();
         config.libraryAeronChannel(acceptingEngine.configuration().libraryAeronChannel());
         artioAdmin = ArtioAdmin.launch(config);
-        assertFalse(artioAdmin.isClosed());
-
-        final List<FixAdminSession> allFixSessions = artioAdmin.allFixSessions();
-        assertThat(allFixSessions, hasSize(1));
-
-        final FixAdminSession session = allFixSessions.get(0);
-        assertEquals(acceptingSession.connectionId(), session.connectionId());
-        assertEquals(acceptingSession.connectedHost(), session.connectedHost());
-        assertEquals(acceptingSession.connectedPort(), session.connectedPort());
-        assertEquals(acceptingSession.id(), session.sessionId());
-        assertEquals(acceptingSession.compositeKey().toString(), session.sessionKey().toString());
-        connectTimeRange.assertWithinRange(session.lastLogonTime());
-        assertEquals(acceptingSession.lastReceivedMsgSeqNum(), session.lastReceivedMsgSeqNum());
-        assertEquals(acceptingSession.lastSentMsgSeqNum(), session.lastSentMsgSeqNum());
-        assertTrue(session.isConnected());
-
-        artioAdmin.close();
-        assertTrue(artioAdmin.isClosed());
-
-        artioAdmin.close();
-        assertTrue("Close not idempotent", artioAdmin.isClosed());
     }
 
-    // TODO: test multiple sessions
     // TODO: test multiple admin API instances.
 }

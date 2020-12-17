@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.admin;
 
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyDecoder;
+import uk.co.real_logic.artio.messages.SlowStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,7 @@ class AdminEndPointHandler
                     sessions.lastSentSequenceNumber(),
                     sessions.lastLogonTime(),
                     sessions.sequenceIndex(),
+                    sessions.slowStatus() == SlowStatus.SLOW,
                     sessions.address(),
                     new AdminCompositeKey(
                     sessions.localCompId(),
@@ -61,7 +63,8 @@ class AdminEndPointHandler
                     sessions.localLocationId(),
                     sessions.remoteCompId(),
                     sessions.remoteSubId(),
-                    sessions.remoteLocationId())));
+                    sessions.remoteLocationId())
+                ));
             }
 
             hasReceivedReply = true;
