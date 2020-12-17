@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.admin.ArtioAdmin;
 import uk.co.real_logic.artio.admin.ArtioAdminConfiguration;
@@ -37,12 +38,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    // Manage fix sessions:
-    //Query session info:
-    //Slow consumer status
-    //Manage session:
-    //Disconnect
-
     private ArtioAdmin artioAdmin;
 
     @Before
@@ -134,6 +129,34 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         });
     }
 
+    @Test
+    public void shouldDisconnectSession()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            artioAdmin.disconnectSession(acceptingSession.id());
+        });
+
+        assertSessionsDisconnected();
+    }
+
+    @Test
+    public void shouldThrowWhenUnknownDisconnectSession()
+    {
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            assertThrows(FixGatewayException.class, () -> artioAdmin.disconnectSession(-1337L));
+        });
+    }
+
     private void assertSessionEquals(final Session session, final FixAdminSession adminSession)
     {
         assertEquals(session.connectionId(), adminSession.connectionId());
@@ -154,6 +177,4 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         config.libraryAeronChannel(acceptingEngine.configuration().libraryAeronChannel());
         artioAdmin = ArtioAdmin.launch(config);
     }
-
-    // TODO: test multiple admin API instances.
 }

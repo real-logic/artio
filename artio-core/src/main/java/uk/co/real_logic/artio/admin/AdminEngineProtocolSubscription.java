@@ -19,12 +19,14 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.AllFixSessionsRequestDecoder;
+import uk.co.real_logic.artio.messages.DisconnectSessionRequestDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 public class AdminEngineProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final AllFixSessionsRequestDecoder allFixSessionsRequest = new AllFixSessionsRequestDecoder();
+    private final DisconnectSessionRequestDecoder disconnectSessionRequest = new DisconnectSessionRequestDecoder();
 
     private final AdminEngineEndPointHandler handler;
 
@@ -47,13 +49,19 @@ public class AdminEngineProtocolSubscription implements FragmentHandler
         {
             case AllFixSessionsRequestDecoder.TEMPLATE_ID:
             {
-                onAllFixSessionsReply(buffer, offset, blockLength, version);
+                onAllFixSessions(buffer, offset, blockLength, version);
+                return;
+            }
+
+            case DisconnectSessionRequestDecoder.TEMPLATE_ID:
+            {
+                onDisconnectSession(buffer, offset, blockLength, version);
                 return;
             }
         }
     }
 
-    private void onAllFixSessionsReply(
+    private void onAllFixSessions(
         final DirectBuffer buffer,
         final int offset,
         final int blockLength,
@@ -61,6 +69,19 @@ public class AdminEngineProtocolSubscription implements FragmentHandler
     {
         final AllFixSessionsRequestDecoder allFixSessionsRequest = this.allFixSessionsRequest;
         allFixSessionsRequest.wrap(buffer, offset, blockLength, version);
-        handler.onAllFixSessionsRequest(allFixSessionsRequest.correlationId());
+        handler.onAllFixSessions(allFixSessionsRequest.correlationId());
+    }
+
+    private void onDisconnectSession(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        final DisconnectSessionRequestDecoder disconnectSessionRequest = this.disconnectSessionRequest;
+        disconnectSessionRequest.wrap(buffer, offset, blockLength, version);
+        handler.onDisconnectSession(
+            disconnectSessionRequest.correlationId(),
+            disconnectSessionRequest.sessionId());
     }
 }

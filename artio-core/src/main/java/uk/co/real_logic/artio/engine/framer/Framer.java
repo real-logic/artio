@@ -787,7 +787,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
         return iLink3Contexts;
     }
 
-    public void onAllFixSessionsRequest(final long correlationId)
+    public void onAllFixSessions(final long correlationId)
     {
         schedule(() -> allFixSessionsRequest(correlationId));
     }
@@ -826,6 +826,57 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
         {
             seenSessions.clear();
         }
+    }
+
+    public void onDisconnectSession(final long correlationId, final long sessionId)
+    {
+        if (!sessionContexts.isKnownSessionId(sessionId))
+        {
+            schedule(() -> saveUnknownDisconnect(correlationId, sessionId));
+            return;
+        }
+
+        if (!sessionContexts.isAuthenticated(sessionId))
+        {
+            schedule(() -> saveNotAuthenticatedDisconnect(correlationId, sessionId));
+            return;
+        }
+
+        GatewaySession gatewaySession = gatewaySessions.sessionById(sessionId);
+        if (gatewaySession == null)
+        {
+            gatewaySession = findLibrarySession(sessionId);
+        }
+
+        if (gatewaySession == null)
+        {
+            schedule(() -> saveNotAuthenticatedDisconnect(correlationId, sessionId));
+            return;
+        }
+
+        final int libraryId = gatewaySession.libraryId();
+        final long connectionId = gatewaySession.connectionId();
+
+        onDisconnect(libraryId, connectionId, DisconnectReason.ADMIN_API_DISCONNECT);
+
+        schedule(() -> saveOkDisconnect(correlationId));
+    }
+
+    private long saveOkDisconnect(final long correlationId)
+    {
+        return adminReplyPublication.saveDisconnectSessionReply(correlationId, GatewayError.NULL_VAL, "");
+    }
+
+    private long saveUnknownDisconnect(final long correlationId, final long sessionId)
+    {
+        return adminReplyPublication.saveDisconnectSessionReply(
+            correlationId, GatewayError.UNKNOWN_SESSION, sessionId + " is an unknown session");
+    }
+
+    private long saveNotAuthenticatedDisconnect(final long correlationId, final long sessionId)
+    {
+        return adminReplyPublication.saveDisconnectSessionReply(
+            correlationId, GatewayError.EXCEPTION, sessionId + " isn't currently authenticated");
     }
 
     private void replyConnectedSessions(
@@ -1835,15 +1886,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
 
     private boolean isOwnedSession(final long sessionId)
     {
+        return findLibrarySession(sessionId) != null;
+    }
+
+    private GatewaySession findLibrarySession(final long sessionId)
+    {
         for (final LiveLibraryInfo library : idToLibrary.values())
         {
-            if (library.lookupSessionById(sessionId) != null)
+            final GatewaySession gatewaySession = library.lookupSessionById(sessionId);
+            if (gatewaySession != null)
             {
-                return true;
+                return gatewaySession;
             }
         }
-
-        return false;
+        return null;
     }
 
     private final class HandoverOfflineSession extends UnitOfWork

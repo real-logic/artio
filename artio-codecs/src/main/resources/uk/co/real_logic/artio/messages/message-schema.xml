@@ -114,6 +114,8 @@
                         description="We disconnected due to the authentication strategy not responding within the timeout">19</validValue>
             <validValue name="INVALID_ILINK_MESSAGE"
                         description="We disconnected due to an error in framing iLink3 messages" sinceVersion="14">20</validValue>
+            <validValue name="ADMIN_API_DISCONNECT"
+                        description="Disconnected due to an explicit administrative API operation from a user" sinceVersion="15">21</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
@@ -574,6 +576,17 @@
             <data name="remoteSubId" id="13" type="Utf8String"/>
             <data name="remoteLocationId" id="14" type="Utf8String"/>
         </group>
+    </sbe:message>
+
+    <sbe:message name="DisconnectSessionRequest" id="64" description="" sinceVersion="15">
+        <field name="correlationId" id="0" type="CorrelationId"/>
+        <field name="sessionId" id="1" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="DisconnectSessionReply" id="65" description="" sinceVersion="15">
+        <field name="correlationId" id="0" type="CorrelationId"/>
+        <field name="errorType" id="1" type="GatewayError"/>
+        <data name="message" id="2" type="Utf8String"/>
     </sbe:message>
 
 </sbe:messageSchema>

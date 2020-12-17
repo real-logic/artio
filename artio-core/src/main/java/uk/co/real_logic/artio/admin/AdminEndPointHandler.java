@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.artio.admin;
 
+import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyDecoder;
+import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.messages.SlowStatus;
 
 import java.util.ArrayList;
@@ -25,7 +27,11 @@ class AdminEndPointHandler
 {
     private long expectedCorrelationId;
     private boolean hasReceivedReply;
+
     private List<FixAdminSession> allFixSessions;
+
+    private GatewayError errorType;
+    private String errorMessage;
 
     public boolean hasReceivedReply()
     {
@@ -75,5 +81,35 @@ class AdminEndPointHandler
     {
         expectedCorrelationId = correlationId;
         hasReceivedReply = false;
+    }
+
+    public <T> T checkError()
+    {
+        if (errorType != null)
+        {
+            try
+            {
+                throw new FixGatewayException(errorMessage);
+            }
+            finally
+            {
+                errorType = null;
+                errorMessage = null;
+            }
+        }
+        return (T)null;
+    }
+
+    public void onDisconnectSessionReply(final long correlationId, final GatewayError errorType, final String message)
+    {
+        if (correlationId == expectedCorrelationId)
+        {
+            if (errorType != null && errorType != GatewayError.NULL_VAL)
+            {
+                this.errorType = errorType;
+                this.errorMessage = message;
+            }
+            hasReceivedReply = true;
+        }
     }
 }

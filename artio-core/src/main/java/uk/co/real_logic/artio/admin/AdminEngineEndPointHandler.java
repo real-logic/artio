@@ -17,5 +17,7 @@ package uk.co.real_logic.artio.admin;
 
 public interface AdminEngineEndPointHandler
 {
-    void onAllFixSessionsRequest(long correlationId);
+    void onAllFixSessions(long correlationId);
+
+    void onDisconnectSession(long correlationId, long sessionId);
 }

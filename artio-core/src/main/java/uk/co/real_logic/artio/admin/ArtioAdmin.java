@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.FAILED_ADMIN_TYPE_ID;
 
@@ -54,10 +55,13 @@ public final class ArtioAdmin implements AutoCloseable
     private final EpochNanoClock epochNanoClock;
     private final Counter failCounter;
     private final long replyTimeoutInNs;
+    private final BooleanSupplier checkReplyFunc = this::checkReply;
+    private final BooleanSupplier saveRequestAllFixSessionsFunc = this::saveRequestAllFixSessionsFunc;
+    private final Supplier<List<FixAdminSession>> allFixSessionsResultFunc = handler::allFixSessions;
 
     private volatile boolean closed = false;
 
-    private boolean inCallback = false;
+    private long correlationId;
 
     public static ArtioAdmin launch(final ArtioAdminConfiguration config)
     {
@@ -85,24 +89,38 @@ public final class ArtioAdmin implements AutoCloseable
 
     public List<FixAdminSession> allFixSessions()
     {
+        return exchangeMessage(saveRequestAllFixSessionsFunc, allFixSessionsResultFunc);
+    }
+
+    private boolean saveRequestAllFixSessionsFunc()
+    {
+        return outboundPublication.saveRequestAllFixSessions(correlationId) > 0;
+    }
+
+    public void disconnectSession(final long sessionId)
+    {
+        exchangeMessage(
+            () -> outboundPublication.saveDisconnectSession(correlationId, sessionId) > 0,
+            handler::checkError);
+    }
+
+    private <T> T exchangeMessage(final BooleanSupplier sendMessage, final Supplier<T> getResult)
+    {
         lock.lock();
         try
         {
             checkOpen();
-            checkNotReentrant();
-            inCallback = true;
 
             final long deadlineInNs = nanoTime() + replyTimeoutInNs;
-            final long correlationId = newCorrelationId();
+            correlationId = newCorrelationId();
             handler.expectedCorrelationId(correlationId);
-            until(deadlineInNs, () -> outboundPublication.saveRequestAllFixSessions(correlationId) > 0);
-            until(deadlineInNs, this::checkReply);
+            until(deadlineInNs, sendMessage);
+            until(deadlineInNs, checkReplyFunc);
 
-            return handler.allFixSessions();
+            return getResult.get();
         }
         finally
         {
-            inCallback = false;
             lock.unlock();
         }
     }
@@ -149,21 +167,11 @@ public final class ArtioAdmin implements AutoCloseable
         }
     }
 
-    private void checkNotReentrant()
-    {
-        if (inCallback)
-        {
-            throw new IllegalStateException("reentrant calls not permitted during callbacks");
-        }
-    }
-
     public void close()
     {
         lock.lock();
         try
         {
-            checkNotReentrant();
-
             if (!closed)
             {
                 Exceptions.closeAll(failCounter, aeron);

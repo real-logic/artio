@@ -19,12 +19,14 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyDecoder;
+import uk.co.real_logic.artio.messages.DisconnectSessionReplyDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 class AdminApiProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final AllFixSessionsReplyDecoder allFixSessionsReply = new AllFixSessionsReplyDecoder();
+    private final DisconnectSessionReplyDecoder disconnectSessionReply = new DisconnectSessionReplyDecoder();
 
     private final AdminEndPointHandler handler;
 
@@ -50,6 +52,12 @@ class AdminApiProtocolSubscription implements FragmentHandler
                 onAllFixSessionsReply(buffer, offset, blockLength, version);
                 return;
             }
+
+            case DisconnectSessionReplyDecoder.TEMPLATE_ID:
+            {
+                onDisconnectSessionReply(buffer, offset, blockLength, version);
+                return;
+            }
         }
     }
 
@@ -65,5 +73,20 @@ class AdminApiProtocolSubscription implements FragmentHandler
         handler.onAllFixSessionsReply(
             allFixSessionsReply.correlationId(),
             allFixSessionsReply.sessions());
+    }
+
+    private void onDisconnectSessionReply(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        final DisconnectSessionReplyDecoder disconnectSessionReply = this.disconnectSessionReply;
+        disconnectSessionReply.wrap(buffer, offset, blockLength, version);
+
+        handler.onDisconnectSessionReply(
+            disconnectSessionReply.correlationId(),
+            disconnectSessionReply.errorType(),
+            disconnectSessionReply.message());
     }
 }

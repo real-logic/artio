@@ -20,6 +20,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.AllFixSessionsRequestEncoder;
+import uk.co.real_logic.artio.messages.DisconnectSessionRequestEncoder;
 import uk.co.real_logic.artio.protocol.ClaimablePublication;
 
 /**
@@ -29,8 +30,11 @@ public class AdminPublication extends ClaimablePublication
 {
     private static final int ALL_FIX_SESSIONS_REQUEST_LENGTH =
         HEADER_LENGTH + AllFixSessionsRequestEncoder.BLOCK_LENGTH;
+    private static final int DISCONNECT_SESSION_REQUEST_LENGTH =
+        HEADER_LENGTH + DisconnectSessionRequestEncoder.BLOCK_LENGTH;
 
     private final AllFixSessionsRequestEncoder allFixSessionsRequest = new AllFixSessionsRequestEncoder();
+    private final DisconnectSessionRequestEncoder disconnectSessionRequest = new DisconnectSessionRequestEncoder();
 
     public AdminPublication(
         final ExclusivePublication dataPublication,
@@ -55,6 +59,27 @@ public class AdminPublication extends ClaimablePublication
         allFixSessionsRequest
             .wrapAndApplyHeader(buffer, offset, header)
             .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveDisconnectSession(final long correlationId, final long sessionId)
+    {
+        final long position = claim(DISCONNECT_SESSION_REQUEST_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        disconnectSessionRequest
+            .wrapAndApplyHeader(buffer, offset, header)
+            .correlationId(correlationId)
+            .sessionId(sessionId);
 
         bufferClaim.commit();
 
