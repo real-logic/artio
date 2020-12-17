@@ -15,13 +15,18 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import io.aeron.Aeron;
+import io.aeron.ExclusivePublication;
 import io.aeron.Image;
+import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.StreamInformation;
+import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
@@ -69,7 +74,8 @@ public class FramerContext
         final Image slowReplayImage,
         final EngineTimers timers,
         final AgentInvoker conductorAgentInvoker,
-        final RecordingCoordinator recordingCoordinator)
+        final RecordingCoordinator recordingCoordinator,
+        final Aeron aeron)
     {
         this.configuration = configuration;
 
@@ -84,6 +90,9 @@ public class FramerContext
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
             outboundLibraryStreams.dataPublication("outboundPublication"));
+
+        final Subscription adminEngineSubscription = newAdminEngineSubscription(aeron);
+        final AdminReplyPublication adminReplyPublication = newAdminReplyPublication(aeron, fixCounters, idleStrategy);
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerOutboundLookup(),
@@ -124,6 +133,8 @@ public class FramerContext
             timers.outboundTimer(),
             timers.sendTimer(),
             configuration,
+            adminEngineSubscription,
+            adminReplyPublication,
             endPointFactory,
             engineContext.outboundLibrarySubscription(
                 "outboundLibrarySubscription", finalImagePositions),
@@ -147,6 +158,29 @@ public class FramerContext
             finalImagePositions,
             conductorAgentInvoker,
             recordingCoordinator);
+    }
+
+    private Subscription newAdminEngineSubscription(final Aeron aeron)
+    {
+        final Subscription adminEngineSubscription = aeron.addSubscription(
+            configuration.libraryAeronChannel(), configuration.outboundAdminStream());
+        StreamInformation.print(
+            "adminEngineSubscription", adminEngineSubscription, configuration.printAeronStreamIdentifiers());
+        return adminEngineSubscription;
+    }
+
+    private AdminReplyPublication newAdminReplyPublication(
+        final Aeron aeron, final FixCounters fixCounters, final IdleStrategy idleStrategy)
+    {
+        final ExclusivePublication adminDataPublication = aeron.addExclusivePublication(
+            configuration.libraryAeronChannel(), configuration.inboundAdminStream());
+        StreamInformation.print(
+            "adminEngineSubscription", adminDataPublication, configuration.printAeronStreamIdentifiers());
+        return new AdminReplyPublication(
+            adminDataPublication,
+            fixCounters.failedAdminReplyPublications(),
+            idleStrategy,
+            configuration.outboundMaxClaimAttempts());
     }
 
     public Agent framer()

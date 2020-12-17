@@ -43,7 +43,9 @@ public class FixCounters implements AutoCloseable
         SENT_MSG_SEQ_NO_TYPE_ID(10_006),
         RECV_MSG_SEQ_NO_TYPE_ID(10_007),
         CURRENT_REPLAY_COUNT_TYPE_ID(10_008),
-        NEGATIVE_TIMESTAMP_TYPE_ID(10_009);
+        NEGATIVE_TIMESTAMP_TYPE_ID(10_009),
+        FAILED_ADMIN_TYPE_ID(10_010),
+        FAILED_ADMIN_REPLY_TYPE_ID(10_011);
 
         final int id;
 
@@ -62,6 +64,7 @@ public class FixCounters implements AutoCloseable
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
+    private final AtomicCounter failedAdminReplyPublications;
     private final AtomicCounter currentReplayCount;
     private final AtomicCounter negativeTimestamps;
     private final Aeron aeron;
@@ -98,6 +101,8 @@ public class FixCounters implements AutoCloseable
                 "Failed offer to outbound publication");
         failedReplayPublications = newCounter(FAILED_REPLAY_TYPE_ID.id(),
                 "Failed offer to replay publication");
+        failedAdminReplyPublications = newCounter(FAILED_ADMIN_REPLY_TYPE_ID.id(),
+            "Failed offer to admin reply publication");
 
         negativeTimestamps = newCounter(NEGATIVE_TIMESTAMP_TYPE_ID.id(), "negative timestamps");
 
@@ -125,6 +130,11 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter failedReplayPublications()
     {
         return failedReplayPublications;
+    }
+
+    public AtomicCounter failedAdminReplyPublications()
+    {
+        return failedAdminReplyPublications;
     }
 
     public AtomicCounter currentReplayCount()

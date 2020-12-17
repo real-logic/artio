@@ -27,19 +27,22 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.admin.AdminEngineEndPointHandler;
+import uk.co.real_logic.artio.admin.AdminEngineProtocolSubscription;
+import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder.SessionsEncoder;
 import uk.co.real_logic.artio.protocol.*;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.InternalSession;
@@ -91,7 +94,7 @@ import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
+class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngineEndPointHandler
 {
 
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);
@@ -134,12 +137,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler librarySubscriber;
     private final ControlledFragmentHandler replaySubscriber;
     private final ControlledFragmentHandler replaySlowSubscriber;
+    private final AdminEngineProtocolSubscription adminEngineProtocolSubscription;
+    private final Subscription adminEngineSubscription;
     private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final FixSenderEndPoints fixSenderEndPoints;
     private final ILink3SenderEndPoints iLink3SenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
     private final EngineConfiguration configuration;
+    private final AdminReplyPublication adminReplyPublication;
     private final EndPointFactory endPointFactory;
     private final Subscription librarySubscription;
     private final SubscriptionSlowPeeker librarySlowPeeker;
@@ -171,6 +177,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final boolean soleLibraryMode;
     private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
+    private final LongHashSet requestAllSessionSeenSessions = new LongHashSet();
 
     private ILink3Contexts iLink3Contexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
@@ -187,6 +194,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer outboundTimer,
         final Timer sendTimer,
         final EngineConfiguration configuration,
+        final Subscription adminEngineSubscription,
+        final AdminReplyPublication adminReplyPublication,
         final EndPointFactory endPointFactory,
         final Subscription librarySubscription,
         final Subscription slowSubscription,
@@ -214,6 +223,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
+        this.adminEngineSubscription = adminEngineSubscription;
+        this.adminReplyPublication = adminReplyPublication;
         this.endPointFactory = endPointFactory;
         this.librarySubscription = librarySubscription;
         this.replayImage = replayImage;
@@ -341,6 +352,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 }
             },
             new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)), 0, true);
+        adminEngineProtocolSubscription = new AdminEngineProtocolSubscription(this);
 
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
@@ -418,7 +430,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int sendOutboundMessages()
     {
         return librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit) +
-            librarySlowPeeker.peek(senderEndPointAssembler);
+            librarySlowPeeker.peek(senderEndPointAssembler) +
+            adminEngineSubscription.poll(adminEngineProtocolSubscription, outboundLibraryFragmentLimit);
     }
 
     private int pollLibraries(final long timeInMs)
@@ -772,6 +785,95 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return iLink3Contexts;
+    }
+
+    public void onAllFixSessionsRequest(final long correlationId)
+    {
+        schedule(() -> allFixSessionsRequest(correlationId));
+    }
+
+    private long allFixSessionsRequest(final long correlationId)
+    {
+        // TODO: handle reentrancy
+
+        final LongHashSet seenSessions = this.requestAllSessionSeenSessions;
+        try
+        {
+            final List<SessionInfo> allSessions = sessionContexts.allSessions();
+            final int sessionsCount = allSessions.size();
+            final SessionsEncoder sessionsEncoder = adminReplyPublication.startRequestAllFixSessions(
+                correlationId,
+                sessionsCount);
+
+            replyConnectedSessions(seenSessions, sessionsEncoder, gatewaySessions.sessions());
+
+            for (final LiveLibraryInfo libraryInfo : idToLibrary.values())
+            {
+                replyConnectedSessions(seenSessions, sessionsEncoder, libraryInfo.gatewaySessions());
+            }
+
+            for (final SessionInfo sessionInfo : allSessions)
+            {
+                if (!seenSessions.contains(sessionInfo.sessionId()))
+                {
+                    final SessionContext context = (SessionContext)sessionInfo;
+                    replySession(sessionsEncoder, NO_CONNECTION_ID, "", sessionInfo, context.lastLogonTime());
+                }
+            }
+
+            return adminReplyPublication.saveRequestAllFixSessions();
+        }
+        finally
+        {
+            seenSessions.clear();
+        }
+    }
+
+    private void replyConnectedSessions(
+        final LongHashSet seenSessions,
+        final SessionsEncoder sessionsEncoder,
+        final List<GatewaySession> gatewaySessions)
+    {
+        final int gatewaySessionsSize = gatewaySessions.size();
+        for (int i = 0; i < gatewaySessionsSize; i++)
+        {
+            final GatewaySession gatewaySession = gatewaySessions.get(i);
+            final long connectionId = gatewaySession.connectionId();
+            final String address = gatewaySession.address();
+
+            replySession(sessionsEncoder, connectionId, address, gatewaySession, gatewaySession.lastLogonTime());
+
+            seenSessions.add(gatewaySession.sessionId());
+        }
+    }
+
+    private void replySession(
+        final SessionsEncoder sessionsEncoder,
+        final long connectionId,
+        final String address,
+        final SessionInfo sessionInfo,
+        final long lastLogonTime)
+    {
+        final long sessionId = sessionInfo.sessionId();
+        final CompositeKey sessionKey = sessionInfo.sessionKey();
+
+        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+
+        sessionsEncoder.next()
+            .sessionId(sessionId)
+            .connectionId(connectionId)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastLogonTime(lastLogonTime)
+            .sequenceIndex(sessionInfo.sequenceIndex())
+            .address(address)
+            .localCompId(sessionKey.localCompId())
+            .localSubId(sessionKey.localSubId())
+            .localLocationId(sessionKey.localLocationId())
+            .remoteCompId(sessionKey.remoteCompId())
+            .remoteSubId(sessionKey.remoteSubId())
+            .remoteLocationId(sessionKey.remoteLocationId());
     }
 
     private final class ILink3LookupConnectOperation implements Continuation

@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="14"
+                   version="15"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -548,6 +548,31 @@
     <!-- Replay Stream Only messages -->
     <sbe:message name="ReplayerTimestamp" id="61" description="" sinceVersion="13">
         <field name="timestamp" id="0" type="Timestamp"/>
+    </sbe:message>
+
+    <!-- Admin Stream Only messages -->
+    <sbe:message name="AllFixSessionsRequest" id="62" description="" sinceVersion="15">
+        <field name="correlationId" id="0" type="CorrelationId"/>
+    </sbe:message>
+
+    <sbe:message name="AllFixSessionsReply" id="63" description="" sinceVersion="15">
+        <field name="correlationId" id="0" type="CorrelationId"/>
+        <group name="sessions" id="7" dimensionType="groupSizeEncoding">
+            <field name="sessionId" id="1" type="FixSessionId"/>
+            <field name="connectionId" id="2" type="ConnectionId"/>
+            <field name="lastReceivedSequenceNumber" id="3" type="int32"/>
+            <field name="lastSentSequenceNumber" id="4" type="int32"/>
+            <field name="lastLogonTime" id="5" type="Timestamp" />
+            <field name="sequenceIndex" id="6" type="SequenceIndex" />
+
+            <data name="address" id="8" type="Utf8String"/>
+            <data name="localCompId" id="9" type="Utf8String"/>
+            <data name="localSubId" id="10" type="Utf8String"/>
+            <data name="localLocationId" id="11" type="Utf8String"/>
+            <data name="remoteCompId" id="12" type="Utf8String"/>
+            <data name="remoteSubId" id="13" type="Utf8String"/>
+            <data name="remoteLocationId" id="14" type="Utf8String"/>
+        </group>
     </sbe:message>
 
 </sbe:messageSchema>

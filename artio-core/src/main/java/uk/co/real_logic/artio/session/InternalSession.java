@@ -108,11 +108,8 @@ public class InternalSession extends Session implements AutoCloseable
 
     public void address(final String address)
     {
-        final int split = address.lastIndexOf(':');
-        final int start = address.startsWith("/") ? 1 : 0;
-        final String host = address.substring(start, split);
-        final int port = Integer.parseInt(address.substring(split + 1));
-        address(host, port);
+        final ParsedAddress parsed = ParsedAddress.parse(address);
+        address(parsed.host(), parsed.port());
     }
 
     public void address(final String host, final int port)

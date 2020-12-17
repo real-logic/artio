@@ -31,9 +31,9 @@ import static io.aeron.Publication.MAX_POSITION_EXCEEDED;
 /**
  * A publication designed for deterministic claiming.
  */
-class ClaimablePublication implements AutoCloseable
+public class ClaimablePublication implements AutoCloseable
 {
-    static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
+    protected static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
     private final long maxClaimAttempts;
     private final AtomicCounter fails;
@@ -44,7 +44,7 @@ class ClaimablePublication implements AutoCloseable
 
     protected final IdleStrategy idleStrategy;
 
-    ClaimablePublication(
+    protected ClaimablePublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,

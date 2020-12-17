@@ -43,6 +43,8 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM;
+import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
@@ -249,6 +251,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int replayPositionBufferSize = DEFAULT_REPLAY_POSITION_BUFFER_SIZE;
     private long duplicateEngineTimeoutInMs = DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS;
     private boolean errorIfDuplicateEngineDetected = true;
+    private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM;
+    private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -1131,6 +1135,30 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
+     * Set the stream id from an admin API to a FIX Engine.
+     *
+     * @param inboundAdminStream the stream id from an admin API to a FIX Engine.
+     * @return this
+     */
+    public EngineConfiguration inboundAdminStream(final int inboundAdminStream)
+    {
+        this.inboundAdminStream = inboundAdminStream;
+        return this;
+    }
+
+    /**
+     * Set the stream id from a FIX Engine to an admin API.
+     *
+     * @param outboundAdminStream the stream id from a FIX Engine to an admin API.
+     * @return this
+     */
+    public EngineConfiguration outboundAdminStream(final int outboundAdminStream)
+    {
+        this.outboundAdminStream = outboundAdminStream;
+        return this;
+    }
+
+    /**
      * {@inheritDoc}
      */
     public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
@@ -1205,6 +1233,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public MessageTimingHandler messageTimingHandler()
     {
         return messageTimingHandler;
+    }
+
+    public int inboundAdminStream()
+    {
+        return inboundAdminStream;
+    }
+
+    public int outboundAdminStream()
+    {
+        return outboundAdminStream;
     }
 
     public EngineConfiguration conclude()

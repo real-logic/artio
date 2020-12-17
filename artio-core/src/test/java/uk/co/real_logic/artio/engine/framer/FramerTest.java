@@ -33,12 +33,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -177,6 +174,8 @@ public class FramerTest
             mock(Timer.class),
             mock(Timer.class),
             engineConfiguration,
+            mock(Subscription.class),
+            mock(AdminReplyPublication.class),
             mockEndPointFactory,
             outboundLibrarySubscription,
             outboundSlowSubscription,
