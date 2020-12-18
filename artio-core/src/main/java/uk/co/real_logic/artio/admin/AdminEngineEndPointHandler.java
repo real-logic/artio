@@ -20,4 +20,6 @@ public interface AdminEngineEndPointHandler
     void onAllFixSessions(long correlationId);
 
     void onDisconnectSession(long correlationId, long sessionId);
+
+    void onAdminResetSequenceNumbersRequest(long correlationId, long sessionId);
 }

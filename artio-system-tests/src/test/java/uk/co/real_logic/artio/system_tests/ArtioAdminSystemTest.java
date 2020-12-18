@@ -31,10 +31,11 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.util.CustomMatchers.assertThrows;
 
 public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -147,14 +148,131 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test
-    public void shouldThrowWhenUnknownDisconnectSession()
+    public void shouldThrowWhenAttemptingToDisconnectUnknownSession()
     {
         testSystem.awaitBlocking(() ->
         {
             launchArtioAdmin();
 
-            assertThrows(FixGatewayException.class, () -> artioAdmin.disconnectSession(-1337L));
+            assertThrows(
+                () -> artioAdmin.disconnectSession(-1337L),
+                FixGatewayException.class,
+                containsString("unknown"));
         });
+    }
+
+    @Test
+    public void shouldThrowWhenAttemptingToDisconnectOfflineSession()
+    {
+        createOfflineSession();
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            assertThrows(
+                () -> artioAdmin.disconnectSession(1),
+                FixGatewayException.class,
+                containsString("not currently authenticated"));
+        });
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfGatewayManagedSession()
+    {
+        connectSessions();
+        messagesCanBeExchanged();
+        messagesCanBeExchanged();
+        assertInitSeqNum(3, 3, 0);
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            artioAdmin.resetSequenceNumbers(1);
+        });
+
+        awaitInitSequenceReset();
+        messagesCanBeExchanged();
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfLibraryManagedSession()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+        messagesCanBeExchanged();
+        assertInitSeqNum(3, 3, 0);
+        assertAccSeqNum(3, 3, 0);
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            artioAdmin.resetSequenceNumbers(1);
+        });
+
+        awaitInitSequenceReset();
+        awaitSequenceReset(acceptingSession);
+        messagesCanBeExchanged();
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfOfflineSession()
+    {
+        createOfflineSession();
+
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            artioAdmin.resetSequenceNumbers(1);
+
+            final List<FixAdminSession> fixAdminSessions = artioAdmin.allFixSessions();
+            assertThat(fixAdminSessions, hasSize(1));
+
+            final FixAdminSession fixAdminSession = fixAdminSessions.get(0);
+            assertFalse(fixAdminSession.isConnected());
+            assertEquals(0, fixAdminSession.lastReceivedMsgSeqNum());
+            assertEquals(0, fixAdminSession.lastSentMsgSeqNum());
+        });
+    }
+
+    @Test
+    public void shouldThrowWhenAttemptingToResetSequenceNumbersOfUnknownSession()
+    {
+        testSystem.awaitBlocking(() ->
+        {
+            launchArtioAdmin();
+
+            assertThrows(
+                () -> artioAdmin.resetSequenceNumbers(-1337L),
+                FixGatewayException.class,
+                containsString("unknown"));
+        });
+    }
+
+    private void createOfflineSession()
+    {
+        connectSessions();
+        messagesCanBeExchanged();
+        messagesCanBeExchanged();
+        assertInitSeqNum(3, 3, 0);
+        logoutInitiatingSession();
+        assertSessionDisconnected(initiatingSession);
+    }
+
+    private void awaitInitSequenceReset()
+    {
+        awaitSequenceReset(initiatingSession);
+    }
+
+    private void awaitSequenceReset(final Session session)
+    {
+        testSystem.await(
+            "Sequence never reset",
+            () -> session.lastReceivedMsgSeqNum() == 1 && this.initiatingSession.lastSentMsgSeqNum() == 1);
     }
 
     private void assertSessionEquals(final Session session, final FixAdminSession adminSession)

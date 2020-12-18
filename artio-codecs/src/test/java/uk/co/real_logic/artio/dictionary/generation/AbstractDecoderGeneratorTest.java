@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
+import static uk.co.real_logic.artio.util.CustomMatchers.assertTargetThrows;
 import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -990,7 +991,7 @@ public abstract class AbstractDecoderGeneratorTest
 
         final AsciiSequenceView actual = getAsciiSequenceView(decoder, "onBehalfOfCompID");
         assertEquals("abc", actual.toString());
-        assertThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
+        assertTargetThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
             "No value for optional field: TestReqID");
     }
 
@@ -1790,11 +1791,6 @@ public abstract class AbstractDecoderGeneratorTest
         return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
     }
 
-    private boolean hasNestedField(final Decoder decoder) throws Exception
-    {
-        return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
-    }
-
     private Object getFloatField(final Decoder decoder) throws Exception
     {
         return get(decoder, FLOAT_FIELD);
@@ -1871,26 +1867,6 @@ public abstract class AbstractDecoderGeneratorTest
             invalidTagId, decoder.invalidTagId());
     }
 
-    private <T extends Exception> void assertThrows(
-        final ExceptionThrowingCommand throwableCommand,
-        final Class<T> exception,
-        final String message)
-    {
-        try
-        {
-            throwableCommand.execute();
-            fail(String.format("Expected exception %s with message %s but was no exception thrown",
-                exception, message));
-        }
-        catch (final Exception e)
-        {
-            final Throwable actualException = e.getCause();
-            assertThat(e.getClass(), typeCompatibleWith(InvocationTargetException.class));
-            assertThat(actualException.getClass(), typeCompatibleWith(exception));
-            assertThat(actualException.getMessage(), is(message));
-        }
-    }
-
     private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
     {
         return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
@@ -1933,11 +1909,6 @@ public abstract class AbstractDecoderGeneratorTest
         {
             assertEquals(nestedValue2, get(nestedGroup, "nestedField"));
         }
-    }
-
-    private interface ExceptionThrowingCommand
-    {
-        void execute() throws Exception;
     }
 
     private Decoder enumTestMessageDecoder() throws Exception

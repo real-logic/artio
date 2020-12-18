@@ -100,7 +100,7 @@ class AdminEndPointHandler
         return (T)null;
     }
 
-    public void onDisconnectSessionReply(final long correlationId, final GatewayError errorType, final String message)
+    public void onGenericAdminReply(final long correlationId, final GatewayError errorType, final String message)
     {
         if (correlationId == expectedCorrelationId)
         {

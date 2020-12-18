@@ -879,7 +879,7 @@ public class Session
     /**
      * This returns the time of the last sequence number reset. The source
      * of time here is configured from your {@link CommonConfiguration#epochNanoClock(EpochNanoClock)}.
-     * This defaults to nanoseconds but it can be any precision that you configure.
+     * The precision is in nanoseconds.
      *
      * @return the time of the last sequence number reset.
      */

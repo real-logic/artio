@@ -19,14 +19,14 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyDecoder;
-import uk.co.real_logic.artio.messages.DisconnectSessionReplyDecoder;
+import uk.co.real_logic.artio.messages.GenericAdminReplyDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 class AdminApiProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final AllFixSessionsReplyDecoder allFixSessionsReply = new AllFixSessionsReplyDecoder();
-    private final DisconnectSessionReplyDecoder disconnectSessionReply = new DisconnectSessionReplyDecoder();
+    private final GenericAdminReplyDecoder genericAdminReply = new GenericAdminReplyDecoder();
 
     private final AdminEndPointHandler handler;
 
@@ -53,9 +53,9 @@ class AdminApiProtocolSubscription implements FragmentHandler
                 return;
             }
 
-            case DisconnectSessionReplyDecoder.TEMPLATE_ID:
+            case GenericAdminReplyDecoder.TEMPLATE_ID:
             {
-                onDisconnectSessionReply(buffer, offset, blockLength, version);
+                onGenericAdminReply(buffer, offset, blockLength, version);
                 return;
             }
         }
@@ -75,18 +75,18 @@ class AdminApiProtocolSubscription implements FragmentHandler
             allFixSessionsReply.sessions());
     }
 
-    private void onDisconnectSessionReply(
+    private void onGenericAdminReply(
         final DirectBuffer buffer,
         final int offset,
         final int blockLength,
         final int version)
     {
-        final DisconnectSessionReplyDecoder disconnectSessionReply = this.disconnectSessionReply;
-        disconnectSessionReply.wrap(buffer, offset, blockLength, version);
+        final GenericAdminReplyDecoder genericAdminReply = this.genericAdminReply;
+        genericAdminReply.wrap(buffer, offset, blockLength, version);
 
-        handler.onDisconnectSessionReply(
-            disconnectSessionReply.correlationId(),
-            disconnectSessionReply.errorType(),
-            disconnectSessionReply.message());
+        handler.onGenericAdminReply(
+            genericAdminReply.correlationId(),
+            genericAdminReply.errorType(),
+            genericAdminReply.message());
     }
 }

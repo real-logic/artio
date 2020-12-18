@@ -146,15 +146,11 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(expectedAccToInitSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
-    private void awaitMessage(final int sequenceNumber, final Session session)
+    void awaitMessage(final int sequenceNumber, final Session session)
     {
-        assertEventuallyTrue(
+        testSystem.await(
             "Library Never reaches " + sequenceNumber,
-            () ->
-            {
-                testSystem.poll();
-                return session.lastReceivedMsgSeqNum() >= sequenceNumber;
-            });
+            () -> session.lastReceivedMsgSeqNum() >= sequenceNumber);
     }
 
     void disconnectSessions()
@@ -632,5 +628,25 @@ public class AbstractGatewayToGatewaySystemTest
     Reply<?> resetSequenceNumber(final long sessionId)
     {
         return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+    }
+
+    void assertInitSeqNum(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
+    {
+        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, initiatingSession);
+    }
+
+    void assertAccSeqNum(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
+    {
+        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, acceptingSession);
+    }
+
+    void assertSeqNum(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex, final Session session)
+    {
+        assertEquals("incorrect lastReceivedMsgSeqNum", lastReceivedMsgSeqNum, session.lastReceivedMsgSeqNum());
+        assertEquals("incorrect lastSentMsgSeqNum", lastSentMsgSeqNum, session.lastSentMsgSeqNum());
+        assertEquals("incorrect sequenceIndex", sequenceIndex, session.sequenceIndex());
     }
 }

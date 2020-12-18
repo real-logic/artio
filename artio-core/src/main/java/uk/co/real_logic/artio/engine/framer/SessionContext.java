@@ -37,7 +37,7 @@ class SessionContext implements SessionInfo
     private final int initialSequenceIndex;
 
     private long lastLogonTime;
-    private long lastSequenceResetTime;
+    private long lastSequenceResetTimeInNs;
     private FixDictionary lastFixDictionary;
     private int filePosition;
 
@@ -46,7 +46,7 @@ class SessionContext implements SessionInfo
         final long sessionId,
         final int sequenceIndex,
         final long lastLogonTime,
-        final long lastSequenceResetTime,
+        final long lastSequenceResetTimeInNs,
         final SessionContexts sessionContexts,
         final int filePosition,
         final int initialSequenceIndex,
@@ -57,7 +57,7 @@ class SessionContext implements SessionInfo
         this.sequenceIndex = sequenceIndex;
         this.initialSequenceIndex = initialSequenceIndex;
         lastLogonTime(lastLogonTime);
-        this.lastSequenceResetTime = lastSequenceResetTime;
+        this.lastSequenceResetTimeInNs = lastSequenceResetTimeInNs;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
         this.lastFixDictionary = lastFixDictionary;
@@ -68,9 +68,9 @@ class SessionContext implements SessionInfo
         this.lastLogonTime = lastLogonTime;
     }
 
-    void onSequenceReset(final long resetTime)
+    void onSequenceReset(final long resetTimeInNs)
     {
-        lastSequenceResetTime = resetTime;
+        lastSequenceResetTimeInNs = resetTimeInNs;
         sequenceIndex = sequenceIndex == UNKNOWN_SEQUENCE_INDEX ? initialSequenceIndex : sequenceIndex + 1;
         save();
     }
@@ -104,7 +104,7 @@ class SessionContext implements SessionInfo
     {
         sequenceIndex = session.sequenceIndex();
         lastLogonTime(session.lastLogonTime());
-        lastSequenceResetTime = session.lastSequenceResetTime();
+        lastSequenceResetTimeInNs = session.lastSequenceResetTime();
     }
 
     void onLogon(final boolean resetSeqNum, final long time, final FixDictionary fixDictionary)
@@ -141,7 +141,7 @@ class SessionContext implements SessionInfo
 
     public long lastSequenceResetTime()
     {
-        return lastSequenceResetTime;
+        return lastSequenceResetTimeInNs;
     }
 
     public long lastLogonTime()

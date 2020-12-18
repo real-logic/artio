@@ -583,10 +583,15 @@
         <field name="sessionId" id="1" type="FixSessionId"/>
     </sbe:message>
 
-    <sbe:message name="DisconnectSessionReply" id="65" description="" sinceVersion="15">
+    <sbe:message name="GenericAdminReply" id="65" description="" sinceVersion="15">
         <field name="correlationId" id="0" type="CorrelationId"/>
         <field name="errorType" id="1" type="GatewayError"/>
         <data name="message" id="2" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="AdminResetSequenceNumbersRequest" id="66" description="" sinceVersion="15">
+        <field name="correlationId" id="0" type="CorrelationId"/>
+        <field name="sessionId" id="1" type="FixSessionId"/>
     </sbe:message>
 
 </sbe:messageSchema>

@@ -21,7 +21,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder;
-import uk.co.real_logic.artio.messages.DisconnectSessionReplyEncoder;
+import uk.co.real_logic.artio.messages.GenericAdminReplyEncoder;
 import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.ClaimablePublication;
@@ -31,13 +31,13 @@ import uk.co.real_logic.artio.protocol.ClaimablePublication;
  */
 public class AdminReplyPublication extends ClaimablePublication
 {
-    private static final int DISCONNECT_SESSION_LENGTH = HEADER_LENGTH + DisconnectSessionReplyEncoder.BLOCK_LENGTH +
-        DisconnectSessionReplyEncoder.messageHeaderLength();
+    private static final int GENERIC_ADMIN_REPLY_LENGTH = HEADER_LENGTH + GenericAdminReplyEncoder.BLOCK_LENGTH +
+        GenericAdminReplyEncoder.messageHeaderLength();
 
     private final ExpandableArrayBuffer expandableArrayBuffer = new ExpandableArrayBuffer();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final AllFixSessionsReplyEncoder allFixSessionsReply = new AllFixSessionsReplyEncoder();
-    private final DisconnectSessionReplyEncoder disconnectSessionReply = new DisconnectSessionReplyEncoder();
+    private final GenericAdminReplyEncoder genericAdminReply = new GenericAdminReplyEncoder();
 
     public AdminReplyPublication(
         final ExclusivePublication dataPublication,
@@ -65,10 +65,10 @@ public class AdminReplyPublication extends ClaimablePublication
         return dataPublication.offer(expandableArrayBuffer, 0, length);
     }
 
-    public long saveDisconnectSessionReply(
+    public long saveGenericAdminReply(
         final long correlationId, final GatewayError gatewayError, final String message)
     {
-        final long position = claim(DISCONNECT_SESSION_LENGTH + message.length());
+        final long position = claim(GENERIC_ADMIN_REPLY_LENGTH + message.length());
         if (position < 0)
         {
             return position;
@@ -77,7 +77,7 @@ public class AdminReplyPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        disconnectSessionReply
+        genericAdminReply
             .wrapAndApplyHeader(buffer, offset, header)
             .correlationId(correlationId)
             .errorType(gatewayError)

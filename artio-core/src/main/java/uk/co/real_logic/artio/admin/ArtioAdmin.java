@@ -63,10 +63,63 @@ public final class ArtioAdmin implements AutoCloseable
 
     private long correlationId;
 
+    // ----------------------------------------------------
+    // Public API
+    // ----------------------------------------------------
+
     public static ArtioAdmin launch(final ArtioAdminConfiguration config)
     {
         return new ArtioAdmin(config);
     }
+
+    public List<FixAdminSession> allFixSessions()
+    {
+        return exchangeMessage(saveRequestAllFixSessionsFunc, allFixSessionsResultFunc);
+    }
+
+    public void disconnectSession(final long sessionId)
+    {
+        exchangeMessage(
+            () -> outboundPublication.saveDisconnectSession(correlationId, sessionId) > 0,
+            handler::checkError);
+    }
+
+    public void resetSequenceNumbers(
+        final long sessionId)
+    {
+        exchangeMessage(
+            () -> outboundPublication.saveResetSequenceNumbers(correlationId, sessionId) > 0,
+            handler::checkError);
+    }
+
+    /*final int nextSentMessageSequenceNumber,
+    final int nextReceivedMessageSequenceNumber*/
+
+    public void close()
+    {
+        lock.lock();
+        try
+        {
+            if (!closed)
+            {
+                Exceptions.closeAll(failCounter, aeron);
+                closed = true;
+            }
+        }
+        finally
+        {
+            lock.unlock();
+        }
+    }
+
+    public boolean isClosed()
+    {
+        return closed;
+    }
+
+    // ----------------------------------------------------
+    // End of Public API
+    // ----------------------------------------------------
 
     private ArtioAdmin(final ArtioAdminConfiguration config)
     {
@@ -87,21 +140,9 @@ public final class ArtioAdmin implements AutoCloseable
         inboundSubscription = aeron.addSubscription(channel, config.inboundAdminStream());
     }
 
-    public List<FixAdminSession> allFixSessions()
-    {
-        return exchangeMessage(saveRequestAllFixSessionsFunc, allFixSessionsResultFunc);
-    }
-
     private boolean saveRequestAllFixSessionsFunc()
     {
         return outboundPublication.saveRequestAllFixSessions(correlationId) > 0;
-    }
-
-    public void disconnectSession(final long sessionId)
-    {
-        exchangeMessage(
-            () -> outboundPublication.saveDisconnectSession(correlationId, sessionId) > 0,
-            handler::checkError);
     }
 
     private <T> T exchangeMessage(final BooleanSupplier sendMessage, final Supplier<T> getResult)
@@ -165,27 +206,5 @@ public final class ArtioAdmin implements AutoCloseable
         {
             throw new IllegalStateException("client is closed");
         }
-    }
-
-    public void close()
-    {
-        lock.lock();
-        try
-        {
-            if (!closed)
-            {
-                Exceptions.closeAll(failCounter, aeron);
-                closed = true;
-            }
-        }
-        finally
-        {
-            lock.unlock();
-        }
-    }
-
-    public boolean isClosed()
-    {
-        return closed;
     }
 }

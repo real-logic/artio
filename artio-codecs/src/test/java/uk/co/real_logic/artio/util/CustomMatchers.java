@@ -26,6 +26,11 @@ import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.typeCompatibleWith;
+import static org.junit.Assert.fail;
+
 /**
  * Custom hamcrest matchers to support our own types in tests.
  */
@@ -149,6 +154,49 @@ public final class CustomMatchers
     public static <T> Matcher<T> hasFluentProperty(final String name, final Object value)
     {
         return hasFluentProperty(name, Matchers.equalTo(value));
+    }
+
+    public interface ExceptionThrowingCommand
+    {
+        void execute() throws Exception;
+    }
+
+    public static <T extends Exception> void assertTargetThrows(
+        final ExceptionThrowingCommand throwableCommand,
+        final Class<T> exception,
+        final String message)
+    {
+        try
+        {
+            throwableCommand.execute();
+            fail(String.format("Expected exception %s with message %s but was no exception thrown",
+                exception, message));
+        }
+        catch (final Exception e)
+        {
+            final Throwable actualException = e.getCause();
+            assertThat(e.getClass(), typeCompatibleWith(InvocationTargetException.class));
+            assertThat(actualException.getClass(), typeCompatibleWith(exception));
+            assertThat(actualException.getMessage(), is(message));
+        }
+    }
+
+    public static <T extends Exception> void assertThrows(
+        final ExceptionThrowingCommand throwableCommand,
+        final Class<T> exception,
+        final Matcher<String> message)
+    {
+        try
+        {
+            throwableCommand.execute();
+            fail(String.format("Expected exception %s with message %s but was no exception thrown",
+                exception, message));
+        }
+        catch (final Exception e)
+        {
+            assertThat(e.getClass(), typeCompatibleWith(exception));
+            assertThat(e.getMessage(), is(message));
+        }
     }
 
 }

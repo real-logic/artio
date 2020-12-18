@@ -1184,26 +1184,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
     }
 
-    private void assertInitSeqNum(
-        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
-    {
-        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, initiatingSession);
-    }
-
-    private void assertAccSeqNum(
-        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
-    {
-        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, acceptingSession);
-    }
-
-    private void assertSeqNum(
-        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex, final Session session)
-    {
-        assertEquals(lastReceivedMsgSeqNum, session.lastReceivedMsgSeqNum());
-        assertEquals(lastSentMsgSeqNum, session.lastSentMsgSeqNum());
-        assertEquals(sequenceIndex, session.sequenceIndex());
-    }
-
     private void awaitIsConnected(final boolean isConnected, final FixLibrary library)
     {
         assertEventuallyTrue(

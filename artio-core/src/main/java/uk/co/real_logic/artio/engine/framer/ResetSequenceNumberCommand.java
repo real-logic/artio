@@ -17,7 +17,9 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
 
@@ -41,14 +43,25 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
-    private final long resetTime;
+    private final long resetTimeInNs;
     private Session session;
     private LongToIntFunction libraryLookup;
     private long waitSequence = 1;
 
+    private boolean isAdminReset = false;
+    private long adminCorrelationId;
+    private AdminReplyPublication adminReplyPublication;
+
     void libraryLookup(final LongToIntFunction libraryLookup)
     {
         this.libraryLookup = libraryLookup;
+    }
+
+    void setupAdminReset(final long correlationId, final AdminReplyPublication adminReplyPublication)
+    {
+        isAdminReset = true;
+        this.adminCorrelationId = correlationId;
+        this.adminReplyPublication = adminReplyPublication;
     }
 
     private enum Step
@@ -74,7 +87,10 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         // await reset of recv seq num
         AWAIT_SENT,
 
-        DONE
+        // Send a message to notify the Admin API that the reset has completed.
+        NOTIFY_ADMIN_API,
+
+        DONE,
     }
 
     private Step step = Step.START;
@@ -89,7 +105,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
-        final long resetTime)
+        final long resetTimeInNs)
     {
         this.sessionId = sessionId;
         this.gatewaySessions = gatewaySessions;
@@ -98,7 +114,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.inboundPublication = inboundPublication;
         this.outboundPublication = outboundPublication;
-        this.resetTime = resetTime;
+        this.resetTimeInNs = resetTimeInNs;
     }
 
     public Exception error()
@@ -157,7 +173,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 // Not logged in
                 else
                 {
-                    sessionContexts.sequenceReset(sessionId, resetTime);
+                    sessionContexts.sequenceReset(sessionId, resetTimeInNs);
                     step = Step.RESET_RECV;
                 }
 
@@ -208,11 +224,24 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 return await(receivedSequenceNumberIndex, Step.AWAIT_SENT);
 
             case AWAIT_SENT:
-                return await(sentSequenceNumberIndex, Step.DONE);
+                return await(sentSequenceNumberIndex, isAdminReset ? Step.NOTIFY_ADMIN_API : Step.DONE);
+
+            case NOTIFY_ADMIN_API:
+                return notifyAdminApi();
 
             case DONE:
                 state = COMPLETED;
                 return true;
+        }
+
+        return false;
+    }
+
+    private boolean notifyAdminApi()
+    {
+        if (adminReplyPublication.saveGenericAdminReply(adminCorrelationId, GatewayError.NULL_VAL, "") > 0)
+        {
+            step = Step.DONE;
         }
 
         return false;

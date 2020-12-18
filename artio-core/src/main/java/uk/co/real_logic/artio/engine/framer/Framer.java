@@ -832,13 +832,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
     {
         if (!sessionContexts.isKnownSessionId(sessionId))
         {
-            schedule(() -> saveUnknownDisconnect(correlationId, sessionId));
+            schedule(() -> saveUnknownSessionAdminReply(correlationId, sessionId));
             return;
         }
 
         if (!sessionContexts.isAuthenticated(sessionId))
         {
-            schedule(() -> saveNotAuthenticatedDisconnect(correlationId, sessionId));
+            schedule(() -> saveNotAuthenticatedAdminReply(correlationId, sessionId));
             return;
         }
 
@@ -850,7 +850,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
 
         if (gatewaySession == null)
         {
-            schedule(() -> saveNotAuthenticatedDisconnect(correlationId, sessionId));
+            schedule(() -> saveNotAuthenticatedAdminReply(correlationId, sessionId));
             return;
         }
 
@@ -859,24 +859,24 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
 
         onDisconnect(libraryId, connectionId, DisconnectReason.ADMIN_API_DISCONNECT);
 
-        schedule(() -> saveOkDisconnect(correlationId));
+        schedule(() -> saveOkAdminReply(correlationId));
     }
 
-    private long saveOkDisconnect(final long correlationId)
+    private long saveOkAdminReply(final long correlationId)
     {
-        return adminReplyPublication.saveDisconnectSessionReply(correlationId, GatewayError.NULL_VAL, "");
+        return adminReplyPublication.saveGenericAdminReply(correlationId, GatewayError.NULL_VAL, "");
     }
 
-    private long saveUnknownDisconnect(final long correlationId, final long sessionId)
+    private long saveUnknownSessionAdminReply(final long correlationId, final long sessionId)
     {
-        return adminReplyPublication.saveDisconnectSessionReply(
+        return adminReplyPublication.saveGenericAdminReply(
             correlationId, GatewayError.UNKNOWN_SESSION, sessionId + " is an unknown session");
     }
 
-    private long saveNotAuthenticatedDisconnect(final long correlationId, final long sessionId)
+    private long saveNotAuthenticatedAdminReply(final long correlationId, final long sessionId)
     {
-        return adminReplyPublication.saveDisconnectSessionReply(
-            correlationId, GatewayError.EXCEPTION, sessionId + " isn't currently authenticated");
+        return adminReplyPublication.saveGenericAdminReply(
+            correlationId, GatewayError.EXCEPTION, sessionId + " is not currently authenticated");
     }
 
     private void replyConnectedSessions(
@@ -929,6 +929,31 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngi
             .remoteCompId(sessionKey.remoteCompId())
             .remoteSubId(sessionKey.remoteSubId())
             .remoteLocationId(sessionKey.remoteLocationId());
+    }
+
+    public void onAdminResetSequenceNumbersRequest(final long correlationId, final long sessionId)
+    {
+        if (!sessionContexts.isKnownSessionId(sessionId))
+        {
+            schedule(() -> saveUnknownSessionAdminReply(correlationId, sessionId));
+            return;
+        }
+
+        // Delegate to the existing ResetSequenceNumberCommand with an additional step at the end in order
+        // to notify the admin API
+        final ResetSequenceNumberCommand resetSequenceNumberCommand = new ResetSequenceNumberCommand(
+            sessionId,
+            gatewaySessions,
+            sessionContexts,
+            receivedSequenceNumberIndex,
+            sentSequenceNumberIndex,
+            inboundPublication,
+            outboundPublication,
+            clock.nanoTime());
+
+        resetSequenceNumberCommand.setupAdminReset(correlationId, adminReplyPublication);
+
+        onResetSequenceNumber(resetSequenceNumberCommand);
     }
 
     private final class ILink3LookupConnectOperation implements Continuation

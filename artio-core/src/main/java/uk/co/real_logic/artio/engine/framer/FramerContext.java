@@ -210,7 +210,7 @@ public class FramerContext
             sentSequenceNumberIndex,
             inboundPublication,
             outboundPublication,
-            epochClock.time());
+            configuration.epochNanoClock().nanoTime());
 
         if (adminCommands.offer(reply))
         {
