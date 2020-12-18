@@ -27,7 +27,7 @@ import uk.co.real_logic.artio.protocol.ClaimablePublication;
 /**
  * A proxy for publishing messages fix related messages
  */
-public class AdminPublication extends ClaimablePublication
+class AdminPublication extends ClaimablePublication
 {
     private static final int ALL_FIX_SESSIONS_REQUEST_LENGTH =
         HEADER_LENGTH + AllFixSessionsRequestEncoder.BLOCK_LENGTH;
@@ -41,7 +41,7 @@ public class AdminPublication extends ClaimablePublication
     private final AdminResetSequenceNumbersRequestEncoder adminResetSequenceNumbersRequest =
         new AdminResetSequenceNumbersRequestEncoder();
 
-    public AdminPublication(
+    AdminPublication(
         final ExclusivePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
@@ -50,7 +50,7 @@ public class AdminPublication extends ClaimablePublication
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
     }
 
-    public long saveRequestAllFixSessions(final long correlationId)
+    long saveRequestAllFixSessions(final long correlationId)
     {
         final long position = claim(ALL_FIX_SESSIONS_REQUEST_LENGTH);
         if (position < 0)
@@ -70,7 +70,7 @@ public class AdminPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveDisconnectSession(final long correlationId, final long sessionId)
+    long saveDisconnectSession(final long correlationId, final long sessionId)
     {
         final long position = claim(DISCONNECT_SESSION_REQUEST_LENGTH);
         if (position < 0)
@@ -91,7 +91,7 @@ public class AdminPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveResetSequenceNumbers(final long correlationId, final long sessionId)
+    long saveResetSequenceNumbers(final long correlationId, final long sessionId)
     {
         final long position = claim(RESET_SEQUENCE_NUMBERS_REQUEST_LENGTH);
         if (position < 0)

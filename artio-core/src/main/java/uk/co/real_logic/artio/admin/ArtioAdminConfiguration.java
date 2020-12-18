@@ -24,37 +24,63 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static uk.co.real_logic.artio.CommonConfiguration.*;
+import static java.lang.Integer.getInteger;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
+/**
+ * Configuration class used to configure an {@link ArtioAdmin} instance.
+ *
+ * If you're using the default configuration for your {@link uk.co.real_logic.artio.engine.FixEngine} then it is only
+ * necessary to ensure that the {@link #aeronChannel(String)} is configured correctly - the other defaults should
+ * work out of the box.
+ */
 public final class ArtioAdminConfiguration
 {
-    public static final int DEFAULT_INBOUND_ADMIN_STREAM = 21;
-    public static final int DEFAULT_OUTBOUND_ADMIN_STREAM = 22;
+    /**
+     * Property name for the system property to override the inbound admin stream id
+     */
+    public static final String INBOUND_STREAM_ID_PROP = "fix.admin.inbound_stream_id";
+
+    /**
+     * Property name for the system property to override the outbound admin stream id
+     */
+    public static final String OUTBOUND_STREAM_ID_PROP = "fix.admin.outbound_stream_id";
+
+    /**
+     * Property name for the system property to override the aeron channel
+     */
+    public static final String AERON_CHANNEL_PROP = "fix.admin.aeron_channel";
+
+    public static final int DEFAULT_INBOUND_ADMIN_STREAM_ID = 21;
+    public static final int DEFAULT_OUTBOUND_ADMIN_STREAM_ID = 22;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
     private final Aeron.Context aeronContext = new Aeron.Context();
 
     private IdleStrategy idleStrategy;
     private EpochNanoClock epochNanoClock;
-    private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM;
-    private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM;
-    private String libraryAeronChannel = IPC_CHANNEL;
+    private int inboundAdminStream = getInteger(INBOUND_STREAM_ID_PROP, DEFAULT_INBOUND_ADMIN_STREAM_ID);
+    private int outboundAdminStream = getInteger(OUTBOUND_STREAM_ID_PROP, DEFAULT_OUTBOUND_ADMIN_STREAM_ID);
+    private String aeronChannel = System.getProperty(AERON_CHANNEL_PROP, IPC_CHANNEL);
     private long replyTimeoutInNs = TimeUnit.MILLISECONDS.toNanos(DEFAULT_REPLY_TIMEOUT_IN_MS);
 
+    /**
+     * Sets the {@link IdleStrategy} used by blocking Admin operations.
+     *
+     * @param idleStrategy the {@link IdleStrategy}.
+     * @return this
+     */
     public ArtioAdminConfiguration idleStrategy(final IdleStrategy idleStrategy)
     {
         this.idleStrategy = idleStrategy;
         return this;
     }
 
-    public ArtioAdminConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
-    {
-        this.epochNanoClock = epochNanoClock;
-        return this;
-    }
-
     /**
-     * Set the stream id from an admin API to a FIX Engine.
+     * Set the stream id from an admin API to a FIX Engine.  This should be the same as
+     * the configured {@link uk.co.real_logic.artio.engine.EngineConfiguration#inboundAdminStream(int)} value
+     * on your FIXEngine instance.
      *
      * @param inboundAdminStream the stream id from an admin API to a FIX Engine.
      * @return this
@@ -66,7 +92,9 @@ public final class ArtioAdminConfiguration
     }
 
     /**
-     * Set the stream id from a FIX Engine to an admin API.
+     * Set the stream id from a FIX Engine to an admin API. This should be the same as
+     * the configured {@link uk.co.real_logic.artio.engine.EngineConfiguration#outboundAdminStream(int)} value
+     * on your FIXEngine instance.
      *
      * @param outboundAdminStream the stream id from a FIX Engine to an admin API.
      * @return this
@@ -78,20 +106,43 @@ public final class ArtioAdminConfiguration
     }
 
     /**
-     * Sets the aeron channel that libraries will use to communicate with the FixEngine instance.
+     * Sets the aeron channel that {@link ArtioAdmin} will use to communicate with the
+     * {@link uk.co.real_logic.artio.engine.FixEngine} instance. This should be the same as
+     * the configured {@link uk.co.real_logic.artio.engine.EngineConfiguration#libraryAeronChannel(String)} value
+     * on your FIXEngine instance.
      *
-     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with the FixEngine instance.
+     * @param aeronChannel the aeron channel to communicate with the FixEngine instance.
      * @return this
      */
-    public ArtioAdminConfiguration libraryAeronChannel(final String libraryAeronChannel)
+    public ArtioAdminConfiguration aeronChannel(final String aeronChannel)
     {
-        this.libraryAeronChannel = libraryAeronChannel;
+        this.aeronChannel = aeronChannel;
         return this;
     }
 
+    /**
+     * The timeout to use for operations to the {@link uk.co.real_logic.artio.engine.FixEngine}. If a reply hasn't
+     * been received within this time period then the operation will be considered a failure and return with an
+     * exception being thrown.
+     *
+     * @param replyTimeoutInNs the timeout for operations to the Fix Engine.
+     * @return this
+     */
     public ArtioAdminConfiguration replyTimeoutInNs(final long replyTimeoutInNs)
     {
         this.replyTimeoutInNs = replyTimeoutInNs;
+        return this;
+    }
+
+    /**
+     * Sets the clock used in order to calculate reply timeouts.
+     *
+     * @param epochNanoClock the clock used in order to calculate reply timeouts.
+     * @return this
+     */
+    public ArtioAdminConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        this.epochNanoClock = epochNanoClock;
         return this;
     }
 
@@ -120,9 +171,9 @@ public final class ArtioAdminConfiguration
         return outboundAdminStream;
     }
 
-    public String libraryAeronChannel()
+    public String aeronChannel()
     {
-        return libraryAeronChannel;
+        return aeronChannel;
     }
 
     public long replyTimeoutInNs()

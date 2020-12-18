@@ -292,7 +292,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     private void launchArtioAdmin()
     {
         final ArtioAdminConfiguration config = new ArtioAdminConfiguration();
-        config.libraryAeronChannel(acceptingEngine.configuration().libraryAeronChannel());
+        config.aeronChannel(acceptingEngine.configuration().libraryAeronChannel());
         artioAdmin = ArtioAdmin.launch(config);
     }
 }

@@ -43,8 +43,8 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM;
-import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM;
+import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
+import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
@@ -251,8 +251,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int replayPositionBufferSize = DEFAULT_REPLAY_POSITION_BUFFER_SIZE;
     private long duplicateEngineTimeoutInMs = DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS;
     private boolean errorIfDuplicateEngineDetected = true;
-    private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM;
-    private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM;
+    private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM_ID;
+    private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.

@@ -30,9 +30,6 @@ import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.admin.AdminEngineEndPointHandler;
-import uk.co.real_logic.artio.admin.AdminEngineProtocolSubscription;
-import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -94,7 +91,7 @@ import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-class Framer implements Agent, EngineEndPointHandler, ProtocolHandler, AdminEngineEndPointHandler
+class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
 
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);

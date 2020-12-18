@@ -26,7 +26,6 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
-import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;

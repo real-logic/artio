@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.admin;
+package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.ExpandableArrayBuffer;
@@ -29,7 +29,7 @@ import uk.co.real_logic.artio.protocol.ClaimablePublication;
 /**
  * A proxy for publishing messages fix related messages
  */
-public class AdminReplyPublication extends ClaimablePublication
+class AdminReplyPublication extends ClaimablePublication
 {
     private static final int GENERIC_ADMIN_REPLY_LENGTH = HEADER_LENGTH + GenericAdminReplyEncoder.BLOCK_LENGTH +
         GenericAdminReplyEncoder.messageHeaderLength();
@@ -39,7 +39,7 @@ public class AdminReplyPublication extends ClaimablePublication
     private final AllFixSessionsReplyEncoder allFixSessionsReply = new AllFixSessionsReplyEncoder();
     private final GenericAdminReplyEncoder genericAdminReply = new GenericAdminReplyEncoder();
 
-    public AdminReplyPublication(
+    AdminReplyPublication(
         final ExclusivePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
@@ -48,7 +48,7 @@ public class AdminReplyPublication extends ClaimablePublication
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
     }
 
-    public AllFixSessionsReplyEncoder.SessionsEncoder startRequestAllFixSessions(
+    AllFixSessionsReplyEncoder.SessionsEncoder startRequestAllFixSessions(
         final long correlationId,
         final int sessionsCount)
     {
@@ -59,13 +59,13 @@ public class AdminReplyPublication extends ClaimablePublication
             .sessionsCount(sessionsCount);
     }
 
-    public long saveRequestAllFixSessions()
+    long saveRequestAllFixSessions()
     {
         final int length = allFixSessionsReply.limit();
         return dataPublication.offer(expandableArrayBuffer, 0, length);
     }
 
-    public long saveGenericAdminReply(
+    long saveGenericAdminReply(
         final long correlationId, final GatewayError gatewayError, final String message)
     {
         final long position = claim(GENERIC_ADMIN_REPLY_LENGTH + message.length());

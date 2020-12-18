@@ -23,7 +23,6 @@ import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.ParsedAddress;
 import uk.co.real_logic.artio.session.Session;
 
-// TODO: describe value class, a snapshot of a point in time
 public class FixAdminSession implements SessionInfo
 {
     private final long lastLogonTime;

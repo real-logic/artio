@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.admin.AdminReplyPublication;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.protocol.GatewayPublication;

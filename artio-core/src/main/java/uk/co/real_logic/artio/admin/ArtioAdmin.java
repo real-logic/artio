@@ -21,6 +21,7 @@ import io.aeron.Subscription;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import java.util.List;
@@ -33,7 +34,9 @@ import java.util.function.Supplier;
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.FAILED_ADMIN_TYPE_ID;
 
 /**
- * Provides a blocking wrapper for Artio API operations that can be used from a different process.
+ * Provides a blocking wrapper for Artio API operations that can be used from a different process. Every API operation
+ * in this class blocks its invoking thread until the operation is complete and only one API operation can be performed
+ * at a time.
  *
  * This can be used for integration into commandline tools (such as FixAdminTool) or external processes, such as
  * web services APIs or custom GUI tools. It is designed to provide functionality for tasks that operational personnel
@@ -67,16 +70,45 @@ public final class ArtioAdmin implements AutoCloseable
     // Public API
     // ----------------------------------------------------
 
+    /**
+     * This starts the ArtioAdmin instance. This allows users to perform Admin API operations by calling the public
+     * methods on this class. Once the instance is finished with it should be closed by calling the {@link #close()}
+     * method.
+     *
+     * @param config the configuration object to start your admin instance.
+     * @return the new ArtioAdmin instance
+     */
     public static ArtioAdmin launch(final ArtioAdminConfiguration config)
     {
         return new ArtioAdmin(config);
     }
 
+    /**
+     * Queries the current list of all FIX sessions associated with this FixEngine. This includes both connected and
+     * offline FIX sessions. It is worth noting that the information provided by this API is a snapshot in time. For
+     * example the received and sent sequence numbers are the numbers that the Engine is aware of when the API
+     * operation is processed. It might be the case that a FIX session with a high volume of traffic that sends or
+     * receives many messages in a short time period will have advanced to new sequence numbers by the time that the
+     * API operation returns. Similarly a client could connect or disconnect immediately after the Engine replies
+     * to this API operation, leaving its data stale.
+     *
+     * @return the list of FIX sessions.
+     * @throws TimeoutException if the operation times out.
+     * @throws IllegalStateException if the instance has been closed.
+     */
     public List<FixAdminSession> allFixSessions()
     {
         return exchangeMessage(saveRequestAllFixSessionsFunc, allFixSessionsResultFunc);
     }
 
+    /**
+     * Disconnects a currently connected FIX session.
+     *
+     * @param sessionId the id of the session to disconnect.
+     * @throws FixGatewayException if the session id is unknown or if the session is not currently connected.
+     * @throws TimeoutException if the operation times out.
+     * @throws IllegalStateException if the instance has been closed.
+     */
     public void disconnectSession(final long sessionId)
     {
         exchangeMessage(
@@ -84,17 +116,27 @@ public final class ArtioAdmin implements AutoCloseable
             handler::checkError);
     }
 
-    public void resetSequenceNumbers(
-        final long sessionId)
+    /**
+     * Resets the sequence numbers of a session back to 1. This operation has the same semantics as
+     * {@link uk.co.real_logic.artio.engine.FixEngine#resetSequenceNumber(long)} and will work for both the case where
+     * a session is connected or offline. If the session is currently connected then a Logon message with a
+     * resetSeqNum=Y flag will be sent to the counter-party.
+     *
+     * @param sessionId the id of the session to perform the reset operation on.
+     * @throws FixGatewayException if the session id is unknown.
+     * @throws TimeoutException if the operation times out.
+     * @throws IllegalStateException if the instance has been closed.
+     */
+    public void resetSequenceNumbers(final long sessionId)
     {
         exchangeMessage(
             () -> outboundPublication.saveResetSequenceNumbers(correlationId, sessionId) > 0,
             handler::checkError);
     }
 
-    /*final int nextSentMessageSequenceNumber,
-    final int nextReceivedMessageSequenceNumber*/
-
+    /**
+     * Close the Admin API instance, releasing underlying resources.
+     */
     public void close()
     {
         lock.lock();
@@ -112,6 +154,11 @@ public final class ArtioAdmin implements AutoCloseable
         }
     }
 
+    /**
+     * Returns whether the class has been closed or not.
+     *
+     * @return true if {@link #close()} has been called, false otherwise.
+     */
     public boolean isClosed()
     {
         return closed;
@@ -131,7 +178,7 @@ public final class ArtioAdmin implements AutoCloseable
         failCounter = aeron.addCounter(FAILED_ADMIN_TYPE_ID.id(), "Failed offer for admin publication");
         replyTimeoutInNs = config.replyTimeoutInNs();
 
-        final String channel = config.libraryAeronChannel();
+        final String channel = config.aeronChannel();
         outboundPublication = new AdminPublication(
             aeron.addExclusivePublication(channel, config.outboundAdminStream()),
             failCounter,
@@ -183,7 +230,7 @@ public final class ArtioAdmin implements AutoCloseable
         {
             if (nanoTime() > deadlineInNs)
             {
-                throw new TimeoutException("Timeout");
+                throw new TimeoutException("Operation timed out after " + replyTimeoutInNs + " ns");
             }
 
             if (attempt.getAsBoolean())
