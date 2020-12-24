@@ -42,7 +42,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public final class FixConnection implements AutoCloseable
 {
-    private static final int BUFFER_SIZE = 8 * 1024;
+    public static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
 
     public static final String PROXY_SOURCE_IP = "192.168.0.1";
@@ -107,7 +107,7 @@ public final class FixConnection implements AutoCloseable
         }
     }
 
-    private FixConnection(final SocketChannel socket, final String senderCompID, final String targetCompID)
+    public FixConnection(final SocketChannel socket, final String senderCompID, final String targetCompID)
     {
         this.socket = socket;
         this.senderCompID = senderCompID;
@@ -231,10 +231,11 @@ public final class FixConnection implements AutoCloseable
         sendBytes(bytes);
     }
 
-    private void sendBytes(final byte[] bytes)
+    public void sendBytes(final byte[] bytes)
     {
         final int length = bytes.length;
         writeAsciiBuffer.putBytes(0, bytes);
+
         send(0, length);
     }
 

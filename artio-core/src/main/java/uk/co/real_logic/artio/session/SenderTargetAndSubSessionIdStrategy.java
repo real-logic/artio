@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.storage.messages.SenderTargetAndSubCompositeKeyEnc
 import java.util.Arrays;
 
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.session.SessionIdStrategy.checkMissing;
 
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
@@ -75,9 +76,9 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     public void setupSession(final CompositeKey compositeKey, final SessionHeaderEncoder headerEncoder)
     {
         final CompositeKeyImpl composite = (CompositeKeyImpl)compositeKey;
-        headerEncoder.senderCompID(composite.localCompID);
-        headerEncoder.senderSubID(composite.localSubID);
-        headerEncoder.targetCompID(composite.remoteCompID);
+        headerEncoder.senderCompID(checkMissing(composite.localCompID));
+        headerEncoder.senderSubID(checkMissing(composite.localSubID));
+        headerEncoder.targetCompID(checkMissing(composite.remoteCompID));
     }
 
     public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)
