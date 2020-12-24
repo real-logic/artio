@@ -38,7 +38,14 @@ import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
  */
 public interface SessionIdStrategy
 {
+    char[] MISSING_COMP_ID = "missing".toCharArray();
+
     int INSUFFICIENT_SPACE = -1;
+
+    static char[] checkMissing(final char[] providedCompId)
+    {
+        return providedCompId.length == 0 ? MISSING_COMP_ID : providedCompId;
+    }
 
     static SessionIdStrategy senderAndTarget()
     {

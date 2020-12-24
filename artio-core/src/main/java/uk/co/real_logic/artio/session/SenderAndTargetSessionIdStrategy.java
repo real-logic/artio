@@ -28,6 +28,7 @@ import java.util.Arrays;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SENDER_COMP_ID;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.TARGET_COMP_ID;
+import static uk.co.real_logic.artio.session.SessionIdStrategy.checkMissing;
 
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
@@ -78,8 +79,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         requireNonNull(headerEncoder, "headerEncoder");
 
         final CompositeKeyImpl composite = (CompositeKeyImpl)compositeKey;
-        headerEncoder.senderCompID(composite.localCompID);
-        headerEncoder.targetCompID(composite.remoteCompID);
+        headerEncoder.senderCompID(checkMissing(composite.localCompID));
+        headerEncoder.targetCompID(checkMissing(composite.remoteCompID));
     }
 
     public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)

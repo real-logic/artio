@@ -27,9 +27,12 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -284,6 +287,51 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             connection.logout();
             assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
         }
+    }
+
+    @Test
+    public void shouldRejectInvalidLogonWithMissingTargetCompId()
+    {
+        setup(true, true, true, SOLE_LIBRARY);
+
+        setupLibrary();
+
+        testSystem.awaitBlocking(() ->
+        {
+            //  Create a logon message that will fail session level validation, but nothing else.
+            try (FixConnection connection = new FixConnection(
+                SocketChannel.open(new InetSocketAddress("localhost", port)),
+                INITIATOR_ID,
+                "\000"))
+            {
+                final LogonEncoder logon = new LogonEncoder();
+                connection.setupHeader(logon.header(), connection.acquireMsgSeqNum(), false);
+
+                logon
+                    .encryptMethod(0)
+                    .heartBtInt(20)
+                    .username("AAAAAAAAA")
+                    .password("asd");
+
+                final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[BUFFER_SIZE]);
+                final long result = logon.encode(asciiBuffer, 0);
+                final int offset = Encoder.offset(result);
+                final int length = Encoder.length(result);
+
+                // Remove the acceptor id whilst keeping the checksum the same
+                final byte[] badLogon = asciiBuffer.getAscii(offset, length)
+                    .replace("\000", "")
+                    .replace(INITIATOR_ID, INITIATOR_ID + "\000")
+                    .getBytes(US_ASCII);
+
+                connection.sendBytes(badLogon);
+                connection.readReject();
+            }
+            catch (final IOException e)
+            {
+                e.printStackTrace();
+            }
+        });
     }
 
     @Test

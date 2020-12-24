@@ -411,7 +411,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
-                    DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, length);
+                    DebugLogger.log(FIX_MESSAGE, "Invalidated (checksum): ", buffer, offset, length);
 
                     if (saveInvalidChecksumMessage(offset, messageType, length, readTimestamp))
                     {
@@ -648,7 +648,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         if (saveInvalidMessage(offset, endOfMessage - offset, readTimestamp))
         {
-            DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, endOfMessage - offset);
+            DebugLogger.log(FIX_MESSAGE, "Invalidated (Body Length): ", buffer, offset, endOfMessage - offset);
             return offset;
         }
 
@@ -852,7 +852,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     // returns true if back-pressured
     private boolean invalidateMessage(final int offset, final long readTimestamp)
     {
-        DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, MIN_MESSAGE_SIZE);
+        DebugLogger.log(FIX_MESSAGE, "Invalidated (IAE): ", buffer, offset, MIN_MESSAGE_SIZE);
         return saveInvalidMessage(offset, readTimestamp);
     }
 
