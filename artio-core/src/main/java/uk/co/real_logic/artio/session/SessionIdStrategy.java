@@ -62,8 +62,10 @@ public interface SessionIdStrategy
      *
      * @param header the header of the logon message.
      * @return the composite session key.
+     * @throws IllegalArgumentException if the header is missing a required field then an IllegalArgumentException
+     * can be thrown.
      */
-    CompositeKey onAcceptLogon(SessionHeaderDecoder header);
+    CompositeKey onAcceptLogon(SessionHeaderDecoder header) throws IllegalArgumentException;
 
     /**
      * Creates the composite session key when you initiate a logon.

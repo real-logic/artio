@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.storage.messages.SenderTargetAndSubCompositeKeyEnc
 
 import java.util.Arrays;
 
+import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.session.SessionIdStrategy.checkMissing;
 
@@ -47,10 +48,21 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
     public CompositeKey onAcceptLogon(final SessionHeaderDecoder header)
     {
+        requireNonNull(header, "header");
+
+        final int localCompIDLength = header.targetCompIDLength();
+        final int localSubIDLength = header.senderSubIDLength();
+        final int remoteCompIDLength = header.senderCompIDLength();
+
+        if (localCompIDLength == 0 || localSubIDLength == 0 || remoteCompIDLength == 0)
+        {
+            throw new IllegalArgumentException("Missing comp id");
+        }
+
         return new CompositeKeyImpl(
-            header.targetCompID(), header.targetCompIDLength(),
-            header.senderSubID(), header.senderSubIDLength(),
-            header.senderCompID(), header.senderCompIDLength());
+            header.targetCompID(), localCompIDLength,
+            header.senderSubID(), localSubIDLength,
+            header.senderCompID(), remoteCompIDLength);
     }
 
     public CompositeKey onInitiateLogon(

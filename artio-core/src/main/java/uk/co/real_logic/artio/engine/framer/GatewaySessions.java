@@ -686,7 +686,17 @@ class GatewaySessions
             final String password = SessionParser.password(logon);
 
             final SessionHeaderDecoder header = logon.header();
-            final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(header);
+            final CompositeKey compositeKey;
+            try
+            {
+                compositeKey = sessionIdStrategy.onAcceptLogon(header);
+            }
+            catch (final IllegalArgumentException e)
+            {
+                reject(DisconnectReason.MISSING_LOGON_COMP_ID);
+                return;
+            }
+
             sessionContext = sessionContexts.onLogon(compositeKey, fixDictionary);
 
             if (sessionContext == DUPLICATE_SESSION)

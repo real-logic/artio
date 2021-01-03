@@ -47,13 +47,21 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     {
     }
 
-    public CompositeKey onAcceptLogon(final SessionHeaderDecoder header)
+    public CompositeKey onAcceptLogon(final SessionHeaderDecoder header) throws IllegalArgumentException
     {
         requireNonNull(header, "header");
 
+        final int localCompIDLength = header.targetCompIDLength();
+        final int remoteCompIDLength = header.senderCompIDLength();
+
+        if (localCompIDLength == 0 || remoteCompIDLength == 0)
+        {
+            throw new IllegalArgumentException("Missing comp id");
+        }
+
         return new CompositeKeyImpl(
-            header.targetCompID(), header.targetCompIDLength(),
-            header.senderCompID(), header.senderCompIDLength());
+            header.targetCompID(), localCompIDLength,
+            header.senderCompID(), remoteCompIDLength);
     }
 
     public CompositeKey onInitiateLogon(

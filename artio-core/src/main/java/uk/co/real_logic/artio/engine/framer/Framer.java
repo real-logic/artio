@@ -2172,7 +2172,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         acceptorHeaderDecoder.reset();
         acceptorHeaderDecoder.decode(asciiBuffer, srcOffset, srcLength);
 
-        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(acceptorHeaderDecoder);
+        final CompositeKey compositeKey;
+        try
+        {
+            compositeKey = sessionIdStrategy.onAcceptLogon(acceptorHeaderDecoder);
+        }
+        catch (final IllegalArgumentException e)
+        {
+            saveError(EXCEPTION, libraryId, correlationId, e.getMessage());
+            return CONTINUE;
+        }
+
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey, fixDictionary);
         final long sessionId = sessionContext.sessionId();
 

@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Timing;
@@ -23,6 +22,7 @@ import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
@@ -33,12 +33,13 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
-import static org.hamcrest.Matchers.either;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
@@ -254,7 +255,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             assertEquals(TEST_REQUEST_MESSAGE_TYPE_STR, rejectDecoder.refMsgTypeAsString());
             assertEquals(COMPID_PROBLEM, rejectDecoder.sessionRejectReasonAsEnum());
 
-            MatcherAssert.assertThat(rejectDecoder.refTagID(), either(is(SENDER_COMP_ID)).or(is(TARGET_COMP_ID)));
+            assertThat(rejectDecoder.refTagID(), either(is(SENDER_COMP_ID)).or(is(TARGET_COMP_ID)));
             assertFalse(otfAcceptor.lastReceivedMessage().isValid());
         }
     }
@@ -325,13 +326,16 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                     .getBytes(US_ASCII);
 
                 connection.sendBytes(badLogon);
-                connection.readReject();
+                assertFalse(connection.isConnected());
             }
             catch (final IOException e)
             {
                 e.printStackTrace();
             }
         });
+
+        final List<SessionInfo> sessions = engine.allSessions();
+        assertThat("sessions = " + sessions, sessions, hasSize(0));
     }
 
     @Test

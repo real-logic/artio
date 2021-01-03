@@ -181,6 +181,7 @@ class SessionContext implements SessionInfo
         return "SessionContext{" +
             "sessionId=" + sessionId +
             ", sequenceIndex=" + sequenceIndex +
+            ", compositeKey=" + compositeKey +
             '}';
     }
 }

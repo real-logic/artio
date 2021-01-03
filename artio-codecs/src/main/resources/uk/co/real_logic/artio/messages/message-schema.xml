@@ -116,6 +116,8 @@
                         description="We disconnected due to an error in framing iLink3 messages" sinceVersion="14">20</validValue>
             <validValue name="ADMIN_API_DISCONNECT"
                         description="Disconnected due to an explicit administrative API operation from a user" sinceVersion="15">21</validValue>
+            <validValue name="MISSING_LOGON_COMP_ID"
+                        description="Disconnected due to a sender or target comp id field missing from the Logon message" sinceVersion="15">22</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
