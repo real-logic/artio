@@ -217,7 +217,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 inboundRecordingIds : outboundRecordingIds;
             final RecordingIdLookup lookup = streamId == configuration.inboundLibraryStream() ?
                 framerOutboundLookup : framerInboundLookup;
-            final LibraryExtendPosition libraryExtendPosition = acquireRecording(recordingIds);
+            final LibraryExtendPosition libraryExtendPosition = acquireRecording(streamId, recordingIds);
             final ExclusivePublication publication;
             if (libraryExtendPosition != null)
             {
@@ -268,7 +268,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    private LibraryExtendPosition acquireRecording(final RecordingIds recordingIds)
+    private LibraryExtendPosition acquireRecording(final int streamId, final RecordingIds recordingIds)
     {
         libraryExtendPosition = null;
 
@@ -288,7 +288,14 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                     return null;
                 }
             }
-
+            else if (libraryExtendPosition.streamId != streamId)
+            {
+                errorHandler.onError(new IllegalStateException(String.format(
+                    "Unable to reuse recordingId: %d. Stream id is mismatch: actual: %d, expected: %d",
+                    recordingId, libraryExtendPosition.streamId, streamId)));
+                libraryExtendPosition = null;
+                return null;
+            }
             // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the
             // Engine process with no clean shutdown and a running media driver. In order to hit this scenario you
             // to restart the process rapidly as the media driver will eventually timeout the old process and stop the
@@ -331,7 +338,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 }
             }
 
-            extendPosition = acquireRecording(outboundRecordingIds);
+            extendPosition = acquireRecording(streamId, outboundRecordingIds);
             if (extendPosition != null)
             {
                 extendRecording(streamId, extendPosition, extendPosition.newSessionId);
@@ -362,7 +369,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         final int newSessionId = ThreadLocalRandom.current().nextInt(
             publicationReservedSessionIdLow(), publicationReservedSessionIdHigh());
         this.libraryExtendPosition = new LibraryExtendPosition(
-            newSessionId, recordingId, stopPosition, initialTermId, termBufferLength, mtuLength);
+            newSessionId, recordingId, streamId, stopPosition, initialTermId, termBufferLength, mtuLength);
     }
 
     private boolean startRecording(
@@ -583,6 +590,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         public final int newSessionId;
         public final long recordingId;
+        public final int streamId;
         public final int initialTermId;
         public final int termBufferLength;
         public final int mtuLength;
@@ -592,6 +600,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         LibraryExtendPosition(
             final int newSessionId,
             final long recordingId,
+            final int streamId,
             final long stopPosition,
             final int initialTermId,
             final int termBufferLength,
@@ -599,6 +608,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         {
             this.newSessionId = newSessionId;
             this.recordingId = recordingId;
+            this.streamId = streamId;
             this.stopPosition = stopPosition;
             this.initialTermId = initialTermId;
             this.termBufferLength = termBufferLength;
@@ -610,6 +620,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             return "LibraryExtendPosition{" +
                 "newSessionId=" + newSessionId +
                 ", recordingId=" + recordingId +
+                ", streamId=" + streamId +
                 ", stopPosition=" + stopPosition +
                 ", initialTermId=" + initialTermId +
                 ", termBufferLength=" + termBufferLength +
