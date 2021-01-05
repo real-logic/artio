@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
@@ -1173,6 +1174,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
     {
         super.customErrorConsumer(customErrorConsumer);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public CommonConfiguration customErrorHandler(final ErrorHandler customErrorHandler)
+    {
+        super.customErrorHandler(customErrorHandler);
         return this;
     }
 

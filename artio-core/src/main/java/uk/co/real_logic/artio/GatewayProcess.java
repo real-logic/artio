@@ -42,8 +42,6 @@ public abstract class GatewayProcess implements AutoCloseable
 
     private static final long START_TIME_IN_MS = System.currentTimeMillis();
 
-    private DistinctErrorLog distinctErrorLog;
-
     protected CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
@@ -64,16 +62,23 @@ public abstract class GatewayProcess implements AutoCloseable
     {
         monitoringFile = new MonitoringFile(true, configuration);
         final EpochClock clock = new SystemEpochClock();
-        distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
-        errorHandler =
-            (throwable) ->
-            {
-                if (!distinctErrorLog.record(throwable))
+        if (configuration.customErrorHandler() != null)
+        {
+            errorHandler = configuration.customErrorHandler();
+        }
+        else
+        {
+            final DistinctErrorLog distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
+            errorHandler =
+                (throwable) ->
                 {
-                    System.err.println("Error Log is full, consider increasing " + ERROR_BUFFER_LENGTH_PROP_NAME);
-                    throwable.printStackTrace();
-                }
-            };
+                    if (!distinctErrorLog.record(throwable))
+                    {
+                        System.err.println("Error Log is full, consider increasing " + ERROR_BUFFER_LENGTH_PROP_NAME);
+                        throwable.printStackTrace();
+                    }
+                };
+        }
     }
 
     public Agent conductorAgent()

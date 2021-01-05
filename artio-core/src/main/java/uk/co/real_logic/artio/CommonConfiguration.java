@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
 import org.agrona.concurrent.BackoffIdleStrategy;
@@ -223,6 +224,7 @@ public class CommonConfiguration
     private EpochNanoClock epochNanoClock = new OffsetEpochNanoClock();
     private boolean printErrorMessages = true;
     private ErrorConsumer customErrorConsumer;
+    private ErrorHandler customErrorHandler;
     private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
@@ -385,9 +387,21 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the custom error handler for the gateway internal exceptions
+     * The default implementation uses {@link MonitoringFile} to store exceptions
+     * @param customErrorConsumer custom error handler
+     * @return this
+     */
     public CommonConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
     {
         this.customErrorConsumer = customErrorConsumer;
+        return this;
+    }
+
+    public CommonConfiguration customErrorHandler(final ErrorHandler customErrorHandler)
+    {
+        this.customErrorHandler = customErrorHandler;
         return this;
     }
 
@@ -593,6 +607,11 @@ public class CommonConfiguration
     public ErrorConsumer customErrorConsumer()
     {
         return customErrorConsumer;
+    }
+
+    public ErrorHandler customErrorHandler()
+    {
+        return customErrorHandler;
     }
 
     public IdleStrategy monitoringThreadIdleStrategy()
