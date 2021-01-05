@@ -22,10 +22,7 @@ import uk.co.real_logic.artio.ExecType;
 import uk.co.real_logic.artio.OrdStatus;
 import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.*;
-import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.LogoutDecoder;
-import uk.co.real_logic.artio.decoder.RejectDecoder;
+import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -241,12 +238,17 @@ public final class FixConnection implements AutoCloseable
 
     public void logon(final boolean resetSeqNumFlag)
     {
+        logon(resetSeqNumFlag, 30);
+    }
+
+    public void logon(final boolean resetSeqNumFlag, final int heartBtInt)
+    {
         setupHeader(logon.header(), msgSeqNum++, false);
 
         logon
             .resetSeqNumFlag(resetSeqNumFlag)
             .encryptMethod(0)
-            .heartBtInt(1)
+            .heartBtInt(heartBtInt)
             .maxMessageSize(9999);
 
         send(logon);
@@ -289,6 +291,11 @@ public final class FixConnection implements AutoCloseable
                 .possDupFlag(true)
                 .origSendingTime(origSendingTimeEncoder.buffer(), origSendingTimeLength);
         }
+    }
+
+    public ExecutionReportDecoder readExecutionReport()
+    {
+        return readMessage(new ExecutionReportDecoder());
     }
 
     public <T extends Decoder> T readMessage(final T decoder)
@@ -384,6 +391,12 @@ public final class FixConnection implements AutoCloseable
         return readMessage(new RejectDecoder());
     }
 
+    public HeartbeatDecoder exchangeTestRequestHeartbeat(final String testReqID)
+    {
+        sendTestRequest(testReqID);
+        return readHeartbeat(testReqID);
+    }
+
     public void sendTestRequest(final String testReqID)
     {
         setupHeader(testRequestEncoder.header(), msgSeqNum++, false);
@@ -393,10 +406,15 @@ public final class FixConnection implements AutoCloseable
 
     public HeartbeatDecoder readHeartbeat(final String testReqID)
     {
-        final HeartbeatDecoder heartbeat = readMessage(new HeartbeatDecoder());
+        final HeartbeatDecoder heartbeat = readHeartbeat();
         assertTrue(heartbeat.hasTestReqID());
         assertEquals(testReqID, heartbeat.testReqIDAsString());
         return heartbeat;
+    }
+
+    public HeartbeatDecoder readHeartbeat()
+    {
+        return readMessage(new HeartbeatDecoder());
     }
 
     public void close()
@@ -448,5 +466,16 @@ public final class FixConnection implements AutoCloseable
         executionReportEncoder.instrument().symbol("IBM");
 
         send(executionReportEncoder);
+    }
+
+    public ResendRequestEncoder sendResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+
+        resendRequest.beginSeqNo(beginSeqNo).endSeqNo(endSeqNo);
+        setupHeader(resendRequest.header(), msgSeqNum++, false);
+        send(resendRequest);
+
+        return resendRequest;
     }
 }

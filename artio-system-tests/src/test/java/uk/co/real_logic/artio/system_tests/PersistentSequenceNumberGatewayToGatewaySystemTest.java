@@ -321,7 +321,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int messageCount = 100;
         for (int i = 0; i < messageCount; i++)
         {
-            assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+            assertEquals(CONTINUE, reportFactory.trySendReport(acceptingSession, Side.BUY));
         }
 
         final int lastSeqNum = messageCount + 1;
@@ -456,8 +456,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertOfflineSession(sessionId, acceptingSession);
 
         // Send a test execution report offline that can be replayed
-        final ReportFactory reportFactory = new ReportFactory();
-        assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+        ReportFactory.sendOneReport(acceptingSession, Side.BUY);
 
         onAcquireSession = this::nothing;
         connectPersistingSessions();
@@ -698,5 +697,25 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         firstConnectTimeRange.assertWithinRange(session.lastSequenceResetTime());
         connectTimeRange.assertWithinRange(session.lastLogonTime());
         assertNotEquals(session.lastLogonTime(), session.lastSequenceResetTime());
+    }
+
+    private void receiveReplayFromOfflineSession(final long sessionId)
+    {
+        assertOfflineSession(sessionId, acceptingSession);
+
+        ReportFactory.sendOneReport(acceptingSession, Side.BUY);
+
+        receivedReplayFromReconnectedSession();
+    }
+
+    private void receivedReplayFromReconnectedSession()
+    {
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
+
+        final FixMessage executionReport = testSystem.awaitMessageOf(
+            initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
+        assertEquals("Y", executionReport.possDup());
     }
 }
