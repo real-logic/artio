@@ -326,7 +326,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int messageCount = 100;
         for (int i = 0; i < messageCount; i++)
         {
-            assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+            assertEquals(CONTINUE, reportFactory.trySendReport(acceptingSession, Side.BUY));
         }
 
         final int lastSeqNum = messageCount + 1;
@@ -729,8 +729,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         assertOfflineSession(sessionId, acceptingSession);
 
-        final ReportFactory reportFactory = new ReportFactory();
-        assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+        ReportFactory.sendOneReport(acceptingSession, Side.BUY);
 
         receivedReplayFromReconnectedSession();
     }

@@ -1714,17 +1714,36 @@ public class Session
 
         final boolean replayUpToMostRecent = endSeqNum == Replayer.MOST_RECENT_MESSAGE;
         // Validate endSeqNo
-        if (!replayUpToMostRecent && endSeqNum < beginSeqNum)
+        if (!replayUpToMostRecent)
         {
-            final String message = messageBuffer.getAscii(messageOffset, messageLength);
-            throw new IllegalStateException(String.format(
-                "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
-                message,
-                endSeqNum,
-                beginSeqNum));
+            // Just an invalid range.
+            if (endSeqNum < beginSeqNum)
+            {
+                final String message = messageBuffer.getAscii(messageOffset, messageLength);
+                throw new IllegalStateException(String.format(
+                    "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
+                    message,
+                    endSeqNum,
+                    beginSeqNum));
+            }
+
+            // begin too high - reject
+            if (beginSeqNum > lastSentMsgSeqNum)
+            {
+                return checkPosition(proxy.sendReject(
+                    newSentSeqNum(),
+                    msgSeqNum,
+                    BEGIN_SEQ_NO,
+                    RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+                    RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
+                    VALUE_IS_INCORRECT.representation(),
+                    sequenceIndex(),
+                    lastMsgSeqNumProcessed));
+            }
         }
 
-        final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : endSeqNum;
+        // Min: end too high - replay the valid range and ignore the invalid chunk.
+        final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : Math.min(lastSentMsgSeqNum, endSeqNum);
         return Pressure.apply(inboundPublication.saveValidResendRequest(
             id,
             connectionId,

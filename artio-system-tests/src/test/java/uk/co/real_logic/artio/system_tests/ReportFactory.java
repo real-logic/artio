@@ -24,7 +24,9 @@ import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.session.Session;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.junit.Assert.assertEquals;
 
 public class ReportFactory
 {
@@ -35,11 +37,21 @@ public class ReportFactory
     private final byte[] encodeBuffer = new byte[SIZE_OF_ASCII_LONG];
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
 
-    public Action sendReport(final Session session, final Side side)
+    public Action trySendReport(final Session session, final Side side)
     {
         setupReport(side, session.lastSentMsgSeqNum());
 
         return Pressure.apply(session.trySend(executionReport));
+    }
+
+    public void sendReport(final Session session, final Side side)
+    {
+        assertEquals(CONTINUE, trySendReport(session, side));
+    }
+
+    public static void sendOneReport(final Session session, final Side side)
+    {
+        new ReportFactory().sendReport(session, side);
     }
 
     public ExecutionReportEncoder setupReport(final Side side, final int execAndOrderId)

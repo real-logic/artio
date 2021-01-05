@@ -17,35 +17,32 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.LogoutDecoder;
-import uk.co.real_logic.artio.decoder.RejectDecoder;
+import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
-import static uk.co.real_logic.artio.system_tests.FixConnection.*;
+import static uk.co.real_logic.artio.system_tests.FixConnection.BUFFER_SIZE;
 import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -166,7 +163,10 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
-            logon(connection);
+            connection.logon(true, 1);
+
+            final LogonDecoder logon = connection.readLogonReply();
+            assertTrue(logon.resetSeqNumFlag());
 
             final Session session = acquireSession();
             logoutSession(session);
@@ -261,7 +261,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     }
 
     @Test
-    public void shouldRejectInvalidResendRequests() throws IOException
+    public void shouldRejectInvalidResendRequestsWrongCompId() throws IOException
     {
         setup(true, true);
 
@@ -270,8 +270,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             logon(connection);
 
             final String testReqId = "ABC";
-            connection.sendTestRequest(testReqId);
-            final int headerSeqNum = connection.readHeartbeat(testReqId).header().msgSeqNum();
+            final int headerSeqNum = connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
             // Send an invalid resend request
             final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
@@ -287,6 +286,87 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             connection.logout();
             assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
+        }
+    }
+
+    @Test
+    public void shouldRejectInvalidResendRequestsHighBeginSeqNo() throws IOException
+    {
+        setup(true, true);
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final String testReqId = "ABC";
+            connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
+
+            final Session session = acquireSession();
+            ReportFactory.sendOneReport(session, Side.SELL);
+
+            testSystem.awaitBlocking(() ->
+            {
+                final int reportSeqNum = connection.readExecutionReport().header().msgSeqNum();
+
+                // Send an invalid resend request
+                final int invalidSeqNum = reportSeqNum + 1;
+                final ResendRequestEncoder resendRequest = connection.sendResendRequest(invalidSeqNum, invalidSeqNum);
+
+                final RejectDecoder reject = connection.readReject();
+                assertEquals(RESEND_REQUEST_MESSAGE_AS_STR, reject.refMsgTypeAsString());
+                assertEquals(resendRequest.header().msgSeqNum(), reject.refSeqNum());
+
+                connection.logout();
+                connection.readLogout();
+                assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
+            });
+        }
+    }
+
+    @Test
+    public void shouldReplyWithOnlyValidMessageSequenceWithHighEndSeqNo() throws IOException
+    {
+        setup(true, true);
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final String testReqId = "ABC";
+            final int headerSeqNum = connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
+
+            final Session session = acquireSession();
+            ReportFactory.sendOneReport(session, Side.SELL);
+
+            testSystem.awaitBlocking(() ->
+            {
+                final int reportSeqNum = connection.readExecutionReport().header().msgSeqNum();
+
+                sleepToAwaitResend();
+
+                // Send an invalid resend request
+                final int invalidSeqNum = reportSeqNum + 100;
+                connection.sendResendRequest(headerSeqNum, invalidSeqNum);
+
+                final SequenceResetDecoder sequenceResetDecoder = connection.readMessage(new SequenceResetDecoder());
+                assertTrue(sequenceResetDecoder.header().possDupFlag());
+                assertEquals(reportSeqNum, sequenceResetDecoder.newSeqNo());
+                final ExecutionReportDecoder secondExecutionReport = connection.readExecutionReport();
+                assertTrue(secondExecutionReport.header().possDupFlag());
+                assertEquals(reportSeqNum, secondExecutionReport.header().msgSeqNum());
+
+                sleepToAwaitResend();
+
+                final HeartbeatDecoder heartbeat = connection.exchangeTestRequestHeartbeat("ABC2");
+                assertFalse(heartbeat.header().hasPossDupFlag());
+                assertEquals(reportSeqNum + 1, heartbeat.header().msgSeqNum());
+
+                connection.logout();
+                connection.readLogout();
+                assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
+            });
         }
     }
 
@@ -338,68 +418,6 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         assertThat("sessions = " + sessions, sessions, hasSize(0));
     }
 
-    @Test
-    public void shouldSupportProxyV1Protocol() throws IOException
-    {
-        shouldSupportProxyProtocol(FixConnection::sendProxyV1Line, PROXY_SOURCE_IP, PROXY_SOURCE_PORT);
-    }
-
-    @Test
-    public void shouldSupportProxyV1ProtocolLargest() throws IOException
-    {
-        shouldSupportProxyProtocol(
-            FixConnection::sendProxyV1LargestLine, LARGEST_PROXY_SOURCE_IP, LARGEST_PROXY_SOURCE_PORT);
-    }
-
-    @Test
-    public void shouldSupportProxyV2ProtocolTcpV4() throws IOException
-    {
-        shouldSupportProxyProtocol(FixConnection::sendProxyV2LineTcpV4, PROXY_SOURCE_IP, PROXY_V2_SOURCE_PORT);
-    }
-
-    @Test
-    public void shouldSupportProxyV2ProtocolTcpV6() throws IOException
-    {
-        shouldSupportProxyProtocol(
-            FixConnection::sendProxyV2LineTcpV6, PROXY_V2_IPV6_SOURCE_IP, PROXY_V2_IPV6_SOURCE_PORT);
-    }
-
-    @Test
-    public void shouldSupportProxyV2ProtocolTcpV6Localhost() throws IOException
-    {
-        shouldSupportProxyProtocol(
-            FixConnection::sendProxyV2LineTcpV6Localhost, "::1", PROXY_V2_IPV6_SOURCE_PORT);
-    }
-
-    private void shouldSupportProxyProtocol(
-        final Consumer<FixConnection> sendLine, final String proxySourceIp, final int proxySourcePort)
-        throws IOException
-    {
-        setup(true, true);
-
-        setupLibrary();
-
-        try (FixConnection connection = FixConnection.initiate(port))
-        {
-            sendLine.accept(connection);
-            logon(connection);
-
-            final Session session = acquireSession();
-
-            assertEquals(proxySourceIp, session.connectedHost());
-            assertEquals(proxySourcePort, session.connectedPort());
-        }
-    }
-
-    private Session acquireSession()
-    {
-        final long sessionId = handler.awaitSessionId(testSystem::poll);
-        handler.clearSessionExistsInfos();
-        final Session session = SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
-        assertNotNull(session);
-        return session;
-    }
-
     private void sleepToAwaitResend()
     {
         try
@@ -410,16 +428,6 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         {
             e.printStackTrace();
         }
-    }
-
-    private void setupLibrary()
-    {
-        otfAcceptor = new FakeOtfAcceptor();
-        handler = new FakeHandler(otfAcceptor);
-        final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
-        configuration.messageValidationStrategy(MessageValidationStrategy.none());
-        library = connect(configuration);
-        testSystem = new TestSystem(library);
     }
 
     private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
