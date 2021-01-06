@@ -1427,7 +1427,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public int id()
+    public int sessionId()
     {
         return dataPublication.sessionId();
     }

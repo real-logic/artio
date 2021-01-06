@@ -173,7 +173,7 @@ class GatewaySessions
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
         final OnMessageInfo messageInfo = new OnMessageInfo();
 
-        final SessionProxy proxy = new DirectSessionProxy(
+        final DirectSessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
             outboundPublication,
             sessionIdStrategy,
@@ -226,7 +226,7 @@ class GatewaySessions
         {
             sessions.add(gatewaySession);
         }
-        gatewaySession.manage(sessionParser, session, engineBlockablePosition);
+        gatewaySession.manage(sessionParser, session, engineBlockablePosition, proxy);
 
         if (DebugLogger.isEnabled(FIX_CONNECTION))
         {
@@ -335,7 +335,7 @@ class GatewaySessions
 
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
     {
-        final int aeronSessionId = outboundPublication.id();
+        final int aeronSessionId = outboundPublication.sessionId();
         final long initialPosition = outboundPublication.initialPosition();
         // At requiredPosition=initialPosition there won't be anything indexed, so indexedPosition will be -1
         if (requiredPosition > initialPosition)

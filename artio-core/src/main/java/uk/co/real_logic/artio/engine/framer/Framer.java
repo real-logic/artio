@@ -175,6 +175,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final LongHashSet requestAllSessionSeenSessions = new LongHashSet();
+    private final Image outboundEngineImage;
 
     private ILink3Contexts iLink3Contexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
@@ -353,11 +354,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
+        outboundEngineImage = librarySubscription.imageBySessionId(outboundPublication.sessionId());
     }
 
     private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
     {
-        final int outboundSessionId = outboundPublication.id();
+        final int outboundSessionId = outboundPublication.sessionId();
         LibrarySlowPeeker outboundSlowPeeker;
         while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
         {
@@ -1779,15 +1781,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int replayFromSequenceNumber,
         final int replayFromSequenceIndex)
     {
-        final Action action = retryManager.retry(correlationId);
-        if (action != null)
-        {
-            return action;
-        }
-
-        final int aeronSessionId = outboundPublication.id();
-        final long requiredPosition = outboundPublication.position();
-
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
@@ -1818,58 +1811,104 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, SESSION_NOT_LOGGED_IN, correlationId));
         }
 
-        final long connectionId = gatewaySession.connectionId();
-        final int lastSentSeqNum = session.lastSentMsgSeqNum();
-        final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
+        schedule(new OnRequestSessionHandover(
+            correlationId, replayFromSequenceNumber, replayFromSequenceIndex, libraryInfo, gatewaySession));
 
-        gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
-        libraryInfo.addSession(gatewaySession);
+        return CONTINUE;
+    }
 
-        DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
+    private final class OnRequestSessionHandover extends UnitOfWork
+    {
+        private final int libraryId;
+        private final LiveLibraryInfo libraryInfo;
+        private final GatewaySession gatewaySession;
+        private final int aeronSessionId;
+        private final long requiredPosition;
+        private final InternalSession session;
+        private final long connectionId;
+        private final long sessionId;
+        private final int lastSentSeqNum;
+        private final int lastRecvSeqNum;
 
-        // Ensure that we've indexed up to this point in time.
-        // If we don't do this then the indexer thread could receive a message sent from the Framer after
-        // the library has sent its first message and get the wrong sent sequence number.
-        // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
-        if (requiredPosition > 0 && configuration.logOutboundMessages())
+        OnRequestSessionHandover(
+            final long correlationId,
+            final int replayFromSequenceNumber,
+            final int replayFromSequenceIndex,
+            final LiveLibraryInfo libraryInfo,
+            final GatewaySession gatewaySession)
         {
-            return retryManager.firstAttempt(correlationId, () ->
-            {
-                if (sentIndexedPosition(aeronSessionId, requiredPosition))
-                {
-                    finishSessionHandover(
-                        libraryId,
-                        correlationId,
-                        replayFromSequenceNumber,
-                        replayFromSequenceIndex,
-                        gatewaySession,
-                        session,
-                        connectionId,
-                        lastSentSeqNum,
-                        lastRecvSeqNum);
+            super(new ArrayList<>());
 
-                    return COMPLETE;
-                }
-                else
-                {
-                    return BACK_PRESSURED;
-                }
-            });
-        }
-        else
-        {
-            finishSessionHandover(
+            this.libraryInfo = libraryInfo;
+            this.gatewaySession = gatewaySession;
+
+            libraryId = libraryInfo.libraryId();
+            aeronSessionId = outboundPublication.sessionId();
+            requiredPosition = outboundPublication.position();
+            session = gatewaySession.session();
+            connectionId = gatewaySession.connectionId();
+            sessionId = session.id();
+            lastSentSeqNum = session.lastSentMsgSeqNum();
+            lastRecvSeqNum = session.lastReceivedMsgSeqNum();
+
+            final DirectBuffer buffer = new UnsafeBuffer();
+            final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
+
+            workList.add(this::awaitGatewaySessionMessagesSent);
+            workList.add(this::awaitIndexer);
+            workList.add(() -> saveManageSession(
                 libraryId,
+                gatewaySession,
+                lastSentSeqNum,
+                lastRecvSeqNum,
+                SessionStatus.SESSION_HANDOVER,
+                session.compositeKey(),
+                connectionId,
+                session,
+                correlationId,
+                status,
+                buffer));
+            catchupSession(
+                workList,
+                libraryId,
+                connectionId,
                 correlationId,
                 replayFromSequenceNumber,
                 replayFromSequenceIndex,
                 gatewaySession,
-                session,
-                connectionId,
-                lastSentSeqNum,
                 lastRecvSeqNum);
+        }
 
-            return CONTINUE;
+        private long awaitIndexer()
+        {
+            // Ensure that we've indexed up to this point in time.
+            // If we don't do this then the indexer thread could receive a message sent from the Framer after
+            // the library has sent its first message and get the wrong sent sequence number.
+            // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
+            if (requiredPosition > 0 && configuration.logOutboundMessages())
+            {
+                return sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED;
+            }
+            else
+            {
+                return COMPLETE;
+            }
+        }
+
+        private long awaitGatewaySessionMessagesSent()
+        {
+            // If there's still a message that was sent by the session when it was managed by the FixEngine
+            // then wait for it to be sent.
+            if (outboundEngineImage.position() < gatewaySession.lastSentPosition())
+            {
+                return BACK_PRESSURED;
+            }
+
+            gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+            libraryInfo.addSession(gatewaySession);
+            DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
+
+            return COMPLETE;
         }
     }
 
@@ -1954,7 +1993,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.sessionId = sessionId;
             this.correlationId = correlationId;
             this.compositeKey = compositeKey;
-            this.aeronSessionId = outboundPublication.id();
+            this.aeronSessionId = outboundPublication.sessionId();
             this.requiredPosition = outboundPublication.position();
 
             if (configuration.logInboundMessages())
@@ -2060,48 +2099,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 metaDataStatus,
                 metaData);
         }
-    }
-
-    private void finishSessionHandover(
-        final int libraryId,
-        final long correlationId,
-        final int replayFromSequenceNumber,
-        final int replayFromSequenceIndex,
-        final GatewaySession gatewaySession,
-        final InternalSession session,
-        final long connectionId,
-        final int lastSentSeqNum,
-        final int lastRecvSeqNum)
-    {
-        final DirectBuffer buffer = new UnsafeBuffer();
-        final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
-
-        final List<Continuation> continuations = new ArrayList<>();
-
-        continuations.add(() -> saveManageSession(
-            libraryId,
-            gatewaySession,
-            lastSentSeqNum,
-            lastRecvSeqNum,
-            SessionStatus.SESSION_HANDOVER,
-            session.compositeKey(),
-            connectionId,
-            session,
-            correlationId,
-            status,
-            buffer));
-
-        catchupSession(
-            continuations,
-            libraryId,
-            connectionId,
-            correlationId,
-            replayFromSequenceNumber,
-            replayFromSequenceIndex,
-            gatewaySession,
-            lastRecvSeqNum);
-
-        schedule(new UnitOfWork(continuations));
     }
 
     public Action onReplayMessages(
@@ -2678,7 +2675,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void quiesce()
     {
         final Long2LongHashMap inboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-        inboundPositions.put(inboundPublication.id(), inboundPublication.position());
+        inboundPositions.put(inboundPublication.sessionId(), inboundPublication.position());
         inboundCompletionPosition.complete(inboundPositions);
 
         final Long2LongHashMap outboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
@@ -2909,7 +2906,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.fixDictionary = fixDictionary;
             this.library = library;
 
-            inboundAeronSessionId = inboundPublication.id();
+            inboundAeronSessionId = inboundPublication.sessionId();
             inBoundRequiredPosition = inboundPublication.position();
 
             if (configuration.logAllMessages())

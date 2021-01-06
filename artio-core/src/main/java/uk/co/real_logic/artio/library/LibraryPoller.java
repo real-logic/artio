@@ -1634,7 +1634,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId &&
             // Possible to receive resent extend position responses if we resent the library connect
             // before the extend was received.
-            newSessionId != outboundPublication.id())
+            newSessionId != outboundPublication.sessionId())
         {
             final long timeInMs = timeInMs();
             resetNextEngineTimer(timeInMs);

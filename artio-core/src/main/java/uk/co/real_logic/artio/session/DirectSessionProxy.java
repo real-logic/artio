@@ -104,6 +104,7 @@ public class DirectSessionProxy implements SessionProxy
     private long sessionId;
     private boolean libraryConnected = true;
     private boolean seqNumResetRequested = false;
+    private long lastSentPosition = 0;
 
     public DirectSessionProxy(
         final int sessionBufferSize,
@@ -452,9 +453,15 @@ public class DirectSessionProxy implements SessionProxy
         if (position > 0)
         {
             DebugLogger.log(FIX_MESSAGE, "Sent ", buffer, offset, length);
+            lastSentPosition = position;
         }
 
         return position;
+    }
+
+    public long lastSentPosition()
+    {
+        return lastSentPosition;
     }
 
     public void libraryConnected(final boolean libraryConnected)

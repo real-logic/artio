@@ -55,6 +55,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
     private SessionContext context;
     private SessionParser sessionParser;
     private InternalSession session;
+    private DirectSessionProxy proxy;
     private CompositeKey sessionKey;
     private String username;
     private String password;
@@ -134,10 +135,12 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
     void manage(
         final SessionParser sessionParser,
         final InternalSession session,
-        final BlockablePosition blockablePosition)
+        final BlockablePosition blockablePosition,
+        final DirectSessionProxy proxy)
     {
         this.sessionParser = sessionParser;
         this.session = session;
+        this.proxy = proxy;
         this.session.sessionProcessHandler(this);
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
@@ -155,6 +158,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         context.updateAndSaveFrom(session);
         session.close();
         session = null;
+        proxy = null;
     }
 
     void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
@@ -491,5 +495,10 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         receiverEndPoint = null;
         senderEndPoint = null;
         onGatewaySessionLogon = null;
+    }
+
+    public long lastSentPosition()
+    {
+        return proxy.lastSentPosition();
     }
 }

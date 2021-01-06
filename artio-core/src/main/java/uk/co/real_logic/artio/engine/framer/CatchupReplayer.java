@@ -367,7 +367,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         {
             case AWAITING_INDEX:
             {
-                final long indexedPosition = receivedSequenceNumberIndex.indexedPosition(inboundPublication.id());
+                final long indexedPosition = receivedSequenceNumberIndex.indexedPosition(
+                    inboundPublication.sessionId());
 
                 if (indexedPosition >= requiredPosition)
                 {

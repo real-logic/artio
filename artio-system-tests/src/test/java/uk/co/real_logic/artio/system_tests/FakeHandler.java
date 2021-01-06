@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.builder.HeartbeatEncoder;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -33,6 +34,7 @@ import java.util.*;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 
 public class FakeHandler
     implements SessionHandler, SessionAcquireHandler, SessionExistsHandler
@@ -52,11 +54,17 @@ public class FakeHandler
 
     private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
     private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer(lastMessageBuffer);
+    private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
+    {
+        heartbeatEncoder.testReqID("abc");
+    }
+
     private int lastMessageLength = 0;
 
     private boolean hasTimedOut = false;
     private int timedOutLibraryId;
     private Session timedOutSession;
+    private boolean spamLogonMessages = false;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -79,6 +87,11 @@ public class FakeHandler
     public MutableAsciiBuffer lastMessage()
     {
         return lastMessage;
+    }
+
+    public void spamLogonMessages()
+    {
+        spamLogonMessages = true;
     }
 
     // ----------- EVENTS -----------
@@ -165,6 +178,17 @@ public class FakeHandler
 
     public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
     {
+        if (spamLogonMessages && session.isActive())
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                while (session.trySend(heartbeatEncoder) < 0)
+                {
+                    Thread.yield();
+                }
+            }
+        }
+
         assertNotEquals(Session.UNKNOWN, session.id());
         sessions.add(session);
         this.lastSession = session;
@@ -179,7 +203,7 @@ public class FakeHandler
 
     public void onSessionExists(
         final FixLibrary library,
-        final long surrogateSessionId,
+        final long sessionId,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -189,9 +213,14 @@ public class FakeHandler
         final int logonReceivedSequenceNumber,
         final int logonSequenceIndex)
     {
+        if (spamLogonMessages)
+        {
+            library.requestSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, 10_000);
+        }
+
         sessionExistsInfos.add(
             new SessionExistsInfo(
-            localCompId, remoteCompId, surrogateSessionId, logonReceivedSequenceNumber, logonSequenceIndex));
+            localCompId, remoteCompId, sessionId, logonReceivedSequenceNumber, logonSequenceIndex));
     }
 
     // ----------- END EVENTS -----------

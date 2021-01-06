@@ -33,7 +33,6 @@ import java.nio.ByteBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
@@ -443,10 +442,7 @@ class FixSenderEndPoint
 
     private boolean isWrongLibraryId(final int libraryId)
     {
-        // We allow the engine's messages to pass through in case the session
-        // has been acquired by a library in the same duty cycle as an engine
-        // sends a message, which would otherwise result in the message being dropped.
-        return !(libraryId == ENGINE_LIBRARY_ID || libraryId == this.libraryId);
+        return libraryId != this.libraryId;
     }
 
     // Only access on Framer thread
