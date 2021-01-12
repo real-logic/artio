@@ -31,10 +31,10 @@ plugins {
     id "com.github.ben-manes.versions" version "0.36.0"
 }
 
-def checkstyleVersion = '8.38'
+def checkstyleVersion = '8.39'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13.1'
-def mockitoVersion = '3.6.28'
+def mockitoVersion = '3.7.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.27'
 
