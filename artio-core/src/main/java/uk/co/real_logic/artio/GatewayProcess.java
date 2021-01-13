@@ -19,8 +19,10 @@ import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.concurrent.*;
-import org.agrona.concurrent.errors.DistinctErrorLog;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.CompositeAgent;
+import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.timing.HistogramLogAgent;
 import uk.co.real_logic.artio.timing.Timer;
@@ -29,7 +31,6 @@ import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.artio.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 
@@ -39,10 +40,6 @@ public abstract class GatewayProcess implements AutoCloseable
     public static final long NO_CORRELATION_ID = 0;
 
     public static final long NO_CONNECTION_ID = -1;
-
-    private static final long START_TIME_IN_MS = System.currentTimeMillis();
-
-    private DistinctErrorLog distinctErrorLog;
 
     protected CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
@@ -63,17 +60,7 @@ public abstract class GatewayProcess implements AutoCloseable
     protected void initMonitoring(final CommonConfiguration configuration)
     {
         monitoringFile = new MonitoringFile(true, configuration);
-        final EpochClock clock = new SystemEpochClock();
-        distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
-        errorHandler =
-            (throwable) ->
-            {
-                if (!distinctErrorLog.record(throwable))
-                {
-                    System.err.println("Error Log is full, consider increasing " + ERROR_BUFFER_LENGTH_PROP_NAME);
-                    throwable.printStackTrace();
-                }
-            };
+        errorHandler = configuration.errorHandlerFactory().make(monitoringFile.errorBuffer());
     }
 
     public Agent conductorAgent()
@@ -161,14 +148,13 @@ public abstract class GatewayProcess implements AutoCloseable
                 configuration.agentNamePrefix()));
         }
 
-        if (configuration.printErrorMessages())
+        final MonitoringAgentFactory monitoringAgentFactory = configuration.monitoringAgentFactory();
+        if (monitoringAgentFactory != null)
         {
-            agents.add(new ErrorPrinter(
+            agents.add(monitoringAgentFactory.make(
                 monitoringFile.errorBuffer(),
                 configuration.agentNamePrefix(),
-                START_TIME_IN_MS,
-                aeronArchive,
-                configuration.customErrorConsumer()));
+                aeronArchive));
         }
 
         if (agent != null)
@@ -178,7 +164,7 @@ public abstract class GatewayProcess implements AutoCloseable
 
         if (!agents.isEmpty())
         {
-            monitoringAgent = new CompositeAgent(agents);
+            this.monitoringAgent = new CompositeAgent(agents);
         }
     }
 

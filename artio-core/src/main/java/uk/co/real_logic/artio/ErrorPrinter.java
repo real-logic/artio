@@ -31,13 +31,14 @@ public class ErrorPrinter implements Agent
         configuration.libraryAeronChannel("").conclude();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
         final ErrorPrinter printer = new ErrorPrinter(
-            monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX, 0, null, null);
+            monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX, 0, null, null,
+            new SystemEpochClock());
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
     }
 
-    private static final ErrorConsumer DEFAULT_ERROR_CONSUMER =
+    static final ErrorConsumer PRINTING_ERROR_CONSUMER =
         (observationCount, firstObservationTimestampInMs, lastObservationTimestampInMs, encodedException) ->
         {
             System.err.println(encodedException);
@@ -57,17 +58,7 @@ public class ErrorPrinter implements Agent
     private long lastPollTimeInMs;
     private final AeronArchive aeronArchive;
 
-    public ErrorPrinter(
-        final AtomicBuffer errorBuffer,
-        final String agentNamePrefix,
-        final long startTimeInMs,
-        final AeronArchive aeronArchive,
-        final ErrorConsumer customErrorConsumer)
-    {
-        this(errorBuffer, agentNamePrefix, startTimeInMs, aeronArchive, customErrorConsumer, new SystemEpochClock());
-    }
-
-    public ErrorPrinter(
+    ErrorPrinter(
         final AtomicBuffer errorBuffer,
         final String agentNamePrefix,
         final long startTimeInMs,
@@ -79,7 +70,7 @@ public class ErrorPrinter implements Agent
         this.agentNamePrefix = agentNamePrefix;
         lastPollTimeInMs = startTimeInMs;
         this.aeronArchive = aeronArchive;
-        this.errorConsumer = customErrorConsumer == null ? DEFAULT_ERROR_CONSUMER : customErrorConsumer;
+        this.errorConsumer = customErrorConsumer == null ? PRINTING_ERROR_CONSUMER : customErrorConsumer;
         this.clock = clock;
     }
 

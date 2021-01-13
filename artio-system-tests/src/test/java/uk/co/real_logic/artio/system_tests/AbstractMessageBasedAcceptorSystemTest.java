@@ -20,6 +20,7 @@ import org.agrona.CloseHelper;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -101,7 +102,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         config.bindAtStartup(shouldBind);
 
         config
-            .printErrorMessages(false)
+            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);
     }

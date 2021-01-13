@@ -19,6 +19,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -48,7 +49,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true);
-        acceptingConfig.printErrorMessages(false);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);

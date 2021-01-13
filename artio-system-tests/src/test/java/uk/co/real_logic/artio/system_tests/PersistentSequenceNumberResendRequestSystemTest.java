@@ -205,13 +205,11 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
-        acceptingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         acceptingConfig.gracefulShutdown(shutdownCleanly);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
-        initiatingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         initiatingConfig.gracefulShutdown(shutdownCleanly);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 

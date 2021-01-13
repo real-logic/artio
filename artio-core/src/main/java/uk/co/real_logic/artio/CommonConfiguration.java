@@ -16,12 +16,12 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
+import io.aeron.archive.client.AeronArchive;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
-import org.agrona.concurrent.BackoffIdleStrategy;
-import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.OffsetEpochNanoClock;
+import org.agrona.concurrent.*;
+import org.agrona.concurrent.errors.DistinctErrorLog;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
@@ -221,8 +221,8 @@ public class CommonConfiguration
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private EpochNanoClock epochNanoClock = new OffsetEpochNanoClock();
-    private boolean printErrorMessages = true;
-    private ErrorConsumer customErrorConsumer;
+    private ErrorHandlerFactory errorHandlerFactory = ErrorHandlerFactory.saveDistinctErrors();
+    private MonitoringAgentFactory monitoringAgentFactory = MonitoringAgentFactory.printDistinctErrors();
     private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
@@ -370,6 +370,11 @@ public class CommonConfiguration
     }
 
     /**
+     * The approach of setting a custom error consumer combined with this print flag has been deprecated in
+     * a combination of {@link #errorHandlerFactory(ErrorHandlerFactory)}
+     * and {@link #monitoringAgentFactory(MonitoringAgentFactory)}.
+     * It will be removed in a future version.
+     *
      * Sets the printing of error messages on or off. Error messages are always logged in an error buffer that
      * can be scanned by another diagnostic process, this simply switches on or off the printing these errors on
      * standard out.
@@ -379,15 +384,64 @@ public class CommonConfiguration
      * @param printErrorMessages the printing of error messages.
      * @return this
      */
+    @Deprecated
     public CommonConfiguration printErrorMessages(final boolean printErrorMessages)
     {
-        this.printErrorMessages = printErrorMessages;
+        if (!printErrorMessages)
+        {
+            monitoringAgentFactory(MonitoringAgentFactory.none());
+        }
         return this;
     }
 
+    /**
+     * The approach of setting a custom error consumer has been deprecated in favour of using
+     * a combination of {@link #errorHandlerFactory(ErrorHandlerFactory)}
+     * and {@link #monitoringAgentFactory(MonitoringAgentFactory)}.
+     * It will be removed in a future version.
+     *
+     * @param customErrorConsumer a custom error consumer to print values out
+     * @return this
+     */
+    @Deprecated
     public CommonConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
     {
-        this.customErrorConsumer = customErrorConsumer;
+        monitoringAgentFactory(MonitoringAgentFactory.consumeDistinctErrors(customErrorConsumer));
+        return this;
+    }
+
+    /**
+     * By default errors within Artio are stored into a {@link DistinctErrorLog} and also printed out. This
+     * method allows the configuration of a custom {@link ErrorHandler} implementation that
+     * can be used to integrate into custom logging configuration. Often used in combination with
+     * the {@link #monitoringAgentFactory(MonitoringAgentFactory)} configuration option.
+     *
+     * See {@link ErrorHandlerFactory#saveDistinctErrors()} for the default value and an example.
+     *
+     * @param errorHandlerFactory the factory for creating a custom error handler
+     * @return this
+     */
+    public CommonConfiguration errorHandlerFactory(final ErrorHandlerFactory errorHandlerFactory)
+    {
+        this.errorHandlerFactory = errorHandlerFactory;
+        return this;
+    }
+
+    /**
+     * By default an implementation is provided that prints out errors from an {@link DistinctErrorLog}
+     * and also prints out any {@link AeronArchive} errors. This method allows the configuration of alternative
+     * error monitoring strategies on the monitoring thread. Often used in combination with
+     * the {@link #errorHandlerFactory(ErrorHandlerFactory)} configuration option.
+     *
+     * For example if you want to save errors to disk but not print them on standard error then just set
+     * this to {@link MonitoringAgentFactory#none()}. Other factory methods are on this interface.
+     *
+     * @param monitoringAgentFactory the factory for setting the
+     * @return this
+     */
+    public CommonConfiguration monitoringAgentFactory(final MonitoringAgentFactory monitoringAgentFactory)
+    {
+        this.monitoringAgentFactory = monitoringAgentFactory;
         return this;
     }
 
@@ -585,14 +639,14 @@ public class CommonConfiguration
         return aeronContext;
     }
 
-    public boolean printErrorMessages()
+    public MonitoringAgentFactory monitoringAgentFactory()
     {
-        return printErrorMessages;
+        return monitoringAgentFactory;
     }
 
-    public ErrorConsumer customErrorConsumer()
+    public ErrorHandlerFactory errorHandlerFactory()
     {
-        return customErrorConsumer;
+        return errorHandlerFactory;
     }
 
     public IdleStrategy monitoringThreadIdleStrategy()

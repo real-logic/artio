@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -49,7 +50,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(true);
-        initiatingConfig.printErrorMessages(false);
+        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);

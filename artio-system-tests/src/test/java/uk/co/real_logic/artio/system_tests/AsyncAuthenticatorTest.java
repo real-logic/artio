@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.RejectEncoder;
@@ -54,7 +55,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.deleteLogFileDirOnStart(true);
-        acceptingConfig.printErrorMessages(false);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         acceptingConfig.authenticationStrategy(auth);
         acceptingConfig.authenticationTimeoutInMs(AUTHENTICATION_TIMEOUT_IN_MS);
 

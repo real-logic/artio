@@ -23,6 +23,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -113,7 +114,7 @@ public class LibraryAndGatewayRandomTimeoutTest
     private void launchEngine()
     {
         final EngineConfiguration initiatingConfig = initiatingConfig(aeronPort, nanoClock);
-        initiatingConfig.printErrorMessages(false);
+        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         initiatingConfig.deleteLogFileDirOnStart(true);
         initiatingEngine = FixEngine.launch(initiatingConfig);
     }

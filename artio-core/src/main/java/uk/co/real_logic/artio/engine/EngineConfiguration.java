@@ -25,6 +25,8 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.ErrorHandlerFactory;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
@@ -1161,6 +1163,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("Deprecated")
+    @Deprecated
     public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
     {
         super.printErrorMessages(printErrorMessages);
@@ -1170,9 +1174,29 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("Deprecated")
+    @Deprecated
     public EngineConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
     {
         super.customErrorConsumer(customErrorConsumer);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration errorHandlerFactory(final ErrorHandlerFactory errorHandlerFactory)
+    {
+        super.errorHandlerFactory(errorHandlerFactory);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration monitoringAgentFactory(final MonitoringAgentFactory monitoringAgentFactory)
+    {
+        super.monitoringAgentFactory(monitoringAgentFactory);
         return this;
     }
 

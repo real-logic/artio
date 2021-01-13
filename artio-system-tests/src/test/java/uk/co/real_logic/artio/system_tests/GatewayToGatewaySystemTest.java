@@ -83,7 +83,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
-        acceptingConfig.printErrorMessages(false);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 

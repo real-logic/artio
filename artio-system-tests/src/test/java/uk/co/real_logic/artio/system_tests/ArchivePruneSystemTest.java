@@ -22,6 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -64,7 +65,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
-        acceptingConfig.printErrorMessages(true);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         acceptingEngine = FixEngine.launch(acceptingConfig);
     }
 

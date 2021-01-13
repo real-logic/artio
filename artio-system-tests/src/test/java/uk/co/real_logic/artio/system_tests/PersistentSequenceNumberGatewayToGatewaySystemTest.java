@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.MonitoringAgentFactory.consumeDistinctErrors;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
@@ -559,13 +560,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         config.sessionPersistenceStrategy(alwaysPersistent());
         if (!printErrorMessages)
         {
-            config.customErrorConsumer(errorCounter);
+            config.monitoringAgentFactory(consumeDistinctErrors(errorCounter));
         }
         acceptingEngine = FixEngine.launch(config);
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         if (!printErrorMessages)
         {
-            initiatingConfig.customErrorConsumer(errorCounter);
+            config.monitoringAgentFactory(consumeDistinctErrors(errorCounter));
         }
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
