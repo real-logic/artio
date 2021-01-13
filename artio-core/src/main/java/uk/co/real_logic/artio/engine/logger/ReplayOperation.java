@@ -20,7 +20,9 @@ import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import io.aeron.archive.status.RecordingPos;
+import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.DebugLogger;
@@ -38,6 +40,8 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
  */
 public class ReplayOperation
 {
+    private static final FragmentHandler EMPTY_FRAGMENT_HANDLER = (buffer, offset, length, header) -> {};
+
     private static final ThreadLocal<CharFormatter> RECORDING_RANGE_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Attempting Recording Range:" +
         " RecordingRange{" +
@@ -69,6 +73,7 @@ public class ReplayOperation
     // fields reset for each recordingRange
     private int replayedMessages = 0;
     private RecordingRange recordingRange;
+    private long replaySessionId;
     private int aeronSessionId;
     private Image image;
 
@@ -132,12 +137,13 @@ public class ReplayOperation
 
             try
             {
-                aeronSessionId = (int)aeronArchive.startReplay(
+                replaySessionId = aeronArchive.startReplay(
                     recordingId,
                     beginPosition,
                     length,
                     IPC_CHANNEL,
                     archiveReplayStream);
+                aeronSessionId = (int)replaySessionId;
 
                 messageTracker.reset();
 
@@ -149,6 +155,7 @@ public class ReplayOperation
             }
             catch (final Throwable exception)
             {
+                exception.printStackTrace();
                 errorHandler.onError(exception);
 
                 return true;
@@ -234,6 +241,7 @@ public class ReplayOperation
         }
 
         aeronSessionId = 0;
+        replaySessionId = 0;
         replayedMessages += recordingRangeCount;
         recordingRange = null;
         image = null;
@@ -262,9 +270,25 @@ public class ReplayOperation
 
     public void close()
     {
-        if (aeronSessionId != 0)
+        if (replaySessionId != 0)
         {
-            aeronArchive.stopReplay(aeronSessionId);
+            try
+            {
+                aeronArchive.stopReplay(replaySessionId);
+            }
+            catch (final ArchiveException e)
+            {
+                // The replay session may have already ended before this close was called.
+                if (e.errorCode() != ArchiveException.UNKNOWN_REPLAY)
+                {
+                    errorHandler.onError(e);
+                }
+            }
+
+            while (!(image.isClosed() || image.isEndOfStream()))
+            {
+                image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
+            }
         }
     }
 }

@@ -476,6 +476,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test
     public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSession()
     {
+        printErrorMessages = false;
+
         launch(this::nothing);
 
         final SessionWriter sessionWriter = createFollowerSession();
