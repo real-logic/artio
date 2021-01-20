@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -35,6 +36,7 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 
@@ -53,6 +55,7 @@ import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -648,5 +651,43 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals("incorrect lastReceivedMsgSeqNum", lastReceivedMsgSeqNum, session.lastReceivedMsgSeqNum());
         assertEquals("incorrect lastSentMsgSeqNum", lastSentMsgSeqNum, session.lastSentMsgSeqNum());
         assertEquals("incorrect sequenceIndex", sequenceIndex, session.sequenceIndex());
+    }
+
+    void acceptingEngineHasSessionAndLibraryIsNotified()
+    {
+        final LibraryDriver driver = LibraryDriver.accepting(testSystem, nanoClock);
+        engineHasSessionAndLibraryIsNotified(driver, acceptingEngine, acceptingSession);
+    }
+
+    void initiatingEngineHasSessionAndLibraryIsNotified()
+    {
+        engineHasSessionAndLibraryIsNotified(
+            LibraryDriver.initiating(libraryAeronPort, testSystem), initiatingEngine, initiatingSession);
+    }
+
+    void engineHasSessionAndLibraryIsNotified(
+        final LibraryDriver libraryDriver, final FixEngine engine, final Session session)
+    {
+        try (LibraryDriver library2 = libraryDriver)
+        {
+            library2.becomeOnlyLibraryConnectedTo(engine);
+
+            final LibraryInfo engineLibraryInfo = engineLibrary(libraries(engine));
+
+            assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
+            assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(session.connectionId())));
+
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
+            assertSameSession(sessionId, session);
+        }
+    }
+
+    void assertSameSession(final SessionExistsInfo sessionId, final Session session)
+    {
+        final CompositeKey compositeKey = session.compositeKey();
+
+        assertEquals(sessionId.surrogateId(), session.id());
+        assertEquals(compositeKey.localCompId(), sessionId.localCompId());
+        assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
 }

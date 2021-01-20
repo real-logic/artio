@@ -108,6 +108,11 @@ public class SequenceNumberIndexReader implements AutoCloseable
 
     public long indexedPosition(final int aeronSessionId)
     {
+        if (recordingIdLookup == null)
+        {
+            return UNKNOWN_POSITION;
+        }
+
         final long recordingId = recordingIdLookup.findRecordingId(aeronSessionId);
         if (recordingId == NULL_RECORDING_ID)
         {

@@ -499,8 +499,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryPosition = image.position();
         }
 
-        final boolean indexed = sentIndexedPosition(librarySessionId, libraryPosition);
-        if (!configuration.logOutboundMessages() || indexed)
+        // Don't check the sent indexed position if we're not logging / indexing,
+        // just acquire
+        if (!configuration.logOutboundMessages() || sentIndexedPosition(librarySessionId, libraryPosition))
         {
             acquireLibrarySessions(library);
         }
@@ -513,13 +514,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean retryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
-        final boolean indexed = sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition());
-        if (!configuration.logOutboundMessages() || indexed)
+        if (!configuration.logOutboundMessages() ||
+            sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition()))
         {
             acquireLibrarySessions(library);
+            return true;
         }
 
-        return indexed;
+        return false;
     }
 
     private boolean sentIndexedPosition(final int aeronSessionId, final long position)

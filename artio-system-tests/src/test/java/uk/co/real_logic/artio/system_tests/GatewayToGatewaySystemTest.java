@@ -33,7 +33,6 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
-import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
@@ -1248,43 +1247,5 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         return testSystem.awaitReply(engine.lookupSessionId(
             localCompId, remoteCompId, null, null, null, null));
-    }
-
-    private void acceptingEngineHasSessionAndLibraryIsNotified()
-    {
-        final LibraryDriver driver = LibraryDriver.accepting(testSystem, nanoClock);
-        engineHasSessionAndLibraryIsNotified(driver, acceptingEngine, acceptingSession);
-    }
-
-    private void initiatingEngineHasSessionAndLibraryIsNotified()
-    {
-        engineHasSessionAndLibraryIsNotified(
-            LibraryDriver.initiating(libraryAeronPort, testSystem), initiatingEngine, initiatingSession);
-    }
-
-    private void engineHasSessionAndLibraryIsNotified(
-        final LibraryDriver libraryDriver, final FixEngine engine, final Session session)
-    {
-        try (LibraryDriver library2 = libraryDriver)
-        {
-            library2.becomeOnlyLibraryConnectedTo(engine);
-
-            final LibraryInfo engineLibraryInfo = engineLibrary(libraries(engine));
-
-            assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
-            assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(session.connectionId())));
-
-            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
-            assertSameSession(sessionId, session);
-        }
-    }
-
-    private void assertSameSession(final SessionExistsInfo sessionId, final Session session)
-    {
-        final CompositeKey compositeKey = session.compositeKey();
-
-        assertEquals(sessionId.surrogateId(), session.id());
-        assertEquals(compositeKey.localCompId(), sessionId.localCompId());
-        assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
 }

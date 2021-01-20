@@ -107,6 +107,24 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         engineShouldManageSession(initiatingSession, initiatingLibrary, acceptingSession, acceptingOtfAcceptor);
     }
 
+    @Test
+    public void engineShouldAcquireTimedOutAcceptingSessions()
+    {
+        acquireAcceptingSession();
+
+        testSystem.remove(acceptingLibrary);
+
+        acceptingEngineHasSessionAndLibraryIsNotified();
+    }
+
+    @Test
+    public void engineShouldAcquireTimedOutInitiatingSessions()
+    {
+        testSystem.remove(initiatingLibrary);
+
+        initiatingEngineHasSessionAndLibraryIsNotified();
+    }
+
     private void engineShouldManageSession(
         final Session session,
         final FixLibrary library,
