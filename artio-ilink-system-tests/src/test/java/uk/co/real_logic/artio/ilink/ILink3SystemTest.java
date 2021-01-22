@@ -20,14 +20,16 @@ import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoPartyDetailsEncoder
 import iLinkBinary.PartyDetailsDefinitionRequest518Encoder.NoTrdRegPublicationsEncoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.IntArrayList;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.errors.ErrorConsumer;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -85,7 +87,7 @@ public class ILink3SystemTest
     private ILink3TestServer testServer;
     private Reply<ILink3Connection> reply;
     private ILink3Connection connection;
-    private final ErrorConsumer errorConsumer = mock(ErrorConsumer.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
     private final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
 
@@ -109,7 +111,8 @@ public class ILink3SystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
             .lookupDefaultAcceptorfixDictionary(false)
-            .customErrorConsumer(errorConsumer)
+            .errorHandlerFactory(errorBuffer -> errorHandler)
+            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
             .iLink3RetransmitHandler(retransmitHandler)
             .messageTimingHandler(messageTimingCaptor);
@@ -121,7 +124,9 @@ public class ILink3SystemTest
         final LibraryConfiguration libraryConfig = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
-        libraryConfig.customErrorConsumer(errorConsumer);
+        libraryConfig
+            .errorHandlerFactory(errorBuffer -> errorHandler)
+            .monitoringAgentFactory(MonitoringAgentFactory.none());
         library = testSystem.connect(libraryConfig);
     }
 
@@ -133,8 +138,11 @@ public class ILink3SystemTest
 
         if (!expectedError)
         {
-            verifyNoInteractions(errorConsumer);
+            verifyNoInteractions(errorHandler);
         }
+
+        // Workaround for mockito memory leak
+        Mockito.framework().clearInlineMocks();
     }
 
     private void closeArtio()
