@@ -125,6 +125,13 @@ public class FixMessageLogger implements Agent
 
     public static void main(final String[] args)
     {
+        final AgentRunner runner = start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(runner::close));
+    }
+
+    public static AgentRunner start()
+    {
         final Configuration configuration = new Configuration()
             .fixMessageConsumer(FixMessageLogger::print);
         final FixMessageLogger logger = new FixMessageLogger(configuration);
@@ -137,7 +144,7 @@ public class FixMessageLogger implements Agent
 
         AgentRunner.startOnThread(runner);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(runner::close));
+        return runner;
     }
 
     private static void print(

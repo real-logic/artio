@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.Header;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -49,7 +53,7 @@ public final class FixArchivePrinter
     private final IntHashSet queryStreamIds = new IntHashSet();
     private String aeronDirectoryName = null;
     private String aeronChannel = null;
-    private int inboundStreamId = DEFAULT_INBOUND_LIBRARY_STREAM;
+    private String offlineArchiveDirectoryName = null;
     private int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
@@ -61,8 +65,29 @@ public final class FixArchivePrinter
     {
         parseArgs(args);
         validateArgs();
-        scanArchive(aeronDirectoryName, aeronChannel, queryStreamIds, predicate, follow, headerPredicate,
-            archiveScannerStreamId, fixDictionaryType);
+
+        final ArchivingMediaDriver archivingMediaDriver = startArchiverIfNeeded();
+        try
+        {
+            scanArchive(aeronDirectoryName, aeronChannel, queryStreamIds, predicate, follow, headerPredicate,
+                archiveScannerStreamId, fixDictionaryType);
+        }
+        finally
+        {
+            CloseHelper.close(archivingMediaDriver);
+        }
+    }
+
+    private ArchivingMediaDriver startArchiverIfNeeded()
+    {
+        if (offlineArchiveDirectoryName == null)
+        {
+            return null;
+        }
+
+        return ArchivingMediaDriver.launch(
+            new MediaDriver.Context().aeronDirectoryName(aeronDirectoryName),
+            new Archive.Context().archiveDirectoryName(offlineArchiveDirectoryName));
     }
 
     private void parseArgs(final String[] args)
@@ -147,6 +172,10 @@ public final class FixArchivePrinter
 
                 case "aeron-channel":
                     aeronChannel = optionValue;
+                    break;
+
+                case "offline-archive-dir":
+                    offlineArchiveDirectoryName = optionValue;
                     break;
 
                 case "fix-dictionary":
@@ -240,6 +269,12 @@ public final class FixArchivePrinter
             "Specifies the aeron channel that was used to by the engine",
             true);
 
+        printOption(
+            "offline-archive-dir",
+            "Enable offline mode using the given aeron archive directory. This is a good way to inspect the" +
+            " directory of a shutdown Artio instance. It starts a media driver and proceeds to inspect the provided " +
+            "aeron archive directory",
+            false);
         printOption(
             "fix-dictionary",
             "The class name of the Fix Dictionary to use, default is used if this is not provided",
