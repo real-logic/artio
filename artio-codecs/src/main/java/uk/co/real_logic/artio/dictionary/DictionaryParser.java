@@ -299,7 +299,7 @@ public final class DictionaryParser
 
                 final String name = name(attributes);
                 final String fullType = getValue(attributes, "msgtype");
-                final Category category = parseCategory(getValue(attributes, "msgcat"));
+                final String category = getValue(attributes, "msgcat");
                 final Message message = new Message(name, fullType, category);
 
                 extractEntries(node.getChildNodes(), fields, message.entries(), components, forwardReferences);
@@ -384,11 +384,6 @@ public final class DictionaryParser
     private boolean isRequired(final NamedNodeMap attributes)
     {
         return "Y".equals(getValue(attributes, "required"));
-    }
-
-    private Category parseCategory(final String from)
-    {
-        return Category.valueOf(from.toUpperCase());
     }
 
     private String getValue(final NamedNodeMap attributes, final String attributeName)

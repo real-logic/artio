@@ -28,8 +28,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static uk.co.real_logic.artio.dictionary.generation.CodecConfiguration.DEFAULT_PARENT_PACKAGE;
-import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
-import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 import static uk.co.real_logic.artio.dictionary.ir.Field.registerField;
 
@@ -557,7 +555,7 @@ public final class ExampleDictionary
         final Field dataFieldLength = registerField(messageEgFields, 200, DATA_FIELD_LENGTH, Type.LENGTH);
         dataField.associatedLengthField(dataFieldLength);
 
-        final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
+        final Message heartbeat = new Message("Heartbeat", "0", "admin");
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
         heartbeat.requiredEntry(intField);
@@ -599,10 +597,10 @@ public final class ExampleDictionary
         trailer.optionalEntry(signature);
         trailer.requiredEntry(checkSum);
 
-        final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
+        final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, "admin");
         otherMessage.optionalEntry(registerField(messageEgFields, 99, "OtherField", INT));
 
-        final Message fieldsMessage = new Message(FIELDS_MESSAGE, "Z", ADMIN);
+        final Message fieldsMessage = new Message(FIELDS_MESSAGE, "Z", "admin");
         fieldsMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));
         fieldsMessage.requiredEntry(registerField(messageEgFields, 1002, "ExchangeField", EXCHANGE));
         fieldsMessage.requiredEntry(registerField(messageEgFields, 1003, "CountryField", COUNTRY));
@@ -613,10 +611,10 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(groupForAdmin);
         fieldsMessage.optionalEntry(nestedComponent);
 
-        final Message lowerCaseMessage = new Message(LOWERCASE_MESSAGE, "LC", ADMIN);
+        final Message lowerCaseMessage = new Message(LOWERCASE_MESSAGE, "LC", "admin");
         lowerCaseMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));
 
-        final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
+        final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, "app");
         enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
             .addValue("a", "A")
             .addValue("b", "B"));
@@ -637,7 +635,7 @@ public final class ExampleDictionary
             .addValue("delta", "DELTA"));
 
         final Message allReqFieldTypesMessage = new Message(ALL_REQ_FIELD_TYPES_MESSAGE_NAME,
-            ALL_REQ_FIELD_TYPES_MESSAGE_TYPE, APP);
+            ALL_REQ_FIELD_TYPES_MESSAGE_TYPE, "app");
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 700, STRING_RF, STRING));
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 701, INT_RF, INT));
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 702, CHAR_RF, CHAR));

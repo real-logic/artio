@@ -21,9 +21,9 @@ public final class Message extends Aggregate
 {
     private final String fullType;
     private final long packedType;
-    private final Category category;
+    private final String category;
 
-    public Message(final String name, final String fullType, final Category category)
+    public Message(final String name, final String fullType, final String category)
     {
         super(name);
         this.fullType = fullType;
@@ -41,7 +41,7 @@ public final class Message extends Aggregate
         return fullType;
     }
 
-    public Category category()
+    public String category()
     {
         return category;
     }

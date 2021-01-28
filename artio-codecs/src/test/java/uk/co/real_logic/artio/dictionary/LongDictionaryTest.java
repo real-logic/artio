@@ -30,7 +30,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertTrue;
-import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 
 public class LongDictionaryTest
 {
@@ -39,7 +38,7 @@ public class LongDictionaryTest
     @Before
     public void createDataDictionary()
     {
-        final Message heartbeat = new Message("Hearbeat", "0", ADMIN);
+        final Message heartbeat = new Message("Hearbeat", "0", "admin");
         heartbeat.requiredEntry(new Field(115, "OnBehalfOfCompID", Type.STRING));
         heartbeat.optionalEntry(new Field(112, "TestReqID", Type.STRING));
 

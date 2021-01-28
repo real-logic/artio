@@ -131,6 +131,8 @@ public final class Field implements Element
         STRING(true, false, false, false, false),
         MULTIPLEVALUESTRING(true, false, false, true, false),
         MULTIPLESTRINGVALUE(true, false, false, true, false),
+        // Technically has extra validation but we'll just make it a String for now.
+        TENOR(true, false, false, true, false),
 
         CURRENCY(true, false, false, false, false), // String using ISO 4217 (3 chars)
         EXCHANGE(true, false, false, false, false), // String using ISO 10383 (2 chars)

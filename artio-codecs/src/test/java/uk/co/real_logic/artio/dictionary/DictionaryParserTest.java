@@ -27,7 +27,6 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasFluentProperty;
@@ -155,7 +154,7 @@ public class DictionaryParserTest
 
         assertEquals("Heartbeat", heartbeat.name());
         assertEquals('0', heartbeat.packedType());
-        assertEquals(ADMIN, heartbeat.category());
+        assertEquals("admin", heartbeat.category());
 
         final Entry entry = heartbeat.entries().get(0);
         assertThat(entry, isRequiredField("TestReqID", false));
