@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.MessageStatus;
 
 /**
  * Consumer to read messages from the fix message archive.
@@ -26,7 +27,14 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 public interface FixMessageConsumer
 {
     /**
-     * Callback invoked for each message that the {@link FixArchiveScanner} scans.
+     * Callback invoked for each message that the {@link FixArchiveScanner} or {@link FixMessageLogger} scans.
+     *
+     * Note that not all of these messages are necessarily valid FIX messages. It is recommended that implementations
+     * print the {@link FixMessageDecoder#status()} field in order to understand the message properly. For example
+     * if a TCP connection is made to an Acceptor that sends some arbitrary binary payload from a misconfigured system
+     * you will be given a callback here with that payload in marked as {@link MessageStatus#INVALID}. It can still
+     * be valuable to print invalid messages in order to debug and understand data sent by malfunctioning clients of
+     * your system.
      *
      * @param message the message header in the log file, can be used to read properties about the message.
      * @param buffer the buffer where the ascii FixMessage is stored.

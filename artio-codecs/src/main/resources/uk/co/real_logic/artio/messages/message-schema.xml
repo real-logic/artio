@@ -64,12 +64,18 @@
             <validValue name="INVALID_CONFIGURATION">8</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
-            <validValue name="OK">0</validValue>
-            <validValue name="INVALID_CHECKSUM">1</validValue>
-            <validValue name="INVALID_BODYLENGTH">2</validValue>
-            <validValue name="INVALID">3</validValue>
-            <validValue name="CATCHUP_REPLAY">4</validValue>
-            <validValue name="AUTH_REJECT">5</validValue>
+            <validValue name="OK"
+                description="Content is a valid Message, passing Framer validation">0</validValue>
+            <validValue name="INVALID_CHECKSUM"
+                description="Message has an invalid FIX checksum and hasn't been processed">1</validValue>
+            <validValue name="INVALID_BODYLENGTH"
+                description="Message has an invalid FIX body length field and hasn't been processed">2</validValue>
+            <validValue name="INVALID"
+                description="Message is invalid. This might either be a severely malformed FIX or, in the case of an Acceptor, it might be an arbitrary TCP connection with a possibly unrenderable payload.">3</validValue>
+            <validValue name="CATCHUP_REPLAY"
+                description="This message has been sent from the FixEngine to the FixLibrary as a result of a Catchup Replay (ie in response to a fixLibrary.requestSession() call), rather than being sent directly over TCP.">4</validValue>
+            <validValue name="AUTH_REJECT"
+                description="This is a Logon message that has been rejected by your authentication strategy in the case of an Acceptor.">5</validValue>
         </enum>
         <enum name="DisconnectReason" encodingType="uint8">
             <validValue name="REMOTE_DISCONNECT"
