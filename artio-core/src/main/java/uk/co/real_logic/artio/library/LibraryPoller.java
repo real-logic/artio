@@ -148,23 +148,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Runnable onDisconnectFunc = this::onDisconnect;
     private final SessionAcquiredInfo sessionAcquiredInfo = new SessionAcquiredInfo();
 
-    private final CharFormatter receivedFormatter = new CharFormatter("(%s) Received %s %n");
-    private final CharFormatter disconnectedFormatter = new CharFormatter("%s: Disconnected from [%s]%n");
-    private final CharFormatter connectedFormatter = new CharFormatter("%s: Connected to [%s]%n");
-    private final CharFormatter attemptConnectFormatter = new CharFormatter("%s: Attempting to connect to %s%n");
+    private final CharFormatter receivedFormatter = new CharFormatter("(%s) Received %s");
+    private final CharFormatter disconnectedFormatter = new CharFormatter("%s: Disconnected from [%s]");
+    private final CharFormatter connectedFormatter = new CharFormatter("%s: Connected to [%s]");
+    private final CharFormatter attemptConnectFormatter = new CharFormatter("%s: Attempting to connect to %s");
     private final CharFormatter attemptNextFormatter = new CharFormatter(
-        "%s: Attempting connect to next engine (%s) in round-robin%n");
-    private final CharFormatter initiatorConnectFormatter = new CharFormatter("Init Connect: %s, %s%n");
-    private final CharFormatter acceptorConnectFormatter = new CharFormatter("Acct Connect: %s, %s%n");
+        "%s: Attempting connect to next engine (%s) in round-robin");
+    private final CharFormatter initiatorConnectFormatter = new CharFormatter("Init Connect: %s, %s");
+    private final CharFormatter acceptorConnectFormatter = new CharFormatter("Acct Connect: %s, %s");
     private final CharFormatter controlNotificationFormatter = new CharFormatter(
-        "%s: Received Control Notification from engine at timeInMs %s%n");
+        "%s: Received Control Notification from engine at timeInMs %s");
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
-        "%s: Received Heartbeat from engine at timeInMs %s%n");
-    private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s%n");
+        "%s: Received Heartbeat from engine at timeInMs %s");
+    private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s");
     private final CharFormatter onDisconnectFormatter = new CharFormatter(
-        "%s: Session Disconnect @ Library %s, %s%n");
+        "%s: Session Disconnect @ Library %s, %s");
     private final CharFormatter sessionExistsFormatter = new CharFormatter(
-        "onSessionExists: conn=%s, sess=%s, sentSeqNo=%s, recvSeqNo=%s%n");
+        "onSessionExists: conn=%s, sess=%s, sentSeqNo=%s, recvSeqNo=%s");
 
     /**
      * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.

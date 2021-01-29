@@ -83,17 +83,17 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final CharFormatter receivedResendFormatter = new CharFormatter(
-        "Received Resend Request for inclusive range: [%s, %s]%n");
+        "Received Resend Request for inclusive range: [%s, %s]");
     private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
-        "Not processing Resend Request for %s because it has already disconnected %n");
+        "Not processing Resend Request for %s because it has already disconnected");
 
     // For FixReplayerSession, safe to share rather than allocate for each FixReplayerSession
     final CharFormatter completeNotRecentFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
-        "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
+        "endSeqNo=%s beginSeqNo=%s expectedCount=%s");
     final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
-        "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
+        "beginGapFillSeqNum=%s, newSequenceNumber=%s");
 
     // ILink specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;

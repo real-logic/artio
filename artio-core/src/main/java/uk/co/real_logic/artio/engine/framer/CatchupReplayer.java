@@ -54,15 +54,15 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     public static class Formatters
     {
         private final CharFormatter attemptFormatter =
-            new CharFormatter("Attempt replay for sessionId=%s%n");
+            new CharFormatter("Attempt replay for sessionId=%s");
         private final CharFormatter okFormatter =
-            new CharFormatter("OK for sessionId=%s%n");
+            new CharFormatter("OK for sessionId=%s");
         private final CharFormatter missingFormatter =
-            new CharFormatter("Missing Messages for sessionId=%s%n");
+            new CharFormatter("Missing Messages for sessionId=%s");
         private final CharFormatter awaitIndexFormatter = new CharFormatter(
-            "Awaiting index position: indexed=%s vs required=%s%n");
+            "Awaiting index position: indexed=%s vs required=%s");
         private final CharFormatter replayQueryingFormatter = new CharFormatter(
-            "Querying for sessionId=%s, currently at (%s, %s)%n");
+            "Querying for sessionId=%s, currently at (%s, %s)");
     }
 
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;

@@ -137,11 +137,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     static class FixReceiverEndPointFormatters
     {
-        private final CharFormatter noProxyProtocol = new CharFormatter("No proxy protocol usage for connId=%s%n");
+        private final CharFormatter noProxyProtocol = new CharFormatter("No proxy protocol usage for connId=%s");
         private final CharFormatter proxyV1Protocol = new CharFormatter(
-            "Proxy v1 detected for connId=%s,addr=%s,line=%s%n");
+            "Proxy v1 detected for connId=%s,addr=%s,line=%s");
         private final CharFormatter proxyV2Protocol = new CharFormatter(
-            "Proxy v2 detected for connId=%s,addr=%s,line=%s%n");
+            "Proxy v2 detected for connId=%s,addr=%s,line=%s");
     }
 
     private final SessionContexts sessionContexts;

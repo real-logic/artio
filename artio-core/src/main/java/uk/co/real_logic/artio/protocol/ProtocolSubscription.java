@@ -32,7 +32,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     private static final Action UNKNOWN_TEMPLATE = null;
 
     private final CharFormatter disconnectFormatter = new CharFormatter(
-        "FixSubscription Disconnect: %s [%s]%n");
+        "FixSubscription Disconnect: %s [%s]");
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();

@@ -44,11 +44,11 @@ public class PruneOperation
     public static class Formatters
     {
         private final CharFormatter findingPositionsFormatter = new CharFormatter(
-            "PruneOperation: allRecordingIds=%s,queried recordingIdToNewStartPosition=%s%n");
+            "PruneOperation: allRecordingIds=%s,queried recordingIdToNewStartPosition=%s");
         private final CharFormatter foundPositionsFormatter = new CharFormatter(
-            "PruneOperation: complete recordingIdToNewStartPosition=%s%n");
+            "PruneOperation: complete recordingIdToNewStartPosition=%s");
         private final CharFormatter filteredRecordingFormatter = new CharFormatter(
-            "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s,%n");
+            "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s");
     }
 
     private final Formatters formatters;

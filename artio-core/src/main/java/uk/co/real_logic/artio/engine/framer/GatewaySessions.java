@@ -64,8 +64,7 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.reset
  */
 class GatewaySessions
 {
-    private final CharFormatter acquiredConnection =
-        new CharFormatter("Gateway Acquired Connection %s%n");
+    private final CharFormatter acquiredConnection = new CharFormatter("Gateway Acquired Connection %s");
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 

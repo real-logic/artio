@@ -42,7 +42,7 @@ public final class LivenessDetector
     private final long replyTimeoutInMs;
     private final long sendIntervalInMs;
     private final CharFormatter disconnectTriggered = new CharFormatter(
-        "%s: Disconnect triggered by a NotConnectedException (Stream CLOSED or MAX_POSITION_EXCEEDED)%n");
+        "%s: Disconnect triggered by a NotConnectedException (Stream CLOSED or MAX_POSITION_EXCEEDED)");
 
     private long latestNextReceiveTimeInMs;
     private long nextSendTimeInMs;

@@ -49,9 +49,9 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private static final int LIMIT = 20;
 
     private final CharFormatter indexingFormatter = new CharFormatter(
-        "Indexing @ %s from [%s, %s]%n");
+        "Indexing @ %s from [%s, %s]");
     private final CharFormatter catchupFormatter = new CharFormatter(
-        "Catchup [%s]: recordingId = %s, recordingStopped @ %s, indexStopped @ %s%n");
+        "Catchup [%s]: recordingId = %s, recordingStopped @ %s, indexStopped @ %s");
 
     private final List<Index> indices;
     private final Subscription subscription;

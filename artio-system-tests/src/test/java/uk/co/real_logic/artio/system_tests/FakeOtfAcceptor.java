@@ -44,7 +44,7 @@ import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
     private final List<FixMessage> receivedMessages = new ArrayList<>();
-    private final CharFormatter formatter = new CharFormatter("Field: %s=%s%n");
+    private final CharFormatter formatter = new CharFormatter("Field: %s=%s");
 
     private ValidationError error;
     private boolean isCompleted;

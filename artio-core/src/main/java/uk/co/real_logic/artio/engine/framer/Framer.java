@@ -102,20 +102,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);
 
-    private final CharFormatter timingOutFormatter = new CharFormatter("Timing out connection to library %s%n");
-    private final CharFormatter libraryConnectedFormatter = new CharFormatter("Library %s - %s connected %n");
+    private final CharFormatter timingOutFormatter = new CharFormatter("Timing out connection to library %s");
+    private final CharFormatter libraryConnectedFormatter = new CharFormatter("Library %s - %s connected");
     private final CharFormatter handingToLibraryFormatter = new CharFormatter(
-        "Handing control for session %s to library %s%n");
+        "Handing control for session %s to library %s");
     private final CharFormatter initiatingSessionFormatter = new CharFormatter(
-        "Initiating session %s from library %s%n");
+        "Initiating session %s from library %s");
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
-        "Received Heartbeat from library %s at timeInMs %s%n");
+        "Received Heartbeat from library %s at timeInMs %s");
     private final CharFormatter acquiringSessionFormatter = new CharFormatter(
-        "Acquiring session %s from library %s%n");
+        "Acquiring session %s from library %s");
     private final CharFormatter releasingSessionFormatter = new CharFormatter(
-        "Releasing session %s with connectionId %s from library %s%n");
+        "Releasing session %s with connectionId %s from library %s");
     private final CharFormatter connectingFormatter = new CharFormatter(
-        "Connecting to %s:%s from library %s%n");
+        "Connecting to %s:%s from library %s");
 
     private final RetryManager retryManager = new RetryManager();
     private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();

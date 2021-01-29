@@ -50,14 +50,14 @@ public class ReplayOperation
         ", position=%s" +
         ", length=%s" +
         ", count=%s" +
-        "}%n"));
+        "}"));
     private static final ThreadLocal<CharFormatter> POLLING_REPLAY_FORMATTER =
-        ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s%n"));
+        ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s"));
     private static final ThreadLocal<CharFormatter> FINISHED_FORMATTER =
-        ThreadLocal.withInitial(() -> new CharFormatter("Finished with Image @ pos=%s, closed=%s, eos=%s%n"));
+        ThreadLocal.withInitial(() -> new CharFormatter("Finished with Image @ pos=%s, closed=%s, eos=%s"));
     private static final ThreadLocal<CharFormatter> MESSAGE_REPLAY_COUNT_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter(
-        "Finished with messageTrackerCount=%s, recordingRangeCount=%s%n"));
+        "Finished with messageTrackerCount=%s, recordingRangeCount=%s"));
 
     private final MessageTracker messageTracker;
     private final ControlledFragmentAssembler assembler;
