@@ -29,17 +29,23 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LivenessDetector;
+import uk.co.real_logic.artio.LogTag;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.CompletionPosition;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder.SessionsEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.InternalSession;
@@ -2852,6 +2858,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private DirectBuffer metaDataBuffer;
         private int lastSentSequenceNumber;
         private int lastReceivedSequenceNumber;
+        private boolean hasDisconnected = false;
 
         HandoverNewConnectionToLibrary(
             final GatewaySession gatewaySession,
@@ -2926,6 +2933,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         private long checkLoggerUpToDate()
         {
+            if (checkDisconnectDuringHandover())
+            {
+                return COMPLETE;
+            }
+
             if (gatewaySession.initialResetSeqNum())
             {
                 lastSentSequenceNumber = 0;
@@ -2966,6 +2978,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return BACK_PRESSURED;
         }
 
+        private boolean checkDisconnectDuringHandover()
+        {
+            if (!hasDisconnected)
+            {
+                hasDisconnected = gatewaySession.connectionId() == NO_CONNECTION_ID;
+
+                // Only do this the first time we notice a disconnect
+                if (hasDisconnected)
+                {
+                    // Need to notify the library because it doesn't know about the session yet and it will
+                    // have a reply object corresponding to the initiate() method call.
+                    library.connectionFinishesConnecting(correlationId);
+                    saveError(UNABLE_TO_CONNECT, libraryId, correlationId,
+                        "Disconnected before session active");
+                }
+            }
+
+            return hasDisconnected;
+        }
+
         private void noMetaData()
         {
             metaDataStatus = MetaDataStatus.NO_META_DATA;
@@ -2974,6 +3006,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         private long onLogon()
         {
+            if (checkDisconnectDuringHandover())
+            {
+                return COMPLETE;
+            }
+
             gatewaySession.onLogon(
                 sessionId,
                 sessionContext,
@@ -2988,6 +3025,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         private long saveManageSession()
         {
+            if (checkDisconnectDuringHandover())
+            {
+                return COMPLETE;
+            }
+
             final long position = inboundPublication.saveManageSession(
                 libraryId,
                 connectionId,

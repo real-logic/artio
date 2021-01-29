@@ -86,7 +86,6 @@ class AcceptorGenerator
         });
     }
 
-
     private void generateAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
     {
         acceptorOutput.append(String.format(

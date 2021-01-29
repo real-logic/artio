@@ -433,7 +433,8 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        manageSessionEncoder.wrapAndApplyHeader(buffer, offset, header)
+        manageSessionEncoder
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connection)
             .session(session)

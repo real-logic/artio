@@ -16,24 +16,23 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.OrdStatus;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Side;
-import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.decoder.ExecutionReportDecoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -41,27 +40,23 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
-import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.unusedPort;
+import static uk.co.real_logic.artio.Reply.State.ERRORED;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingLibraryConfig;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.launchInitiatingEngine;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 // For reproducing error scenarios when initiating a connection
 public class MessageBasedInitiatorSystemTest
 {
     private static final int LOGON_SEQ_NUM = 2;
 
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
@@ -80,7 +75,11 @@ public class MessageBasedInitiatorSystemTest
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        engine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingConfig.initialAcceptedSessionOwner(InitialAcceptedSessionOwner.SOLE_LIBRARY);
+        initiatingConfig.errorHandlerFactory(errorBuffer -> errorHandler);
+        engine = FixEngine.launch(initiatingConfig);
         testSystem = new TestSystem();
         library = testSystem.connect(initiatingLibraryConfig(libraryAeronPort, handler, nanoClock));
     }
@@ -266,6 +265,42 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
+    @Test
+    public void shouldNotErrorWhenNoLogonClosedInSoleLibraryReconnectScenario() throws IOException
+    {
+        shouldBeNotifiedOnDisconnect();
+
+        try (FixConnection connection = acceptConnection())
+        {
+            connection.close();
+
+            testSystem.awaitReply(sessionReply);
+            assertEquals(sessionReply.toString(), sessionReply.state(), ERRORED);
+        }
+
+        verifyNoInteractions(errorHandler);
+    }
+
+    @Test
+    public void shouldNotErrorWhenInSoleLibraryReconnectScenario() throws IOException
+    {
+        shouldBeNotifiedOnDisconnect();
+
+        try (FixConnection connection = acceptConnection())
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readLogonReply();
+                connection.logon(false);
+            });
+
+            testSystem.awaitReply(sessionReply);
+            assertEquals(sessionReply.toString(), sessionReply.state(), COMPLETED);
+        }
+
+        verifyNoInteractions(errorHandler);
+    }
+
     public static void assertConnectionDisconnects(final TestSystem testSystem, final FixConnection connection)
     {
         assertEventuallyTrue("Socket is not disconnected", () ->
@@ -294,16 +329,16 @@ public class MessageBasedInitiatorSystemTest
         connection.readLogonReply();
     }
 
-    private FixConnection acceptConnection() throws IOException
-    {
-        return FixConnection.accept(fixPort, () ->
-            sessionReply = SystemTestUtil.initiate(library, fixPort, INITIATOR_ID, ACCEPTOR_ID));
-    }
-
     @After
     public void tearDown()
     {
         Exceptions.closeAll(library, engine);
         cleanupMediaDriver(mediaDriver);
+    }
+
+    private FixConnection acceptConnection() throws IOException
+    {
+        return FixConnection.accept(fixPort, () ->
+            sessionReply = SystemTestUtil.initiate(library, fixPort, INITIATOR_ID, ACCEPTOR_ID));
     }
 }
