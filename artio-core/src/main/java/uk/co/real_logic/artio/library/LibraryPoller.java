@@ -121,6 +121,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private InternalSession[] sessions = EMPTY_SESSIONS;
     private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
     private final List<Session> unmodifiableSessions = new UnmodifiableWrapper<>(() -> sessions);
+    private final List<Session> unmodifiablePendingInitiatorSessions =
+        new UnmodifiableWrapper<>(() -> pendingInitiatorSessions);
 
     private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
 
@@ -238,6 +240,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     List<Session> sessions()
     {
         return unmodifiableSessions;
+    }
+
+    List<Session> pendingInitiatorSessions()
+    {
+        return unmodifiablePendingInitiatorSessions;
     }
 
     Reply<Session> initiate(final SessionConfiguration configuration)

@@ -207,6 +207,21 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
+     * Get a list of the initiator sessions that are currently pending. This means that the session has succesfully
+     * connected via TCP but it hasn't completed the FIX initiator logon process yet. Once a session in this list
+     * sends it's Logon message and receives a valid Logon message in response then its state becomes ACTIVE and
+     * it is moved to the {@link #sessions()} list.
+     * <p>
+     * Note: the list is unmodifiable.
+     *
+     * @return a list of tthe initiator sessions that are currently pending.
+     */
+    public List<Session> pendingInitiatorSessions()
+    {
+        return poller.pendingInitiatorSessions();
+    }
+
+    /**
      * Close the Library. This will also remove all files associated with the library.
      */
     public void close()
