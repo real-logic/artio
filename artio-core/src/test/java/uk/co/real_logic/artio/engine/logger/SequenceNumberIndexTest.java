@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
+import io.aeron.ExclusivePublication;
 import io.aeron.Image;
-import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
@@ -38,6 +38,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.File;
 
@@ -51,9 +52,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -75,7 +74,9 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private ArchivingMediaDriver mediaDriver;
     private AeronArchive aeronArchive;
-    private Publication publication;
+    private Aeron aeron;
+    private ExclusivePublication publication;
+    private GatewayPublication gatewayPublication;
     private Subscription subscription;
     private RecordingIdLookup recordingIdLookup;
 
@@ -84,11 +85,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         mediaDriver = launchMediaDriver();
         aeronArchive = AeronArchive.connect();
-        final Aeron aeron = aeronArchive.context().aeron();
+        aeron = aeronArchive.context().aeron();
 
         aeronArchive.startRecording(IPC_CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 
-        publication = aeron.addPublication(IPC_CHANNEL, STREAM_ID);
+        publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID);
+        gatewayPublication = new GatewayPublication(publication, null, null, null, 1);
         subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
 
         buffer = new UnsafeBuffer(new byte[512]);
@@ -158,6 +160,54 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexRecord();
 
         assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
+    }
+
+    @Test
+    public void shouldRedactSequenceNumber()
+    {
+        final int sequenceNumberToRedact = 8;
+
+        indexFixMessage();
+        bufferContainsExampleMessage(true, SESSION_ID, sequenceNumberToRedact, SEQUENCE_INDEX);
+
+        final long fixMessageToRedactPosition = indexRecord();
+
+        indexRedactSequenceMessage(fixMessageToRedactPosition);
+
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+    }
+
+    @Test
+    public void shouldRedactSequenceNumberWhenFixMessageProcessedAfterRedact()
+    {
+        final int sequenceNumberToRedact = 8;
+
+        indexFixMessage();
+        bufferContainsExampleMessage(true, SESSION_ID, sequenceNumberToRedact, SEQUENCE_INDEX);
+
+        final long fixMessageToRedactPosition = writeBuffer();
+
+        indexRedactSequenceMessage(fixMessageToRedactPosition);
+
+        // Indexer processes the fix message that has been redacted after the redact message itself due
+        // to lack of synchronisation between streams.
+        indexToPosition(this.publication.sessionId(), fixMessageToRedactPosition);
+
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+    }
+
+    private void indexRedactSequenceMessage(final long fixMessageToRedactPosition)
+    {
+        try (ExclusivePublication publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID))
+        {
+            final GatewayPublication gatewayPublication = new GatewayPublication(
+                publication, null, null, null, 1);
+
+            final long redactMessagePosition = gatewayPublication.saveRedactSequenceUpdate(
+                SESSION_ID, SEQUENCE_NUMBER, fixMessageToRedactPosition);
+
+            indexToPosition(publication.sessionId(), redactMessagePosition);
+        }
     }
 
     @Test
@@ -340,16 +390,22 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.close();
         writer = newWriter(inMemoryBuffer);
 
-        writer.resetSequenceNumber(SESSION_ID, 1000);
+        resetSequenceNumber(SESSION_ID);
         assertLastKnownSequenceNumberIs(SESSION_ID, 0);
 
         // this should write to old session place and not to same as previous call
-        writer.resetSequenceNumber(SESSION_ID_2, 1000);
+        resetSequenceNumber(SESSION_ID_2);
         assertLastKnownSequenceNumberIs(SESSION_ID_2, 0);
 
         indexFixMessage();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
         assertLastKnownSequenceNumberIs(SESSION_ID_2, 0);
+    }
+
+    private void resetSequenceNumber(final long sessionId)
+    {
+        final long position = gatewayPublication.saveResetSequenceNumber(sessionId);
+        indexToPosition(gatewayPublication.sessionId(), position);
     }
 
     private SequenceNumberIndexReader newInstanceAfterRestart()
@@ -400,24 +456,19 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private long indexRecord()
     {
-        long position = 0;
-        while (position < 1)
-        {
-            position = publication.offer(buffer, START, fragmentLength());
+        final long position = writeBuffer();
+        indexToPosition(publication.sessionId(), position);
+        return position;
+    }
 
-            Thread.yield();
-        }
-
-        /*System.out.println("position = " + position);
-        System.out.println("p = " + p);*/
-
-
+    private void indexToPosition(final int aeronSessionId, final long position)
+    {
         Image image = null;
         while (image == null || image.position() < position)
         {
             if (image == null)
             {
-                image = subscription.imageBySessionId(publication.sessionId());
+                image = subscription.imageBySessionId(aeronSessionId);
             }
 
             if (image != null)
@@ -425,7 +476,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
                 image.poll(writer, 1);
             }
         }
+    }
 
+    private long writeBuffer()
+    {
+        long position = 0;
+        while (position < 1)
+        {
+            position = publication.offer(buffer, START, fragmentLength());
+
+            Thread.yield();
+        }
         return position;
     }
 

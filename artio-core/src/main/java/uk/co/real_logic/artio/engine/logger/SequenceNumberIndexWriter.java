@@ -21,8 +21,7 @@ import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.CollectionUtil;
-import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.*;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -87,6 +86,7 @@ public class SequenceNumberIndexWriter implements Index
     private final Predicate<WriteMetaDataResponse> sendResponseFunc = this::sendResponse;
     private final RandomAccessFile metaDataFile;
     private byte[] metaDataWriteBuffer = new byte[0];
+    private final Long2ObjectHashMap<LongHashSet> sessionIdToRedactPositions = new Long2ObjectHashMap<>();
 
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private FramerContext framerContext;
@@ -327,6 +327,7 @@ public class SequenceNumberIndexWriter implements Index
             false);
     }
 
+    // return true if updated index
     private boolean onFixMessage(
         final DirectBuffer buffer,
         final int start,
@@ -362,9 +363,21 @@ public class SequenceNumberIndexWriter implements Index
             metaDataOffset = 0;
         }
 
-        offset += FixMessageDecoder.bodyHeaderLength();
         final long sessionId = messageFrame.session();
+        final LongHashSet redactPositions = sessionIdToRedactPositions.get(sessionId);
+        if (redactPositions != null)
+        {
+            if (redactPositions.remove(messagePosition))
+            {
+                if (redactPositions.isEmpty())
+                {
+                    sessionIdToRedactPositions.remove(sessionId);
+                }
+                return false;
+            }
+        }
 
+        offset += FixMessageDecoder.bodyHeaderLength();
         final int msgSeqNum = sequenceNumberExtractor.extract(buffer, offset, messageFrame.bodyLength());
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
         {
@@ -715,7 +728,7 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     recordOffsets.put(sessionId, position);
                     updateSequenceNumber(
-                        newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired);
+                        newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired, sessionId);
                     return position;
                 }
 
@@ -724,7 +737,8 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired);
+            updateSequenceNumber(
+                newSequenceNumber, position, messagePosition, requiredPosition, incrementRequired, sessionId);
             return position;
         }
     }
@@ -734,11 +748,26 @@ public class SequenceNumberIndexWriter implements Index
         final int recordOffset,
         final long messagePosition,
         final long requiredPosition,
-        final boolean incrementRequired)
+        final boolean incrementRequired,
+        final long sessionId)
     {
-        if (requiredPosition != NO_REQUIRED_POSITION && getMessagePosition(recordOffset) != requiredPosition)
+        if (requiredPosition != NO_REQUIRED_POSITION)
         {
-            return;
+            final long oldMessagePosition = getMessagePosition(recordOffset);
+            if (oldMessagePosition > requiredPosition)
+            {
+                // Redacted message has been processed but we've already processed a later FIX message, don't redact.
+                return;
+            }
+            else if (oldMessagePosition < requiredPosition)
+            {
+                // We've not processed the message that needs redacting yet, so keep track that we need to
+                // redact this message when it arrives.
+                final LongHashSet redactPositions = sessionIdToRedactPositions.computeIfAbsent(
+                    sessionId, ignore -> new LongHashSet());
+                redactPositions.add(requiredPosition);
+                return;
+            }
         }
 
         final int oldSequenceNumber = getSequenceNumber(recordOffset);
