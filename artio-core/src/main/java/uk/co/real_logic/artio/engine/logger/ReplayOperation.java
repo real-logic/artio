@@ -285,7 +285,7 @@ public class ReplayOperation
                 }
             }
 
-            while (!(image.isClosed() || image.isEndOfStream()))
+            while (image != null && !(image.isClosed() || image.isEndOfStream()))
             {
                 image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
             }
