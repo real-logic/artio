@@ -68,6 +68,9 @@ class ReplayChannel
 
     void close()
     {
-        session.close();
+        if (session != null)
+        {
+            session.close();
+        }
     }
 }
