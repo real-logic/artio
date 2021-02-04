@@ -626,7 +626,7 @@ public abstract class AbstractSessionTest
         assertAwaitingResend();
 
         // Receives gapfill
-        session().onSequenceReset(1, 3, true, true, POSITION);
+        session().onSequenceReset(1, 4, true, true, POSITION);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -642,7 +642,7 @@ public abstract class AbstractSessionTest
         onMessage(3);
 
         // then sends a resend request
-        verify(sessionProxy).sendResendRequest(1, 1, 2, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(1, 1, 3, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
         assertAwaitingResend();
     }
@@ -674,7 +674,7 @@ public abstract class AbstractSessionTest
         onMessage(3);
 
         // then sends a resend request
-        verify(sessionProxy).sendResendRequest(1, 1, 2, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(1, 1, 3, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
         assertAwaitingResend();
     }
@@ -718,6 +718,7 @@ public abstract class AbstractSessionTest
         assertAwaitingResend();
 
         onPossDupMessage(3);
+        onPossDupMessage(4);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -742,11 +743,12 @@ public abstract class AbstractSessionTest
         onPossDupMessage(1);
         onPossDupMessage(2);
 
-        verify(sessionProxy).sendResendRequest(2, 3, 3, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(2, 3, 4, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
         assertAwaitingResend();
 
         onPossDupMessage(3);
+        onPossDupMessage(4);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -767,13 +769,13 @@ public abstract class AbstractSessionTest
         assertAwaitingResend();
         reset(sessionProxy);
 
-        onGapFill(1, 2);
+        onGapFill(1, 3);
 
-        verify(sessionProxy).sendResendRequest(2, 2, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(2, 3, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
         assertAwaitingResend();
 
-        onGapFill(2, 4);
+        onGapFill(3, 5);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -795,13 +797,13 @@ public abstract class AbstractSessionTest
         assertAwaitingResend();
         reset(sessionProxy);
 
-        onGapFill(1, 2);
+        onGapFill(1, 3);
 
-        verify(sessionProxy).sendResendRequest(2, 2, 3, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(2, 3, 4, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
         assertAwaitingResend();
 
-        onGapFill(2, 4);
+        onGapFill(3, 5);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }

@@ -182,6 +182,20 @@ public class TestSystem
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }
 
+    public List<FixMessage> awaitMessageCount(
+        final FakeOtfAcceptor otfAcceptor, final int count)
+    {
+        Timing.assertEventuallyTrue("Never received " + count + " messages: " + otfAcceptor.messages(), () ->
+        {
+            poll();
+
+            return otfAcceptor.messages().size() >= count;
+        },
+            Timing.DEFAULT_TIMEOUT_IN_MS);
+
+        return otfAcceptor.messages();
+    }
+
     public void awaitReceivedSequenceNumber(final Session session, final int sequenceNumber)
     {
         Timing.assertEventuallyTrue(session + " Never get to " + sequenceNumber, () ->
@@ -213,7 +227,7 @@ public class TestSystem
             });
     }
 
-    public void awaitDisconnect(final Session session)
+    public void awaitRequestDisconnect(final Session session)
     {
         await("Failed to disconnect: " + session, () -> session.requestDisconnect() > 0);
     }

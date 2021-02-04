@@ -3,8 +3,6 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Test;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
@@ -49,13 +47,10 @@ public class ResendRedundantResendRequestTest
         {
             connection.msgSeqNum(3);
             connection.logon(false);
-            final LogonDecoder logonReply = connection.readLogonReply();
-            assertEquals(1, logonReply.header().msgSeqNum());
+            connection.readLogon(1);
 
             // await resend request
-            final ResendRequestDecoder resendRequest = connection.readMessage(new ResendRequestDecoder());
-            assertEquals(1, resendRequest.beginSeqNo());
-            assertEquals(0, resendRequest.endSeqNo());
+            connection.readResendRequest(1, 0);
 
             // reply with first message of resend
             connection.sendExecutionReport(1, true);

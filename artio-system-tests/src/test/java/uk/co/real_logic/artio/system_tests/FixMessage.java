@@ -60,6 +60,11 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return get(Constants.POSS_DUP_FLAG);
     }
 
+    public String gapFill()
+    {
+        return get(Constants.GAP_FILL_FLAG);
+    }
+
     public int messageSequenceNumber()
     {
         return getInt(Constants.MSG_SEQ_NUM);

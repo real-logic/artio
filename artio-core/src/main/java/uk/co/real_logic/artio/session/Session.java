@@ -1111,6 +1111,13 @@ public class Session
                 }
                 else
                 {
+                    messageInfo.isValid(false);
+                    // Here we setup the next resend request for when this chunk of messages ends.
+                    if (closedResendInterval)
+                    {
+                        lastResendChunkMsgSeqNum = endOfResendRequestRange;
+                        endOfResendRequestRange = msgSeqNum;
+                    }
                     return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
                 }
             }
@@ -1154,13 +1161,14 @@ public class Session
 
     private Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        final long position = trySendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
+        final long position = trySendResendRequest(expectedSeqNo, receivedMsgSeqNo);
         if (position >= 0)
         {
+            messageInfo.isValid(false);
             awaitingResend = true;
             lastResentMsgSeqNo = expectedSeqNo - 1;
             lastReceivedMsgSeqNum = receivedMsgSeqNo;
-            endOfResendRequestRange = receivedMsgSeqNo - 1;
+            endOfResendRequestRange = receivedMsgSeqNo;
         }
         return checkPosition(position);
     }
@@ -1569,7 +1577,7 @@ public class Session
         {
             return applySequenceReset(msgSeqNo, newSeqNo, position);
         }
-        else if (newSeqNo > msgSeqNo)
+        else if (newSeqNo >= msgSeqNo)
         {
             return onGapFill(msgSeqNo, newSeqNo, possDupFlag, position);
         }
@@ -1613,6 +1621,7 @@ public class Session
     private Action onGapFill(
         final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag, final long position)
     {
+        final int impliedSeqNoFromNewSeqNo = newSeqNo - 1;
         final int expectedMsgSeqNo = awaitingResend ? lastResentMsgSeqNo + 1 : expectedReceivedSeqNum();
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
@@ -1622,11 +1631,11 @@ public class Session
             {
                 if (awaitingResend)
                 {
-                    lastResentMsgSeqNo = newSeqNo - 1;
+                    this.lastResentMsgSeqNo = impliedSeqNoFromNewSeqNo;
                 }
                 else
                 {
-                    lastReceivedMsgSeqNum(newSeqNo - 1);
+                    lastReceivedMsgSeqNum(impliedSeqNoFromNewSeqNo);
                 }
             }
             return action;
@@ -1643,8 +1652,23 @@ public class Session
         {
             if (awaitingResend)
             {
+                // NB: in the gapfill case the newSeqNo means the last message in the gap, not the sequence number
+                // of the next message.
                 // A Resend Request would have put it in the AWAITING_RESEND state, we're now active again.
-                if (lastReceivedMsgSeqNum <= newSeqNo)
+                if (impliedSeqNoFromNewSeqNo == lastResendChunkMsgSeqNum)
+                {
+                    final Action action = checkPosition(trySendResendRequest(
+                        newSeqNo,
+                        endOfResendMsgSeqNum()));
+                    if (action == CONTINUE)
+                    {
+                        lastResentMsgSeqNo = impliedSeqNoFromNewSeqNo;
+                    }
+
+                    return action;
+                }
+                // <= because sequence number can also be increased beyond the end of the sequence gap.
+                else if (lastReceivedMsgSeqNum <= impliedSeqNoFromNewSeqNo)
                 {
                     awaitingResend = false;
                     lastResentMsgSeqNo = 0;
@@ -1652,34 +1676,20 @@ public class Session
                     endOfResendRequestRange = 0;
                     // if new sequence is beyond original sequence
                     // accept it so that new messages will not cause resend request
-                    if (lastReceivedMsgSeqNum < newSeqNo)
+                    if (lastReceivedMsgSeqNum < impliedSeqNoFromNewSeqNo)
                     {
-                        lastReceivedMsgSeqNum(newSeqNo - 1);
+                        lastReceivedMsgSeqNum(impliedSeqNoFromNewSeqNo);
                     }
                 }
                 else
                 {
-                    if (newSeqNo == lastResendChunkMsgSeqNum)
-                    {
-                        final Action action = checkPosition(trySendResendRequest(
-                            newSeqNo,
-                            endOfResendMsgSeqNum()));
-                        if (action == CONTINUE)
-                        {
-                            lastResentMsgSeqNo = newSeqNo - 1;
-                        }
-
-                        return action;
-                    }
-
-                    lastResentMsgSeqNo = newSeqNo - 1;
+                    lastResentMsgSeqNo = impliedSeqNoFromNewSeqNo;
                 }
             }
             else
             {
-                lastReceivedMsgSeqNum(newSeqNo - 1);
+                lastReceivedMsgSeqNum(impliedSeqNoFromNewSeqNo);
             }
-
         }
 
         return CONTINUE;

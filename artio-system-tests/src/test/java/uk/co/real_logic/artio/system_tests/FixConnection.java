@@ -243,7 +243,12 @@ public final class FixConnection implements AutoCloseable
 
     public void logon(final boolean resetSeqNumFlag, final int heartBtInt)
     {
-        setupHeader(logon.header(), msgSeqNum++, false);
+        logon(resetSeqNumFlag, heartBtInt, false);
+    }
+
+    public void logon(final boolean resetSeqNumFlag, final int heartBtInt, final boolean possDupFlag)
+    {
+        setupHeader(logon.header(), msgSeqNum++, possDupFlag);
 
         logon
             .resetSeqNumFlag(resetSeqNumFlag)
@@ -381,14 +386,34 @@ public final class FixConnection implements AutoCloseable
         }
     }
 
-    public LogonDecoder readLogonReply()
+    public LogonDecoder readLogon()
     {
         return readMessage(new LogonDecoder());
+    }
+
+    public LogonDecoder readLogon(final int msgSeqNum)
+    {
+        final LogonDecoder logonReply = readLogon();
+        assertEquals(logonReply.toString(), msgSeqNum, logonReply.header().msgSeqNum());
+        return logonReply;
     }
 
     public RejectDecoder readReject()
     {
         return readMessage(new RejectDecoder());
+    }
+
+    public ResendRequestDecoder readResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        final ResendRequestDecoder resendRequest = readMessage(new ResendRequestDecoder());
+        assertEquals(resendRequest.toString(), beginSeqNo, resendRequest.beginSeqNo());
+        assertEquals(resendRequest.toString(), endSeqNo, resendRequest.endSeqNo());
+        return resendRequest;
+    }
+
+    public NewOrderSingleDecoder readOrder()
+    {
+        return readMessage(new NewOrderSingleDecoder());
     }
 
     public HeartbeatDecoder exchangeTestRequestHeartbeat(final String testReqID)

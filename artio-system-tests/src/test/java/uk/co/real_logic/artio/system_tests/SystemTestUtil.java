@@ -495,7 +495,7 @@ public final class SystemTestUtil
 
                 return acceptor
                     .receivedMessage("0")
-                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)) && message.isValid());
+                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
             });
     }
 

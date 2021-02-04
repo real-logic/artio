@@ -123,7 +123,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             sendInvalidTestRequestMessage(connection);
 
-            final RejectDecoder reject = connection.readMessage(new RejectDecoder());
+            final RejectDecoder reject = connection.readReject();
             assertEquals(2, reject.refSeqNum());
             assertEquals(Constants.SENDING_TIME, reject.refTagID());
 
@@ -165,7 +165,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         {
             connection.logon(true, 1);
 
-            final LogonDecoder logon = connection.readLogonReply();
+            final LogonDecoder logon = connection.readLogon();
             assertTrue(logon.resetSeqNumFlag());
 
             final Session session = acquireSession();
@@ -193,7 +193,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             session = acquireSession();
 
-            connection.readLogonReply();
+            connection.readLogon();
 
             connection.logout();
         }
@@ -217,7 +217,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             });
 
             // Use sequence number 3 to ensure that we're getting a logon reply
-            final LogonDecoder logonReply = connection.readLogonReply();
+            final LogonDecoder logonReply = connection.readLogon();
             assertEquals(3, logonReply.header().msgSeqNum());
 
             final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();

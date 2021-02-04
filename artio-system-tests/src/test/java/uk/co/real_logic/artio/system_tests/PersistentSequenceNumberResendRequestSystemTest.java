@@ -16,34 +16,20 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
-import org.agrona.SystemUtil;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import uk.co.real_logic.artio.OrdType;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.TestFixtures;
-import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.decoder.NewOrderSingleDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.fields.DecimalFloat;
-import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -51,7 +37,6 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INIT
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
-@RunWith(Parameterized.class)
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final boolean PRINT_ERROR_MESSAGES = true;
@@ -95,79 +80,27 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         };
     }
 
-    private final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
-    private final DecimalFloat price = new DecimalFloat(100);
-    private final DecimalFloat orderQty = new DecimalFloat(2);
-    private final UtcTimestampEncoder transactTime = new UtcTimestampEncoder();
-    private final boolean shutdownCleanly;
-
-    @Parameterized.Parameters(name = "shutdownCleanly={0}")
-    public static Collection<Object[]> data()
-    {
-        if (SystemUtil.osName().startsWith("win"))
-        {
-            return Arrays.asList(new Object[][]{
-                {true}
-            });
-        }
-        else
-        {
-            return Arrays.asList(new Object[][]{
-                {true}
-            });
-        }
-    }
-
     @Before
     public void setUp()
     {
         deleteLogs();
+        mediaDriver = TestFixtures.launchMediaDriver();
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
-
-    public PersistentSequenceNumberResendRequestSystemTest(final boolean shutdownCleanly)
-    {
-        this.shutdownCleanly = shutdownCleanly;
-    }
-
-    // TODO: parameters
-    // business vs session messages
 
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
-        mediaDriver = TestFixtures.launchMediaDriver();
-
-        // 1. setup a session
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
-
-        // 2. exchange some messages
-        sendOrder();
-
-        final FixMessage executionReport =
-            testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-        final int resendSeqNum = executionReport.messageSequenceNumber();
+        final int resendSeqNum = exchangeMessages();
 
         assertInitiatingSequenceIndexIs(0);
-        if (shutdownCleanly)
-        {
-            initiatingSession.startLogout();
-            assertSessionsDisconnected();
+        initiatingSession.startLogout();
+        assertSessionsDisconnected();
 
-            close();
-        }
-        else
-        {
-            CloseHelper.close(initiatingLibrary);
-            CloseHelper.close(acceptingLibrary);
-            CloseHelper.close(initiatingEngine);
-            CloseHelper.close(acceptingEngine);
-        }
+        close();
 
         clearMessages();
-        if (shutdownCleanly)
-        {
-            launchMediaDriverWithDirs();
-        }
+        launchMediaDriverWithDirs();
 
         // 4. login with low received sequence number in order to force a resend request from the server.
         launch(1);
@@ -200,27 +133,32 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             }, 5000);
     }
 
+    private int exchangeMessages()
+    {
+        OrderFactory.sendOrder(initiatingSession);
+
+        final FixMessage executionReport =
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        return executionReport.messageSequenceNumber();
+    }
+
     private void launch(final int initiatorInitialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
-        acceptingConfig.gracefulShutdown(shutdownCleanly);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
-        initiatingConfig.gracefulShutdown(shutdownCleanly);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
-        acceptingLibraryConfig.gracefulShutdown(shutdownCleanly);
         testSystem = new TestSystem();
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
 
         final LibraryConfiguration initiatingLibraryConfig =
             initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock);
-        initiatingLibraryConfig.gracefulShutdown(shutdownCleanly);
         initiatingLibrary = testSystem.connect(initiatingLibraryConfig);
 
         final Reply<Session> reply = connectPersistentSessions(
@@ -228,23 +166,5 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         acquireAcceptingSession();
-    }
-
-    private void sendOrder()
-    {
-        final int transactTimeLength = transactTime.encode(System.currentTimeMillis());
-
-        newOrderSingle
-            .clOrdID("A")
-            .side(Side.BUY)
-            .transactTime(transactTime.buffer(), transactTimeLength)
-            .ordType(OrdType.MARKET)
-            .price(price);
-
-        newOrderSingle.instrument().symbol("MSFT");
-        newOrderSingle.orderQtyData().orderQty(orderQty);
-
-        final long position = initiatingSession.trySend(newOrderSingle);
-        assertThat(position, Matchers.greaterThan(0L));
     }
 }

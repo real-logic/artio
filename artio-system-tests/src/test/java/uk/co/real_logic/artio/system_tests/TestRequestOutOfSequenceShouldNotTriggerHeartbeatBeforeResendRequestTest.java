@@ -19,8 +19,6 @@ import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
@@ -62,16 +60,13 @@ public class TestRequestOutOfSequenceShouldNotTriggerHeartbeatBeforeResendReques
         try (FixConnection connection = FixConnection.initiate(port))
         {
             connection.logon(true);
-            final LogonDecoder logonReply = connection.readLogonReply();
-            assertEquals(1, logonReply.header().msgSeqNum());
+            connection.readLogon(1);
 
             connection.msgSeqNum(3);
             connection.sendTestRequest("firstRequest");
 
             // await resend request
-            final ResendRequestDecoder resendRequest = connection.readMessage(new ResendRequestDecoder());
-            assertEquals(2, resendRequest.beginSeqNo());
-            assertEquals(0, resendRequest.endSeqNo());
+            connection.readResendRequest(2, 0);
 
             LockSupport.parkNanos(500);
 

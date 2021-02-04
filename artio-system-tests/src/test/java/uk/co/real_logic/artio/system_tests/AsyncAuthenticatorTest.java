@@ -242,13 +242,13 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldNotifyAuthStrategyUponAcceptorDisconnect()
     {
-        notifyAuthStrategyUpon(() -> testSystem.awaitDisconnect(acceptingSession));
+        notifyAuthStrategyUpon(() -> testSystem.awaitRequestDisconnect(acceptingSession));
     }
 
     @Test
     public void shouldNotifyAuthStrategyUponInitiatorDisconnect()
     {
-        notifyAuthStrategyUpon(() -> testSystem.awaitDisconnect(initiatingSession));
+        notifyAuthStrategyUpon(() -> testSystem.awaitRequestDisconnect(initiatingSession));
     }
 
     private void notifyAuthStrategyUpon(final Runnable disconnector)

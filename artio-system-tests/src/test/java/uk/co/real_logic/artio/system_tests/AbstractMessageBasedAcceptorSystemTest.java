@@ -111,7 +111,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     {
         connection.logon(true);
 
-        final LogonDecoder logon = connection.readLogonReply();
+        final LogonDecoder logon = connection.readLogon();
         assertTrue(logon.resetSeqNumFlag());
     }
 

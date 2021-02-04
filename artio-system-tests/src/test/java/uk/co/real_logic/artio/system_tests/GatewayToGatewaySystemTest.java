@@ -241,9 +241,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         sendExampleMessage(testReqID, fromSession);
 
-        final FixMessage fixMessage = testSystem.awaitMessageOf(
+        return testSystem.awaitMessageOf(
             toAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR, msg -> msg.testReqId().equals(testReqID));
-        return fixMessage;
     }
 
     private void sendExampleMessage(final String testReqID, final Session fromSession)
