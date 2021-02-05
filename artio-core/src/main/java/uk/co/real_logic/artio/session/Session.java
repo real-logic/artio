@@ -1105,14 +1105,13 @@ public class Session
             }
             else if (msgSeqNum > endOfResendRequestRange)
             {
+                messageInfo.isValid(false);
                 if (sendRedundantResendRequests)
                 {
-                    messageInfo.isValid(false);
                     return Pressure.apply(trySendResendRequest(endOfResendRequestRange + 1, msgSeqNum));
                 }
                 else
                 {
-                    messageInfo.isValid(false);
                     // Here we setup the next resend request for when this chunk of messages ends.
                     if (closedResendInterval)
                     {
