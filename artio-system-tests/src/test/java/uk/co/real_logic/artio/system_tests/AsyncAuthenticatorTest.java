@@ -292,7 +292,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             return auth.hasAuthenticateBeenInvoked();
         }, TEST_REPLY_TIMEOUT_IN_MS);
 
-        assertEquals(Reply.State.EXECUTING, reply.state());
+        assertEquals(reply.toString(), Reply.State.EXECUTING, reply.state());
 
         return reply;
     }
