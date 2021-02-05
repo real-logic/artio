@@ -301,38 +301,13 @@ public class MessageBasedInitiatorSystemTest
         verifyNoInteractions(errorHandler);
     }
 
-    // TODO: case with resend request
-
     @Test
     public void shouldProcessResendRequestMarkingInvalidMessagesAsSo() throws IOException
     {
-        final Session session;
-        try (FixConnection connection = acceptPersistentConnection(false))
-        {
-            testSystem.awaitBlocking(() ->
-            {
-                connection.readLogon(1);
-                connection.logon(false);
-            });
-            testSystem.awaitCompletedReply(sessionReply);
-            session = sessionReply.resultIfPresent();
-            OrderFactory.sendOrder(session);
-            connection.readOrder();
-
-            OrderFactory.sendOrder(session);
-            final NewOrderSingleDecoder receivedOrder = connection.readOrder();
-            assertEquals(3, receivedOrder.header().msgSeqNum());
-
-            connection.sendExecutionReport(2, false);
-            testSystem.awaitMessageOf(otfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-            otfAcceptor.messages().clear();
-
-            // send 2 orders and received 1 report then disconnect
-        }
-        SystemTestUtil.assertSessionDisconnected(testSystem, session);
+        sendTwoOrdersReceiveOneReportAndDisconnect(false, false);
 
         // The gateway thinks it's sent the second execution report and wants to send a third.
-        try (FixConnection connection = acceptPersistentConnection(false))
+        try (FixConnection connection = acceptPersistentConnection(false, false))
         {
             testSystem.awaitBlocking(() ->
             {
@@ -348,47 +323,127 @@ public class MessageBasedInitiatorSystemTest
 
             // Assert that we've received the resent messages in order - without the first execution report
             // which should be ignored
-            final List<FixMessage> messages = testSystem.awaitMessageCount(otfAcceptor, 6);
-
-            final FixMessage logon = messages.get(0);
-            assertEquals(logon.toString(), 4, logon.messageSequenceNumber());
-            assertEquals(logon.toString(), LOGON_MESSAGE_AS_STR, logon.msgType());
-            assertFalse(logon.toString(), logon.isValid());
-
-            final FixMessage invalidReport5 = messages.get(1);
-            assertEquals(invalidReport5.toString(), 5, invalidReport5.messageSequenceNumber());
-            assertEquals(invalidReport5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, invalidReport5.msgType());
-            assertNull(invalidReport5.toString(), invalidReport5.possDup());
-            assertFalse(invalidReport5.toString(), invalidReport5.isValid());
-
-            final FixMessage report3 = messages.get(2);
-            assertEquals(report3.toString(), 3, report3.messageSequenceNumber());
-            assertEquals(report3.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report3.msgType());
-            assertEquals(report3.toString(), "Y", report3.possDup());
-
-            final FixMessage gapFill = messages.get(3);
-            assertEquals(gapFill.toString(), 4, gapFill.messageSequenceNumber());
-            assertEquals(gapFill.toString(), SEQUENCE_RESET_MESSAGE_AS_STR, gapFill.msgType());
-            assertEquals(gapFill.toString(), "Y", gapFill.gapFill());
-            assertEquals(gapFill.toString(), "Y", gapFill.possDup());
-
-            final FixMessage report5 = messages.get(4);
-            assertEquals(report5.toString(), 5, report5.messageSequenceNumber());
-            assertEquals(report5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report5.msgType());
-            assertEquals(report5.toString(), "Y", report5.possDup());
-
-            final FixMessage report6 = messages.get(5);
-            assertEquals(report6.toString(), 6, report6.messageSequenceNumber());
-            assertEquals(report6.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report6.msgType());
-            assertNull(report6.toString(), report6.possDup());
+            assertResendMessagesInOrder();
         }
     }
 
     @Test
     public void shouldProcessResendRequestMarkingInvalidMessagesAsSoWithClosedResendInterval() throws IOException
     {
+        sendTwoOrdersReceiveOneReportAndDisconnect(true, false);
+
+        // The gateway thinks it's sent the second execution report and wants to send a third.
+        try (FixConnection connection = acceptPersistentConnection(true, false))
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readLogon(4);
+                connection.msgSeqNum(4).logon(false);
+                connection.sendExecutionReport(5, false);
+                connection.readResendRequest(3, 4);
+                connection.sendExecutionReport(3, true);
+                connection.sendGapFill(4, 5);
+                connection.readResendRequest(5, 5);
+                connection.sendExecutionReport(5, true);
+                connection.sendExecutionReport(6, false);
+            });
+            assertResendMessagesInOrder();
+        }
+    }
+
+    @Test
+    public void shouldProcessResendRequestMarkingInvalidMessagesAsSoWithRepeatResendRequests() throws IOException
+    {
+        sendTwoOrdersReceiveOneReportAndDisconnect(false, true);
+
+        // The gateway thinks it's sent the second execution report and wants to send a third.
+        try (FixConnection connection = acceptPersistentConnection(false, true))
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readLogon(4);
+                connection.msgSeqNum(4).logon(false);
+                connection.readResendRequest(3, 0);
+                connection.sendExecutionReport(5, false);
+                connection.readResendRequest(5, 0);
+                connection.sendExecutionReport(3, true);
+                connection.sendGapFill(4, 5);
+                connection.sendExecutionReport(5, true);
+                connection.sendExecutionReport(6, false);
+            });
+            assertResendMessagesInOrder();
+        }
+    }
+
+    @Test
+    public void shouldProcessResendRequestMarkingInvalidMessagesAsSoWithRepeatResendRequestsAndClosedResendInterval()
+        throws IOException
+    {
+        sendTwoOrdersReceiveOneReportAndDisconnect(true, true);
+
+        // The gateway thinks it's sent the second execution report and wants to send a third.
+        try (FixConnection connection = acceptPersistentConnection(true, true))
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readLogon(4);
+                connection.msgSeqNum(4).logon(false);
+                connection.readResendRequest(3, 4);
+                connection.sendExecutionReport(5, false);
+                connection.readResendRequest(5, 5);
+                connection.sendExecutionReport(3, true);
+                connection.sendGapFill(4, 5);
+                connection.sendExecutionReport(5, true);
+                connection.sendExecutionReport(6, false);
+            });
+            assertResendMessagesInOrder();
+        }
+    }
+
+    private void assertResendMessagesInOrder()
+    {
+        // Assert that we've received the resent messages in order - without the first execution report
+        // which should be ignored
+        final List<FixMessage> messages = testSystem.awaitMessageCount(otfAcceptor, 6);
+
+        final FixMessage logon = messages.get(0);
+        assertEquals(logon.toString(), 4, logon.messageSequenceNumber());
+        assertEquals(logon.toString(), LOGON_MESSAGE_AS_STR, logon.msgType());
+        assertFalse(logon.toString(), logon.isValid());
+
+        final FixMessage invalidReport5 = messages.get(1);
+        assertEquals(invalidReport5.toString(), 5, invalidReport5.messageSequenceNumber());
+        assertEquals(invalidReport5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, invalidReport5.msgType());
+        assertNull(invalidReport5.toString(), invalidReport5.possDup());
+        assertFalse(invalidReport5.toString(), invalidReport5.isValid());
+
+        final FixMessage report3 = messages.get(2);
+        assertEquals(report3.toString(), 3, report3.messageSequenceNumber());
+        assertEquals(report3.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report3.msgType());
+        assertEquals(report3.toString(), "Y", report3.possDup());
+
+        final FixMessage gapFill = messages.get(3);
+        assertEquals(gapFill.toString(), 4, gapFill.messageSequenceNumber());
+        assertEquals(gapFill.toString(), SEQUENCE_RESET_MESSAGE_AS_STR, gapFill.msgType());
+        assertEquals(gapFill.toString(), "Y", gapFill.gapFill());
+        assertEquals(gapFill.toString(), "Y", gapFill.possDup());
+
+        final FixMessage report5 = messages.get(4);
+        assertEquals(report5.toString(), 5, report5.messageSequenceNumber());
+        assertEquals(report5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report5.msgType());
+        assertEquals(report5.toString(), "Y", report5.possDup());
+
+        final FixMessage report6 = messages.get(5);
+        assertEquals(report6.toString(), 6, report6.messageSequenceNumber());
+        assertEquals(report6.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report6.msgType());
+        assertNull(report6.toString(), report6.possDup());
+    }
+
+    private void sendTwoOrdersReceiveOneReportAndDisconnect(
+        final boolean closedResendInterval, final boolean sendRedundantResendRequests) throws IOException
+    {
         final Session session;
-        try (FixConnection connection = acceptPersistentConnection(true))
+        try (FixConnection connection = acceptPersistentConnection(closedResendInterval, sendRedundantResendRequests))
         {
             testSystem.awaitBlocking(() ->
             {
@@ -407,63 +462,8 @@ public class MessageBasedInitiatorSystemTest
             connection.sendExecutionReport(2, false);
             testSystem.awaitMessageOf(otfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
             otfAcceptor.messages().clear();
-
-            // send 2 orders and received 1 report then disconnect
         }
         SystemTestUtil.assertSessionDisconnected(testSystem, session);
-
-        // The gateway thinks it's sent the second execution report and wants to send a third.
-        try (FixConnection connection = acceptPersistentConnection(true))
-        {
-            testSystem.awaitBlocking(() ->
-            {
-                connection.readLogon(4);
-                connection.msgSeqNum(4).logon(false);
-                connection.sendExecutionReport(5, false);
-                connection.readResendRequest(3, 4);
-                connection.sendExecutionReport(3, true);
-                connection.sendGapFill(4, 5);
-                connection.readResendRequest(5, 5);
-                connection.sendExecutionReport(5, true);
-                connection.sendExecutionReport(6, false);
-            });
-
-            // Assert that we've received the resent messages in order - without the first execution report
-            // which should be ignored
-            final List<FixMessage> messages = testSystem.awaitMessageCount(otfAcceptor, 6);
-
-            final FixMessage logon = messages.get(0);
-            assertEquals(logon.toString(), 4, logon.messageSequenceNumber());
-            assertEquals(logon.toString(), LOGON_MESSAGE_AS_STR, logon.msgType());
-            assertFalse(logon.toString(), logon.isValid());
-
-            final FixMessage invalidReport5 = messages.get(1);
-            assertEquals(invalidReport5.toString(), 5, invalidReport5.messageSequenceNumber());
-            assertEquals(invalidReport5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, invalidReport5.msgType());
-            assertNull(invalidReport5.toString(), invalidReport5.possDup());
-            assertFalse(invalidReport5.toString(), invalidReport5.isValid());
-
-            final FixMessage report3 = messages.get(2);
-            assertEquals(report3.toString(), 3, report3.messageSequenceNumber());
-            assertEquals(report3.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report3.msgType());
-            assertEquals(report3.toString(), "Y", report3.possDup());
-
-            final FixMessage gapFill = messages.get(3);
-            assertEquals(gapFill.toString(), 4, gapFill.messageSequenceNumber());
-            assertEquals(gapFill.toString(), SEQUENCE_RESET_MESSAGE_AS_STR, gapFill.msgType());
-            assertEquals(gapFill.toString(), "Y", gapFill.gapFill());
-            assertEquals(gapFill.toString(), "Y", gapFill.possDup());
-
-            final FixMessage report5 = messages.get(4);
-            assertEquals(report5.toString(), 5, report5.messageSequenceNumber());
-            assertEquals(report5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report5.msgType());
-            assertEquals(report5.toString(), "Y", report5.possDup());
-
-            final FixMessage report6 = messages.get(5);
-            assertEquals(report6.toString(), 6, report6.messageSequenceNumber());
-            assertEquals(report6.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, report6.msgType());
-            assertNull(report6.toString(), report6.possDup());
-        }
     }
 
     public static void assertConnectionDisconnects(final TestSystem testSystem, final FixConnection connection)
@@ -507,7 +507,8 @@ public class MessageBasedInitiatorSystemTest
             sessionReply = SystemTestUtil.initiate(library, fixPort, INITIATOR_ID, ACCEPTOR_ID));
     }
 
-    private FixConnection acceptPersistentConnection(final boolean closedResendInterval) throws IOException
+    private FixConnection acceptPersistentConnection(
+        final boolean closedResendInterval, final boolean sendRedundantResendRequests) throws IOException
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", fixPort)
@@ -517,6 +518,7 @@ public class MessageBasedInitiatorSystemTest
             .timeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .sequenceNumbersPersistent(true)
             .closedResendInterval(closedResendInterval)
+            .sendRedundantResendRequests(sendRedundantResendRequests)
             .build();
 
         return FixConnection.accept(fixPort, () -> sessionReply = library.initiate(config));

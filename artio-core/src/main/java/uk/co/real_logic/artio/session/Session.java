@@ -1107,7 +1107,8 @@ public class Session
             {
                 if (sendRedundantResendRequests)
                 {
-                    return Pressure.apply(trySendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
+                    messageInfo.isValid(false);
+                    return Pressure.apply(trySendResendRequest(endOfResendRequestRange + 1, msgSeqNum));
                 }
                 else
                 {
