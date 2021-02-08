@@ -723,9 +723,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void assertSequenceResetBeforeLastLogon(final Session session)
     {
-        firstConnectTimeRange.assertWithinRange(session.lastSequenceResetTime());
-        connectTimeRange.assertWithinRange(session.lastLogonTime());
-        assertNotEquals(session.lastLogonTime(), session.lastSequenceResetTime());
+        firstConnectTimeRange.assertWithinRange(session.lastSequenceResetTimeInNs());
+        connectTimeRange.assertWithinRange(session.lastLogonTimeInNs());
+        assertNotEquals(session.lastLogonTimeInNs(), session.lastSequenceResetTimeInNs());
     }
 
     private void receiveReplayFromOfflineSession(final long sessionId)

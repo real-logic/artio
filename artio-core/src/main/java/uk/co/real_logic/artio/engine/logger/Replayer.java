@@ -120,7 +120,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ReplayerCommandQueue replayerCommandQueue;
     private final AtomicCounter currentReplayCount;
     private final int maxConcurrentSessionReplays;
-    private final EpochNanoClock nanoClock;
+    private final EpochNanoClock clock;
     private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
@@ -128,7 +128,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final int maxClaimAttempts;
     private final Subscription inboundSubscription;
     private final String agentNamePrefix;
-    private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final ILink3RetransmitHandler iLink3RetransmitHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
@@ -143,7 +142,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final int maxClaimAttempts,
         final Subscription inboundSubscription,
         final String agentNamePrefix,
-        final EpochClock clock,
         final Set<String> gapfillOnReplayMessageTypes,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ReplayHandler replayHandler,
@@ -155,7 +153,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final EpochFractionFormat epochFractionFormat,
         final AtomicCounter currentReplayCount,
         final int maxConcurrentSessionReplays,
-        final EpochNanoClock nanoClock)
+        final EpochNanoClock clock)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -165,7 +163,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.maxClaimAttempts = maxClaimAttempts;
         this.inboundSubscription = inboundSubscription;
         this.agentNamePrefix = agentNamePrefix;
-        this.clock = clock;
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
         this.iLink3RetransmitHandler = iLink3RetransmitHandler;
@@ -175,7 +172,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.replayerCommandQueue = replayerCommandQueue;
         this.currentReplayCount = currentReplayCount;
         this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
-        this.nanoClock = nanoClock;
+        this.clock = clock;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -183,10 +180,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));
-        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, nanoClock));
+        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, clock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
 
-        nextTimestampMessageInNs = nanoClock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
+        nextTimestampMessageInNs = clock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
         replayerTimestampEncoder
             .wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
     }
@@ -375,7 +372,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
-                iLink3RetransmitHandler, nanoClock);
+                iLink3RetransmitHandler, clock);
 
             session.query();
 
@@ -451,7 +448,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     private void sendTimestampMessage()
     {
-        final long timeInNs = nanoClock.nanoTime();
+        final long timeInNs = clock.nanoTime();
         if (timeInNs > nextTimestampMessageInNs)
         {
             replayerTimestampEncoder.timestamp(timeInNs);

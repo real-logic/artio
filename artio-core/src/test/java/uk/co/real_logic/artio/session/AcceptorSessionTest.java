@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.session;
 
-import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.Test;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -36,10 +35,10 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private AcceptorSession newAcceptorSession()
     {
         final AcceptorSession acceptorSession = new AcceptorSession(
-            HEARTBEAT_INTERVAL,
+            HEARTBEAT_INTERVAL_IN_S,
             CONNECTION_ID,
             fakeClock,
-            new OffsetEpochNanoClock(),
+            nanoClock,
             sessionProxy,
             mock(GatewayPublication.class),
             mockPublication,
@@ -140,7 +139,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private void verifyLogon()
     {
         verify(sessionProxy).sendLogon(
-            1, HEARTBEAT_INTERVAL, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+            1, HEARTBEAT_INTERVAL_IN_S, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
 }

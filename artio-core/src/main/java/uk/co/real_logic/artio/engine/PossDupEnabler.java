@@ -21,7 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
@@ -67,7 +67,7 @@ public class PossDupEnabler
     private final PreCommit onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
-    private final EpochClock clock;
+    private final EpochNanoClock clock;
     private final int maxPayloadLength;
     private final LogTag logTag;
 
@@ -85,7 +85,7 @@ public class PossDupEnabler
         final PreCommit onPreCommit,
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
-        final EpochClock clock,
+        final EpochNanoClock clock,
         final int maxPayloadLength,
         final LogTag logTag)
     {
@@ -356,7 +356,7 @@ public class PossDupEnabler
         final int sendingTimeLength = possDupFinder.sendingTimeLength();
 
         final int sendingTimeClaimOffset = srcToClaim(sendingTimeOffset, srcOffset, claimOffset);
-        utcTimestampEncoder.encodeFrom(clock.time(), TimeUnit.MILLISECONDS);
+        utcTimestampEncoder.encodeFrom(clock.nanoTime(), TimeUnit.NANOSECONDS);
         claimBuffer.putBytes(sendingTimeClaimOffset, utcTimestampEncoder.buffer(), 0, sendingTimeLength);
     }
 

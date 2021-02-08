@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.FixCounters;
@@ -42,7 +41,6 @@ public class InternalSession extends Session implements AutoCloseable
     public InternalSession(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock epochClock,
         final EpochNanoClock clock,
         final SessionState state,
         final SessionProxy proxy,
@@ -65,7 +63,6 @@ public class InternalSession extends Session implements AutoCloseable
         super(
             heartbeatIntervalInS,
             connectionId,
-            epochClock,
             clock,
             state,
             proxy,
@@ -86,9 +83,9 @@ public class InternalSession extends Session implements AutoCloseable
             epochFractionClock);
     }
 
-    public int poll(final long time)
+    public int poll(final long timeInMs)
     {
-        return super.poll(time);
+        return super.poll(timeInMs);
     }
 
     public void disable()
@@ -127,9 +124,9 @@ public class InternalSession extends Session implements AutoCloseable
         super.password(password);
     }
 
-    public void lastLogonTime(final long logonTime)
+    public void lastLogonTimeInNs(final long logonTimeInNs)
     {
-        super.lastLogonTime(logonTime);
+        super.lastLogonTimeInNs(logonTimeInNs);
     }
 
     public void awaitingResend(final boolean awaitingResend)
@@ -182,9 +179,9 @@ public class InternalSession extends Session implements AutoCloseable
         super.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
     }
 
-    public void lastSequenceResetTime(final long lastSequenceResetTime)
+    public void lastSequenceResetTimeInNs(final long lastSequenceResetTimeInNs)
     {
-        super.lastSequenceResetTime(lastSequenceResetTime);
+        super.lastSequenceResetTimeInNs(lastSequenceResetTimeInNs);
     }
 
     public void endOfResendRequestRange(final int endOfResendRequestRange)

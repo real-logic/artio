@@ -882,7 +882,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         timeRange.end();
 
         assertAccSeqNum(1, 1, 1);
-        timeRange.assertWithinRange(acceptingSession.lastSequenceResetTime());
+        timeRange.assertWithinRange(acceptingSession.lastSequenceResetTimeInNs());
     }
 
     private TimeRange resetSequenceNumbersViaEngineApi()
@@ -897,7 +897,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         timeRange.end();
 
         assertInitSeqNum(1, 1, 1);
-        timeRange.assertWithinRange(initiatingSession.lastSequenceResetTime());
+        timeRange.assertWithinRange(initiatingSession.lastSequenceResetTimeInNs());
 
         return timeRange;
     }
@@ -1077,8 +1077,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSessionsDisconnected();
 
         final long sessionId = acceptingSession.id();
-        final long lastSequenceResetTime = acceptingSession.lastSequenceResetTime();
-        final long lastLogonTime = acceptingSession.lastLogonTime();
+        final long lastSequenceResetTime = acceptingSession.lastSequenceResetTimeInNs();
+        final long lastLogonTime = acceptingSession.lastLogonTimeInNs();
         acceptingSession = null;
 
         assertNotEquals(Session.UNKNOWN_TIME, lastSequenceResetTime);
@@ -1087,8 +1087,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         assertOfflineSession(sessionId, acceptingSession);
-        assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTime());
-        assertEquals(lastLogonTime, acceptingSession.lastLogonTime());
+        assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTimeInNs());
+        assertEquals(lastLogonTime, acceptingSession.lastLogonTimeInNs());
 
         assertAllSessionsOnlyContains(acceptingEngine, acceptingSession);
 

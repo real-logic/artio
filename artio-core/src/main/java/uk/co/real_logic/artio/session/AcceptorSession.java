@@ -52,7 +52,6 @@ public class AcceptorSession extends InternalSession
         super(
             defaultInterval,
             connectionId,
-            epochClock,
             clock,
             state,
             proxy,

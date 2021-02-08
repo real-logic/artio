@@ -177,7 +177,7 @@ class GatewaySessions
             outboundPublication,
             sessionIdStrategy,
             customisationStrategy,
-            epochClock,
+            clock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
             errorHandler,
@@ -186,7 +186,6 @@ class GatewaySessions
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
             connectionId,
-            epochClock,
             clock,
             state,
             proxy,
@@ -659,7 +658,7 @@ class GatewaySessions
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
             header.sendingTime(
-                sendingTimeEncoder.buffer(), sendingTimeEncoder.encodeFrom(epochClock.time(), TimeUnit.MILLISECONDS));
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encodeFrom(clock.nanoTime(), TimeUnit.NANOSECONDS));
             HeaderSetup.setup(logon.header(), header);
             customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 

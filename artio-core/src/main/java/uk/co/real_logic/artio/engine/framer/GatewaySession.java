@@ -449,7 +449,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         this.lastSequenceResetTime = lastSequenceResetTime;
         if (session != null)
         {
-            session.lastSequenceResetTime(lastSequenceResetTime);
+            session.lastSequenceResetTimeInNs(lastSequenceResetTime);
         }
     }
 
@@ -463,7 +463,7 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         this.lastLogonTime = lastLogonTime;
         if (session != null)
         {
-            session.lastLogonTime(lastLogonTime);
+            session.lastLogonTimeInNs(lastLogonTime);
         }
     }
 

@@ -252,8 +252,8 @@ public class SessionParser
         }
         else if (heartbeat.hasTestReqID())
         {
-            final long origSendingTime = origSendingTime(header);
-            final long sendingTime = sendingTime(header);
+            final long origSendingTime = origSendingTimeInMs(header);
+            final long sendingTime = sendingTimeInMs(header);
             final int testReqIDLength = heartbeat.testReqIDLength();
             final char[] testReqID = heartbeat.testReqID();
             final int msgSeqNum = header.msgSeqNum();
@@ -275,13 +275,13 @@ public class SessionParser
         }
     }
 
-    private long sendingTime(final SessionHeaderDecoder header)
+    private long sendingTimeInMs(final SessionHeaderDecoder header)
     {
         final byte[] sendingTime = header.sendingTime();
-        return decodeTimestamp(sendingTime, header.sendingTimeLength(), SENDING_TIME);
+        return decodeTimestampInMs(sendingTime, header.sendingTimeLength(), SENDING_TIME);
     }
 
-    private long decodeTimestamp(final byte[] sendingTime, final int length, final int refTagId)
+    private long decodeTimestampInMs(final byte[] sendingTime, final int length, final int refTagId)
     {
         try
         {
@@ -325,8 +325,8 @@ public class SessionParser
 
     private Action onMessage(final SessionHeaderDecoder header, final long position)
     {
-        final long origSendingTime = origSendingTime(header);
-        final long sendingTime = sendingTime(header);
+        final long origSendingTime = origSendingTimeInMs(header);
+        final long sendingTime = sendingTimeInMs(header);
         final boolean possDup = isPossDup(header);
         return session.onMessage(
             header.msgSeqNum(),
@@ -339,11 +339,11 @@ public class SessionParser
             position);
     }
 
-    private long origSendingTime(final SessionHeaderDecoder header)
+    private long origSendingTimeInMs(final SessionHeaderDecoder header)
     {
         if (header.hasOrigSendingTime())
         {
-            return decodeTimestamp(header.origSendingTime(), header.origSendingTimeLength(), ORIG_SENDING_TIME);
+            return decodeTimestampInMs(header.origSendingTime(), header.origSendingTimeLength(), ORIG_SENDING_TIME);
         }
         return UNKNOWN;
     }
@@ -361,8 +361,8 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = origSendingTime(header);
-            final long sendingTime = sendingTime(header);
+            final long origSendingTime = origSendingTimeInMs(header);
+            final long sendingTime = sendingTimeInMs(header);
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
             final boolean possDup = isPossDup(header);
@@ -419,14 +419,14 @@ public class SessionParser
         else
         {
             final int msgSeqNo = header.msgSeqNum();
-            final long origSendingTime = origSendingTime(header);
-            final long sendingTime = sendingTime(header);
+            final long origSendingTime = origSendingTimeInMs(header);
+            final long sendingTimeInMs = sendingTimeInMs(header);
             final boolean possDup = isPossDup(header);
             return session.onTestRequest(
                 msgSeqNo,
                 testRequest.testReqID(),
                 testRequest.testReqIDLength(),
-                sendingTime,
+                sendingTimeInMs,
                 origSendingTime,
                 isPossDupOrResend(possDup, header),
                 possDup, position);
@@ -446,8 +446,8 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = origSendingTime(header);
-            final long sendingTime = sendingTime(header);
+            final long origSendingTime = origSendingTimeInMs(header);
+            final long sendingTime = sendingTimeInMs(header);
             final boolean possDup = isPossDup(header);
             return session.onReject(
                 header.msgSeqNum(),
@@ -472,13 +472,13 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = origSendingTime(header);
-            final long sendingTime = sendingTime(header);
+            final long origSendingTimeInMs = origSendingTimeInMs(header);
+            final long sendingTimeInMs = sendingTimeInMs(header);
             final boolean possDup = isPossDup(header);
             return session.onLogout(
                 header.msgSeqNum(),
-                sendingTime,
-                origSendingTime,
+                sendingTimeInMs,
+                origSendingTimeInMs,
                 possDup,
                 position);
         }
@@ -501,7 +501,7 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = origSendingTime(header);
+            final long origSendingTime = origSendingTimeInMs(header);
             final String username = username(logon);
             final String password = password(logon);
             final boolean possDup = isPossDup(header);
@@ -509,7 +509,7 @@ public class SessionParser
             return session.onLogon(
                 logon.heartBtInt(),
                 header.msgSeqNum(),
-                sendingTime(header),
+                sendingTimeInMs(header),
                 origSendingTime,
                 username,
                 password,
@@ -618,8 +618,8 @@ public class SessionParser
 
             if (header.msgSeqNum() == MISSING_INT)
             {
-                final long origSendingTime = origSendingTime(header);
-                final long sendingTime = sendingTime(header);
+                final long origSendingTime = origSendingTimeInMs(header);
+                final long sendingTime = sendingTimeInMs(header);
                 final char[] msgType = header.msgType();
                 return session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false,
                     false, position);

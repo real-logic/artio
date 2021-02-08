@@ -22,7 +22,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
@@ -88,7 +88,7 @@ class FixReplayerSession extends ReplayerSession
         final int maxClaimAttempts,
         final LongHashSet gapFillMessageTypes,
         final ExclusivePublication publication,
-        final EpochClock clock,
+        final EpochNanoClock clock,
         final int beginSeqNo,
         final int endSeqNo,
         final long connectionId,

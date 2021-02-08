@@ -31,7 +31,6 @@ import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
@@ -1046,11 +1045,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.awaitingHeartbeat(awaitingHeartbeat);
         if (lastLogonTime != UNKNOWN_TIME)
         {
-            session.lastLogonTime(lastLogonTime);
+            session.lastLogonTimeInNs(lastLogonTime);
         }
         if (lastSequenceResetTime != UNKNOWN_TIME)
         {
-            session.lastSequenceResetTime(lastSequenceResetTime);
+            session.lastSequenceResetTimeInNs(lastSequenceResetTime);
         }
 
         createSessionSubscriber(connectionId, session, reply, fixDictionary, messageInfo, compositeKey);
@@ -1879,7 +1878,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
-            new SystemEpochClock(),
+            configuration.epochNanoClock(),
             connectionId,
             libraryId,
             LangUtil::rethrowUnchecked,

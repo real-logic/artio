@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -98,8 +98,8 @@ public class DirectSessionProxy implements SessionProxy
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
-    private final EpochClock clock;
     private final int libraryId;
+    private final EpochNanoClock clock;
     private long connectionId;
     private long sessionId;
     private boolean libraryConnected = true;
@@ -111,7 +111,7 @@ public class DirectSessionProxy implements SessionProxy
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
-        final EpochClock clock,
+        final EpochNanoClock clock,
         final long connectionId,
         final int libraryId,
         final ErrorHandler errorHandler,
@@ -127,7 +127,7 @@ public class DirectSessionProxy implements SessionProxy
         this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder = new UtcTimestampEncoder(epochFractionPrecision);
-        timestampEncoder.initialise(clock.time(), TimeUnit.MILLISECONDS);
+        timestampEncoder.initialise(clock.nanoTime(), TimeUnit.NANOSECONDS);
     }
 
     public void fixDictionary(final FixDictionary dictionary)
@@ -422,7 +422,8 @@ public class DirectSessionProxy implements SessionProxy
     private void setupHeader(final SessionHeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)
     {
         final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
-        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.updateFrom(clock.time(), TimeUnit.MILLISECONDS));
+        final int length = timestampEncoder.updateFrom(clock.nanoTime(), TimeUnit.NANOSECONDS);
+        header.sendingTime(timestampEncoder.buffer(), length);
         header.msgSeqNum(msgSeqNo);
 
         if (lastMsgSeqNumProcessed != NO_LAST_MSG_SEQ_NUM_PROCESSED)

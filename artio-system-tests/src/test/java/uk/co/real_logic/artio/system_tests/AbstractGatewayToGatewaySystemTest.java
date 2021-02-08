@@ -527,8 +527,8 @@ public class AbstractGatewayToGatewaySystemTest
 
     void assertSequenceResetTimeAtLatestLogon(final Session session)
     {
-        final long lastLogonTime = session.lastLogonTime();
-        final long lastSequenceResetTime = session.lastSequenceResetTime();
+        final long lastLogonTime = session.lastLogonTimeInNs();
+        final long lastSequenceResetTime = session.lastSequenceResetTimeInNs();
         connectTimeRange.assertWithinRange(lastLogonTime);
         assertEquals("lastSequenceResetTime was not the same as lastLogonTime",
             lastLogonTime, lastSequenceResetTime);

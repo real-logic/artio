@@ -165,7 +165,7 @@ public class FramerTest
         when(gatewaySession.fixDictionary()).thenReturn(fixDictionary);
         when(gatewaySession.isOffline()).thenReturn(false);
 
-        when(session.lastLogonTime()).thenReturn(-1L);
+        when(session.lastLogonTimeInNs()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
 
         framer = new Framer(

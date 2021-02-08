@@ -56,7 +56,6 @@ public class InitiatorSession extends InternalSession
         super(
             heartbeatInterval,
             connectionId,
-            epochClock,
             clock,
             state,
             proxy,
@@ -89,7 +88,7 @@ public class InitiatorSession extends InternalSession
         return null;
     }
 
-    public int poll(final long time)
+    public int poll(final long timeInMs)
     {
         int actions = 0;
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
@@ -110,6 +109,6 @@ public class InitiatorSession extends InternalSession
             actions++;
         }
 
-        return actions + super.poll(time);
+        return actions + super.poll(timeInMs);
     }
 }

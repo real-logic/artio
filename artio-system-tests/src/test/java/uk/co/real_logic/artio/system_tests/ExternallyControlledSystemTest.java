@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
@@ -243,7 +243,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
-        final EpochClock clock,
+        final EpochNanoClock clock,
         final long connectionId,
         final int libraryId,
         final ErrorHandler errorHandler,

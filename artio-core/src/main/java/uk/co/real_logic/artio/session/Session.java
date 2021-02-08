@@ -19,7 +19,6 @@ import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
-import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
@@ -29,6 +28,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.logger.Replayer;
+import uk.co.real_logic.artio.fields.CalendricalUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
@@ -44,8 +44,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -102,11 +101,10 @@ public class Session
     protected final int libraryId;
     protected final SessionProxy proxy;
 
-    private final EpochClock epochClock;
     private final EpochFractionClock epochFractionClock;
     private final EpochNanoClock clock;
     private final long sendingTimeWindowInMs;
-    private final long reasonableTransmissionTimeInMs;
+    private final long reasonableTransmissionTimeInNs;
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
@@ -137,19 +135,19 @@ public class Session
     private int lastSentMsgSeqNum;
     private int sequenceIndex;
 
-    private long heartbeatIntervalInMs;
-    private long nextRequiredInboundMessageTimeInMs;
-    private long sendingHeartbeatIntervalInMs;
-    private long nextRequiredHeartbeatTimeInMs;
+    private long heartbeatIntervalInNs;
+    private long nextRequiredInboundMessageTimeInNs;
+    private long sendingHeartbeatIntervalInNs;
+    private long nextRequiredHeartbeatTimeInNs;
 
-    private long awaitingLogoutTimeoutInMs;
+    private long awaitingLogoutTimeoutInNs;
 
     private String username;
     private String password;
     private String connectedHost;
     private int connectedPort;
-    private long lastLogonTime = UNKNOWN_TIME;
-    private long lastSequenceResetTime = UNKNOWN_TIME;
+    private long lastLogonTimeInNs = UNKNOWN_TIME;
+    private long lastSequenceResetTimeInNs = UNKNOWN_TIME;
     private boolean closedResendInterval;
     private int resendRequestChunkSize;
     private boolean sendRedundantResendRequests;
@@ -164,7 +162,6 @@ public class Session
     public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock epochClock,
         final EpochNanoClock clock,
         final SessionState state,
         final SessionProxy proxy,
@@ -184,7 +181,6 @@ public class Session
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock)
     {
-        Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -194,7 +190,6 @@ public class Session
         Verify.notNull(epochFractionClock, "epochFractionClock");
 
         this.messageInfo = messageInfo;
-        this.epochClock = epochClock;
         this.proxy = proxy;
         this.connectionId = connectionId;
         this.outboundPublication = outboundPublication;
@@ -204,7 +199,7 @@ public class Session
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
-        this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
+        this.reasonableTransmissionTimeInNs = MILLISECONDS.toNanos(reasonableTransmissionTimeInMs);
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
         this.asciiBuffer = asciiBuffer;
         this.clock = clock;
@@ -329,7 +324,7 @@ public class Session
      */
     public long heartbeatIntervalInMs()
     {
-        return heartbeatIntervalInMs;
+        return NANOSECONDS.toMillis(heartbeatIntervalInNs);
     }
 
     /**
@@ -414,7 +409,7 @@ public class Session
         }
         else
         {
-            awaitingLogoutTimeoutInMs = time() + heartbeatIntervalInMs;
+            awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
             state(AWAITING_LOGOUT);
         }
         return position;
@@ -779,10 +774,10 @@ public class Session
         return trySendSequenceReset(nextSentMessageSequenceNumber, nextReceivedMessageSequenceNumber);
     }
 
-    private void nextSequenceIndex(final long messageTime)
+    private void nextSequenceIndex(final long messageTimeInNs)
     {
         sequenceIndex++;
-        lastSequenceResetTime(messageTime);
+        lastSequenceResetTimeInNs(messageTimeInNs);
     }
 
     /**
@@ -796,7 +791,7 @@ public class Session
     public long tryResetSequenceNumbers()
     {
         final int sentSeqNum = 1;
-        final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        final int heartbeatIntervalInS = (int)NANOSECONDS.toSeconds(heartbeatIntervalInNs);
         nextSequenceIndex(clock.nanoTime());
         final long position = proxy.sendLogon(
             sentSeqNum,
@@ -867,13 +862,12 @@ public class Session
     /**
      * This returns the time of the last received logon message for the current session. The source
      * of time here is configured from your {@link CommonConfiguration#epochNanoClock(EpochNanoClock)}.
-     * This defaults to nanoseconds but it can be any precision that you configure.
      *
      * @return the time of the last received logon message for the current session.
      */
-    public long lastLogonTime()
+    public long lastLogonTimeInNs()
     {
-        return lastLogonTime;
+        return lastLogonTimeInNs;
     }
 
     /**
@@ -883,9 +877,9 @@ public class Session
      *
      * @return the time of the last sequence number reset.
      */
-    public long lastSequenceResetTime()
+    public long lastSequenceResetTimeInNs()
     {
-        return lastSequenceResetTime;
+        return lastSequenceResetTimeInNs;
     }
 
     public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
@@ -990,25 +984,25 @@ public class Session
         }
         else
         {
-            final long time = time();
+            final long timeInNs = timeInNs();
             final Action action = validateRequiredFieldsAndCodec(
-                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
+                msgSeqNo, timeInNs, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
             if (action != null)
             {
                 return action;
             }
 
-            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend, position);
+            return checkSeqNoChange(msgSeqNo, timeInNs, isPossDupOrResend, position);
         }
     }
 
     private Action validateRequiredFieldsAndCodec(
         final int msgSeqNo,
-        final long time,
+        final long timeInNs,
         final char[] msgType,
         final int msgTypeLength,
-        final long sendingTime,
-        final long origSendingTime,
+        final long sendingTimeInMs,
+        final long origSendingTimeInMs,
         final boolean possDup,
         final long position)
     {
@@ -1022,8 +1016,8 @@ public class Session
 
         if (CODEC_VALIDATION_ENABLED)
         {
-            final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
-                origSendingTime, possDup, position);
+            final Action validationResult = validateCodec(timeInNs, msgSeqNo, msgType, msgTypeLength, sendingTimeInMs,
+                origSendingTimeInMs, possDup, position);
             if (validationResult != null)
             {
                 return validationResult;
@@ -1035,18 +1029,18 @@ public class Session
 
     // returns final state of session after validation or null if further processing required
     private Action validateCodec(
-        final long time,
+        final long timeInNs,
         final int msgSeqNum,
         final char[] msgType,
         final int msgTypeLength,
-        final long sendingTime,
-        final long origSendingTime,
+        final long sendingTimeInMs,
+        final long origSendingTimeInMs,
         final boolean possDup,
         final long position)
     {
         if (possDup)
         {
-            if (origSendingTime == UNKNOWN)
+            if (origSendingTimeInMs == UNKNOWN)
             {
                 return onInvalidMessage(
                     msgSeqNum,
@@ -1056,13 +1050,15 @@ public class Session
                     REQUIRED_TAG_MISSING.representation(),
                     position);
             }
-            else if (origSendingTime > sendingTime)
+            else if (origSendingTimeInMs > sendingTimeInMs)
             {
                 return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             }
         }
 
-        if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
+        final long timeInMs = timeInNs / CalendricalUtil.NANOS_IN_MILLIS;
+        if ((sendingTimeInMs < timeInMs - sendingTimeWindowInMs) ||
+            (sendingTimeInMs > timeInMs + sendingTimeWindowInMs))
         {
             final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             if (action != ABORT)
@@ -1250,16 +1246,16 @@ public class Session
             position);
     }
 
-    private void incNextReceivedInboundMessageTime(final long time)
+    private void incNextReceivedInboundMessageTime(final long timeInNs)
     {
-        this.nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs() + reasonableTransmissionTimeInMs;
+        this.nextRequiredInboundMessageTimeInNs = timeInNs + heartbeatIntervalInNs + reasonableTransmissionTimeInNs;
     }
 
     Action onLogon(
-        final int heartbeatInterval,
+        final int heartbeatIntervalInS,
         final int msgSeqNum,
-        final long sendingTime,
-        final long origSendingTime,
+        final long sendingTimeInMs,
+        final long origSendingTimeInMs,
         final String username,
         final String password,
         final boolean isPossDupOrResend,
@@ -1269,23 +1265,23 @@ public class Session
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
-        Action action = validateOrRejectHeartbeat(heartbeatInterval);
+        Action action = validateOrRejectHeartbeat(heartbeatIntervalInS);
         if (action != null)
         {
             return action;
         }
 
-        action = validateOrRejectSendingTime(sendingTime, position);
+        action = validateOrRejectSendingTime(sendingTimeInMs);
         if (action != null)
         {
             return action;
         }
 
-        final long logonTime = clock.nanoTime();
+        final long logonTimeInNs = clock.nanoTime();
 
         if (resetSeqNumFlag)
         {
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
+            return onResetSeqNumLogon(heartbeatIntervalInS, username, password, logonTimeInNs, msgSeqNum);
         }
 
         if (state() == initialState())
@@ -1295,20 +1291,20 @@ public class Session
             if (expectedMsgSeqNo == msgSeqNum)
             {
                 // Send outbound logon message and check if backpressured on the outward client side.
-                action = respondToLogon(heartbeatInterval);
+                action = respondToLogon(heartbeatIntervalInS);
                 if (action == ABORT)
                 {
                     return ABORT;
                 }
 
                 // Don't configure this session as active until successful outbound publication
-                setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
+                setupCompleteLogonState(logonTimeInNs, heartbeatIntervalInS, username, password, timeInNs());
                 // If this is the first logon message this session has received, even if sequence
                 // index doesn't need incrementing we need to track the lastSequenceResetTime.
                 // Other cases handled by nextSequenceIndex()
                 if (lastReceivedMsgSeqNum == 0)
                 {
-                    lastSequenceResetTime(logonTime);
+                    lastSequenceResetTimeInNs(logonTimeInNs);
                 }
                 lastReceivedMsgSeqNum(msgSeqNum);
 
@@ -1317,7 +1313,7 @@ public class Session
             else if (expectedMsgSeqNo < msgSeqNum)
             {
                 // If their sequence number is higher than expected, we still accept the logon.
-                action = respondToLogon(heartbeatInterval);
+                action = respondToLogon(heartbeatIntervalInS);
                 if (action == ABORT)
                 {
                     return ABORT;
@@ -1327,13 +1323,13 @@ public class Session
                 if (requestSeqNumReset) // if we requested sequence number reset then do not await for replay
                 {
                     lastReceivedMsgSeqNum = 0; // TODO: should this not be msgSeqNum?
-                    setupCompleteLogonStateReset(logonTime, heartbeatInterval, username, password, time());
+                    setupCompleteLogonStateReset(logonTimeInNs, heartbeatIntervalInS, username, password, timeInNs());
 
                     return CONTINUE;
                 }
                 else
                 {
-                    setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
+                    setupCompleteLogonState(logonTimeInNs, heartbeatIntervalInS, username, password, timeInNs());
                     action = requestResend(expectedMsgSeqNo, msgSeqNum);
 
                     return action;
@@ -1348,7 +1344,7 @@ public class Session
         {
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
             return onMessage(
-                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTimeInMs, origSendingTimeInMs, isPossDupOrResend, possDup,
                 position);
         }
     }
@@ -1368,7 +1364,7 @@ public class Session
         final int heartbeatInterval,
         final String username,
         final String password,
-        final long logonTime,
+        final long logonTimeInNs,
         final int msgSeqNo)
     {
         // if we have just received a reset request and not a response to one we just sent.
@@ -1387,8 +1383,8 @@ public class Session
 
             lastSentMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
             lastReceivedMsgSeqNum(msgSeqNo);
-            lastLogonTime(logonTime);
-            lastSequenceResetTime(logonTime);
+            lastLogonTimeInNs(logonTimeInNs);
+            lastSequenceResetTimeInNs(logonTimeInNs);
         }
         else
         {
@@ -1396,7 +1392,7 @@ public class Session
         }
 
         // logon time becomes time of the confirmation message.
-        setupCompleteLogonStateReset(logonTime, heartbeatInterval, username, password, time());
+        setupCompleteLogonStateReset(logonTimeInNs, heartbeatInterval, username, password, timeInNs());
 
         return CONTINUE;
     }
@@ -1406,28 +1402,28 @@ public class Session
         final int heartbeatInterval,
         final String username,
         final String password,
-        final long currentTime)
+        final long timeInNs)
     {
-        setupCompleteLogonState(logonTime, heartbeatInterval, username, password, currentTime);
-        lastSequenceResetTime(logonTime);
+        setupCompleteLogonState(logonTime, heartbeatInterval, username, password, timeInNs);
+        lastSequenceResetTimeInNs(logonTime);
     }
 
     private void setupCompleteLogonState(
-        final long logonTime,
-        final int heartbeatInterval,
+        final long logonTimeInNs,
+        final int heartbeatIntervalInS,
         final String username,
         final String password,
-        final long currentTime)
+        final long timeInNs)
     {
-        lastLogonTime(logonTime);
-        setupLogonState(heartbeatInterval, username, password, currentTime);
+        lastLogonTimeInNs(logonTimeInNs);
+        setupLogonState(heartbeatIntervalInS, username, password, timeInNs);
     }
 
     private void setupLogonState(
-        final int heartbeatInterval, final String username, final String password, final long currentTime)
+        final int heartbeatIntervalInS, final String username, final String password, final long timeInNs)
     {
-        incNextReceivedInboundMessageTime(currentTime);
-        heartbeatIntervalInS(heartbeatInterval);
+        incNextReceivedInboundMessageTime(timeInNs);
+        heartbeatIntervalInS(heartbeatIntervalInS);
         state(ACTIVE);
         username(username);
         password(password);
@@ -1451,15 +1447,16 @@ public class Session
             newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
-    private Action validateOrRejectSendingTime(final long sendingTime, final long position)
+    private Action validateOrRejectSendingTime(final long sendingTimeInMs)
     {
-        if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
+        if (CODEC_VALIDATION_DISABLED && sendingTimeInMs == MISSING_LONG)
         {
             return null;
         }
 
-        final long time = time();
-        if ((sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs)))
+        final long timeInMs = timeInNs() / CalendricalUtil.NANOS_IN_MILLIS;
+        if ((sendingTimeInMs < (timeInMs + sendingTimeWindowInMs) &&
+            sendingTimeInMs > (timeInMs - sendingTimeWindowInMs)))
         {
             return null;
         }
@@ -1470,9 +1467,9 @@ public class Session
             INVALID_SENDING_TIME);
     }
 
-    private Action validateOrRejectHeartbeat(final int heartbeatInterval)
+    private Action validateOrRejectHeartbeat(final int heartbeatIntervalInS)
     {
-        if (heartbeatInterval < 0)
+        if (heartbeatIntervalInS < 0)
         {
             messageInfo.isValid(false);
 
@@ -1504,18 +1501,19 @@ public class Session
 
     Action onLogout(
         final int msgSeqNo,
-        final long sendingTime,
-        final long origSendingTime,
+        final long sendingTimeInMs,
+        final long origSendingTimeInMs,
         final boolean possDup,
         final long position)
     {
-        final long time = time();
+        final long timeInNs = timeInNs();
         final Action action = validateRequiredFieldsAndCodec(
-            msgSeqNo, time,
+            msgSeqNo,
+            timeInNs,
             LOGON_MESSAGE_TYPE_CHARS,
             LOGON_MESSAGE_TYPE_CHARS.length,
-            sendingTime,
-            origSendingTime,
+            sendingTimeInMs,
+            origSendingTimeInMs,
             possDup,
             position);
         if (action == ABORT)
@@ -1807,7 +1805,7 @@ public class Session
 
     private void incNextHeartbeatTime()
     {
-        nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
+        nextRequiredHeartbeatTimeInNs = timeInNs() + sendingHeartbeatIntervalInNs;
     }
 
     private long trySendLogout()
@@ -1828,12 +1826,12 @@ public class Session
 
     void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis(heartbeatIntervalInS);
+        this.heartbeatIntervalInNs = SECONDS.toNanos(heartbeatIntervalInS);
 
-        final long time = time();
-        incNextReceivedInboundMessageTime(time);
-        sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
-        nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
+        final long timeInNs = timeInNs();
+        incNextReceivedInboundMessageTime(timeInNs);
+        sendingHeartbeatIntervalInNs = (long)(heartbeatIntervalInNs * HEARTBEAT_PAUSE_FACTOR);
+        nextRequiredHeartbeatTimeInNs = timeInNs + sendingHeartbeatIntervalInNs;
     }
 
     protected Session state(final SessionState state)
@@ -1847,9 +1845,9 @@ public class Session
         this.id = id;
     }
 
-    protected long time()
+    protected long timeInNs()
     {
-        return epochClock.time();
+        return clock.nanoTime();
     }
 
     // Does not check the sequence index
@@ -1875,9 +1873,9 @@ public class Session
         receivedMsgSeqNo.increment();
     }
 
-    void lastSequenceResetTime(final long lastSequenceResetTime)
+    void lastSequenceResetTimeInNs(final long lastSequenceResetTimeInNs)
     {
-        this.lastSequenceResetTime = lastSequenceResetTime;
+        this.lastSequenceResetTimeInNs = lastSequenceResetTimeInNs;
     }
 
     Action onInvalidMessage(
@@ -1946,32 +1944,16 @@ public class Session
         close();
     }
 
-    int poll(final long time)
+    int poll(final long timeInMs)
     {
+        final long timeInNs = timeInNs();
         final short state = state().value();
 
         switch (state)
         {
             case DISCONNECTING_VALUE:
             {
-                if (incorrectBeginString)
-                {
-                    final int sentMsgSeqNum = newSentSeqNum();
-                    final long position = proxy.sendIncorrectBeginStringLogout(
-                        sentMsgSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
-                    if (position < 0)
-                    {
-                        return 1;
-                    }
-                    lastSentMsgSeqNum(sentMsgSeqNum);
-                    requestDisconnect(INCORRECT_BEGIN_STRING);
-                }
-                else
-                {
-                    requestDisconnect();
-                }
-
-                return 1;
+                return onDisconnecting();
             }
 
             case LOGGING_OUT_VALUE:
@@ -1992,7 +1974,7 @@ public class Session
 
             case AWAITING_LOGOUT_VALUE:
             {
-                if (time > awaitingLogoutTimeoutInMs)
+                if (timeInNs > awaitingLogoutTimeoutInNs)
                 {
                     if (!Pressure.isBackPressured(requestDisconnect()))
                     {
@@ -2013,7 +1995,7 @@ public class Session
             {
                 int actions = 0;
                 final boolean isActive = state == ACTIVE_VALUE;
-                if (isActive && time >= nextRequiredHeartbeatTimeInMs)
+                if (isActive && timeInNs >= nextRequiredHeartbeatTimeInNs)
                 {
                     // Drop when back pressured: retried on duty cycle
                     final int sentSeqNum = newSentSeqNum();
@@ -2022,7 +2004,7 @@ public class Session
                     actions++;
                 }
 
-                if (time >= nextRequiredInboundMessageTimeInMs)
+                if (timeInNs >= nextRequiredInboundMessageTimeInNs)
                 {
                     if (awaitingHeartbeat)
                     {
@@ -2037,7 +2019,7 @@ public class Session
                         {
                             lastSentMsgSeqNum(sentSeqNum);
                             awaitingHeartbeat = true;
-                            incNextReceivedInboundMessageTime(time);
+                            incNextReceivedInboundMessageTime(timeInMs);
                         }
                     }
                     actions++;
@@ -2046,6 +2028,28 @@ public class Session
                 return actions;
             }
         }
+    }
+
+    private int onDisconnecting()
+    {
+        if (incorrectBeginString)
+        {
+            final int sentMsgSeqNum = newSentSeqNum();
+            final long position = proxy.sendIncorrectBeginStringLogout(
+                sentMsgSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+            if (position < 0)
+            {
+                return 1;
+            }
+            lastSentMsgSeqNum(sentMsgSeqNum);
+            requestDisconnect(INCORRECT_BEGIN_STRING);
+        }
+        else
+        {
+            requestDisconnect();
+        }
+
+        return 1;
     }
 
     void libraryConnected(final boolean libraryConnected)
@@ -2089,9 +2093,9 @@ public class Session
         this.password = password;
     }
 
-    void lastLogonTime(final long logonTime)
+    void lastLogonTimeInNs(final long logonTimeInNs)
     {
-        this.lastLogonTime = logonTime;
+        this.lastLogonTimeInNs = logonTimeInNs;
     }
 
     void awaitingResend(final boolean awaitingResend)

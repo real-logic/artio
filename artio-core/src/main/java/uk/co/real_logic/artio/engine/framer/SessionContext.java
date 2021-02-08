@@ -103,8 +103,8 @@ class SessionContext implements SessionInfo
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
-        lastLogonTime(session.lastLogonTime());
-        lastSequenceResetTimeInNs = session.lastSequenceResetTime();
+        lastLogonTime(session.lastLogonTimeInNs());
+        lastSequenceResetTimeInNs = session.lastSequenceResetTimeInNs();
     }
 
     void onLogon(final boolean resetSeqNum, final long time, final FixDictionary fixDictionary)

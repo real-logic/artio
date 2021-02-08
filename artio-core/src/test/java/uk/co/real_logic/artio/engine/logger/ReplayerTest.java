@@ -24,9 +24,8 @@ import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
@@ -73,8 +72,8 @@ import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 public class ReplayerTest extends AbstractLogTest
 {
     private static final String DATE_TIME_STR = "19840521-15:00:00.000";
-    private static final long DATE_TIME_EPOCH_MS =
-        new UtcTimestampDecoder(true).decode(DATE_TIME_STR.getBytes(US_ASCII));
+    private static final long DATE_TIME_EPOCH_NS =
+        new UtcTimestampDecoder(true).decodeNanos(DATE_TIME_STR.getBytes(US_ASCII));
 
     public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
         ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=" + ORIGINAL_SENDING_TIME + "\00156=CCG\001" +
@@ -86,9 +85,9 @@ public class ReplayerTest extends AbstractLogTest
     private final Subscription subscription = mock(Subscription.class);
     private final IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private final EpochClock clock = mock(EpochClock.class);
     private final ArgumentCaptor<MessageTracker> messageTracker =
         ArgumentCaptor.forClass(MessageTracker.class);
+    private final EpochNanoClock clock = mock(EpochNanoClock.class);
     private final Header fragmentHeader = mock(Header.class);
     private final ReplayHandler replayHandler = mock(ReplayHandler.class);
     private final SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
@@ -102,7 +101,7 @@ public class ReplayerTest extends AbstractLogTest
     public void setUp()
     {
         when(fragmentHeader.flags()).thenReturn((byte)DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
-        when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
+        when(clock.nanoTime()).thenReturn(DATE_TIME_EPOCH_NS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         when(publication.maxPayloadLength()).thenReturn(Configuration.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
 
@@ -122,7 +121,6 @@ public class ReplayerTest extends AbstractLogTest
             MAX_CLAIM_ATTEMPTS,
             subscription,
             DEFAULT_NAME_PREFIX,
-            clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             new IntHashSet(),
             replayHandler,
@@ -134,7 +132,7 @@ public class ReplayerTest extends AbstractLogTest
             EpochFractionFormat.MILLISECONDS,
             currentReplayCounter,
             DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
-            new OffsetEpochNanoClock());
+            clock);
     }
 
     private void setReplayedMessages(final int replayedMessages)

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,8 +70,8 @@ public abstract class AbstractSessionTest
     static final long TWO_MINUTES = MINUTES.toMillis(2);
     static final long SENDING_TIME_WINDOW = 2000;
     static final long CONNECTION_ID = 3L;
-    static final int HEARTBEAT_INTERVAL = 2;
-    static final int SESSION_TIMEOUT = HEARTBEAT_INTERVAL + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
+    static final int HEARTBEAT_INTERVAL_IN_S = 2;
+    static final int SESSION_TIMEOUT = HEARTBEAT_INTERVAL_IN_S + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
     static final int LIBRARY_ID = 4;
     static final int SEQUENCE_INDEX = 0;
 
@@ -82,7 +83,8 @@ public abstract class AbstractSessionTest
     DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();
-    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(fakeClock.nanoClockView());
+    EpochNanoClock nanoClock = fakeClock.nanoClockView();
+    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(nanoClock);
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
     SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);
@@ -853,7 +855,7 @@ public abstract class AbstractSessionTest
 
     public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(final int sequenceIndex)
     {
-        onLogon(HEARTBEAT_INTERVAL, 1, true);
+        onLogon(HEARTBEAT_INTERVAL_IN_S, 1, true);
 
         verifySetsSequenceNumbersToTwo(sequenceIndex);
     }
@@ -869,7 +871,7 @@ public abstract class AbstractSessionTest
             session().state(state);
             sequenceNumbersAreThree();
 
-            onLogon(HEARTBEAT_INTERVAL, 1, true);
+            onLogon(HEARTBEAT_INTERVAL_IN_S, 1, true);
 
             session().poll(100);
 
@@ -884,7 +886,7 @@ public abstract class AbstractSessionTest
     {
         shouldStartLogonBasedSequenceNumberReset();
 
-        onLogon(HEARTBEAT_INTERVAL, 1, true);
+        onLogon(HEARTBEAT_INTERVAL_IN_S, 1, true);
 
         verifyNoFurtherMessages();
         assertSequenceIndexIs(SEQUENCE_INDEX + 1);
@@ -1040,7 +1042,7 @@ public abstract class AbstractSessionTest
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
         final Action action = session().onLogon(
-            HEARTBEAT_INTERVAL,
+            HEARTBEAT_INTERVAL_IN_S,
             1,
             1,
             UNKNOWN, null, null, false, false, false,
@@ -1073,7 +1075,7 @@ public abstract class AbstractSessionTest
     private void verifySetsSentSequenceNumbersToTwo(final int sequenceIndex)
     {
         verify(sessionProxy).sendLogon(
-            eq(1), eq(HEARTBEAT_INTERVAL), any(), any(), eq(true), eq(sequenceIndex), anyInt());
+            eq(1), eq(HEARTBEAT_INTERVAL_IN_S), any(), any(), eq(true), eq(sequenceIndex), anyInt());
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -1159,15 +1161,15 @@ public abstract class AbstractSessionTest
 
     public Action onLogon(final int msgSeqNo)
     {
-        return onLogon(HEARTBEAT_INTERVAL, msgSeqNo, false);
+        return onLogon(HEARTBEAT_INTERVAL_IN_S, msgSeqNo, false);
     }
 
-    private Action onLogon(final int heartbeatInterval, final int msgSeqNo, final boolean resetSeqNumFlag)
+    private Action onLogon(final int heartbeatIntervalInS, final int msgSeqNo, final boolean resetSeqNumFlag)
     {
         final String username = null;
         final String password = null;
         return session().onLogon(
-            heartbeatInterval,
+            heartbeatIntervalInS,
             msgSeqNo,
             fakeClock.time(),
             UNKNOWN,
