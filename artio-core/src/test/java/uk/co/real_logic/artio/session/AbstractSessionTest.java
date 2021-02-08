@@ -82,7 +82,7 @@ public abstract class AbstractSessionTest
     DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();
-    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(fakeClock);
+    EpochFractionClock fakeEpochFractionClock = EpochFractionClocks.millisClock(fakeClock.nanoClockView());
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
     SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);

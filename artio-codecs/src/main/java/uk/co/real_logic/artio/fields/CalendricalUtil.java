@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static java.lang.String.format;
 import static java.time.Year.isLeap;
 
-final class CalendricalUtil
+public final class CalendricalUtil
 {
     // ------------ Time Constants ------------
     static final int SECONDS_IN_MINUTE = 60;
@@ -29,9 +29,9 @@ final class CalendricalUtil
     static final int SECONDS_IN_DAY = SECONDS_IN_HOUR * 24;
     static final long MILLIS_IN_SECOND = 1_000L;
     static final long MICROS_IN_MILLIS = 1_000L;
-    static final long NANOS_IN_MICROS = 1_000L;
-    static final long NANOS_IN_MILLIS = NANOS_IN_MICROS * MICROS_IN_MILLIS;
     static final long MICROS_IN_SECOND = MILLIS_IN_SECOND * MICROS_IN_MILLIS;
+    public static final long NANOS_IN_MICROS = 1_000L;
+    public static final long NANOS_IN_MILLIS = NANOS_IN_MICROS * MICROS_IN_MILLIS;
     static final long NANOS_IN_SECOND = MICROS_IN_SECOND * NANOS_IN_MICROS;
     static final long MILLIS_IN_DAY = SECONDS_IN_DAY * MILLIS_IN_SECOND;
     static final long MICROS_IN_DAY = SECONDS_IN_DAY * MICROS_IN_SECOND;

@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fields.CalendricalUtil;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -41,5 +43,10 @@ public class FakeEpochClock implements EpochClock
     public long time()
     {
         return time;
+    }
+
+    public EpochNanoClock nanoClockView()
+    {
+        return () -> time() * CalendricalUtil.NANOS_IN_MILLIS;
     }
 }

@@ -17,15 +17,16 @@ package uk.co.real_logic.artio.util;
 
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fields.CalendricalUtil;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 
 /**
  * A factory for {@link EpochFractionClock}
- * Based internally on a combination of {@link EpochClock} and {@link EpochNanoClock}
+ * Based internally on an {@link EpochNanoClock}
  */
-public class EpochFractionClocks
+public final class EpochFractionClocks
 {
-    public static EpochFractionClock millisClock(final EpochClock clock)
+    public static EpochFractionClock millisClock(final EpochNanoClock clock)
     {
         return new MillisBasedClock(clock);
     }
@@ -42,7 +43,7 @@ public class EpochFractionClocks
                 return new MicrosBasedClock(nanoClock);
 
             case MILLISECONDS:
-                return new MillisBasedClock(clock);
+                return new MillisBasedClock(nanoClock);
 
             default:
                 throw new RuntimeException("Unknown precision: " + format);
@@ -51,16 +52,16 @@ public class EpochFractionClocks
 
     static class MillisBasedClock implements EpochFractionClock
     {
-        private final EpochClock clock;
+        private final EpochNanoClock clock;
 
-        MillisBasedClock(final EpochClock clock)
+        MillisBasedClock(final EpochNanoClock clock)
         {
             this.clock = clock;
         }
 
         public long epochFractionTime()
         {
-            return clock.time();
+            return clock.nanoTime() / CalendricalUtil.NANOS_IN_MILLIS;
         }
 
         public EpochFractionFormat epochFractionPrecision()
@@ -80,7 +81,7 @@ public class EpochFractionClocks
 
         public long epochFractionTime()
         {
-            return epochNanoClock.nanoTime() / 1000;
+            return epochNanoClock.nanoTime() / CalendricalUtil.NANOS_IN_MICROS;
         }
 
         public EpochFractionFormat epochFractionPrecision()
@@ -108,5 +109,4 @@ public class EpochFractionClocks
             return EpochFractionFormat.NANOSECONDS;
         }
     }
-
 }
