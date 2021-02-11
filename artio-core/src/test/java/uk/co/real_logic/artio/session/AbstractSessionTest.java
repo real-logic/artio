@@ -873,7 +873,7 @@ public abstract class AbstractSessionTest
 
             onLogon(HEARTBEAT_INTERVAL_IN_S, 1, true);
 
-            session().poll(100);
+            session().poll(100_000_000);
 
             sequenceIndex++;
             verifySetsSequenceNumbersToTwo(sequenceIndex);
@@ -1255,7 +1255,7 @@ public abstract class AbstractSessionTest
 
     protected void poll()
     {
-        session().poll(fakeClock.time());
+        session().poll(nanoClock.nanoTime());
     }
 
     protected abstract Session session();

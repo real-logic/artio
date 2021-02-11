@@ -29,7 +29,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 final class LibraryDriver implements AutoCloseable
 {
-    private static EpochNanoClock nanoClock;
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final FixLibrary library;
@@ -37,12 +36,12 @@ final class LibraryDriver implements AutoCloseable
 
     static LibraryDriver accepting(final TestSystem testSystem, final EpochNanoClock nanoClock)
     {
-        LibraryDriver.nanoClock = nanoClock;
         return new LibraryDriver(testSystem, sessionHandler ->
             SystemTestUtil.acceptingLibraryConfig(sessionHandler, nanoClock));
     }
 
-    static LibraryDriver initiating(final int libraryAeronPort, final TestSystem testSystem)
+    static LibraryDriver initiating(
+        final int libraryAeronPort, final TestSystem testSystem, final EpochNanoClock nanoClock)
     {
         return new LibraryDriver(testSystem, handler -> initiatingLibraryConfig(libraryAeronPort, handler, nanoClock));
     }

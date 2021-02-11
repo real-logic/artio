@@ -662,7 +662,7 @@ public class AbstractGatewayToGatewaySystemTest
     void initiatingEngineHasSessionAndLibraryIsNotified()
     {
         engineHasSessionAndLibraryIsNotified(
-            LibraryDriver.initiating(libraryAeronPort, testSystem), initiatingEngine, initiatingSession);
+            LibraryDriver.initiating(libraryAeronPort, testSystem, nanoClock), initiatingEngine, initiatingSession);
     }
 
     void engineHasSessionAndLibraryIsNotified(

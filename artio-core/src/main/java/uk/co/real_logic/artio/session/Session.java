@@ -1944,9 +1944,8 @@ public class Session
         close();
     }
 
-    int poll(final long timeInMs)
+    int poll(final long timeInNs)
     {
-        final long timeInNs = timeInNs();
         final short state = state().value();
 
         switch (state)
@@ -2019,7 +2018,7 @@ public class Session
                         {
                             lastSentMsgSeqNum(sentSeqNum);
                             awaitingHeartbeat = true;
-                            incNextReceivedInboundMessageTime(timeInMs);
+                            incNextReceivedInboundMessageTime(timeInNs);
                         }
                     }
                     actions++;

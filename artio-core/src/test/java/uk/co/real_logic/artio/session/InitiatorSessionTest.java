@@ -95,9 +95,9 @@ public class InitiatorSessionTest extends AbstractSessionTest
         session.id(SESSION_ID);
         session.poll(0);
 
-        session.poll(10);
+        session.poll(10_000_000);
 
-        session.poll(20);
+        session.poll(20_000_000);
 
         verifyLogon();
     }

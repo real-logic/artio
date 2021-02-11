@@ -291,15 +291,16 @@ class GatewaySessions
         }
     }
 
-    int pollSessions(final long time)
+    int pollSessions(final long timeInMs)
     {
+        final long timeInNs = clock.nanoTime();
         final List<GatewaySession> sessions = this.sessions;
 
         int eventsProcessed = 0;
         for (int i = 0, size = sessions.size(); i < size;)
         {
             final GatewaySession session = sessions.get(i);
-            eventsProcessed += session.poll(time);
+            eventsProcessed += session.poll(timeInMs, timeInNs);
             if (session.hasDisconnected())
             {
                 size--;

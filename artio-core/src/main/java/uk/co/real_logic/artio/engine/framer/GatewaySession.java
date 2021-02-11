@@ -177,9 +177,9 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         }
     }
 
-    int poll(final long timeInMs)
+    int poll(final long timeInMs, final long timeInNs)
     {
-        final int events = session != null ? session.poll(timeInMs) : 0;
+        final int events = session != null ? session.poll(timeInNs) : 0;
         return events + checkNoLogonDisconnect(timeInMs);
     }
 

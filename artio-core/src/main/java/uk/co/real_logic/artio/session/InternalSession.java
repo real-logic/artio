@@ -83,9 +83,9 @@ public class InternalSession extends Session implements AutoCloseable
             epochFractionClock);
     }
 
-    public int poll(final long timeInMs)
+    public int poll(final long timeInNs)
     {
-        return super.poll(timeInMs);
+        return super.poll(timeInNs);
     }
 
     public void disable()

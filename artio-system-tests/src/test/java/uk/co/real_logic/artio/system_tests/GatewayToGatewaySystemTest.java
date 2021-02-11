@@ -774,17 +774,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
 
-        try (LibraryDriver library2 = LibraryDriver.initiating(libraryAeronPort, testSystem))
+        try (LibraryDriver library2 = LibraryDriver.initiating(libraryAeronPort, testSystem, nanoClock))
         {
             final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, initiatingSession);
 
-            try (LibraryDriver library3 = LibraryDriver.initiating(libraryAeronPort, testSystem))
+            try (LibraryDriver library3 = LibraryDriver.initiating(libraryAeronPort, testSystem, nanoClock))
             {
                 final SessionExistsInfo sessionId3 = library3.awaitCompleteSessionId();
                 assertSameSession(sessionId3, initiatingSession);
 
-                try (LibraryDriver library4 = LibraryDriver.initiating(libraryAeronPort, testSystem))
+                try (LibraryDriver library4 = LibraryDriver.initiating(libraryAeronPort, testSystem, nanoClock))
                 {
                     final SessionExistsInfo sessionId4 = library4.awaitCompleteSessionId();
                     assertSameSession(sessionId4, initiatingSession);

@@ -88,7 +88,7 @@ public class InitiatorSession extends InternalSession
         return null;
     }
 
-    public int poll(final long timeInMs)
+    public int poll(final long timeInNs)
     {
         int actions = 0;
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
@@ -109,6 +109,6 @@ public class InitiatorSession extends InternalSession
             actions++;
         }
 
-        return actions + super.poll(timeInMs);
+        return actions + super.poll(timeInNs);
     }
 }

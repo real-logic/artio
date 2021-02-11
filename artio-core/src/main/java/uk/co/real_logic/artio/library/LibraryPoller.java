@@ -132,6 +132,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Uniquely identifies library session
     private final int libraryId;
+    private final EpochNanoClock epochNanoClock;
     private final EpochClock epochClock;
     private final EpochFractionClock epochFractionClock;
     private final LibraryConfiguration configuration;
@@ -211,6 +212,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionExistsHandler = configuration.sessionExistsHandler();
         this.epochClock = epochClock;
+        epochNanoClock = configuration.epochNanoClock();
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
         this.epochFractionClock = EpochFractionClocks.create(
             epochClock, configuration.epochNanoClock(), configuration.sessionEpochFractionFormat());
@@ -544,11 +546,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
+        final long timeInNs = epochNanoClock.nanoTime();
         int operations = 0;
         operations += inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
         operations += livenessDetector.poll(timeInMs);
-        operations += pollSessions(timeInMs);
-        operations += pollPendingInitiatorSessions(timeInMs);
+        operations += pollSessions(timeInNs);
+        operations += pollPendingInitiatorSessions(timeInNs);
         operations += checkReplies(timeInMs);
         return operations;
     }
@@ -738,7 +741,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     END CONNECTION LOGIC
     // -----------------------------------------------------------------------
 
-    private int pollSessions(final long timeInMs)
+    private int pollSessions(final long timeInNs)
     {
         final InternalSession[] sessions = this.sessions;
         int total = 0;
@@ -746,20 +749,20 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         for (int i = 0, size = sessions.length; i < size; i++)
         {
             final InternalSession session = sessions[i];
-            total += session.poll(timeInMs);
+            total += session.poll(timeInNs);
         }
 
         final ILink3Connection[] iLink3Connections = this.iLink3Connections;
         for (int i = 0, size = iLink3Connections.length; i < size; i++)
         {
             final ILink3Connection connection = iLink3Connections[i];
-            total += connection.poll(timeInMs);
+            total += connection.poll(timeInNs);
         }
 
         return total;
     }
 
-    private int pollPendingInitiatorSessions(final long timeInMs)
+    private int pollPendingInitiatorSessions(final long timeInNs)
     {
         InternalSession[] pendingSessions = this.pendingInitiatorSessions;
         int total = 0;
@@ -767,7 +770,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         for (int i = 0, size = pendingSessions.length; i < size;)
         {
             final InternalSession session = pendingSessions[i];
-            total += session.poll(timeInMs);
+            total += session.poll(timeInNs);
             if (session.state() == ACTIVE)
             {
                 this.pendingInitiatorSessions = pendingSessions = ArrayUtil.remove(pendingSessions, i);
