@@ -105,6 +105,8 @@ public class ILink3SystemTest
 
     private void launchArtio()
     {
+        testSystem = new TestSystem();
+
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
@@ -118,8 +120,6 @@ public class ILink3SystemTest
             .messageTimingHandler(messageTimingCaptor);
 
         engine = FixEngine.launch(engineConfig);
-
-        testSystem = new TestSystem();
 
         final LibraryConfiguration libraryConfig = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))

@@ -192,7 +192,7 @@ public final class InternalILink3Connection extends ILink3Connection
     private long retransmitMaxSeqNo = NOT_AWAITING_RETRANSMIT;
     private long nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
 
-    private long resendTime;
+    private long resendTimeInMs;
     private long nextReceiveMessageTimeInMs;
     private long nextSendMessageTimeInMs;
     private boolean backpressuredNotApplied = false;
@@ -521,7 +521,7 @@ public final class InternalILink3Connection extends ILink3Connection
         if (position > 0)
         {
             state = State.SENT_NEGOTIATE;
-            resendTime = nextTimeoutInMs();
+            resendTimeInMs = nextTimeoutInMs();
             lastNegotiateRequestTimestamp = requestTimestamp;
             return true;
         }
@@ -564,7 +564,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
         if (position > 0)
         {
-            nextSendMessageTimeInMs = resendTime = nextTimeoutInMs();
+            nextSendMessageTimeInMs = resendTimeInMs = nextTimeoutInMs();
             lastEstablishRequestTimestamp = requestTimestamp;
             state = State.SENT_ESTABLISH;
             return true;
@@ -720,7 +720,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollSentEstablish(final long timeInMs)
     {
-        if (timeInMs > resendTime)
+        if (timeInMs > resendTimeInMs)
         {
             if (sendEstablish())
             {
@@ -733,7 +733,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollRetryEstablish(final long timeInMs)
     {
-        if (timeInMs > resendTime)
+        if (timeInMs > resendTimeInMs)
         {
             onEstablishFailure();
             fullyUnbind();
@@ -744,7 +744,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollRetryNegotiate(final long timeInMs)
     {
-        if (timeInMs > resendTime)
+        if (timeInMs > resendTimeInMs)
         {
             onNegotiateFailure();
             fullyUnbind();
@@ -755,7 +755,7 @@ public final class InternalILink3Connection extends ILink3Connection
 
     private int pollSentNegotiate(final long timeInMs)
     {
-        if (timeInMs > resendTime)
+        if (timeInMs > resendTimeInMs)
         {
             if (sendNegotiate())
             {

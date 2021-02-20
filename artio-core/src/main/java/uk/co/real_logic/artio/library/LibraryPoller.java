@@ -752,11 +752,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             total += session.poll(timeInNs);
         }
 
+        final long timeInMs = System.currentTimeMillis();
         final ILink3Connection[] iLink3Connections = this.iLink3Connections;
         for (int i = 0, size = iLink3Connections.length; i < size; i++)
         {
             final ILink3Connection connection = iLink3Connections[i];
-            total += connection.poll(timeInNs);
+            total += connection.poll(timeInMs);
         }
 
         return total;
