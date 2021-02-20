@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-public class ILink3Parser extends AbstractILink3Parser
+public class ILink3Parser extends AbstractBinaryParser
 {
     private final MessageHeaderDecoder header = new MessageHeaderDecoder();
     private final NegotiationResponse501Decoder negotiationResponse = new NegotiationResponse501Decoder();

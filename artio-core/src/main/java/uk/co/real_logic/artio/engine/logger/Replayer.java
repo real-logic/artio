@@ -37,8 +37,8 @@ import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -97,8 +97,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     // ILink specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
-    private final Lazy<AbstractILink3Parser> iLink3Parser;
-    private final Lazy<AbstractILink3Proxy> iLink3Proxy;
+    private final Lazy<AbstractBinaryParser> iLink3Parser;
+    private final Lazy<AbstractBinaryProxy> iLink3Proxy;
     private final Lazy<AbstractILink3Offsets> iLink3Offsets;
     private final LongHashSet iLinkConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
@@ -179,8 +179,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             gapFillMessageTypes.add(packMessageType(messageTypeAsString)));
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
-        iLink3Parser = new Lazy<>(() -> AbstractILink3Parser.make(null, errorHandler));
-        iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, clock));
+        iLink3Parser = new Lazy<>(() -> AbstractBinaryParser.make(null, errorHandler));
+        iLink3Proxy = new Lazy<>(() -> AbstractBinaryProxy.make(publication, errorHandler, clock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
 
         nextTimestampMessageInNs = clock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
@@ -368,11 +368,11 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 beginSeqNo,
                 endSeqNo);
 
-            final ILinkReplayerSession session = new ILinkReplayerSession(
+            final BinaryReplayerSession session = new BinaryReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
-                iLink3RetransmitHandler, clock);
+                iLink3RetransmitHandler);
 
             session.query();
 

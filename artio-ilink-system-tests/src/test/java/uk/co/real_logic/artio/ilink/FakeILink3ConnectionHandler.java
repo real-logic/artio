@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.OrderMassActionReport562Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
-import uk.co.real_logic.artio.library.ILink3Connection;
+import uk.co.real_logic.artio.library.BinaryConnection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -49,7 +49,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onBusinessMessage(
-        final ILink3Connection connection,
+        final BinaryConnection connection,
         final int templateId,
         final DirectBuffer buffer,
         final int offset,
@@ -68,7 +68,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onNotApplied(
-        final ILink3Connection connection,
+        final BinaryConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
@@ -78,7 +78,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onRetransmitReject(
-        final ILink3Connection connection,
+        final BinaryConnection connection,
         final String reason,
         final long lastUuid,
         final long requestTimestamp,
@@ -86,20 +86,20 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     {
     }
 
-    public void onRetransmitTimeout(final ILink3Connection connection)
+    public void onRetransmitTimeout(final BinaryConnection connection)
     {
     }
 
-    public void onSequence(final ILink3Connection connection, final long uuid, final long nextSeqNo)
+    public void onSequence(final BinaryConnection connection, final long uuid, final long nextSeqNo)
     {
     }
 
-    public void onError(final ILink3Connection connection, final Exception ex)
+    public void onError(final BinaryConnection connection, final Exception ex)
     {
         exceptions.add(ex);
     }
 
-    public void onDisconnect(final ILink3Connection connection, final DisconnectReason reason)
+    public void onDisconnect(final BinaryConnection connection, final DisconnectReason reason)
     {
         this.disconnectReason = reason;
     }

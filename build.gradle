@@ -352,10 +352,9 @@ project(':artio-ilink3-codecs') {
         from sourceSets.generated.java
     }
 
-    // TODO: re-enable this once https://github.com/real-logic/simple-binary-encoding/issues/826 is resolved
-    /*javadoc {
+    javadoc {
         source += sourceSets.generated.java
-    }*/
+    }
 
     jar {
         from sourceSets.generated.output
@@ -378,6 +377,82 @@ project(':artio-ilink3-codecs') {
 
     signing {
         sign publishing.publications.artioILink3Codecs
+    }
+}
+
+project(':artio-binary-entrypoint-codecs') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    configurations {
+        codecGeneration
+    }
+
+    dependencies {
+        api "org.agrona:agrona:${agronaVersion}"
+        codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
+        api files('build/classes/java/generated')
+        testImplementation files('build/classes/java/generated')
+    }
+
+    def outputClasses = 'out/production/classes'
+    def sbePath = 'src/main/resources/uk/co/real_logic/artio/entrypoint/binary_entrypoint.xml'
+    def generatedDir = file("${buildDir}/generated-src")
+    sourceSets {
+        generated {
+            java.srcDir generatedDir
+            compileClasspath += configurations.codecGeneration
+        }
+    }
+
+    compileJava.dependsOn 'compileGeneratedJava'
+    compileGeneratedJava.dependsOn 'generateMessages', 'copySbeIr'
+
+    task generateMessages(type: JavaExec) {
+        main = 'uk.co.real_logic.sbe.SbeTool'
+        classpath = configurations.codecGeneration
+        systemProperties(
+                'sbe.output.dir': generatedDir,
+                'sbe.target.language': 'Java',
+                'sbe.java.generate.interfaces': 'true',
+                'sbe.generate.ir': 'true')
+        args = [ sbePath ]
+    }
+
+    task copySbeIr (type: Copy) {
+        dependsOn 'generateMessages'
+        from generatedDir.absolutePath + "/binary_entrypoint.sbeir"
+        into outputClasses + '/b3/entrypoint/fixp/sbe/'
+    }
+
+    sourcesJar {
+        from sourceSets.generated.java
+    }
+
+    javadoc {
+        source += sourceSets.generated.java
+    }
+
+    jar {
+        from sourceSets.generated.output
+
+        from(outputClasses) {
+            include '/b3/entrypoint/fixp/sbe/binary_entrypoint.sbeir'
+        }
+    }
+
+    checkstyleGenerated.enabled = false
+
+    publishing {
+        publications {
+            artioBinaryEntrypointCodecs(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioBinaryEntrypointCodecs
     }
 }
 

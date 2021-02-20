@@ -21,7 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
 import uk.co.real_logic.artio.messages.ILinkConnectDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -29,8 +29,8 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 class ILinkSequenceNumberExtractor
@@ -44,7 +44,7 @@ class ILinkSequenceNumberExtractor
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
     private AbstractILink3Offsets offsets;
-    private AbstractILink3Parser parser;
+    private AbstractBinaryParser parser;
     private boolean attemptedILinkInit = false;
 
     ILinkSequenceNumberExtractor(
@@ -109,7 +109,7 @@ class ILinkSequenceNumberExtractor
         {
             attemptedILinkInit = true;
 
-            parser = AbstractILink3Parser.make(null, errorHandler);
+            parser = AbstractBinaryParser.make(null, errorHandler);
             offsets = AbstractILink3Offsets.make(errorHandler);
 
             if (parser == null || offsets == null)

@@ -22,7 +22,7 @@ import org.agrona.MutableDirectBuffer;
 import java.lang.reflect.InvocationTargetException;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 
 public abstract class AbstractILink3Offsets
 {

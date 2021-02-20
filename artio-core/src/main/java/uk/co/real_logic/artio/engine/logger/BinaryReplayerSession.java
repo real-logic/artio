@@ -21,32 +21,34 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
-import uk.co.real_logic.artio.ilink.AbstractILink3Proxy;
+import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Parser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 
-// In ILink cases the UUID is used as a sessionId
-public class ILinkReplayerSession extends ReplayerSession
+/**
+ * In ILink cases the UUID is used as a sessionId.
+ *
+ * Supports CME's ILink3 and B3's Binary Entrypoint
+ */
+public class BinaryReplayerSession extends ReplayerSession
 {
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
     private final ILinkMessageEncoder iLinkMessageEncoder;
-    private final AbstractILink3Parser iLink3Parser;
-    private final AbstractILink3Proxy iLink3Proxy;
+    private final AbstractBinaryParser binaryParser;
+    private final AbstractBinaryProxy binaryProxy;
     private final AbstractILink3Offsets iLink3Offsets;
     private final ILink3RetransmitHandler iLink3RetransmitHandler;
-    private final EpochNanoClock epochNanoClock;
 
     private boolean mustSendSequenceMessage = false;
 
@@ -58,7 +60,7 @@ public class ILinkReplayerSession extends ReplayerSession
 
     private State state;
 
-    public ILinkReplayerSession(
+    public BinaryReplayerSession(
         final long connectionId,
         final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
@@ -71,29 +73,27 @@ public class ILinkReplayerSession extends ReplayerSession
         final Replayer replayer,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ILinkMessageEncoder iLinkMessageEncoder,
-        final AbstractILink3Parser iLink3Parser,
-        final AbstractILink3Proxy iLink3Proxy,
+        final AbstractBinaryParser binaryParser,
+        final AbstractBinaryProxy binaryProxy,
         final AbstractILink3Offsets iLink3Offsets,
-        final ILink3RetransmitHandler iLink3RetransmitHandler,
-        final EpochNanoClock epochNanoClock)
+        final ILink3RetransmitHandler iLink3RetransmitHandler)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
 
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.iLinkMessageEncoder = iLinkMessageEncoder;
-        this.iLink3Parser = iLink3Parser;
-        this.iLink3Proxy = iLink3Proxy;
+        this.binaryParser = binaryParser;
+        this.binaryProxy = binaryProxy;
         this.iLink3Offsets = iLink3Offsets;
         this.iLink3RetransmitHandler = iLink3RetransmitHandler;
-        this.epochNanoClock = epochNanoClock;
 
         state = State.REPLAYING;
     }
 
     MessageTracker messageTracker()
     {
-        return new ILink3MessageTracker(this);
+        return new BinaryMessageTracker(this);
     }
 
     public boolean attemptReplay()
@@ -139,9 +139,9 @@ public class ILinkReplayerSession extends ReplayerSession
         final int encoderOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
             ILinkMessageDecoder.BLOCK_LENGTH;
-        final int templateId = iLink3Parser.templateId(buffer, headerOffset);
-        final int blockLength = iLink3Parser.blockLength(buffer, headerOffset);
-        final int version = iLink3Parser.version(buffer, headerOffset);
+        final int templateId = binaryParser.templateId(buffer, headerOffset);
+        final int blockLength = binaryParser.blockLength(buffer, headerOffset);
+        final int version = binaryParser.version(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
 
         iLink3RetransmitHandler.onReplayedBusinessMessage(
@@ -186,8 +186,8 @@ public class ILinkReplayerSession extends ReplayerSession
 
     private boolean sendSequence(final int nextSentSequenceNumber)
     {
-        iLink3Proxy.connectionId(connectionId);
-        return !Pressure.isBackPressured(iLink3Proxy.sendSequence(sessionId, nextSentSequenceNumber));
+        binaryProxy.connectionId(connectionId);
+        return !Pressure.isBackPressured(binaryProxy.sendSequence(sessionId, nextSentSequenceNumber));
     }
 
     public void close()

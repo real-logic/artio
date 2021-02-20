@@ -21,15 +21,15 @@ import org.agrona.concurrent.EpochNanoClock;
 
 import java.lang.reflect.InvocationTargetException;
 
-public abstract class AbstractILink3Proxy
+public abstract class AbstractBinaryProxy
 {
-    public static AbstractILink3Proxy make(
+    public static AbstractBinaryProxy make(
         final ExclusivePublication publication, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy)cls.getConstructors()[0].newInstance(
+            return (AbstractBinaryProxy)cls.getConstructors()[0].newInstance(
                 0, publication, null, epochNanoClock);
         }
         catch (final ClassNotFoundException | InstantiationException |

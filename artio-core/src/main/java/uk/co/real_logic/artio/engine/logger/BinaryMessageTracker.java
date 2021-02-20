@@ -24,9 +24,9 @@ import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class ILink3MessageTracker extends MessageTracker
+public class BinaryMessageTracker extends MessageTracker
 {
-    public ILink3MessageTracker(final ControlledFragmentHandler messageHandler)
+    public BinaryMessageTracker(final ControlledFragmentHandler messageHandler)
     {
         super(LogTag.REPLAY, messageHandler);
     }

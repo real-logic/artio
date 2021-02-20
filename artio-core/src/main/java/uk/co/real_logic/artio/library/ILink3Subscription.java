@@ -16,15 +16,15 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 class ILink3Subscription
 {
-    private final AbstractILink3Parser parser;
+    private final AbstractBinaryParser parser;
     private final ILink3Connection session;
 
-    ILink3Subscription(final AbstractILink3Parser parser, final ILink3Connection session)
+    ILink3Subscription(final AbstractBinaryParser parser, final ILink3Connection session)
     {
         this.parser = parser;
         this.session = session;

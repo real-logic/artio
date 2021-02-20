@@ -37,7 +37,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -1371,7 +1371,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final ILink3Subscription subscription = new ILink3Subscription(
-                    AbstractILink3Parser.make(connection, THROW_ERRORS), connection);
+                    AbstractBinaryParser.make(connection, THROW_ERRORS), connection);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Connections = ArrayUtil.add(iLink3Connections, connection);
             }
