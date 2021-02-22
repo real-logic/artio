@@ -15,17 +15,31 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import org.agrona.DirectBuffer;
+
 /**
- * A callback that can be implemented to inspect the messages that get retransmitted on an Ilink3 connection.
+ * A callback that can be implemented to inspect the messages that get retransmitted on a binary FIXP connection.
  *
  * This callback is called for every message that needs to be replayed, even those that are replaced with
  * a sequence message. The handler is invoked on the Replay Agent.
- *
- * Details of business messages can be found in the
- * <a href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/iLink+3+Application+Layer">CME
- * Documentation</a>. These may also be referred to as application layer messages.
  */
 @FunctionalInterface
-public interface ILink3RetransmitHandler extends BinaryFixPRetransmitHandler
+public interface BinaryFixPRetransmitHandler
 {
+
+    /**
+     * Callback for receiving binary FIXP business/application messages.
+     *
+     * @param templateId the templateId of the SBE message that you have received.
+     * @param buffer the buffer containing the message.
+     * @param offset the offset within the buffer at which your message starts.
+     * @param blockLength the blockLength of the received message.
+     * @param version the sbe version of the protocol.
+     */
+    void onReplayedBusinessMessage(
+        int templateId,
+        DirectBuffer buffer,
+        int offset,
+        int blockLength,
+        int version);
 }

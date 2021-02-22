@@ -46,6 +46,7 @@ import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -124,7 +125,7 @@ public class ReplayerTest extends AbstractLogTest
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             new IntHashSet(),
             replayHandler,
-            DEFAULT_ILINK3_RETRANSMIT_HANDLER,
+            DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER,
             senderSequenceNumbers,
             new FakeFixSessionCodecsFactory(),
             DEFAULT_SENDER_MAX_BYTES_IN_BUFFER,
@@ -132,7 +133,8 @@ public class ReplayerTest extends AbstractLogTest
             EpochFractionFormat.MILLISECONDS,
             currentReplayCounter,
             DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
-            clock);
+            clock,
+            SupportedBinaryFixPProtocol.ILINK_3);
     }
 
     private void setReplayedMessages(final int replayedMessages)

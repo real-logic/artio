@@ -16,15 +16,12 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
-
-import java.lang.reflect.InvocationTargetException;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 
-public abstract class AbstractILink3Offsets
+public abstract class AbstractBinaryOffsets
 {
     public static final int MISSING_OFFSET = -1;
 
@@ -34,21 +31,6 @@ public abstract class AbstractILink3Offsets
     static final int MINIMUM_BUSINESS_MSG_TEMPLATE_ID = 514;
     static final int PARTY_DETAILS_LIST_REQUEST_ID = 537;
     static final int TEMPLATE_ID_OFFSET = 2;
-
-    public static AbstractILink3Offsets make(final ErrorHandler errorHandler)
-    {
-        try
-        {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Offsets");
-            return (AbstractILink3Offsets)cls.getConstructor().newInstance();
-        }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
-        {
-            errorHandler.onError(e);
-            return null;
-        }
-    }
 
     // Optimised path for sequence numbers based upon common patterns.
     public static long clientSeqNum(final DirectBuffer buffer, final int sbeHeaderOffset)

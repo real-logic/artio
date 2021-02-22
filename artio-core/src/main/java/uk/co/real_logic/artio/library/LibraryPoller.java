@@ -37,7 +37,8 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.ilink.BinaryFixPProtocol;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -1370,8 +1371,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final ILink3Connection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
+                final BinaryFixPProtocol protocol = SupportedBinaryFixPProtocol.ILINK_3.make(THROW_ERRORS);
                 final ILink3Subscription subscription = new ILink3Subscription(
-                    AbstractBinaryParser.make(connection, THROW_ERRORS), connection);
+                    protocol.makeParser(connection), connection);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
                 iLink3Connections = ArrayUtil.add(iLink3Connections, connection);
             }

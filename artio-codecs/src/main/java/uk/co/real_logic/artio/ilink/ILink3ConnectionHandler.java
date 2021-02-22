@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.library.BinaryConnection;
+import uk.co.real_logic.artio.library.BinaryFixPConnection;
 
 /**
  * This handler should be implemented by anyone using Artio to connect to the iLink3 protocol. Your application code
@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.library.BinaryConnection;
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public interface ILink3ConnectionHandler extends BinaryConnectionHandler
+public interface ILink3ConnectionHandler extends BinaryFixPConnectionHandler
 {
     /**
      * Callback for receiving iLink3 business messages. Details of business messages can be found in the
@@ -42,7 +42,7 @@ public interface ILink3ConnectionHandler extends BinaryConnectionHandler
      */
     @Override
     void onBusinessMessage(
-        BinaryConnection connection,
+        BinaryFixPConnection connection,
         int templateId,
         DirectBuffer buffer,
         int offset,

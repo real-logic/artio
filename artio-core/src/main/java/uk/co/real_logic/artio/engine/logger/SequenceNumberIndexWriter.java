@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.WriteMetaDataResponse;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
@@ -100,7 +101,7 @@ public class SequenceNumberIndexWriter implements Index
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positionWriter;
-    private final ILinkSequenceNumberExtractor iLinkSequenceNumberExtractor;
+    private final BinaryFixPSequenceNumberExtractor binaryFixPSequenceNumberExtractor;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -120,7 +121,7 @@ public class SequenceNumberIndexWriter implements Index
         final long indexFileStateFlushTimeoutInMs,
         final EpochClock clock,
         final String metaDataDir,
-        final Long2LongHashMap connectionIdToILinkUuid)
+        final Long2LongHashMap connectionIdToILinkUuid, final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -130,8 +131,8 @@ public class SequenceNumberIndexWriter implements Index
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
 
-        iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler,
+        binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
+            connectionIdToILinkUuid, errorHandler, supportedBinaryFixPProtocol,
             (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
             // When possRetrans=true we should only update if the number is actually higher as
             // possRetrans=true messages can be interleaved with normal messages /or/ the last message
@@ -307,7 +308,7 @@ public class SequenceNumberIndexWriter implements Index
 
                 default:
                 {
-                    iLinkSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
+                    binaryFixPSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
                     break;
                 }
             }

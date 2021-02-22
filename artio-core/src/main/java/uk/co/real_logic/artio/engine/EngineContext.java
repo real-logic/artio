@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 
@@ -99,6 +100,7 @@ public class EngineContext implements AutoCloseable
         {
             final EpochClock epochClock = new SystemEpochClock();
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
+            final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol = configuration.supportedBinaryFixPProtocol();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
@@ -108,7 +110,8 @@ public class EngineContext implements AutoCloseable
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 configuration.logFileDir(),
-                connectionIdToILinkUuid);
+                connectionIdToILinkUuid,
+                supportedBinaryFixPProtocol);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -118,7 +121,8 @@ public class EngineContext implements AutoCloseable
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 null,
-                connectionIdToILinkUuid);
+                connectionIdToILinkUuid,
+                supportedBinaryFixPProtocol);
 
             newStreams();
             newArchivingAgent();
@@ -176,7 +180,8 @@ public class EngineContext implements AutoCloseable
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId, configuration.replayPositionBufferSize()),
             errorHandler,
             recordingIdLookup,
-            connectionIdToILinkUuid);
+            connectionIdToILinkUuid,
+            configuration.supportedBinaryFixPProtocol());
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -214,7 +219,7 @@ public class EngineContext implements AutoCloseable
             configuration.gapfillOnReplayMessageTypes(),
             configuration.gapfillOnRetransmitILinkTemplateIds(),
             configuration.replayHandler(),
-            configuration.iLink3RetransmitHandler(),
+            configuration.binaryFixPRetransmitHandler(),
             senderSequenceNumbers,
             new FixSessionCodecsFactory(epochFractionFormat),
             configuration.senderMaxBytesInBuffer(),
@@ -222,7 +227,8 @@ public class EngineContext implements AutoCloseable
             epochFractionFormat,
             fixCounters.currentReplayCount(),
             configuration.maxConcurrentSessionReplays(),
-            configuration.epochNanoClock());
+            configuration.epochNanoClock(),
+            configuration.supportedBinaryFixPProtocol());
     }
 
     private void newIndexers()

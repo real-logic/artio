@@ -20,7 +20,7 @@ package uk.co.real_logic.artio.library;
  * This is a FIXP session protocol with SBE encoded binary messages. It is very similar to CME's iLink3 protocol.
  * Unlike FIX it possible to have multiple connections open with the same session id.
  */
-public abstract class BinaryEntrypointConnection extends BinaryConnection
+public abstract class BinaryEntrypointConnection extends BinaryFixPConnection
 {
     // -----------------------------------------------
     // Accessors

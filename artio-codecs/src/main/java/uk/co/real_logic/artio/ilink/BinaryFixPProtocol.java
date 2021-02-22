@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Monotonic Ltd.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,16 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-public abstract class AbstractBinaryProxy
-{
-    public abstract void connectionId(long connectionId);
+import io.aeron.ExclusivePublication;
+import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.library.ILink3Connection;
 
-    public abstract long sendSequence(
-        long uuid, long nextSentSeqNo);
+public abstract class BinaryFixPProtocol
+{
+    public abstract AbstractBinaryParser makeParser(ILink3Connection session);
+
+    public abstract AbstractBinaryProxy makeProxy(
+        ExclusivePublication publication, EpochNanoClock epochNanoClock);
+
+    public abstract AbstractBinaryOffsets makeOffsets();
 }

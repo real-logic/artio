@@ -38,6 +38,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.File;
@@ -420,7 +421,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         final MappedFile indexFile = newIndexFile();
         return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
             DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null,
-            new Long2LongHashMap(UNK_SESSION));
+            new Long2LongHashMap(UNK_SESSION),
+            SupportedBinaryFixPProtocol.ILINK_3);
     }
 
     private MappedFile newIndexFile()

@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.OrderMassActionReport562Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
-import uk.co.real_logic.artio.library.BinaryConnection;
+import uk.co.real_logic.artio.library.BinaryFixPConnection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -49,7 +49,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onBusinessMessage(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
         final int offset,
@@ -68,7 +68,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onNotApplied(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
@@ -78,7 +78,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     }
 
     public void onRetransmitReject(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final String reason,
         final long lastUuid,
         final long requestTimestamp,
@@ -86,20 +86,20 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     {
     }
 
-    public void onRetransmitTimeout(final BinaryConnection connection)
+    public void onRetransmitTimeout(final BinaryFixPConnection connection)
     {
     }
 
-    public void onSequence(final BinaryConnection connection, final long uuid, final long nextSeqNo)
+    public void onSequence(final BinaryFixPConnection connection, final long uuid, final long nextSeqNo)
     {
     }
 
-    public void onError(final BinaryConnection connection, final Exception ex)
+    public void onError(final BinaryFixPConnection connection, final Exception ex)
     {
         exceptions.add(ex);
     }
 
-    public void onDisconnect(final BinaryConnection connection, final DisconnectReason reason)
+    public void onDisconnect(final BinaryFixPConnection connection, final DisconnectReason reason)
     {
         this.disconnectReason = reason;
     }

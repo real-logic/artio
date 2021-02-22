@@ -29,7 +29,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     private boolean retransmitTimedOut = false;
 
     public void onBusinessMessage(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
         final int offset,
@@ -59,7 +59,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     }
 
     public void onNotApplied(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
@@ -67,7 +67,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     }
 
     public void onRetransmitReject(
-        final BinaryConnection connection,
+        final BinaryFixPConnection connection,
         final String reason,
         final long lastUuid,
         final long requestTimestamp,
@@ -80,7 +80,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         return retransmitTimedOut;
     }
 
-    public void onRetransmitTimeout(final BinaryConnection connection)
+    public void onRetransmitTimeout(final BinaryFixPConnection connection)
     {
         retransmitTimedOut = true;
     }
@@ -90,15 +90,15 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         retransmitTimedOut = false;
     }
 
-    public void onSequence(final BinaryConnection connection, final long uuid, final long nextSeqNo)
+    public void onSequence(final BinaryFixPConnection connection, final long uuid, final long nextSeqNo)
     {
     }
 
-    public void onError(final BinaryConnection connection, final Exception ex)
+    public void onError(final BinaryFixPConnection connection, final Exception ex)
     {
     }
 
-    public void onDisconnect(final BinaryConnection connection, final DisconnectReason reason)
+    public void onDisconnect(final BinaryFixPConnection connection, final DisconnectReason reason)
     {
     }
 }

@@ -34,8 +34,8 @@ import java.nio.ByteBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.clientSeqNum;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.clientSeqNum;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class ILink3SenderEndPoint

@@ -25,7 +25,7 @@ import static org.junit.Assert.assertEquals;
 public class ILink3OffsetsTest
 {
 
-    private final AbstractILink3Offsets offsets = new ILink3Offsets();
+    private final AbstractBinaryOffsets offsets = new ILink3Offsets();
 
     @Test
     public void shouldLoadSeqNumOffset()

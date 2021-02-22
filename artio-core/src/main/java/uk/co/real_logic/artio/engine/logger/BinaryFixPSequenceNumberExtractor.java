@@ -20,8 +20,10 @@ import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.ilink.AbstractBinaryOffsets;
 import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.ilink.BinaryFixPProtocol;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.ILinkConnectDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -33,27 +35,30 @@ import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.BOOLEAN_FLAG_TRU
 import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-class ILinkSequenceNumberExtractor
+class BinaryFixPSequenceNumberExtractor
 {
     private final Long2LongHashMap connectionIdToILinkUuid;
     private final ErrorHandler errorHandler;
+    private final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol;
     private final ILinkSequenceNumberHandler handler;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
-    private AbstractILink3Offsets offsets;
+    private AbstractBinaryOffsets offsets;
     private AbstractBinaryParser parser;
     private boolean attemptedILinkInit = false;
 
-    ILinkSequenceNumberExtractor(
+    BinaryFixPSequenceNumberExtractor(
         final Long2LongHashMap connectionIdToILinkUuid,
         final ErrorHandler errorHandler,
+        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol,
         final ILinkSequenceNumberHandler handler)
     {
         this.connectionIdToILinkUuid = connectionIdToILinkUuid;
         this.errorHandler = errorHandler;
+        this.supportedBinaryFixPProtocol = supportedBinaryFixPProtocol;
         this.handler = handler;
     }
 
@@ -109,16 +114,20 @@ class ILinkSequenceNumberExtractor
         {
             attemptedILinkInit = true;
 
-            parser = AbstractBinaryParser.make(null, errorHandler);
-            offsets = AbstractILink3Offsets.make(errorHandler);
-
-            if (parser == null || offsets == null)
+            final BinaryFixPProtocol protocol = supportedBinaryFixPProtocol.make(errorHandler);
+            if (protocol == null)
             {
                 errorHandler.onError(new IllegalStateException(
-                    "Configuration Issue: could not find ILink3Codes on the Engine classpath, despite " +
-                    "ILink3 message requiring processing. Sequence Index update ignored"));
+                    "Configuration Issue: could not setup Binary FIXP protocol on the Engine classpath, despite " +
+                    "Binary FIXP message requiring processing. Sequence Index update ignored. " +
+                    "If you're using iLink3 then you should be the artio-ilink3-codecs and artio-ilink3-impl" +
+                    "dependencies on the classpath. " +
+                    "Binary entrypoint requires a call to EngineConfiguration.acceptBinaryEntryPoint()"));
                 return;
             }
+
+            parser = protocol.makeParser(null);
+            offsets = protocol.makeOffsets();
         }
 
         iLinkMessage.wrap(buffer, offset, actingBlockLength, version);
@@ -131,7 +140,7 @@ class ILinkSequenceNumberExtractor
         final boolean possRetrans = offsets.possRetrans(templateId, buffer, messageOffset) == BOOLEAN_FLAG_TRUE;
 
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
-        if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
+        if (seqNum != AbstractBinaryOffsets.MISSING_OFFSET)
         {
             final long uuid = connectionIdToILinkUuid.get(connectionId);
             if (uuid != UNK_SESSION)

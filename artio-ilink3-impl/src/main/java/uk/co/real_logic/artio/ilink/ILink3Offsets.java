@@ -31,7 +31,7 @@ import java.util.List;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class ILink3Offsets extends AbstractILink3Offsets
+public class ILink3Offsets extends AbstractBinaryOffsets
 {
     private final Int2IntHashMap templateIdToSeqNumOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToUuidOffset = new Int2IntHashMap(MISSING_OFFSET);

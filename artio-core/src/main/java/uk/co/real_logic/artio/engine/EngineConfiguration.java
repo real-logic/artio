@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
@@ -48,6 +49,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
+import static uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol.BINARY_ENTRYPOINT;
+import static uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol.ILINK_3;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
@@ -151,7 +154,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         (buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType) ->
         {
         };
-    public static final ILink3RetransmitHandler DEFAULT_ILINK3_RETRANSMIT_HANDLER =
+    public static final BinaryFixPRetransmitHandler DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER =
         (templateId, buffer, offset, blockLength, version) ->
         {
         };
@@ -231,7 +234,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
-    private ILink3RetransmitHandler iLink3RetransmitHandler = DEFAULT_ILINK3_RETRANSMIT_HANDLER;
+    private BinaryFixPRetransmitHandler binaryFixPRetransmitHandler = DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER;
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
@@ -255,6 +258,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean errorIfDuplicateEngineDetected = true;
     private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM_ID;
     private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
+    private boolean acceptsBinaryEntryPoint = false;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -287,6 +291,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration bindAtStartup(final boolean bindAtStartup)
     {
         this.bindAtStartup = bindAtStartup;
+        return this;
+    }
+
+    /**
+     * Configures the engine to accept binary entrypoint connections. The Engine no longer accepts
+     * regular FIX protocol connections and only accepts this binary protocol.
+     *
+     * @return this
+     */
+    public EngineConfiguration acceptBinaryEntryPoint()
+    {
+        this.acceptsBinaryEntryPoint = true;
         return this;
     }
 
@@ -592,12 +608,29 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Sets a handler that will be invoked when an iLink3 message is replayed.
      *
+     * This configuration option has been deprecated - please use
+     * {@link #binaryFixPRetransmitHandler(BinaryFixPRetransmitHandler)} instead.
+     *
      * @param iLink3RetransmitHandler the replay handler
      * @return this
      */
+    @Deprecated
     public EngineConfiguration iLink3RetransmitHandler(final ILink3RetransmitHandler iLink3RetransmitHandler)
     {
-        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
+        this.binaryFixPRetransmitHandler = iLink3RetransmitHandler;
+        return this;
+    }
+
+    /**
+     * Sets a handler that will be invoked when an iLink3 message is replayed.
+     *
+     * @param binaryFixPRetransmitHandler the replay handler
+     * @return this
+     */
+    public EngineConfiguration binaryFixPRetransmitHandler(
+        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler)
+    {
+        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
         return this;
     }
 
@@ -1008,9 +1041,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayHandler;
     }
 
-    public ILink3RetransmitHandler iLink3RetransmitHandler()
+    public BinaryFixPRetransmitHandler binaryFixPRetransmitHandler()
     {
-        return iLink3RetransmitHandler;
+        return binaryFixPRetransmitHandler;
     }
 
     public InitialAcceptedSessionOwner initialAcceptedSessionOwner()
@@ -1071,6 +1104,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean errorIfDuplicateEngineDetected()
     {
         return errorIfDuplicateEngineDetected;
+    }
+
+    public boolean acceptsBinaryEntryPoint()
+    {
+        return acceptsBinaryEntryPoint;
+    }
+
+    public SupportedBinaryFixPProtocol supportedBinaryFixPProtocol()
+    {
+        return acceptsBinaryEntryPoint ? BINARY_ENTRYPOINT : ILINK_3;
     }
 
     /**

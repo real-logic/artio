@@ -456,6 +456,29 @@ project(':artio-binary-entrypoint-codecs') {
     }
 }
 
+project(':artio-binary-entrypoint-impl') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        api project(':artio-binary-entrypoint-codecs')
+        api project(':artio-codecs')
+        api project(':artio-core')
+    }
+
+    publishing {
+        publications {
+            artioBinaryEntrypointImpl(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioBinaryEntrypointImpl
+    }
+}
+
 project(':artio-ilink3-impl') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
@@ -485,7 +508,6 @@ project(':artio-ilink3-impl') {
 }
 
 project(':artio-session-codecs') {
-
     configurations {
         codecGeneration
     }
@@ -551,7 +573,6 @@ project(':artio-session-codecs') {
 }
 
 project(':artio-session-fixt-codecs') {
-
     configurations {
         codecGeneration
     }
@@ -740,6 +761,40 @@ project(':artio-ilink-system-tests') {
 
     signing {
         sign publishing.publications.artioILink3SystemTests
+    }
+}
+
+project(':artio-binary-entrypoint-system-tests') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        testImplementation project(path: ':artio-core', configuration: 'tests')
+        testImplementation project(path: ':artio-codecs', configuration: 'tests')
+        testImplementation project(path: ':artio-system-tests', configuration: 'tests')
+
+        implementation project(':artio-core')
+        implementation project(':artio-binary-entrypoint-codecs')
+        implementation project(':artio-binary-entrypoint-impl')
+    }
+
+    test {
+        systemProperties(
+                'aeron.dir.warn.if.exists': 'false',
+                'aeron.use.windows.high.res.timer': 'true',
+                'aeron.term.buffer.sparse.file': 'true')
+    }
+
+    publishing {
+        publications {
+            artioBinaryEntrypointSystemTests(MavenPublication) {
+                from components.java
+                pom(projectPom)
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.artioBinaryEntrypointSystemTests
     }
 }
 

@@ -19,19 +19,19 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 /**
- * Represents a Session Connection of the Binary protocols based upon FIXP
+ * Represents a Connection of a Binary protocol based upon FIXP - for example iLink3 or Binary Entrypoint
  * This is a FIXP session protocol with SBE encoded binary messages. Unlike FIX it possible to have multiple connections
  * open with the same session id.
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public abstract class BinaryConnection
+public abstract class BinaryFixPConnection
 {
     public static final long NOT_AWAITING_RETRANSMIT = -1L;
 
     /**
      * Defines the internal state of the Session, this can be accessed using
-     * the {@link BinaryConnection#state()} method.
+     * the {@link BinaryFixPConnection#state()} method.
      */
     public enum State
     {

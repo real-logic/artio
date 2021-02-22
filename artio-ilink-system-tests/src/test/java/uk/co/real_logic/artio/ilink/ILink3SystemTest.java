@@ -116,7 +116,7 @@ public class ILink3SystemTest
             .errorHandlerFactory(errorBuffer -> errorHandler)
             .monitoringAgentFactory(MonitoringAgentFactory.none())
             .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
-            .iLink3RetransmitHandler(retransmitHandler)
+            .binaryFixPRetransmitHandler(retransmitHandler)
             .messageTimingHandler(messageTimingCaptor);
 
         engine = FixEngine.launch(engineConfig);

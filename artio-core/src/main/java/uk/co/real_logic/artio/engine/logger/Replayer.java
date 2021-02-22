@@ -30,15 +30,10 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
-import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
-import uk.co.real_logic.artio.engine.ReplayHandler;
-import uk.co.real_logic.artio.engine.ReplayerCommandQueue;
-import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
-import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
+import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -95,11 +90,12 @@ public class Replayer implements Agent, ControlledFragmentHandler
         "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
         "beginGapFillSeqNum=%s, newSequenceNumber=%s");
 
-    // ILink specific state
+    // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
-    private final Lazy<AbstractBinaryParser> iLink3Parser;
-    private final Lazy<AbstractBinaryProxy> iLink3Proxy;
-    private final Lazy<AbstractILink3Offsets> iLink3Offsets;
+    private final Lazy<BinaryFixPProtocol> binaryFixPProtocol;
+    private final Lazy<AbstractBinaryParser> binaryFixPParser;
+    private final Lazy<AbstractBinaryProxy> binaryFixPProxy;
+    private final Lazy<AbstractBinaryOffsets> abstractBinaryFixPOffsets;
     private final LongHashSet iLinkConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final ILinkMessageEncoder iLinkMessageEncoder = new ILinkMessageEncoder();
@@ -129,7 +125,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final Subscription inboundSubscription;
     private final String agentNamePrefix;
     private final ReplayHandler replayHandler;
-    private final ILink3RetransmitHandler iLink3RetransmitHandler;
+    private final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final UtcTimestampEncoder utcTimestampEncoder;
 
@@ -145,7 +141,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final Set<String> gapfillOnReplayMessageTypes,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ReplayHandler replayHandler,
-        final ILink3RetransmitHandler iLink3RetransmitHandler,
+        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
         final int maxBytesInBuffer,
@@ -153,7 +149,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final EpochFractionFormat epochFractionFormat,
         final AtomicCounter currentReplayCount,
         final int maxConcurrentSessionReplays,
-        final EpochNanoClock clock)
+        final EpochNanoClock clock,
+        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -165,7 +162,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.agentNamePrefix = agentNamePrefix;
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
-        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
+        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.maxBytesInBuffer = maxBytesInBuffer;
@@ -179,13 +176,13 @@ public class Replayer implements Agent, ControlledFragmentHandler
             gapFillMessageTypes.add(packMessageType(messageTypeAsString)));
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
-        iLink3Parser = new Lazy<>(() -> AbstractBinaryParser.make(null, errorHandler));
-        iLink3Proxy = new Lazy<>(() -> AbstractBinaryProxy.make(publication, errorHandler, clock));
-        iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
+        binaryFixPProtocol = new Lazy<>(() -> supportedBinaryFixPProtocol.make(errorHandler));
+        binaryFixPParser = new Lazy<>(() -> binaryFixPProtocol.get().makeParser(null));
+        binaryFixPProxy = new Lazy<>(() -> binaryFixPProtocol.get().makeProxy(publication, clock));
+        abstractBinaryFixPOffsets = new Lazy<>(() -> binaryFixPProtocol.get().makeOffsets());
 
         nextTimestampMessageInNs = clock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
-        replayerTimestampEncoder
-            .wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
+        replayerTimestampEncoder.wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
     }
 
     public Action onFragment(
@@ -371,8 +368,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             final BinaryReplayerSession session = new BinaryReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
-                iLinkMessageEncoder, iLink3Parser.get(), iLink3Proxy.get(), iLink3Offsets.get(),
-                iLink3RetransmitHandler);
+                iLinkMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
+                binaryFixPRetransmitHandler);
 
             session.query();
 

@@ -16,30 +16,11 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import uk.co.real_logic.artio.library.ILink3Connection;
-
-import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractBinaryParser
 {
     public static final int ILINK_MESSAGE_HEADER_LENGTH = 8;
     public static final int BOOLEAN_FLAG_TRUE = 1;
-
-    public static AbstractBinaryParser make(final ILink3Connection session, final ErrorHandler errorHandler)
-    {
-        try
-        {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Parser");
-            return (AbstractBinaryParser)cls.getConstructor(ILink3Connection.class).newInstance(session);
-        }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
-        {
-            errorHandler.onError(e);
-            return null;
-        }
-    }
 
     public abstract long onMessage(DirectBuffer buffer, int offset);
 

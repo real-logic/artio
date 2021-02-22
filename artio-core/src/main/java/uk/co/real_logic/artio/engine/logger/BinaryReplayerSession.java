@@ -24,8 +24,8 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
-import uk.co.real_logic.artio.ilink.AbstractILink3Offsets;
+import uk.co.real_logic.artio.engine.BinaryFixPRetransmitHandler;
+import uk.co.real_logic.artio.ilink.AbstractBinaryOffsets;
 import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
 import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
 import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
@@ -47,8 +47,8 @@ public class BinaryReplayerSession extends ReplayerSession
     private final ILinkMessageEncoder iLinkMessageEncoder;
     private final AbstractBinaryParser binaryParser;
     private final AbstractBinaryProxy binaryProxy;
-    private final AbstractILink3Offsets iLink3Offsets;
-    private final ILink3RetransmitHandler iLink3RetransmitHandler;
+    private final AbstractBinaryOffsets iLink3Offsets;
+    private final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler;
 
     private boolean mustSendSequenceMessage = false;
 
@@ -75,8 +75,8 @@ public class BinaryReplayerSession extends ReplayerSession
         final ILinkMessageEncoder iLinkMessageEncoder,
         final AbstractBinaryParser binaryParser,
         final AbstractBinaryProxy binaryProxy,
-        final AbstractILink3Offsets iLink3Offsets,
-        final ILink3RetransmitHandler iLink3RetransmitHandler)
+        final AbstractBinaryOffsets iLink3Offsets,
+        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
@@ -86,7 +86,7 @@ public class BinaryReplayerSession extends ReplayerSession
         this.binaryParser = binaryParser;
         this.binaryProxy = binaryProxy;
         this.iLink3Offsets = iLink3Offsets;
-        this.iLink3RetransmitHandler = iLink3RetransmitHandler;
+        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
 
         state = State.REPLAYING;
     }
@@ -144,7 +144,7 @@ public class BinaryReplayerSession extends ReplayerSession
         final int version = binaryParser.version(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
 
-        iLink3RetransmitHandler.onReplayedBusinessMessage(
+        binaryFixPRetransmitHandler.onReplayedBusinessMessage(
             templateId,
             buffer,
             messageOffset,
@@ -161,7 +161,7 @@ public class BinaryReplayerSession extends ReplayerSession
             if (mustSendSequenceMessage)
             {
                 final int seqNum = iLink3Offsets.seqNum(templateId, buffer, messageOffset);
-                if (seqNum != AbstractILink3Offsets.MISSING_OFFSET)
+                if (seqNum != AbstractBinaryOffsets.MISSING_OFFSET)
                 {
                     if (sendSequence(seqNum))
                     {

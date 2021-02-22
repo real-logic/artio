@@ -25,6 +25,7 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
@@ -67,7 +68,7 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
     private final SequenceNumberExtractor sequenceNumberExtractor;
 
-    private final ILinkSequenceNumberExtractor iLinkSequenceNumberExtractor;
+    private final BinaryFixPSequenceNumberExtractor binaryFixPSequenceNumberExtractor;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
@@ -89,7 +90,8 @@ public class ReplayIndex implements Index
         final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler,
         final RecordingIdLookup recordingIdLookup,
-        final Long2LongHashMap connectionIdToILinkUuid)
+        final Long2LongHashMap connectionIdToILinkUuid,
+        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -99,8 +101,8 @@ public class ReplayIndex implements Index
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
-        iLinkSequenceNumberExtractor = new ILinkSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler,
+        binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
+            connectionIdToILinkUuid, errorHandler, supportedBinaryFixPProtocol,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
                 sessionIndex(uuid)
                 .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID));
@@ -195,7 +197,7 @@ public class ReplayIndex implements Index
             }
             else if (templateId == ILinkMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
             {
-                iLinkSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
+                binaryFixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
             }
             else if (templateId == ResetSequenceNumberDecoder.TEMPLATE_ID)
             {

@@ -36,6 +36,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -106,7 +107,8 @@ public class ReplayIndexTest extends AbstractLogTest
             replayPositionBuffer,
             errorHandler,
             recordingIdLookup,
-            new Long2LongHashMap(Session.UNKNOWN));
+            new Long2LongHashMap(Session.UNKNOWN),
+            SupportedBinaryFixPProtocol.ILINK_3);
     }
 
     private Aeron aeron()

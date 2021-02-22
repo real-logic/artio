@@ -47,7 +47,7 @@ import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
-import static uk.co.real_logic.artio.ilink.AbstractILink3Offsets.*;
+import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.*;
 import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
