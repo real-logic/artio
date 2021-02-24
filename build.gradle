@@ -34,7 +34,7 @@ plugins {
 def checkstyleVersion = '8.39'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13.2'
-def mockitoVersion = '3.7.7'
+def mockitoVersion = '3.8.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.27'
 
@@ -728,6 +728,6 @@ tasks.withType(PublishToMavenRepository) {
 }
 
 wrapper {
-    gradleVersion = '6.8.2'
+    gradleVersion = '6.8.3'
     distributionType = 'ALL'
 }
