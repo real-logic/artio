@@ -61,7 +61,8 @@ public class ReportFactory
         executionReport.orderID(encodeBuffer, encodedLength)
             .execID(encodeBuffer, encodedLength);
 
-        executionReport.execType(ExecType.FILL)
+        executionReport
+            .execType(ExecType.FILL)
             .ordStatus(OrdStatus.FILLED)
             .side(side);
 

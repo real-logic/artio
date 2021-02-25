@@ -977,10 +977,16 @@ public class Session
         final boolean possDup,
         final long position)
     {
-        if (state() == SessionState.CONNECTED)
+        final SessionState state = state();
+        if (state == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
             return Pressure.apply(requestDisconnect(FIRST_MESSAGE_NOT_LOGON));
+        }
+        else if (state == DISCONNECTED || state == DISABLED)
+        {
+            // Ignore any messages sent by the counter-party after a logout has occurred.
+            return CONTINUE;
         }
         else
         {
