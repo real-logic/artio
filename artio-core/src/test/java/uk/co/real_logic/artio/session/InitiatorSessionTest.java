@@ -152,5 +152,4 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         assertTrue(session().lastLogonTimeInNs() != UNKNOWN_TIME);
     }
-
 }

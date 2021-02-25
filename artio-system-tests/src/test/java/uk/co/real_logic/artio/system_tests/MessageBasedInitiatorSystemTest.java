@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -243,7 +244,6 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
-
     @Test
     public void shouldBeNotifiedOnDisconnect() throws IOException
     {
@@ -398,6 +398,58 @@ public class MessageBasedInitiatorSystemTest
             });
             assertResendMessagesInOrder();
         }
+    }
+
+    @Test
+    public void shouldIgnoreMessagesAfterALowSequenceNumberLogout() throws IOException
+    {
+        final Session session;
+
+        // Boost the received sequence number to 4
+        try (FixConnection connection = acceptPersistentConnection(false, false))
+        {
+            sendLogonToAcceptor(connection);
+            connection.logon(false);
+
+            session = completeLogon();
+            OrderFactory.sendOrder(session);
+
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readOrder();
+                connection.sendExecutionReport(2, false);
+                connection.sendExecutionReport(3, false);
+
+                connection.msgSeqNum(4).logoutAndAwaitReply();
+            });
+            assertEquals(4, session.lastReceivedMsgSeqNum());
+            assertEquals(3, session.lastSentMsgSeqNum());
+        }
+
+        testSystem.await("Failed to disconnect", () -> session.state() == SessionState.DISCONNECTED);
+
+        // Low sequence number logon followed by a resend request
+        try (FixConnection connection = acceptPersistentConnection(false, false))
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.readLogon();
+                connection.logon(false);
+                connection.sendResendRequest(2, 2);
+                assertEquals(
+                    "MsgSeqNum too low, expecting 5 but received 1",
+                    connection.readLogout().textAsString());
+                assertFalse(connection.isConnected());
+            });
+
+            // logon=4,logout=5, no more messages sent after logout
+            assertEquals(5, session.lastSentMsgSeqNum());
+        }
+    }
+
+    private Session completeLogon()
+    {
+        return testSystem.awaitCompletedReply(sessionReply).resultIfPresent();
     }
 
     private void assertResendMessagesInOrder()

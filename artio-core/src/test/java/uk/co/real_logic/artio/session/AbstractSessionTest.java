@@ -148,6 +148,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldDisconnectIfMissingSequenceNumber()
     {
+        readyForLogon();
         onLogon(1);
 
         final int nextMsgSeqNum = nextMsgSeqNum();
@@ -161,6 +162,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldDisconnectIfMissingSequenceNumberWhenBackPressured()
     {
+        readyForLogon();
         onLogon(1);
 
         final int nextMsgSeqNum = nextMsgSeqNum();
@@ -206,10 +208,13 @@ public abstract class AbstractSessionTest
         final long sendingTime = sendingTime();
         final long origSendingTime = sendingTime + 10;
 
+        readyForLogon();
         onLogon(1);
 
         onMessage(2);
 
+        // Ensure sequence numbers are consistent
+        session().lastSentMsgSeqNum(1);
         session().onMessage(
             2, MSG_TYPE_CHARS, sendingTime, origSendingTime, true, true, POSITION);
 
@@ -220,10 +225,13 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldValidateOriginalSendingTimeExistsIfPossDupFlagIsSet()
     {
+        readyForLogon();
         onLogon(1);
 
         onMessage(2);
 
+        // Ensure sequence numbers are consistent
+        session().lastSentMsgSeqNum(1);
         onMessage(2, true, UNKNOWN);
 
         verify(sessionProxy).sendReject(
