@@ -23,7 +23,7 @@ import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class PrintingILinkMessageConsumer implements ILinkMessageConsumer
 {

@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.fixp;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 
 public abstract class AbstractBinaryOffsets
 {
     public static final int MISSING_OFFSET = -1;
 
-    static final int NORMAL_CLIENT_MSG_SEQ_NUM_OFFSET = 17;
-    static final int PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET = 16;
-    static final int EXCHANGE_MSG_SEQ_NUM_OFFSET = 0;
-    static final int MINIMUM_BUSINESS_MSG_TEMPLATE_ID = 514;
-    static final int PARTY_DETAILS_LIST_REQUEST_ID = 537;
-    static final int TEMPLATE_ID_OFFSET = 2;
+    public static final int NORMAL_CLIENT_MSG_SEQ_NUM_OFFSET = 17;
+    public static final int PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET = 16;
+    public static final int EXCHANGE_MSG_SEQ_NUM_OFFSET = 0;
+    public static final int MINIMUM_BUSINESS_MSG_TEMPLATE_ID = 514;
+    public static final int PARTY_DETAILS_LIST_REQUEST_ID = 537;
+    public static final int TEMPLATE_ID_OFFSET = 2;
 
     // Optimised path for sequence numbers based upon common patterns.
     public static long clientSeqNum(final DirectBuffer buffer, final int sbeHeaderOffset)

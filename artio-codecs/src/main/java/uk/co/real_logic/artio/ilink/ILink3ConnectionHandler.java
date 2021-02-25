@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.fixp.BinaryFixPConnectionHandler;
 import uk.co.real_logic.artio.library.BinaryFixPConnection;
 
 /**

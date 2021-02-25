@@ -19,13 +19,15 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.InternalILink3Connection;
 
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class ILink3Parser extends AbstractBinaryParser
 {

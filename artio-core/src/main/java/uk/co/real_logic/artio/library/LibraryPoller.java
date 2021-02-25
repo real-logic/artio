@@ -37,8 +37,8 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.ilink.BinaryFixPProtocol;
-import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -108,15 +108,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private static final int ENGINE_DISCONNECT = 5;
 
-    private static final ILink3Connection[] EMPTY_ILINK_CONNECTIONS = new ILink3Connection[0];
+    private static final InternalBinaryFixPConnection[] EMPTY_FIXP_CONNECTIONS = new InternalBinaryFixPConnection[0];
     private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
 
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private ILink3Connection[] iLink3Connections = EMPTY_ILINK_CONNECTIONS;
-    private final List<ILink3Connection> unmodifiableILink3Connections =
-        new UnmodifiableWrapper<>(() -> iLink3Connections);
+    private InternalBinaryFixPConnection[] binaryFixPConnections = EMPTY_FIXP_CONNECTIONS;
+    private final List<InternalBinaryFixPConnection> unmodifiableBinaryFixPConnections =
+        new UnmodifiableWrapper<>(() -> binaryFixPConnections);
 
     private InternalSession[] sessions = EMPTY_SESSIONS;
     private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
@@ -124,7 +124,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final List<Session> unmodifiablePendingInitiatorSessions =
         new UnmodifiableWrapper<>(() -> pendingInitiatorSessions);
 
-    private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<BinaryFixPSubscription> connectionIdToFixPSubscription =
+        new Long2ObjectHashMap<>();
 
     private static final ErrorHandler THROW_ERRORS = LangUtil::rethrowUnchecked;
 
@@ -191,7 +192,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
-    private Iterator<ILink3Subscription> iLink3LogoutIterator = null;
+    private Iterator<BinaryFixPSubscription> iLink3LogoutIterator = null;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -754,10 +755,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         final long timeInMs = System.currentTimeMillis();
-        final ILink3Connection[] iLink3Connections = this.iLink3Connections;
-        for (int i = 0, size = iLink3Connections.length; i < size; i++)
+        final InternalBinaryFixPConnection[] binaryFixPConnections = this.binaryFixPConnections;
+        for (int i = 0, size = binaryFixPConnections.length; i < size; i++)
         {
-            final ILink3Connection connection = iLink3Connections[i];
+            final InternalBinaryFixPConnection connection = binaryFixPConnections[i];
             total += connection.poll(timeInMs);
         }
 
@@ -1231,7 +1232,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onILink3Disconnect(final long connectionId, final DisconnectReason reason)
     {
-        final ILink3Subscription subscription = connectionIdToILink3Subscription.remove(connectionId);
+        final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.remove(connectionId);
         if (subscription != null)
         {
             subscription.onDisconnect(reason);
@@ -1241,7 +1242,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
-        final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connectionId);
+        final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
         if (subscription != null)
         {
             return Pressure.apply(subscription.onMessage(buffer, offset));
@@ -1368,21 +1369,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 reply.onTcpConnected();
 
                 final ILink3ConnectionConfiguration configuration = reply.configuration();
-                final ILink3Connection connection = makeILink3Connection(
+                final InternalBinaryFixPConnection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final BinaryFixPProtocol protocol = SupportedBinaryFixPProtocol.ILINK_3.make(THROW_ERRORS);
-                final ILink3Subscription subscription = new ILink3Subscription(
-                    protocol.makeParser(connection), connection);
-                connectionIdToILink3Subscription.put(connectionId, subscription);
-                iLink3Connections = ArrayUtil.add(iLink3Connections, connection);
+                final BinaryFixPSubscription subscription = new BinaryFixPSubscription(
+                    protocol.makeParser((ILink3Connection)connection), connection);
+                connectionIdToFixPSubscription.put(connectionId, subscription);
+                binaryFixPConnections = ArrayUtil.add(binaryFixPConnections, connection);
             }
         }
 
         return CONTINUE;
     }
 
-    private ILink3Connection makeILink3Connection(
+    private InternalBinaryFixPConnection makeILink3Connection(
         final ILink3ConnectionConfiguration configuration,
         final long connectionId,
         final InitiateILink3ConnectionReply initiateReply,
@@ -1412,7 +1413,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 EpochNanoClock.class);
 
-            return (ILink3Connection)constructor.newInstance(
+            return (InternalBinaryFixPConnection)constructor.newInstance(
                 configuration,
                 connectionId,
                 initiateReply,
@@ -1509,18 +1510,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         // Continue from previous position on backpressured re-attempts
         if (iLink3LogoutIterator == null)
         {
-            iLink3LogoutIterator = connectionIdToILink3Subscription.values().iterator();
+            iLink3LogoutIterator = connectionIdToFixPSubscription.values().iterator();
         }
         while (iLink3LogoutIterator.hasNext())
         {
-            final ILink3Subscription iLink3Subscription = iLink3LogoutIterator.next();
-            if (Pressure.isBackPressured(iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN)))
+            final BinaryFixPSubscription binaryFixPSubscription = iLink3LogoutIterator.next();
+            if (Pressure.isBackPressured(binaryFixPSubscription.requestDisconnect(ENGINE_SHUTDOWN)))
             {
                 return;
             }
         }
 
-        if (!connectionIdToILink3Subscription.isEmpty())
+        if (!connectionIdToFixPSubscription.isEmpty())
         {
             DebugLogger.log(CLOSE, "Completed logging out ILink 3 Sessions");
         }
@@ -1566,16 +1567,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void controlUpdateILinkSessions()
     {
         // We just disconnect everything.
-        if (iLink3Connections.length > 0)
+        if (binaryFixPConnections.length > 0)
         {
-            for (final ILink3Connection session : iLink3Connections)
+            for (final InternalBinaryFixPConnection connection : binaryFixPConnections)
             {
-                session.unbindState(DisconnectReason.LIBRARY_DISCONNECT);
+                connection.unbindState(DisconnectReason.LIBRARY_DISCONNECT);
             }
-            iLink3Connections = new ILink3Connection[0];
+            binaryFixPConnections = EMPTY_FIXP_CONNECTIONS;
         }
 
-        connectionIdToILink3Subscription.clear();
+        connectionIdToFixPSubscription.clear();
     }
 
     private Action controlUpdateSessions(final int libraryId, final SessionsDecoder sessionsDecoder)
@@ -1716,7 +1717,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connection);
+            final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.get(connection);
             if (subscription != null)
             {
                 subscription.onReplayComplete();
@@ -1944,15 +1945,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         tasks.add(task);
     }
 
+    @SuppressWarnings("unchecked")
     public List<ILink3Connection> iLink3Sessions()
     {
-        return unmodifiableILink3Connections;
+        return (List<ILink3Connection>)(List<?>)unmodifiableBinaryFixPConnections;
     }
 
-    public void remove(final ILink3Connection session)
+    public void remove(final InternalBinaryFixPConnection connection)
     {
-        iLink3Connections = ArrayUtil.remove(iLink3Connections, session);
-        connectionIdToILink3Subscription.remove(session.connectionId());
+        binaryFixPConnections = ArrayUtil.remove(binaryFixPConnections, connection);
+        connectionIdToFixPSubscription.remove(connection.connectionId());
     }
 }
 

@@ -25,16 +25,16 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.BinaryFixPRetransmitHandler;
-import uk.co.real_logic.artio.ilink.AbstractBinaryOffsets;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
-import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
-import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
+import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.AbstractBinaryProxy;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
 
 /**
  * In ILink cases the UUID is used as a sessionId.

@@ -32,8 +32,8 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofh;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofh;
 import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_ILINK_MESSAGE;
 import static uk.co.real_logic.artio.messages.GatewayError.EXCEPTION;
 

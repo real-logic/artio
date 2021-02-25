@@ -20,7 +20,7 @@ package uk.co.real_logic.artio.library;
  * This is a FIXP session protocol with SBE encoded binary messages. Unlike FIX it possible to have multiple connections
  * open with the same session id.
  */
-public abstract class ILink3Connection extends BinaryFixPConnection
+public interface ILink3Connection extends BinaryFixPConnection
 {
     // -----------------------------------------------
     // Accessors
@@ -31,13 +31,12 @@ public abstract class ILink3Connection extends BinaryFixPConnection
      *
      * @return the UUID of the current connection for this session.
      */
-    public abstract long uuid();
+    long uuid();
 
     /**
      * Gets the UUID of the last success connection for this session.
      *
      * @return the UUID of the last success connection for this session.
      */
-    public abstract long lastUuid();
-
+    long lastUuid();
 }

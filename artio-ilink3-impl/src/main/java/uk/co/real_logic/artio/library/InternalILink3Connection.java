@@ -47,17 +47,17 @@ import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.*;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.readSofhMessageSize;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.*;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 
 /**
  * External users should never rely on this API.
  */
-public final class InternalILink3Connection extends ILink3Connection
+public final class InternalILink3Connection extends InternalBinaryFixPConnection implements ILink3Connection
 {
     public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
 
@@ -614,7 +614,7 @@ public final class InternalILink3Connection extends ILink3Connection
         }
     }
 
-    int poll(final long timeInMs)
+    protected int poll(final long timeInMs)
     {
         final State state = this.state;
         switch (state)
@@ -936,6 +936,7 @@ public final class InternalILink3Connection extends ILink3Connection
                 .append(uuid)
                 .append(",");
         }
+
         if (msgRequestTimestamp != expectedRequestTimestamp)
         {
             msgBuilder
@@ -951,6 +952,7 @@ public final class InternalILink3Connection extends ILink3Connection
             .append(errorCodes)
             .append(",errorMessage=")
             .append(ESTABLISH_AND_NEGOTIATE_REJECT_ERROR_CODES[errorCodes]);
+
         connectionError(new IllegalResponseException(msgBuilder.toString()));
 
         return 1;
@@ -1082,11 +1084,6 @@ public final class InternalILink3Connection extends ILink3Connection
 
     public long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
     {
-        if (uUID != uuid())
-        {
-
-        }
-
         // Don't invoke the handler on the backpressured retry
         if (!backpressuredNotApplied)
         {
@@ -1126,7 +1123,7 @@ public final class InternalILink3Connection extends ILink3Connection
         }
     }
 
-    void onReplayComplete()
+    protected void onReplayComplete()
     {
         state = State.ESTABLISHED;
     }
@@ -1141,14 +1138,14 @@ public final class InternalILink3Connection extends ILink3Connection
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 
-    void fullyUnbind()
+    protected void fullyUnbind()
     {
         requestDisconnect(LOGOUT);
         owner.remove(this);
         unbindState(APPLICATION_DISCONNECT);
     }
 
-    void unbindState(final DisconnectReason reason)
+    protected void unbindState(final DisconnectReason reason)
     {
         state = State.UNBOUND;
         handler.onDisconnect(this, reason);
@@ -1678,7 +1675,6 @@ public final class InternalILink3Connection extends ILink3Connection
     public long onRetransmission(
         final long uUID, final long lastUUID, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
-        // TODO: validate that
         return 1;
     }
 

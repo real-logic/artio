@@ -19,6 +19,7 @@ import iLinkBinary.NewOrderSingle514Decoder;
 import iLinkBinary.NotApplied513Decoder;
 import iLinkBinary.PartyDetailsDefinitionRequestAck519Decoder;
 import org.junit.Test;
+import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
 
 import static org.junit.Assert.assertEquals;
 

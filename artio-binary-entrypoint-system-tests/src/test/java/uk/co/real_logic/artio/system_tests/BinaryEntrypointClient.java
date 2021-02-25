@@ -15,6 +15,77 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-public final class BinaryEntrypointClient
+import org.agrona.CloseHelper;
+import org.agrona.LangUtil;
+import org.agrona.concurrent.UnsafeBuffer;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+
+import static org.junit.Assert.assertEquals;
+
+public final class BinaryEntrypointClient implements AutoCloseable
 {
+    public static final int BUFFER_SIZE = 8 * 1024;
+    private static final int OFFSET = 0;
+
+    private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private final UnsafeBuffer writeAsciiBuffer = new UnsafeBuffer(writeBuffer);
+
+    private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private final UnsafeBuffer asciiReadBuffer = new UnsafeBuffer(readBuffer);
+
+    private final SocketChannel socket;
+
+    public BinaryEntrypointClient(final int port) throws IOException
+    {
+        socket = SocketChannel.open(new InetSocketAddress("localhost", port));
+    }
+
+    private void send(final int offset, final int length)
+    {
+        try
+        {
+            writeBuffer.position(offset).limit(offset + length);
+            final int written = socket.write(writeBuffer);
+            assertEquals(length, written);
+            writeBuffer.clear();
+        }
+        catch (final IOException ex)
+        {
+            LangUtil.rethrowUnchecked(ex);
+        }
+    }
+
+    private int readData() throws IOException
+    {
+        return socket.read(readBuffer);
+    }
+
+    public void close()
+    {
+        CloseHelper.close(socket);
+    }
+
+    public void sendNegotiate()
+    {
+
+    }
+
+    public void readNegotiateResponse()
+    {
+
+    }
+
+    public void sendEstablish()
+    {
+
+    }
+
+    public void readEstablishAck()
+    {
+
+    }
 }

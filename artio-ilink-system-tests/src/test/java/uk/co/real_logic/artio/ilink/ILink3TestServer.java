@@ -45,7 +45,7 @@ import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.CL_ORD_ID;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.FIRM_ID;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.*;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
 
 public class ILink3TestServer
 {

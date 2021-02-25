@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.fixp;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.library.BinaryFixPConnection;

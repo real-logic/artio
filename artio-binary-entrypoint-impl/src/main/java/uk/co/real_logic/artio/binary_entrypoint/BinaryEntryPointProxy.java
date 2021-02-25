@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import uk.co.real_logic.artio.ilink.AbstractBinaryProxy;
+import uk.co.real_logic.artio.fixp.AbstractBinaryProxy;
 
 public class BinaryEntryPointProxy extends AbstractBinaryProxy
 {

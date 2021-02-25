@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Monotonic Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,19 @@
  */
 package uk.co.real_logic.artio.library;
 
-/**
- * Represents a Session Connection of the Binary Entrypoint protocol.
- * This is a FIXP session protocol with SBE encoded binary messages. It is very similar to CME's iLink3 protocol.
- */
-public interface BinaryEntrypointConnection extends BinaryFixPConnection
+import uk.co.real_logic.artio.messages.DisconnectReason;
+
+public abstract class InternalBinaryFixPConnection implements BinaryFixPConnection
 {
     // -----------------------------------------------
-    // Accessors
+    // Internal Methods below, not part of the public API
     // -----------------------------------------------
 
-    int sessionId();
+    protected abstract int poll(long timeInMs);
 
-    long sessionVerId();
+    protected abstract void onReplayComplete();
 
+    protected abstract void fullyUnbind();
+
+    protected abstract void unbindState(DisconnectReason reason);
 }

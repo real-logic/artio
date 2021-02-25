@@ -16,18 +16,18 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
-class ILink3Subscription
+class BinaryFixPSubscription
 {
     private final AbstractBinaryParser parser;
-    private final ILink3Connection session;
+    private final InternalBinaryFixPConnection connection;
 
-    ILink3Subscription(final AbstractBinaryParser parser, final ILink3Connection session)
+    BinaryFixPSubscription(final AbstractBinaryParser parser, final InternalBinaryFixPConnection connection)
     {
         this.parser = parser;
-        this.session = session;
+        this.connection = connection;
     }
 
     public long onMessage(final DirectBuffer buffer, final int offset)
@@ -37,21 +37,21 @@ class ILink3Subscription
 
     public long requestDisconnect(final DisconnectReason reason)
     {
-        return session.requestDisconnect(reason);
+        return connection.requestDisconnect(reason);
     }
 
     public void onDisconnect(final DisconnectReason reason)
     {
-        session.unbindState(reason);
+        connection.unbindState(reason);
     }
 
     public void onReplayComplete()
     {
-        session.onReplayComplete();
+        connection.onReplayComplete();
     }
 
-    public ILink3Connection session()
+    public InternalBinaryFixPConnection session()
     {
-        return session;
+        return connection;
     }
 }

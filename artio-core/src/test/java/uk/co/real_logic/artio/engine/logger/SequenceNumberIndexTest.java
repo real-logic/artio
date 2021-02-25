@@ -38,7 +38,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
-import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.io.File;

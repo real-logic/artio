@@ -20,6 +20,7 @@ import iLinkBinary.NewOrderSingle514Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2IntHashMap;
+import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
 import uk.co.real_logic.sbe.ir.Ir;
 import uk.co.real_logic.sbe.ir.IrDecoder;
 import uk.co.real_logic.sbe.ir.Signal;

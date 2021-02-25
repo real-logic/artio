@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
-import uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
@@ -34,9 +34,9 @@ import java.nio.ByteBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryOffsets.clientSeqNum;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.clientSeqNum;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class ILink3SenderEndPoint
 {

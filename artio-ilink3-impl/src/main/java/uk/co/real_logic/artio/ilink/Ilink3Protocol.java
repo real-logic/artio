@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.ilink;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
 import uk.co.real_logic.artio.library.ILink3Connection;
 
 public class Ilink3Protocol extends BinaryFixPProtocol

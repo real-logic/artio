@@ -25,15 +25,15 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public abstract class BinaryFixPConnection
+public interface BinaryFixPConnection
 {
-    public static final long NOT_AWAITING_RETRANSMIT = -1L;
+    long NOT_AWAITING_RETRANSMIT = -1L;
 
     /**
      * Defines the internal state of the Session, this can be accessed using
      * the {@link BinaryFixPConnection#state()} method.
      */
-    public enum State
+    enum State
     {
         /** The TCP connection has been established, but the negotiate not sent.*/
         CONNECTED,
@@ -100,7 +100,7 @@ public abstract class BinaryFixPConnection
      * number indicating an error status.
      * @see #tryClaim(MessageEncoderFlyweight, int)
      */
-    public abstract long tryClaim(MessageEncoderFlyweight message);
+    long tryClaim(MessageEncoderFlyweight message);
 
     /**
      * Tries to send a business layer message with a variable length or group fields. This method claims a buffer
@@ -114,7 +114,7 @@ public abstract class BinaryFixPConnection
      * number indicating an error status.
      * @see #tryClaim(MessageEncoderFlyweight)
      */
-    public abstract long tryClaim(MessageEncoderFlyweight message, int variableLength);
+    long tryClaim(MessageEncoderFlyweight message, int variableLength);
 
     /**
      * Commit a message that has been claimed. Do not overlap sending other messages or polling the FixLibrary
@@ -125,7 +125,7 @@ public abstract class BinaryFixPConnection
      * @see #tryClaim(MessageEncoderFlyweight, int)
      * @see #abort()
      */
-    public abstract void commit();
+    void commit();
 
     /**
      * Abort a message that has been claimed. If an error happens when initialising a message flyweight after a
@@ -135,7 +135,7 @@ public abstract class BinaryFixPConnection
      * @see #tryClaim(MessageEncoderFlyweight, int)
      * @see #abort()
      */
-    public abstract void abort();
+    void abort();
 
     /**
      * Try to send a sequence message indicating the current sent sequence number position. This can be combined
@@ -145,7 +145,7 @@ public abstract class BinaryFixPConnection
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
-    public abstract long trySendSequence();
+    long trySendSequence();
 
     /**
      * Disconnect your session, providing a reason. This is an immediate TCP disconnect with no Terminate message
@@ -155,7 +155,7 @@ public abstract class BinaryFixPConnection
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
-    public abstract long requestDisconnect(DisconnectReason reason);
+    long requestDisconnect(DisconnectReason reason);
 
     /**
      * Initiate a termination. This sends a Terminate message to initiate the termination. Artio's session will await
@@ -167,7 +167,7 @@ public abstract class BinaryFixPConnection
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
-    public abstract long terminate(String shutdown, int errorCodes);
+    long terminate(String shutdown, int errorCodes);
 
     /**
      * Send a custom retransmit request.
@@ -179,7 +179,7 @@ public abstract class BinaryFixPConnection
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
-    public abstract long tryRetransmitRequest(long uuid, long fromSeqNo, int msgCount);
+    long tryRetransmitRequest(long uuid, long fromSeqNo, int msgCount);
 
     // -----------------------------------------------
     // Accessors
@@ -190,42 +190,42 @@ public abstract class BinaryFixPConnection
      *
      * @return the Artio connectionId of the current connection for this session.
      */
-    public abstract long connectionId();
+    long connectionId();
 
     /**
      * Gets the current State of this session.
      *
      * @return the current State of this session.
      */
-    public abstract State state();
+    State state();
 
     /**
      * Gets the next sequence number to be used when sending a new business layer message.
      *
      * @return the next sequence number to be used when sending  a new business layer message.
      */
-    public abstract long nextSentSeqNo();
+    long nextSentSeqNo();
 
     /**
      * Sets the next sequence number to be used when sending a new business layer message.
      *
      * @param nextSentSeqNo the next sequence number to be used when sending  a new business layer message.
      */
-    public abstract void nextSentSeqNo(long nextSentSeqNo);
+    void nextSentSeqNo(long nextSentSeqNo);
 
     /**
      * Gets the next sequence number to be expected when receiving a new business layer message.
      *
      * @return the next sequence number to be expected when receiving  a new business layer message.
      */
-    public abstract long nextRecvSeqNo();
+    long nextRecvSeqNo();
 
     /**
      * Sets the next sequence number to be expected when receiving a new business layer message.
      *
      * @param nextRecvSeqNo the next sequence number to be expected when receiving  a new business layer message.
      */
-    public abstract void nextRecvSeqNo(long nextRecvSeqNo);
+    void nextRecvSeqNo(long nextRecvSeqNo);
 
     /**
      * Gets the next received sequence number that will fill the current retransmit request. If there is no
@@ -233,7 +233,7 @@ public abstract class BinaryFixPConnection
      *
      * @return the next received sequence number that will fill the current retransmit request.
      */
-    public abstract long retransmitFillSeqNo();
+    long retransmitFillSeqNo();
 
     /**
      * Gets the next sequence number that Artio expects to received in the current retransmit request. If there is no
@@ -241,25 +241,13 @@ public abstract class BinaryFixPConnection
      *
      * @return the next sequence number that Artio expects to received in the current retransmit request.
      */
-    public abstract long nextRetransmitSeqNo();
+    long nextRetransmitSeqNo();
 
     /**
      * Check if a message can be sent. This is when you're in the ESTABLISHED or AWAITING_KEEPALIVE state.
      *
      * @return true if a message can be sent, false otherwise
      */
-    public abstract boolean canSendMessage();
-
-    // -----------------------------------------------
-    // Internal Methods below, not part of the public API
-    // -----------------------------------------------
-
-    abstract int poll(long timeInMs);
-
-    abstract void onReplayComplete();
-
-    abstract void fullyUnbind();
-
-    abstract void unbindState(DisconnectReason reason);
+    boolean canSendMessage();
 
 }

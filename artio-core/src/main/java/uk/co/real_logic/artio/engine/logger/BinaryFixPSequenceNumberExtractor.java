@@ -20,10 +20,10 @@ import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.artio.ilink.AbstractBinaryOffsets;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
-import uk.co.real_logic.artio.ilink.BinaryFixPProtocol;
-import uk.co.real_logic.artio.ilink.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
+import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.ILinkConnectDecoder;
 import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -31,9 +31,9 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.ilink.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
-import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 class BinaryFixPSequenceNumberExtractor
 {

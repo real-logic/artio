@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.ilink.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
 
 public class BinaryEntryPointParser extends AbstractBinaryParser
 {
