@@ -16,11 +16,10 @@
 package uk.co.real_logic.artio.library;
 
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.messages.GatewayError;
 
-/**
- * .
- */
 class InitiateILink3ConnectionReply extends LibraryReply<ILink3Connection>
 {
     private final ILink3ConnectionConfiguration configuration;

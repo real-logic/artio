@@ -25,16 +25,16 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.BinaryFixPRetransmitHandler;
-import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
-import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
-import uk.co.real_logic.artio.fixp.AbstractBinaryProxy;
+import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
-import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
-import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
+import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
 
 /**
  * In ILink cases the UUID is used as a sessionId.
@@ -44,10 +44,10 @@ import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEA
 public class BinaryReplayerSession extends ReplayerSession
 {
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
-    private final ILinkMessageEncoder iLinkMessageEncoder;
-    private final AbstractBinaryParser binaryParser;
-    private final AbstractBinaryProxy binaryProxy;
-    private final AbstractBinaryOffsets iLink3Offsets;
+    private final FixPMessageEncoder fixPMessageEncoder;
+    private final AbstractFixPParser binaryParser;
+    private final AbstractFixPProxy binaryProxy;
+    private final AbstractFixPOffsets iLink3Offsets;
     private final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler;
 
     private boolean mustSendSequenceMessage = false;
@@ -72,17 +72,17 @@ public class BinaryReplayerSession extends ReplayerSession
         final long sessionId,
         final Replayer replayer,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
-        final ILinkMessageEncoder iLinkMessageEncoder,
-        final AbstractBinaryParser binaryParser,
-        final AbstractBinaryProxy binaryProxy,
-        final AbstractBinaryOffsets iLink3Offsets,
+        final FixPMessageEncoder fixPMessageEncoder,
+        final AbstractFixPParser binaryParser,
+        final AbstractFixPProxy binaryProxy,
+        final AbstractFixPOffsets iLink3Offsets,
         final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
 
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
-        this.iLinkMessageEncoder = iLinkMessageEncoder;
+        this.fixPMessageEncoder = fixPMessageEncoder;
         this.binaryParser = binaryParser;
         this.binaryProxy = binaryProxy;
         this.iLink3Offsets = iLink3Offsets;
@@ -138,7 +138,7 @@ public class BinaryReplayerSession extends ReplayerSession
     {
         final int encoderOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
-            ILinkMessageDecoder.BLOCK_LENGTH;
+            FixPMessageDecoder.BLOCK_LENGTH;
         final int templateId = binaryParser.templateId(buffer, headerOffset);
         final int blockLength = binaryParser.blockLength(buffer, headerOffset);
         final int version = binaryParser.version(buffer, headerOffset);
@@ -161,7 +161,7 @@ public class BinaryReplayerSession extends ReplayerSession
             if (mustSendSequenceMessage)
             {
                 final int seqNum = iLink3Offsets.seqNum(templateId, buffer, messageOffset);
-                if (seqNum != AbstractBinaryOffsets.MISSING_OFFSET)
+                if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
                 {
                     if (sendSequence(seqNum))
                     {
@@ -175,7 +175,7 @@ public class BinaryReplayerSession extends ReplayerSession
             }
 
             // Update connection id in case we're replaying from a previous connection.
-            iLinkMessageEncoder
+            fixPMessageEncoder
                 .wrap((MutableDirectBuffer)buffer, encoderOffset)
                 .connection(connectionId)
                 /*.enqueueTime(epochNanoClock.nanoTime())*/;

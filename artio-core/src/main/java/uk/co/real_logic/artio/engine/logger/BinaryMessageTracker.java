@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -36,7 +36,7 @@ public class BinaryMessageTracker extends MessageTracker
     {
         messageHeaderDecoder.wrap(buffer, offset);
 
-        if (messageHeaderDecoder.templateId() == ILinkMessageDecoder.TEMPLATE_ID)
+        if (messageHeaderDecoder.templateId() == FixPMessageDecoder.TEMPLATE_ID)
         {
             final Action action = messageHandler.onFragment(buffer, offset, length, header);
             if (action != ABORT)

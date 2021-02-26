@@ -37,8 +37,12 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -1372,7 +1376,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final InternalBinaryFixPConnection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
-                final BinaryFixPProtocol protocol = SupportedBinaryFixPProtocol.ILINK_3.make(THROW_ERRORS);
+                final FixPProtocol protocol = FixPProtocolFactory.make(FixPProtocolType.ILINK_3, THROW_ERRORS);
                 final BinaryFixPSubscription subscription = new BinaryFixPSubscription(
                     protocol.makeParser((ILink3Connection)connection), connection);
                 connectionIdToFixPSubscription.put(connectionId, subscription);
@@ -1727,6 +1731,36 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    public Action onInboundFixPConnect(
+        final long connection,
+        final long sessionId,
+        final FixPProtocolType protocolType,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final int lastConnectPayload,
+        final DirectBuffer buffer,
+        final int offset,
+        final int messageLength)
+    {
+        final FixPProtocol protocol = FixPProtocolFactory.make(protocolType, THROW_ERRORS);
+        final AbstractFixPParser parser = protocol.makeParser(null);
+        final FixPIdentification identification = parser.lookupIdentification(
+            lastReceivedSequenceNumber,
+            lastSentSequenceNumber,
+            lastConnectPayload,
+            buffer,
+            offset,
+            messageLength);
+
+        return configuration
+            .fixPConnectionExistsHandler()
+            .onConnectionExists(
+                fixLibrary,
+                sessionId,
+                protocolType,
+                identification);
     }
 
     // -----------------------------------------------------------------------

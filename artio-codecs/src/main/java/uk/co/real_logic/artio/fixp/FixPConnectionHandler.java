@@ -16,11 +16,10 @@
 package uk.co.real_logic.artio.fixp;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.library.BinaryFixPConnection;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
-import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.Builder;
+import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.Builder;
 
 /**
  * This handler should be implemented by anyone using Artio to connect to binary FIXP protocols - such as CME's
@@ -30,7 +29,7 @@ import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.Build
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public interface BinaryFixPConnectionHandler
+public interface FixPConnectionHandler
 {
     /**
      * Callback for receiving business messages.
@@ -44,7 +43,7 @@ public interface BinaryFixPConnectionHandler
      * @param possRetrans true of the possRetrans flag is set to true.
      */
     void onBusinessMessage(
-        BinaryFixPConnection connection,
+        FixPConnection connection,
         int templateId,
         DirectBuffer buffer,
         int offset,
@@ -62,7 +61,7 @@ public interface BinaryFixPConnectionHandler
      * @param response used to tell Artio how to respond to the NotApplied message.
      */
     void onNotApplied(
-        BinaryFixPConnection connection, long fromSequenceNumber, long msgCount, NotAppliedResponse response);
+        FixPConnection connection, long fromSequenceNumber, long msgCount, NotAppliedResponse response);
 
     /**
      * Callback when Artio has received a RetransmitReject message. This can be used for error logging or handling.
@@ -73,7 +72,7 @@ public interface BinaryFixPConnectionHandler
      * @param errorCodes the errorCodes of the RetransmitReject message
      */
     void onRetransmitReject(
-        BinaryFixPConnection connection, String reason, long lastUuid, long requestTimestamp, int errorCodes);
+        FixPConnection connection, String reason, long lastUuid, long requestTimestamp, int errorCodes);
 
     /**
      * Callback triggered by a timeout on a retransmit request. See
@@ -81,7 +80,7 @@ public interface BinaryFixPConnectionHandler
      *
      * @param connection the connection that initiated the retransmit request.
      */
-    void onRetransmitTimeout(BinaryFixPConnection connection);
+    void onRetransmitTimeout(FixPConnection connection);
 
     /**
      * Notifies an application when a sequence message is received. Normally applications would not need to implement
@@ -92,7 +91,7 @@ public interface BinaryFixPConnectionHandler
      * @param uuid the UUID of the sequence message.
      * @param nextSeqNo the next sequence number contained in the body of the sequence message.
      */
-    void onSequence(BinaryFixPConnection connection, long uuid, long nextSeqNo);
+    void onSequence(FixPConnection connection, long uuid, long nextSeqNo);
 
     /**
      * Callback when an error happens internally with the processing of a message in iLink3 that can't be handled
@@ -101,7 +100,7 @@ public interface BinaryFixPConnectionHandler
      * @param connection the connection where this error has occurred.
      * @param ex the exception corresponding to an error
      */
-    void onError(BinaryFixPConnection connection, Exception ex);
+    void onError(FixPConnection connection, Exception ex);
 
     /**
      * Call when this connection is disconnected.
@@ -109,5 +108,5 @@ public interface BinaryFixPConnectionHandler
      * @param connection the connection that was disconnected.
      * @param reason the reason for the disconnection.
      */
-    void onDisconnect(BinaryFixPConnection connection, DisconnectReason reason);
+    void onDisconnect(FixPConnection connection, DisconnectReason reason);
 }

@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.ilink;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
-import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -37,7 +37,7 @@ public interface ILinkMessageConsumer
      * @param offset the offset within the buffer at which your message starts.
      * @param header the Aeron header value for the fragment
      */
-    void onBusinessMessage(ILinkMessageDecoder iLinkMessage, DirectBuffer buffer, int offset, Header header);
+    void onBusinessMessage(FixPMessageDecoder iLinkMessage, DirectBuffer buffer, int offset, Header header);
 
     static ILinkMessageConsumer makePrinter(final int inboundStreamId)
     {

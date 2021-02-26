@@ -13,24 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.binary_entrypoint;
+package uk.co.real_logic.artio.library;
 
-import b3.entrypoint.fixp.sbe.MessageHeaderEncoder;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
-
-public class BinaryEntryPointProxy extends AbstractFixPProxy
+@FunctionalInterface
+public interface FixPConnectionExistsHandler
 {
-    public static final int BINARY_ENTRYPOINT_HEADER_LENGTH = SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH;
-
-    public void connectionId(final long connectionId)
-    {
-
-    }
-
-    public long sendSequence(final long uuid, final long nextSentSeqNo)
-    {
-        return 0;
-    }
+    ControlledFragmentHandler.Action onConnectionExists(
+        FixLibrary library,
+        long surrogateSessionId,
+        FixPProtocolType protocol,
+        FixPIdentification identification);
 }

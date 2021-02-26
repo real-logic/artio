@@ -36,7 +36,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
+    private final FixPMessageDecoder iLinkMessage = new FixPMessageDecoder();
 
     private final ProtocolHandler protocolHandler;
     private final Action defaultAction;
@@ -96,7 +96,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
                 return onDisconnect(buffer, offset, blockLength, version);
             }
 
-            case ILinkMessageDecoder.TEMPLATE_ID:
+            case FixPMessageDecoder.TEMPLATE_ID:
             {
                 return onILinkMessage(buffer, offset, blockLength, version);
             }
@@ -113,7 +113,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         return protocolHandler.onILinkMessage(
             connectionId,
             buffer,
-            offset + ILinkMessageDecoder.BLOCK_LENGTH);
+            offset + FixPMessageDecoder.BLOCK_LENGTH);
     }
 
     private Action onDisconnect(

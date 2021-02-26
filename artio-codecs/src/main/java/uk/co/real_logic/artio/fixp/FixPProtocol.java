@@ -17,14 +17,15 @@ package uk.co.real_logic.artio.fixp;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.library.ILink3Connection;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
 
-public abstract class BinaryFixPProtocol
+// Implementation classes should be stateless
+public abstract class FixPProtocol
 {
-    public abstract AbstractBinaryParser makeParser(ILink3Connection session);
+    public abstract AbstractFixPParser makeParser(ILink3Connection session);
 
-    public abstract AbstractBinaryProxy makeProxy(
+    public abstract AbstractFixPProxy makeProxy(
         ExclusivePublication publication, EpochNanoClock epochNanoClock);
 
-    public abstract AbstractBinaryOffsets makeOffsets();
+    public abstract AbstractFixPOffsets makeOffsets();
 }

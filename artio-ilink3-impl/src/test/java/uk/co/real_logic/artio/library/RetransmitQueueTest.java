@@ -23,6 +23,8 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -38,8 +40,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.library.ILink3Connection.NOT_AWAITING_RETRANSMIT;
-import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.DEFAULT_RETRANSMIT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.ilink.ILink3Connection.NOT_AWAITING_RETRANSMIT;
+import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.DEFAULT_RETRANSMIT_TIMEOUT_IN_MS;
 
 public class RetransmitQueueTest
 {
@@ -467,7 +469,7 @@ public class RetransmitQueueTest
 
     private void onExecutionReport(final long sequenceNumber, final boolean possRetrans, final long uuid)
     {
-        SimpleOpenFramingHeader.writeSofh(recvBuffer, 0, totalLength);
+        SimpleOpenFramingHeader.writeILinkSofh(recvBuffer, 0, totalLength);
 
         final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();

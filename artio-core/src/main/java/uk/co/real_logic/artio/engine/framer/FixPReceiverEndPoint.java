@@ -1,0 +1,234 @@
+/*
+ * Copyright 2020-2021 Monotonic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package uk.co.real_logic.artio.engine.framer;
+
+import io.aeron.ExclusivePublication;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.FixPMessageEncoder;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofh;
+import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_FIXP_MESSAGE;
+import static uk.co.real_logic.artio.messages.GatewayError.EXCEPTION;
+
+abstract class FixPReceiverEndPoint extends ReceiverEndPoint
+{
+    public static final int ARTIO_HEADER_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + FixPMessageEncoder.BLOCK_LENGTH;
+
+    private static final int TEMPLATE_ID_OFFSET = SOFH_LENGTH + 2;
+
+    private final FixPMessageEncoder fixPMessage = new FixPMessageEncoder();
+    private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
+    private final ExclusivePublication inboundPublication;
+    private final EpochNanoClock epochNanoClock;
+    private final long correlationId;
+    private final short encodingType;
+
+    FixPReceiverEndPoint(
+        final long connectionId,
+        final TcpChannel channel,
+        final int bufferSize,
+        final ErrorHandler errorHandler,
+        final Framer framer,
+        final GatewayPublication publication,
+        final int libraryId,
+        final EpochNanoClock epochNanoClock,
+        final long correlationId,
+        final short encodingType)
+    {
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
+        inboundPublication = publication.dataPublication();
+        this.epochNanoClock = epochNanoClock;
+        this.correlationId = correlationId;
+        this.encodingType = encodingType;
+
+        makeHeader();
+    }
+
+    private void makeHeader()
+    {
+        final MessageHeaderEncoder header = new MessageHeaderEncoder();
+
+        fixPMessage
+            .wrapAndApplyHeader(headerBuffer, 0, header)
+            .connection(connectionId);
+    }
+
+    void removeEndpointFromFramer()
+    {
+        trackDisconnect();
+        framer.onFixPDisconnect(connectionId, null);
+    }
+
+    void cleanupDisconnectState(final DisconnectReason reason)
+    {
+        // Not needed in iLink implementation
+    }
+
+    boolean retryFrameMessages()
+    {
+        return frameMessages();
+    }
+
+    private int readData() throws IOException
+    {
+        final int dataRead = channel.read(byteBuffer);
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
+                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Read     ", byteBuffer, usedBufferData, dataRead);
+            }
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnectDetected();
+        }
+
+        return dataRead;
+    }
+
+    int poll()
+    {
+        try
+        {
+            final int bytesRead = readData();
+            if (bytesRead > 0 && !frameMessages())
+            {
+                return -bytesRead;
+            }
+
+            return bytesRead;
+        }
+        catch (final ClosedChannelException ex)
+        {
+            onDisconnectDetected();
+        }
+        catch (final IllegalArgumentException ex)
+        {
+            errorHandler.onError(ex);
+            saveError(ex);
+            completeDisconnect(INVALID_FIXP_MESSAGE);
+        }
+        catch (final Exception ex)
+        {
+            // Regular disconnects aren't errors
+            if (!Exceptions.isJustDisconnect(ex))
+            {
+                errorHandler.onError(ex);
+            }
+
+            saveError(ex);
+            onDisconnectDetected();
+        }
+
+        return 1;
+    }
+
+    private void saveError(final Exception ex)
+    {
+        framer.saveError(EXCEPTION, libraryId, correlationId, ex.getMessage());
+    }
+
+    // false iff back pressured
+    private boolean frameMessages()
+    {
+        final MutableAsciiBuffer buffer = this.buffer;
+
+        int offset = 0;
+        while (usedBufferData > SOFH_LENGTH)
+        {
+            final int messageSize = readSofh(buffer, offset, encodingType);
+            if (messageSize > usedBufferData)
+            {
+                moveRemainingDataToBufferStart(offset);
+                return true;
+            }
+
+            checkMessage(buffer, offset, messageSize);
+
+            fixPMessage.enqueueTime(epochNanoClock.nanoTime());
+
+            final long position = inboundPublication.offer(
+                headerBuffer,
+                0,
+                ARTIO_HEADER_LENGTH,
+                buffer,
+                offset,
+                messageSize);
+
+            if (position < 0)
+            {
+                moveRemainingDataToBufferStart(offset);
+                return false;
+            }
+
+            usedBufferData -= messageSize;
+            offset += messageSize;
+        }
+
+        moveRemainingDataToBufferStart(offset);
+        return true;
+    }
+
+    abstract void checkMessage(MutableAsciiBuffer buffer, int offset, int messageSize);
+
+    static int readTemplateId(final MutableAsciiBuffer buffer, final int offset)
+    {
+        return (buffer.getShort(offset + TEMPLATE_ID_OFFSET, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
+    }
+
+    private void moveRemainingDataToBufferStart(final int offset)
+    {
+        if (usedBufferData > 0)
+        {
+            buffer.putBytes(0, buffer, offset, usedBufferData);
+        }
+        // position set to ensure that back pressure is applied to TCP when read(byteBuffer) called.
+        ByteBufferUtil.position(byteBuffer, usedBufferData);
+    }
+
+    void closeResources()
+    {
+        trackDisconnect();
+
+        try
+        {
+            channel.close();
+        }
+        catch (final Exception ex)
+        {
+            errorHandler.onError(ex);
+        }
+    }
+
+    abstract void trackDisconnect();
+}

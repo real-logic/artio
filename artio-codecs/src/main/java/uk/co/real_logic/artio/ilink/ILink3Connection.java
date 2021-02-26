@@ -13,20 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.ilink;
+
+import uk.co.real_logic.artio.fixp.FixPConnection;
 
 /**
- * Represents a Session Connection of the Binary Entrypoint protocol.
- * This is a FIXP session protocol with SBE encoded binary messages. It is very similar to CME's iLink3 protocol.
+ * Represents a Session Connection of the iLink3 protocol.
+ * This is a FIXP session protocol with SBE encoded binary messages. Unlike FIX it possible to have multiple connections
+ * open with the same session id.
  */
-public interface BinaryEntrypointConnection extends BinaryFixPConnection
+public interface ILink3Connection extends FixPConnection
 {
     // -----------------------------------------------
     // Accessors
     // -----------------------------------------------
 
-    int sessionId();
+    /**
+     * Gets the UUID of the current connection for this session.
+     *
+     * @return the UUID of the current connection for this session.
+     */
+    long uuid();
 
-    long sessionVerId();
-
+    /**
+     * Gets the UUID of the last success connection for this session.
+     *
+     * @return the UUID of the last success connection for this session.
+     */
+    long lastUuid();
 }

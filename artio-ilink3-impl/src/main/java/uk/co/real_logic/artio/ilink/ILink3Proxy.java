@@ -23,23 +23,23 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.fixp.AbstractBinaryProxy;
-import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.messages.FixPMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.writeSofh;
 import static uk.co.real_logic.artio.library.InternalILink3Connection.BUSINESS_MESSAGE_LOGGING_ENABLED;
 
-public class ILink3Proxy extends AbstractBinaryProxy
+public class ILink3Proxy extends AbstractFixPProxy
 {
     public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
 
     private static final int ARTIO_HEADER_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
+        MessageHeaderEncoder.ENCODED_LENGTH + FixPMessageEncoder.BLOCK_LENGTH;
     private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
 
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer(new byte[0]);
@@ -49,7 +49,7 @@ public class ILink3Proxy extends AbstractBinaryProxy
     private static final int ESTABLISH_LENGTH =
         Establish503Encoder.BLOCK_LENGTH + Establish503Encoder.credentialsHeaderLength();
 
-    private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
+    private final FixPMessageEncoder iLinkMessage = new FixPMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
@@ -277,7 +277,7 @@ public class ILink3Proxy extends AbstractBinaryProxy
 
         offset += ARTIO_HEADER_LENGTH;
 
-        writeSofh(buffer, offset, ILINK_HEADER_LENGTH + messageLength);
+        SimpleOpenFramingHeader.writeILinkSofh(buffer, offset, ILINK_HEADER_LENGTH + messageLength);
         offset += SOFH_LENGTH;
 
         iLinkMessageHeader

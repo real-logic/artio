@@ -21,13 +21,13 @@ import org.agrona.collections.Long2ObjectHashMap;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class ILink3SenderEndPoints
+public class FixPSenderEndPoints
 {
-    private final Long2ObjectHashMap<ILink3SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<FixPSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
 
     public Action onMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
-        final ILink3SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixPSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
         {
             return senderEndPoint.onMessage(buffer, offset);
@@ -35,7 +35,7 @@ public class ILink3SenderEndPoints
         return CONTINUE;
     }
 
-    public void add(final ILink3SenderEndPoint senderEndPoint)
+    public void add(final FixPSenderEndPoint senderEndPoint)
     {
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
@@ -47,7 +47,7 @@ public class ILink3SenderEndPoints
 
     public Action onReplayComplete(final long connectionId)
     {
-        final ILink3SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        final FixPSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
         {
             return senderEndPoint.onReplayComplete(connectionId);

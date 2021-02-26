@@ -34,11 +34,11 @@ import java.nio.ByteBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.clientSeqNum;
+import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.MISSING_OFFSET;
+import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.clientSeqNum;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-public class ILink3SenderEndPoint
+public class FixPSenderEndPoint
 {
     private static final int NO_REATTEMPT = 0;
 
@@ -58,7 +58,7 @@ public class ILink3SenderEndPoint
 
     private int reattemptBytesWritten = NO_REATTEMPT;
 
-    public ILink3SenderEndPoint(
+    public FixPSenderEndPoint(
         final long connectionId,
         final TcpChannel channel,
         final ErrorHandler errorHandler,

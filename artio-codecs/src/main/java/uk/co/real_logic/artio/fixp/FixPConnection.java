@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.fixp;
 
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -25,13 +25,13 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
  *
  * NB: This is an experimental API and is subject to change or potentially removal.
  */
-public interface BinaryFixPConnection
+public interface FixPConnection
 {
     long NOT_AWAITING_RETRANSMIT = -1L;
 
     /**
      * Defines the internal state of the Session, this can be accessed using
-     * the {@link BinaryFixPConnection#state()} method.
+     * the {@link FixPConnection#state()} method.
      */
     enum State
     {
@@ -249,5 +249,4 @@ public interface BinaryFixPConnection
      * @return true if a message can be sent, false otherwise
      */
     boolean canSendMessage();
-
 }

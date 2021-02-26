@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.system_tests;
 
-import iLinkBinary.OrderMassActionReport562Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -26,10 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.ilink.ILink3TestServer.NO_AFFECTED_ORDERS_COUNT;
-
-public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
+public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
     private final IntArrayList messageIds = new IntArrayList();
     private final List<Exception> exceptions = new ArrayList<>();
@@ -38,7 +35,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     private boolean hasReceivedNotApplied;
     private DisconnectReason disconnectReason;
 
-    public FakeILink3ConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
+    public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
         this.notAppliedResponse = notAppliedResponse;
     }
@@ -58,13 +55,6 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         final boolean possRetrans)
     {
         messageIds.add(templateId);
-
-        if (templateId == OrderMassActionReport562Decoder.TEMPLATE_ID)
-        {
-            final OrderMassActionReport562Decoder decoder = new OrderMassActionReport562Decoder();
-            decoder.wrap(buffer, offset, blockLength, version);
-            assertEquals(NO_AFFECTED_ORDERS_COUNT, decoder.noAffectedOrders().count());
-        }
     }
 
     public void onNotApplied(

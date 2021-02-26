@@ -110,4 +110,16 @@ public interface LibraryEndPointHandler
         int termBufferLength, int mtuLength);
 
     Action onReplayComplete(int libraryId, long connection);
+
+    Action onInboundFixPConnect(
+        long connection,
+        long sessionId,
+        FixPProtocolType protocol,
+        long lastReceivedSequenceNumber,
+        long lastSentSequenceNumber,
+        int lastConnectPayload,
+        DirectBuffer buffer,
+        int limit,
+        int messageLength);
+
 }

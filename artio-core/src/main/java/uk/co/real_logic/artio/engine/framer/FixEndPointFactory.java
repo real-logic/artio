@@ -23,7 +23,7 @@ import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
-class EndPointFactory
+class FixEndPointFactory
 {
     private final FixReceiverEndPoint.FixReceiverEndPointFormatters formatters =
         new FixReceiverEndPoint.FixReceiverEndPointFormatters();
@@ -33,19 +33,19 @@ class EndPointFactory
     private final GatewayPublication inboundLibraryPublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
-    private final GatewaySessions gatewaySessions;
+    private final FixGatewaySessions gatewaySessions;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final MessageTimingHandler messageTimingHandler;
 
     private SlowPeeker replaySlowPeeker;
 
-    EndPointFactory(
+    FixEndPointFactory(
         final EngineConfiguration configuration,
         final SessionContexts sessionContexts,
         final GatewayPublication inboundLibraryPublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
-        final GatewaySessions gatewaySessions,
+        final FixGatewaySessions gatewaySessions,
         final SenderSequenceNumbers senderSequenceNumbers,
         final MessageTimingHandler messageTimingHandler)
     {

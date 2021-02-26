@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.fixp;
+package uk.co.real_logic.artio.binary_entrypoint;
 
-import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 
-public abstract class AbstractBinaryParser
+/**
+ * Represents a Session Connection of the Binary Entrypoint protocol.
+ * This is a FIXP session protocol with SBE encoded binary messages. It is very similar to CME's iLink3 protocol.
+ */
+public interface BinaryEntrypointConnection extends FixPConnection
 {
-    public static final int ILINK_MESSAGE_HEADER_LENGTH = 8;
-    public static final int BOOLEAN_FLAG_TRUE = 1;
+    // -----------------------------------------------
+    // Accessors
+    // -----------------------------------------------
 
-    public abstract long onMessage(DirectBuffer buffer, int offset);
+    int sessionId();
 
-    public abstract int templateId(DirectBuffer buffer, int offset);
+    long sessionVerId();
 
-    public abstract int blockLength(DirectBuffer buffer, int offset);
-
-    public abstract int version(DirectBuffer buffer, int offset);
 }

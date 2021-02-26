@@ -100,7 +100,7 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerInboundLookup(),
             null);
 
-        gatewaySessions = new GatewaySessions(
+        gatewaySessions = new FixGatewaySessions(
             epochClock,
             inboundPublication,
             outboundPublication,
@@ -115,13 +115,13 @@ public class FramerContext
             receivedSequenceNumberIndex,
             configuration.sessionEpochFractionFormat());
 
-        final EndPointFactory endPointFactory = new EndPointFactory(
+        final FixEndPointFactory endPointFactory = new FixEndPointFactory(
             configuration,
             sessionContexts,
             inboundPublication,
             fixCounters,
             errorHandler,
-            gatewaySessions,
+            (FixGatewaySessions)gatewaySessions,
             engineContext.senderSequenceNumbers(),
             configuration.messageTimingHandler());
 

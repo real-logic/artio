@@ -25,7 +25,6 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
@@ -91,7 +90,7 @@ public class ReplayIndex implements Index
         final ErrorHandler errorHandler,
         final RecordingIdLookup recordingIdLookup,
         final Long2LongHashMap connectionIdToILinkUuid,
-        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
+        final FixPProtocolType fixPProtocolType)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -102,7 +101,7 @@ public class ReplayIndex implements Index
         this.recordingIdLookup = recordingIdLookup;
 
         binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler, supportedBinaryFixPProtocol,
+            connectionIdToILinkUuid, errorHandler, fixPProtocolType,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
                 sessionIndex(uuid)
                 .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID));
@@ -195,7 +194,7 @@ public class ReplayIndex implements Index
                     }
                 }
             }
-            else if (templateId == ILinkMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
+            else if (templateId == FixPMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
             {
                 binaryFixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
             }

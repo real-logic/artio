@@ -26,7 +26,6 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.library.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.system_tests.TestSystem;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 
@@ -126,7 +125,7 @@ public class ILink3TestServer
                 throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
             }
 
-            final int totalLength = readSofh(unsafeReadBuffer, 0);
+            final int totalLength = readSofh(unsafeReadBuffer, 0, CME_ENCODING_TYPE);
             final int templateId = iLinkHeaderDecoder.templateId();
             final int blockLength = iLinkHeaderDecoder.blockLength();
             final int version = iLinkHeaderDecoder.version();

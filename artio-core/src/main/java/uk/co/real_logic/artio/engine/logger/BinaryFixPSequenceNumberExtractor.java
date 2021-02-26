@@ -20,45 +20,46 @@ import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
-import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
-import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
+import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.ILinkConnectDecoder;
-import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 class BinaryFixPSequenceNumberExtractor
 {
     private final Long2LongHashMap connectionIdToILinkUuid;
     private final ErrorHandler errorHandler;
-    private final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol;
+    private final FixPProtocolType fixPProtocolType;
     private final ILinkSequenceNumberHandler handler;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
+    private final FixPMessageDecoder iLinkMessage = new FixPMessageDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
 
-    private AbstractBinaryOffsets offsets;
-    private AbstractBinaryParser parser;
+    private AbstractFixPOffsets offsets;
+    private AbstractFixPParser parser;
     private boolean attemptedILinkInit = false;
 
     BinaryFixPSequenceNumberExtractor(
         final Long2LongHashMap connectionIdToILinkUuid,
         final ErrorHandler errorHandler,
-        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol,
+        final FixPProtocolType fixPProtocolType,
         final ILinkSequenceNumberHandler handler)
     {
         this.connectionIdToILinkUuid = connectionIdToILinkUuid;
         this.errorHandler = errorHandler;
-        this.supportedBinaryFixPProtocol = supportedBinaryFixPProtocol;
+        this.fixPProtocolType = fixPProtocolType;
         this.handler = handler;
     }
 
@@ -82,7 +83,7 @@ class BinaryFixPSequenceNumberExtractor
 
             switch (templateId)
             {
-                case ILinkMessageDecoder.TEMPLATE_ID:
+                case FixPMessageDecoder.TEMPLATE_ID:
                 {
                     final int totalLength = BitUtil.align(srcLength, FRAME_ALIGNMENT);
 
@@ -114,7 +115,7 @@ class BinaryFixPSequenceNumberExtractor
         {
             attemptedILinkInit = true;
 
-            final BinaryFixPProtocol protocol = supportedBinaryFixPProtocol.make(errorHandler);
+            final FixPProtocol protocol = FixPProtocolFactory.make(fixPProtocolType, errorHandler);
             if (protocol == null)
             {
                 errorHandler.onError(new IllegalStateException(
@@ -133,14 +134,14 @@ class BinaryFixPSequenceNumberExtractor
         iLinkMessage.wrap(buffer, offset, actingBlockLength, version);
         final long connectionId = iLinkMessage.connection();
 
-        final int sofhOffset = offset + ILinkMessageDecoder.BLOCK_LENGTH;
+        final int sofhOffset = offset + FixPMessageDecoder.BLOCK_LENGTH;
         final int headerOffset = sofhOffset + SOFH_LENGTH;
         final int templateId = parser.templateId(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
         final boolean possRetrans = offsets.possRetrans(templateId, buffer, messageOffset) == BOOLEAN_FLAG_TRUE;
 
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
-        if (seqNum != AbstractBinaryOffsets.MISSING_OFFSET)
+        if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
         {
             final long uuid = connectionIdToILinkUuid.get(connectionId);
             if (uuid != UNK_SESSION)

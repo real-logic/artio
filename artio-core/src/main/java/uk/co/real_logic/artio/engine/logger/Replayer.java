@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.fixp.*;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -92,13 +93,13 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
-    private final Lazy<BinaryFixPProtocol> binaryFixPProtocol;
-    private final Lazy<AbstractBinaryParser> binaryFixPParser;
-    private final Lazy<AbstractBinaryProxy> binaryFixPProxy;
-    private final Lazy<AbstractBinaryOffsets> abstractBinaryFixPOffsets;
+    private final Lazy<FixPProtocol> binaryFixPProtocol;
+    private final Lazy<AbstractFixPParser> binaryFixPParser;
+    private final Lazy<AbstractFixPProxy> binaryFixPProxy;
+    private final Lazy<AbstractFixPOffsets> abstractBinaryFixPOffsets;
     private final LongHashSet iLinkConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
-    private final ILinkMessageEncoder iLinkMessageEncoder = new ILinkMessageEncoder();
+    private final FixPMessageEncoder fixPMessageEncoder = new FixPMessageEncoder();
 
     // Timestamp state
     private final UnsafeBuffer timestampBuffer = new UnsafeBuffer(new byte[
@@ -150,7 +151,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final AtomicCounter currentReplayCount,
         final int maxConcurrentSessionReplays,
         final EpochNanoClock clock,
-        final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
+        final FixPProtocolType fixPProtocolType)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -176,7 +177,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             gapFillMessageTypes.add(packMessageType(messageTypeAsString)));
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
-        binaryFixPProtocol = new Lazy<>(() -> supportedBinaryFixPProtocol.make(errorHandler));
+        binaryFixPProtocol = new Lazy<>(() -> FixPProtocolFactory.make(fixPProtocolType, errorHandler));
         binaryFixPParser = new Lazy<>(() -> binaryFixPProtocol.get().makeParser(null));
         binaryFixPProxy = new Lazy<>(() -> binaryFixPProtocol.get().makeProxy(publication, clock));
         abstractBinaryFixPOffsets = new Lazy<>(() -> binaryFixPProtocol.get().makeOffsets());
@@ -368,7 +369,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             final BinaryReplayerSession session = new BinaryReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
-                iLinkMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
+                fixPMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
                 binaryFixPRetransmitHandler);
 
             session.query();

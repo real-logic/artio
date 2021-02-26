@@ -147,7 +147,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final SessionContexts sessionContexts;
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
-    private final GatewaySessions gatewaySessions;
+    private final FixGatewaySessions gatewaySessions;
     private final EpochNanoClock clock;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
@@ -176,7 +176,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final GatewaySessions gatewaySessions,
+        final FixGatewaySessions gatewaySessions,
         final EpochNanoClock clock,
         final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
         final FixReceiverEndPointFormatters formatters)

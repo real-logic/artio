@@ -47,6 +47,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
     private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
+    private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -144,6 +145,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case ReplayCompleteDecoder.TEMPLATE_ID:
             {
                 return onReplayComplete(buffer, offset, blockLength, version);
+            }
+
+            case InboundFixPConnectDecoder.TEMPLATE_ID:
+            {
+                return onInboundFixPConnect(buffer, offset, blockLength, version);
             }
         }
 
@@ -476,5 +482,26 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         return handler.onReplayComplete(libraryId, connection);
     }
 
+    private Action onInboundFixPConnect(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        inboundFixPConnect.wrap(buffer, offset, blockLength, version);
+
+        final int limit = inboundFixPConnect.limit();
+
+        return handler.onInboundFixPConnect(
+            inboundFixPConnect.connection(),
+            inboundFixPConnect.sessionId(),
+            inboundFixPConnect.protocolType(),
+            inboundFixPConnect.lastReceivedSequenceNumber(),
+            inboundFixPConnect.lastSentSequenceNumber(),
+            inboundFixPConnect.lastConnectPayload(),
+            buffer,
+            limit,
+            inboundFixPConnect.messageLength());
+    }
 
 }

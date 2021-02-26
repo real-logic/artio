@@ -98,7 +98,7 @@ public class FramerTest
 
     private final FixSenderEndPoint mockSenderEndPoint = mock(FixSenderEndPoint.class);
     private final FixReceiverEndPoint mockReceiverEndPoint = mock(FixReceiverEndPoint.class);
-    private final EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
+    private final FixEndPointFactory mockEndPointFactory = mock(FixEndPointFactory.class);
     private final GatewayPublication inboundPublication = mock(GatewayPublication.class);
     private final SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private final Header header = mock(Header.class);
@@ -107,7 +107,7 @@ public class FramerTest
     private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final ReplayQuery replayQuery = mock(ReplayQuery.class);
     private final SessionContexts sessionContexts = mock(SessionContexts.class);
-    private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
+    private final FixGatewaySessions gatewaySessions = mock(FixGatewaySessions.class);
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);

@@ -15,43 +15,19 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.messages.DisconnectReason;
-import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.CME_ENCODING_TYPE;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofh;
-import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_ILINK_MESSAGE;
-import static uk.co.real_logic.artio.messages.GatewayError.EXCEPTION;
-
-class ILink3ReceiverEndPoint extends ReceiverEndPoint
+class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
 {
-    public static final int ARTIO_HEADER_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + ILinkMessageEncoder.BLOCK_LENGTH;
-
     private static final int NEGOTIATION_RESPONSE = 501;
-    private static final int TEMPLATE_ID_OFFSET = SOFH_LENGTH + 2;
 
-    private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
-    private final UnsafeBuffer headerBuffer = new UnsafeBuffer(new byte[ARTIO_HEADER_LENGTH]);
-    private final ExclusivePublication inboundPublication;
     private final boolean isBackup;
     private final ILink3Context context;
-    private final EpochNanoClock epochNanoClock;
-    private final long correlationId;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -66,32 +42,30 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         final EpochNanoClock epochNanoClock,
         final long correlationId)
     {
-        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
-        inboundPublication = publication.dataPublication();
+        super(
+            connectionId,
+            channel,
+            bufferSize,
+            errorHandler,
+            framer,
+            publication,
+            libraryId,
+            epochNanoClock,
+            correlationId,
+            CME_ENCODING_TYPE);
         this.isBackup = isBackup;
         this.context = context;
-        this.epochNanoClock = epochNanoClock;
-        this.correlationId = correlationId;
-
-        makeHeader();
     }
 
-    private void makeHeader()
+    void checkMessage(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
     {
-        final MessageHeaderEncoder header = new MessageHeaderEncoder();
-
-        iLinkMessage
-            .wrapAndApplyHeader(headerBuffer, 0, header)
-            .connection(connectionId);
+        if (readTemplateId(buffer, offset) == NEGOTIATION_RESPONSE)
+        {
+            context.confirmUuid();
+        }
     }
 
-    void removeEndpointFromFramer()
-    {
-        trackDisconnect();
-        framer.onILink3Disconnect(connectionId, null);
-    }
-
-    private void trackDisconnect()
+    void trackDisconnect()
     {
         if (isBackup)
         {
@@ -103,152 +77,8 @@ class ILink3ReceiverEndPoint extends ReceiverEndPoint
         }
     }
 
-    void cleanupDisconnectState(final DisconnectReason reason)
-    {
-        // Not needed in iLink implementation
-    }
-
-    boolean retryFrameMessages()
-    {
-        return frameMessages();
-    }
-
-    private int readData() throws IOException
-    {
-        final int dataRead = channel.read(byteBuffer);
-        if (dataRead != SOCKET_DISCONNECTED)
-        {
-            if (dataRead > 0)
-            {
-                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Read     ", byteBuffer, usedBufferData, dataRead);
-            }
-            usedBufferData += dataRead;
-        }
-        else
-        {
-            onDisconnectDetected();
-        }
-
-        return dataRead;
-    }
-
-    int poll()
-    {
-        try
-        {
-            final int bytesRead = readData();
-            if (bytesRead > 0 && !frameMessages())
-            {
-                return -bytesRead;
-            }
-
-            return bytesRead;
-        }
-        catch (final ClosedChannelException ex)
-        {
-            onDisconnectDetected();
-        }
-        catch (final IllegalArgumentException ex)
-        {
-            errorHandler.onError(ex);
-            saveError(ex);
-            completeDisconnect(INVALID_ILINK_MESSAGE);
-        }
-        catch (final Exception ex)
-        {
-            // Regular disconnects aren't errors
-            if (!Exceptions.isJustDisconnect(ex))
-            {
-                errorHandler.onError(ex);
-            }
-
-            saveError(ex);
-            onDisconnectDetected();
-        }
-
-        return 1;
-    }
-
-    private void saveError(final Exception ex)
-    {
-        framer.saveError(EXCEPTION, libraryId, correlationId, ex.getMessage());
-    }
-
-    // false iff back pressured
-    private boolean frameMessages()
-    {
-        final MutableAsciiBuffer buffer = this.buffer;
-
-        int offset = 0;
-        while (usedBufferData > SOFH_LENGTH)
-        {
-            final int messageSize = readSofh(buffer, offset);
-            if (messageSize > usedBufferData)
-            {
-                moveRemainingDataToBufferStart(offset);
-                return true;
-            }
-
-            if (readTemplateId(buffer, offset) == NEGOTIATION_RESPONSE)
-            {
-                context.confirmUuid();
-            }
-
-            iLinkMessage.enqueueTime(epochNanoClock.nanoTime());
-
-            final long position = inboundPublication.offer(
-                headerBuffer,
-                0,
-                ARTIO_HEADER_LENGTH,
-                buffer,
-                offset,
-                messageSize);
-
-            if (position < 0)
-            {
-                moveRemainingDataToBufferStart(offset);
-                return false;
-            }
-
-            usedBufferData -= messageSize;
-            offset += messageSize;
-        }
-
-        moveRemainingDataToBufferStart(offset);
-        return true;
-    }
-
-    private int readTemplateId(final MutableAsciiBuffer buffer, final int offset)
-    {
-        return (buffer.getShort(offset + TEMPLATE_ID_OFFSET, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
-    }
-
-    private void moveRemainingDataToBufferStart(final int offset)
-    {
-        if (usedBufferData > 0)
-        {
-            buffer.putBytes(0, buffer, offset, usedBufferData);
-        }
-        // position set to ensure that back pressure is applied to TCP when read(byteBuffer) called.
-        ByteBufferUtil.position(byteBuffer, usedBufferData);
-    }
-
     boolean requiresAuthentication()
     {
         return false;
-    }
-
-    void closeResources()
-    {
-        trackDisconnect();
-
-        try
-        {
-            channel.close();
-        }
-        catch (final Exception ex)
-        {
-            errorHandler.onError(ex);
-        }
     }
 }

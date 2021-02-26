@@ -16,15 +16,15 @@
 package uk.co.real_logic.artio.library;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 class BinaryFixPSubscription
 {
-    private final AbstractBinaryParser parser;
+    private final AbstractFixPParser parser;
     private final InternalBinaryFixPConnection connection;
 
-    BinaryFixPSubscription(final AbstractBinaryParser parser, final InternalBinaryFixPConnection connection)
+    BinaryFixPSubscription(final AbstractFixPParser parser, final InternalBinaryFixPConnection connection)
     {
         this.parser = parser;
         this.connection = connection;

@@ -47,11 +47,11 @@ import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryOffsets.*;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.*;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
-import static uk.co.real_logic.artio.library.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 
 /**

@@ -19,9 +19,9 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.fixp.AbstractBinaryParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
-import uk.co.real_logic.artio.library.ILink3Connection;
 import uk.co.real_logic.artio.library.InternalILink3Connection;
 
 import java.util.function.Consumer;
@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-public class ILink3Parser extends AbstractBinaryParser
+public class ILink3Parser extends AbstractFixPParser
 {
     private final MessageHeaderDecoder header = new MessageHeaderDecoder();
     private final NegotiationResponse501Decoder negotiationResponse = new NegotiationResponse501Decoder();
@@ -75,6 +75,22 @@ public class ILink3Parser extends AbstractBinaryParser
     {
         header.wrap(buffer, offset);
         return header.version();
+    }
+
+    public FixPIdentification lookupIdentification(
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final int lastConnectPayload,
+        final DirectBuffer messageBuffer,
+        final int messageOffset,
+        final int messageLength)
+    {
+        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
+    }
+
+    public long sessionId(final DirectBuffer buffer, final int offset)
+    {
+        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
     }
 
     public long onMessage(final DirectBuffer buffer, final int start)

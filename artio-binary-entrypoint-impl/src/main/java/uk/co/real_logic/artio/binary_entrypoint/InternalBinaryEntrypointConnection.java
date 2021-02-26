@@ -16,10 +16,12 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import org.agrona.sbe.MessageEncoderFlyweight;
-import uk.co.real_logic.artio.library.BinaryEntrypointConnection;
 import uk.co.real_logic.artio.library.InternalBinaryFixPConnection;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
+/**
+ * External users should never rely on this API.
+ */
 public class InternalBinaryEntrypointConnection
     extends InternalBinaryFixPConnection implements BinaryEntrypointConnection
 {
@@ -45,7 +47,6 @@ public class InternalBinaryEntrypointConnection
 
     public void commit()
     {
-
     }
 
     public void abort()

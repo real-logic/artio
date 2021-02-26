@@ -18,21 +18,17 @@ package uk.co.real_logic.artio.ilink;
 import iLinkBinary.Negotiate500Encoder;
 import iLinkBinary.NewOrderSingle514Decoder;
 import org.agrona.DirectBuffer;
-import org.agrona.LangUtil;
 import org.agrona.collections.Int2IntHashMap;
-import uk.co.real_logic.artio.fixp.AbstractBinaryOffsets;
+import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
 import uk.co.real_logic.sbe.ir.Ir;
-import uk.co.real_logic.sbe.ir.IrDecoder;
 import uk.co.real_logic.sbe.ir.Signal;
 import uk.co.real_logic.sbe.ir.Token;
 
-import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.List;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class ILink3Offsets extends AbstractBinaryOffsets
+public class ILink3Offsets extends AbstractFixPOffsets
 {
     private final Int2IntHashMap templateIdToSeqNumOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToUuidOffset = new Int2IntHashMap(MISSING_OFFSET);
@@ -88,26 +84,7 @@ public class ILink3Offsets extends AbstractBinaryOffsets
 
     public static Ir loadSbeIr()
     {
-        try
-        {
-            final InputStream stream = Negotiate500Encoder.class.getResourceAsStream(SBE_IR_FILE);
-            final int length = stream.available();
-            final byte[] bytes = new byte[length];
-            int remaining = length;
-            while (remaining > 0)
-            {
-                remaining -= stream.read(bytes, length - remaining, remaining);
-            }
-            try (IrDecoder irDecoder = new IrDecoder(ByteBuffer.wrap(bytes)))
-            {
-                return irDecoder.decode();
-            }
-        }
-        catch (final Exception e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
+        return AbstractFixPOffsets.loadSbeIr(Negotiate500Encoder.class, SBE_IR_FILE);
     }
 
     private static void findOffset(

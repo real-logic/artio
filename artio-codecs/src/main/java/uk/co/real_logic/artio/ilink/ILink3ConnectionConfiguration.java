@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.ilink;
 
 import org.agrona.Verify;
-import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -594,7 +594,7 @@ public final class ILink3ConnectionConfiguration
 
         /**
          * Sets a timeout used in retransmit operations. The timeout is started when a retransmit request is sent. If
-         * this timeout is breached then the {@link ILink3ConnectionHandler#onRetransmitTimeout(BinaryFixPConnection)}
+         * this timeout is breached then the {@link ILink3ConnectionHandler#onRetransmitTimeout(FixPConnection)}
          * method will be invoked. This notification could be used to cancel the retransmit or inform operators,
          * traders or algorithms that it's taking a while to get sequence numbers back into sync. The timeout
          * doesn't not in and of itself cancel the retransmit request - just call the callback.

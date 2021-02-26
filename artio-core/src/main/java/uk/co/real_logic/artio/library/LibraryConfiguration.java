@@ -87,6 +87,8 @@ public final class LibraryConfiguration extends CommonConfiguration
     private LibraryScheduler scheduler = new DefaultLibraryScheduler();
     private String libraryName = "";
     private SessionProxyFactory sessionProxyFactory = DEFAULT_SESSION_PROXY_FACTORY;
+    private FixPConnectionExistsHandler fixPConnectionExistsHandler;
+    private FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -100,6 +102,13 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration sessionAcquireHandler(final SessionAcquireHandler sessionAcquireHandler)
     {
         this.sessionAcquireHandler = sessionAcquireHandler;
+        return this;
+    }
+
+    public LibraryConfiguration fixPConnectionAcquiredHandler(
+        final FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler)
+    {
+        this.fixPConnectionAcquiredHandler = fixPConnectionAcquiredHandler;
         return this;
     }
 
@@ -118,6 +127,13 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration sessionExistsHandler(final SessionExistsHandler sessionExistsHandler)
     {
         this.sessionExistsHandler = sessionExistsHandler;
+        return this;
+    }
+
+    public LibraryConfiguration fixPConnectionExistsHandler(
+        final FixPConnectionExistsHandler fixPConnectionExistsHandler)
+    {
+        this.fixPConnectionExistsHandler = fixPConnectionExistsHandler;
         return this;
     }
 
@@ -249,6 +265,16 @@ public final class LibraryConfiguration extends CommonConfiguration
     SessionExistsHandler sessionExistsHandler()
     {
         return sessionExistsHandler;
+    }
+
+    FixPConnectionExistsHandler fixPConnectionExistsHandler()
+    {
+        return fixPConnectionExistsHandler;
+    }
+
+    FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler()
+    {
+        return fixPConnectionAcquiredHandler;
     }
 
     public List<String> libraryAeronChannels()

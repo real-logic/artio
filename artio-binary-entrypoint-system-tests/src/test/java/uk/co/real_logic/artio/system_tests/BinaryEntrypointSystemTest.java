@@ -20,20 +20,25 @@ import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointIdentification;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -43,7 +48,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIME
 public class BinaryEntrypointSystemTest
 {
 
-    private int port = unusedPort();
+    private final int port = unusedPort();
+
     private ArchivingMediaDriver mediaDriver;
     private TestSystem testSystem;
     private FixEngine engine;
@@ -51,6 +57,13 @@ public class BinaryEntrypointSystemTest
 
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
+    private final FakeFixPConnectionExistsHandler connectionExistsHandler = new FakeFixPConnectionExistsHandler();
+    private final FakeBinaryEntrypointConnectionHandler connectionHandler = new FakeBinaryEntrypointConnectionHandler(
+        notAppliedResponse ->
+        {
+        });
+    private final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler = new FakeFixPConnectionAcquiredHandler(
+        connectionHandler);
 
     @Before
     public void setUp()
@@ -73,24 +86,47 @@ public class BinaryEntrypointSystemTest
 
         final LibraryConfiguration libraryConfig = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .fixPConnectionExistsHandler(connectionExistsHandler)
+            .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
+
         libraryConfig
             .errorHandlerFactory(errorBuffer -> errorHandler)
             .monitoringAgentFactory(MonitoringAgentFactory.none());
         library = testSystem.connect(libraryConfig);
     }
 
+    @Ignore
     @Test
     public void shouldAcceptLogonFromClient() throws IOException
     {
-        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port))
+        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
         {
-            client.sendNegotiate();
+            client.writeNegotiate();
+
+            testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
+            assertEquals(BinaryEntrypointClient.SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
+            final BinaryEntryPointIdentification id =
+                (BinaryEntryPointIdentification)connectionExistsHandler.lastIdentification();
+            final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
+            assertEquals(0, id.lastReceivedSequenceNumber());
+            assertEquals(0, id.lastSentSequenceNumber());
+
+            testSystem.awaitCompletedReply(reply);
+            assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
+
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+
             client.readNegotiateResponse();
-            client.sendEstablish();
+            client.writeEstablish();
             client.readEstablishAck();
         }
     }
+
+    // TODO: exchanging business messages
+    // TODO: terminate
+    // TODO: timeout disconnect
+    // TODO: heartbeat / timeout
 
     @After
     public void close()

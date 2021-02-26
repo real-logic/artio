@@ -32,7 +32,7 @@ import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.PruneOperation;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 
@@ -100,7 +100,7 @@ public class EngineContext implements AutoCloseable
         {
             final EpochClock epochClock = new SystemEpochClock();
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
-            final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol = configuration.supportedBinaryFixPProtocol();
+            final FixPProtocolType fixPProtocolType = configuration.supportedBinaryFixPProtocol();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
@@ -111,7 +111,7 @@ public class EngineContext implements AutoCloseable
                 epochClock,
                 configuration.logFileDir(),
                 connectionIdToILinkUuid,
-                supportedBinaryFixPProtocol);
+                fixPProtocolType);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -122,7 +122,7 @@ public class EngineContext implements AutoCloseable
                 epochClock,
                 null,
                 connectionIdToILinkUuid,
-                supportedBinaryFixPProtocol);
+                fixPProtocolType);
 
             newStreams();
             newArchivingAgent();

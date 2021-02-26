@@ -30,7 +30,6 @@ import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.WriteMetaDataResponse;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
@@ -121,7 +120,8 @@ public class SequenceNumberIndexWriter implements Index
         final long indexFileStateFlushTimeoutInMs,
         final EpochClock clock,
         final String metaDataDir,
-        final Long2LongHashMap connectionIdToILinkUuid, final SupportedBinaryFixPProtocol supportedBinaryFixPProtocol)
+        final Long2LongHashMap connectionIdToILinkUuid,
+        final FixPProtocolType fixPProtocolType)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -132,7 +132,7 @@ public class SequenceNumberIndexWriter implements Index
         this.clock = clock;
 
         binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler, supportedBinaryFixPProtocol,
+            connectionIdToILinkUuid, errorHandler, fixPProtocolType,
             (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
             // When possRetrans=true we should only update if the number is actually higher as
             // possRetrans=true messages can be interleaved with normal messages /or/ the last message

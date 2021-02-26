@@ -17,10 +17,10 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.fixp.BinaryFixPProtocol;
-import uk.co.real_logic.artio.library.ILink3Connection;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
 
-public class BinaryEntryPointProtocol extends BinaryFixPProtocol
+public class BinaryEntryPointProtocol extends FixPProtocol
 {
     public BinaryEntryPointParser makeParser(final ILink3Connection session)
     {

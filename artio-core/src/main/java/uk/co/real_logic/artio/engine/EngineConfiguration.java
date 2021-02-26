@@ -31,8 +31,8 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
-import uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
@@ -49,9 +49,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
-import static uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol.BINARY_ENTRYPOINT;
-import static uk.co.real_logic.artio.fixp.SupportedBinaryFixPProtocol.ILINK_3;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
+import static uk.co.real_logic.artio.messages.FixPProtocolType.BINARY_ENTRYPOINT;
+import static uk.co.real_logic.artio.messages.FixPProtocolType.ILINK_3;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
 /**
@@ -296,13 +296,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Configures the engine to accept binary entrypoint connections. The Engine no longer accepts
-     * regular FIX protocol connections and only accepts this binary protocol.
+     * regular FIX protocol connections and only accepts this binary protocol. Automatically sets
+     * <code>lookupDefaultAcceptorfixDictionary(false)</code>
      *
      * @return this
      */
     public EngineConfiguration acceptBinaryEntryPoint()
     {
         this.acceptsBinaryEntryPoint = true;
+        lookupDefaultAcceptorfixDictionary = false;
         return this;
     }
 
@@ -1111,7 +1113,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return acceptsBinaryEntryPoint;
     }
 
-    public SupportedBinaryFixPProtocol supportedBinaryFixPProtocol()
+    public FixPProtocolType supportedBinaryFixPProtocol()
     {
         return acceptsBinaryEntryPoint ? BINARY_ENTRYPOINT : ILINK_3;
     }

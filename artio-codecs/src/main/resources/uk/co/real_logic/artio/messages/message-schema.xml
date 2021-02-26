@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="15"
+                   version="16"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -118,7 +118,7 @@
                         description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messages">18</validValue>
             <validValue name="AUTHENTICATION_TIMEOUT"
                         description="We disconnected due to the authentication strategy not responding within the timeout">19</validValue>
-            <validValue name="INVALID_ILINK_MESSAGE"
+            <validValue name="INVALID_FIXP_MESSAGE"
                         description="We disconnected due to an error in framing iLink3 messages" sinceVersion="14">20</validValue>
             <validValue name="ADMIN_API_DISCONNECT"
                         description="Disconnected due to an explicit administrative API operation from a user" sinceVersion="15">21</validValue>
@@ -214,6 +214,11 @@
         <enum name="InitialAcceptedSessionOwner" encodingType="uint8" sinceVersion="10">
             <validValue name="ENGINE">0</validValue>
             <validValue name="SOLE_LIBRARY">1</validValue>
+        </enum>
+
+        <enum name="FixPProtocolType" encodingType="uint16" sinceVersion="16">
+            <validValue name="ILINK_3">0</validValue>
+            <validValue name="BINARY_ENTRYPOINT">1</validValue>
         </enum>
     </types>
 
@@ -461,7 +466,7 @@
         <field name="status" id="3" type="ReplayMessagesStatus"/>
     </sbe:message>
 
-    <sbe:message name="ILinkConnect" id="57" description="ILink TCP Connection established"
+    <sbe:message name="ILinkConnect" id="57" description="Outbound ILink TCP Connection established"
                  sinceVersion="8">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
@@ -531,7 +536,7 @@
         <field name="libraryId" id="2" type="LibraryId" sinceVersion="9"/>
     </sbe:message>
 
-    <sbe:message name="ILinkMessage" id="58" description="ILink3 Message Header"
+    <sbe:message name="FixPMessage" id="58" description="FIXP Message Header"
                  sinceVersion="8">
         <field name="connection" id="1" type="ConnectionId"/>
         <field name="enqueueTime" id="2" type="Timestamp" sinceVersion="12"/>
@@ -600,6 +605,21 @@
     <sbe:message name="AdminResetSequenceNumbersRequest" id="66" description="" sinceVersion="15">
         <field name="correlationId" id="0" type="CorrelationId"/>
         <field name="sessionId" id="1" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="InboundFixPConnect" id="67" description="Inbound FIXP TCP Connection received"
+         sinceVersion="16">
+        <field name="connection" id="1" type="ConnectionId"/>
+        <field name="sessionId" id="2" type="uint64"/>
+        <field name="protocolType" id="3" type="FixPProtocolType"/>
+        <field name="lastReceivedSequenceNumber" id="4" type="uint64"/>
+        <field name="lastSentSequenceNumber" id="5" type="uint64"/>
+        <!-- Additional payload that corresponds to previous logon information, ie:-->
+        <!-- BinaryEntrypoint: sessionVerId -->
+        <field name="lastConnectPayload" id="6" type="uint16"/>
+        <field name="messageLength" id="7" type="uint16"/>
+        <!-- then the connect payload -->
+        <!-- then the first message sent -->
     </sbe:message>
 
 </sbe:messageSchema>

@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.library;
 import iLinkBinary.ExecutionReportStatus532Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.LongArrayList;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -29,7 +30,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     private boolean retransmitTimedOut = false;
 
     public void onBusinessMessage(
-        final BinaryFixPConnection connection,
+        final FixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
         final int offset,
@@ -59,7 +60,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     }
 
     public void onNotApplied(
-        final BinaryFixPConnection connection,
+        final FixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
@@ -67,7 +68,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
     }
 
     public void onRetransmitReject(
-        final BinaryFixPConnection connection,
+        final FixPConnection connection,
         final String reason,
         final long lastUuid,
         final long requestTimestamp,
@@ -80,7 +81,7 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         return retransmitTimedOut;
     }
 
-    public void onRetransmitTimeout(final BinaryFixPConnection connection)
+    public void onRetransmitTimeout(final FixPConnection connection)
     {
         retransmitTimedOut = true;
     }
@@ -90,15 +91,15 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         retransmitTimedOut = false;
     }
 
-    public void onSequence(final BinaryFixPConnection connection, final long uuid, final long nextSeqNo)
+    public void onSequence(final FixPConnection connection, final long uuid, final long nextSeqNo)
     {
     }
 
-    public void onError(final BinaryFixPConnection connection, final Exception ex)
+    public void onError(final FixPConnection connection, final Exception ex)
     {
     }
 
-    public void onDisconnect(final BinaryFixPConnection connection, final DisconnectReason reason)
+    public void onDisconnect(final FixPConnection connection, final DisconnectReason reason)
     {
     }
 }

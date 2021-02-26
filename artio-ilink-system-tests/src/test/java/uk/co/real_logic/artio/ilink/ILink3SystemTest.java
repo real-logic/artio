@@ -61,7 +61,7 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_ERROR_CODES;
 import static uk.co.real_logic.artio.ilink.ILink3TestServer.RETRANSMIT_REJECT_REASON;
-import static uk.co.real_logic.artio.library.ILink3Connection.NOT_AWAITING_RETRANSMIT;
+import static uk.co.real_logic.artio.ilink.ILink3Connection.NOT_AWAITING_RETRANSMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ILink3SystemTest
@@ -1269,7 +1269,7 @@ public class ILink3SystemTest
 
         assertConnectError(
             either(containsString("Unsupported Encoding Type: 25972 should be -13570"))
-            .or(containsString("Unbound due to: INVALID_ILINK_MESSAGE")));
+            .or(containsString("Unbound due to: INVALID_FIXP_MESSAGE")));
     }
 
     // Replicate a bug report where the sequence numbers weren't updated after a reconnect / retransmit

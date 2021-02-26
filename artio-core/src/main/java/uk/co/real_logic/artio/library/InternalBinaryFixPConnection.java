@@ -15,9 +15,10 @@
  */
 package uk.co.real_logic.artio.library;
 
+import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
-public abstract class InternalBinaryFixPConnection implements BinaryFixPConnection
+public abstract class InternalBinaryFixPConnection implements FixPConnection
 {
     // -----------------------------------------------
     // Internal Methods below, not part of the public API

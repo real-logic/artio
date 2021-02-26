@@ -13,27 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.binary_entrypoint;
 
-import io.aeron.ExclusivePublication;
-import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
 
-public class Ilink3Protocol extends FixPProtocol
+public class BinaryEntryPointIdentification implements FixPIdentification
 {
-    public ILink3Parser makeParser(final ILink3Connection session)
+    public long lastReceivedSequenceNumber()
     {
-        return new ILink3Parser(session);
+        return 0;
     }
 
-    public ILink3Proxy makeProxy(
-        final ExclusivePublication publication, final EpochNanoClock epochNanoClock)
+    public long lastSentSequenceNumber()
     {
-        return new ILink3Proxy(0, publication, null, epochNanoClock);
-    }
-
-    public ILink3Offsets makeOffsets()
-    {
-        return new ILink3Offsets();
+        return 0;
     }
 }

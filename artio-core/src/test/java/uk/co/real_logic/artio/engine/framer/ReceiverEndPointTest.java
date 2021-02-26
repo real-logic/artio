@@ -76,7 +76,7 @@ public class ReceiverEndPointTest
     private final Framer framer = mock(Framer.class);
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
-    private final GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
+    private final FixGatewaySessions mockGatewaySessions = mock(FixGatewaySessions.class);
     private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");

@@ -30,10 +30,18 @@ public final class SimpleOpenFramingHeader
     public static final int SOFH_ENCODING_OFFSET = SOFH_MSG_SIZE_LENGTH;
 
     public static final short CME_ENCODING_TYPE = (short)0xCAFE;
+    public static final short BINARY_ENTRYPOINT_TYPE = (short)0xEB50;
 
-    public static void writeSofh(final MutableDirectBuffer buffer, final int offset, final int messageSize)
+    public static void writeILinkSofh(
+        final MutableDirectBuffer buffer, final int offset, final int messageSize)
     {
         writeSofh(buffer, offset, messageSize, CME_ENCODING_TYPE);
+    }
+
+    public static void writeBinaryEntryPointSofh(
+        final MutableDirectBuffer buffer, final int offset, final int messageSize)
+    {
+        writeSofh(buffer, offset, messageSize, BINARY_ENTRYPOINT_TYPE);
     }
 
     public static void writeSofh(
@@ -48,14 +56,14 @@ public final class SimpleOpenFramingHeader
         return buffer.getShort(offset + SOFH_MSG_SIZE_OFFSET, ByteOrder.LITTLE_ENDIAN) & 0xFFFF;
     }
 
-    public static int readSofh(final DirectBuffer buffer, final int offset)
+    public static int readSofh(final DirectBuffer buffer, final int offset, final short expectedEncodingType)
     {
         final int messageSize = readSofhMessageSize(buffer, offset);
         final short encodingType = buffer.getShort(offset + SOFH_ENCODING_OFFSET, ByteOrder.LITTLE_ENDIAN);
-        if (encodingType != CME_ENCODING_TYPE)
+        if (encodingType != expectedEncodingType)
         {
             throw new IllegalArgumentException(
-                "Unsupported Encoding Type: " + encodingType + " should be " + CME_ENCODING_TYPE);
+                "Unsupported Encoding Type: " + encodingType + " should be " + expectedEncodingType);
         }
         return messageSize;
     }

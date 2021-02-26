@@ -16,12 +16,18 @@
 package uk.co.real_logic.artio.fixp;
 
 import org.agrona.DirectBuffer;
+import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
+import uk.co.real_logic.sbe.ir.Ir;
+import uk.co.real_logic.sbe.ir.IrDecoder;
+
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static uk.co.real_logic.artio.fixp.AbstractBinaryParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
 
-public abstract class AbstractBinaryOffsets
+public abstract class AbstractFixPOffsets
 {
     public static final int MISSING_OFFSET = -1;
 
@@ -83,4 +89,29 @@ public abstract class AbstractBinaryOffsets
     public abstract int possRetrans(int templateId, DirectBuffer buffer, int messageOffset);
 
     public abstract int sendingTimeEpochOffset(int templateId);
+
+
+    public static Ir loadSbeIr(final Class<?> encoder, final String fileName)
+    {
+        try
+        {
+            final InputStream stream = encoder.getResourceAsStream(fileName);
+            final int length = stream.available();
+            final byte[] bytes = new byte[length];
+            int remaining = length;
+            while (remaining > 0)
+            {
+                remaining -= stream.read(bytes, length - remaining, remaining);
+            }
+            try (IrDecoder irDecoder = new IrDecoder(ByteBuffer.wrap(bytes)))
+            {
+                return irDecoder.decode();
+            }
+        }
+        catch (final Exception e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
+    }
 }
