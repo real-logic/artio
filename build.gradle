@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
+ * Copyright 2015-2021 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ def hamcrestVersion = '2.2'
 def junitVersion = '4.13.2'
 def mockitoVersion = '3.8.0'
 def hdrHistogramVersion = '2.1.12'
-def jmhVersion = '1.27'
+def jmhVersion = '1.28'
 
 def aeronVersion = '1.32.0'
 def agronaVersion = '1.9.0'

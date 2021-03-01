@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
+ * Copyright 2015-2021 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -224,19 +224,19 @@ class EncoderGenerator extends Generator
         final String name = group.name();
         final Entry numberField = group.numberField();
         return String.format(
-                "    public void %1$s()\n" +
-                "    {\n" +
-                "        if (%2$s != null)\n" +
-                "        {\n" +
-                "            %2$s.reset();\n" +
-                "        }\n" +
-                "        %3$s = 0;\n" +
-                "        has%4$s = false;\n" +
-                "    }\n\n",
-                nameOfResetMethod(name),
-                formatPropertyName(name),
-                formatPropertyName(numberField.name()),
-                numberField.name());
+            "    public void %1$s()\n" +
+            "    {\n" +
+            "        if (%2$s != null)\n" +
+            "        {\n" +
+            "            %2$s.reset();\n" +
+            "        }\n" +
+            "        %3$s = 0;\n" +
+            "        has%4$s = false;\n" +
+            "    }\n\n",
+            nameOfResetMethod(name),
+            formatPropertyName(name),
+            formatPropertyName(numberField.name()),
+            numberField.name());
     }
 
     private void generateAggregateClass(
@@ -493,8 +493,7 @@ class EncoderGenerator extends Generator
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
-        final String hasField =
-            String.format("    private boolean has%1$s;\n\n", name) + hasGetter(name);
+        final String hasField = String.format("    private boolean has%1$s;\n\n", name) + hasGetter(name);
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
@@ -541,8 +540,7 @@ class EncoderGenerator extends Generator
             case DATA:
             case XMLDATA:
                 // DATA fields always come with their own Length field defined by the schema
-                return generateSetter.apply("byte[]") +
-                    generateCopyingDataSetter(className, fieldName, name, hasAssign);
+                return generateSetter.apply("byte[]") + generateCopyingDataSetter(className, fieldName, hasAssign);
 
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
@@ -557,19 +555,17 @@ class EncoderGenerator extends Generator
         }
     }
 
-    private String generateCopyingDataSetter(
-        final String className, final String fieldName, final String name, final String hasAssign)
+    private String generateCopyingDataSetter(final String className, final String fieldName, final String hasAssign)
     {
         return String.format(
             "    public %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s = copyInto(%1$s, value, offset, length);\n" +
-            "%4$s" +
+            "%3$s" +
             "        return this;\n" +
             "    }\n\n",
             fieldName,
             className,
-            name,
             hasAssign);
     }
 
