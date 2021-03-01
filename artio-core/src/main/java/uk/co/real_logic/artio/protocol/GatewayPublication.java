@@ -107,6 +107,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ValidResendRequestEncoder.BLOCK_LENGTH + ValidResendRequestEncoder.bodyHeaderLength();
     private static final int LIBRARY_EXTEND_POSITION_LENGTH =
         HEADER_LENGTH + LibraryExtendPositionEncoder.BLOCK_LENGTH;
+    private static final int MANAGE_FIXP_CONNECTION_LENGTH =
+        HEADER_LENGTH + ManageFixPConnectionDecoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -139,6 +141,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
     private final LibraryExtendPositionEncoder libraryExtendPosition = new LibraryExtendPositionEncoder();
+    private final ManageFixPConnectionEncoder manageFixPConnection = new ManageFixPConnectionEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -1424,6 +1427,48 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, libraryExtendPosition);
+
+        return position;
+    }
+
+    public long saveManageFixPConnection(
+        final int libraryId,
+        final long correlationId,
+        final long connectionId,
+        final long sessionId,
+        final FixPProtocolType protocolType,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final long lastConnectPayload,
+        final byte[] firstMessage)
+    {
+        final int messageLength = firstMessage.length;
+        final long position = claim(MANAGE_FIXP_CONNECTION_LENGTH + messageLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        manageFixPConnection
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .connection(connectionId)
+            .sessionId(sessionId)
+            .protocolType(protocolType)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastConnectPayload(lastConnectPayload)
+            .messageLength(messageLength);
+
+        buffer.putBytes(manageFixPConnection.limit(), firstMessage, 0, messageLength);
+
+        bufferClaim.commit();
+
+//        logSbeMessage(GATEWAY_MESSAGE, manageFixPConnection);
 
         return position;
     }

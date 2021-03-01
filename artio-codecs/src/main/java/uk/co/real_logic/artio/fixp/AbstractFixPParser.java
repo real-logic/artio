@@ -31,9 +31,6 @@ public abstract class AbstractFixPParser
     public abstract int version(DirectBuffer buffer, int offset);
 
     public abstract FixPIdentification lookupIdentification(
-        long lastReceivedSequenceNumber,
-        long lastSentSequenceNumber,
-        int lastConnectPayload,
         DirectBuffer messageBuffer,
         int messageOffset,
         int messageLength);

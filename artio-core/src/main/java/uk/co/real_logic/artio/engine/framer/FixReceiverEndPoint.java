@@ -152,7 +152,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
-    private GatewaySession gatewaySession;
+    private FixGatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
     private boolean isPaused = false;
@@ -971,7 +971,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return hasDisconnected;
     }
 
-    void gatewaySession(final GatewaySession gatewaySession)
+    void gatewaySession(final FixGatewaySession gatewaySession)
     {
         this.gatewaySession = gatewaySession;
     }

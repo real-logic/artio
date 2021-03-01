@@ -108,7 +108,7 @@ public class FramerTest
     private final ReplayQuery replayQuery = mock(ReplayQuery.class);
     private final SessionContexts sessionContexts = mock(SessionContexts.class);
     private final FixGatewaySessions gatewaySessions = mock(FixGatewaySessions.class);
-    private final GatewaySession gatewaySession = mock(GatewaySession.class);
+    private final FixGatewaySession gatewaySession = mock(FixGatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
     private final Subscription outboundSlowSubscription = mock(Subscription.class);

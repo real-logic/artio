@@ -100,7 +100,7 @@ public class EngineContext implements AutoCloseable
         {
             final EpochClock epochClock = new SystemEpochClock();
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
-            final FixPProtocolType fixPProtocolType = configuration.supportedBinaryFixPProtocol();
+            final FixPProtocolType fixPProtocolType = configuration.supportedFixPProtocolType();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
@@ -181,7 +181,7 @@ public class EngineContext implements AutoCloseable
             errorHandler,
             recordingIdLookup,
             connectionIdToILinkUuid,
-            configuration.supportedBinaryFixPProtocol());
+            configuration.supportedFixPProtocolType());
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -228,7 +228,7 @@ public class EngineContext implements AutoCloseable
             fixCounters.currentReplayCount(),
             configuration.maxConcurrentSessionReplays(),
             configuration.epochNanoClock(),
-            configuration.supportedBinaryFixPProtocol());
+            configuration.supportedFixPProtocolType());
     }
 
     private void newIndexers()

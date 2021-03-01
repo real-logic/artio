@@ -120,7 +120,7 @@ abstract class GatewaySessions
 
     void releaseByConnectionId(final long connectionId)
     {
-        final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
+        final FixGatewaySession session = (FixGatewaySession)removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
             session.close();

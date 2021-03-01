@@ -26,7 +26,10 @@ import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.engine.logger.*;
+import uk.co.real_logic.artio.engine.logger.FixMessageTracker;
+import uk.co.real_logic.artio.engine.logger.ReplayOperation;
+import uk.co.real_logic.artio.engine.logger.ReplayQuery;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
@@ -43,7 +46,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.CATCHUP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.bodyHeaderLength;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -78,7 +81,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 final GatewayPublication publication,
                 final int libraryId,
                 final long correlationId,
-                final GatewaySession session)
+                final FixGatewaySession session)
             {
                 return publication.saveReplayMessagesReply(
                     libraryId, correlationId, ReplayMessagesStatus.OK);
@@ -88,7 +91,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 final GatewayPublication publication,
                 final int libraryId,
                 final long correlationId,
-                final GatewaySession session)
+                final FixGatewaySession session)
             {
                 return publication.saveReplayMessagesReply(
                     libraryId, correlationId, ReplayMessagesStatus.MISSING_MESSAGES);
@@ -100,7 +103,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 final GatewayPublication publication,
                 final int libraryId,
                 final long correlationId,
-                final GatewaySession session)
+                final FixGatewaySession session)
             {
                 final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
                 if (position > 0)
@@ -114,7 +117,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 final GatewayPublication publication,
                 final int libraryId,
                 final long correlationId,
-                final GatewaySession session)
+                final FixGatewaySession session)
             {
                 final long position = publication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
                 if (position > 0)
@@ -129,13 +132,13 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             GatewayPublication publication,
             int libraryId,
             long correlationId,
-            GatewaySession session);
+            FixGatewaySession session);
 
         abstract long sendMissing(
             GatewayPublication publication,
             int libraryId,
             long correlationId,
-            GatewaySession session);
+            FixGatewaySession session);
     }
 
     private enum State
@@ -164,7 +167,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final int libraryId;
     private final int replayToSequenceNumber;
     private final int replayToSequenceIndex;
-    private final GatewaySession session;
+    private final FixGatewaySession session;
     private final long catchupEndTimeInMs;
     private final long requiredPosition;
     private final SessionHeaderDecoder headerDecoder;
@@ -197,7 +200,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int replayToSequenceIndex,
         final int replayFromSequenceNumber,
         final int replayFromSequenceIndex,
-        final GatewaySession session,
+        final FixGatewaySession session,
         final long catchupEndTimeInMs,
         final ReplayFor replayFor,
         final Formatters formatters,
@@ -474,7 +477,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private long sendOk(
         final GatewayPublication publication,
         final long correlationId,
-        final GatewaySession session)
+        final FixGatewaySession session)
     {
         if (DebugLogger.isEnabled(CATCHUP))
         {
@@ -487,7 +490,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     static long sendOk(
         final GatewayPublication publication,
         final long correlationId,
-        final GatewaySession session,
+        final FixGatewaySession session,
         final int libraryId,
         final CatchupReplayer.Formatters formatters)
     {

@@ -117,48 +117,50 @@ class DisconnectAllOperation implements Continuation
         while (gatewaySessionIndex < gatewaySessionCount)
         {
             final GatewaySession gatewaySession = gatewaySessions.get(gatewaySessionIndex);
-            final InternalSession session = gatewaySession.session();
-            if (session != null)
+            if (gatewaySession instanceof FixGatewaySession)
             {
-                final SessionState state = session.state();
-                switch (state)
+                final InternalSession session = ((FixGatewaySession)gatewaySession).session();
+                if (session != null)
                 {
-                    case SENT_LOGON:
-                    case ACTIVE:
-                    case AWAITING_LOGOUT:
-                    case LOGGING_OUT_AND_DISCONNECTING:
-                    case LOGGING_OUT:
+                    final SessionState state = session.state();
+                    switch (state)
                     {
-                        final long position = session.logoutAndDisconnect();
-                        if (position < 0)
+                        case SENT_LOGON:
+                        case ACTIVE:
+                        case AWAITING_LOGOUT:
+                        case LOGGING_OUT_AND_DISCONNECTING:
+                        case LOGGING_OUT:
                         {
-                            return position;
+                            final long position = session.logoutAndDisconnect();
+                            if (position < 0)
+                            {
+                                return position;
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
-
-                    case CONNECTED:
-                    case CONNECTING:
-                    case DISCONNECTING:
-                    {
-                        final long position = session.requestDisconnect();
-                        if (position < 0)
+                        case CONNECTED:
+                        case CONNECTING:
+                        case DISCONNECTING:
                         {
-                            return position;
+                            final long position = session.requestDisconnect();
+                            if (position < 0)
+                            {
+                                return position;
+                            }
+
+                            break;
                         }
 
-                        break;
+                        case DISCONNECTED:
+                        case DISABLED:
+                        default:
+                            // deliberately blank
+                            break;
                     }
-
-                    case DISCONNECTED:
-                    case DISABLED:
-                    default:
-                        // deliberately blank
-                        break;
                 }
             }
-
             gatewaySessionIndex++;
         }
 

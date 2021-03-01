@@ -28,7 +28,7 @@ class EngineLibraryInfo implements LibraryInfo
 
     EngineLibraryInfo(final GatewaySessions gatewaySessions)
     {
-        sessions = new ArrayList<>(gatewaySessions.sessions());
+        sessions = new ArrayList<>((List<ConnectedSessionInfo>)(List<?>)gatewaySessions.sessions()); // TODO
         this.gatewaySessions = gatewaySessions;
     }
 

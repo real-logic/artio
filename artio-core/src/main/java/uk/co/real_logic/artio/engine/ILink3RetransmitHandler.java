@@ -26,6 +26,6 @@ package uk.co.real_logic.artio.engine;
  * Documentation</a>. These may also be referred to as application layer messages.
  */
 @FunctionalInterface
-public interface ILink3RetransmitHandler extends BinaryFixPRetransmitHandler
+public interface ILink3RetransmitHandler extends FixPRetransmitHandler
 {
 }

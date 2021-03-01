@@ -48,6 +48,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
     private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
     private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
+    private final ManageFixPConnectionDecoder manageFixPConnection = new ManageFixPConnectionDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -68,89 +69,58 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         switch (messageHeader.templateId())
         {
             case ManageSessionDecoder.TEMPLATE_ID:
-            {
                 return onManageSession(buffer, offset, blockLength, version);
-            }
 
             case ErrorDecoder.TEMPLATE_ID:
-            {
                 return onError(buffer, offset, blockLength, version);
-            }
 
             case ApplicationHeartbeatDecoder.TEMPLATE_ID:
-            {
                 return onApplicationHeartbeat(buffer, offset, blockLength, version);
-            }
 
             case ReleaseSessionReplyDecoder.TEMPLATE_ID:
-            {
                 return onReleaseSessionReply(buffer, offset, blockLength, version);
-            }
 
             case RequestSessionReplyDecoder.TEMPLATE_ID:
-            {
                 return onRequestSessionReply(buffer, offset, blockLength, version);
-            }
 
             case ControlNotificationDecoder.TEMPLATE_ID:
-            {
                 return onControlNotification(buffer, offset, blockLength, version);
-            }
 
             case SlowStatusNotificationDecoder.TEMPLATE_ID:
-            {
                 return onSlowStatusNotification(buffer, offset, blockLength, version);
-            }
 
             case ResetLibrarySequenceNumberDecoder.TEMPLATE_ID:
-            {
                 return onResetLibrarySequenceNumber(buffer, offset, blockLength, version);
-            }
 
             case FollowerSessionReplyDecoder.TEMPLATE_ID:
-            {
                 return onFollowerSessionReply(buffer, offset, blockLength, version);
-            }
 
             case WriteMetaDataReplyDecoder.TEMPLATE_ID:
-            {
                 return onWriteMetaDataReply(buffer, offset, blockLength, version);
-            }
 
             case ReadMetaDataReplyDecoder.TEMPLATE_ID:
-            {
                 return onReadMetaDataReply(buffer, offset, blockLength, version);
-            }
 
             case EndOfDayDecoder.TEMPLATE_ID:
-            {
                 return onEndOfDay(buffer, offset, blockLength, version);
-            }
 
             case ReplayMessagesReplyDecoder.TEMPLATE_ID:
-            {
                 return onReplayMessagesReply(buffer, offset, blockLength, version);
-            }
 
             case ILinkConnectDecoder.TEMPLATE_ID:
-            {
                 return onILinkConnect(buffer, offset, blockLength, version);
-            }
 
             case LibraryExtendPositionDecoder.TEMPLATE_ID:
-            {
                 return onLibraryExtendPosition(buffer, offset, blockLength, version);
-            }
 
             case ReplayCompleteDecoder.TEMPLATE_ID:
-            {
                 return onReplayComplete(buffer, offset, blockLength, version);
-            }
 
             case InboundFixPConnectDecoder.TEMPLATE_ID:
-            {
                 return onInboundFixPConnect(buffer, offset, blockLength, version);
-            }
+
+            case ManageFixPConnectionDecoder.TEMPLATE_ID:
+                return onManageFixPConnection(buffer, offset, blockLength, version);
         }
 
         return CONTINUE;
@@ -496,12 +466,33 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             inboundFixPConnect.connection(),
             inboundFixPConnect.sessionId(),
             inboundFixPConnect.protocolType(),
-            inboundFixPConnect.lastReceivedSequenceNumber(),
-            inboundFixPConnect.lastSentSequenceNumber(),
-            inboundFixPConnect.lastConnectPayload(),
             buffer,
             limit,
             inboundFixPConnect.messageLength());
+    }
+
+    private Action onManageFixPConnection(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        manageFixPConnection.wrap(buffer, offset, blockLength, version);
+
+        final int limit = manageFixPConnection.limit();
+
+        return handler.onManageFixPConnection(
+            manageFixPConnection.libraryId(),
+            manageFixPConnection.correlationId(),
+            manageFixPConnection.connection(),
+            manageFixPConnection.sessionId(),
+            manageFixPConnection.protocolType(),
+            manageFixPConnection.lastReceivedSequenceNumber(),
+            manageFixPConnection.lastSentSequenceNumber(),
+            manageFixPConnection.lastConnectPayload(),
+            buffer,
+            limit,
+            manageFixPConnection.messageLength());
     }
 
 }

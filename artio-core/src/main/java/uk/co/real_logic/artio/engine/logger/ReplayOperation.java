@@ -155,7 +155,6 @@ public class ReplayOperation
             }
             catch (final Throwable exception)
             {
-                exception.printStackTrace();
                 errorHandler.onError(exception);
 
                 return true;

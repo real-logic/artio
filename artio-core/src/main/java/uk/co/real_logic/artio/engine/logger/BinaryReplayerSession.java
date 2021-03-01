@@ -24,7 +24,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.engine.BinaryFixPRetransmitHandler;
+import uk.co.real_logic.artio.engine.FixPRetransmitHandler;
 import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
@@ -48,7 +48,7 @@ public class BinaryReplayerSession extends ReplayerSession
     private final AbstractFixPParser binaryParser;
     private final AbstractFixPProxy binaryProxy;
     private final AbstractFixPOffsets iLink3Offsets;
-    private final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler;
+    private final FixPRetransmitHandler fixPRetransmitHandler;
 
     private boolean mustSendSequenceMessage = false;
 
@@ -76,7 +76,7 @@ public class BinaryReplayerSession extends ReplayerSession
         final AbstractFixPParser binaryParser,
         final AbstractFixPProxy binaryProxy,
         final AbstractFixPOffsets iLink3Offsets,
-        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler)
+        final FixPRetransmitHandler fixPRetransmitHandler)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, 0, replayer);
@@ -86,7 +86,7 @@ public class BinaryReplayerSession extends ReplayerSession
         this.binaryParser = binaryParser;
         this.binaryProxy = binaryProxy;
         this.iLink3Offsets = iLink3Offsets;
-        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
+        this.fixPRetransmitHandler = fixPRetransmitHandler;
 
         state = State.REPLAYING;
     }
@@ -144,7 +144,7 @@ public class BinaryReplayerSession extends ReplayerSession
         final int version = binaryParser.version(buffer, headerOffset);
         final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
 
-        binaryFixPRetransmitHandler.onReplayedBusinessMessage(
+        fixPRetransmitHandler.onReplayedBusinessMessage(
             templateId,
             buffer,
             messageOffset,

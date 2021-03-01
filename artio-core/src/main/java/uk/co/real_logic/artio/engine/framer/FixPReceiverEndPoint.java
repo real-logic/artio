@@ -51,6 +51,8 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
     private final long correlationId;
     private final short encodingType;
 
+    protected FixPGatewaySession fixPGatewaySession;
+
     FixPReceiverEndPoint(
         final long connectionId,
         final TcpChannel channel,
@@ -228,6 +230,11 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
         {
             errorHandler.onError(ex);
         }
+    }
+
+    public void gatewaySession(final FixPGatewaySession fixPGatewaySession)
+    {
+        this.fixPGatewaySession = fixPGatewaySession;
     }
 
     abstract void trackDisconnect();

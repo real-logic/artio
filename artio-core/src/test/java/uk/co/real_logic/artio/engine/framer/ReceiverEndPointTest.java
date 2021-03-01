@@ -74,7 +74,7 @@ public class ReceiverEndPointTest
     private final AtomicCounter messagesRead = mock(AtomicCounter.class);
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final Framer framer = mock(Framer.class);
-    private final GatewaySession gatewaySession = mock(GatewaySession.class);
+    private final FixGatewaySession gatewaySession = mock(FixGatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
     private final FixGatewaySessions mockGatewaySessions = mock(FixGatewaySessions.class);
     private final CompositeKey sessionKey = SessionIdStrategy

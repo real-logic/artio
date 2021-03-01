@@ -17,7 +17,4 @@ package uk.co.real_logic.artio.fixp;
 
 public interface FixPIdentification
 {
-    long lastReceivedSequenceNumber();
-
-    long lastSentSequenceNumber();
 }

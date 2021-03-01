@@ -16,14 +16,24 @@
 package uk.co.real_logic.artio.ilink;
 
 import io.aeron.ExclusivePublication;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.library.InternalFixPConnection;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 public class Ilink3Protocol extends FixPProtocol
 {
-    public ILink3Parser makeParser(final ILink3Connection session)
+    public Ilink3Protocol()
     {
-        return new ILink3Parser(session);
+        super(FixPProtocolType.ILINK_3);
+    }
+
+    public ILink3Parser makeParser(final FixPConnection connection)
+    {
+        return new ILink3Parser((ILink3Connection)connection);
     }
 
     public ILink3Proxy makeProxy(
@@ -35,5 +45,22 @@ public class Ilink3Protocol extends FixPProtocol
     public ILink3Offsets makeOffsets()
     {
         return new ILink3Offsets();
+    }
+
+    public InternalFixPConnection makeAcceptorConnection(
+        final long connectionId,
+        final GatewayPublication outboundPublication,
+        final GatewayPublication inboundPublication,
+        final int libraryId,
+        final Object libraryPoller,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final long lastConnectPayload,
+        final DirectBuffer buffer,
+        final int offset,
+        final int messageLength,
+        final EpochNanoClock epochNanoClock)
+    {
+        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
     }
 }

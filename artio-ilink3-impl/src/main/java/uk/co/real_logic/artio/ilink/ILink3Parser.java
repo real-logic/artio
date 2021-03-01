@@ -78,9 +78,6 @@ public class ILink3Parser extends AbstractFixPParser
     }
 
     public FixPIdentification lookupIdentification(
-        final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber,
-        final int lastConnectPayload,
         final DirectBuffer messageBuffer,
         final int messageOffset,
         final int messageLength)

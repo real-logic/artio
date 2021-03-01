@@ -57,7 +57,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 /**
  * External users should never rely on this API.
  */
-public final class InternalILink3Connection extends InternalBinaryFixPConnection implements ILink3Connection
+public final class InternalILink3Connection extends InternalFixPConnection implements ILink3Connection
 {
     public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
 

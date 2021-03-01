@@ -100,7 +100,7 @@ public class SequenceNumberIndexWriter implements Index
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positionWriter;
-    private final BinaryFixPSequenceNumberExtractor binaryFixPSequenceNumberExtractor;
+    private final FixPSequenceNumberExtractor fixPSequenceNumberExtractor;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -131,7 +131,7 @@ public class SequenceNumberIndexWriter implements Index
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
 
-        binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
+        fixPSequenceNumberExtractor = new FixPSequenceNumberExtractor(
             connectionIdToILinkUuid, errorHandler, fixPProtocolType,
             (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
             // When possRetrans=true we should only update if the number is actually higher as
@@ -308,7 +308,7 @@ public class SequenceNumberIndexWriter implements Index
 
                 default:
                 {
-                    binaryFixPSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
+                    fixPSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
                     break;
                 }
             }

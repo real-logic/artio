@@ -36,7 +36,7 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-class BinaryFixPSequenceNumberExtractor
+class FixPSequenceNumberExtractor
 {
     private final Long2LongHashMap connectionIdToILinkUuid;
     private final ErrorHandler errorHandler;
@@ -51,7 +51,7 @@ class BinaryFixPSequenceNumberExtractor
     private AbstractFixPParser parser;
     private boolean attemptedILinkInit = false;
 
-    BinaryFixPSequenceNumberExtractor(
+    FixPSequenceNumberExtractor(
         final Long2LongHashMap connectionIdToILinkUuid,
         final ErrorHandler errorHandler,
         final FixPProtocolType fixPProtocolType,

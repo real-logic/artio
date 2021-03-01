@@ -20,10 +20,8 @@ import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
-import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointIdentification;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -76,11 +74,12 @@ public class BinaryEntrypointSystemTest
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
-            .errorHandlerFactory(errorBuffer -> errorHandler)
-            .monitoringAgentFactory(MonitoringAgentFactory.none())
+//            .errorHandlerFactory(errorBuffer -> errorHandler)
+//            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .binaryFixPRetransmitHandler(retransmitHandler)
             .acceptBinaryEntryPoint()
-            .bindTo("localhost", port);
+            .bindTo("localhost", port)
+            .deleteLogFileDirOnStart(true);
 
         engine = FixEngine.launch(engineConfig);
 
@@ -90,13 +89,12 @@ public class BinaryEntrypointSystemTest
             .fixPConnectionExistsHandler(connectionExistsHandler)
             .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
 
-        libraryConfig
-            .errorHandlerFactory(errorBuffer -> errorHandler)
-            .monitoringAgentFactory(MonitoringAgentFactory.none());
+//        libraryConfig
+//            .errorHandlerFactory(errorBuffer -> errorHandler)
+//            .monitoringAgentFactory(MonitoringAgentFactory.none());
         library = testSystem.connect(libraryConfig);
     }
 
-    @Ignore
     @Test
     public void shouldAcceptLogonFromClient() throws IOException
     {
@@ -109,8 +107,6 @@ public class BinaryEntrypointSystemTest
             final BinaryEntryPointIdentification id =
                 (BinaryEntryPointIdentification)connectionExistsHandler.lastIdentification();
             final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
-            assertEquals(0, id.lastReceivedSequenceNumber());
-            assertEquals(0, id.lastSentSequenceNumber());
 
             testSystem.awaitCompletedReply(reply);
             assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());

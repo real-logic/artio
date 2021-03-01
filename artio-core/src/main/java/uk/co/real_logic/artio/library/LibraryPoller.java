@@ -37,10 +37,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.fixp.AbstractFixPParser;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
-import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.messages.*;
@@ -112,15 +109,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private static final int ENGINE_DISCONNECT = 5;
 
-    private static final InternalBinaryFixPConnection[] EMPTY_FIXP_CONNECTIONS = new InternalBinaryFixPConnection[0];
+    private static final InternalFixPConnection[] EMPTY_FIXP_CONNECTIONS = new InternalFixPConnection[0];
     private static final InternalSession[] EMPTY_SESSIONS = new InternalSession[0];
 
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private InternalBinaryFixPConnection[] binaryFixPConnections = EMPTY_FIXP_CONNECTIONS;
-    private final List<InternalBinaryFixPConnection> unmodifiableBinaryFixPConnections =
-        new UnmodifiableWrapper<>(() -> binaryFixPConnections);
+    private InternalFixPConnection[] fixPConnections = EMPTY_FIXP_CONNECTIONS;
+    private final List<InternalFixPConnection> unmodifiableBinaryFixPConnections =
+        new UnmodifiableWrapper<>(() -> fixPConnections);
 
     private InternalSession[] sessions = EMPTY_SESSIONS;
     private InternalSession[] pendingInitiatorSessions = EMPTY_SESSIONS;
@@ -128,7 +125,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final List<Session> unmodifiablePendingInitiatorSessions =
         new UnmodifiableWrapper<>(() -> pendingInitiatorSessions);
 
-    private final Long2ObjectHashMap<BinaryFixPSubscription> connectionIdToFixPSubscription =
+    private final Long2ObjectHashMap<FixPSubscription> connectionIdToFixPSubscription =
         new Long2ObjectHashMap<>();
 
     private static final ErrorHandler THROW_ERRORS = LangUtil::rethrowUnchecked;
@@ -196,7 +193,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
-    private Iterator<BinaryFixPSubscription> iLink3LogoutIterator = null;
+    private Iterator<FixPSubscription> iLink3LogoutIterator = null;
+
+    private FixPProtocol fixPProtocol;
+    private AbstractFixPParser commonFixPParser;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -759,10 +759,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         final long timeInMs = System.currentTimeMillis();
-        final InternalBinaryFixPConnection[] binaryFixPConnections = this.binaryFixPConnections;
+        final InternalFixPConnection[] binaryFixPConnections = this.fixPConnections;
         for (int i = 0, size = binaryFixPConnections.length; i < size; i++)
         {
-            final InternalBinaryFixPConnection connection = binaryFixPConnections[i];
+            final InternalFixPConnection connection = binaryFixPConnections[i];
             total += connection.poll(timeInMs);
         }
 
@@ -1236,7 +1236,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onILink3Disconnect(final long connectionId, final DisconnectReason reason)
     {
-        final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.remove(connectionId);
+        final FixPSubscription subscription = connectionIdToFixPSubscription.remove(connectionId);
         if (subscription != null)
         {
             subscription.onDisconnect(reason);
@@ -1246,7 +1246,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
-        final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
+        final FixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
         if (subscription != null)
         {
             return Pressure.apply(subscription.onMessage(buffer, offset));
@@ -1373,21 +1373,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 reply.onTcpConnected();
 
                 final ILink3ConnectionConfiguration configuration = reply.configuration();
-                final InternalBinaryFixPConnection connection = makeILink3Connection(
+                final InternalFixPConnection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final FixPProtocol protocol = FixPProtocolFactory.make(FixPProtocolType.ILINK_3, THROW_ERRORS);
-                final BinaryFixPSubscription subscription = new BinaryFixPSubscription(
+                final FixPSubscription subscription = new FixPSubscription(
                     protocol.makeParser((ILink3Connection)connection), connection);
                 connectionIdToFixPSubscription.put(connectionId, subscription);
-                binaryFixPConnections = ArrayUtil.add(binaryFixPConnections, connection);
+                fixPConnections = ArrayUtil.add(fixPConnections, connection);
             }
         }
 
         return CONTINUE;
     }
 
-    private InternalBinaryFixPConnection makeILink3Connection(
+    private InternalFixPConnection makeILink3Connection(
         final ILink3ConnectionConfiguration configuration,
         final long connectionId,
         final InitiateILink3ConnectionReply initiateReply,
@@ -1417,7 +1417,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 EpochNanoClock.class);
 
-            return (InternalBinaryFixPConnection)constructor.newInstance(
+            return (InternalFixPConnection)constructor.newInstance(
                 configuration,
                 connectionId,
                 initiateReply,
@@ -1518,8 +1518,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         while (iLink3LogoutIterator.hasNext())
         {
-            final BinaryFixPSubscription binaryFixPSubscription = iLink3LogoutIterator.next();
-            if (Pressure.isBackPressured(binaryFixPSubscription.requestDisconnect(ENGINE_SHUTDOWN)))
+            final FixPSubscription fixPSubscription = iLink3LogoutIterator.next();
+            if (Pressure.isBackPressured(fixPSubscription.requestDisconnect(ENGINE_SHUTDOWN)))
             {
                 return;
             }
@@ -1571,13 +1571,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void controlUpdateILinkSessions()
     {
         // We just disconnect everything.
-        if (binaryFixPConnections.length > 0)
+        if (fixPConnections.length > 0)
         {
-            for (final InternalBinaryFixPConnection connection : binaryFixPConnections)
+            for (final InternalFixPConnection connection : fixPConnections)
             {
                 connection.unbindState(DisconnectReason.LIBRARY_DISCONNECT);
             }
-            binaryFixPConnections = EMPTY_FIXP_CONNECTIONS;
+            fixPConnections = EMPTY_FIXP_CONNECTIONS;
         }
 
         connectionIdToFixPSubscription.clear();
@@ -1721,7 +1721,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final BinaryFixPSubscription subscription = connectionIdToFixPSubscription.get(connection);
+            final FixPSubscription subscription = connectionIdToFixPSubscription.get(connection);
             if (subscription != null)
             {
                 subscription.onReplayComplete();
@@ -1737,19 +1737,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connection,
         final long sessionId,
         final FixPProtocolType protocolType,
-        final long lastReceivedSequenceNumber,
-        final long lastSentSequenceNumber,
-        final int lastConnectPayload,
         final DirectBuffer buffer,
         final int offset,
         final int messageLength)
     {
-        final FixPProtocol protocol = FixPProtocolFactory.make(protocolType, THROW_ERRORS);
-        final AbstractFixPParser parser = protocol.makeParser(null);
-        final FixPIdentification identification = parser.lookupIdentification(
-            lastReceivedSequenceNumber,
-            lastSentSequenceNumber,
-            lastConnectPayload,
+        initFixP(protocolType);
+
+        final FixPIdentification identification = commonFixPParser.lookupIdentification(
             buffer,
             offset,
             messageLength);
@@ -1761,6 +1755,74 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 sessionId,
                 protocolType,
                 identification);
+    }
+
+    public Action onManageFixPConnection(
+        final int libraryId,
+        final long correlationId,
+        final long connectionId,
+        final long sessionId,
+        final FixPProtocolType protocolType,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final long lastConnectPayload,
+        final DirectBuffer buffer,
+        final int offset,
+        final int messageLength)
+    {
+        initFixP(protocolType);
+
+        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.get(correlationId);
+
+        try
+        {
+            final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
+                connectionId,
+                outboundPublication,
+                inboundPublication,
+                libraryId,
+                this,
+                lastReceivedSequenceNumber,
+                lastSentSequenceNumber,
+                lastConnectPayload,
+                buffer,
+                offset,
+                messageLength,
+                epochNanoClock);
+
+            final FixPConnectionHandler handler = configuration
+                .fixPConnectionAcquiredHandler()
+                .onConnectionAcquired(connection);
+
+            final FixPSubscription subscription = new FixPSubscription(
+                fixPProtocol.makeParser(connection), connection);
+            connectionIdToFixPSubscription.put(connectionId, subscription);
+            fixPConnections = ArrayUtil.add(fixPConnections, connection);
+
+            if (reply != null)
+            {
+                reply.onComplete(SessionReplyStatus.OK);
+            }
+        }
+        catch (final Exception e)
+        {
+            if (reply != null)
+            {
+                reply.onError(e);
+            }
+            LangUtil.rethrowUnchecked(e);
+        }
+
+        return CONTINUE;
+    }
+
+    private void initFixP(final FixPProtocolType protocolType)
+    {
+        if (fixPProtocol == null)
+        {
+            fixPProtocol = FixPProtocolFactory.make(protocolType, THROW_ERRORS);
+            commonFixPParser = fixPProtocol.makeParser(null);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -1985,9 +2047,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return (List<ILink3Connection>)(List<?>)unmodifiableBinaryFixPConnections;
     }
 
-    public void remove(final InternalBinaryFixPConnection connection)
+    public void remove(final InternalFixPConnection connection)
     {
-        binaryFixPConnections = ArrayUtil.remove(binaryFixPConnections, connection);
+        fixPConnections = ArrayUtil.remove(fixPConnections, connection);
         connectionIdToFixPSubscription.remove(connection.connectionId());
     }
 }

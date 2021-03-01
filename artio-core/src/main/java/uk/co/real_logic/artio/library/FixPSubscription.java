@@ -19,12 +19,12 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
-class BinaryFixPSubscription
+class FixPSubscription
 {
     private final AbstractFixPParser parser;
-    private final InternalBinaryFixPConnection connection;
+    private final InternalFixPConnection connection;
 
-    BinaryFixPSubscription(final AbstractFixPParser parser, final InternalBinaryFixPConnection connection)
+    FixPSubscription(final AbstractFixPParser parser, final InternalFixPConnection connection)
     {
         this.parser = parser;
         this.connection = connection;
@@ -50,7 +50,7 @@ class BinaryFixPSubscription
         connection.onReplayComplete();
     }
 
-    public InternalBinaryFixPConnection session()
+    public InternalFixPConnection session()
     {
         return connection;
     }

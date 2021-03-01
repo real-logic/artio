@@ -67,7 +67,7 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
     private final SequenceNumberExtractor sequenceNumberExtractor;
 
-    private final BinaryFixPSequenceNumberExtractor binaryFixPSequenceNumberExtractor;
+    private final FixPSequenceNumberExtractor fixPSequenceNumberExtractor;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
@@ -100,7 +100,7 @@ public class ReplayIndex implements Index
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
-        binaryFixPSequenceNumberExtractor = new BinaryFixPSequenceNumberExtractor(
+        fixPSequenceNumberExtractor = new FixPSequenceNumberExtractor(
             connectionIdToILinkUuid, errorHandler, fixPProtocolType,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
                 sessionIndex(uuid)
@@ -196,7 +196,7 @@ public class ReplayIndex implements Index
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
             {
-                binaryFixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
+                fixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
             }
             else if (templateId == ResetSequenceNumberDecoder.TEMPLATE_ID)
             {

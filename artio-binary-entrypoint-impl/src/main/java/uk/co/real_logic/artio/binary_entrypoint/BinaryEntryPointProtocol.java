@@ -16,13 +16,22 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import io.aeron.ExclusivePublication;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
-import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.library.InternalFixPConnection;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 public class BinaryEntryPointProtocol extends FixPProtocol
 {
-    public BinaryEntryPointParser makeParser(final ILink3Connection session)
+    public BinaryEntryPointProtocol()
+    {
+        super(FixPProtocolType.BINARY_ENTRYPOINT);
+    }
+
+    public BinaryEntryPointParser makeParser(final FixPConnection connection)
     {
         return new BinaryEntryPointParser();
     }
@@ -36,5 +45,22 @@ public class BinaryEntryPointProtocol extends FixPProtocol
     public BinaryEntryPointOffsets makeOffsets()
     {
         return new BinaryEntryPointOffsets();
+    }
+
+    public InternalFixPConnection makeAcceptorConnection(
+        final long connectionId,
+        final GatewayPublication outboundPublication,
+        final GatewayPublication inboundPublication,
+        final int libraryId,
+        final Object libraryPoller,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final long lastConnectPayload,
+        final DirectBuffer buffer,
+        final int offset,
+        final int messageLength,
+        final EpochNanoClock epochNanoClock)
+    {
+        return new InternalBinaryEntrypointConnection();
     }
 }

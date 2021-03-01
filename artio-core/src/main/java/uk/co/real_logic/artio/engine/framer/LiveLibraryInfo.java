@@ -33,7 +33,9 @@ final class LiveLibraryInfo implements LibraryInfo
     private final int aeronSessionId;
     private final LibrarySlowPeeker librarySlowPeeker;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
-    private final List<ConnectedSessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
+    @SuppressWarnings("unchecked")
+    private final List<ConnectedSessionInfo> unmodifiableAllSessions =
+        unmodifiableList((List<? extends ConnectedSessionInfo>)(List<?>)allSessions);
     private final Long2ObjectHashMap<ConnectingSession> correlationIdToConnectingSession = new Long2ObjectHashMap<>();
 
     private long acquireAtPosition;
@@ -118,7 +120,7 @@ final class LiveLibraryInfo implements LibraryInfo
             final GatewaySession session = sessions.get(i);
             if (session.connectionId() == connectionId)
             {
-                session.goOffline();
+                ((FixGatewaySession)session).goOffline();
             }
         }
     }

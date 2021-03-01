@@ -24,9 +24,8 @@ import org.agrona.DirectBuffer;
  * a sequence message. The handler is invoked on the Replay Agent.
  */
 @FunctionalInterface
-public interface BinaryFixPRetransmitHandler
+public interface FixPRetransmitHandler
 {
-
     /**
      * Callback for receiving binary FIXP business/application messages.
      *

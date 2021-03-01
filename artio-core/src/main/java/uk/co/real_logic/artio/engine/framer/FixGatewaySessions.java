@@ -132,7 +132,7 @@ public class FixGatewaySessions extends GatewaySessions
 
 
     void acquire(
-        final GatewaySession gatewaySession,
+        final FixGatewaySession gatewaySession,
         final SessionState state,
         final boolean awaitingResend,
         final int heartbeatIntervalInS,
@@ -223,7 +223,7 @@ public class FixGatewaySessions extends GatewaySessions
         int eventsProcessed = 0;
         for (int i = 0, size = sessions.size(); i < size;)
         {
-            final GatewaySession session = sessions.get(i);
+            final FixGatewaySession session = (FixGatewaySession)sessions.get(i);
             eventsProcessed += session.poll(timeInMs, timeInNs);
             if (session.hasDisconnected())
             {
@@ -240,7 +240,7 @@ public class FixGatewaySessions extends GatewaySessions
     AcceptorLogonResult authenticate(
         final AbstractLogonDecoder logon,
         final long connectionId,
-        final GatewaySession gatewaySession,
+        final FixGatewaySession gatewaySession,
         final TcpChannel channel,
         final FixDictionary fixDictionary,
         final Framer framer)
@@ -272,9 +272,9 @@ public class FixGatewaySessions extends GatewaySessions
             connectionId);
     }
 
-    protected void setLastSequenceResetTime(final GatewaySession gatewaySession)
+    protected void setLastSequenceResetTime(final GatewaySession session)
     {
-        gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
+        ((FixGatewaySession)session).lastSequenceResetTime(sessionContext.lastSequenceResetTime());
     }
 
     final class FixPendingAcceptorLogon extends GatewaySessions.PendingAcceptorLogon implements AuthenticationProxy
@@ -282,6 +282,7 @@ public class FixGatewaySessions extends GatewaySessions
         private static final int ENCODE_BUFFER_SIZE = 1024;
 
         private final SessionIdStrategy sessionIdStrategy;
+        private final FixGatewaySession session;
         private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private FixDictionary fixDictionary;
@@ -293,7 +294,7 @@ public class FixGatewaySessions extends GatewaySessions
 
         FixPendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
-            final GatewaySession gatewaySession,
+            final FixGatewaySession gatewaySession,
             final AbstractLogonDecoder logon,
             final long connectionId,
             final SessionContexts sessionContexts,
@@ -304,6 +305,7 @@ public class FixGatewaySessions extends GatewaySessions
             super(gatewaySession, connectionId, channel, framer);
 
             this.sessionIdStrategy = sessionIdStrategy;
+            this.session = gatewaySession;
             this.logon = logon;
             this.sessionContexts = sessionContexts;
             this.fixDictionary = fixDictionary;

@@ -100,30 +100,45 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerInboundLookup(),
             null);
 
-        gatewaySessions = new FixGatewaySessions(
-            epochClock,
-            inboundPublication,
-            outboundPublication,
-            sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(),
-            fixCounters,
-            configuration,
-            errorHandler,
-            sessionContexts,
-            configuration.sessionPersistenceStrategy(),
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
-            configuration.sessionEpochFractionFormat());
+        final FixEndPointFactory endPointFactory;
+        if (configuration.acceptsBinaryEntryPoint())
+        {
+            gatewaySessions = new FixPGatewaySessions(
+                epochClock,
+                inboundPublication,
+                outboundPublication,
+                errorHandler,
+                sentSequenceNumberIndex,
+                receivedSequenceNumberIndex);
+            endPointFactory = null;
+        }
+        else
+        {
+            gatewaySessions = new FixGatewaySessions(
+                epochClock,
+                inboundPublication,
+                outboundPublication,
+                sessionIdStrategy,
+                configuration.sessionCustomisationStrategy(),
+                fixCounters,
+                configuration,
+                errorHandler,
+                sessionContexts,
+                configuration.sessionPersistenceStrategy(),
+                sentSequenceNumberIndex,
+                receivedSequenceNumberIndex,
+                configuration.sessionEpochFractionFormat());
 
-        final FixEndPointFactory endPointFactory = new FixEndPointFactory(
-            configuration,
-            sessionContexts,
-            inboundPublication,
-            fixCounters,
-            errorHandler,
-            (FixGatewaySessions)gatewaySessions,
-            engineContext.senderSequenceNumbers(),
-            configuration.messageTimingHandler());
+            endPointFactory = new FixEndPointFactory(
+                configuration,
+                sessionContexts,
+                inboundPublication,
+                fixCounters,
+                errorHandler,
+                (FixGatewaySessions)gatewaySessions,
+                engineContext.senderSequenceNumbers(),
+                configuration.messageTimingHandler());
+        }
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 

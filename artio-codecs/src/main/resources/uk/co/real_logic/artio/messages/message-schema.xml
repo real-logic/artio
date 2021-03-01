@@ -612,13 +612,22 @@
         <field name="connection" id="1" type="ConnectionId"/>
         <field name="sessionId" id="2" type="uint64"/>
         <field name="protocolType" id="3" type="FixPProtocolType"/>
-        <field name="lastReceivedSequenceNumber" id="4" type="uint64"/>
-        <field name="lastSentSequenceNumber" id="5" type="uint64"/>
+        <field name="messageLength" id="7" type="uint16"/>
+        <!-- then the first message sent -->
+    </sbe:message>
+
+    <sbe:message name="ManageFixPConnection" id="68" description="" sinceVersion="16">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+        <field name="sessionId" id="4" type="uint64"/>
+        <field name="protocolType" id="5" type="FixPProtocolType"/>
+        <field name="lastReceivedSequenceNumber" id="6" type="uint64"/>
+        <field name="lastSentSequenceNumber" id="7" type="uint64"/>
         <!-- Additional payload that corresponds to previous logon information, ie:-->
         <!-- BinaryEntrypoint: sessionVerId -->
-        <field name="lastConnectPayload" id="6" type="uint16"/>
-        <field name="messageLength" id="7" type="uint16"/>
-        <!-- then the connect payload -->
+        <field name="lastConnectPayload" id="8" type="uint64"/>
+        <field name="messageLength" id="9" type="uint16"/>
         <!-- then the first message sent -->
     </sbe:message>
 

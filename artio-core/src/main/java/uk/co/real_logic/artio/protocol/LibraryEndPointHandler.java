@@ -115,9 +115,19 @@ public interface LibraryEndPointHandler
         long connection,
         long sessionId,
         FixPProtocolType protocol,
+        DirectBuffer buffer,
+        int limit,
+        int messageLength);
+
+    Action onManageFixPConnection(
+        int libraryId,
+        long correlationId,
+        long connection,
+        long sessionId,
+        FixPProtocolType protocolType,
         long lastReceivedSequenceNumber,
         long lastSentSequenceNumber,
-        int lastConnectPayload,
+        long lastConnectPayload,
         DirectBuffer buffer,
         int limit,
         int messageLength);

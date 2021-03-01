@@ -19,13 +19,4 @@ import uk.co.real_logic.artio.fixp.FixPIdentification;
 
 public class BinaryEntryPointIdentification implements FixPIdentification
 {
-    public long lastReceivedSequenceNumber()
-    {
-        return 0;
-    }
-
-    public long lastSentSequenceNumber()
-    {
-        return 0;
-    }
 }

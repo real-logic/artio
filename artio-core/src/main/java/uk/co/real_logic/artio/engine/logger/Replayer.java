@@ -126,7 +126,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final Subscription inboundSubscription;
     private final String agentNamePrefix;
     private final ReplayHandler replayHandler;
-    private final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler;
+    private final FixPRetransmitHandler fixPRetransmitHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final UtcTimestampEncoder utcTimestampEncoder;
 
@@ -142,7 +142,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final Set<String> gapfillOnReplayMessageTypes,
         final IntHashSet gapfillOnRetransmitILinkTemplateIds,
         final ReplayHandler replayHandler,
-        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler,
+        final FixPRetransmitHandler fixPRetransmitHandler,
         final SenderSequenceNumbers senderSequenceNumbers,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
         final int maxBytesInBuffer,
@@ -163,7 +163,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.agentNamePrefix = agentNamePrefix;
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
-        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
+        this.fixPRetransmitHandler = fixPRetransmitHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.maxBytesInBuffer = maxBytesInBuffer;
@@ -370,7 +370,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 fixPMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
-                binaryFixPRetransmitHandler);
+                fixPRetransmitHandler);
 
             session.query();
 

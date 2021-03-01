@@ -154,7 +154,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         (buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType) ->
         {
         };
-    public static final BinaryFixPRetransmitHandler DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER =
+    public static final FixPRetransmitHandler DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER =
         (templateId, buffer, offset, blockLength, version) ->
         {
         };
@@ -234,7 +234,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
-    private BinaryFixPRetransmitHandler binaryFixPRetransmitHandler = DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER;
+    private FixPRetransmitHandler fixPRetransmitHandler = DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER;
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
@@ -611,7 +611,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets a handler that will be invoked when an iLink3 message is replayed.
      *
      * This configuration option has been deprecated - please use
-     * {@link #binaryFixPRetransmitHandler(BinaryFixPRetransmitHandler)} instead.
+     * {@link #binaryFixPRetransmitHandler(FixPRetransmitHandler)} instead.
      *
      * @param iLink3RetransmitHandler the replay handler
      * @return this
@@ -619,20 +619,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     @Deprecated
     public EngineConfiguration iLink3RetransmitHandler(final ILink3RetransmitHandler iLink3RetransmitHandler)
     {
-        this.binaryFixPRetransmitHandler = iLink3RetransmitHandler;
+        this.fixPRetransmitHandler = iLink3RetransmitHandler;
         return this;
     }
 
     /**
      * Sets a handler that will be invoked when an iLink3 message is replayed.
      *
-     * @param binaryFixPRetransmitHandler the replay handler
+     * @param fixPRetransmitHandler the replay handler
      * @return this
      */
     public EngineConfiguration binaryFixPRetransmitHandler(
-        final BinaryFixPRetransmitHandler binaryFixPRetransmitHandler)
+        final FixPRetransmitHandler fixPRetransmitHandler)
     {
-        this.binaryFixPRetransmitHandler = binaryFixPRetransmitHandler;
+        this.fixPRetransmitHandler = fixPRetransmitHandler;
         return this;
     }
 
@@ -1043,9 +1043,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayHandler;
     }
 
-    public BinaryFixPRetransmitHandler binaryFixPRetransmitHandler()
+    public FixPRetransmitHandler binaryFixPRetransmitHandler()
     {
-        return binaryFixPRetransmitHandler;
+        return fixPRetransmitHandler;
     }
 
     public InitialAcceptedSessionOwner initialAcceptedSessionOwner()
@@ -1113,7 +1113,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return acceptsBinaryEntryPoint;
     }
 
-    public FixPProtocolType supportedBinaryFixPProtocol()
+    public FixPProtocolType supportedFixPProtocolType()
     {
         return acceptsBinaryEntryPoint ? BINARY_ENTRYPOINT : ILINK_3;
     }
