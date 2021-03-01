@@ -15,9 +15,7 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import b3.entrypoint.fixp.sbe.EstablishDecoder;
-import b3.entrypoint.fixp.sbe.MessageHeaderDecoder;
-import b3.entrypoint.fixp.sbe.NegotiateDecoder;
+import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 
@@ -28,6 +26,15 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private final MessageHeaderDecoder header = new MessageHeaderDecoder();
     private final NegotiateDecoder negotiate = new NegotiateDecoder();
     private final EstablishDecoder establish = new EstablishDecoder();
+    private final TerminateDecoder terminate = new TerminateDecoder();
+    private final SequenceDecoder sequence = new SequenceDecoder();
+
+    private final InternalBinaryEntrypointConnection handler;
+
+    public BinaryEntryPointParser(final InternalBinaryEntrypointConnection handler)
+    {
+        this.handler = handler;
+    }
 
     public int templateId(final DirectBuffer buffer, final int offset)
     {
@@ -61,15 +68,63 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         switch (templateId)
         {
             case NegotiateDecoder.TEMPLATE_ID:
-                negotiate.wrap(buffer, offset, blockLength, version);
-                return 1;
+                return onNegotiate(buffer, offset, blockLength, version);
 
             case EstablishDecoder.TEMPLATE_ID:
-                establish.wrap(buffer, offset, blockLength, version);
-                return 1;
+                return onEstablish(buffer, offset, blockLength, version);
+
+            case TerminateDecoder.TEMPLATE_ID:
+                return onTerminate(buffer, offset, blockLength, version);
+
+            case SequenceDecoder.TEMPLATE_ID:
+                return onSequence(buffer, offset, blockLength, version);
         }
 
         return 1;
+    }
+
+    private long onSequence(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        sequence.wrap(buffer, offset, blockLength, version);
+
+        return handler.onSequence(sequence.nextSeqNo());
+    }
+
+    private long onTerminate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        terminate.wrap(buffer, offset, blockLength, version);
+
+        return handler.onTerminate(
+            terminate.sessionID(),
+            terminate.sessionVerID(),
+            terminate.terminationCode());
+    }
+
+    private long onEstablish(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        establish.wrap(buffer, offset, blockLength, version);
+
+        return handler.onEstablish(
+            establish.sessionID(),
+            establish.sessionVerID(),
+            establish.timestamp().time(),
+            establish.keepAliveInterval().time(),
+            establish.nextSeqNo(),
+            establish.cancelOnDisconnectType(),
+            establish.codTimeoutWindow());
+    }
+
+    private long onNegotiate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        negotiate.wrap(buffer, offset, blockLength, version);
+
+        return handler.onNegotiate(
+            negotiate.sessionID(),
+            negotiate.sessionVerID(),
+            negotiate.timestamp().time(),
+            negotiate.enteringFirm(),
+            negotiate.onbehalfFirm(),
+            negotiate.senderLocation());
     }
 
     public BinaryEntryPointIdentification lookupIdentification(
@@ -90,13 +145,18 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         {
             case NegotiateDecoder.TEMPLATE_ID:
                 negotiate.wrap(messageBuffer, offset, blockLength, version);
-                return new BinaryEntryPointIdentification();
+                return new BinaryEntryPointIdentification(
+                    negotiate.sessionID(),
+                    negotiate.sessionVerID());
 
             case EstablishDecoder.TEMPLATE_ID:
                 establish.wrap(messageBuffer, offset, blockLength, version);
-                return new BinaryEntryPointIdentification();
+                return new BinaryEntryPointIdentification(
+                    establish.sessionID(),
+                    establish.sessionVerID());
         }
 
+        // TODO: deal with this scenario more politely
         throw new IllegalArgumentException("Template id: " + templateId + " isn't a negotiate or establish");
     }
 

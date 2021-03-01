@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import b3.entrypoint.fixp.sbe.EstablishAckDecoder;
+import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
@@ -106,6 +108,8 @@ public class BinaryEntrypointSystemTest
             assertEquals(BinaryEntrypointClient.SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
             final BinaryEntryPointIdentification id =
                 (BinaryEntryPointIdentification)connectionExistsHandler.lastIdentification();
+            assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
+            assertEquals(1, id.sessionVerID());
             final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
 
             testSystem.awaitCompletedReply(reply);
@@ -113,9 +117,17 @@ public class BinaryEntrypointSystemTest
 
             testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
 
-            client.readNegotiateResponse();
+            final NegotiateResponseDecoder response = client.readNegotiateResponse();
+            assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
+            assertEquals(1, response.sessionVerID());
+            assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
+
             client.writeEstablish();
-            client.readEstablishAck();
+            final EstablishAckDecoder establishAck = client.readEstablishAck();
+            assertEquals(BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
+            assertEquals(1, establishAck.sessionVerID());
+            assertEquals(1, establishAck.nextSeqNo());
+            assertEquals(0, establishAck.lastIncomingSeqNo());
         }
     }
 

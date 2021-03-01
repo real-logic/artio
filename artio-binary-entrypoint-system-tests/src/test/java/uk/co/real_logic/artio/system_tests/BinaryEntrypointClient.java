@@ -15,13 +15,13 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import b3.entrypoint.fixp.sbe.MessageHeaderDecoder;
-import b3.entrypoint.fixp.sbe.MessageHeaderEncoder;
-import b3.entrypoint.fixp.sbe.NegotiateEncoder;
+import b3.entrypoint.fixp.sbe.*;
 import org.agrona.CloseHelper;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.SystemEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointOffsets;
@@ -32,6 +32,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProxy.BINARY_ENTRYPOINT_HEADER_LENGTH;
@@ -39,12 +41,14 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
 
 public final class BinaryEntrypointClient implements AutoCloseable
 {
+    private static final int NOT_SKIPPING = -1;
     private static final int OFFSET = 0;
 
     public static final int BUFFER_SIZE = 8 * 1024;
     public static final int SESSION_ID = 123;
     public static final int FIRM_ID = 456;
     public static final String SENDER_LOCATION = "LOCATION_1";
+    private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointOffsets.loadSbeIr());
 
@@ -55,17 +59,97 @@ public final class BinaryEntrypointClient implements AutoCloseable
     private final UnsafeBuffer unsafeWriteBuffer = new UnsafeBuffer(writeBuffer);
 
     private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-    private final UnsafeBuffer asciiReadBuffer = new UnsafeBuffer(readBuffer);
+    private final UnsafeBuffer unsafeReadBuffer = new UnsafeBuffer(readBuffer);
 
     private final EpochNanoClock epochNanoClock = new SystemEpochNanoClock();
 
     private final SocketChannel socket;
     private final TestSystem testSystem;
+    private int skipTemplateId = NOT_SKIPPING;
 
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
         this.testSystem = testSystem;
+
+        headerDecoder.wrap(unsafeReadBuffer, SOFH_LENGTH);
+    }
+
+    public NegotiateResponseDecoder readNegotiateResponse()
+    {
+        return read(new NegotiateResponseDecoder(), 0);
+    }
+
+    public <T extends MessageDecoderFlyweight> T read(final T messageDecoder, final int nonBlockLength)
+    {
+        return testSystem.awaitBlocking(() -> readInternal(messageDecoder, nonBlockLength));
+    }
+
+    private <T extends MessageDecoderFlyweight> T readInternal(final T messageDecoder, final int nonBlockLength)
+    {
+        try
+        {
+            final int headerLength = MessageHeaderDecoder.ENCODED_LENGTH + SOFH_LENGTH;
+            readBuffer.limit(headerLength);
+            final int readHeader = socket.read(readBuffer);
+            if (readHeader != headerLength)
+            {
+                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
+            }
+
+            final int totalLength = readSofh(unsafeReadBuffer, 0, BINARY_ENTRYPOINT_TYPE);
+            final int templateId = headerDecoder.templateId();
+            final int blockLength = headerDecoder.blockLength();
+            final int version = headerDecoder.version();
+
+            if (skipTemplateId != NOT_SKIPPING && templateId == skipTemplateId)
+            {
+                readBuffer.limit(totalLength);
+                int readSkip = 0;
+                do
+                {
+                    readSkip += socket.read(readBuffer);
+                }
+                while (readSkip < (totalLength - readHeader));
+
+                readBuffer.clear();
+
+                return readInternal(messageDecoder, nonBlockLength);
+            }
+
+            final int messageOffset = headerLength;
+            final int expectedLength = messageOffset + messageDecoder.sbeBlockLength() + nonBlockLength;
+            readBuffer.limit(expectedLength);
+
+            final int readBody = socket.read(readBuffer);
+            final int read = readHeader + readBody;
+
+            messageDecoder.wrap(
+                unsafeReadBuffer,
+                messageOffset,
+                blockLength,
+                version);
+
+            print(unsafeReadBuffer, "> ");
+
+            assertEquals(messageDecoder.sbeTemplateId(), templateId);
+
+            if (totalLength != read)
+            {
+                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
+            }
+
+            assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
+
+            readBuffer.clear();
+
+            return messageDecoder;
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     private void write()
@@ -141,18 +225,26 @@ public final class BinaryEntrypointClient implements AutoCloseable
         write();
     }
 
-    public void readNegotiateResponse()
-    {
-
-    }
-
     public void writeEstablish()
     {
+        final EstablishEncoder establish = new EstablishEncoder();
+        wrap(establish, EstablishEncoder.BLOCK_LENGTH);
 
+        establish
+            .sessionID(SESSION_ID)
+            .sessionVerID(1)
+            .timestamp().time(epochNanoClock.nanoTime());
+        establish.keepAliveInterval().time(KEEP_ALIVE_INTERVAL_IN_MS);
+        establish
+            .nextSeqNo(1)
+            .cancelOnDisconnectType(CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE)
+            .codTimeoutWindow().time(DeltaInMillisEncoder.timeNullValue());
+
+        write();
     }
 
-    public void readEstablishAck()
+    public EstablishAckDecoder readEstablishAck()
     {
-
+        return read(new EstablishAckDecoder(), 0);
     }
 }

@@ -33,13 +33,13 @@ public class BinaryEntryPointProtocol extends FixPProtocol
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)
     {
-        return new BinaryEntryPointParser();
+        return new BinaryEntryPointParser((InternalBinaryEntrypointConnection)connection);
     }
 
     public BinaryEntryPointProxy makeProxy(
         final ExclusivePublication publication, final EpochNanoClock epochNanoClock)
     {
-        return new BinaryEntryPointProxy();
+        return new BinaryEntryPointProxy(0, publication);
     }
 
     public BinaryEntryPointOffsets makeOffsets()
@@ -61,6 +61,14 @@ public class BinaryEntryPointProtocol extends FixPProtocol
         final int messageLength,
         final EpochNanoClock epochNanoClock)
     {
-        return new InternalBinaryEntrypointConnection();
+        return new InternalBinaryEntrypointConnection(
+            connectionId,
+            outboundPublication,
+            inboundPublication,
+            libraryId,
+            lastReceivedSequenceNumber,
+            lastSentSequenceNumber,
+            lastConnectPayload,
+            epochNanoClock);
     }
 }

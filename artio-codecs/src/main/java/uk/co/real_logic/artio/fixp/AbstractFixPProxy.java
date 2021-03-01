@@ -15,10 +15,75 @@
  */
 package uk.co.real_logic.artio.fixp;
 
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.messages.FixPMessageEncoder;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
+
 public abstract class AbstractFixPProxy
 {
-    public abstract void connectionId(long connectionId);
+    protected static final int ARTIO_HEADER_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + FixPMessageEncoder.BLOCK_LENGTH;
+
+    protected final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
+    protected final FixPMessageEncoder fixPMessage = new FixPMessageEncoder();
+    protected final BufferClaim bufferClaim = new BufferClaim();
+
+    protected final ExclusivePublication publication;
+    protected long connectionId;
+
+    protected AbstractFixPProxy(final long connectionId, final ExclusivePublication publication)
+    {
+        this.connectionId = connectionId;
+        this.publication = publication;
+    }
+
+    public void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
+    }
 
     public abstract long sendSequence(
         long uuid, long nextSentSeqNo);
+
+    protected long claimMessage(
+        final int messageLength,
+        final MessageEncoderFlyweight message,
+        final long timestamp,
+        final int totalHeaderLength,
+        final int protocolHeaderLength,
+        final short protocolType)
+    {
+        final BufferClaim bufferClaim = this.bufferClaim;
+        final long position = publication.tryClaim(totalHeaderLength + messageLength, bufferClaim);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        fixPMessage
+            .wrapAndApplyHeader(buffer, bufferClaim.offset(), messageHeader)
+            .connection(connectionId)
+            .enqueueTime(timestamp);
+
+        offset += ARTIO_HEADER_LENGTH;
+
+        SimpleOpenFramingHeader.writeSofh(buffer, offset, protocolHeaderLength + messageLength, protocolType);
+        offset += SOFH_LENGTH;
+
+        offset = applyHeader(message, buffer, offset);
+
+        message.wrap(buffer, offset);
+
+        return position;
+    }
+
+    protected abstract int applyHeader(MessageEncoderFlyweight message, MutableDirectBuffer buffer, int offset);
 }

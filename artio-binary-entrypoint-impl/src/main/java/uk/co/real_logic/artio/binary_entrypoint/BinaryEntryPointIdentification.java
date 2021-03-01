@@ -19,4 +19,22 @@ import uk.co.real_logic.artio.fixp.FixPIdentification;
 
 public class BinaryEntryPointIdentification implements FixPIdentification
 {
+    private final long sessionID;
+    private final long sessionVerID;
+
+    public BinaryEntryPointIdentification(final long sessionID, final long sessionVerID)
+    {
+        this.sessionID = sessionID;
+        this.sessionVerID = sessionVerID;
+    }
+
+    public long sessionID()
+    {
+        return sessionID;
+    }
+
+    public long sessionVerID()
+    {
+        return sessionVerID;
+    }
 }

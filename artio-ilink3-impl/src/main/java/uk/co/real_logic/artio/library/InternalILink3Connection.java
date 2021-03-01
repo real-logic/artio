@@ -27,6 +27,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -288,7 +289,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         final long timestamp = requestTimestamp();
 
-        final long position = proxy.claimILinkMessage(
+        final long position = proxy.claimMessage(
             message.sbeBlockLength() + variableLength, message, timestamp);
 
         if (position > 0)
@@ -1156,6 +1157,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         {
             onReplyError(new Exception("Unbound due to: " + reason));
         }
+    }
+
+    public void handler(final FixPConnectionHandler handler)
+    {
+        Ilink3Protocol.unsupported();
     }
 
 //    private

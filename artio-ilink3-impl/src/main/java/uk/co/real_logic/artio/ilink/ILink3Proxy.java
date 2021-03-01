@@ -25,8 +25,6 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
-import uk.co.real_logic.artio.messages.FixPMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.util.function.Consumer;
 
@@ -38,8 +36,6 @@ public class ILink3Proxy extends AbstractFixPProxy
 {
     public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
 
-    private static final int ARTIO_HEADER_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + FixPMessageEncoder.BLOCK_LENGTH;
     private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
 
     private static final UnsafeBuffer NO_BUFFER = new UnsafeBuffer(new byte[0]);
@@ -49,10 +45,6 @@ public class ILink3Proxy extends AbstractFixPProxy
     private static final int ESTABLISH_LENGTH =
         Establish503Encoder.BLOCK_LENGTH + Establish503Encoder.credentialsHeaderLength();
 
-    private final FixPMessageEncoder iLinkMessage = new FixPMessageEncoder();
-    private final BufferClaim bufferClaim = new BufferClaim();
-
-    private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
     private final iLinkBinary.MessageHeaderEncoder iLinkMessageHeader = new iLinkBinary.MessageHeaderEncoder();
     private final iLinkBinary.MessageHeaderDecoder iLinkMessageHeaderDecoder = new iLinkBinary.MessageHeaderDecoder();
 
@@ -68,11 +60,8 @@ public class ILink3Proxy extends AbstractFixPProxy
     private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
     private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
 
-    private final ExclusivePublication publication;
     private final ILink3BusinessMessageDissector businessMessageLogger;
     private final EpochNanoClock epochNanoClock;
-
-    private long connectionId;
 
     public ILink3Proxy(
         final long connectionId,
@@ -80,8 +69,8 @@ public class ILink3Proxy extends AbstractFixPProxy
         final ILink3BusinessMessageDissector businessMessageLogger,
         final EpochNanoClock epochNanoClock)
     {
+        super(connectionId, publication);
         this.connectionId = connectionId;
-        this.publication = publication;
         this.businessMessageLogger = businessMessageLogger;
         this.epochNanoClock = epochNanoClock;
     }
@@ -106,7 +95,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         final Negotiate500Encoder negotiate = this.negotiate;
 
-        final long position = claimILinkMessage(NEGOTIATE_LENGTH, negotiate, requestTimestamp);
+        final long position = claimMessage(NEGOTIATE_LENGTH, negotiate, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -143,7 +132,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         final Establish503Encoder establish = this.establish;
 
-        final long position = claimILinkMessage(ESTABLISH_LENGTH, establish, requestTimestamp);
+        final long position = claimMessage(ESTABLISH_LENGTH, establish, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -174,7 +163,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         final Terminate507Encoder terminate = this.terminate;
 
-        final long position = claimILinkMessage(Terminate507Encoder.BLOCK_LENGTH, terminate, requestTimestamp);
+        final long position = claimMessage(Terminate507Encoder.BLOCK_LENGTH, terminate, requestTimestamp);
         if (position < 0)
         {
             return position;
@@ -205,7 +194,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         final Sequence506Encoder sequence = this.sequence;
 
-        final long position = claimILinkMessage(Sequence506Encoder.BLOCK_LENGTH, sequence, timestamp());
+        final long position = claimMessage(Sequence506Encoder.BLOCK_LENGTH, sequence, timestamp());
         if (position < 0)
         {
             return position;
@@ -234,7 +223,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         final RetransmitRequest508Encoder retransmitRequest = this.retransmitRequest;
 
-        final long position = claimILinkMessage(
+        final long position = claimMessage(
             RetransmitRequest508Encoder.BLOCK_LENGTH, retransmitRequest, requestTimestamp);
         if (position < 0)
         {
@@ -255,31 +244,22 @@ public class ILink3Proxy extends AbstractFixPProxy
         return position;
     }
 
-    public long claimILinkMessage(
+    public long claimMessage(
         final int messageLength,
         final MessageEncoderFlyweight message,
         final long timestamp)
     {
-        final BufferClaim bufferClaim = this.bufferClaim;
-        final long position = publication.tryClaim(ILINK_MESSAGE_HEADER + messageLength, bufferClaim);
-        if (position < 0)
-        {
-            return position;
-        }
+        return claimMessage(
+            messageLength,
+            message,
+            timestamp,
+            ILINK_MESSAGE_HEADER,
+            ILINK_HEADER_LENGTH,
+            SimpleOpenFramingHeader.CME_ENCODING_TYPE);
+    }
 
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        iLinkMessage
-            .wrapAndApplyHeader(buffer, offset, messageHeader)
-            .connection(connectionId)
-            .enqueueTime(timestamp);
-
-        offset += ARTIO_HEADER_LENGTH;
-
-        SimpleOpenFramingHeader.writeILinkSofh(buffer, offset, ILINK_HEADER_LENGTH + messageLength);
-        offset += SOFH_LENGTH;
-
+    protected int applyHeader(final MessageEncoderFlyweight message, final MutableDirectBuffer buffer, final int offset)
+    {
         iLinkMessageHeader
             .wrap(buffer, offset)
             .blockLength(message.sbeBlockLength())
@@ -287,11 +267,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .schemaId(message.sbeSchemaId())
             .version(message.sbeSchemaVersion());
 
-        offset += iLinkMessageHeader.encodedLength();
-
-        message.wrap(buffer, offset);
-
-        return position;
+        return offset + iLinkMessageHeader.encodedLength();
     }
 
     public void commit()

@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 public abstract class InternalFixPConnection implements FixPConnection
@@ -31,4 +32,6 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected abstract void fullyUnbind();
 
     protected abstract void unbindState(DisconnectReason reason);
+
+    public abstract void handler(FixPConnectionHandler handler);
 }

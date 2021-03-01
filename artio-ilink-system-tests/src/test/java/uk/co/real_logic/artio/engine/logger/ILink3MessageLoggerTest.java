@@ -43,7 +43,7 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
     {
         final ILink3Proxy proxy = new ILink3Proxy(1, publication.dataPublication(), null, null);
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();
-        final long position = proxy.claimILinkMessage(
+        final long position = proxy.claimMessage(
             ExecutionReportStatus532Encoder.BLOCK_LENGTH,
             executionReportStatus,
             timestamp);

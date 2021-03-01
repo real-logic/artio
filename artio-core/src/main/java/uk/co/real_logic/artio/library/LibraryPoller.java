@@ -1794,9 +1794,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 .fixPConnectionAcquiredHandler()
                 .onConnectionAcquired(connection);
 
+            connection.handler(handler);
+
             final FixPSubscription subscription = new FixPSubscription(
                 fixPProtocol.makeParser(connection), connection);
             connectionIdToFixPSubscription.put(connectionId, subscription);
+
+            subscription.onMessage(buffer, offset);
+
             fixPConnections = ArrayUtil.add(fixPConnections, connection);
 
             if (reply != null)

@@ -82,12 +82,12 @@ public class ILink3Parser extends AbstractFixPParser
         final int messageOffset,
         final int messageLength)
     {
-        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
+        return Ilink3Protocol.unsupported();
     }
 
     public long sessionId(final DirectBuffer buffer, final int offset)
     {
-        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
+        return Ilink3Protocol.unsupported();
     }
 
     public long onMessage(final DirectBuffer buffer, final int start)

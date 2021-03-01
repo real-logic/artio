@@ -15,22 +15,174 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import b3.entrypoint.fixp.sbe.MessageHeaderEncoder;
+import b3.entrypoint.fixp.sbe.*;
+import io.aeron.ExclusivePublication;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class BinaryEntryPointProxy extends AbstractFixPProxy
 {
     public static final int BINARY_ENTRYPOINT_HEADER_LENGTH = SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH;
+    private static final int BINARY_ENTRYPOINT_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + BINARY_ENTRYPOINT_HEADER_LENGTH;
 
-    public void connectionId(final long connectionId)
+    private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
+    private final NegotiateResponseEncoder negotiateResponse = new NegotiateResponseEncoder();
+    private final NegotiateRejectEncoder negotiateReject = new NegotiateRejectEncoder();
+    private final EstablishAckEncoder establishAck = new EstablishAckEncoder();
+    private final EstablishRejectEncoder establishReject = new EstablishRejectEncoder();
+    private final SequenceEncoder sequence = new SequenceEncoder();
+    private final TerminateEncoder terminate = new TerminateEncoder();
+
+    public BinaryEntryPointProxy(
+        final long connectionId,
+        final ExclusivePublication publication)
     {
-
+        super(connectionId, publication);
     }
 
     public long sendSequence(final long uuid, final long nextSentSeqNo)
     {
         return 0;
+    }
+
+    public long sendNegotiateResponse(
+        final long sessionID, final long sessionVerID, final long requestTimestamp, final long enteringFirm)
+    {
+        final NegotiateResponseEncoder negotiateResponse = this.negotiateResponse;
+
+        final long position = claimMessage(NegotiateResponseEncoder.BLOCK_LENGTH, negotiateResponse, requestTimestamp);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        negotiateResponse
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerID)
+            .requestTimestamp().time(requestTimestamp);
+        negotiateResponse
+            .enteringFirm(enteringFirm);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendNegotiateReject(
+        final long sessionID,
+        final long sessionVerID,
+        final long requestTimestamp,
+        final long enteringFirm,
+        final RetransmitRejectCode negotiationRejectCode)
+    {
+        final NegotiateRejectEncoder negotiateReject = this.negotiateReject;
+
+        final long position = claimMessage(NegotiateRejectEncoder.BLOCK_LENGTH, negotiateReject, requestTimestamp);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        negotiateReject
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerID)
+            .requestTimestamp().time(requestTimestamp);
+        negotiateReject
+            .enteringFirm(enteringFirm)
+            .negotiationRejectCode(negotiationRejectCode);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendEstablishAck(
+        final long sessionID,
+        final long sessionVerID,
+        final long requestTimestamp,
+        final long keepAliveInterval,
+        final long nextSeqNo, final long lastIncomingSeqNo)
+    {
+        final EstablishAckEncoder establishAck = this.establishAck;
+
+        final long position = claimMessage(EstablishAckEncoder.BLOCK_LENGTH, establishAck, requestTimestamp);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        establishAck
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerID)
+            .requestTimestamp().time(requestTimestamp);
+        establishAck.keepAliveInterval().time(keepAliveInterval);
+        establishAck
+            .nextSeqNo(nextSeqNo)
+            .lastIncomingSeqNo(lastIncomingSeqNo);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendEstablishReject(
+        final long sessionID,
+        final long sessionVerID,
+        final long requestTimestamp,
+        final EstablishRejectCode establishmentRejectCode)
+    {
+        final EstablishRejectEncoder establishReject = this.establishReject;
+
+        final long position = claimMessage(EstablishRejectEncoder.BLOCK_LENGTH, establishReject, requestTimestamp);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        establishReject
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerID)
+            .requestTimestamp().time(requestTimestamp);
+        establishReject.establishmentRejectCode(establishmentRejectCode);
+
+        commit();
+
+        return position;
+    }
+
+    public long claimMessage(
+        final int messageLength,
+        final MessageEncoderFlyweight message,
+        final long timestamp)
+    {
+        return claimMessage(
+            messageLength,
+            message,
+            timestamp,
+            BINARY_ENTRYPOINT_MESSAGE_HEADER,
+            BINARY_ENTRYPOINT_HEADER_LENGTH,
+            SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE);
+    }
+
+    protected int applyHeader(
+        final MessageEncoderFlyweight message, final MutableDirectBuffer buffer, final int offset)
+    {
+        beMessageHeader
+            .wrap(buffer, offset)
+            .blockLength(message.sbeBlockLength())
+            .templateId(message.sbeTemplateId())
+            .schemaId(message.sbeSchemaId())
+            .version(message.sbeSchemaVersion());
+
+        return offset + beMessageHeader.encodedLength();
+    }
+
+    private void commit()
+    {
+        bufferClaim.commit();
     }
 }

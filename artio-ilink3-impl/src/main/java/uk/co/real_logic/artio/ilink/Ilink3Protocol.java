@@ -26,6 +26,11 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 public class Ilink3Protocol extends FixPProtocol
 {
+    public static <T> T unsupported()
+    {
+        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
+    }
+
     public Ilink3Protocol()
     {
         super(FixPProtocolType.ILINK_3);
@@ -61,6 +66,6 @@ public class Ilink3Protocol extends FixPProtocol
         final int messageLength,
         final EpochNanoClock epochNanoClock)
     {
-        throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
+        return unsupported();
     }
 }
