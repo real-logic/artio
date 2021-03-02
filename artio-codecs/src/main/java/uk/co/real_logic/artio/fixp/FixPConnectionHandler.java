@@ -67,12 +67,11 @@ public interface FixPConnectionHandler
      * Callback when Artio has received a RetransmitReject message. This can be used for error logging or handling.
      * @param connection the connection receiving this message
      * @param reason the reason of the RetransmitReject message
-     * @param lastUuid the lastUuid of the RetransmitReject message
      * @param requestTimestamp the requestTimestamp of the RetransmitReject message
      * @param errorCodes the errorCodes of the RetransmitReject message
      */
     void onRetransmitReject(
-        FixPConnection connection, String reason, long lastUuid, long requestTimestamp, int errorCodes);
+        FixPConnection connection, String reason, long requestTimestamp, int errorCodes);
 
     /**
      * Callback triggered by a timeout on a retransmit request. See
@@ -86,12 +85,10 @@ public interface FixPConnectionHandler
      * Notifies an application when a sequence message is received. Normally applications would not need to implement
      * this method or take any behaviour in response to a sequence message - Artio itself provides any session level
      * protocol responses. This method just exposes the event to applications for debugging or certification purposes.
-     *
-     * @param connection the connection receiving this message
-     * @param uuid the UUID of the sequence message.
+     *  @param connection the connection receiving this message
      * @param nextSeqNo the next sequence number contained in the body of the sequence message.
      */
-    void onSequence(FixPConnection connection, long uuid, long nextSeqNo);
+    void onSequence(FixPConnection connection, long nextSeqNo);
 
     /**
      * Callback when an error happens internally with the processing of a message in iLink3 that can't be handled

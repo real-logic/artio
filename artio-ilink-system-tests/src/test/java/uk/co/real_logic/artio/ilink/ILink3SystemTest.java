@@ -837,7 +837,7 @@ public class ILink3SystemTest
 
         verify(handler, times(2))
             .onRetransmitReject(
-            eq(connection), eq(RETRANSMIT_REJECT_REASON), anyLong(), anyLong(), eq(RETRANSMIT_REJECT_ERROR_CODES));
+            eq(connection), eq(RETRANSMIT_REJECT_REASON), anyLong(), eq(RETRANSMIT_REJECT_ERROR_CODES));
 
         terminateAndDisconnect();
     }

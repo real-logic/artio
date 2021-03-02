@@ -47,7 +47,7 @@ import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
+import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.*;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
@@ -972,7 +972,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             final String terminateErrorReason = terminateErrorReason(errorCodes);
             if (terminateErrorReason != null)
             {
-                DebugLogger.log(ILINK_SESSION, terminateErrorReason);
+                DebugLogger.log(FIXP_SESSION, terminateErrorReason);
             }
 
             sendTerminateAck(reason, errorCodes);
@@ -1054,7 +1054,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             else
             {
                 // low sequence number triggered disconnect
-                handler.onSequence(this, uUID, nextSeqNo);
+                handler.onSequence(this, nextSeqNo);
                 return position;
             }
 
@@ -1064,7 +1064,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 sendSequence(NotLapsed);
             }
 
-            handler.onSequence(this, uUID, nextSeqNo);
+            handler.onSequence(this, nextSeqNo);
         }
 
         return 1;
@@ -1207,7 +1207,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
-            DebugLogger.log(ILINK_SESSION, checkSeqNum, seqNum, nextRecvSeqNo);
+            DebugLogger.log(FIXP_SESSION, checkSeqNum, seqNum, nextRecvSeqNo);
             final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
             if (position == OK_POSITION)
             {
@@ -1262,7 +1262,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final long seqNum = offsets.seqNum(templateId, buffer, offset);
         final boolean possRetrans = offsets.possRetrans(templateId, buffer, offset) == BOOLEAN_FLAG_TRUE;
 
-        if (DebugLogger.isEnabled(ILINK_SESSION))
+        if (DebugLogger.isEnabled(FIXP_SESSION))
         {
             unknownMessage.clear()
                 .with(templateId)
@@ -1270,12 +1270,12 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 .with(version)
                 .with(seqNum)
                 .with(possRetrans);
-            DebugLogger.log(ILINK_SESSION, unknownMessage);
+            DebugLogger.log(FIXP_SESSION, unknownMessage);
 
             if (templateId == BusinessReject521Decoder.TEMPLATE_ID)
             {
                 businessReject.wrap(buffer, offset, blockLength, version);
-                DebugLogger.logSbeDecoder(ILINK_SESSION, "> ", businessRejectAppendTo);
+                DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", businessRejectAppendTo);
             }
         }
 
@@ -1469,7 +1469,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final RetransmitRequest retransmitRequest = retransmitRequests.peekFirst();
         if (retransmitRequest == null)
         {
-            DebugLogger.log(ILINK_SESSION, retransmitFilled, retransmitFillSeqNo);
+            DebugLogger.log(FIXP_SESSION, retransmitFilled, retransmitFillSeqNo);
             final long nextSeqNoAfterRetransmit = retransmitFillSeqNo + 1;
             if (retransmitUuid == this.uuid && nextRecvSeqNo < nextSeqNoAfterRetransmit)
             {
@@ -1491,7 +1491,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
             if (!Pressure.isBackPressured(position))
             {
-                if (DebugLogger.isEnabled(ILINK_SESSION))
+                if (DebugLogger.isEnabled(FIXP_SESSION))
                 {
                     retransmitFilledNext
                         .clear()
@@ -1500,7 +1500,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                         .with(retransmitFillSeqNo)
                         .with(fromSeqNo)
                         .with(msgCount);
-                    DebugLogger.log(ILINK_SESSION, retransmitFilledNext);
+                    DebugLogger.log(FIXP_SESSION, retransmitFilledNext);
                 }
                 retransmitRequests.pollFirst();
                 retransmitFillTimeoutInNs(requestTimestamp);
@@ -1739,7 +1739,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     {
         checkUuid(uuid);
 
-        handler.onRetransmitReject(this, reason, lastUuid, requestTimestamp, errorCodes);
+        handler.onRetransmitReject(this, reason, requestTimestamp, errorCodes);
 
         onRetransmitFilled();
 

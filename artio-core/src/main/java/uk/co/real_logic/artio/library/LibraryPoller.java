@@ -116,7 +116,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private InternalFixPConnection[] fixPConnections = EMPTY_FIXP_CONNECTIONS;
-    private final List<InternalFixPConnection> unmodifiableBinaryFixPConnections =
+    private final List<InternalFixPConnection> unmodifiableFixPConnections =
         new UnmodifiableWrapper<>(() -> fixPConnections);
 
     private InternalSession[] sessions = EMPTY_SESSIONS;
@@ -2049,7 +2049,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     @SuppressWarnings("unchecked")
     public List<ILink3Connection> iLink3Sessions()
     {
-        return (List<ILink3Connection>)(List<?>)unmodifiableBinaryFixPConnections;
+        return (List<ILink3Connection>)(List<?>)unmodifiableFixPConnections;
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<FixPConnection> fixPConnections()
+    {
+        return (List<FixPConnection>)(List<?>)unmodifiableFixPConnections;
     }
 
     public void remove(final InternalFixPConnection connection)

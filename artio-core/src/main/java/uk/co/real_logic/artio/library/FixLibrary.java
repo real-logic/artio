@@ -471,9 +471,25 @@ public class FixLibrary extends GatewayProcess
      * <p>
      * Note: the list is unmodifiable.
      *
+     * This method has been deprecated and will be replaced by {@link #fixPConnections()} it will continue to work
+     * until then.
+     *
      * @return a list of the currently active ILink3 Sessions
      */
+    @Deprecated
     public List<ILink3Connection> iLink3Sessions()
+    {
+        return poller.iLink3Sessions();
+    }
+
+    /**
+     * Get a list of the currently active FIXP connections.
+     * <p>
+     * Note: the list is unmodifiable.
+     *
+     * @return a list of the currently active FIXP connections.
+     */
+    public List<ILink3Connection> fixPConnections()
     {
         return poller.iLink3Sessions();
     }

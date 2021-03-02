@@ -80,7 +80,6 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     public void onRetransmitReject(
         final FixPConnection connection,
         final String reason,
-        final long lastUuid,
         final long requestTimestamp,
         final int errorCodes)
     {
@@ -90,7 +89,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     {
     }
 
-    public void onSequence(final FixPConnection connection, final long uuid, final long nextSeqNo)
+    public void onSequence(final FixPConnection connection, final long nextSeqNo)
     {
     }
 

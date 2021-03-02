@@ -119,7 +119,7 @@
             <validValue name="AUTHENTICATION_TIMEOUT"
                         description="We disconnected due to the authentication strategy not responding within the timeout">19</validValue>
             <validValue name="INVALID_FIXP_MESSAGE"
-                        description="We disconnected due to an error in framing iLink3 messages" sinceVersion="14">20</validValue>
+                        description="We disconnected due to an error in framing FIXP messages" sinceVersion="14">20</validValue>
             <validValue name="ADMIN_API_DISCONNECT"
                         description="Disconnected due to an explicit administrative API operation from a user" sinceVersion="15">21</validValue>
             <validValue name="MISSING_LOGON_COMP_ID"

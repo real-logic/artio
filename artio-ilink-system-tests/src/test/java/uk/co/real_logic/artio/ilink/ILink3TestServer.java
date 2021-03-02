@@ -40,7 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
-import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
+import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.ilink.ILink3Proxy.ILINK_HEADER_LENGTH;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.CL_ORD_ID;
 import static uk.co.real_logic.artio.ilink.ILink3SystemTest.FIRM_ID;
@@ -389,7 +389,7 @@ public class ILink3TestServer
 
         assertEquals(expectedSeqNum, request.seqNum());
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "TS: ", request::appendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "TS: ", request::appendTo);
     }
 
     public void disconnect()

@@ -70,13 +70,32 @@ public enum LogTag
 
     /**
      * Prints out the ILink3 session messages.
+     *
+     * Replaced by <code>FIXP_SESSION</code>. This will be removed in a future version of Artio, until then it
+     * will continue to work as an alias.
      */
+    @Deprecated
     ILINK_SESSION,
 
     /**
-     * Prints out the ILink3 business layer messages.
+     * Prints out the FIXP session messages.
      */
-    ILINK_BUSINESS;
+    FIXP_SESSION,
+
+    /**
+     * Prints out the ILink3 business layer messages.
+     *
+     * Replaced by <code>FIXP_BUSINESS</code>. This will be removed in a future version of Artio, until then it
+     * will continue to work as an alias.
+     */
+    @Deprecated
+    ILINK_BUSINESS,
+
+    /**
+     * Prints out the FIXP business layer messages.
+     */
+    FIXP_BUSINESS;
+
 
     private final char[] logStr;
 

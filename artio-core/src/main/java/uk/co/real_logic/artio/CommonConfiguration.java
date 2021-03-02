@@ -158,7 +158,7 @@ public class CommonConfiguration
                 {
                     debugTags = Stream
                         .of(debugPrintMessagesValue.split(","))
-                        .map(LogTag::valueOf)
+                        .map(CommonConfiguration::lookupLogTag)
                         .collect(toCollection(() -> EnumSet.noneOf(LogTag.class)));
 
                     debugPrintMessages = !debugTags.isEmpty();
@@ -178,6 +178,16 @@ public class CommonConfiguration
         final String loggingSeparator = getProperty(LOGGING_SEPARATOR_PROPERTY);
         DEBUG_LOGGING_SEPARATOR =
             loggingSeparator == null ? DEFAULT_DEBUG_LOGGING_SEPARATOR : (byte)loggingSeparator.charAt(0);
+    }
+
+    private static LogTag lookupLogTag(final String name)
+    {
+        switch (name)
+        {
+            case "ILINK_SESSION": return LogTag.FIXP_SESSION;
+            case "ILINK_BUSINESS": return LogTag.FIXP_BUSINESS;
+            default: return LogTag.valueOf(name);
+        }
     }
 
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);

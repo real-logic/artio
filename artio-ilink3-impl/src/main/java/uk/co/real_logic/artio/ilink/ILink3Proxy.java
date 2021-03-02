@@ -28,7 +28,7 @@ import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.LogTag.ILINK_SESSION;
+import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.library.InternalILink3Connection.BUSINESS_MESSAGE_LOGGING_ENABLED;
 
@@ -110,7 +110,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .firm(firmId)
             .putCredentials(NO_BUFFER, 0, 0);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", negotiateAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", negotiateAppendTo);
 
         commit();
 
@@ -152,7 +152,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .keepAliveInterval(keepAliveInterval)
             .putCredentials(NO_BUFFER, 0, 0);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", establishAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", establishAppendTo);
 
         commit();
 
@@ -176,7 +176,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .errorCodes(errorCodes)
             .splitMsg(SplitMsg.NULL_VAL);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", terminateAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", terminateAppendTo);
 
         commit();
 
@@ -206,7 +206,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .faultToleranceIndicator(fti)
             .keepAliveIntervalLapsed(keepAliveLapsed);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", sequenceAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", sequenceAppendTo);
 
         commit();
 
@@ -237,7 +237,7 @@ public class ILink3Proxy extends AbstractFixPProxy
             .fromSeqNo(fromSeqNo)
             .msgCount(msgCount);
 
-        DebugLogger.logSbeDecoder(ILINK_SESSION, "< ", retransmitRequestAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", retransmitRequestAppendTo);
 
         commit();
 
