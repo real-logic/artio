@@ -105,7 +105,7 @@ public class InitiatorSession extends InternalSession
                 sequenceIndex(),
                 lastMsgSeqNumProcessed(),
                 cancelOnDisconnectOption,
-                cancelOnDisconnectTimeoutWindowInMs());
+                getCancelOnDisconnectTimeoutWindowInMs());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

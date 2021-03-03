@@ -143,6 +143,18 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
 
+    @Test
+    public void shouldCorrectTimeoutsOverLimit()
+    {
+        setup(CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), 100_000_000);
+
+        acquireAcceptingSession();
+
+        final long maxTimeoutInNs = 60_000_000_000L;
+        assertEquals(maxTimeoutInNs, acceptingSession.cancelOnDisconnectTimeoutWindowInNs());
+        assertEquals(maxTimeoutInNs, initiatingSession.cancelOnDisconnectTimeoutWindowInNs());
+    }
+
     private void assertHandlerNotInvoked()
     {
         assertSessionDisconnected(initiatingSession);
@@ -162,9 +174,6 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertNull(timeoutHandler.result);
         assertEquals(0, timeoutHandler.invokeCount());
     }
-
-    // TODO: missing fields on logon
-    // TODO: window over 60 second limit
 
     private void assertTriggersCancelOnDisconnect(final CancelOnDisconnectType type)
     {

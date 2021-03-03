@@ -276,6 +276,6 @@ public class InternalSession extends Session implements AutoCloseable
 
     public void cancelOnDisconnectTimeoutWindowInNs(final long cancelOnDisconnectTimeoutWindowInNs)
     {
-        this.cancelOnDisconnectTimeoutWindowInNs = cancelOnDisconnectTimeoutWindowInNs;
+        super.cancelOnDisconnectTimeoutWindowInNs(cancelOnDisconnectTimeoutWindowInNs);
     }
 }

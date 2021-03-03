@@ -79,6 +79,7 @@ public class Session
     static final short DISCONNECTED_VALUE = 9;
     static final short DISABLED_VALUE = 10;
 
+    private static final long MAX_COD_TIMEOUT_IN_NS = 60_000_000_000L;
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     private static final int INITIAL_SEQUENCE_NUMBER = 1;
@@ -159,8 +160,8 @@ public class Session
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
     private FixDictionary fixDictionary;
 
+    private long cancelOnDisconnectTimeoutWindowInNs = MISSING_LONG;
     CancelOnDisconnectOption cancelOnDisconnectOption;
-    long cancelOnDisconnectTimeoutWindowInNs = MISSING_LONG;
 
     Session(
         final int heartbeatIntervalInS,
@@ -823,7 +824,7 @@ public class Session
             sequenceIndex(),
             lastMsgSeqNumProcessed,
             cancelOnDisconnectOption,
-            cancelOnDisconnectTimeoutWindowInMs());
+            getCancelOnDisconnectTimeoutWindowInMs());
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -1294,7 +1295,7 @@ public class Session
         final boolean possDup,
         final long position,
         final CancelOnDisconnectOption cancelOnDisconnectOption,
-        final int cancelOnDisconnectTimeoutWindow)
+        final int cancelOnDisconnectTimeoutWindowInMs)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -1313,7 +1314,7 @@ public class Session
         final long logonTimeInNs = clock.nanoTime();
 
         this.cancelOnDisconnectOption = cancelOnDisconnectOption;
-        this.cancelOnDisconnectTimeoutWindowInNs = MILLISECONDS.toNanos(cancelOnDisconnectTimeoutWindow);
+        cancelOnDisconnectTimeoutWindowInNs(MILLISECONDS.toNanos(cancelOnDisconnectTimeoutWindowInMs));
 
         if (resetSeqNumFlag)
         {
@@ -1414,7 +1415,7 @@ public class Session
                 logonSequenceIndex,
                 lastMsgSeqNumProcessed,
                 cancelOnDisconnectOption,
-                cancelOnDisconnectTimeoutWindowInMs());
+                getCancelOnDisconnectTimeoutWindowInMs());
             if (position < 0)
             {
                 return ABORT;
@@ -1487,10 +1488,10 @@ public class Session
             null, null,
             false,
             sequenceIndex(), lastMsgSeqNumProcessed,
-            cancelOnDisconnectOption, cancelOnDisconnectTimeoutWindowInMs()));
+            cancelOnDisconnectOption, getCancelOnDisconnectTimeoutWindowInMs()));
     }
 
-    int cancelOnDisconnectTimeoutWindowInMs()
+    int getCancelOnDisconnectTimeoutWindowInMs()
     {
         if (cancelOnDisconnectTimeoutWindowInNs == MISSING_LONG)
         {
@@ -2255,6 +2256,12 @@ public class Session
     void awaitingHeartbeat(final boolean awaitingHeartbeat)
     {
         this.awaitingHeartbeat = awaitingHeartbeat;
+    }
+
+    void cancelOnDisconnectTimeoutWindowInNs(final long cancelOnDisconnectTimeoutWindowInNs)
+    {
+        this.cancelOnDisconnectTimeoutWindowInNs = Math.min(
+            MAX_COD_TIMEOUT_IN_NS, cancelOnDisconnectTimeoutWindowInNs);
     }
 
     void fixDictionary(final FixDictionary fixDictionary)
