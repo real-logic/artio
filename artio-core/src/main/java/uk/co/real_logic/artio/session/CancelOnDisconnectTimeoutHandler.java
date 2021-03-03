@@ -18,11 +18,15 @@ package uk.co.real_logic.artio.session;
 /**
  * Handler interface that is invoked after a cancel on disconnect timeout for an acceptor session.
  *
- * In order for this handler to be invoked
- * A session must specify a CancelOnDisconnectType field in it's logon message that requires
- * a cancel on either logout, disconnect or both and the CODTimeoutWindow also specified in the logon message must
- * have expired. The window may be zero. If the session reconnects within the timeout window then the handler is not
- * invoked.
+ * In order for this handler to be invoked:
+ * <ul>
+ *  <li>Your FIX session dictionary must contain a cancel on disconnect type field associated with a logonmessage</li>
+ *  <li>A session must specify a CancelOnDisconnectType field in it's logon message that requires
+ * a cancel on either logout, disconnect or both</li>
+ *  <li>the CODTimeoutWindow also specified in the logon message must have expired without a reconnect</li>
+ * </ul>.
+ *
+ * Cancel on disconnect fields will be echoed back in the corresponding acceptor logon message.
  *
  * Initiator implementations using cancel on disconnect can set the requisite logon fields using a
  * {@link SessionCustomisationStrategy}.

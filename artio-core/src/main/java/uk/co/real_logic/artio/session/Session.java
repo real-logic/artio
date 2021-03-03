@@ -397,16 +397,22 @@ public class Session
     }
 
     /**
-     * The cancel on disconnect option from the Logon message. Note: a missing COD option will result in
+     * Gets the cancel on disconnect option from the Logon message. Note: a missing COD option will result in
      * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}.
      *
-     * @return cancel on disconnect option from the Logon message.
+     * @return cancel on disconnect option received in the Logon message.
      */
     public CancelOnDisconnectOption cancelOnDisconnectOption()
     {
         return cancelOnDisconnectOption;
     }
 
+    /**
+     * Gets the cancel on disconnection timeout window in nanoseconds. This is the value received from the Logon
+     * message. If the timeout is over the limit (60 seconds) then it will be set to 60 seconds.
+     *
+     * @return the cancel on disconnection timeout window in nanoseconds.
+     */
     public long cancelOnDisconnectTimeoutWindowInNs()
     {
         return cancelOnDisconnectTimeoutWindowInNs;
