@@ -120,6 +120,11 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return valid;
     }
 
+    public int cancelOnDisconnectType()
+    {
+        return getInt(Constants.CANCEL_ON_DISCONNECT_TYPE);
+    }
+
     public FixMessage clone()
     {
         final FixMessage theClone = new FixMessage();

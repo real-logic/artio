@@ -49,4 +49,16 @@ public interface AbstractLogonDecoder extends Decoder
     boolean hasResetSeqNumFlag();
 
     boolean resetSeqNumFlag();
+
+    boolean supportsCancelOnDisconnectType();
+
+    boolean hasCancelOnDisconnectType();
+
+    int cancelOnDisconnectType();
+
+    boolean supportsCODTimeoutWindow();
+
+    boolean hasCODTimeoutWindow();
+
+    int cODTimeoutWindow();
 }

@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
@@ -34,6 +35,7 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
@@ -104,6 +106,18 @@ public class SessionParser
     public static String password(final AbstractLogonDecoder logon)
     {
         return logon.supportsPassword() ? logon.passwordAsString() : null;
+    }
+
+    public static CancelOnDisconnectOption cancelOnDisconnectType(final AbstractLogonDecoder logon)
+    {
+        return logon.supportsCancelOnDisconnectType() && logon.hasCancelOnDisconnectType() ?
+            CancelOnDisconnectOption.get(logon.cancelOnDisconnectType()) : DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
+    }
+
+    public static int cancelOnDisconnectTimeoutWindow(final AbstractLogonDecoder logon)
+    {
+        return logon.supportsCODTimeoutWindow() && logon.hasCODTimeoutWindow() ?
+            logon.cODTimeoutWindow() : 0;
     }
 
     public Action onMessage(
@@ -504,6 +518,8 @@ public class SessionParser
             final long origSendingTime = origSendingTimeInMs(header);
             final String username = username(logon);
             final String password = password(logon);
+            final CancelOnDisconnectOption cancelOnDisconnectOption = cancelOnDisconnectType(logon);
+            final int cancelOnDisconnectTimeoutWindow = cancelOnDisconnectTimeoutWindow(logon);
             final boolean possDup = isPossDup(header);
 
             return session.onLogon(
@@ -516,7 +532,9 @@ public class SessionParser
                 isPossDupOrResend(possDup, header),
                 resetSeqNumFlag(logon),
                 possDup,
-                position);
+                position,
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindow);
         }
     }
 

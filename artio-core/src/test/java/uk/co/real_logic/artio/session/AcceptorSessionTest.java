@@ -16,12 +16,14 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -37,7 +39,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         final AcceptorSession acceptorSession = new AcceptorSession(
             HEARTBEAT_INTERVAL_IN_S,
             CONNECTION_ID,
-            fakeClock,
             nanoClock,
             sessionProxy,
             mock(GatewayPublication.class),
@@ -139,7 +140,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private void verifyLogon()
     {
         verify(sessionProxy).sendLogon(
-            1, HEARTBEAT_INTERVAL_IN_S, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+            1, HEARTBEAT_INTERVAL_IN_S, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED,
+            CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, MISSING_INT);
     }
 
 }

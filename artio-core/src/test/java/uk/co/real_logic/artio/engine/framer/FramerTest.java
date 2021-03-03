@@ -562,7 +562,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any(DirectBuffer.class))).thenReturn(BACK_PRESSURED, POSITION);
+            any(DirectBuffer.class),
+            any(),
+            anyLong())).thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
 
@@ -610,7 +612,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any(DirectBuffer.class));
+            any(DirectBuffer.class),
+            any(),
+            anyLong());
         saveRequestSessionReply();
 
         neverSavesUnknownSession();
@@ -803,7 +807,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any(DirectBuffer.class))).thenReturn(BACK_PRESSURED, POSITION);
+            any(DirectBuffer.class),
+            any(),
+            anyLong())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     private void verifySessionsAcquired(final SessionState state)
@@ -940,7 +946,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any(DirectBuffer.class));
+            any(DirectBuffer.class),
+            any(),
+            anyLong());
     }
 
     private void verifySessionExistsSaved(final VerificationMode times, final SessionStatus status)
@@ -981,7 +989,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any(DirectBuffer.class));
+            any(DirectBuffer.class),
+            any(),
+            anyLong());
     }
 
     private void aClientSendsData() throws IOException

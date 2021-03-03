@@ -77,7 +77,9 @@ public interface LibraryEndPointHandler
         MetaDataStatus metaDataStatus,
         DirectBuffer metaDataBuffer,
         int metaDataOffset,
-        int metaDataLength);
+        int metaDataLength,
+        CancelOnDisconnectOption cancelOnDisconnectOption,
+        long cancelOnDisconnectTimeoutInNs);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 

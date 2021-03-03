@@ -28,6 +28,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionStatus;
@@ -384,6 +385,8 @@ public class LibraryPollerTest
             MetaDataStatus.NO_META_DATA,
             new UnsafeBuffer(new byte[0]),
             0,
+            0,
+            CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT,
             0);
     }
 

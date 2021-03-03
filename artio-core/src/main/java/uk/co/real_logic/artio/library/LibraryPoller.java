@@ -840,8 +840,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId,
         final long connectionId,
         final long sessionId,
-        final int lastSentSeqNum,
-        final int lastRecvSeqNum,
+        final int lastSentSeqNum, final int lastRecvSeqNum,
         final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
@@ -854,28 +853,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long correlationId,
         final int sequenceIndex,
         final boolean awaitingResend,
-        final int lastResentMsgSeqNo,
-        final int lastResendChunkMsgSeqNum,
-        final int endOfResendRequestRange,
+        final int lastResentMsgSeqNo, final int lastResendChunkMsgSeqNum, final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
         final int logonReceivedSequenceNumber,
         final int logonSequenceIndex,
-        final long lastLogonTime,
-        final long lastSequenceResetTime,
-        final String localCompId,
-        final String localSubId,
-        final String localLocationId,
-        final String remoteCompId,
-        final String remoteSubId,
-        final String remoteLocationId,
-        final String address,
-        final String username,
-        final String password,
+        final long lastLogonTime, final long lastSequenceResetTime,
+        final String localCompId, final String localSubId, final String localLocationId,
+        final String remoteCompId, final String remoteSubId, final String remoteLocationId,
+        final String address, final String username, final String password,
         final Class<? extends FixDictionary> fixDictionaryType,
         final MetaDataStatus metaDataStatus,
         final DirectBuffer metaDataBuffer,
         final int metaDataOffset,
-        final int metaDataLength)
+        final int metaDataLength,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final long cancelOnDisconnectTimeoutInNs)
     {
         if (state == CONNECTED)
         {
@@ -923,10 +915,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         lastLogonTime, lastSequenceResetTime,
                         localCompId, localSubId, localLocationId,
                         remoteCompId, remoteSubId, remoteLocationId,
-                        address,
-                        username,
-                        password,
-                        fixDictionary);
+                        address, username, password,
+                        fixDictionary,
+                        cancelOnDisconnectOption, cancelOnDisconnectTimeoutInNs);
                 }
                 else
                 {
@@ -954,24 +945,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final ConnectionType connectionType,
         final SessionState sessionState,
         final int heartbeatIntervalInS,
-        final boolean closedResendInterval,
-        final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed,
+        final boolean closedResendInterval, final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests, final boolean enableLastMsgSeqNumProcessed,
         final long correlationId,
         final int sequenceIndex,
         final boolean awaitingResend,
-        final int lastResentMsgSeqNo,
-        final int lastResendChunkMsgSeqNum,
-        final int endOfResendRequestRange,
+        final int lastResentMsgSeqNo, final int lastResendChunkMsgSeqNum, final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
-        final long lastLogonTime,
-        final long lastSequenceResetTime,
+        final long lastLogonTime, final long lastSequenceResetTime,
         final String localCompId, final String localSubId, final String localLocationId,
         final String remoteCompId, final String remoteSubId, final String remoteLocationId,
-        final String address,
-        final String username, final String password,
-        final FixDictionary fixDictionary)
+        final String address, final String username, final String password,
+        final FixDictionary fixDictionary,
+        final CancelOnDisconnectOption cancelOnDisconnectOption, final long cancelOnDisconnectTimeoutInNs)
     {
         InternalSession session;
         InitiateSessionReply reply = null;
@@ -1002,14 +988,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (isNewConnect)
             {
                 session = newInitiatorSession(
-                    connectionId,
-                    initialSentSequenceNumber, initialReceivedSequenceNumber,
-                    sessionState,
-                    sequenceIndex,
-                    enableLastMsgSeqNumProcessed,
-                    fixDictionary,
-                    resetSeqNum,
-                    messageInfo);
+                    connectionId, initialSentSequenceNumber, initialReceivedSequenceNumber,
+                    sessionState, sequenceIndex, enableLastMsgSeqNumProcessed,
+                    fixDictionary, resetSeqNum, messageInfo);
             }
             else
             {
@@ -1035,15 +1016,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
-            localCompId,
-            localSubId,
-            localLocationId,
-            remoteCompId,
-            remoteSubId,
-            remoteLocationId);
+            localCompId, localSubId, localLocationId,
+            remoteCompId, remoteSubId, remoteLocationId);
 
-        session.username(username);
-        session.password(password);
+        session.username(username); session.password(password);
         session.setupSession(sessionId, compositeKey);
         session.closedResendInterval(closedResendInterval);
         session.resendRequestChunkSize(resendRequestChunkSize);
@@ -1053,6 +1029,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
         session.endOfResendRequestRange(endOfResendRequestRange);
         session.awaitingHeartbeat(awaitingHeartbeat);
+        session.cancelOnDisconnectOption(cancelOnDisconnectOption);
+        session.cancelOnDisconnectTimeoutWindowInNs(cancelOnDisconnectTimeoutInNs);
+
         if (lastLogonTime != UNKNOWN_TIME)
         {
             session.lastLogonTimeInNs(lastLogonTime);
@@ -1955,7 +1934,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InternalSession session = new AcceptorSession(
             heartbeatIntervalInS,
             connectionId,
-            epochClock,
             configuration.epochNanoClock(),
             sessionProxy(connectionId),
             inboundPublication,

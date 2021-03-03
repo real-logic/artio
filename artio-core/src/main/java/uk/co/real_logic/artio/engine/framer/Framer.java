@@ -29,10 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LivenessDetector;
-import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -50,10 +47,7 @@ import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder.SessionsEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
-import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.InternalSession;
-import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -832,6 +826,52 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
+    public void onCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
+    {
+        final CancelOnDisconnectTimeoutHandler handler = configuration.cancelOnDisconnectTimeoutHandler();
+        if (handler != null)
+        {
+            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            if (entry == null)
+            {
+                errorHandler.onError(new IllegalStateException("Unknown session id when performing cancel on" +
+                    " disconnect timeout: " + sessionId));
+                return;
+            }
+
+            final CompositeKey sessionKey = entry.getKey();
+            if (runCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey) == BACK_PRESSURED)
+            {
+                schedule(() -> runCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey));
+            }
+        }
+    }
+
+    private long runCancelOnDisconnect(
+        final long sessionId,
+        final long timeInNs,
+        final CancelOnDisconnectTimeoutHandler handler,
+        final CompositeKey sessionKey)
+    {
+        if (clock.nanoTime() > timeInNs)
+        {
+            try
+            {
+                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
+            }
+            catch (final Throwable t)
+            {
+                errorHandler.onError(new FixGatewayException(
+                    "Error executing cancel on disconnect timeout handler", t));
+            }
+            return COMPLETE;
+        }
+        else
+        {
+            return BACK_PRESSURED;
+        }
+    }
+
     private boolean checkDuplicateILinkConnection(
         final int libraryId,
         final long correlationId,
@@ -1403,6 +1443,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 enableLastMsgSeqNumProcessed,
                 username,
                 password,
+                // Will be echo'd or validated by counter-party in Logon message
+                CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT,
+                0,
                 fixDictionaryClass,
                 heartbeatIntervalInS,
                 correlationId,
@@ -1439,6 +1482,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final long cancelOnDisconnectTimeoutWindowInNs,
         final Class<? extends FixDictionary> fixDictionary,
         final int heartbeatIntervalInS,
         final long correlationId,
@@ -1463,6 +1508,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionKey,
             username,
             password,
+            cancelOnDisconnectOption,
+            cancelOnDisconnectTimeoutWindowInNs,
             heartbeatIntervalInS,
             libraryId,
             connectionId,
@@ -2240,7 +2287,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.password(),
                 gatewaySession.fixDictionary().getClass(),
                 metaDataStatus,
-                metaData);
+                metaData,
+                gatewaySession.cancelOnDisconnectOption(),
+                gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
         }
     }
 
@@ -2414,7 +2463,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.password(),
             gatewaySession.fixDictionary().getClass(),
             metaDataStatus,
-            metaData);
+            metaData,
+            gatewaySession.cancelOnDisconnectOption(),
+            gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
     }
 
     private void catchupSession(
@@ -2627,6 +2678,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     gatewaySession.enableLastMsgSeqNumProcessed(),
                     gatewaySession.username(),
                     gatewaySession.password(),
+                    gatewaySession.cancelOnDisconnectOption(),
+                    gatewaySession.cancelOnDisconnectTimeoutWindowInNs(),
                     gatewaySession.fixDictionary().getClass(),
                     gatewaySession.heartbeatIntervalInS(),
                     NO_CORRELATION_ID,
@@ -2971,6 +3024,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private final CompositeKey sessionKey;
         private final String username;
         private final String password;
+        private final CancelOnDisconnectOption cancelOnDisconnectOption;
+        private final long cancelOnDisconnectTimeoutWindowInNs;
         private final int heartbeatIntervalInS;
         private final int libraryId;
         private final long connectionId;
@@ -3005,6 +3060,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final CompositeKey sessionKey,
             final String username,
             final String password,
+            final CancelOnDisconnectOption cancelOnDisconnectOption,
+            final long cancelOnDisconnectTimeoutWindowInNs,
             final int heartbeatIntervalInS,
             final int libraryId,
             final long connectionId,
@@ -3032,6 +3089,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.sessionKey = sessionKey;
             this.username = username;
             this.password = password;
+            this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+            this.cancelOnDisconnectTimeoutWindowInNs = cancelOnDisconnectTimeoutWindowInNs;
             this.heartbeatIntervalInS = heartbeatIntervalInS;
             this.libraryId = libraryId;
             this.connectionId = connectionId;
@@ -3153,7 +3212,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 username,
                 password,
                 heartbeatIntervalInS,
-                lastReceivedSequenceNumber);
+                lastReceivedSequenceNumber,
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindowInNs);
 
             return COMPLETE;
         }
@@ -3202,7 +3263,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 password,
                 fixDictionary,
                 metaDataStatus,
-                metaDataBuffer);
+                metaDataBuffer,
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindowInNs);
 
             if (position > 0)
             {

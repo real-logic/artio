@@ -92,4 +92,12 @@ public interface AbstractLogonEncoder extends Encoder
     void resetPassword();
 
     boolean resetSeqNumFlag();
+
+    boolean supportsCancelOnDisconnectType();
+
+    boolean supportsCODTimeoutWindow();
+
+    AbstractLogonEncoder cancelOnDisconnectType(int cancelOnDisconnectType);
+
+    AbstractLogonEncoder cODTimeoutWindow(int cODTimeoutWindow);
 }

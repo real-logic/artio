@@ -109,6 +109,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + LibraryExtendPositionEncoder.BLOCK_LENGTH;
     private static final int MANAGE_FIXP_CONNECTION_LENGTH =
         HEADER_LENGTH + ManageFixPConnectionDecoder.BLOCK_LENGTH;
+    private static final int CANCEL_ON_DISCONNECT_TRIGGER_LENGTH =
+        HEADER_LENGTH + CancelOnDisconnectTriggerEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -142,6 +144,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
     private final LibraryExtendPositionEncoder libraryExtendPosition = new LibraryExtendPositionEncoder();
     private final ManageFixPConnectionEncoder manageFixPConnection = new ManageFixPConnectionEncoder();
+    private final CancelOnDisconnectTriggerEncoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -408,7 +411,9 @@ public class GatewayPublication extends ClaimablePublication
         final String password,
         final Class<? extends FixDictionary> fixDictionary,
         final MetaDataStatus metaDataStatus,
-        final DirectBuffer metaData)
+        final DirectBuffer metaData,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final long cancelOnDisconnectTimeoutWindowInNs)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -464,6 +469,8 @@ public class GatewayPublication extends ClaimablePublication
             .lastLogonTime(lastLogonTime)
             .lastSequenceResetTime(lastSequenceResetTime)
             .metaDataStatus(metaDataStatus)
+            .cancelOnDisconnectOption(cancelOnDisconnectOption)
+            .cancelOnDisconnectTimeoutInNs(cancelOnDisconnectTimeoutWindowInNs)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
@@ -1469,6 +1476,29 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
 //        logSbeMessage(GATEWAY_MESSAGE, manageFixPConnection);
+
+        return position;
+    }
+
+    public long saveCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
+    {
+        final long position = claim(CANCEL_ON_DISCONNECT_TRIGGER_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        cancelOnDisconnectTrigger
+            .wrapAndApplyHeader(buffer, offset, header)
+            .sessionId(sessionId)
+            .timeInNs(timeInNs);
+
+        bufferClaim.commit();
+
+//        logSbeMessage(GATEWAY_MESSAGE, cancelOnDisconnectTrigger);
 
         return position;
     }

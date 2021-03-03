@@ -52,6 +52,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
@@ -1054,7 +1055,9 @@ public abstract class AbstractSessionTest
             1,
             1,
             UNKNOWN, null, null, false, false, false,
-            POSITION);
+            POSITION,
+            DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT,
+            MISSING_INT);
 
         assertEquals(expectedAction, action);
     }
@@ -1083,7 +1086,8 @@ public abstract class AbstractSessionTest
     private void verifySetsSentSequenceNumbersToTwo(final int sequenceIndex)
     {
         verify(sessionProxy).sendLogon(
-            eq(1), eq(HEARTBEAT_INTERVAL_IN_S), any(), any(), eq(true), eq(sequenceIndex), anyInt());
+            eq(1), eq(HEARTBEAT_INTERVAL_IN_S), any(), any(), eq(true), eq(sequenceIndex), anyInt(),
+            any(), anyInt());
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -1186,7 +1190,9 @@ public abstract class AbstractSessionTest
             false,
             resetSeqNumFlag,
             false,
-            POSITION);
+            POSITION,
+            DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT,
+            MISSING_INT);
     }
 
     protected Action onMessage(final int msgSeqNo)

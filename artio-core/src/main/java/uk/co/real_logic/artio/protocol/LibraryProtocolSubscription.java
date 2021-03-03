@@ -412,7 +412,9 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.metaDataStatus(),
             buffer,
             manageSession.limit() + ManageSessionDecoder.metaDataHeaderLength(),
-            manageSession.metaDataLength());
+            manageSession.metaDataLength(),
+            manageSession.cancelOnDisconnectOption(),
+            manageSession.cancelOnDisconnectTimeoutInNs());
     }
 
     private Action onEndOfDay(

@@ -58,6 +58,8 @@
             <field name="TestMessageIndicator" required="N"/>
             <field name="Username" required="N"/>
             <field name="Password" required="N"/>
+            <field name="CancelOnDisconnectType" required="N"/>
+            <field name="CODTimeoutWindow" required="N"/>
         </message>
         <message name="UserRequest" msgtype="BE" msgcat="admin">
             <field name="UserRequestID" required="Y"/>
@@ -208,5 +210,12 @@
             <value enum="2" description="FILL"/>
             <value enum="4" description="CANCELED"/>
         </field>
+        <field number="35002" name="CancelOnDisconnectType" type="INT">
+            <value enum="0" description="DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT"/>
+            <value enum="1" description="CANCEL_ON_DISCONNECT_ONLY"/>
+            <value enum="2" description="CANCEL_ON_LOGOUT_ONLY"/>
+            <value enum="3" description="CANCEL_ON_DISCONNECT_OR_LOGOUT"/>
+        </field>
+        <field number="35003" name="CODTimeoutWindow" type="INT"/>
     </fields>
 </fix>

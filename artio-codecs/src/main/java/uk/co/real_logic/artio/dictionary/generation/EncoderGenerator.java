@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnum
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.ENCODER_OPTIONAL_SESSION_FIELDS;
+import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.OPTIONAL_FIELD_TYPES;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -396,85 +397,115 @@ class EncoderGenerator extends Generator
         {
             final String propertyName = formatPropertyName(optionalField);
 
-            out.append(String.format(
-                "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final DirectBuffer value, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final DirectBuffer value)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final byte[] value, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final byte[] value)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public boolean has%3$s()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public String %1$sAsString()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final CharSequence value)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final AsciiSequenceView value)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final char[] value, final int offset, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final char[] value, final int length)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public %2$s %1$s(final char[] value)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public MutableDirectBuffer %1$s()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n" +
-                "\n" +
-                "    public void reset%3$s()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }",
-                propertyName,
-                className,
-                optionalField));
+            final Type type = OPTIONAL_FIELD_TYPES.get(optionalField);
+            switch (type)
+            {
+                case STRING:
+                {
+                    generateMissingStringOptionalSessionFields(out, className, optionalField, propertyName);
+                    break;
+                }
+
+                case INT:
+                {
+                    out.append(String.format(
+                        "    public %2$s %1$s(final int value)\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n",
+                        propertyName,
+                        className));
+                    break;
+                }
+
+                default:
+                    throw new UnsupportedOperationException("Unknown field type for: '" + optionalField + "'");
+            }
         }
+    }
+
+    private void generateMissingStringOptionalSessionFields(
+        final Writer out, final String className, final String optionalField, final String propertyName)
+        throws IOException
+    {
+        out.append(String.format(
+            "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final DirectBuffer value, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final DirectBuffer value)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final byte[] value, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final byte[] value)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public boolean has%3$s()\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public String %1$sAsString()\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final CharSequence value)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final AsciiSequenceView value)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final char[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final char[] value, final int length)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public %2$s %1$s(final char[] value)\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public MutableDirectBuffer %1$s()\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }\n" +
+            "\n" +
+            "    public void reset%3$s()\n" +
+            "    {\n" +
+            "        throw new UnsupportedOperationException();\n" +
+            "    }",
+            propertyName,
+            className,
+            optionalField));
     }
 
     private void generateSetter(

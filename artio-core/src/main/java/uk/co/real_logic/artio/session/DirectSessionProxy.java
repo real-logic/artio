@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.AsciiFormatter;
@@ -196,8 +197,11 @@ public class DirectSessionProxy implements SessionProxy
         final String password,
         final boolean resetSeqNumFlag,
         final int sequenceIndex,
-        final int lastMsgSeqNumProcessed)
+        final int lastMsgSeqNumProcessed,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final int cancelOnDisconnectTimeoutWindowInMs)
     {
+        final AbstractLogonEncoder logon = this.logon;
         final SessionHeaderEncoder header = logon.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
@@ -228,6 +232,16 @@ public class DirectSessionProxy implements SessionProxy
             {
                 logon.password(password);
             }
+        }
+
+        if (cancelOnDisconnectOption != null && logon.supportsCancelOnDisconnectType())
+        {
+            logon.cancelOnDisconnectType(cancelOnDisconnectOption.value());
+        }
+
+        if (cancelOnDisconnectTimeoutWindowInMs != MISSING_INT && logon.supportsCODTimeoutWindow())
+        {
+            logon.cODTimeoutWindow(cancelOnDisconnectTimeoutWindowInMs);
         }
 
         customisationStrategy.configureLogon(logon, sessionId);
@@ -473,5 +487,10 @@ public class DirectSessionProxy implements SessionProxy
     public boolean seqNumResetRequested()
     {
         return seqNumResetRequested;
+    }
+
+    public long sendCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
+    {
+        return gatewayPublication.saveCancelOnDisconnectTrigger(sessionId, timeInNs);
     }
 }

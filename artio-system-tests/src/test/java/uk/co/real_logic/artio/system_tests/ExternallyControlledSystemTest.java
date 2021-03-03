@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionAcquiredInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
@@ -313,7 +314,9 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             final String password,
             final boolean resetSeqNumFlag,
             final int sequenceIndex,
-            final int lastMsgSeqNumProcessed)
+            final int lastMsgSeqNumProcessed,
+            final CancelOnDisconnectOption cancelOnDisconnectOption,
+            final int cancelOnDisconnectTimeoutWindowInMs)
         {
             final int adjustedMsgSeqNo = msgSeqNo + sequenceNumberAdjustment;
             sentLogons++;
@@ -465,6 +468,12 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         public boolean seqNumResetRequested()
         {
             return seqNumResetRequested;
+        }
+
+        public long sendCancelOnDisconnectTrigger(final long id, final long timeInNs)
+        {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendCancelOnDisconnectTrigger");
+            return 0;
         }
 
         private void setupHeader(final HeaderEncoder header, final int msgSeqNo)

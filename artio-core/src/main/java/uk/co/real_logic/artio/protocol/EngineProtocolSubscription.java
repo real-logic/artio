@@ -43,6 +43,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final ReadMetaDataDecoder readMetaData = new ReadMetaDataDecoder();
     private final ReplayMessagesDecoder replayMessages = new ReplayMessagesDecoder();
     private final InitiateILinkConnectionDecoder initiateILinkConnection = new InitiateILinkConnectionDecoder();
+    private final CancelOnDisconnectTriggerDecoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -121,8 +122,22 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             {
                 return onInitiateILinkConnection(buffer, offset, blockLength, version, header);
             }
+
+            case CancelOnDisconnectTriggerDecoder.TEMPLATE_ID:
+            {
+                return onCancelOnDisconnectTrigger(buffer, offset, blockLength, version, header);
+            }
         }
 
+        return CONTINUE;
+    }
+
+    private Action onCancelOnDisconnectTrigger(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+    {
+        cancelOnDisconnectTrigger.wrap(buffer, offset, blockLength, version);
+        handler.onCancelOnDisconnectTrigger(
+            cancelOnDisconnectTrigger.sessionId(), cancelOnDisconnectTrigger.timeInNs());
         return CONTINUE;
     }
 

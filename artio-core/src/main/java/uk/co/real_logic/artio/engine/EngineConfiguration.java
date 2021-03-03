@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
@@ -259,6 +260,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM_ID;
     private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
     private boolean acceptsBinaryEntryPoint = false;
+    private CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler = null;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -867,6 +869,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         this.errorIfDuplicateEngineDetected = errorIfDuplicateEngineDetected;
         return this;
+    }
+
+    public EngineConfiguration cancelOnDisconnectTimeoutHandler(
+        final CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler)
+    {
+        this.cancelOnDisconnectTimeoutHandler = cancelOnDisconnectTimeoutHandler;
+        return this;
+    }
+
+    public CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler()
+    {
+        return cancelOnDisconnectTimeoutHandler;
     }
 
     public int receiverBufferSize()

@@ -26,6 +26,7 @@ class EngineLibraryInfo implements LibraryInfo
     private final ArrayList<ConnectedSessionInfo> sessions;
     private final GatewaySessions gatewaySessions;
 
+    @SuppressWarnings("unchecked")
     EngineLibraryInfo(final GatewaySessions gatewaySessions)
     {
         sessions = new ArrayList<>((List<ConnectedSessionInfo>)(List<?>)gatewaySessions.sessions()); // TODO

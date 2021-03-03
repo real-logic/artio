@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 /**
@@ -49,7 +50,9 @@ public interface SessionProxy
         String password,
         boolean resetSeqNumFlag,
         int sequenceIndex,
-        int lastMsgSeqNumProcessed);
+        int lastMsgSeqNumProcessed,
+        CancelOnDisconnectOption cancelOnDisconnectOption,
+        int cancelOnDisconnectTimeoutWindowInMs);
 
     long sendLogout(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
@@ -103,4 +106,6 @@ public interface SessionProxy
     void libraryConnected(boolean libraryConnected);
 
     boolean seqNumResetRequested();
+
+    long sendCancelOnDisconnectTrigger(long id, long timeInNs);
 }

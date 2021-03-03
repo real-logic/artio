@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
@@ -33,6 +34,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 
 class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
 {
@@ -63,6 +65,8 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     // Otherwise this is updated when we handover the session.
     private long lastSequenceResetTime = Session.UNKNOWN_TIME;
     private long lastLogonTime = Session.UNKNOWN_TIME;
+    private CancelOnDisconnectOption cancelOnDisconnectOption;
+    private long cancelOnDisconnectTimeoutWindowInNs;
 
     FixGatewaySession(
         final long connectionId,
@@ -256,13 +260,17 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         final String username,
         final String password,
         final int heartbeatIntervalInS,
-        final int logonReceivedSequenceNumber)
+        final int logonReceivedSequenceNumber,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final long cancelOnDisconnectTimeoutWindowInNs)
     {
         this.sessionId = sessionId;
         this.context = context;
         this.sessionKey = sessionKey;
         this.logonReceivedSequenceNumber = logonReceivedSequenceNumber;
         this.logonSequenceIndex = context.sequenceIndex();
+        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+        this.cancelOnDisconnectTimeoutWindowInNs = cancelOnDisconnectTimeoutWindowInNs;
 
         onLogon(username, password, heartbeatIntervalInS);
     }
@@ -390,6 +398,16 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         return logonSequenceIndex;
     }
 
+    public CancelOnDisconnectOption cancelOnDisconnectOption()
+    {
+        return cancelOnDisconnectOption == null ? DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT : cancelOnDisconnectOption;
+    }
+
+    public long cancelOnDisconnectTimeoutWindowInNs()
+    {
+        return cancelOnDisconnectTimeoutWindowInNs;
+    }
+
     void updateSessionDictionary()
     {
         if (session != null)
@@ -445,5 +463,13 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     public long lastSentPosition()
     {
         return proxy.lastSentPosition();
+    }
+
+    public void onDisconnect()
+    {
+        if (session != null)
+        {
+            session.onDisconnect();
+        }
     }
 }

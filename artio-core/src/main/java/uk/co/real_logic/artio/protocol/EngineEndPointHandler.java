@@ -119,4 +119,6 @@ public interface EngineEndPointHandler
         int libraryId, int port, long correlationId,
         boolean reestablishConnection, boolean useBackupHost,
         String host, String accessKeyId, String backupHost);
+
+    void onCancelOnDisconnectTrigger(long sessionId, long timeInNs);
 }

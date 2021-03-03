@@ -32,9 +32,7 @@ import uk.co.real_logic.artio.fields.CalendricalUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
-import uk.co.real_logic.artio.messages.DisconnectReason;
-import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
-import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.NotConnectedException;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -45,6 +43,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.*;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -108,6 +107,7 @@ public class Session
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
+    private final ConnectionType connectionType;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -159,7 +159,10 @@ public class Session
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
     private FixDictionary fixDictionary;
 
-    public Session(
+    CancelOnDisconnectOption cancelOnDisconnectOption;
+    long cancelOnDisconnectTimeoutWindowInNs = MISSING_LONG;
+
+    Session(
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochNanoClock clock,
@@ -179,8 +182,10 @@ public class Session
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
-        final EpochFractionClock epochFractionClock)
+        final EpochFractionClock epochFractionClock,
+        final ConnectionType connectionType)
     {
+        this.connectionType = connectionType;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -388,6 +393,22 @@ public class Session
     public int connectedPort()
     {
         return connectedPort;
+    }
+
+    /**
+     * The cancel on disconnect option from the Logon message. Note: a missing COD option will result in
+     * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}.
+     *
+     * @return cancel on disconnect option from the Logon message.
+     */
+    public CancelOnDisconnectOption cancelOnDisconnectOption()
+    {
+        return cancelOnDisconnectOption;
+    }
+
+    public long cancelOnDisconnectTimeoutWindowInNs()
+    {
+        return cancelOnDisconnectTimeoutWindowInNs;
     }
 
     /**
@@ -800,7 +821,9 @@ public class Session
             password(),
             true,
             sequenceIndex(),
-            lastMsgSeqNumProcessed);
+            lastMsgSeqNumProcessed,
+            cancelOnDisconnectOption,
+            cancelOnDisconnectTimeoutWindowInMs());
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -844,6 +867,8 @@ public class Session
         state(DISCONNECTED);
         address("", Session.UNKNOWN);
         connectionId(NO_CONNECTION_ID);
+
+        checkCancelOnDisconnectDisconnect();
     }
 
     // Also checks the sequence index
@@ -1267,7 +1292,9 @@ public class Session
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag,
         final boolean possDup,
-        final long position)
+        final long position,
+        final CancelOnDisconnectOption cancelOnDisconnectOption,
+        final int cancelOnDisconnectTimeoutWindow)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -1284,6 +1311,9 @@ public class Session
         }
 
         final long logonTimeInNs = clock.nanoTime();
+
+        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+        this.cancelOnDisconnectTimeoutWindowInNs = MILLISECONDS.toNanos(cancelOnDisconnectTimeoutWindow);
 
         if (resetSeqNumFlag)
         {
@@ -1381,7 +1411,10 @@ public class Session
                 null,
                 null,
                 true,
-                logonSequenceIndex, lastMsgSeqNumProcessed);
+                logonSequenceIndex,
+                lastMsgSeqNumProcessed,
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindowInMs());
             if (position < 0)
             {
                 return ABORT;
@@ -1450,7 +1483,21 @@ public class Session
     private Action replyToLogon(final int heartbeatInterval)
     {
         return checkPosition(proxy.sendLogon(
-            newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
+            newSentSeqNum(), heartbeatInterval,
+            null, null,
+            false,
+            sequenceIndex(), lastMsgSeqNumProcessed,
+            cancelOnDisconnectOption, cancelOnDisconnectTimeoutWindowInMs()));
+    }
+
+    int cancelOnDisconnectTimeoutWindowInMs()
+    {
+        if (cancelOnDisconnectTimeoutWindowInNs == MISSING_LONG)
+        {
+            return MISSING_INT;
+        }
+
+        return (int)NANOSECONDS.toMillis(cancelOnDisconnectTimeoutWindowInNs);
     }
 
     private Action validateOrRejectSendingTime(final long sendingTimeInMs)
@@ -1528,6 +1575,9 @@ public class Session
         }
 
         lastReceivedMsgSeqNum(msgSeqNo);
+
+        checkCancelOnDisconnectLogout(timeInNs);
+
         if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect(LOGOUT);
@@ -1942,6 +1992,36 @@ public class Session
             msgTypeLength,
             INVALID_MSGTYPE.representation(),
             position);
+    }
+
+    void checkCancelOnDisconnectLogout(final long timeInNs)
+    {
+        if (!notifyCancelOnDisconnect(timeInNs, CANCEL_ON_LOGOUT_ONLY))
+        {
+            sessionProcessHandler.enqueueTask(() -> notifyCancelOnDisconnect(timeInNs, CANCEL_ON_LOGOUT_ONLY));
+        }
+    }
+
+    void checkCancelOnDisconnectDisconnect()
+    {
+        final long timeInNs = clock.nanoTime();
+        if (!notifyCancelOnDisconnect(timeInNs, CANCEL_ON_DISCONNECT_ONLY))
+        {
+            sessionProcessHandler.enqueueTask(() -> notifyCancelOnDisconnect(timeInNs, CANCEL_ON_DISCONNECT_ONLY));
+        }
+    }
+
+    private boolean notifyCancelOnDisconnect(final long timeInNs, final CancelOnDisconnectOption option)
+    {
+        if (connectionType == ConnectionType.ACCEPTOR &&
+            (cancelOnDisconnectOption == option ||
+            cancelOnDisconnectOption == CANCEL_ON_DISCONNECT_OR_LOGOUT))
+        {
+            final long deadlineInNs = timeInNs + cancelOnDisconnectTimeoutWindowInNs;
+            return !Pressure.isBackPressured(proxy.sendCancelOnDisconnectTrigger(id(), deadlineInNs));
+        }
+
+        return true;
     }
 
     void disable()

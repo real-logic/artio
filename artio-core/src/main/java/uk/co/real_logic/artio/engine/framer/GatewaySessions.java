@@ -123,6 +123,7 @@ abstract class GatewaySessions
         final FixGatewaySession session = (FixGatewaySession)removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
+            session.onDisconnect();
             session.close();
         }
     }

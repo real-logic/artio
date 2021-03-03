@@ -20,6 +20,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.library.OnMessageInfo;
+import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.EpochFractionClock;
@@ -73,7 +74,8 @@ public class InitiatorSession extends InternalSession
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
             messageInfo,
-            epochFractionClock);
+            epochFractionClock,
+            ConnectionType.INITIATOR);
         this.resetSeqNum = resetSeqNum;
     }
 
@@ -101,7 +103,9 @@ public class InitiatorSession extends InternalSession
                 password(),
                 resetSeqNum,
                 sequenceIndex(),
-                lastMsgSeqNumProcessed());
+                lastMsgSeqNumProcessed(),
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindowInMs());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

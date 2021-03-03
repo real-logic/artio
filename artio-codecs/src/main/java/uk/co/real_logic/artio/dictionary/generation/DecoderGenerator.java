@@ -42,6 +42,7 @@ import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VA
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.enumName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.DECODER_OPTIONAL_SESSION_FIELDS;
+import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.OPTIONAL_FIELD_TYPES;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -871,6 +872,7 @@ class DecoderGenerator extends Generator
         throws IOException
     {
         final List<String> optionalFields = DECODER_OPTIONAL_SESSION_FIELDS.get(className);
+        // Remove from missingOptionalFields during generateGetter
         final Set<String> missingOptionalFields = optionalFields == null ? emptySet() : new HashSet<>(optionalFields);
 
         for (final Entry entry : entries)
@@ -889,30 +891,56 @@ class DecoderGenerator extends Generator
         for (final String optionalField : missingOptionalFields)
         {
             final String propertyName = formatPropertyName(optionalField);
+            final Type type = OPTIONAL_FIELD_TYPES.get(optionalField);
+            switch (type)
+            {
+                case STRING:
+                {
+                    out.append(String.format(
+                        "    public char[] %1$s()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n" +
+                        "    public boolean has%2$s()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n" +
+                        "    public int %1$sLength()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n" +
+                        "    public String %1$sAsString()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n" +
+                        "    public void %1$s(final AsciiSequenceView view)\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n",
+                        propertyName,
+                        optionalField));
+                    break;
+                }
 
-            out.append(String.format(
-                "    public char[] %1$s()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n\n" +
-                "    public boolean has%2$s()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n\n" +
-                "    public int %1$sLength()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n\n" +
-                "    public String %1$sAsString()\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n\n" +
-                "    public void %1$s(final AsciiSequenceView view)\n" +
-                "    {\n" +
-                "        throw new UnsupportedOperationException();\n" +
-                "    }\n\n",
-                propertyName,
-                optionalField));
+                case INT:
+                {
+                    out.append(String.format(
+                        "    public int %1$s()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n" +
+                        "    public boolean has%2$s()\n" +
+                        "    {\n" +
+                        "        throw new UnsupportedOperationException();\n" +
+                        "    }\n\n",
+                        propertyName,
+                        optionalField));
+                    break;
+                }
+
+                default:
+                    throw new UnsupportedOperationException("Unknown field type for: '" + optionalField + "'");
+            }
         }
     }
 

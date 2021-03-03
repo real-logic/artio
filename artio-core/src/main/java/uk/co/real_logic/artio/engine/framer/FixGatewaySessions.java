@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -53,6 +54,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
@@ -180,7 +182,8 @@ public class FixGatewaySessions extends GatewaySessions
             gatewaySession.enableLastMsgSeqNumProcessed(),
             customisationStrategy,
             messageInfo,
-            epochFractionClock);
+            epochFractionClock,
+            gatewaySession.connectionType());
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -378,6 +381,9 @@ public class FixGatewaySessions extends GatewaySessions
 
             final String username = SessionParser.username(logon);
             final String password = SessionParser.password(logon);
+            final CancelOnDisconnectOption cancelOnDisconnectOption = SessionParser.cancelOnDisconnectType(logon);
+            final long cancelOnDisconnectTimeoutWindowInNs =
+                MILLISECONDS.toNanos(SessionParser.cancelOnDisconnectTimeoutWindow(logon));
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey;
@@ -413,7 +419,9 @@ public class FixGatewaySessions extends GatewaySessions
                 username,
                 password,
                 logon.heartBtInt(),
-                header.msgSeqNum());
+                header.msgSeqNum(),
+                cancelOnDisconnectOption,
+                cancelOnDisconnectTimeoutWindowInNs);
             session.lastLogonTime(logonTime);
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent

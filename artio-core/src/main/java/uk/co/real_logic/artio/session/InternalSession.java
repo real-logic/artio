@@ -21,6 +21,8 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.library.OnMessageInfo;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
+import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.EpochFractionClock;
@@ -58,7 +60,8 @@ public class InternalSession extends Session implements AutoCloseable
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
-        final EpochFractionClock epochFractionClock)
+        final EpochFractionClock epochFractionClock,
+        final ConnectionType connectionType)
     {
         super(
             heartbeatIntervalInS,
@@ -80,7 +83,8 @@ public class InternalSession extends Session implements AutoCloseable
             enableLastMsgSeqNumProcessed,
             customisationStrategy,
             messageInfo,
-            epochFractionClock);
+            epochFractionClock,
+            connectionType);
     }
 
     public int poll(final long timeInNs)
@@ -263,5 +267,15 @@ public class InternalSession extends Session implements AutoCloseable
     public boolean areCountersClosed()
     {
         return super.areCountersClosed();
+    }
+
+    public void cancelOnDisconnectOption(final CancelOnDisconnectOption cancelOnDisconnectOption)
+    {
+        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+    }
+
+    public void cancelOnDisconnectTimeoutWindowInNs(final long cancelOnDisconnectTimeoutWindowInNs)
+    {
+        this.cancelOnDisconnectTimeoutWindowInNs = cancelOnDisconnectTimeoutWindowInNs;
     }
 }
