@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -57,7 +58,7 @@ public class Ilink3Protocol extends FixPProtocol
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
         final int libraryId,
-        final Object libraryPoller,
+        final FixPSessionOwner libraryPoller,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,

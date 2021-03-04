@@ -398,7 +398,7 @@
 		<field name="requestTimestamp" type="UTCTimestampNanos" id="35521" description="Matches Negotiate timestamp." />
 		<field name="clientFlow" type="FlowType" valueRef="FlowType.IDEMPOTENT" id="35516" presence="constant" description="Type of flow from client to server. It is a constant value = idempotent." />
 		<field name="enteringFirm" type="Firm" id="35501" description="Identifies the broker firm that will enter orders" />
-		<field name="negotiationRejectCode" type="RetransmitRejectCode" id="35522" description="Identifies the code of reject negotiation." />
+		<field name="negotiationRejectCode" type="NegotiationRejectCode" id="35522" description="Identifies the code of reject negotiation." />
 	</sbe:message>
 	<sbe:message name="Establish" id="4" description="Establish message">
 		<field name="messageType" type="MessageType" valueRef="MessageType.Establish" id="35" presence="constant" description="Constant field = Establish" />

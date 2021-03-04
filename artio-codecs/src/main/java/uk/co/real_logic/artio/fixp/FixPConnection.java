@@ -35,18 +35,17 @@ public interface FixPConnection
      */
     enum State
     {
-        /** The TCP connection has been established, but the negotiate not sent.*/
+        /** Initiator TCP connection has been established, but the negotiate not sent.*/
         CONNECTED,
-        /** The Negotiate message sent but no reply received yet. */
+        /** Initiator has sent the Negotiate message sent but no reply received yet. */
         SENT_NEGOTIATE,
-        /** The Negotiate message hasn't been sent due to back-pressure in Artio, retrying attempt to send. */
+        /** Initiator has not sent the Negotiate message due to back-pressure in Artio, retrying attempt to send. */
         RETRY_NEGOTIATE,
-
-        /** Received a Negotiate Reject message. */
+        /** Initiator has received a Negotiate Reject message. */
         NEGOTIATE_REJECTED,
-        /** Negotiate accepted, Establish not sent */
+        /** Initiator has had a Negotiate accepted, Establish not sent */
         NEGOTIATED,
-        /** Negotiate accepted, Establish sent */
+        /** Initiator has had a Negotiate accepted, Establish sent */
         SENT_ESTABLISH,
         /**
          * Negotiate accepted, The Establish message hasn't been sent due to back-pressure in Artio,
@@ -55,6 +54,24 @@ public interface FixPConnection
         RETRY_ESTABLISH,
         /** Received an Establish Reject message. */
         ESTABLISH_REJECTED,
+
+        /** Acceptor TCP connection has been established, but the negotiate not received.*/
+        ACCEPTED,
+        /** Acceptor has received a negotiate message and responded to it. */
+        SENT_NEGOTIATE_RESPONSE,
+        /** Acceptor has not sent the Negotiate response message due to back-pressure, retrying attempt to send. */
+        RETRY_NEGOTIATE_RESPONSE,
+        /** Acceptor has received a negotiate message and rejected it. */
+        SENT_NEGOTIATE_REJECT,
+        /** Acceptor has not sent the Negotiate reject message due to back-pressure, retrying attempt to send. */
+        RETRY_NEGOTIATE_REJECT,
+        /** Acceptor has not sent the Establish ack message due to back-pressure, retrying attempt to send. */
+        RETRY_ESTABLISH_ACK,
+        /** Acceptor has received an establish message and rejected it. */
+        SENT_ESTABLISH_REJECT,
+        /** Acceptor has not sent the Establish reject message due to back-pressure, retrying attempt to send. */
+        RETRY_ESTABLISH_REJECT,
+
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
         /** The session is currently retransmitting messages in response to a NotApplied message. */
@@ -156,18 +173,6 @@ public interface FixPConnection
      * number indicating an error status.
      */
     long requestDisconnect(DisconnectReason reason);
-
-    /**
-     * Initiate a termination. This sends a Terminate message to initiate the termination. Artio's session will await
-     * an acknowledging Terminate message from the exchange. If keepAliveInterval elapses without a reply then a TCP
-     * disconnect will happen.
-     *
-     * @param shutdown the shutdown text to send in the Terminate message
-     * @param errorCodes the error codes to send in the Terminate message
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     */
-    long terminate(String shutdown, int errorCodes);
 
     /**
      * Send a custom retransmit request.

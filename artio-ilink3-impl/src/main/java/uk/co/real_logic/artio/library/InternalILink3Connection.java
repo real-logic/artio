@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.library;
 
 import iLinkBinary.*;
-import io.aeron.exceptions.TimeoutException;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.LangUtil;
@@ -27,9 +26,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.ilink.*;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -53,14 +50,14 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.DisconnectReason.*;
+import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 
 /**
  * External users should never rely on this API.
  */
 public final class InternalILink3Connection extends InternalFixPConnection implements ILink3Connection
 {
-    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.ILINK_BUSINESS);
+    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.FIXP_BUSINESS);
 
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
     private static final int INVALID_UUID_ERROR_CODE = 13;
@@ -167,22 +164,12 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private final ILink3Proxy proxy;
     private final ILink3Offsets offsets;
     private final ILink3ConnectionConfiguration configuration;
-    private final long connectionId;
-    private final GatewayPublication outboundPublication;
-    private final GatewayPublication inboundPublication;
-    private final int libraryId;
-    private final LibraryPoller owner;
-    private final ILink3ConnectionHandler handler;
     private final boolean newlyAllocated;
     private final long uuid;
-    private final EpochNanoClock epochNanoClock;
 
     private final long lastUuid;
     private final long lastConnectionLastReceivedSequenceNumber;
 
-    private InitiateILink3ConnectionReply initiateReply;
-
-    private State state;
     private long nextRecvSeqNo;
     private long nextSentSeqNo;
 
@@ -210,7 +197,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
         final int libraryId,
-        final LibraryPoller owner,
+        final FixPSessionOwner owner,
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
@@ -231,26 +218,22 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
         final int libraryId,
-        final LibraryPoller owner,
+        final FixPSessionOwner owner,
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final boolean newlyAllocated,
         final long lastUuid,
-        final EpochNanoClock epochNanoClock,
+        final EpochNanoClock clock,
         final ILink3Proxy proxy)
     {
+        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner);
         this.configuration = configuration;
-        this.connectionId = connectionId;
-        this.initiateReply = initiateReply;
-        this.outboundPublication = outboundPublication;
-        this.inboundPublication = inboundPublication;
-        this.libraryId = libraryId;
-        this.owner = owner;
-        this.handler = configuration.handler();
+        initiateReply(initiateReply);
+        handler(configuration.handler());
+
         this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
         this.newlyAllocated = newlyAllocated;
-        this.epochNanoClock = epochNanoClock;
         this.proxy = proxy;
 
         businessMessageLogger = proxy.businessMessageLogger() == null ?
@@ -394,26 +377,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return position;
     }
 
-    private void validateCanSend()
-    {
-        if (!canSendMessage())
-        {
-            throw new IllegalStateException(
-                "State should be ESTABLISHED or AWAITING_KEEPALIVE in order to send but is " + state);
-        }
-    }
-
-    public boolean canSendMessage()
-    {
-        final State state = this.state;
-        return state == State.ESTABLISHED || state == State.AWAITING_KEEPALIVE;
-    }
-
-    public long requestDisconnect(final DisconnectReason reason)
-    {
-        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, reason);
-    }
-
     public long uuid()
     {
         return uuid;
@@ -422,16 +385,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     public long lastUuid()
     {
         return lastUuid;
-    }
-
-    public long connectionId()
-    {
-        return connectionId;
-    }
-
-    public State state()
-    {
-        return state;
     }
 
     public long nextSentSeqNo()
@@ -481,11 +434,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return retransmitQueueOffset;
     }
 
-    void state(final State state)
-    {
-        this.state = state;
-    }
-
     private long calculateInitialSequenceNumber(
         final long lastSequenceNumber, final long initialSequenceNumber)
     {
@@ -532,7 +480,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     private long requestTimestamp()
     {
-        return epochNanoClock.nanoTime();
+        return clock.nanoTime();
     }
 
     private boolean sendEstablish()
@@ -779,22 +727,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
-    private void onNegotiateFailure()
-    {
-        onReplyError(new TimeoutException("Timed out: no reply for Negotiate"));
-    }
-
-    private void onEstablishFailure()
-    {
-        onReplyError(new TimeoutException("Timed out: no reply for Establish"));
-    }
-
-    private void onReplyError(final Exception error)
-    {
-        initiateReply.onError(error);
-        initiateReply = null;
-    }
-
     public long trySendSequence()
     {
         return sendSequence(NotLapsed);
@@ -966,7 +898,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         {
             fullyUnbind();
         }
-        // The exchange initiated termination
+        // The counter-party initiated termination
         else
         {
             final String terminateErrorReason = terminateErrorReason(errorCodes);
@@ -1137,31 +1069,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
 
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
-    }
-
-    protected void fullyUnbind()
-    {
-        requestDisconnect(LOGOUT);
-        owner.remove(this);
-        unbindState(APPLICATION_DISCONNECT);
-    }
-
-    protected void unbindState(final DisconnectReason reason)
-    {
-        state = State.UNBOUND;
-        handler.onDisconnect(this, reason);
-
-        // Complete the reply if we're in the process of trying to establish a connection and we haven't provided
-        // a more specific reason for a disconnect to happen.
-        if (initiateReply != null)
-        {
-            onReplyError(new Exception("Unbound due to: " + reason));
-        }
-    }
-
-    public void handler(final FixPConnectionHandler handler)
-    {
-        Ilink3Protocol.unsupported();
     }
 
 //    private

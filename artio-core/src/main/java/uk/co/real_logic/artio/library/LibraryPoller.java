@@ -77,7 +77,7 @@ import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_L
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
-final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable, FixPSessionOwner
 {
     /**
      * Has connected to an engine instance
@@ -1176,8 +1176,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                // iLink3 doesn't behave any differently in sole library mode as it's an initiator connection.
-                onILink3Disconnect(connectionId, reason);
+                // FIXP doesn't behave any differently.
+                onFixPDisconnect(connectionId, reason);
             }
         }
         else
@@ -1206,14 +1206,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                onILink3Disconnect(connectionId, reason);
+                onFixPDisconnect(connectionId, reason);
             }
         }
 
         return CONTINUE;
     }
 
-    private void onILink3Disconnect(final long connectionId, final DisconnectReason reason)
+    private void onFixPDisconnect(final long connectionId, final DisconnectReason reason)
     {
         final FixPSubscription subscription = connectionIdToFixPSubscription.remove(connectionId);
         if (subscription != null)
@@ -1388,7 +1388,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 GatewayPublication.class,
                 GatewayPublication.class,
                 int.class,
-                LibraryPoller.class,
+                FixPSessionOwner.class,
                 long.class,
                 long.class,
                 long.class,

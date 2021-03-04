@@ -24,6 +24,7 @@ public class FakeFixPConnectionAcquiredHandler implements FixPConnectionAcquired
     private final FakeBinaryEntrypointConnectionHandler connectionHandler;
 
     private boolean invoked = false;
+    private FixPConnection connection;
 
     public FakeFixPConnectionAcquiredHandler(final FakeBinaryEntrypointConnectionHandler connectionHandler)
     {
@@ -33,11 +34,17 @@ public class FakeFixPConnectionAcquiredHandler implements FixPConnectionAcquired
     public FixPConnectionHandler onConnectionAcquired(final FixPConnection connection)
     {
         invoked = true;
+        this.connection = connection;
         return connectionHandler;
     }
 
     public boolean invoked()
     {
         return invoked;
+    }
+
+    public FixPConnection connection()
+    {
+        return connection;
     }
 }

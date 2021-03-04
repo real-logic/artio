@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.fixp;
 import io.aeron.ExclusivePublication;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -49,7 +50,7 @@ public abstract class FixPProtocol
         GatewayPublication outboundPublication,
         GatewayPublication inboundPublication,
         int libraryId,
-        Object libraryPoller, // TODO: add interface
+        FixPSessionOwner libraryPoller,
         long lastReceivedSequenceNumber,
         long lastSentSequenceNumber,
         long lastConnectPayload,

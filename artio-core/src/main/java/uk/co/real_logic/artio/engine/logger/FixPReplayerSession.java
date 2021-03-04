@@ -41,7 +41,7 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADE
  *
  * Supports CME's ILink3 and B3's Binary Entrypoint
  */
-public class BinaryReplayerSession extends ReplayerSession
+public class FixPReplayerSession extends ReplayerSession
 {
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
     private final FixPMessageEncoder fixPMessageEncoder;
@@ -60,7 +60,7 @@ public class BinaryReplayerSession extends ReplayerSession
 
     private State state;
 
-    public BinaryReplayerSession(
+    public FixPReplayerSession(
         final long connectionId,
         final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,

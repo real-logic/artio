@@ -16,48 +16,61 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
-import b3.entrypoint.fixp.sbe.DeltaInMillisDecoder;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.sbe.MessageEncoderFlyweight;
-import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+
+import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 
 /**
  * External users should never rely on this API.
  */
-public class InternalBinaryEntrypointConnection
+class InternalBinaryEntrypointConnection
     extends InternalFixPConnection implements BinaryEntrypointConnection
 {
     private final BinaryEntryPointProxy proxy;
-    private final EpochNanoClock clock;
 
-    private FixPConnectionHandler handler;
+    private TerminationCode resendTerminationCode;
 
-    public InternalBinaryEntrypointConnection(
+    private long sessionId;
+    private long sessionVerId;
+    private CancelOnDisconnectType cancelOnDisconnectType;
+    private long codTimeoutWindow;
+
+    InternalBinaryEntrypointConnection(
         final long connectionId,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
         final int libraryId,
+        final FixPSessionOwner owner,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
         final EpochNanoClock clock)
     {
-        this.clock = clock;
+        super(
+            connectionId,
+            outboundPublication,
+            inboundPublication,
+            libraryId,
+            clock,
+            owner);
         proxy = new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication());
+        state(State.ACCEPTED);
     }
 
-    public int sessionId()
+    public long sessionId()
     {
-        return 0;
+        return sessionId;
     }
 
     public long sessionVerId()
     {
-        return 0;
+        return sessionVerId;
     }
 
     public long tryClaim(final MessageEncoderFlyweight message)
@@ -79,17 +92,14 @@ public class InternalBinaryEntrypointConnection
 
     }
 
+    public long terminate(final TerminationCode terminationCode)
+    {
+        validateCanSend();
+
+        return sendTerminate(terminationCode, State.UNBINDING, State.RESEND_TERMINATE);
+    }
+
     public long trySendSequence()
-    {
-        return 0;
-    }
-
-    public long requestDisconnect(final DisconnectReason reason)
-    {
-        return 0;
-    }
-
-    public long terminate(final String shutdown, final int errorCodes)
     {
         return 0;
     }
@@ -97,16 +107,6 @@ public class InternalBinaryEntrypointConnection
     public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
     {
         return 0;
-    }
-
-    public long connectionId()
-    {
-        return 0;
-    }
-
-    public State state()
-    {
-        return null;
     }
 
     public long nextSentSeqNo()
@@ -139,11 +139,6 @@ public class InternalBinaryEntrypointConnection
         return 0;
     }
 
-    public boolean canSendMessage()
-    {
-        return false;
-    }
-
     // -----------------------------------------------
     // Internal Methods below, not part of the public API
     // -----------------------------------------------
@@ -157,31 +152,41 @@ public class InternalBinaryEntrypointConnection
     {
     }
 
-    protected void fullyUnbind()
-    {
-    }
-
-    protected void unbindState(final DisconnectReason reason)
-    {
-    }
-
-    public void handler(final FixPConnectionHandler handler)
-    {
-        this.handler = handler;
-    }
-
     public long onNegotiate(
-        final long sessionID,
+        final long sessionId,
         final long sessionVerID,
         final long timestamp,
         final long enteringFirm,
         final long onbehalfFirm,
         final String senderLocation)
     {
-        return proxy.sendNegotiateResponse(sessionID, sessionVerID, timestamp, enteringFirm);
+        final State state = state();
+        if (!(state == State.ACCEPTED || state == State.SENT_NEGOTIATE_RESPONSE))
+        {
+            // TODO: validation error
+        }
+
+        this.sessionId = sessionId;
+        this.sessionVerId = sessionVerID;
+
+        final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
+        return checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE);
     }
 
-    private long requestTimestamp()
+    private long checkState(final long position, final State success, final State backPressured)
+    {
+        if (position > 0)
+        {
+            state(success);
+        }
+        else
+        {
+            state(backPressured);
+        }
+        return position;
+    }
+
+    private long requestTimestampInNs()
     {
         return clock.nanoTime();
     }
@@ -193,20 +198,85 @@ public class InternalBinaryEntrypointConnection
         final long keepAliveInterval,
         final long nextSeqNo,
         final CancelOnDisconnectType cancelOnDisconnectType,
-        final DeltaInMillisDecoder codTimeoutWindow)
+        final long codTimeoutWindow)
     {
-        return proxy.sendEstablishAck(
+        checkSession(sessionID, sessionVerID);
+
+        final State state = state();
+        if (state != State.SENT_NEGOTIATE_RESPONSE)
+        {
+            // TODO: validation error
+        }
+
+        this.cancelOnDisconnectType = cancelOnDisconnectType;
+        this.codTimeoutWindow = codTimeoutWindow;
+
+        final long position = proxy.sendEstablishAck(
             sessionID,
             sessionVerID,
             timestamp,
             keepAliveInterval,
             1,
             0);
+        return checkState(position, State.ESTABLISHED, State.RETRY_ESTABLISH_ACK);
     }
 
-    public long onTerminate(final long sessionID, final long sessionVerID, final TerminationCode terminationCode)
+    public long onTerminate(
+        final long sessionID, final long sessionVerID, final TerminationCode terminationCode)
     {
-        return 0;
+        // We initiated termination
+        if (state == State.UNBINDING)
+        {
+            fullyUnbind();
+        }
+        // The counter-party initiated termination
+        else
+        {
+            DebugLogger.log(FIXP_SESSION, "Terminated: ", terminationCode.name());
+
+            sendTerminateAck(terminationCode);
+        }
+
+        checkSession(sessionID, sessionVerID);
+
+        return 1;
+    }
+
+    private void checkSession(final long sessionID, final long sessionVerID)
+    {
+        // TODO: log error if incorrect
+    }
+
+    private void sendTerminateAck(final TerminationCode terminationCode)
+    {
+        final long position = sendTerminate(terminationCode, State.UNBOUND, State.RESEND_TERMINATE_ACK);
+        if (position > 0)
+        {
+            fullyUnbind();
+        }
+    }
+
+    private long sendTerminate(
+        final TerminationCode terminationCode, final State finalState, final State resendState)
+    {
+        final long position = proxy.sendTerminate(
+            sessionId,
+            sessionVerId,
+            terminationCode,
+            requestTimestampInNs());
+
+        if (position > 0)
+        {
+            state = finalState;
+            resendTerminationCode = null;
+        }
+        else
+        {
+            state = resendState;
+            resendTerminationCode = terminationCode;
+        }
+
+        return position;
     }
 
     public long onSequence(final long nextSeqNo)

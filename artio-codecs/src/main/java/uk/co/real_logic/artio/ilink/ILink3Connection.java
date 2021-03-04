@@ -25,6 +25,22 @@ import uk.co.real_logic.artio.fixp.FixPConnection;
 public interface ILink3Connection extends FixPConnection
 {
     // -----------------------------------------------
+    // Operations
+    // -----------------------------------------------
+
+    /**
+     * Initiate a termination. This sends a Terminate message to initiate the termination. Artio's session will await
+     * an acknowledging Terminate message from the exchange. If keepAliveInterval elapses without a reply then a TCP
+     * disconnect will happen.
+     *
+     * @param shutdown the shutdown text to send in the Terminate message
+     * @param errorCodes the error codes to send in the Terminate message
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     */
+    long terminate(String shutdown, int errorCodes);
+
+    // -----------------------------------------------
     // Accessors
     // -----------------------------------------------
 

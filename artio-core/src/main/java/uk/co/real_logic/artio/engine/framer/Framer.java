@@ -678,7 +678,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.authenticationTimeoutInMs(),
             protocolType,
             fixPParser,
-            inboundPublication.dataPublication());
+            inboundPublication.dataPublication(),
+            receiverEndPoint,
+            senderEndPoint);
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
         gatewaySessions.track(gatewaySession);
         receiverEndPoint.gatewaySession(gatewaySession);
@@ -1951,7 +1953,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, OTHER_SESSION_OWNER, correlationId));
         }
 
-        gatewaySession.libraryId(libraryId);
+        gatewaySession.setManagementTo(libraryId);
 
         // TODO: add the gateway session to the library info object
         // TODO: lookup sequence numbers + last connect payload

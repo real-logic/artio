@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.EstablishAckDecoder;
 import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
+import b3.entrypoint.fixp.sbe.TerminateDecoder;
+import b3.entrypoint.fixp.sbe.TerminationCode;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
@@ -26,10 +28,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointIdentification;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
+import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
@@ -47,7 +51,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIME
 
 public class BinaryEntrypointSystemTest
 {
-
     private final int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
@@ -64,6 +67,8 @@ public class BinaryEntrypointSystemTest
         });
     private final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler = new FakeFixPConnectionAcquiredHandler(
         connectionHandler);
+
+    private BinaryEntrypointConnection connection;
 
     @Before
     public void setUp()
@@ -128,11 +133,26 @@ public class BinaryEntrypointSystemTest
             assertEquals(1, establishAck.sessionVerID());
             assertEquals(1, establishAck.nextSeqNo());
             assertEquals(0, establishAck.lastIncomingSeqNo());
+
+            connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
+            assertEquals(BinaryEntrypointClient.SESSION_ID, connection.sessionId());
+            assertEquals(1, connection.sessionVerId());
+            assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
+
+            client.writeTerminate();
+            final TerminateDecoder terminate = client.readTerminate();
+            assertEquals(BinaryEntrypointClient.SESSION_ID, terminate.sessionID());
+            assertEquals(1, terminate.sessionVerID());
+            assertEquals(TerminationCode.FINISHED, terminate.terminationCode());
+            client.close();
+
+            testSystem.await("onDisconnect not called", () -> connectionHandler.disconnectReason() != null);
+            assertEquals(FixPConnection.State.UNBOUND, connection.state());
         }
     }
 
     // TODO: exchanging business messages
-    // TODO: terminate
+    // TODO: duplicate session id
     // TODO: timeout disconnect
     // TODO: heartbeat / timeout
 

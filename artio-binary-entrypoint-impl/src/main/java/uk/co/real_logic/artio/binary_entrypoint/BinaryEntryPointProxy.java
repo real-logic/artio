@@ -77,7 +77,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         final long sessionVerID,
         final long requestTimestamp,
         final long enteringFirm,
-        final RetransmitRejectCode negotiationRejectCode)
+        final NegotiationRejectCode negotiationRejectCode)
     {
         final NegotiateRejectEncoder negotiateReject = this.negotiateReject;
 
@@ -157,12 +157,12 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     public long claimMessage(
         final int messageLength,
         final MessageEncoderFlyweight message,
-        final long timestamp)
+        final long timestampInNs)
     {
         return claimMessage(
             messageLength,
             message,
-            timestamp,
+            timestampInNs,
             BINARY_ENTRYPOINT_MESSAGE_HEADER,
             BINARY_ENTRYPOINT_HEADER_LENGTH,
             SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE);
@@ -184,5 +184,29 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private void commit()
     {
         bufferClaim.commit();
+    }
+
+    public long sendTerminate(
+        final long sessionId,
+        final long sessionVerId,
+        final TerminationCode terminationCode,
+        final long timestampInNs)
+    {
+        final TerminateEncoder terminate = this.terminate;
+
+        final long position = claimMessage(TerminateEncoder.BLOCK_LENGTH, terminate, timestampInNs);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        terminate
+            .sessionID(sessionId)
+            .sessionVerID(sessionVerId)
+            .terminationCode(terminationCode);
+
+        commit();
+
+        return position;
     }
 }

@@ -38,7 +38,7 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.clientSeqNum;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-public class FixPSenderEndPoint
+class FixPSenderEndPoint
 {
     private static final int NO_REATTEMPT = 0;
 
@@ -53,12 +53,12 @@ public class FixPSenderEndPoint
     private final TcpChannel channel;
     private final ErrorHandler errorHandler;
     private final ExclusivePublication inboundPublication;
-    private final int libraryId;
+    private int libraryId;
     private final MessageTimingHandler messageTimingHandler;
 
     private int reattemptBytesWritten = NO_REATTEMPT;
 
-    public FixPSenderEndPoint(
+    FixPSenderEndPoint(
         final long connectionId,
         final TcpChannel channel,
         final ErrorHandler errorHandler,
@@ -150,5 +150,10 @@ public class FixPSenderEndPoint
         bufferClaim.commit();
 
         return CONTINUE;
+    }
+
+    void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
     }
 }

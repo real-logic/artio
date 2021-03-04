@@ -32,6 +32,8 @@ public class FixPGatewaySession extends GatewaySession
     private final FixPProtocolType protocolType;
     private final AbstractFixPParser parser;
     private final ExclusivePublication publication;
+    private final BinaryEntryPointReceiverEndPoint receiverEndPoint;
+    private final FixPSenderEndPoint senderEndPoint;
 
     private byte[] firstMessage;
 
@@ -43,12 +45,16 @@ public class FixPGatewaySession extends GatewaySession
         final long authenticationTimeoutInMs,
         final FixPProtocolType protocolType,
         final AbstractFixPParser parser,
-        final ExclusivePublication publication)
+        final ExclusivePublication publication,
+        final BinaryEntryPointReceiverEndPoint receiverEndPoint,
+        final FixPSenderEndPoint senderEndPoint)
     {
         super(connectionId, sessionId, address, connectionType, authenticationTimeoutInMs);
         this.protocolType = protocolType;
         this.parser = parser;
         this.publication = publication;
+        this.receiverEndPoint = receiverEndPoint;
+        this.senderEndPoint = senderEndPoint;
     }
 
     public String address()
@@ -108,5 +114,12 @@ public class FixPGatewaySession extends GatewaySession
     public byte[] firstMessage()
     {
         return firstMessage;
+    }
+
+    public void setManagementTo(final int libraryId)
+    {
+        libraryId(libraryId);
+        receiverEndPoint.libraryId(libraryId);
+        senderEndPoint.libraryId(libraryId);
     }
 }

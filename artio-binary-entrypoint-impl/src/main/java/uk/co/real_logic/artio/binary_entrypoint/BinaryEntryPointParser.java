@@ -111,7 +111,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             establish.keepAliveInterval().time(),
             establish.nextSeqNo(),
             establish.cancelOnDisconnectType(),
-            establish.codTimeoutWindow());
+            establish.codTimeoutWindow().time());
     }
 
     private long onNegotiate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

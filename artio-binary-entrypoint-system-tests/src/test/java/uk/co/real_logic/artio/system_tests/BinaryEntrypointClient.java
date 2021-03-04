@@ -247,4 +247,22 @@ public final class BinaryEntrypointClient implements AutoCloseable
     {
         return read(new EstablishAckDecoder(), 0);
     }
+
+    public TerminateDecoder readTerminate()
+    {
+        return read(new TerminateDecoder(), 0);
+    }
+
+    public void writeTerminate()
+    {
+        final TerminateEncoder terminate = new TerminateEncoder();
+        wrap(terminate, TerminateEncoder.BLOCK_LENGTH);
+
+        terminate
+            .sessionID(SESSION_ID)
+            .sessionVerID(1)
+            .terminationCode(TerminationCode.FINISHED);
+
+        write();
+    }
 }
