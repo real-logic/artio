@@ -35,6 +35,7 @@ import java.nio.channels.SocketChannel;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProxy.BINARY_ENTRYPOINT_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
@@ -250,7 +251,11 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public TerminateDecoder readTerminate()
     {
-        return read(new TerminateDecoder(), 0);
+        final TerminateDecoder terminate = read(new TerminateDecoder(), 0);
+        assertEquals(BinaryEntrypointClient.SESSION_ID, terminate.sessionID());
+        assertEquals(1, terminate.sessionVerID());
+        assertEquals(TerminationCode.FINISHED, terminate.terminationCode());
+        return terminate;
     }
 
     public void writeTerminate()
@@ -264,5 +269,31 @@ public final class BinaryEntrypointClient implements AutoCloseable
             .terminationCode(TerminationCode.FINISHED);
 
         write();
+    }
+
+    public void assertDisconnected()
+    {
+        final boolean disconnected = testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                return socket.read(readBuffer) == -1;
+            }
+            catch (final IOException e)
+            {
+                return true;
+            }
+        });
+
+        assertTrue(disconnected);
+
+        try
+        {
+            socket.close();
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 }
