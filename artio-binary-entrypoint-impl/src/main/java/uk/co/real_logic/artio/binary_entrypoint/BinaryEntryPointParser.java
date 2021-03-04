@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
@@ -78,9 +79,13 @@ public class BinaryEntryPointParser extends AbstractFixPParser
 
             case SequenceDecoder.TEMPLATE_ID:
                 return onSequence(buffer, offset, blockLength, version);
-        }
 
-        return 1;
+            default:
+            {
+                final int sofhMessageSize = SimpleOpenFramingHeader.readSofhMessageSize(buffer, start);
+                return handler.onMessage(buffer, offset, templateId, blockLength, version, sofhMessageSize);
+            }
+        }
     }
 
     private long onSequence(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

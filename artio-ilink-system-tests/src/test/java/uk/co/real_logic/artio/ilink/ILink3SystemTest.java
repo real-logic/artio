@@ -1494,7 +1494,7 @@ public class ILink3SystemTest
 
     private void assertArtioShowsSessionDisconnected()
     {
-        assertThat(library.iLink3Sessions(), hasSize(0));
+        assertThat(library.fixPConnections(), hasSize(0));
         assertThat(engine.allSessions(), hasSize(0));
     }
 

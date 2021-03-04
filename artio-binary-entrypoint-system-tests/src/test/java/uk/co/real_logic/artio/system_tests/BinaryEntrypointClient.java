@@ -50,6 +50,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public static final int FIRM_ID = 456;
     public static final String SENDER_LOCATION = "LOCATION_1";
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
+    public static final int CL_ORD_ID = 1;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointOffsets.loadSbeIr());
 
@@ -258,6 +259,12 @@ public final class BinaryEntrypointClient implements AutoCloseable
         return terminate;
     }
 
+    public void readExecutionReportNew()
+    {
+        final ExecutionReport_NewDecoder report = read(new ExecutionReport_NewDecoder(), 0);
+        assertEquals(CL_ORD_ID, report.clOrdID());
+    }
+
     public void writeTerminate()
     {
         final TerminateEncoder terminate = new TerminateEncoder();
@@ -267,6 +274,40 @@ public final class BinaryEntrypointClient implements AutoCloseable
             .sessionID(SESSION_ID)
             .sessionVerID(1)
             .terminationCode(TerminationCode.FINISHED);
+
+        write();
+    }
+
+    public void writeNewOrderSingle()
+    {
+        final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
+        wrap(newOrderSingle, NewOrderSingleEncoder.BLOCK_LENGTH);
+
+        newOrderSingle
+            .clOrdID(CL_ORD_ID)
+            .securityID(2)
+            .price().mantissa(3);
+        newOrderSingle
+            .putOrderQty(1, 2, 3, 4)
+            .account(5)
+            .marketSegmentID(NewOrderSingleEncoder.marketSegmentIDNullValue())
+            .side(Side.BUY)
+            .ordType(OrdType.MARKET)
+            .timeInForce(TimeInForce.FILL_OR_KILL)
+            .stopPx().mantissa(PriceOptionalEncoder.mantissaNullValue());
+        newOrderSingle
+            .putMinQty(1, 2, 3, 4)
+            .putMaxFloor(5, 6, 7, 8)
+            .enteringTrader("Maria")
+            .ordTagID((short)1)
+            .mmProtectionReset(Bool.TRUE_VALUE)
+            .routingInstruction(RoutingInstruction.NULL_VAL)
+            .putExpireDate(5, 5)
+            .investorID(123)
+            .custodianInfo()
+                .custodian(1)
+                .custodyAccount(2)
+                .custodyAllocationType(3);
 
         write();
     }

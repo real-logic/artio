@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.sbe.MessageEncoderFlyweight;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -33,10 +35,18 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected final int libraryId;
     protected final EpochNanoClock clock;
     protected final FixPSessionOwner owner;
+    protected final AbstractFixPProxy proxy;
 
     protected State state;
     protected FixPConnectionHandler handler;
     protected LibraryReply<InternalFixPConnection> initiateReply;
+
+    protected long nextSentSeqNo;
+    protected long nextRecvSeqNo;
+
+    protected long nextReceiveMessageTimeInMs;
+    protected long nextSendMessageTimeInMs;
+    protected long requestedKeepAliveIntervalInMs;
 
     protected InternalFixPConnection(
         final long connectionId,
@@ -44,7 +54,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         final GatewayPublication inboundPublication,
         final int libraryId,
         final EpochNanoClock clock,
-        final FixPSessionOwner owner)
+        final FixPSessionOwner owner,
+        final AbstractFixPProxy proxy)
     {
         this.connectionId = connectionId;
         this.outboundPublication = outboundPublication;
@@ -52,6 +63,7 @@ public abstract class InternalFixPConnection implements FixPConnection
         this.libraryId = libraryId;
         this.clock = clock;
         this.owner = owner;
+        this.proxy = proxy;
     }
 
     // -----------------------------------------------
@@ -79,9 +91,62 @@ public abstract class InternalFixPConnection implements FixPConnection
         return state;
     }
 
+    public long tryClaim(
+        final MessageEncoderFlyweight message)
+    {
+        return tryClaim(message, 0);
+    }
+
+    public long tryClaim(
+        final MessageEncoderFlyweight message, final int variableLength)
+    {
+        validateCanSend();
+
+        final long timestamp = requestTimestampInNs();
+
+        final long position = proxy.claimMessage(
+            message.sbeBlockLength() + variableLength, message, timestamp);
+
+        if (position > 0)
+        {
+            nextSentSeqNo++;
+        }
+
+        return position;
+    }
+
+    public void commit()
+    {
+        proxy.commit();
+
+        sentMessage();
+    }
+
+    public void abort()
+    {
+        proxy.abort();
+
+        nextSentSeqNo--;
+    }
+
     // -----------------------------------------------
     // Internal Methods below, not part of the public API
     // -----------------------------------------------
+
+    protected long nextTimeoutInMs()
+    {
+        return System.currentTimeMillis() + requestedKeepAliveIntervalInMs;
+    }
+
+    protected void sentMessage()
+    {
+        nextSendMessageTimeInMs = nextTimeoutInMs();
+    }
+
+    protected long requestTimestampInNs()
+    {
+        return clock.nanoTime();
+    }
 
     protected void validateCanSend()
     {

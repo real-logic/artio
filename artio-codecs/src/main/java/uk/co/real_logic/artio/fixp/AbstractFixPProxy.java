@@ -50,6 +50,21 @@ public abstract class AbstractFixPProxy
     public abstract long sendSequence(
         long uuid, long nextSentSeqNo);
 
+    public abstract long claimMessage(
+        int messageLength,
+        MessageEncoderFlyweight message,
+        long timestamp);
+
+    public void commit()
+    {
+        this.bufferClaim.commit();
+    }
+
+    public void abort()
+    {
+        bufferClaim.abort();
+    }
+
     protected long claimMessage(
         final int messageLength,
         final MessageEncoderFlyweight message,

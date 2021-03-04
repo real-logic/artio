@@ -292,9 +292,4 @@ public class ILink3Proxy extends AbstractFixPProxy
 
         bufferClaim.commit();
     }
-
-    public void abort()
-    {
-        bufferClaim.abort();
-    }
 }

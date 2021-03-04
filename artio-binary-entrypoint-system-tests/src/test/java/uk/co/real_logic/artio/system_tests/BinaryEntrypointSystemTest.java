@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import b3.entrypoint.fixp.sbe.EstablishAckDecoder;
-import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
-import b3.entrypoint.fixp.sbe.TerminateDecoder;
-import b3.entrypoint.fixp.sbe.TerminationCode;
+import b3.entrypoint.fixp.sbe.*;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
@@ -105,22 +102,16 @@ public class BinaryEntrypointSystemTest
     @Test
     public void shouldEstablishConnectionAtBeginningOfWeek() throws IOException
     {
-        try (BinaryEntrypointClient client  = establishNewConnection())
+        try (BinaryEntrypointClient client = establishNewConnection())
         {
-            // Covers shouldAcceptExchangeInitiatedTerminate
-            client.writeTerminate();
-            client.readTerminate();
-
-            client.close();
-
-            assertConnectionDisconnected();
+            clientTerminatesSession(client);
         }
     }
 
     @Test
     public void shouldSupportInitiatorTerminateConnection() throws IOException
     {
-        try (BinaryEntrypointClient client  = establishNewConnection())
+        try (BinaryEntrypointClient client = establishNewConnection())
         {
             connection.terminate(TerminationCode.FINISHED);
             assertEquals(FixPConnection.State.UNBINDING, connection.state());
@@ -131,6 +122,35 @@ public class BinaryEntrypointSystemTest
             client.assertDisconnected();
             assertConnectionDisconnected();
         }
+    }
+
+    @Test
+    public void shouldExchangeBusinessMessage() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            client.writeNewOrderSingle();
+
+            assertReceivesOrder();
+
+            client.readExecutionReportNew();
+        }
+    }
+
+    private void assertReceivesOrder()
+    {
+        testSystem.await("does not receive new order single",
+            () -> connectionHandler.templateIds().containsInt(NewOrderSingleDecoder.TEMPLATE_ID));
+    }
+
+    private void clientTerminatesSession(final BinaryEntrypointClient client)
+    {
+        client.writeTerminate();
+        client.readTerminate();
+
+        client.close();
+
+        assertConnectionDisconnected();
     }
 
     private void assertConnectionDisconnected()
@@ -193,7 +213,6 @@ public class BinaryEntrypointSystemTest
 
     // should support FinishedSending/FinishedReceiving process
 
-    // shouldExchangeBusinessMessage()
     // shouldCorrectlyAbortBusinessMessage()
     // shouldResendNegotiateAndEstablishOnTimeout() - check protocol spec
     // shouldDisconnectIfNoNegotiate()

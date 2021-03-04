@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.TerminationCode;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -58,8 +58,9 @@ class InternalBinaryEntrypointConnection
             inboundPublication,
             libraryId,
             clock,
-            owner);
-        proxy = new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication());
+            owner,
+            new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication()));
+        proxy = (BinaryEntryPointProxy)super.proxy;
         state(State.ACCEPTED);
     }
 
@@ -71,25 +72,6 @@ class InternalBinaryEntrypointConnection
     public long sessionVerId()
     {
         return sessionVerId;
-    }
-
-    public long tryClaim(final MessageEncoderFlyweight message)
-    {
-        return 0;
-    }
-
-    public long tryClaim(final MessageEncoderFlyweight message, final int variableLength)
-    {
-        return 0;
-    }
-
-    public void commit()
-    {
-    }
-
-    public void abort()
-    {
-
     }
 
     public long terminate(final TerminationCode terminationCode)
@@ -186,11 +168,6 @@ class InternalBinaryEntrypointConnection
         return position;
     }
 
-    private long requestTimestampInNs()
-    {
-        return clock.nanoTime();
-    }
-
     public long onEstablish(
         final long sessionID,
         final long sessionVerID,
@@ -282,5 +259,27 @@ class InternalBinaryEntrypointConnection
     public long onSequence(final long nextSeqNo)
     {
         return 0;
+    }
+
+    public long onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int templateId,
+        final int blockLength,
+        final int version,
+        final int sofhMessageSize)
+    {
+//        onReceivedMessage();
+
+        handler.onBusinessMessage(
+            this,
+            templateId,
+            buffer,
+            offset,
+            blockLength,
+            version,
+            false);
+
+        return 1;
     }
 }

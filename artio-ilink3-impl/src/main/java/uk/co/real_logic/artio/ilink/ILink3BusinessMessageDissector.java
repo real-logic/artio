@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.DebugLogger;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.LogTag.ILINK_BUSINESS;
+import static uk.co.real_logic.artio.LogTag.FIXP_BUSINESS;
 
 public final class ILink3BusinessMessageDissector
 {
@@ -331,7 +331,7 @@ public final class ILink3BusinessMessageDissector
 
     private static void logDefault(final String prefix, final Consumer<StringBuilder> appendTo)
     {
-        DebugLogger.logSbeDecoder(ILINK_BUSINESS, prefix, appendTo);
+        DebugLogger.logSbeDecoder(FIXP_BUSINESS, prefix, appendTo);
     }
 
     public interface Logger

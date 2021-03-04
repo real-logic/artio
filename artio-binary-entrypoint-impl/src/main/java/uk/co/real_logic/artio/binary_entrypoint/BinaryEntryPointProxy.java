@@ -181,11 +181,6 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         return offset + beMessageHeader.encodedLength();
     }
 
-    private void commit()
-    {
-        bufferClaim.commit();
-    }
-
     public long sendTerminate(
         final long sessionId,
         final long sessionVerId,

@@ -170,9 +170,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private final long lastUuid;
     private final long lastConnectionLastReceivedSequenceNumber;
 
-    private long nextRecvSeqNo;
-    private long nextSentSeqNo;
-
     private long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
     private long retransmitUuid = NOT_AWAITING_RETRANSMIT;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
@@ -181,8 +178,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private long nextRetransmitSeqNo = NOT_AWAITING_RETRANSMIT;
 
     private long resendTimeInMs;
-    private long nextReceiveMessageTimeInMs;
-    private long nextSendMessageTimeInMs;
     private boolean backpressuredNotApplied = false;
 
     private String resendTerminateReason;
@@ -227,11 +222,12 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final EpochNanoClock clock,
         final ILink3Proxy proxy)
     {
-        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner);
-        this.configuration = configuration;
+        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy);
         initiateReply(initiateReply);
         handler(configuration.handler());
+        requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
 
+        this.configuration = configuration;
         this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
         this.newlyAllocated = newlyAllocated;
         this.proxy = proxy;
@@ -260,17 +256,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     // PUBLIC API
 
     public long tryClaim(
-        final MessageEncoderFlyweight message)
-    {
-        return tryClaim(message, 0);
-    }
-
-    public long tryClaim(
         final MessageEncoderFlyweight message, final int variableLength)
     {
         validateCanSend();
 
-        final long timestamp = requestTimestamp();
+        final long timestamp = requestTimestampInNs();
 
         final long position = proxy.claimMessage(
             message.sbeBlockLength() + variableLength, message, timestamp);
@@ -296,25 +286,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return position;
     }
 
-    public void commit()
-    {
-        proxy.commit();
-
-        sentMessage();
-    }
-
-    public void abort()
-    {
-        proxy.abort();
-
-        nextSentSeqNo--;
-    }
-
-    private void sentMessage()
-    {
-        nextSendMessageTimeInMs = nextTimeoutInMs();
-    }
-
     public long terminate(final String reason, final int errorCodes)
     {
         validateCanSend();
@@ -332,7 +303,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
 
         sentMessage();
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = requestTimestampInNs();
         final long thisUuid = this.uuid;
         final long lastUuid = lookupRetransmitLastUuid(uuid, thisUuid);
         final long position = proxy.sendRetransmitRequest(thisUuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
@@ -354,7 +325,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private long sendTerminate(
         final String reason, final int errorCodes, final State finalState, final State resendState)
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = requestTimestampInNs();
         final long position = proxy.sendTerminate(
             reason,
             uuid,
@@ -458,7 +429,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     private boolean sendNegotiate()
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = requestTimestampInNs();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
@@ -478,14 +449,9 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return false;
     }
 
-    private long requestTimestamp()
-    {
-        return clock.nanoTime();
-    }
-
     private boolean sendEstablish()
     {
-        final long requestTimestamp = requestTimestamp();
+        final long requestTimestamp = requestTimestampInNs();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String tradingSystemName = configuration.tradingSystemName();
@@ -520,11 +486,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
 
         return false;
-    }
-
-    private long nextTimeoutInMs()
-    {
-        return System.currentTimeMillis() + configuration.requestedKeepAliveIntervalInMs();
     }
 
     private byte[] calculateHMAC(final String canonicalRequest)
@@ -1332,7 +1293,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
         {
-            final long requestTimestamp = requestTimestamp();
+            final long requestTimestamp = requestTimestampInNs();
             final long position = sendRetransmitRequest(lastUuid, fromSeqNo, msgCount, requestTimestamp);
             if (!Pressure.isBackPressured(position))
             {
@@ -1392,7 +1353,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             final long lastUuid = retransmitRequest.lastUuid;
             final long fromSeqNo = retransmitRequest.fromSeqNo;
             final int msgCount = retransmitRequest.msgCount;
-            final long requestTimestamp = requestTimestamp();
+            final long requestTimestamp = requestTimestampInNs();
             final long position = sendRetransmitRequest(
                 lastUuid, fromSeqNo, msgCount, requestTimestamp);
 

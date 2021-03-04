@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
+import org.hamcrest.Matchers;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
@@ -25,6 +27,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
@@ -55,6 +59,33 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         final boolean possRetrans)
     {
         messageIds.add(templateId);
+
+        if (templateId == NewOrderSingleDecoder.TEMPLATE_ID)
+        {
+            final NewOrderSingleDecoder newOrderSingle = new NewOrderSingleDecoder();
+            newOrderSingle.wrap(buffer, offset, blockLength, version);
+
+            final ExecutionReport_NewEncoder executionReport = new ExecutionReport_NewEncoder();
+            final long position = connection.tryClaim(executionReport);
+            assertThat(position, Matchers.greaterThan(0L));
+
+            executionReport
+                .orderID(newOrderSingle.clOrdID())
+                .clOrdID(newOrderSingle.clOrdID())
+                .securityID(newOrderSingle.securityID())
+                .secondaryOrderID(ExecutionReport_NewEncoder.secondaryOrderIDNullValue())
+                .ordStatus(OrdStatus.NEW)
+                .execRestatementReason(ExecRestatementReason.NULL_VAL)
+                .multiLegReportingType(MultiLegReportingType.NULL_VAL)
+                .workingIndicator(Bool.NULL_VAL)
+                .transactTime().time(System.nanoTime());
+            executionReport
+                .putTradeDate(1, 2)
+                .protectionPrice().mantissa(1234);
+            executionReport.receivedTime().time(System.nanoTime());
+
+            connection.commit();
+        }
     }
 
     public void onNotApplied(
@@ -98,7 +129,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         return disconnectReason;
     }
 
-    public IntArrayList messageIds()
+    public IntArrayList templateIds()
     {
         return messageIds;
     }
