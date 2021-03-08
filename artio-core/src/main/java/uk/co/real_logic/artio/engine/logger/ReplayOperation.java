@@ -278,7 +278,17 @@ public class ReplayOperation
             catch (final ArchiveException e)
             {
                 // The replay session may have already ended before this close was called.
-                if (e.errorCode() != ArchiveException.UNKNOWN_REPLAY)
+                if (e.errorCode() == ArchiveException.UNKNOWN_REPLAY)
+                {
+                    // If the session disconnected rapidly after starting a short replay then it is possible for us to
+                    // be in a position where image == null but Aeron owns an image object that needs to be drained in
+                    // order for it's underlying buffers to be released.
+                    if (image != null)
+                    {
+                        image = subscription.imageBySessionId(aeronSessionId);
+                    }
+                }
+                else
                 {
                     errorHandler.onError(e);
                 }
