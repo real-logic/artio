@@ -1111,12 +1111,12 @@ public class Session
         return null;
     }
 
-    private Action checkSeqNoChange(
-        final int msgSeqNum, final long time, final boolean isPossDupOrResend, final long position)
+    Action checkSeqNoChange(
+        final int msgSeqNum, final long timeInNs, final boolean isPossDupOrResend, final long position)
     {
         if (awaitingResend)
         {
-            incNextReceivedInboundMessageTime(time);
+            incNextReceivedInboundMessageTime(timeInNs);
 
             if (msgSeqNum == endOfResendMsgSeqNum())
             {
@@ -1152,7 +1152,7 @@ public class Session
                         lastResendChunkMsgSeqNum = endOfResendRequestRange;
                         endOfResendRequestRange = msgSeqNum;
                     }
-                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
+                    return checkNormalSeqNoChange(msgSeqNum, timeInNs, isPossDupOrResend, position);
                 }
             }
             else
@@ -1162,7 +1162,7 @@ public class Session
         }
         else
         {
-            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
+            return checkNormalSeqNoChange(msgSeqNum, timeInNs, isPossDupOrResend, position);
         }
 
         return CONTINUE;
@@ -1284,7 +1284,7 @@ public class Session
             position);
     }
 
-    private void incNextReceivedInboundMessageTime(final long timeInNs)
+    void incNextReceivedInboundMessageTime(final long timeInNs)
     {
         this.nextRequiredInboundMessageTimeInNs = timeInNs + heartbeatIntervalInNs + reasonableTransmissionTimeInNs;
     }

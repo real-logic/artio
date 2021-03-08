@@ -228,7 +228,8 @@ public class EngineContext implements AutoCloseable
             fixCounters.currentReplayCount(),
             configuration.maxConcurrentSessionReplays(),
             configuration.epochNanoClock(),
-            configuration.supportedFixPProtocolType());
+            configuration.supportedFixPProtocolType(),
+            configuration);
     }
 
     private void newIndexers()

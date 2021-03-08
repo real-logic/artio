@@ -1800,6 +1800,36 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onThrottleNotification(
+        final int libraryId,
+        final long connectionId,
+        final long refMsgType,
+        final int refSeqNum,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength,
+        final long position)
+    {
+        if (libraryId == this.libraryId)
+        {
+            final SessionSubscriber sessionSubscriber = connectionIdToSession.get(connectionId);
+            if (sessionSubscriber != null)
+            {
+                final boolean replied = sessionSubscriber.onThrottleNotification(
+                    refMsgType,
+                    refSeqNum,
+                    businessRejectRefIDBuffer,
+                    businessRejectRefIDOffset,
+                    businessRejectRefIDLength
+                );
+
+                return replied ? CONTINUE : ABORT;
+            }
+        }
+
+        return CONTINUE;
+    }
+
     private void initFixP(final FixPProtocolType protocolType)
     {
         if (fixPProtocol == null)

@@ -243,4 +243,16 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
     {
         this.initiateSessionReply = reply;
     }
+
+    public boolean onThrottleNotification(
+        final long refMsgType,
+        final int refSeqNum,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        return session.onThrottleNotification(
+            refMsgType, refSeqNum, businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength
+        );
+    }
 }

@@ -418,11 +418,68 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         assertThat("sessions = " + sessions, sessions, hasSize(0));
     }
 
+    @Test
+    public void shouldRejectMessagesOverThrottle() throws IOException, InterruptedException
+    {
+        setup(true, true, true, ENGINE, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final int reportCount = 10;
+            for (int i = 0; i < reportCount; i++)
+            {
+                connection.sendExecutionReport(connection.acquireMsgSeqNum(), false);
+
+                sleep(1);
+            }
+
+            for (int i = 0; i < (reportCount - TEST_THROTTLE_LIMIT_OF_MESSAGES) + 1; i++)
+            {
+                assertReadsBusinessReject(connection, i + 2, i + 4, false);
+            }
+
+            Thread.sleep(TEST_THROTTLE_WINDOW_IN_MS);
+
+            final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
+            assertEquals(10, abc.header().msgSeqNum());
+
+            // Test that resend requests work with throttle rejection
+            connection.sendResendRequest(4, 5);
+            assertReadsBusinessReject(connection, 4, 6, true);
+            assertReadsBusinessReject(connection, 5, 7, true);
+
+            connection.logoutAndAwaitReply();
+        }
+    }
+
+    private void assertReadsBusinessReject(
+        final FixConnection connection, final int seqNum, final int refSeqNum, final boolean possDup)
+    {
+        final BusinessMessageRejectDecoder reject = connection.readBusinessReject();
+        final HeaderDecoder header = reject.header();
+        assertEquals(seqNum, header.msgSeqNum());
+        assertEquals(ACCEPTOR_ID, header.senderCompIDAsString());
+        assertEquals(INITIATOR_ID, header.targetCompIDAsString());
+        assertEquals(possDup, header.hasPossDupFlag() && header.possDupFlag());
+
+        assertEquals("wrong businessRejectReason", 99, reject.businessRejectReason());
+        assertEquals("8", reject.refMsgTypeAsString());
+        assertEquals("wrong refSeqNum", refSeqNum, reject.refSeqNum());
+        assertEquals("Throttle limit exceeded (3 in 1000ms)", reject.textAsString());
+    }
+
     private void sleepToAwaitResend()
+    {
+        sleep(200);
+    }
+
+    private void sleep(final int timeInMs)
     {
         try
         {
-            Thread.sleep(200);
+            Thread.sleep(timeInMs);
         }
         catch (final InterruptedException e)
         {

@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.BusinessRejectRefIdExtractor;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
@@ -28,6 +30,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -38,9 +41,12 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.BitUtil.SIZE_OF_CHAR;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -147,10 +153,17 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final SessionContexts sessionContexts;
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
+    private final BusinessRejectRefIdExtractor businessRejectRefIdExtractor = new BusinessRejectRefIdExtractor();
     private final FixGatewaySessions gatewaySessions;
     private final EpochNanoClock clock;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
+
+    private final long throttleWindowInNs;
+    private final int throttleLimitOfMessages;
+    private final long[] lastMessageTimestampsInNs;
+    private final int lastMessageTimestampsInNsMask;
+    private int throttlePosition = 0;
 
     private FixGatewaySession gatewaySession;
     private long sessionId;
@@ -160,7 +173,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private AcceptorLogonResult pendingAcceptorLogon;
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
-    private long lastReadTimestamp;
+    private long lastReadTimestampInNs;
     private String address;
     private boolean requiresProxyCheck = true;
 
@@ -179,13 +192,16 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final FixGatewaySessions gatewaySessions,
         final EpochNanoClock clock,
         final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
-        final FixReceiverEndPointFormatters formatters)
+        final FixReceiverEndPointFormatters formatters,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
 
+        this.throttleLimitOfMessages = throttleLimitOfMessages;
         this.formatters = formatters;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex - 1; // Incremented on first logon
@@ -194,6 +210,21 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
+
+
+        if (throttleWindowInMs == MISSING_INT)
+        {
+            this.throttleWindowInNs = MISSING_LONG;
+            lastMessageTimestampsInNs = null;
+            lastMessageTimestampsInNsMask = 0;
+        }
+        else
+        {
+            this.throttleWindowInNs = MILLISECONDS.toNanos(throttleWindowInMs);
+            final int lastMessageTimestampsInNsCapacity = BitUtil.findNextPositivePowerOfTwo(throttleLimitOfMessages);
+            lastMessageTimestampsInNs = new long[lastMessageTimestampsInNsCapacity];
+            lastMessageTimestampsInNsMask = lastMessageTimestampsInNsCapacity - 1;
+        }
 
         address = channel.remoteAddress();
     }
@@ -231,16 +262,16 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         try
         {
-            final long latestReadTimestamp = clock.nanoTime();
+            final long latestReadTimestampInNs = clock.nanoTime();
             final int bytesRead = readData();
-            if (frameMessages(bytesRead == 0 ? lastReadTimestamp : latestReadTimestamp))
+            if (frameMessages(bytesRead == 0 ? lastReadTimestampInNs : latestReadTimestampInNs))
             {
-                lastReadTimestamp = latestReadTimestamp;
+                lastReadTimestampInNs = latestReadTimestampInNs;
                 return bytesRead;
             }
             else
             {
-                lastReadTimestamp = latestReadTimestamp;
+                lastReadTimestampInNs = latestReadTimestampInNs;
                 return -bytesRead;
             }
         }
@@ -294,7 +325,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     connectionId,
                     AUTH_REJECT,
                     0,
-                    lastReadTimestamp);
+                    lastReadTimestampInNs);
 
                 if (Pressure.isBackPressured(position))
                 {
@@ -326,7 +357,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final long sessionId = gatewaySession.sessionId();
         final int sequenceIndex = gatewaySession.sequenceIndex();
 
-        if (saveMessage(offset, LOGON_MESSAGE_TYPE, length, sessionId, sequenceIndex, lastReadTimestamp))
+        if (saveMessage(offset, LOGON_MESSAGE_TYPE, length, sessionId, sequenceIndex, lastReadTimestampInNs))
         {
             // Authentication is only complete (ie this state set) when the actual logon message has been saved.
             this.sessionId = sessionId;
@@ -348,7 +379,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     boolean retryFrameMessages()
     {
-        return frameMessages(lastReadTimestamp);
+        return frameMessages(lastReadTimestampInNs);
     }
 
     // true - no more framed messages in the buffer data to process. This could mean no more messages, or some data
@@ -764,48 +795,114 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final long readTimestamp)
     {
         DirectBuffer buffer = this.buffer;
-        int offset = messageOffset;
-        int length = messageLength;
 
-        final boolean isUserRequest = messageType == USER_REQUEST_MESSAGE_TYPE;
-        if (messageType == LOGON_MESSAGE_TYPE || isUserRequest)
+        if (shouldThrottle(readTimestamp))
         {
-            if (isUserRequest)
-            {
-                gatewaySessions.onUserRequest(
-                    buffer, offset, length, gatewaySession.fixDictionary(), connectionId, sessionId);
-            }
-
-            passwordCleaner.clean(buffer, offset, length);
-
-            offset = 0;
-            buffer = passwordCleaner.cleanedBuffer();
-            length = passwordCleaner.cleanedLength();
-        }
-
-        final long position = publication.saveMessage(
-            buffer,
-            offset,
-            length,
-            libraryId,
-            messageType,
-            sessionId,
-            sequenceIndex,
-            connectionId,
-            OK,
-            0,
-            readTimestamp);
-
-        if (Pressure.isBackPressured(position))
-        {
-            moveRemainingDataToBufferStart(offset);
-            return false;
+            return throttleMessage(messageOffset, messageType, messageLength, buffer);
         }
         else
         {
-            gatewaySession.onMessage(buffer, offset, length, messageType, position);
-            return true;
+            int offset = messageOffset;
+            int length = messageLength;
+
+            final boolean isUserRequest = messageType == USER_REQUEST_MESSAGE_TYPE;
+            if (messageType == LOGON_MESSAGE_TYPE || isUserRequest)
+            {
+                if (isUserRequest)
+                {
+                    gatewaySessions.onUserRequest(
+                        buffer, offset, length, gatewaySession.fixDictionary(), connectionId, sessionId);
+                }
+
+                passwordCleaner.clean(buffer, offset, length);
+
+                offset = 0;
+                buffer = passwordCleaner.cleanedBuffer();
+                length = passwordCleaner.cleanedLength();
+            }
+
+            final long position = publication.saveMessage(
+                buffer,
+                offset,
+                length,
+                libraryId,
+                messageType,
+                sessionId,
+                sequenceIndex,
+                connectionId,
+                OK,
+                0,
+                readTimestamp);
+
+            if (Pressure.isBackPressured(position))
+            {
+                moveRemainingDataToBufferStart(messageOffset);
+                return false;
+            }
+            else
+            {
+                gatewaySession.onMessage(buffer, offset, length, messageType, position);
+                return true;
+            }
         }
+    }
+
+    private boolean throttleMessage(
+        final int messageOffset, final long messageType, final int messageLength, final DirectBuffer buffer)
+    {
+        final BusinessRejectRefIdExtractor businessRejectRefIdExtractor = this.businessRejectRefIdExtractor;
+        businessRejectRefIdExtractor.search(messageType, buffer, messageOffset, messageLength);
+
+        final int refSeqNum = businessRejectRefIdExtractor.sequenceNumber();
+        final AsciiBuffer refIdBuffer = businessRejectRefIdExtractor.buffer();
+        final int refIdOffset = businessRejectRefIdExtractor.offset();
+        final int refIdLength = businessRejectRefIdExtractor.length();
+
+        final long position = publication.saveThrottleNotification(
+            libraryId,
+            connectionId,
+            messageType,
+            refSeqNum,
+            sessionId,
+            sequenceIndex,
+            refIdBuffer, refIdOffset, refIdLength);
+
+        if (position > 0)
+        {
+            return gatewaySession.onThrottleNotification(
+                messageType,
+                refSeqNum,
+                refIdBuffer, refIdOffset, refIdLength);
+        }
+        else
+        {
+            moveRemainingDataToBufferStart(messageOffset);
+            return false;
+        }
+    }
+
+    private boolean shouldThrottle(final long readTimestampInNs)
+    {
+        final long throttleWindowInNs = this.throttleWindowInNs;
+        if (throttleWindowInNs == MISSING_LONG)
+        {
+            return false;
+        }
+
+        final long[] lastMessageTimestampsInNs = this.lastMessageTimestampsInNs;
+        final int lastMessageTimestampsMask = this.lastMessageTimestampsInNsMask;
+        final int throttlePosition = this.throttlePosition;
+
+        final int oldestMessagePosition = throttlePosition - throttleLimitOfMessages;
+        final int oldestMessageIndex = oldestMessagePosition & lastMessageTimestampsMask;
+        final long oldestMessageTimestampInNs = lastMessageTimestampsInNs[oldestMessageIndex];
+
+        final int currentIndex = throttlePosition & lastMessageTimestampsMask;
+        lastMessageTimestampsInNs[currentIndex] = readTimestampInNs;
+        this.throttlePosition = throttlePosition + 1;
+
+        final long timeAgoOfOldestMessageInNs = readTimestampInNs - oldestMessageTimestampInNs;
+        return timeAgoOfOldestMessageInNs < throttleWindowInNs;
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)

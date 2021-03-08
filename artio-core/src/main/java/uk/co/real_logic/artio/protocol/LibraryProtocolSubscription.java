@@ -49,6 +49,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
     private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
     private final ManageFixPConnectionDecoder manageFixPConnection = new ManageFixPConnectionDecoder();
+    private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -121,9 +122,37 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
             case ManageFixPConnectionDecoder.TEMPLATE_ID:
                 return onManageFixPConnection(buffer, offset, blockLength, version);
+
+            case ThrottleNotificationDecoder.TEMPLATE_ID:
+                return onThrottleNotification(buffer, offset, blockLength, version, header.position());
         }
 
         return CONTINUE;
+    }
+
+    private Action onThrottleNotification(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final long position)
+    {
+        final ThrottleNotificationDecoder throttleNotification = this.throttleNotification;
+        throttleNotification.wrap(buffer, offset, blockLength, version);
+        final int libraryId = throttleNotification.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        final int businessRejectRefIDOffset =
+            throttleNotification.limit() + ThrottleNotificationDecoder.businessRejectRefIDHeaderLength();
+        return handler.onThrottleNotification(
+            libraryId,
+            throttleNotification.connection(),
+            throttleNotification.refMsgType(),
+            throttleNotification.refSeqNum(),
+            buffer,
+            businessRejectRefIDOffset,
+            throttleNotification.businessRejectRefIDLength(),
+            position);
     }
 
     private Action onLibraryExtendPosition(

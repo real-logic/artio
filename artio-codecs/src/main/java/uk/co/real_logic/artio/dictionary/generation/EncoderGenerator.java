@@ -52,14 +52,15 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 class EncoderGenerator extends Generator
 {
-    private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
+    private static final Set<String> USED_SESSION_CODECS = new HashSet<>(Arrays.asList(
         "LogonEncoder",
         "ResendRequestEncoder",
         "LogoutEncoder",
         "HeartbeatEncoder",
         "RejectEncoder",
         "TestRequestEncoder",
-        "SequenceResetEncoder"));
+        "SequenceResetEncoder",
+        "BusinessMessageRejectEncoder"));
 
     private static final String TRAILER_ENCODE_PREFIX =
         "    // |10=...|\n" +
@@ -197,7 +198,7 @@ class EncoderGenerator extends Generator
             {
                 out.append(fileHeader(thisPackage));
 
-                if (REQUIRED_SESSION_CODECS.contains(className))
+                if (USED_SESSION_CODECS.contains(className))
                 {
                     out.append(importFor("uk.co.real_logic.artio.builder.Abstract" + className));
                 }
@@ -252,7 +253,7 @@ class EncoderGenerator extends Generator
         if (isMessage)
         {
             final String parentName =
-                (REQUIRED_SESSION_CODECS.contains(className)) ?
+                (USED_SESSION_CODECS.contains(className)) ?
                 "Abstract" + className :
                 Encoder.class.getSimpleName();
             interfaces = singletonList(parentName);

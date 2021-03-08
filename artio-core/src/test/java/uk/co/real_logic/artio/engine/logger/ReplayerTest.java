@@ -134,7 +134,8 @@ public class ReplayerTest extends AbstractLogTest
             currentReplayCounter,
             DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
             clock,
-            FixPProtocolType.ILINK_3);
+            FixPProtocolType.ILINK_3,
+            mock(EngineConfiguration.class));
     }
 
     private void setReplayedMessages(final int replayedMessages)

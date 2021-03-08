@@ -21,11 +21,13 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -42,6 +44,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final EngineConfiguration configuration;
 
     private FixDictionary fixDictionary;
     private FixReceiverEndPoint receiverEndPoint;
@@ -82,9 +85,9 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         final boolean sendRedundantResendRequests,
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary,
-        final long authenticationTimeoutInMs)
+        final EngineConfiguration configuration)
     {
-        super(connectionId, context.sessionId(), address, connectionType, authenticationTimeoutInMs);
+        super(connectionId, context.sessionId(), address, connectionType, configuration.authenticationTimeoutInMs());
         this.context = context;
         this.sessionKey = sessionKey;
         this.receiverEndPoint = receiverEndPoint;
@@ -94,7 +97,8 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
-        this.fixDictionary = fixDictionary;
+        this.configuration = configuration;
+        fixDictionary(fixDictionary);
     }
 
     public String address()
@@ -272,6 +276,8 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         this.cancelOnDisconnectOption = cancelOnDisconnectOption;
         this.cancelOnDisconnectTimeoutWindowInNs = cancelOnDisconnectTimeoutWindowInNs;
 
+        senderEndPoint.onLogon(sessionKey, configuration);
+
         onLogon(username, password, heartbeatIntervalInS);
     }
 
@@ -386,6 +392,10 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     void fixDictionary(final FixDictionary fixDictionary)
     {
         this.fixDictionary = fixDictionary;
+        if (senderEndPoint != null)
+        {
+            senderEndPoint.fixDictionary(fixDictionary);
+        }
     }
 
     public int logonReceivedSequenceNumber()
@@ -471,5 +481,26 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         {
             session.onDisconnect();
         }
+    }
+
+    public boolean onThrottleNotification(
+        final long messageType,
+        final int refSeqNum,
+        final AsciiBuffer refIdBuffer,
+        final int refIdOffset,
+        final int refIdLength)
+    {
+        if (session != null)
+        {
+            return session.onThrottleNotification(
+                messageType,
+                refSeqNum,
+                refIdBuffer,
+                refIdOffset,
+                refIdLength
+            );
+        }
+
+        return true;
     }
 }

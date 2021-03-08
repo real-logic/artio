@@ -442,6 +442,26 @@ public final class DebugLogger
         }
     }
 
+    public static void logSbeMessage(
+        final LogTag tag,
+        final ThrottleNotificationEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
+        final ThrottleRejectEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
     public static void log(
         final LogTag tag,
         final String prefixString,
@@ -672,6 +692,7 @@ public final class DebugLogger
         private final LibraryTimeoutDecoder libraryTimeout = new LibraryTimeoutDecoder();
         private final InitiateILinkConnectionDecoder initiateILinkConnection =
             new InitiateILinkConnectionDecoder();
+        private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
 
         // Engine -> Library
         private final ErrorDecoder error = new ErrorDecoder();
@@ -692,6 +713,7 @@ public final class DebugLogger
         private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
         private final LibraryExtendPositionDecoder libraryExtendPosition = new LibraryExtendPositionDecoder();
         private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+        private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
 
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -1165,6 +1187,30 @@ public final class DebugLogger
                 ILinkConnectEncoder.BLOCK_LENGTH,
                 ILinkConnectEncoder.SCHEMA_VERSION);
             iLinkConnect.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ThrottleRejectEncoder encoder)
+        {
+            appendStart();
+            throttleReject.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ThrottleRejectEncoder.BLOCK_LENGTH,
+                ThrottleRejectEncoder.SCHEMA_VERSION);
+            throttleReject.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ThrottleNotificationEncoder encoder)
+        {
+            appendStart();
+            throttleNotification.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ThrottleNotificationEncoder.BLOCK_LENGTH,
+                ThrottleNotificationEncoder.SCHEMA_VERSION);
+            throttleNotification.appendTo(builder);
             finish(tag);
         }
 

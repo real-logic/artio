@@ -403,6 +403,11 @@ public final class FixConnection implements AutoCloseable
         return readMessage(new RejectDecoder());
     }
 
+    public BusinessMessageRejectDecoder readBusinessReject()
+    {
+        return readMessage(new BusinessMessageRejectDecoder());
+    }
+
     public ResendRequestDecoder readResendRequest(final int beginSeqNo, final int endSeqNo)
     {
         final ResendRequestDecoder resendRequest = readMessage(new ResendRequestDecoder());

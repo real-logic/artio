@@ -73,6 +73,8 @@ public class SequenceNumberIndexWriter implements Index
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
     private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
+    private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
+    private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -306,6 +308,26 @@ public class SequenceNumberIndexWriter implements Index
                     break;
                 }
 
+                case ThrottleRejectDecoder.TEMPLATE_ID:
+                {
+                    throttleReject.wrap(buffer, offset, actingBlockLength, version);
+                    if (!onThrottleReject(endPosition))
+                    {
+                        return;
+                    }
+                    break;
+                }
+
+                case ThrottleNotificationDecoder.TEMPLATE_ID:
+                {
+                    throttleNotification.wrap(buffer, offset, actingBlockLength, version);
+                    if (!onThrottleNotification(endPosition))
+                    {
+                        return;
+                    }
+                    break;
+                }
+
                 default:
                 {
                     fixPSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
@@ -318,8 +340,44 @@ public class SequenceNumberIndexWriter implements Index
         positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
     }
 
+    private boolean onThrottleReject(final long position)
+    {
+        final ThrottleRejectDecoder throttleReject = this.throttleReject;
+        final long sessionId = throttleReject.session();
+        final int sequenceNumber = throttleReject.sequenceNumber();
+
+        return onThrottle(position, sessionId, sequenceNumber);
+    }
+
+    private boolean onThrottleNotification(final long position)
+    {
+        final ThrottleNotificationDecoder throttleNotification = this.throttleNotification;
+        final long sessionId = throttleNotification.session();
+        final int sequenceNumber = throttleNotification.refSeqNum();
+
+        return onThrottle(position, sessionId, sequenceNumber);
+    }
+
+    private boolean onThrottle(final long position, final long sessionId, final int sequenceNumber)
+    {
+        if (checkRedactPosition(position, sessionId))
+        {
+            return false;
+        }
+
+        saveRecord(
+            sequenceNumber,
+            sessionId,
+            position,
+            NO_REQUIRED_POSITION,
+            false);
+
+        return true;
+    }
+
     private void onRedactSequenceUpdate()
     {
+        final RedactSequenceUpdateDecoder redactSequenceUpdate = this.redactSequenceUpdate;
         saveRecord(
             redactSequenceUpdate.correctSequenceNumber(),
             redactSequenceUpdate.session(),
@@ -365,17 +423,9 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         final long sessionId = messageFrame.session();
-        final LongHashSet redactPositions = sessionIdToRedactPositions.get(sessionId);
-        if (redactPositions != null)
+        if (checkRedactPosition(messagePosition, sessionId))
         {
-            if (redactPositions.remove(messagePosition))
-            {
-                if (redactPositions.isEmpty())
-                {
-                    sessionIdToRedactPositions.remove(sessionId);
-                }
-                return false;
-            }
+            return false;
         }
 
         offset += FixMessageDecoder.bodyHeaderLength();
@@ -389,6 +439,23 @@ public class SequenceNumberIndexWriter implements Index
             }
         }
         return true;
+    }
+
+    private boolean checkRedactPosition(final long messagePosition, final long sessionId)
+    {
+        final LongHashSet redactPositions = sessionIdToRedactPositions.get(sessionId);
+        if (redactPositions != null)
+        {
+            if (redactPositions.remove(messagePosition))
+            {
+                if (redactPositions.isEmpty())
+                {
+                    sessionIdToRedactPositions.remove(sessionId);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     private void resizeMetaDataBuffer(final int metaDataLength)

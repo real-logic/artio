@@ -21,12 +21,17 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
+import uk.co.real_logic.artio.session.CompositeKey;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,12 +40,14 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
+import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
 class FixSenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
+    public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
     private final long connectionId;
     private final TcpChannel channel;
@@ -59,6 +66,11 @@ class FixSenderEndPoint
     private long sessionId;
     private long sendingTimeoutTimeInMs;
     private boolean replayPaused;
+
+    private ThrottleRejectBuilder throttleRejectBuilder;
+    private FixDictionary fixDictionary;
+    private CompositeKey sessionKey;
+    private EngineConfiguration configuration;
 
     FixSenderEndPoint(
         final long connectionId,
@@ -122,6 +134,129 @@ class FixSenderEndPoint
         }
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
+    }
+
+    public void onThrottleReject(
+        final int libraryId,
+        final long refMsgType,
+        final int refSeqNum,
+        final int sequenceNumber,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength,
+        final long position,
+        final long timeInMs)
+    {
+        if (isWrongLibraryId(libraryId))
+        {
+            invalidLibraryAttempts.increment();
+            return;
+        }
+
+        final ThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
+        if (!throttleRejectBuilder.build(
+            refMsgType,
+            refSeqNum,
+            sequenceNumber,
+            businessRejectRefIDBuffer,
+            businessRejectRefIDOffset,
+            businessRejectRefIDLength,
+            false))
+        {
+            // failed to build reject due to configuration error
+            return;
+        }
+
+        onOutboundMessage(
+            libraryId,
+            throttleRejectBuilder.buffer(),
+            throttleRejectBuilder.offset(),
+            throttleRejectBuilder.length(),
+            sequenceNumber,
+            position,
+            timeInMs);
+    }
+
+    public Action onSlowThrottleReject(
+        final int libraryId,
+        final long refMsgType,
+        final int refSeqNum,
+        final int sequenceNumber,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength,
+        final long position,
+        final long timeInMs)
+    {
+        if (isWrongLibraryId(libraryId))
+        {
+            invalidLibraryAttempts.increment();
+            return CONTINUE;
+        }
+
+        // We hoist these next two steps early on this path to avoid building the throttle reject
+        if (!isSlowConsumer())
+        {
+            return CONTINUE;
+        }
+
+        // Skip all messages beyond the skip position, since this endpoint has been blocked but others
+        // Scanning forward.
+        final long skipPosition = outboundTracker.skipPosition;
+        if (position > skipPosition)
+        {
+            return CONTINUE;
+        }
+
+        final ThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
+        if (!throttleRejectBuilder.build(
+            refMsgType,
+            refSeqNum,
+            sequenceNumber,
+            businessRejectRefIDBuffer,
+            businessRejectRefIDOffset,
+            businessRejectRefIDLength,
+            false))
+        {
+            // failed to build reject due to configuration error
+            return CONTINUE;
+        }
+
+        // fake the data offset after header position in order to make it look like a normally framed FIX message.
+        final int fakeOffsetAfterHeader = throttleRejectBuilder.offset() - FRAME_SIZE;
+        return attemptSlowMessage(
+            throttleRejectBuilder.buffer(),
+            fakeOffsetAfterHeader,
+            throttleRejectLength(businessRejectRefIDLength),
+            position,
+            throttleRejectBuilder.length(),
+            timeInMs,
+            outboundTracker,
+            0,
+            sequenceNumber);
+    }
+
+    private ThrottleRejectBuilder throttleRejectBuilder()
+    {
+        if (throttleRejectBuilder == null)
+        {
+            throttleRejectBuilder = new ThrottleRejectBuilder(
+                fixDictionary,
+                errorHandler,
+                sessionId,
+                connectionId,
+                configuration,
+                new UtcTimestampEncoder(configuration.sessionEpochFractionFormat()),
+                configuration.epochNanoClock());
+            configuration.sessionIdStrategy().setupSession(sessionKey, throttleRejectBuilder.header());
+        }
+
+        return throttleRejectBuilder;
+    }
+
+    private int throttleRejectLength(final int businessRejectRefIDLength)
+    {
+        return ThrottleRejectDecoder.BLOCK_LENGTH + businessRejectRefIDHeaderLength() + businessRejectRefIDLength;
     }
 
     Action onReplayMessage(
@@ -499,6 +634,17 @@ class FixSenderEndPoint
         return CONTINUE;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        this.fixDictionary = fixDictionary;
+    }
+
+    void onLogon(final CompositeKey sessionKey, final EngineConfiguration configuration)
+    {
+        this.sessionKey = sessionKey;
+        this.configuration = configuration;
+    }
+
     // Struct for tracking the slow state of the replay and outbound streams
     static class StreamTracker
     {
@@ -517,4 +663,5 @@ class FixSenderEndPoint
     {
         return replayPaused;
     }
+
 }

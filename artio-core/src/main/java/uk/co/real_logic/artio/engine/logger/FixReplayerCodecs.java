@@ -53,4 +53,9 @@ class FixReplayerCodecs
     {
         return new GapFillEncoder(dictionary.makeSequenceResetEncoder(), timestampEncoder);
     }
+
+    FixDictionary dictionary()
+    {
+        return dictionary;
+    }
 }

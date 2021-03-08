@@ -36,6 +36,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -124,9 +125,33 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldStashNewSequenceNumber()
+    public void shouldIndexNewSequenceNumber()
     {
         indexFixMessage();
+
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+    }
+
+    @Test
+    public void shouldIndexNewSequenceNumberFromThrottle()
+    {
+        long position = 0;
+        while (position < 1)
+        {
+            position = gatewayPublication.saveThrottleReject(
+                LIBRARY_ID,
+                CONNECTION_ID,
+                SessionConstants.TEST_REQUEST_MESSAGE_TYPE,
+                1,
+                SEQUENCE_NUMBER,
+                SESSION_ID,
+                SEQUENCE_INDEX,
+                new UnsafeBuffer(new byte[0]), 0, 0);
+
+            Thread.yield();
+        }
+
+        indexToPosition(publication.sessionId(), position);
 
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
     }

@@ -82,7 +82,9 @@ class FixEndPointFactory
             gatewaySessions,
             configuration.epochNanoClock(),
             framer.acceptorFixDictionaryLookup(),
-            formatters);
+            formatters,
+            configuration.throttleWindowInMs(),
+            configuration.throttleLimitOfMessages());
     }
 
     FixSenderEndPoint senderEndPoint(

@@ -44,6 +44,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final ReplayMessagesDecoder replayMessages = new ReplayMessagesDecoder();
     private final InitiateILinkConnectionDecoder initiateILinkConnection = new InitiateILinkConnectionDecoder();
     private final CancelOnDisconnectTriggerDecoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerDecoder();
+    private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -125,16 +126,42 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
 
             case CancelOnDisconnectTriggerDecoder.TEMPLATE_ID:
             {
-                return onCancelOnDisconnectTrigger(buffer, offset, blockLength, version, header);
+                return onCancelOnDisconnectTrigger(buffer, offset, blockLength, version);
             }
+
+            case ThrottleRejectDecoder.TEMPLATE_ID:
+                return onThrottleReject(buffer, offset, blockLength, version, header);
         }
 
         return CONTINUE;
     }
 
-    private Action onCancelOnDisconnectTrigger(
+    private Action onThrottleReject(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
+        final ThrottleRejectDecoder throttleReject = this.throttleReject;
+        throttleReject.wrap(buffer, offset, blockLength, version);
+
+        final int businessRejectRefIDOffset =
+            throttleReject.limit() + ThrottleRejectDecoder.businessRejectRefIDHeaderLength();
+
+        return handler.onThrottleReject(
+            throttleReject.libraryId(),
+            throttleReject.connection(),
+            throttleReject.refMsgType(),
+            throttleReject.refSeqNum(),
+            throttleReject.sequenceNumber(),
+            buffer,
+            businessRejectRefIDOffset,
+            throttleReject.businessRejectRefIDLength(),
+            header.position());
+    }
+
+    private Action onCancelOnDisconnectTrigger(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        final CancelOnDisconnectTriggerDecoder cancelOnDisconnectTrigger = this.cancelOnDisconnectTrigger;
+
         cancelOnDisconnectTrigger.wrap(buffer, offset, blockLength, version);
         handler.onCancelOnDisconnectTrigger(
             cancelOnDisconnectTrigger.sessionId(), cancelOnDisconnectTrigger.timeInNs());

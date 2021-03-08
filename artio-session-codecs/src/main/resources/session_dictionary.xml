@@ -68,6 +68,13 @@
             <field name="Password" required="N"/>
             <field name="NewPassword" required="N"/>
         </message>
+        <message name="BusinessMessageReject" msgtype="j" msgcat="app">
+            <field name="RefSeqNum" required="N"/>
+            <field name="RefMsgType" required="Y"/>
+            <field name="BusinessRejectRefID" required="N"/>
+            <field name="BusinessRejectReason" required="Y"/>
+            <field name="Text" required="N"/>
+        </message>
 
         <!-- Messages for Samples -->
         <message name="NewOrderSingle" msgtype="D" msgcat="app">
@@ -111,6 +118,7 @@
             <value enum="8" description="EXECUTION_REPORT"/>
             <value enum="A" description="LOGON"/>
             <value enum="D" description="ORDER_SINGLE"/>
+            <value enum="j" description="BUSINESS_MESSAGE_REJECT"/>
             <value enum="BE" description="USER_REQUEST"/>
         </field>
         <field number="10" name="CheckSum" type="STRING"/>
@@ -170,11 +178,13 @@
         <field number="95" name="RawDataLength" type="LENGTH"/>
         <field number="96" name="RawData" type="DATA"/>
         <field number="141" name="ResetSeqNumFlag" type="BOOLEAN"/>
-        <field number="789" name="NextExpectedMsgSeqNum" type="SEQNUM"/>
+        <field number="379" name="BusinessRejectRefID" type="STRING"/>
+        <field number="380" name="BusinessRejectReason" type="INT"/>
         <field number="383" name="MaxMessageSize" type="LENGTH"/>
         <field number="464" name="TestMessageIndicator" type="BOOLEAN"/>
         <field number="553" name="Username" type="STRING"/>
         <field number="554" name="Password" type="STRING"/>
+        <field number="789" name="NextExpectedMsgSeqNum" type="SEQNUM"/>
         <field number="923" name="UserRequestID" type="STRING"/>
         <field number="924" name="UserRequestType" type="INT">
             <value enum="1" description="LogOnUser"/>

@@ -849,6 +849,29 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
+    public Action onThrottleReject(
+        final int libraryId,
+        final long connectionId,
+        final long refMsgType,
+        final int refSeqNum,
+        final int sequenceNumber,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength,
+        final long position)
+    {
+        return fixSenderEndPoints.onThrottleReject(
+            libraryId,
+            connectionId,
+            refMsgType,
+            refSeqNum,
+            sequenceNumber,
+            businessRejectRefIDBuffer,
+            businessRejectRefIDOffset,
+            businessRejectRefIDLength,
+            position);
+    }
+
     private long runCancelOnDisconnect(
         final long sessionId,
         final long timeInNs,
@@ -1651,7 +1674,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sendRedundantResendRequests,
             enableLastMsgSeqNumProcessed,
             fixDictionary,
-            configuration.authenticationTimeoutInMs());
+            configuration);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -2206,7 +2229,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     configuration.acceptedSessionSendRedundantResendRequests(),
                     configuration.acceptedEnableLastMsgSeqNumProcessed(),
                     sessionContext.lastFixDictionary(),
-                    configuration.authenticationTimeoutInMs());
+                    configuration);
                 gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
                 gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
                 gatewaySession.libraryId(libraryId);

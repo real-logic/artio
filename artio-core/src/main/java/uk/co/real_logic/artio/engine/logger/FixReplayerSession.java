@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.engine.framer.ThrottleRejectBuilder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -41,6 +42,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
@@ -62,6 +64,7 @@ class FixReplayerSession extends ReplayerSession
     // Safe to share between multiple instances due to single threaded nature of the replayer
     private static final FixMessageEncoder FIX_MESSAGE_ENCODER = new FixMessageEncoder();
     private static final FixMessageDecoder FIX_MESSAGE = new FixMessageDecoder();
+    private static final ThrottleRejectDecoder THROTTLE_REJECT = new ThrottleRejectDecoder();
     private static final AsciiBuffer ASCII_BUFFER = new MutableAsciiBuffer();
 
     private final GapFillEncoder gapFillEncoder;
@@ -74,6 +77,7 @@ class FixReplayerSession extends ReplayerSession
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private final AtomicCounter bytesInBuffer;
     private final int maxBytesInBuffer;
+    private final ThrottleRejectBuilder throttleRejectBuilder;
 
     private int lastSeqNo;
 
@@ -101,7 +105,8 @@ class FixReplayerSession extends ReplayerSession
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
         final UtcTimestampEncoder utcTimestampEncoder,
-        final Replayer replayer)
+        final Replayer replayer,
+        final ThrottleRejectBuilder throttleRejectBuilder)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, sequenceIndex, replayer);
@@ -116,6 +121,7 @@ class FixReplayerSession extends ReplayerSession
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
         lastSeqNo = beginSeqNo - 1;
+        this.throttleRejectBuilder = throttleRejectBuilder;
 
         possDupEnabler = new PossDupEnabler(
             utcTimestampEncoder,
@@ -159,11 +165,38 @@ class FixReplayerSession extends ReplayerSession
     public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {
-        replayer.messageHeaderDecoder.wrap(srcBuffer, srcOffset);
-        final int actingBlockLength = replayer.messageHeaderDecoder.blockLength();
-        final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
-        final int version = replayer.messageHeaderDecoder.version();
+        final MessageHeaderDecoder messageHeader = replayer.messageHeaderDecoder.wrap(srcBuffer, srcOffset);
 
+        final int actingBlockLength = messageHeader.blockLength();
+        final int templateId = messageHeader.templateId();
+        final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int version = messageHeader.version();
+
+
+        switch (templateId)
+        {
+            case FixMessageDecoder.TEMPLATE_ID:
+            {
+                return onFixMessage(srcBuffer, srcOffset, srcLength, actingBlockLength, offset, version);
+            }
+
+            case ThrottleRejectDecoder.TEMPLATE_ID:
+            {
+                return onThrottleReject(srcBuffer, actingBlockLength, offset, version);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    private Action onFixMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int actingBlockLength,
+        final int offset,
+        final int version)
+    {
         FIX_MESSAGE.wrap(
             srcBuffer,
             offset,
@@ -221,42 +254,106 @@ class FixReplayerSession extends ReplayerSession
         }
     }
 
+    private Action onThrottleReject(
+        final DirectBuffer srcBuffer, final int actingBlockLength, final int offset, final int version)
+    {
+        THROTTLE_REJECT.wrap(
+            srcBuffer,
+            offset,
+            actingBlockLength,
+            version);
+        final int msgSeqNum = THROTTLE_REJECT.sequenceNumber();
+
+        if (gapFillMessageTypes.contains(BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE))
+        {
+            if (beginGapFillSeqNum == NONE)
+            {
+                beginGapFillSeqNum = lastSeqNo + 1;
+            }
+
+            lastSeqNo = msgSeqNum;
+            return CONTINUE;
+        }
+        else
+        {
+            if (beginGapFillSeqNum != NONE)
+            {
+                sendGapFill(beginGapFillSeqNum, msgSeqNum);
+            }
+            else if (msgSeqNum > lastSeqNo + 1)
+            {
+                sendGapFill(lastSeqNo, msgSeqNum);
+            }
+
+            final int businessRejectRefIDOffset = THROTTLE_REJECT.limit() +
+                ThrottleNotificationDecoder.businessRejectRefIDHeaderLength();
+            throttleRejectBuilder.build(
+                THROTTLE_REJECT.refMsgType(),
+                THROTTLE_REJECT.refSeqNum(),
+                THROTTLE_REJECT.sequenceNumber(),
+                srcBuffer,
+                businessRejectRefIDOffset,
+                THROTTLE_REJECT.businessRejectRefIDLength(),
+                true);
+
+            final Action action = sendFixMessage(
+                throttleRejectBuilder.buffer(),
+                throttleRejectBuilder.offset(),
+                throttleRejectBuilder.length(),
+                BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE);
+            if (action == CONTINUE)
+            {
+                lastSeqNo = msgSeqNum;
+            }
+            return action;
+        }
+    }
+
     private Action sendGapFill(final int msgSeqNo, final int newSeqNo)
     {
         final long result = gapFillEncoder.encode(msgSeqNo, newSeqNo);
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
+        final MutableAsciiBuffer buffer = gapFillEncoder.buffer();
 
+        final Action action = sendFixMessage(buffer, gapFillOffset, gapFillLength, SEQUENCE_RESET_MESSAGE_TYPE);
+        if (action == CONTINUE)
+        {
+            this.beginGapFillSeqNum = NONE;
+        }
+        return action;
+    }
+
+    private Action sendFixMessage(
+        final MutableAsciiBuffer fixBuffer, final int fixOffset, final int fixLength, final long messageType)
+    {
         if (claimMessageBuffer(
-            MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength(), gapFillLength))
+            MESSAGE_FRAME_BLOCK_LENGTH + fixLength + metaDataHeaderLength(), fixLength))
         {
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
-            final MutableAsciiBuffer gapFillBuffer = gapFillEncoder.buffer();
 
             FIX_MESSAGE_ENCODER
                 .wrapAndApplyHeader(destBuffer, destOffset, replayer.messageHeaderEncoder)
                 .libraryId(ENGINE_LIBRARY_ID)
-                .messageType(SEQUENCE_RESET_MESSAGE_TYPE)
+                .messageType(messageType)
                 .session(this.sessionId)
                 .sequenceIndex(this.sequenceIndex)
                 .connection(this.connectionId)
                 .timestamp(0)
                 .status(MessageStatus.OK)
                 .putMetaData(NO_BYTES, 0, 0)
-                .putBody(gapFillBuffer, gapFillOffset, gapFillLength);
+                .putBody(fixBuffer, fixOffset, fixLength);
 
             bufferClaim.commit();
 
-            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: ", gapFillBuffer, gapFillOffset, gapFillLength);
-
-            this.beginGapFillSeqNum = NONE;
+            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: ", fixBuffer, fixOffset, fixLength);
 
             return CONTINUE;
         }
         else
         {
-            DebugLogger.log(REPLAY, "Back pressured trying to sendGapFill");
+            DebugLogger.log(REPLAY, "Back pressured trying to sendFixMessage");
 
             return ABORT;
         }

@@ -343,9 +343,16 @@
         <data name="backupHost" id="7" type="Utf8String"/>
     </sbe:message>
 
-    <sbe:message name="CancelOnDisconnectTrigger" id="69" description="" sinceVersion="16">
-        <field name="sessionId" id="1" type="uint64"/>
-        <field name="timeInNs" id="2" type="int64"/>
+    <sbe:message name="ThrottleReject" id="71" description="Send a business reject in response to a throttle"
+                 sinceVersion="16">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="refMsgType" id="3" type="MessageType"/>
+        <field name="refSeqNum" id="4" type="int32"/>
+        <field name="sequenceNumber" id="5" type="int32"/>
+        <field name="session" id="6" type="FixSessionId"/>
+        <field name="sequenceIndex" id="7" type="SequenceIndex" />
+        <data name="businessRejectRefID" id="8" type="AsciiString"/>
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -523,6 +530,22 @@
         <field name="lastConnectPayload" id="8" type="uint64"/>
         <field name="messageLength" id="9" type="uint16"/>
         <!-- then the first message sent -->
+    </sbe:message>
+
+    <sbe:message name="CancelOnDisconnectTrigger" id="69" description="" sinceVersion="16">
+        <field name="sessionId" id="1" type="uint64"/>
+        <field name="timeInNs" id="2" type="int64"/>
+    </sbe:message>
+
+    <sbe:message name="ThrottleNotification" id="70" description="Notify the session that a message has been throttled"
+                 sinceVersion="16">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="refMsgType" id="3" type="MessageType"/>
+        <field name="refSeqNum" id="4" type="int32"/>
+        <field name="session" id="5" type="FixSessionId"/>
+        <field name="sequenceIndex" id="6" type="SequenceIndex" />
+        <data name="businessRejectRefID" id="7" type="AsciiString"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

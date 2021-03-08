@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.session.Session;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-class OrderFactory
+final class OrderFactory
 {
     static void sendOrder(final Session session)
     {

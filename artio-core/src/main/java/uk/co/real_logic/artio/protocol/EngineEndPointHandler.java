@@ -121,4 +121,15 @@ public interface EngineEndPointHandler
         String host, String accessKeyId, String backupHost);
 
     void onCancelOnDisconnectTrigger(long sessionId, long timeInNs);
+
+    Action onThrottleReject(
+        int libraryId,
+        long connection,
+        long refMsgType,
+        int refSeqNum,
+        int sequenceNumber,
+        DirectBuffer businessRejectRefIDBuffer,
+        int businessRejectRefIDOffset,
+        int businessRejectRefIDLength,
+        long position);
 }

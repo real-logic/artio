@@ -16,13 +16,14 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.ThrottleNotificationDecoder;
+import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -31,6 +32,8 @@ import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 public class FixMessageTracker extends MessageTracker
 {
+    private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
+    private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
     private final long sessionId;
 
@@ -43,19 +46,24 @@ public class FixMessageTracker extends MessageTracker
     public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
+        final MessageHeaderDecoder messageHeaderDecoder = this.messageHeaderDecoder;
         messageHeaderDecoder.wrap(buffer, offset);
 
-        if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
+        final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int templateId = messageHeaderDecoder.templateId();
+        final int blockLength = messageHeaderDecoder.blockLength();
+        final int version = messageHeaderDecoder.version();
+
+        if (templateId == FixMessageDecoder.TEMPLATE_ID)
         {
-            final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
             if (sessionId != UNK_SESSION)
             {
+
                 messageDecoder.wrap(
                     buffer,
                     messageOffset,
-                    messageHeaderDecoder.blockLength(),
-                    messageHeaderDecoder.version()
-                );
+                    blockLength,
+                    version);
 
                 if (messageDecoder.session() != sessionId)
                 {
@@ -73,14 +81,41 @@ public class FixMessageTracker extends MessageTracker
                 DebugLogger.log(logTag, formatter, buffer, bodyOffset, bodyLength);
             }
 
-            final Action action = messageHandler.onFragment(buffer, offset, length, header);
-            if (action != ABORT)
-            {
-                count++;
-            }
-            return action;
+            return processFragment(buffer, offset, length, header);
+        }
+        else if (templateId == ThrottleNotificationDecoder.TEMPLATE_ID)
+        {
+            throttleNotification.wrap(buffer, messageOffset, blockLength, version);
+            return onThrottle(throttleNotification.session(), buffer, offset, length, header);
+        }
+        else if (templateId == ThrottleRejectDecoder.TEMPLATE_ID)
+        {
+            throttleReject.wrap(buffer, messageOffset, blockLength, version);
+            return onThrottle(throttleReject.session(), buffer, offset, length, header);
         }
 
         return CONTINUE;
+    }
+
+    private Action onThrottle(
+        final long sessionId,
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        if (sessionId != this.sessionId)
+        {
+            return CONTINUE;
+        }
+
+        return processFragment(buffer, offset, length, header);
+    }
+
+    private Action processFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        final Action action = messageHandler.onFragment(buffer, offset, length, header);
+        if (action != ABORT)
+        {
+            count++;
+        }
+        return action;
     }
 }

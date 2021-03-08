@@ -41,6 +41,9 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUE
 
 public class AbstractMessageBasedAcceptorSystemTest
 {
+    public static final int TEST_THROTTLE_WINDOW_IN_MS = 1000;
+    public static final int TEST_THROTTLE_LIMIT_OF_MESSAGES = 3;
+
     int port = unusedPort();
 
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
@@ -81,6 +84,16 @@ public class AbstractMessageBasedAcceptorSystemTest
         final boolean provideBindingAddress,
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
+        setup(sequenceNumberReset, shouldBind, provideBindingAddress, initialAcceptedSessionOwner, false);
+    }
+
+    void setup(
+        final boolean sequenceNumberReset,
+        final boolean shouldBind,
+        final boolean provideBindingAddress,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final boolean enableThrottle)
+    {
         mediaDriver = launchMediaDriver();
 
         delete(ACCEPTOR_LOGS);
@@ -93,6 +106,11 @@ public class AbstractMessageBasedAcceptorSystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
+
+        if (enableThrottle)
+        {
+            config.enableMessageThrottle(TEST_THROTTLE_WINDOW_IN_MS, TEST_THROTTLE_LIMIT_OF_MESSAGES);
+        }
 
         if (provideBindingAddress)
         {

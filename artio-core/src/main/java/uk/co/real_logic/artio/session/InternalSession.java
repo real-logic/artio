@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.FixCounters;
@@ -277,5 +278,40 @@ public class InternalSession extends Session implements AutoCloseable
     public void cancelOnDisconnectTimeoutWindowInNs(final long cancelOnDisconnectTimeoutWindowInNs)
     {
         super.cancelOnDisconnectTimeoutWindowInNs(cancelOnDisconnectTimeoutWindowInNs);
+    }
+
+    public boolean onThrottleNotification(
+        final long refMsgType,
+        final int refSeqNum,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        // Accept the throttled message in terms of updating the sequence number and keeping the session alive
+        // Don't waste time validating it in any other way.
+        incNextReceivedInboundMessageTime(timeInNs());
+        lastReceivedMsgSeqNum(refSeqNum);
+
+        final int sequenceNumber = newSentSeqNum();
+
+        final long position = outboundPublication.saveThrottleReject(
+            libraryId,
+            connectionId,
+            refMsgType,
+            refSeqNum,
+            sequenceNumber,
+            id(),
+            sequenceIndex(),
+            businessRejectRefIDBuffer,
+            businessRejectRefIDOffset,
+            businessRejectRefIDLength);
+
+        if (position > 0)
+        {
+            lastSentMsgSeqNum(sequenceNumber);
+            return true;
+        }
+
+        return false;
     }
 }

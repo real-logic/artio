@@ -118,4 +118,32 @@ public final class MessageTypeEncoding
             return packed;
         }
     }
+
+    /**
+     * Unpacks a packed message type into a byte array so that it can be encoded into different formats.
+     * Note: this only supports up to 2 character message types, which is enough for most normal FIX dictionaries
+     * but not the "ultra-packed" message type that the <code>packMessageType()</code> methods can support for
+     * unusual dictionaries. The unpacked value is a byte[] that contains the ascii encoded String of the message
+     * type.
+     *
+     * @param packedMessageType the FIX message type in packed format.
+     * @param dest a destination byte array where the unpacked value is put, should be at least two bytes long.
+     * @throws ArrayIndexOutOfBoundsException if dest is too short.
+     *
+     * @return the length of the unpacked value
+     */
+    public static int unpackMessageType(final long packedMessageType, final byte[] dest)
+    {
+        dest[0] = (byte)packedMessageType;
+        final byte secondByte = (byte)(packedMessageType >>> 8);
+        if (secondByte == 0)
+        {
+            return 1;
+        }
+        else
+        {
+            dest[1] = secondByte;
+            return 2;
+        }
+    }
 }

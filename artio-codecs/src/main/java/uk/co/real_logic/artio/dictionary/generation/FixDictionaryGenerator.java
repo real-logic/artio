@@ -24,13 +24,7 @@ import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 
 
-import uk.co.real_logic.artio.builder.AbstractHeartbeatEncoder;
-import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
-import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
-import uk.co.real_logic.artio.builder.AbstractRejectEncoder;
-import uk.co.real_logic.artio.builder.AbstractResendRequestEncoder;
-import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
-import uk.co.real_logic.artio.builder.AbstractTestRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.AbstractHeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.decoder.AbstractLogoutDecoder;
@@ -119,6 +113,8 @@ class FixDictionaryGenerator
                 addEncoderImport(out, encoderPackage, "TestRequest", allMessageNames, sb);
                 out.append(importFor(AbstractSequenceResetEncoder.class));
                 addEncoderImport(out, encoderPackage, "SequenceReset", allMessageNames, sb);
+                out.append(importFor(AbstractBusinessMessageRejectEncoder.class));
+                addEncoderImport(out, encoderPackage, "BusinessMessageReject", allMessageNames, sb);
 
                 out.append(importFor(AbstractLogonDecoder.class));
                 addDecoderImport(out, decoderPackage, "Logon", allMessageNames, sb);

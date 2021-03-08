@@ -78,6 +78,8 @@ public interface FixDictionary
 
     AbstractSequenceResetEncoder makeSequenceResetEncoder();
 
+    AbstractBusinessMessageRejectEncoder makeBusinessMessageRejectEncoder();
+
     AbstractLogonDecoder makeLogonDecoder();
 
     AbstractLogoutDecoder makeLogoutDecoder();

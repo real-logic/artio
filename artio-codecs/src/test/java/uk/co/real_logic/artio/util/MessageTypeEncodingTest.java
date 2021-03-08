@@ -21,12 +21,6 @@ public class MessageTypeEncodingTest
         assertPackedTypesNotEqual("BG", "BF");
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void willFailToGeneratePackedMessageTypeWithMoreThan8Characters()
-    {
-        packMessageType("ABCDEFGHI");
-    }
-
     @Test
     public void supportsPackingMessageTypesOfLength7()
     {
@@ -64,5 +58,28 @@ public class MessageTypeEncodingTest
         System.arraycopy(bytes, 0, bytesExtra, 1, length);
         bytesExtra[length + 1] = (byte)'z';
         assertEquals(packed, packMessageType(bytesExtra, 1, length));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void willFailToGeneratePackedMessageTypeWithMoreThan8Characters()
+    {
+        packMessageType("ABCDEFGHI");
+    }
+
+    @Test
+    public void shouldUnpackMessageTypes()
+    {
+        assertUnpackedPackedExample("D");
+        assertUnpackedPackedExample("AL");
+        assertUnpackedPackedExample("BF");
+    }
+
+    private void assertUnpackedPackedExample(final String messageType)
+    {
+        final long packed = packMessageType(messageType);
+
+        final byte[] buffer = new byte[2];
+        final int length = MessageTypeEncoding.unpackMessageType(packed, buffer);
+        assertEquals(messageType, new String(buffer, 0, length, US_ASCII));
     }
 }

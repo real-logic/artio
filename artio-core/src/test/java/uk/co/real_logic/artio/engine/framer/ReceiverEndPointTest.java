@@ -46,6 +46,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.NO_THROTTLE_WINDOW;
 import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -150,7 +151,9 @@ public class ReceiverEndPointTest
             mockGatewaySessions,
             mockClock,
             new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()),
-            new FixReceiverEndPoint.FixReceiverEndPointFormatters());
+            new FixReceiverEndPoint.FixReceiverEndPointFormatters(),
+            NO_THROTTLE_WINDOW,
+            NO_THROTTLE_WINDOW);
         endPoint.gatewaySession(gatewaySession);
     }
 

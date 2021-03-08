@@ -58,6 +58,8 @@ public class ReplayIndex implements Index
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
+    private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final RedactSequenceUpdateDecoder redactSequenceUpdateDecoder = new RedactSequenceUpdateDecoder();
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
@@ -162,57 +164,62 @@ public class ReplayIndex implements Index
         final boolean beginMessage = (flags & BEGIN_FRAG_FLAG) == BEGIN_FRAG_FLAG;
         if ((flags & UNFRAGMENTED) == UNFRAGMENTED || beginMessage)
         {
-            if (templateId == FixMessageEncoder.TEMPLATE_ID)
+            switch (templateId)
             {
-                messageFrame.wrap(srcBuffer, offset, blockLength, version);
-                if (messageFrame.status() == OK)
+                case FixMessageEncoder.TEMPLATE_ID:
+                    messageFrame.wrap(srcBuffer, offset, blockLength, version);
+                    onFixMessage(
+                        srcBuffer, header, recordingId, endPosition,
+                        length, offset, blockLength, version, beginMessage);
+                    break;
+
+                case ThrottleNotificationDecoder.TEMPLATE_ID:
                 {
-                    offset += blockLength;
-                    if (version >= metaDataSinceVersion())
-                    {
-                        offset += metaDataHeaderLength() + messageFrame.metaDataLength();
-                        messageFrame.skipMetaData();
-                    }
-                    offset += bodyHeaderLength();
+                    throttleNotification.wrap(srcBuffer, offset, blockLength, version);
+                    final int sequenceNumber = throttleNotification.refSeqNum();
+                    final long fixSessionId = throttleNotification.session();
+                    final int sequenceIndex = throttleNotification.sequenceIndex();
 
-                    final long fixSessionId = messageFrame.session();
-                    final int sequenceNumber = sequenceNumberExtractor.extract(
-                        srcBuffer, offset, messageFrame.bodyLength());
-                    final int sequenceIndex = messageFrame.sequenceIndex();
-
-                    if (sequenceNumber != NO_SEQUENCE_NUMBER)
-                    {
-                        if (beginMessage)
-                        {
-                            continuedFixSessionId = fixSessionId;
-                            continuedSequenceNumber = sequenceNumber;
-                            continuedSequenceIndex = sequenceIndex;
-                        }
-
-                        sessionIndex(fixSessionId).onRecord(
-                            endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
-                    }
+                    sessionIndex(fixSessionId).onRecord(
+                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+                    break;
                 }
-            }
-            else if (templateId == FixPMessageDecoder.TEMPLATE_ID || templateId == ILinkConnectDecoder.TEMPLATE_ID)
-            {
-                fixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
-            }
-            else if (templateId == ResetSequenceNumberDecoder.TEMPLATE_ID)
-            {
-                resetSequenceNumber.wrap(srcBuffer, offset, blockLength, version);
-                final long fixSessionId = resetSequenceNumber.session();
-                onResetSequenceNumber(fixSessionId);
-            }
-            else if (templateId == RedactSequenceUpdateDecoder.TEMPLATE_ID)
-            {
-                redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
-                // We only update the replay index in response to a redact if it is used to redact all the sequence
-                // numbers within the index
-                if (redactSequenceUpdateDecoder.correctSequenceNumber() <= 1)
+
+                case ThrottleRejectDecoder.TEMPLATE_ID:
                 {
-                    final long fixSessionId = redactSequenceUpdateDecoder.session();
+                    throttleReject.wrap(srcBuffer, offset, blockLength, version);
+                    final int sequenceNumber = throttleReject.sequenceNumber();
+                    final long fixSessionId = throttleReject.session();
+                    final int sequenceIndex = throttleReject.sequenceIndex();
+
+                    sessionIndex(fixSessionId).onRecord(
+                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+                    break;
+                }
+
+                case FixPMessageDecoder.TEMPLATE_ID:
+                case ILinkConnectDecoder.TEMPLATE_ID:
+                    fixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
+                    break;
+
+                case ResetSequenceNumberDecoder.TEMPLATE_ID:
+                {
+                    resetSequenceNumber.wrap(srcBuffer, offset, blockLength, version);
+                    final long fixSessionId = resetSequenceNumber.session();
                     onResetSequenceNumber(fixSessionId);
+                    break;
+                }
+
+                case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                {
+                    redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
+                    // We only update the replay index in response to a redact if it is used to redact all the sequence
+                    // numbers within the index
+                    if (redactSequenceUpdateDecoder.correctSequenceNumber() <= 1)
+                    {
+                        final long fixSessionId = redactSequenceUpdateDecoder.session();
+                        onResetSequenceNumber(fixSessionId);
+                    }
                 }
             }
         }
@@ -224,6 +231,47 @@ public class ReplayIndex implements Index
 
         positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
         positionWriter.updateChecksums();
+    }
+
+    private void onFixMessage(
+        final DirectBuffer srcBuffer,
+        final Header header,
+        final long recordingId,
+        final long endPosition,
+        final int length,
+        final int start,
+        final int blockLength,
+        final int version,
+        final boolean beginMessage)
+    {
+        if (messageFrame.status() == OK)
+        {
+            int offset = start + blockLength;
+            if (version >= metaDataSinceVersion())
+            {
+                offset += metaDataHeaderLength() + messageFrame.metaDataLength();
+                messageFrame.skipMetaData();
+            }
+            offset += bodyHeaderLength();
+
+            final long fixSessionId = messageFrame.session();
+            final int sequenceNumber = sequenceNumberExtractor.extract(
+                srcBuffer, offset, messageFrame.bodyLength());
+            final int sequenceIndex = messageFrame.sequenceIndex();
+
+            if (sequenceNumber != NO_SEQUENCE_NUMBER)
+            {
+                if (beginMessage)
+                {
+                    continuedFixSessionId = fixSessionId;
+                    continuedSequenceNumber = sequenceNumber;
+                    continuedSequenceIndex = sequenceIndex;
+                }
+
+                sessionIndex(fixSessionId).onRecord(
+                    endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+            }
+        }
     }
 
     private void onResetSequenceNumber(final long fixSessionId)

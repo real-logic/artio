@@ -23,10 +23,12 @@ import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 
 import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
 
 class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
@@ -34,6 +36,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
     private final LongToIntFunction libraryLookup = this::libraryLookup;
@@ -91,6 +94,29 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         return false;
     }
 
+    Action onThrottleReject(
+        final int libraryId,
+        final long connectionId,
+        final long refMsgType,
+        final int refSeqNum,
+        final int sequenceNumber,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength,
+        final long position)
+    {
+        final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
+        if (endPoint != null)
+        {
+            endPoint.onThrottleReject(
+                libraryId, refMsgType, refSeqNum, sequenceNumber,
+                businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength, position,
+                timeInMs);
+        }
+
+        return null;
+    }
+
     Action onReplayMessage(
         final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
     {
@@ -138,8 +164,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             buffer.getStringWithoutLengthUtf8(offset, length))));
     }
 
-    @SuppressWarnings("FinalParameters")
-    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
     }
@@ -151,15 +176,17 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final int length,
         final long position)
     {
+        final MessageHeaderDecoder messageHeader = this.messageHeader;
         messageHeader.wrap(buffer, offset);
 
-        if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
+        final int templateId = messageHeader.templateId();
+        if (templateId == FixMessageDecoder.TEMPLATE_ID)
         {
             offset += HEADER_LENGTH;
             final int version = messageHeader.version();
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), version);
-            final long connectionId = fixMessage.connection();
 
+            final long connectionId = fixMessage.connection();
             final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
@@ -171,6 +198,29 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
                 return senderEndPoint.onSlowOutboundMessage(
                     buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs,
                     metaDataLength, sequenceNumber);
+            }
+        }
+        else if (templateId == ThrottleRejectDecoder.TEMPLATE_ID)
+        {
+            offset += HEADER_LENGTH;
+            final int version = messageHeader.version();
+            throttleReject.wrap(buffer, offset, messageHeader.blockLength(), version);
+
+            final long connectionId = throttleReject.connection();
+            final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+            if (senderEndPoint != null)
+            {
+                final int businessRejectRefIDOffset = throttleReject.limit() + businessRejectRefIDHeaderLength();
+                return senderEndPoint.onSlowThrottleReject(
+                    throttleReject.libraryId(),
+                    throttleReject.refMsgType(),
+                    throttleReject.refSeqNum(),
+                    throttleReject.sequenceNumber(),
+                    buffer,
+                    businessRejectRefIDOffset,
+                    throttleReject.businessRejectRefIDLength(),
+                    position,
+                    timeInMs);
             }
         }
 
@@ -219,7 +269,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         return count;
     }
 
-    public LongToIntFunction libraryLookup()
+    LongToIntFunction libraryLookup()
     {
         return libraryLookup;
     }

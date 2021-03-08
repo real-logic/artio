@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.framer.ThrottleRejectBuilder;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.fixp.*;
@@ -46,6 +47,7 @@ import java.util.Set;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 
@@ -118,6 +120,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final AtomicCounter currentReplayCount;
     private final int maxConcurrentSessionReplays;
     private final EpochNanoClock clock;
+    private final EngineConfiguration configuration;
     private final ReplayQuery outboundReplayQuery;
     private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
@@ -151,7 +154,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final AtomicCounter currentReplayCount,
         final int maxConcurrentSessionReplays,
         final EpochNanoClock clock,
-        final FixPProtocolType fixPProtocolType)
+        final FixPProtocolType fixPProtocolType,
+        final EngineConfiguration configuration)
     {
         this.outboundReplayQuery = outboundReplayQuery;
         this.publication = publication;
@@ -171,6 +175,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.currentReplayCount = currentReplayCount;
         this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
         this.clock = clock;
+        this.configuration = configuration;
 
         gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
@@ -407,6 +412,25 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
         encoder.setupMessage(resendRequest.header());
 
+        final ThrottleRejectBuilder throttleRejectBuilder;
+
+        if (configuration.throttleWindowInMs() == MISSING_INT)
+        {
+            throttleRejectBuilder = null;
+        }
+        else
+        {
+            throttleRejectBuilder = new ThrottleRejectBuilder(
+                sessionCodecs.dictionary(),
+                errorHandler,
+                sessionId,
+                connectionId,
+                configuration,
+                utcTimestampEncoder,
+                clock);
+            HeaderSetup.setup(resendRequest.header(), throttleRejectBuilder.header());
+        }
+
         final String message = asciiBuffer.getAscii(0, asciiBuffer.capacity());
         final FixReplayerSession fixReplayerSession = new FixReplayerSession(
             bufferClaim,
@@ -428,7 +452,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             bytesInBuffer,
             maxBytesInBuffer,
             utcTimestampEncoder,
-            this);
+            this,
+            throttleRejectBuilder);
 
         fixReplayerSession.query();
 

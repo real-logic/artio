@@ -111,6 +111,10 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ManageFixPConnectionDecoder.BLOCK_LENGTH;
     private static final int CANCEL_ON_DISCONNECT_TRIGGER_LENGTH =
         HEADER_LENGTH + CancelOnDisconnectTriggerEncoder.BLOCK_LENGTH;
+    private static final int THROTTLE_NOTIFICATION_LENGTH = HEADER_LENGTH +
+        ThrottleNotificationEncoder.BLOCK_LENGTH + ThrottleNotificationEncoder.businessRejectRefIDHeaderLength();
+    private static final int THROTTLE_REJECT_LENGTH = HEADER_LENGTH +
+        ThrottleRejectEncoder.BLOCK_LENGTH + ThrottleRejectEncoder.businessRejectRefIDHeaderLength();
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -145,6 +149,8 @@ public class GatewayPublication extends ClaimablePublication
     private final LibraryExtendPositionEncoder libraryExtendPosition = new LibraryExtendPositionEncoder();
     private final ManageFixPConnectionEncoder manageFixPConnection = new ManageFixPConnectionEncoder();
     private final CancelOnDisconnectTriggerEncoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerEncoder();
+    private final ThrottleNotificationEncoder throttleNotification = new ThrottleNotificationEncoder();
+    private final ThrottleRejectEncoder throttleReject = new ThrottleRejectEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -1499,6 +1505,82 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
 //        logSbeMessage(GATEWAY_MESSAGE, cancelOnDisconnectTrigger);
+
+        return position;
+    }
+
+    public long saveThrottleNotification(
+        final int libraryId,
+        final long connectionId,
+        final long refMsgType,
+        final int refSeqNum,
+        final long sessionId,
+        final int sequenceIndex,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        final long position = claim(THROTTLE_NOTIFICATION_LENGTH + businessRejectRefIDLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        throttleNotification
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .refMsgType(refMsgType)
+            .refSeqNum(refSeqNum)
+            .session(sessionId)
+            .sequenceIndex(sequenceIndex)
+            .putBusinessRejectRefID(businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(FIX_MESSAGE, throttleNotification);
+
+        return position;
+    }
+
+    public long saveThrottleReject(
+        final int libraryId,
+        final long connectionId,
+        final long refMsgType,
+        final int refSeqNum,
+        final int sequenceNumber,
+        final long sessionId,
+        final int sequenceIndex,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        final long position = claim(THROTTLE_REJECT_LENGTH + businessRejectRefIDLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        throttleReject
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .refMsgType(refMsgType)
+            .refSeqNum(refSeqNum)
+            .sequenceNumber(sequenceNumber)
+            .session(sessionId)
+            .sequenceIndex(sequenceIndex)
+            .putBusinessRejectRefID(businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(FIX_MESSAGE, throttleReject);
 
         return position;
     }

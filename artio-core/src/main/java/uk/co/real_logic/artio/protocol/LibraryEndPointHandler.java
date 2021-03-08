@@ -134,4 +134,12 @@ public interface LibraryEndPointHandler
         int limit,
         int messageLength);
 
+    Action onThrottleNotification(
+        int libraryId,
+        long connection,
+        long refMsgType,
+        int refSeqNum,
+        DirectBuffer businessRejectRefIDBuffer, int businessRejectRefIDOffset, int businessRejectRefIDLength,
+        long position);
+
 }

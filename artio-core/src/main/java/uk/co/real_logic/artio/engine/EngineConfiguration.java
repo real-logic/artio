@@ -49,6 +49,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.FixPProtocolType.BINARY_ENTRYPOINT;
@@ -166,6 +167,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final long DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS = 60_000;
     public static final int DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS = 5;
     public static final long DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS = SECONDS.toMillis(10);
+    public static final int NO_THROTTLE_WINDOW = MISSING_INT;
 
     static
     {
@@ -261,6 +263,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
     private boolean acceptsBinaryEntryPoint = false;
     private CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler = null;
+    private int throttleWindowInMs = NO_THROTTLE_WINDOW;
+    private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -826,6 +830,35 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
+     * Enables Artio's message throttle. If a session starts to send more messages than the specified throttle limit
+     * then Artio will drop those messages as efficiently as possible and reply to the messages with a business reject.
+     * The time window is applied as a rolling manner.
+     *
+     * @param throttleWindowInMs the time window to apply the throttle over.
+     * @param throttleLimitOfMessages the maximum number of messages that can be received within the time window.
+     * @return this
+     */
+    public EngineConfiguration enableMessageThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        if (throttleWindowInMs < 1)
+        {
+            throw new IllegalArgumentException(
+                "Unable to configure message throttle, throttleWindowInMs must be >= 1 but is " + throttleWindowInMs);
+        }
+
+        if (throttleLimitOfMessages < 1)
+        {
+            throw new IllegalArgumentException(
+                "Unable to configure message throttle, throttleLimitOfMessages must be >= 1 but is " +
+                throttleLimitOfMessages);
+        }
+
+        this.throttleWindowInMs = throttleWindowInMs;
+        this.throttleLimitOfMessages = throttleLimitOfMessages;
+        return this;
+    }
+
+    /**
      * Sets the maximum number of resend requests per session that Artio will process concurrently. Once the maximum is
      * hit further FIX resend requests will be ignored and an Exception will be logged noting the event. Note
      * this is a per-session parameter - ie the number of ResendRequests that will be queued for processing.
@@ -1326,6 +1359,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int outboundAdminStream()
     {
         return outboundAdminStream;
+    }
+
+    public int throttleWindowInMs()
+    {
+        return throttleWindowInMs;
+    }
+
+    public int throttleLimitOfMessages()
+    {
+        return throttleLimitOfMessages;
     }
 
     public EngineConfiguration conclude()

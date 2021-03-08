@@ -52,6 +52,7 @@ public final class SessionConstants
     public static final long REJECT_MESSAGE_TYPE = 51L;
     public static final long SEQUENCE_RESET_MESSAGE_TYPE = 52L;
     public static final long LOGOUT_MESSAGE_TYPE = 53L;
+    public static final long BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE = 106L;
 
     public static final int USER_REQUEST_MESSAGE_TYPE = 17730;
 
