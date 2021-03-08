@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio;
 
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
@@ -25,15 +26,60 @@ import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 
 public class BusinessRejectRefIdExtractor implements OtfMessageAcceptor
 {
     private static final MutableAsciiBuffer NO_RESULT = new MutableAsciiBuffer(new byte[0]);
 
-    private static final long INDICATION_OF_INTEREST = packMessageType("6");
+    private static final Long2LongHashMap PACKED_MESSAGE_TYPE_TO_REF_ID_TAG = new Long2LongHashMap(MISSING_LONG);
 
-    private static final int IOI_ID = 23;
+    private static void putReferenceTag(final String messageType, final int searchTag)
+    {
+        PACKED_MESSAGE_TYPE_TO_REF_ID_TAG.put(packMessageType(messageType), searchTag);
+    }
+
+    static
+    {
+        putReferenceTag("6", 23);
+        putReferenceTag("7", 2);
+        putReferenceTag("B", 148);
+        putReferenceTag("C", 164);
+        putReferenceTag("9", 11);
+        putReferenceTag("P", 70);
+        putReferenceTag("AT", 70);
+        putReferenceTag("N", 66);
+        putReferenceTag("T", 162);
+        putReferenceTag("W", 262);
+        putReferenceTag("X", 262);
+        putReferenceTag("Y", 262);
+        putReferenceTag("b", 117);
+        putReferenceTag("d", 322);
+        putReferenceTag("f", 324);
+        putReferenceTag("h", 335);
+        putReferenceTag("r", 37);
+        putReferenceTag("w", 322);
+        putReferenceTag("y", 322);
+        putReferenceTag("AA", 322);
+        putReferenceTag("AG", 131);
+        putReferenceTag("AH", 644);
+        putReferenceTag("AI", 117);
+        putReferenceTag("p", 513);
+        putReferenceTag("AE", 571);
+        putReferenceTag("AU", 664);
+        putReferenceTag("l", 390);
+        putReferenceTag("m", 66);
+        putReferenceTag("T", 777);
+        putReferenceTag("AQ", 568);
+        putReferenceTag("AR", 571);
+        putReferenceTag("AM", 721);
+        putReferenceTag("AO", 721);
+        putReferenceTag("AP", 721);
+        putReferenceTag("AW", 833);
+        putReferenceTag("AZ", 904);
+        putReferenceTag("BG", 909);
+    }
 
     private final OtfParser parser = new OtfParser(this, new LongDictionary());
 
@@ -51,10 +97,7 @@ public class BusinessRejectRefIdExtractor implements OtfMessageAcceptor
         length = 0;
         sequenceNumber = 0;
 
-        if (msgType == INDICATION_OF_INTEREST)
-        {
-            searchTag = IOI_ID;
-        }
+        searchTag = (int)PACKED_MESSAGE_TYPE_TO_REF_ID_TAG.get(msgType);
 
         parser.onMessage(msgBuffer, msgOffset, msgLength);
     }
@@ -74,6 +117,13 @@ public class BusinessRejectRefIdExtractor implements OtfMessageAcceptor
         if (tag == SessionConstants.MSG_SEQ_NO)
         {
             sequenceNumber = buffer.getInt(offset, offset + length);
+        }
+
+        if (tag == searchTag)
+        {
+            this.buffer = buffer;
+            this.offset = offset;
+            this.length = length;
         }
 
         return MessageControl.CONTINUE;
