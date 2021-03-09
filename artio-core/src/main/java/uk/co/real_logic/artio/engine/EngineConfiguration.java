@@ -832,13 +832,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Enables Artio's message throttle. If a session starts to send more messages than the specified throttle limit
      * then Artio will drop those messages as efficiently as possible and reply to the messages with a business reject.
-     * The time window is applied as a rolling manner.
+     * The time window is applied as a rolling manner. This can be overriden on a per session basis at runtime using
+     * {@link uk.co.real_logic.artio.session.Session#throttleMessagesAt(int, int)}.
      *
      * @param throttleWindowInMs the time window to apply the throttle over.
      * @param throttleLimitOfMessages the maximum number of messages that can be received within the time window.
+     * @throws IllegalArgumentException if either parameter is &lt; 1.
      * @return this
      */
     public EngineConfiguration enableMessageThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        validateMessageThrottleOptions(throttleWindowInMs, throttleLimitOfMessages);
+
+        this.throttleWindowInMs = throttleWindowInMs;
+        this.throttleLimitOfMessages = throttleLimitOfMessages;
+        return this;
+    }
+
+    public static void validateMessageThrottleOptions(final int throttleWindowInMs, final int throttleLimitOfMessages)
     {
         if (throttleWindowInMs < 1)
         {
@@ -850,12 +861,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         {
             throw new IllegalArgumentException(
                 "Unable to configure message throttle, throttleLimitOfMessages must be >= 1 but is " +
-                throttleLimitOfMessages);
+                    throttleLimitOfMessages);
         }
-
-        this.throttleWindowInMs = throttleWindowInMs;
-        this.throttleLimitOfMessages = throttleLimitOfMessages;
-        return this;
     }
 
     /**

@@ -45,6 +45,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final InitiateILinkConnectionDecoder initiateILinkConnection = new InitiateILinkConnectionDecoder();
     private final CancelOnDisconnectTriggerDecoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
+    private final ThrottleConfigurationDecoder throttleConfiguration = new ThrottleConfigurationDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -65,75 +66,66 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         switch (messageHeader.templateId())
         {
             case RequestDisconnectDecoder.TEMPLATE_ID:
-            {
                 return onRequestDisconnect(buffer, offset, blockLength, version, header);
-            }
 
             case InitiateConnectionDecoder.TEMPLATE_ID:
-            {
                 return onInitiateConnection(buffer, offset, blockLength, version, header);
-            }
 
             case ApplicationHeartbeatDecoder.TEMPLATE_ID:
-            {
                 return onApplicationHeartbeat(buffer, offset, blockLength, version, header);
-            }
 
             case LibraryConnectDecoder.TEMPLATE_ID:
-            {
                 return onLibraryConnect(buffer, offset, blockLength, version, header);
-            }
 
             case ReleaseSessionDecoder.TEMPLATE_ID:
-            {
                 return onReleaseSession(buffer, offset, blockLength, version, header);
-            }
 
             case RequestSessionDecoder.TEMPLATE_ID:
-            {
                 return onRequestSession(buffer, offset, blockLength, version, header);
-            }
 
             case MidConnectionDisconnectDecoder.TEMPLATE_ID:
-            {
                 return onMidConnectionDisconnect(buffer, offset, blockLength, version, header);
-            }
 
             case FollowerSessionRequestDecoder.TEMPLATE_ID:
-            {
                 return onFollowerSessionRequest(buffer, offset, blockLength, version, header);
-            }
 
             case WriteMetaDataDecoder.TEMPLATE_ID:
-            {
                 return onWriteMetaData(buffer, offset, blockLength, version, header);
-            }
 
             case ReadMetaDataDecoder.TEMPLATE_ID:
-            {
                 return onReadMetaData(buffer, offset, blockLength, version, header);
-            }
 
             case ReplayMessagesDecoder.TEMPLATE_ID:
-            {
                 return onReplayMessages(buffer, offset, blockLength, version, header);
-            }
 
             case InitiateILinkConnectionDecoder.TEMPLATE_ID:
-            {
                 return onInitiateILinkConnection(buffer, offset, blockLength, version, header);
-            }
 
             case CancelOnDisconnectTriggerDecoder.TEMPLATE_ID:
-            {
                 return onCancelOnDisconnectTrigger(buffer, offset, blockLength, version);
-            }
 
             case ThrottleRejectDecoder.TEMPLATE_ID:
                 return onThrottleReject(buffer, offset, blockLength, version, header);
+
+            case ThrottleConfigurationDecoder.TEMPLATE_ID:
+                return onThrottleConfiguration(buffer, offset, blockLength, version, header);
         }
 
         return CONTINUE;
+    }
+
+    private Action onThrottleConfiguration(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+    {
+        final ThrottleConfigurationDecoder throttleConfiguration = this.throttleConfiguration;
+        throttleConfiguration.wrap(buffer, offset, blockLength, version);
+
+        return handler.onThrottleConfiguration(
+            throttleConfiguration.libraryId(),
+            throttleConfiguration.correlationId(),
+            throttleConfiguration.session(),
+            throttleConfiguration.throttleWindowInMs(),
+            throttleConfiguration.throttleLimitOfMessages());
     }
 
     private Action onThrottleReject(

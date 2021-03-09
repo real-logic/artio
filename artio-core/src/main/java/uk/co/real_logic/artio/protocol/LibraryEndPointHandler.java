@@ -142,4 +142,5 @@ public interface LibraryEndPointHandler
         DirectBuffer businessRejectRefIDBuffer, int businessRejectRefIDOffset, int businessRejectRefIDLength,
         long position);
 
+    Action onThrottleConfigurationReply(int libraryId, long replyToId, ThrottleConfigurationStatus status);
 }

@@ -245,13 +245,19 @@ class FixSenderEndPoint
                 errorHandler,
                 sessionId,
                 connectionId,
-                configuration,
                 new UtcTimestampEncoder(configuration.sessionEpochFractionFormat()),
-                configuration.epochNanoClock());
+                configuration.epochNanoClock(),
+                configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages()
+            );
             configuration.sessionIdStrategy().setupSession(sessionKey, throttleRejectBuilder.header());
         }
 
         return throttleRejectBuilder;
+    }
+
+    boolean configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        return throttleRejectBuilder().configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
     }
 
     private int throttleRejectLength(final int businessRejectRefIDLength)

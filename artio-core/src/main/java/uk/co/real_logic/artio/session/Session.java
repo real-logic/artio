@@ -43,6 +43,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.*;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.validateMessageThrottleOptions;
 import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
@@ -446,7 +447,8 @@ public class Session
     /**
      * Request the session be disconnected.
      *
-     * @return the position within the Aeron stream where the disconnect is encoded.
+     * @return the position within the Aeron stream where the disconnect is encoded. If this is &lt; 0 then the
+     * operation has failed.
      * @see Session#logoutAndDisconnect()
      */
     public long requestDisconnect()
@@ -464,6 +466,24 @@ public class Session
         }
 
         return position;
+    }
+
+    /**
+     * Override Artio's message throttle configuration for a given session.
+     *
+     * @param throttleWindowInMs the time window to apply the throttle over.
+     * @param throttleLimitOfMessages the maximum number of messages that can be received within the time window.
+     * @return a reply object that represents the state of the operation.
+     * @throws IllegalArgumentException if either parameter is &lt; 1.
+     * @see uk.co.real_logic.artio.engine.EngineConfiguration#enableMessageThrottle(int, int)
+     */
+    public Reply<ThrottleConfigurationStatus> throttleMessagesAt(
+        final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        validateMessageThrottleOptions(throttleWindowInMs, throttleLimitOfMessages);
+
+        return sessionProcessHandler.messageThrottle(
+            id, throttleWindowInMs, throttleLimitOfMessages);
     }
 
     /**

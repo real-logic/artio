@@ -50,6 +50,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
     private final ManageFixPConnectionDecoder manageFixPConnection = new ManageFixPConnectionDecoder();
     private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
+    private final ThrottleConfigurationReplyDecoder throttleConfigurationReply =
+        new ThrottleConfigurationReplyDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -125,9 +127,30 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
             case ThrottleNotificationDecoder.TEMPLATE_ID:
                 return onThrottleNotification(buffer, offset, blockLength, version, header.position());
+
+            case ThrottleConfigurationReplyDecoder.TEMPLATE_ID:
+                return onThrottleConfigurationReply(buffer, offset, blockLength, version, header.position());
         }
 
         return CONTINUE;
+    }
+
+    private Action onThrottleConfigurationReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final long position)
+    {
+        final ThrottleConfigurationReplyDecoder throttleConfigurationReply = this.throttleConfigurationReply;
+        throttleConfigurationReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = throttleConfigurationReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onThrottleConfigurationReply(
+            libraryId,
+            throttleConfigurationReply.replyToId(),
+            throttleConfigurationReply.status());
     }
 
     private Action onThrottleNotification(

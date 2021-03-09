@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.Timer;
 
@@ -37,6 +38,7 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
     private final Timer receiveTimer;
     private final Timer sessionTimer;
     private final LibraryPoller libraryPoller;
+    private final long replyTimeoutInMs;
 
     private SessionHandler handler;
     private InitiateSessionReply initiateSessionReply;
@@ -48,7 +50,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
         final InternalSession session,
         final Timer receiveTimer,
         final Timer sessionTimer,
-        final LibraryPoller libraryPoller)
+        final LibraryPoller libraryPoller,
+        final long replyTimeoutInMs)
     {
         this.info = info;
         this.parser = parser;
@@ -56,6 +59,7 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
         this.receiveTimer = receiveTimer;
         this.sessionTimer = sessionTimer;
         this.libraryPoller = libraryPoller;
+        this.replyTimeoutInMs = replyTimeoutInMs;
         this.session.sessionProcessHandler(this);
     }
 
@@ -197,16 +201,27 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
         final int replayFromSequenceIndex,
         final int replayToSequenceNumber,
         final int replayToSequenceIndex,
-        final long timeout)
+        final long timeoutInMs)
     {
         return new ReplayMessagesReply(
             libraryPoller,
-            libraryPoller.timeInMs() + timeout,
+            libraryPoller.timeInMs() + timeoutInMs,
             sessionId,
             replayFromSequenceNumber,
             replayFromSequenceIndex,
             replayToSequenceNumber,
             replayToSequenceIndex);
+    }
+
+    public Reply<ThrottleConfigurationStatus> messageThrottle(
+        final long sessionId, final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        return new ThrottleConfigurationReply(
+            libraryPoller,
+            libraryPoller.timeInMs() + replyTimeoutInMs,
+            sessionId,
+            throttleWindowInMs,
+            throttleLimitOfMessages);
     }
 
     public void enqueueTask(final BooleanSupplier task)

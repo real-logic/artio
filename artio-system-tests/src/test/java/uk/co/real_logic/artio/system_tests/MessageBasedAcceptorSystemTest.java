@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
@@ -24,6 +25,7 @@ import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -42,6 +44,7 @@ import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixConnection.BUFFER_SIZE;
 import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -419,43 +422,84 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     }
 
     @Test
-    public void shouldRejectMessagesOverThrottle() throws IOException, InterruptedException
+    public void shouldRejectMessagesOverThrottle() throws IOException
     {
         setup(true, true, true, ENGINE, true);
+        setupLibrary();
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
             logon(connection);
+            testSystem.poll();
 
-            final int reportCount = 10;
-            for (int i = 0; i < reportCount; i++)
-            {
-                connection.sendExecutionReport(connection.acquireMsgSeqNum(), false);
+            assertMessagesRejectedAboveThrottleRate(connection, THROTTLE_MSG_LIMIT, 2, 4, 1);
 
-                sleep(1);
-            }
-
-            for (int i = 0; i < (reportCount - TEST_THROTTLE_LIMIT_OF_MESSAGES) + 1; i++)
-            {
-                assertReadsBusinessReject(connection, i + 2, i + 4, false);
-            }
-
-            Thread.sleep(TEST_THROTTLE_WINDOW_IN_MS);
+            testSystem.awaitBlocking(this::sleepThrottleWindow);
 
             final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
             assertEquals(10, abc.header().msgSeqNum());
 
             // Test that resend requests work with throttle rejection
             connection.sendResendRequest(4, 5);
-            assertReadsBusinessReject(connection, 4, 6, true);
-            assertReadsBusinessReject(connection, 5, 7, true);
+            assertReadsBusinessReject(connection, 4, 6, true, THROTTLE_MSG_LIMIT);
+            assertReadsBusinessReject(connection, 5, 7, true, THROTTLE_MSG_LIMIT);
+            final HeartbeatDecoder def = connection.exchangeTestRequestHeartbeat("DEF");
+            assertEquals(11, def.header().msgSeqNum());
+            testSystem.poll();
 
-            connection.logoutAndAwaitReply();
+            // Reset the throttle rate
+            final Session session = acquireSession();
+            final Reply<ThrottleConfigurationStatus> reply = testSystem.awaitCompletedReply(session.throttleMessagesAt(
+                TEST_THROTTLE_WINDOW_IN_MS, RESET_THROTTLE_MSG_LIMIT));
+            assertEquals(reply.toString(), OK, reply.resultIfPresent());
+
+            testSystem.awaitBlocking(() ->
+            {
+                sleepThrottleWindow();
+
+                assertMessagesRejectedAboveThrottleRate(connection, RESET_THROTTLE_MSG_LIMIT, 12, 20, 0);
+
+                sleepThrottleWindow();
+
+                connection.logoutAndAwaitReply();
+            });
+        }
+    }
+
+    private void sleepThrottleWindow()
+    {
+        sleep(TEST_THROTTLE_WINDOW_IN_MS);
+    }
+
+    private void assertMessagesRejectedAboveThrottleRate(
+        final FixConnection connection,
+        final int limitOfMessages,
+        final int seqNumOffset,
+        final int refSeqNumOffset,
+        final int messagesWithinThrottleWindow)
+    {
+        final int reportCount = 10;
+        for (int i = 0; i < reportCount; i++)
+        {
+            connection.sendExecutionReport(connection.acquireMsgSeqNum(), false);
+
+            sleep(1);
+        }
+
+        // messagesWithinThrottleWindow - could be login message at the start
+        for (int i = 0; i < (reportCount - limitOfMessages) + messagesWithinThrottleWindow; i++)
+        {
+            assertReadsBusinessReject(
+                connection, i + seqNumOffset, i + refSeqNumOffset, false, limitOfMessages);
         }
     }
 
     private void assertReadsBusinessReject(
-        final FixConnection connection, final int seqNum, final int refSeqNum, final boolean possDup)
+        final FixConnection connection,
+        final int seqNum,
+        final int refSeqNum,
+        final boolean possDup,
+        final int limitOfMessages)
     {
         final BusinessMessageRejectDecoder reject = connection.readBusinessReject();
         final HeaderDecoder header = reject.header();
@@ -467,7 +511,8 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         assertEquals("wrong businessRejectReason", 99, reject.businessRejectReason());
         assertEquals("8", reject.refMsgTypeAsString());
         assertEquals("wrong refSeqNum", refSeqNum, reject.refSeqNum());
-        assertEquals("Throttle limit exceeded (3 in 1000ms)", reject.textAsString());
+        assertEquals("Throttle limit exceeded (" + limitOfMessages + " in 300ms)",
+            reject.textAsString());
     }
 
     private void sleepToAwaitResend()

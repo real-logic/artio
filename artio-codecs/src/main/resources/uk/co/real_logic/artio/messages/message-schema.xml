@@ -227,6 +227,19 @@
             <validValue name="CANCEL_ON_LOGOUT_ONLY">2</validValue>
             <validValue name="CANCEL_ON_DISCONNECT_OR_LOGOUT">3</validValue>
         </enum>
+
+        <enum name="ThrottleConfigurationStatus" encodingType="uint8">
+            <validValue name="OK"
+                        description="Operation Succeeded">0</validValue>
+            <validValue name="SESSION_NOT_OWNED"
+                        description="Either your library doesn't own this session or the gateway doesn't know about the specified session">1</validValue>
+            <validValue name="UNKNOWN_LIBRARY"
+                        description="The gateway doesn't know about your library">2</validValue>
+            <validValue name="SESSION_NOT_LOGGED_IN"
+                        description="The session isn't currently logged in.">3</validValue>
+            <validValue name="INVALID_DICTIONARY"
+                        description="The session is configured to use a Fix Dictionary that doesn't support the business reject message.">4</validValue>
+        </enum>
     </types>
 
     <!-- Messages From Library To Engine -->
@@ -353,6 +366,16 @@
         <field name="session" id="6" type="FixSessionId"/>
         <field name="sequenceIndex" id="7" type="SequenceIndex" />
         <data name="businessRejectRefID" id="8" type="AsciiString"/>
+    </sbe:message>
+
+    <sbe:message name="ThrottleConfiguration" id="72"
+         description="Override the configuration of a specific sessions throttle rate"
+         sinceVersion="16">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="throttleWindowInMs" id="4" type="int32" />
+        <field name="throttleLimitOfMessages" id="5" type="int32" />
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -546,6 +569,14 @@
         <field name="session" id="5" type="FixSessionId"/>
         <field name="sequenceIndex" id="6" type="SequenceIndex" />
         <data name="businessRejectRefID" id="7" type="AsciiString"/>
+    </sbe:message>
+
+    <sbe:message name="ThrottleConfigurationReply" id="73"
+                 description="Acknowledge the configuration of a specific sessions throttle rate"
+                 sinceVersion="16">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="ThrottleConfigurationStatus"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

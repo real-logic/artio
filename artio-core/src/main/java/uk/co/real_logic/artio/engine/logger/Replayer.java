@@ -429,9 +429,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 errorHandler,
                 sessionId,
                 connectionId,
-                configuration,
                 utcTimestampEncoder,
-                clock);
+                clock, configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages());
             HeaderSetup.setup(resendRequest.header(), throttleRejectBuilder.header());
         }
 

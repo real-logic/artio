@@ -7,7 +7,6 @@ import uk.co.real_logic.artio.builder.AbstractBusinessMessageRejectEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MessageTypeEncoding;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -34,9 +33,10 @@ public class ThrottleRejectBuilder
         final ErrorHandler errorHandler,
         final long sessionId,
         final long connectionId,
-        final EngineConfiguration configuration,
         final UtcTimestampEncoder timestampEncoder,
-        final EpochNanoClock clock)
+        final EpochNanoClock clock,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages)
     {
         this.timestampEncoder = timestampEncoder;
         this.clock = clock;
@@ -52,9 +52,22 @@ public class ThrottleRejectBuilder
         }
         else
         {
+            configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
+        }
+    }
+
+    boolean configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        if (businessMessageReject != null)
+        {
             businessMessageReject.text(String.format("Throttle limit exceeded (%s in %sms)",
-                configuration.throttleLimitOfMessages(),
-                configuration.throttleWindowInMs()));
+                throttleLimitOfMessages,
+                throttleWindowInMs));
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 

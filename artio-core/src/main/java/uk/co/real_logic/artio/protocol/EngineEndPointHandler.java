@@ -132,4 +132,7 @@ public interface EngineEndPointHandler
         int businessRejectRefIDOffset,
         int businessRejectRefIDLength,
         long position);
+
+    Action onThrottleConfiguration(
+        int libraryId, long correlationId, long session, int throttleWindowInMs, int throttleLimitOfMessages);
 }

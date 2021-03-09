@@ -41,8 +41,9 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUE
 
 public class AbstractMessageBasedAcceptorSystemTest
 {
-    public static final int TEST_THROTTLE_WINDOW_IN_MS = 1000;
-    public static final int TEST_THROTTLE_LIMIT_OF_MESSAGES = 3;
+    public static final int TEST_THROTTLE_WINDOW_IN_MS = 300;
+    public static final int THROTTLE_MSG_LIMIT = 3;
+    public static final int RESET_THROTTLE_MSG_LIMIT = 5;
 
     int port = unusedPort();
 
@@ -109,7 +110,7 @@ public class AbstractMessageBasedAcceptorSystemTest
 
         if (enableThrottle)
         {
-            config.enableMessageThrottle(TEST_THROTTLE_WINDOW_IN_MS, TEST_THROTTLE_LIMIT_OF_MESSAGES);
+            config.enableMessageThrottle(TEST_THROTTLE_WINDOW_IN_MS, THROTTLE_MSG_LIMIT);
         }
 
         if (provideBindingAddress)

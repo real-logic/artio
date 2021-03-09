@@ -159,10 +159,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
-    private final long throttleWindowInNs;
-    private final int throttleLimitOfMessages;
-    private final long[] lastMessageTimestampsInNs;
-    private final int lastMessageTimestampsInNsMask;
+    private long throttleWindowInNs;
+    private int throttleLimitOfMessages;
+    private long[] lastMessageTimestampsInNs;
+    private int lastMessageTimestampsInNsMask;
     private int throttlePosition = 0;
 
     private FixGatewaySession gatewaySession;
@@ -201,7 +201,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
 
-        this.throttleLimitOfMessages = throttleLimitOfMessages;
         this.formatters = formatters;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex - 1; // Incremented on first logon
@@ -211,7 +210,19 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
 
+        configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
 
+        address = channel.remoteAddress();
+    }
+
+    void configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        if (this.throttleWindowInNs == throttleWindowInMs && this.throttleLimitOfMessages == throttleLimitOfMessages)
+        {
+            return;
+        }
+
+        this.throttleLimitOfMessages = throttleLimitOfMessages;
         if (throttleWindowInMs == MISSING_INT)
         {
             this.throttleWindowInNs = MISSING_LONG;
@@ -225,8 +236,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             lastMessageTimestampsInNs = new long[lastMessageTimestampsInNsCapacity];
             lastMessageTimestampsInNsMask = lastMessageTimestampsInNsCapacity - 1;
         }
-
-        address = channel.remoteAddress();
     }
 
     private int readData() throws IOException

@@ -115,6 +115,9 @@ public class GatewayPublication extends ClaimablePublication
         ThrottleNotificationEncoder.BLOCK_LENGTH + ThrottleNotificationEncoder.businessRejectRefIDHeaderLength();
     private static final int THROTTLE_REJECT_LENGTH = HEADER_LENGTH +
         ThrottleRejectEncoder.BLOCK_LENGTH + ThrottleRejectEncoder.businessRejectRefIDHeaderLength();
+    private static final int THROTTLE_CONFIGURATION_LENGTH = HEADER_LENGTH + ThrottleConfigurationEncoder.BLOCK_LENGTH;
+    private static final int THROTTLE_CONFIGURATION_REPLY_LENGTH = HEADER_LENGTH +
+        ThrottleConfigurationReplyEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -151,6 +154,9 @@ public class GatewayPublication extends ClaimablePublication
     private final CancelOnDisconnectTriggerEncoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerEncoder();
     private final ThrottleNotificationEncoder throttleNotification = new ThrottleNotificationEncoder();
     private final ThrottleRejectEncoder throttleReject = new ThrottleRejectEncoder();
+    private final ThrottleConfigurationEncoder throttleConfiguration = new ThrottleConfigurationEncoder();
+    private final ThrottleConfigurationReplyEncoder throttleConfigurationReply =
+        new ThrottleConfigurationReplyEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -1581,6 +1587,64 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(FIX_MESSAGE, throttleReject);
+
+        return position;
+    }
+
+    public long saveThrottleConfiguration(
+        final int libraryId,
+        final long correlationId,
+        final long sessionId,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages)
+    {
+        final long position = claim(THROTTLE_CONFIGURATION_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        throttleConfiguration
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .session(sessionId)
+            .throttleWindowInMs(throttleWindowInMs)
+            .throttleLimitOfMessages(throttleLimitOfMessages);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, throttleConfiguration);
+
+        return position;
+    }
+
+    public long saveThrottleConfigurationReply(
+        final int libraryId,
+        final long replyToId,
+        final ThrottleConfigurationStatus status)
+    {
+        final long position = claim(THROTTLE_CONFIGURATION_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        throttleConfigurationReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .status(status);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, throttleConfigurationReply);
 
         return position;
     }

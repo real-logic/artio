@@ -508,4 +508,9 @@ public final class FixConnection implements AutoCloseable
 
         return resendRequest;
     }
+
+    public int msgSeqNum()
+    {
+        return msgSeqNum;
+    }
 }

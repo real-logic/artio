@@ -22,10 +22,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
-import uk.co.real_logic.artio.messages.ConnectionType;
-import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
-import uk.co.real_logic.artio.messages.SlowStatus;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
@@ -209,10 +206,21 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         final int replayToSequenceIndex,
         final long timeout)
     {
-        throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
+        return unsupported();
     }
 
     public void enqueueTask(final BooleanSupplier task)
+    {
+        unsupported();
+    }
+
+    public Reply<ThrottleConfigurationStatus> messageThrottle(
+        final long sessionId, final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        return unsupported();
+    }
+
+    private <T> T unsupported()
     {
         throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
     }
@@ -502,5 +510,15 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         }
 
         return true;
+    }
+
+    public boolean configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        final boolean ok = senderEndPoint.configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
+        if (ok)
+        {
+            receiverEndPoint.configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
+        }
+        return ok;
     }
 }

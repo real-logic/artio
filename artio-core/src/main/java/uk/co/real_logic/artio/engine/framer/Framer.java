@@ -872,6 +872,42 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             position);
     }
 
+    public Action onThrottleConfiguration(
+        final int libraryId,
+        final long correlationId,
+        final long sessionId,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages)
+    {
+        final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        if (libraryInfo == null)
+        {
+            return saveThrottleConfReply(libraryId, correlationId, ThrottleConfigurationStatus.UNKNOWN_LIBRARY);
+        }
+
+        final FixGatewaySession gatewaySession = (FixGatewaySession)libraryInfo.lookupSessionById(sessionId);
+        if (gatewaySession == null)
+        {
+            return saveThrottleConfReply(libraryId, correlationId, ThrottleConfigurationStatus.SESSION_NOT_OWNED);
+        }
+
+        if (gatewaySession.isOffline())
+        {
+            return saveThrottleConfReply(libraryId, correlationId, ThrottleConfigurationStatus.SESSION_NOT_LOGGED_IN);
+        }
+
+        final ThrottleConfigurationStatus status =
+            gatewaySession.configureThrottle(throttleWindowInMs, throttleLimitOfMessages) ?
+            ThrottleConfigurationStatus.OK : ThrottleConfigurationStatus.INVALID_DICTIONARY;
+        return saveThrottleConfReply(libraryId, correlationId, status);
+    }
+
+    private Action saveThrottleConfReply(
+        final int libraryId, final long correlationId, final ThrottleConfigurationStatus ok)
+    {
+        return Pressure.apply(inboundPublication.saveThrottleConfigurationReply(libraryId, correlationId, ok));
+    }
+
     private long runCancelOnDisconnect(
         final long sessionId,
         final long timeInNs,

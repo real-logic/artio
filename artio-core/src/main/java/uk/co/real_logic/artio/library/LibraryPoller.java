@@ -456,6 +456,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             latestReplyArrivalTimeInMs);
     }
 
+    long saveThrottleConfiguration(
+        final long correlationId,
+        final long sessionId,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages)
+    {
+        checkState();
+
+        return outboundPublication.saveThrottleConfiguration(
+            libraryId,
+            correlationId,
+            sessionId,
+            throttleWindowInMs,
+            throttleLimitOfMessages);
+    }
+
     void onInitiatorSessionTimeout(final long correlationId, final long connectionId)
     {
         checkState();
@@ -1432,10 +1448,28 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int srcOffset,
         final int srcLength)
     {
-        final ReadMetaDataReply reply = (ReadMetaDataReply)correlationIdToReply.remove(replyToId);
-        if (reply != null)
+        if (this.libraryId == libraryId)
         {
-            reply.onComplete(status, srcBuffer, srcOffset, srcLength);
+            final ReadMetaDataReply reply = (ReadMetaDataReply)correlationIdToReply.remove(replyToId);
+            if (reply != null)
+            {
+                reply.onComplete(status, srcBuffer, srcOffset, srcLength);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    public Action onThrottleConfigurationReply(
+        final int libraryId, final long replyToId, final ThrottleConfigurationStatus status)
+    {
+        if (this.libraryId == libraryId)
+        {
+            final ThrottleConfigurationReply reply = (ThrottleConfigurationReply)correlationIdToReply.remove(replyToId);
+            if (reply != null)
+            {
+                reply.onComplete(status);
+            }
         }
 
         return CONTINUE;
@@ -1864,7 +1898,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session,
             receiveTimer,
             sessionTimer,
-            this);
+            this,
+            configuration.replyTimeoutInMs());
         subscriber.reply(reply);
         subscriber.handler(configuration.sessionAcquireHandler().onSessionAcquired(session, sessionAcquiredInfo));
 

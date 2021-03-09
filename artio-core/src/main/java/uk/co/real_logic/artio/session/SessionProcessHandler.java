@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 
 import java.util.function.BooleanSupplier;
 
@@ -37,4 +38,7 @@ public interface SessionProcessHandler
         long timeout);
 
     void enqueueTask(BooleanSupplier task);
+
+    Reply<ThrottleConfigurationStatus> messageThrottle(
+        long sessionId, int throttleWindowInMs, int throttleLimitOfMessages);
 }

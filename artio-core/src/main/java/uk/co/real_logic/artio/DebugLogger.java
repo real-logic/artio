@@ -119,6 +119,26 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final ThrottleConfigurationEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
+        final ThrottleConfigurationReplyEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
         final ManageSessionEncoder encoder)
     {
         if (isEnabled(tag))
@@ -693,6 +713,9 @@ public final class DebugLogger
         private final InitiateILinkConnectionDecoder initiateILinkConnection =
             new InitiateILinkConnectionDecoder();
         private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
+        private final ThrottleConfigurationDecoder throttleConfiguration = new ThrottleConfigurationDecoder();
+        private final ThrottleConfigurationReplyDecoder throttleConfigurationReply =
+            new ThrottleConfigurationReplyDecoder();
 
         // Engine -> Library
         private final ErrorDecoder error = new ErrorDecoder();
@@ -745,6 +768,30 @@ public final class DebugLogger
                 RedactSequenceUpdateEncoder.BLOCK_LENGTH,
                 RedactSequenceUpdateEncoder.SCHEMA_VERSION);
             redactSequenceUpdate.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ThrottleConfigurationEncoder encoder)
+        {
+            appendStart();
+            throttleConfiguration.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ThrottleConfigurationEncoder.BLOCK_LENGTH,
+                ThrottleConfigurationEncoder.SCHEMA_VERSION);
+            throttleConfiguration.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ThrottleConfigurationReplyEncoder encoder)
+        {
+            appendStart();
+            throttleConfigurationReply.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                ThrottleConfigurationReplyEncoder.BLOCK_LENGTH,
+                ThrottleConfigurationReplyEncoder.SCHEMA_VERSION);
+            throttleConfigurationReply.appendTo(builder);
             finish(tag);
         }
 
