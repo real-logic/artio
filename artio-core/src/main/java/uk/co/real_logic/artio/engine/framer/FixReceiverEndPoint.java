@@ -163,7 +163,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private int throttleLimitOfMessages;
     private long[] lastMessageTimestampsInNs;
     private int lastMessageTimestampsInNsMask;
-    private int throttlePosition = 0;
+    private int throttlePosition;
 
     private FixGatewaySession gatewaySession;
     private long sessionId;
@@ -222,7 +222,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             return;
         }
 
-        this.throttleLimitOfMessages = throttleLimitOfMessages;
+        final long[] oldLastMessageTimestampsInNs = this.lastMessageTimestampsInNs;
+        final int oldThrottleLimitOfMessages = this.throttleLimitOfMessages;
+        final int oldLastMessageTimestampsInNsMask = this.lastMessageTimestampsInNsMask;
+        final int oldThrottlePosition = this.throttlePosition;
+
         if (throttleWindowInMs == MISSING_INT)
         {
             this.throttleWindowInNs = MISSING_LONG;
@@ -235,6 +239,21 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             final int lastMessageTimestampsInNsCapacity = BitUtil.findNextPositivePowerOfTwo(throttleLimitOfMessages);
             lastMessageTimestampsInNs = new long[lastMessageTimestampsInNsCapacity];
             lastMessageTimestampsInNsMask = lastMessageTimestampsInNsCapacity - 1;
+        }
+        this.throttleLimitOfMessages = throttleLimitOfMessages;
+        throttlePosition = 0;
+
+        if (oldLastMessageTimestampsInNs != null && lastMessageTimestampsInNs != null)
+        {
+            final int minLimitOfMessages = Math.min(oldThrottleLimitOfMessages, throttleLimitOfMessages);
+            int srcPosition = Math.max(0, oldThrottlePosition - minLimitOfMessages);
+            while (srcPosition < oldThrottlePosition)
+            {
+                lastMessageTimestampsInNs[throttlePosition & lastMessageTimestampsInNsMask] =
+                    oldLastMessageTimestampsInNs[srcPosition & oldLastMessageTimestampsInNsMask];
+                srcPosition++;
+                throttlePosition++;
+            }
         }
     }
 
