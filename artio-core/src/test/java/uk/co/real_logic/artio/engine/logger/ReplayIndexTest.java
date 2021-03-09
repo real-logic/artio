@@ -502,7 +502,7 @@ public class ReplayIndexTest extends AbstractLogTest
             new FixMessageTracker(REPLAY, mockHandler, sessionId));
 
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        while (!operation.attemptReplay())
+        while (!operation.pollReplay())
         {
             idleStrategy.idle();
         }

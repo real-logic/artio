@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.Aeron;
+import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AgentRunner;
@@ -38,11 +39,14 @@ import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.IntSupplier;
 
 import static java.util.Arrays.asList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
@@ -52,8 +56,7 @@ import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID;
 import static uk.co.real_logic.artio.FixCounters.lookupCounterIds;
 import static uk.co.real_logic.artio.FixMatchers.*;
-import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.Timing.withTimeout;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -79,7 +82,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Before
     public void launch()
     {
-        mediaDriver = launchMediaDriver();
+        final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH, true);
+        context.publicationLingerTimeoutNs(SECONDS.toNanos(1));
+        mediaDriver = launchMediaDriver(context);
 
 //        logger = FixMessageLogger.start();
 
@@ -947,6 +952,46 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
+    public void shouldCleanupAeronResourcesUponDisconnectDuringResend() throws IOException
+    {
+        // Test reproduces a race within the cleanup of the ReplayOperation
+        messagesCanBeExchanged();
+
+        messagesCanBeExchanged();
+
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+        resendRequest.beginSeqNo(1).endSeqNo(0);
+
+        initiatingOtfAcceptor.messages().clear();
+
+        testSystem.send(initiatingSession, resendRequest);
+
+        sleep(1);
+
+        testSystem.awaitSend("Failed to disconnect", () -> initiatingSession.requestDisconnect());
+
+        sleep(2_500);
+
+        final long remainingFileCount = Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath())
+            .count();
+        assertEquals(31L, remainingFileCount);
+    }
+
+    private void sleep(final int timeInMs)
+    {
+        testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                Thread.sleep(timeInMs);
+            } catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @Test
     public void shouldReplayAMixOfEngineAndLibraryMessages()
     {
         // Engine messages
@@ -1191,17 +1236,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThat(acceptingSession.trySend(executionReport), greaterThan(0L));
 
         testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-    }
-
-    private void awaitIsConnected(final boolean isConnected, final FixLibrary library)
-    {
-        assertEventuallyTrue(
-            "isConnected never became: " + isConnected,
-            () ->
-            {
-                testSystem.poll();
-                return library.isConnected() == isConnected;
-            });
     }
 
     private void reacquireSession(

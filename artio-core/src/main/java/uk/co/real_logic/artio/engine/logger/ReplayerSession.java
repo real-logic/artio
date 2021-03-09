@@ -128,11 +128,19 @@ abstract class ReplayerSession implements ControlledFragmentHandler
 
     abstract boolean attemptReplay();
 
-    void close()
+    void closeNow()
     {
         if (replayOperation != null)
         {
-            replayOperation.close();
+            replayOperation.closeNow();
+        }
+    }
+
+    void startClose()
+    {
+        if (replayOperation != null)
+        {
+            replayOperation.startClose();
         }
     }
 }

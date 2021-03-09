@@ -22,9 +22,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.collections.IntHashSet;
-import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.LongHashSet;
+import org.agrona.collections.*;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
@@ -42,6 +40,8 @@ import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.Lazy;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
@@ -109,6 +109,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ReplayerTimestampEncoder replayerTimestampEncoder = new ReplayerTimestampEncoder();
     private long nextTimestampMessageInNs;
 
+    private final List<ReplayChannel> closingChannels = new ArrayList<>();
     private final Long2ObjectHashMap<ReplayChannel> connectionIdToReplayerChannel = new Long2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
@@ -279,7 +280,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
         {
             currentReplayCount.decrement();
             // replay was in progress at the time of disconnect
-            replayChannel.close();
+            if (!replayChannel.startClose())
+            {
+                closingChannels.add(replayChannel);
+            }
         }
     }
 
@@ -523,12 +527,12 @@ public class Replayer implements Agent, ControlledFragmentHandler
             }
         }
 
-        return size;
+        return size + CollectionUtil.removeIf(closingChannels, ReplayChannel::attemptReplay);
     }
 
     public void onClose()
     {
-        connectionIdToReplayerChannel.values().forEach(ReplayChannel::close);
+        connectionIdToReplayerChannel.values().forEach(ReplayChannel::closeNow);
         connectionIdToReplayerChannel.clear();
         currentReplayCount.set(0);
         currentReplayCount.close();

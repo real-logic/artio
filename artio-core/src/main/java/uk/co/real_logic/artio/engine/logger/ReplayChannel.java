@@ -66,11 +66,23 @@ class ReplayChannel
         return session == null || session.attemptReplay();
     }
 
-    void close()
+    void closeNow()
     {
         if (session != null)
         {
-            session.close();
+            session.closeNow();
         }
+    }
+
+    // true if safe to remove immediately
+    public boolean startClose()
+    {
+        if (session != null)
+        {
+            session.startClose();
+            return false;
+        }
+
+        return true;
     }
 }

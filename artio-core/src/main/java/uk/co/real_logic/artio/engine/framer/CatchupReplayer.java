@@ -420,7 +420,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     return switchToMissingMessages("Catchup operation timed out");
                 }
 
-                if (replayOperation.attemptReplay())
+                if (replayOperation.pollReplay())
                 {
                     if (hasMissingMessages())
                     {
@@ -533,7 +533,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     {
         if (replayOperation != null)
         {
-            replayOperation.close();
+            replayOperation.closeNow();
         }
     }
 }

@@ -55,7 +55,8 @@ public class FixPReplayerSession extends ReplayerSession
     private enum State
     {
         REPLAYING,
-        SEND_COMPLETE_MESSAGE
+        SEND_COMPLETE_MESSAGE,
+        CLOSING
     }
 
     private State state;
@@ -119,12 +120,17 @@ public class FixPReplayerSession extends ReplayerSession
 
             case REPLAYING:
             {
-                if (replayOperation.attemptReplay())
+                if (replayOperation.pollReplay())
                 {
                     DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: REPLAYING step");
                     state = State.SEND_COMPLETE_MESSAGE;
                 }
                 return false;
+            }
+
+            case CLOSING:
+            {
+                return replayOperation.pollReplay();
             }
 
             default:
@@ -190,11 +196,9 @@ public class FixPReplayerSession extends ReplayerSession
         return !Pressure.isBackPressured(binaryProxy.sendSequence(sessionId, nextSentSequenceNumber));
     }
 
-    public void close()
+    void startClose()
     {
-        if (replayOperation != null)
-        {
-            replayOperation.close();
-        }
+        state = State.CLOSING;
+        super.startClose();
     }
 }

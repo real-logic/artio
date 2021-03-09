@@ -108,7 +108,7 @@ public class ReplayerTest extends AbstractLogTest
 
         when(replayQuery.query(anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any(), messageTracker.capture()))
             .thenReturn(replayOperation);
-        when(replayOperation.attemptReplay()).thenReturn(true);
+        when(replayOperation.pollReplay()).thenReturn(true);
         when(senderSequenceNumbers.bytesInBufferCounter(anyLong())).thenReturn(bytesInBufferCounter);
 
         setReplayedMessages(1);
@@ -145,7 +145,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private OngoingStubbing<Boolean> whenReplayQueried()
     {
-        return when(replayOperation.attemptReplay());
+        return when(replayOperation.pollReplay());
     }
 
     @Test

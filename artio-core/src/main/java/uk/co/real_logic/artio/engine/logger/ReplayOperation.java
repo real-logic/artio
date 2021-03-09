@@ -59,6 +59,16 @@ public class ReplayOperation
         ThreadLocal.withInitial(() -> new CharFormatter(
         "Finished with messageTrackerCount=%s, recordingRangeCount=%s"));
 
+    // Closing state formatters:
+    private static final ThreadLocal<CharFormatter> INIT_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
+        new CharFormatter("ReplayOperation:INIT_CLOSING - stopReplay id=%s"));
+    private static final ThreadLocal<CharFormatter> FIND_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
+        new CharFormatter("ReplayOperation:FIND_IMAGE_CLOSING: - id=%s,image=%s"));
+    private static final ThreadLocal<CharFormatter> POLL_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
+        new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s"));
+    private static final ThreadLocal<CharFormatter> CLOSED_FORMATTER = ThreadLocal.withInitial(() ->
+        new CharFormatter("ReplayOperation:CLOSED - id=%s"));
+
     private final MessageTracker messageTracker;
     private final ControlledFragmentAssembler assembler;
 
@@ -76,6 +86,17 @@ public class ReplayOperation
     private long replaySessionId;
     private int aeronSessionId;
     private Image image;
+
+    private enum State
+    {
+        REPLAYING,
+        INIT_CLOSING,
+        FIND_IMAGE_CLOSING,
+        POLL_IMAGE_CLOSING,
+        CLOSED
+    }
+
+    private State state = State.REPLAYING;
 
     ReplayOperation(
         final List<RecordingRange> ranges,
@@ -105,7 +126,93 @@ public class ReplayOperation
      *
      * @return true if complete
      */
-    public boolean attemptReplay()
+    public boolean pollReplay()
+    {
+        if (state == State.REPLAYING)
+        {
+            return attemptReplay();
+        }
+        else
+        {
+            return attemptClose();
+        }
+    }
+
+    private boolean attemptClose()
+    {
+        switch (state)
+        {
+            case INIT_CLOSING:
+            {
+                if (replaySessionId != 0)
+                {
+                    DebugLogger.log(logTag, INIT_CLOSING_FORMATTER.get(), replaySessionId);
+                    try
+                    {
+                        aeronArchive.stopReplay(replaySessionId);
+                    }
+                    catch (final ArchiveException e)
+                    {
+                        // The replay session may have already ended before this close was called.
+                        if (e.errorCode() != ArchiveException.UNKNOWN_REPLAY)
+                        {
+                            errorHandler.onError(e);
+                        }
+                    }
+                    state = image == null ? State.FIND_IMAGE_CLOSING : State.POLL_IMAGE_CLOSING;
+
+                    return false;
+                }
+                else
+                {
+                    // There isn't a current replay in progress.
+                    logClosed();
+                    state = State.CLOSED;
+                    return true;
+                }
+            }
+
+            case FIND_IMAGE_CLOSING:
+            {
+                // If the session disconnected rapidly after starting a short replay then it is possible for us to
+                // be in a position where image == null but Aeron owns an image object that needs to be drained in
+                // order for it's underlying buffers to be released.
+                image = subscription.imageBySessionId(aeronSessionId);
+                final int logId = image == null ? 0 : aeronSessionId;
+                DebugLogger.log(logTag, FIND_IMAGE_CLOSING_FORMATTER.get(), replaySessionId, logId);
+                if (image == null)
+                {
+                    return false;
+                }
+
+                // Deliberate fallthrough to next action
+                state = State.POLL_IMAGE_CLOSING;
+            }
+
+            case POLL_IMAGE_CLOSING:
+            {
+                DebugLogger.log(logTag, POLL_IMAGE_CLOSING_FORMATTER.get(), replaySessionId);
+                while (!(image.isClosed() || image.isEndOfStream()))
+                {
+                    image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
+                }
+                logClosed();
+                state = State.CLOSED;
+                return true;
+            }
+
+            default:
+                logClosed();
+                return true;
+        }
+    }
+
+    private void logClosed()
+    {
+        DebugLogger.log(logTag, CLOSED_FORMATTER.get(), replaySessionId);
+    }
+
+    private boolean attemptReplay()
     {
         if (recordingRange == null)
         {
@@ -267,37 +374,15 @@ public class ReplayOperation
         return false;
     }
 
-    public void close()
+    public void startClose()
     {
-        if (replaySessionId != 0)
-        {
-            try
-            {
-                aeronArchive.stopReplay(replaySessionId);
-            }
-            catch (final ArchiveException e)
-            {
-                // The replay session may have already ended before this close was called.
-                if (e.errorCode() == ArchiveException.UNKNOWN_REPLAY)
-                {
-                    // If the session disconnected rapidly after starting a short replay then it is possible for us to
-                    // be in a position where image == null but Aeron owns an image object that needs to be drained in
-                    // order for it's underlying buffers to be released.
-                    if (image != null)
-                    {
-                        image = subscription.imageBySessionId(aeronSessionId);
-                    }
-                }
-                else
-                {
-                    errorHandler.onError(e);
-                }
-            }
+        state = State.INIT_CLOSING;
+    }
 
-            while (image != null && !(image.isClosed() || image.isEndOfStream()))
-            {
-                image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
-            }
-        }
+    // Close the session immediately. Can leave open images that will be cleaned up by it's parent.
+    public void closeNow()
+    {
+        startClose();
+        attemptClose();
     }
 }
