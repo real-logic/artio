@@ -984,7 +984,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             try
             {
                 Thread.sleep(timeInMs);
-            } catch (InterruptedException e)
+            }
+            catch (final InterruptedException e)
             {
                 e.printStackTrace();
             }

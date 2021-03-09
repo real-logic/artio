@@ -138,6 +138,7 @@ public class ReplayOperation
         }
     }
 
+
     private boolean attemptClose()
     {
         switch (state)
@@ -185,8 +186,8 @@ public class ReplayOperation
                     return false;
                 }
 
-                // Deliberate fallthrough to next action
                 state = State.POLL_IMAGE_CLOSING;
+                return attemptClose();
             }
 
             case POLL_IMAGE_CLOSING:
