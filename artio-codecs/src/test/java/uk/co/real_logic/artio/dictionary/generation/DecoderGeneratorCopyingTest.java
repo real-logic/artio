@@ -16,6 +16,13 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
+import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.fields.RejectReason;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 
 public class DecoderGeneratorCopyingTest extends AbstractDecoderGeneratorTest
 {
@@ -23,5 +30,29 @@ public class DecoderGeneratorCopyingTest extends AbstractDecoderGeneratorTest
     public static void generate() throws Exception
     {
         generate(false);
+    }
+
+    @Test
+    public void shouldValidateDataFormatForInts() throws Exception
+    {
+        final Decoder decoder = newHeartbeat();
+
+        decode(INVALID_INT_VALUE_MESSAGE, decoder);
+
+        assertFalse(decoder.validate());
+        assertEquals(RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation(), decoder.rejectReason());
+        assertEquals(INT_FIELD_TAG, decoder.invalidTagId());
+    }
+
+    @Test
+    public void shouldValidateDataFormatForFloats() throws Exception
+    {
+        final Decoder decoder = newHeartbeat();
+
+        decode(INVALID_FLOAT_VALUE_MESSAGE, decoder);
+
+        assertFalse(decoder.validate());
+        assertEquals(RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation(), decoder.rejectReason());
+        assertEquals(FLOAT_FIELD_TAG, decoder.invalidTagId());
     }
 }

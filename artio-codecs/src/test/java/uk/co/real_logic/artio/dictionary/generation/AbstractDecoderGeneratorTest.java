@@ -661,7 +661,7 @@ public abstract class AbstractDecoderGeneratorTest
 
         decode(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE, decoder);
 
-        assertInvalid(decoder, REQUIRED_TAG_MISSING, 117);
+        assertInvalid(decoder, REQUIRED_TAG_MISSING, FLOAT_FIELD_TAG);
     }
 
     // --------------------------------------------------------------
@@ -1733,7 +1733,7 @@ public abstract class AbstractDecoderGeneratorTest
         return decoder;
     }
 
-    private Decoder newHeartbeat()
+    Decoder newHeartbeat()
         throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException
     {
         return (Decoder)heartbeat.getConstructor().newInstance();
@@ -1760,7 +1760,7 @@ public abstract class AbstractDecoderGeneratorTest
         return decoder;
     }
 
-    private void decode(final String example, final Decoder decoder)
+    void decode(final String example, final Decoder decoder)
     {
         buffer.putAscii(1, example);
         decoder.decode(buffer, 1, example.length());
