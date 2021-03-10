@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiNumberFormatException;
 import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
@@ -92,6 +93,8 @@ class DecoderGenerator extends Generator
         RejectReason.TAG_SPECIFIED_WITHOUT_A_VALUE.representation();
     public static final int VALUE_IS_INCORRECT =
         RejectReason.VALUE_IS_INCORRECT.representation();
+    public static final int INCORRECT_DATA_FORMAT_FOR_VALUE =
+        RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation();
 
     public static final int TAG_APPEARS_MORE_THAN_ONCE =
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
@@ -174,6 +177,7 @@ class DecoderGenerator extends Generator
                     out.append(importFor(MessageTypeEncoding.class));
                     out.append(importFor(SessionHeaderDecoder.class));
                 }
+                out.append(importFor(AsciiNumberFormatException.class));
 
                 generateImports("Decoder", type, out, Encoder.class);
 
@@ -251,7 +255,6 @@ class DecoderGenerator extends Generator
             final List<Field> fields = compileAllFieldsFor(message);
             final String messageFieldsSet = generateFieldDictionary(fields, MESSAGE_FIELDS, false);
             out.append(commonCompoundImports("Decoder", true, messageFieldsSet));
-
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
@@ -710,6 +713,7 @@ class DecoderGenerator extends Generator
                 final String interfaceExtension = interfaces.isEmpty() ? "" : " extends " +
                     String.join(", ", interfaces);
 
+                out.append(importFor(AsciiNumberFormatException.class));
                 generateImports("Decoder", AggregateType.COMPONENT, out, Encoder.class);
                 importEncoders(component, out);
 
@@ -1344,7 +1348,94 @@ class DecoderGenerator extends Generator
         final boolean isGroup = type == GROUP;
         final boolean isHeader = type == HEADER;
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
-        final String prefix =
+        final String prefix = generateDecodePrefix(aggregate, hasCommonCompounds, isGroup, isHeader, endGroupCheck);
+        final String body = entries.stream()
+            .map(this::decodeEntry)
+            .collect(joining("\n", "", "\n"));
+        final String suffix =
+            "            default:\n" +
+            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
+            "                {\n" +
+            (isGroup ?
+            "                    seenFields.remove(tag);\n" :
+            "                    alreadyVisitedFields.remove(tag);\n") +
+            "                }\n" +
+            (isGroup ? "" :
+            "                else\n" +
+            "                {\n" +
+            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                    {\n" +
+            "                        unknownFields.add(tag);\n" +
+            "                    }\n" +
+            "                }\n") +
+
+            // Skip the thing if it's a completely unknown field and you aren't validating messages
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            " || " + unknownFieldPredicate(type) + ")\n" +
+            "                {\n" +
+            decodeTrailerOrReturn(hasCommonCompounds, 5) +
+            "                }\n" +
+            "\n" +
+            "            }\n\n" +
+            "            if (position < (endOfField + 1))\n" +
+            "            {\n" +
+            "                position = endOfField + 1;\n" +
+            "            }\n" +
+            "        }\n" +
+            decodeTrailerOrReturn(hasCommonCompounds, 2) +
+            "    }\n\n";
+        return prefix + body + suffix;
+    }
+
+    private String generateDecodePrefix(
+        final Aggregate aggregate,
+        final boolean hasCommonCompounds,
+        final boolean isGroup,
+        final boolean isHeader,
+        final String endGroupCheck)
+    {
+        return "    public int getInt(\n" +
+            "        final AsciiBuffer buffer, final int startInclusive, final int endExclusive, final int tag)\n" +
+            "    {\n" +
+            "        try\n" +
+            "        {\n" +
+            "            return buffer.getInt(startInclusive, endExclusive);" +
+            "        }\n" +
+            "        catch(final AsciiNumberFormatException e)\n" +
+            "        {\n" +
+            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "            {\n" +
+            "                invalidTagId = tag;\n" +
+            "                rejectReason = " + INCORRECT_DATA_FORMAT_FOR_VALUE + ";\n" +
+            "                return MISSING_INT;" +
+            "            }\n" +
+            "            else\n" +
+            "            {\n" +
+            "                throw new AsciiNumberFormatException(e.getMessage() + \" tag=\" + tag);\n" +
+            "            }\n" +
+            "        }\n" +
+            "    }\n" +
+            "    public DecimalFloat getFloat(" +
+            "        final AsciiBuffer buffer, final DecimalFloat number, int offset, int length, final int tag)\n" +
+            "    {\n" +
+            "        try\n" +
+            "        {\n" +
+            "            return buffer.getFloat(number, offset, length);" +
+            "        }\n" +
+            "        catch(final NumberFormatException e)\n" +
+            "        {\n" +
+            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "            {\n" +
+            "                invalidTagId = tag;\n" +
+            "                rejectReason = " + INCORRECT_DATA_FORMAT_FOR_VALUE + ";\n" +
+            "                return number;" +
+            "            }\n" +
+            "            else\n" +
+            "            {\n" +
+            "                throw new NumberFormatException(e.getMessage() + \" tag=\" + tag);\n" +
+            "            }\n" +
+            "        }\n" +
+            "    }\n" +
             "    private AsciiBuffer buffer;\n\n" +
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
             "    {\n" +
@@ -1393,48 +1484,11 @@ class DecoderGenerator extends Generator
             "                    invalidTagId = tag;\n" +
             "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
             "                }\n") +
-
             "                missingRequiredFields.remove(tag);\n" +
             "                seenFieldCount++;\n" +
             "            }\n\n" +
             "            switch (tag)\n" +
             "            {\n";
-        final String body = entries.stream()
-            .map(this::decodeEntry)
-            .collect(joining("\n", "", "\n"));
-        final String suffix =
-            "            default:\n" +
-            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
-            "                {\n" +
-            (isGroup ?
-            "                    seenFields.remove(tag);\n" :
-            "                    alreadyVisitedFields.remove(tag);\n") +
-            "                }\n" +
-            (isGroup ? "" :
-            "                else\n" +
-            "                {\n" +
-            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
-            "                    {\n" +
-            "                        unknownFields.add(tag);\n" +
-            "                    }\n" +
-            "                }\n") +
-
-            // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
-            " || " + unknownFieldPredicate(type) + ")\n" +
-            "                {\n" +
-            decodeTrailerOrReturn(hasCommonCompounds, 5) +
-            "                }\n" +
-            "\n" +
-            "            }\n\n" +
-            "            if (position < (endOfField + 1))\n" +
-            "            {\n" +
-            "                position = endOfField + 1;\n" +
-            "            }\n" +
-            "        }\n" +
-            decodeTrailerOrReturn(hasCommonCompounds, 2) +
-            "    }\n\n";
-        return prefix + body + suffix;
     }
 
     private String malformedMessageCheck()
@@ -1652,7 +1706,7 @@ class DecoderGenerator extends Generator
                 {
                     return "";
                 }
-                decodeMethod = "buffer.getInt(valueOffset, endOfField)";
+                decodeMethod = String.format("getInt(buffer, valueOffset, endOfField, %d)", field.number());
                 break;
             case FLOAT:
             case PRICE:
@@ -1664,7 +1718,8 @@ class DecoderGenerator extends Generator
                 {
                     return "";
                 }
-                decodeMethod = String.format("buffer.getFloat(%s, valueOffset, valueLength)", fieldName);
+                decodeMethod = String.format(
+                    "getFloat(buffer, %s, valueOffset, valueLength, %d)", fieldName, field.number());
                 break;
             case CHAR:
                 decodeMethod = "buffer.getChar(valueOffset)";

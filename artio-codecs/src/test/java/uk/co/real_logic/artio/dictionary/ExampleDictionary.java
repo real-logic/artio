@@ -219,6 +219,14 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=043\001";
 
+    public static final String INVALID_INT_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=A\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=043\001";
+
+    public static final String INVALID_FLOAT_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=A\001127=19700101-00:00:00.001" +
+        "\00110=043\001";
+
     public static final String MISSING_REQUIRED_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=161\001";
@@ -450,6 +458,7 @@ public final class ExampleDictionary
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
     public static final long OTHER_MESSAGE_TYPE_PACKED = MessageTypeEncoding.packMessageType(OTHER_MESSAGE_TYPE);
     public static final int INT_FIELD_TAG = 116;
+    public static final int FLOAT_FIELD_TAG = 117;
 
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
     private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
