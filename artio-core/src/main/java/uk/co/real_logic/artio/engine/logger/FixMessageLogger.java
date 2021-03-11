@@ -52,6 +52,8 @@ public class FixMessageLogger implements Agent
 
         private FixMessageConsumer fixMessageConsumer;
         private Aeron.Context context;
+        private boolean ownsAeronClient;
+        private Aeron aeron;
         private String libraryAeronChannel = IPC_CHANNEL;
         private int inboundStreamId = DEFAULT_INBOUND_LIBRARY_STREAM;
         private int outboundStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
@@ -59,6 +61,12 @@ public class FixMessageLogger implements Agent
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
         private ILinkMessageConsumer iLinkMessageConsumer;
 
+        /**
+         * Provide a consumer for FIX messages that are logger by the stream.
+         *
+         * @param fixMessageConsumer the consumer for FIX Messages.
+         * @return this
+         */
         public Configuration fixMessageConsumer(final FixMessageConsumer fixMessageConsumer)
         {
             this.fixMessageConsumer = fixMessageConsumer;
@@ -71,38 +79,126 @@ public class FixMessageLogger implements Agent
             return this;
         }
 
+        /**
+         * Provide an Aeron context object that is used by default to construct the Aeron client instance used by
+         * this FixMessageLogger. If the {@link #aeron(Aeron)} configuration option is used to provide an Aeron
+         * object then this configuration option will be ignored. This sets <code>ownsAeronClient(true)</code>
+         * as the created Aeron instance will be owned by the FixMessageLogger.
+         *
+         * @param context the Aeron context object
+         * @return this
+         */
         public Configuration context(final Aeron.Context context)
         {
+            Verify.notNull(context, "context");
+            ownsAeronClient(true);
             this.context = context;
             return this;
         }
 
+        /**
+         * Aeron client for communicating with the local Media Driver. This overrides any context object provided
+         * to {@link #context(Aeron.Context)}. This client will be closed when the FixMessageLogger is closed if
+         * {@link #ownsAeronClient(boolean)} is set to true.
+         *
+         * @param aeron client for communicating with the local Media Driver.
+         * @return this
+         */
+        public Configuration aeron(final Aeron aeron)
+        {
+            Verify.notNull(aeron, "aeron");
+            this.aeron = aeron;
+            return this;
+        }
+
+        /**
+         * Does this FixMessageLogger own the Aeron client and take responsibility for closing it?
+         *
+         * @param ownsAeronClient does this own the Aeron client and take responsibility for closing it?
+         * @return this
+         */
+        public Configuration ownsAeronClient(final boolean ownsAeronClient)
+        {
+            this.ownsAeronClient = ownsAeronClient;
+            return this;
+        }
+
+        /**
+         * Provide the Aeron channel used to communicate with library instances by your
+         * {@link uk.co.real_logic.artio.engine.FixEngine}. This should be the same value as provided to
+         * {@link uk.co.real_logic.artio.engine.EngineConfiguration#libraryAeronChannel(String)}.
+         *
+         * Defaults to the IPC channel if not configured.
+         *
+         * @param libraryAeronChannel The Aeron channel used to communicate between engine and library instances
+         * @return this
+         */
         public Configuration libraryAeronChannel(final String libraryAeronChannel)
         {
+            Verify.notNull(libraryAeronChannel, "libraryAeronChannel");
             this.libraryAeronChannel = libraryAeronChannel;
             return this;
         }
 
+        /**
+         * Provide the inbound streamId used to communicate between engine and library instances.
+         * if you override {@link uk.co.real_logic.artio.engine.EngineConfiguration#inboundLibraryStream(int)} then you
+         * should set this to the same value.
+         *
+         * @param inboundStreamId The inbound streamId used to communicate between engine and library instances
+         * @return this
+         */
         public Configuration inboundStreamId(final int inboundStreamId)
         {
             this.inboundStreamId = inboundStreamId;
             return this;
         }
 
+        /**
+         * Provide the outbound streamId used to communicate between engine and library instances.
+         * if you override {@link uk.co.real_logic.artio.engine.EngineConfiguration#outboundLibraryStream(int)} then
+         * you should set this to the same value.
+         *
+         * @param outboundStreamId The outbound streamId used to communicate between engine and library instances
+         * @return this
+         */
         public Configuration outboundStreamId(final int outboundStreamId)
         {
             this.outboundStreamId = outboundStreamId;
             return this;
         }
 
+        /**
+         * Provide the outbound replay streamId used to communicate between engine and library instances.
+         * if you override {@link uk.co.real_logic.artio.engine.EngineConfiguration#outboundReplayStream(int)} then
+         * you should set this to the same value.
+         *
+         * @param outboundReplayStreamId The outbound replay streamId used to communicate between engine and library
+         *                               instances
+         * @return this
+         */
         public Configuration outboundReplayStreamId(final int outboundReplayStreamId)
         {
             this.outboundReplayStreamId = outboundReplayStreamId;
             return this;
         }
 
+        /**
+         * Provide the compaction size to within the reorder buffer. The FixMessageLogger re-orders its messages
+         * internally in order to hand them off the consumer in timestamp order. A larger compaction size allows it's
+         * internal reorder buffer to grow larger before compaction is attempted. A larger compaction size results in
+         * less compaction and thus less CPU usage at the cost of more memory being consumed.
+         *
+         * @param compactionSize the compaction size to within the reorder buffer.
+         * @return this
+         */
         public Configuration compactionSize(final int compactionSize)
         {
+            if (compactionSize <= 0)
+            {
+                throw new IllegalArgumentException("Compaction size must be positive, but is: " + compactionSize);
+            }
+
             this.compactionSize = compactionSize;
             return this;
         }
@@ -111,14 +207,14 @@ public class FixMessageLogger implements Agent
         {
             Verify.notNull(fixMessageConsumer, "fixMessageConsumer");
 
-            if (compactionSize <= 0)
+            if (aeron == null)
             {
-                throw new IllegalArgumentException("Compaction size must be positive, but is: " + compactionSize);
-            }
+                if (context == null)
+                {
+                    context(new Aeron.Context());
+                }
 
-            if (context == null)
-            {
-                context = new Aeron.Context();
+                aeron = Aeron.connect(context);
             }
         }
     }
@@ -158,7 +254,7 @@ public class FixMessageLogger implements Agent
     }
 
     private final StreamTimestampZipper zipper;
-    private final Aeron aeron;
+    private final Configuration configuration;
     private volatile boolean closed = false;
 
     @Deprecated
@@ -183,7 +279,8 @@ public class FixMessageLogger implements Agent
         final Configuration configuration)
     {
         configuration.conclude();
-        aeron = Aeron.connect(configuration.context);
+        this.configuration = configuration;
+        final Aeron aeron = configuration.aeron;
 
         final String libraryAeronChannel = configuration.libraryAeronChannel;
         final SubscriptionPoller[] pollers = IntStream.of(
@@ -212,7 +309,11 @@ public class FixMessageLogger implements Agent
             closed = true;
 
             zipper.onClose();
-            aeron.close();
+
+            if (configuration.ownsAeronClient)
+            {
+                configuration.aeron.close();
+            }
         }
     }
 
