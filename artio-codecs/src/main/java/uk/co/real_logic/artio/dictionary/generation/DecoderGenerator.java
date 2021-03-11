@@ -19,6 +19,7 @@ import org.agrona.AsciiNumberFormatException;
 import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
+import uk.co.real_logic.artio.builder.CommonDecoderImpl;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -93,8 +94,6 @@ class DecoderGenerator extends Generator
         RejectReason.TAG_SPECIFIED_WITHOUT_A_VALUE.representation();
     public static final int VALUE_IS_INCORRECT =
         RejectReason.VALUE_IS_INCORRECT.representation();
-    public static final int INCORRECT_DATA_FORMAT_FOR_VALUE =
-        RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation();
 
     public static final int TAG_APPEARS_MORE_THAN_ONCE =
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
@@ -179,7 +178,7 @@ class DecoderGenerator extends Generator
                 }
                 out.append(importFor(AsciiNumberFormatException.class));
 
-                generateImports("Decoder", type, out, Encoder.class);
+                generateImports(out, type);
 
                 importEncoders(aggregate, out);
 
@@ -265,6 +264,21 @@ class DecoderGenerator extends Generator
         out.append(generateToEncoder(aggregate));
         out.append("}\n");
         currentAggregate = parentAggregate;
+    }
+
+    private String classDeclaration(
+        final String className,
+        final List<String> interfaces,
+        final boolean isStatic)
+    {
+        final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
+
+        return String.format(
+            "\n\npublic %3$sclass %1$s extends CommonDecoderImpl%2$s\n" +
+                "{\n",
+            className,
+            interfaceList,
+            isStatic ? "static " : "");
     }
 
     private List<Field> compileAllFieldsFor(final Message message)
@@ -458,16 +472,6 @@ class DecoderGenerator extends Generator
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
             "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
-            "    private int invalidTagId = Decoder.NO_ERROR;\n\n" +
-            "    public int invalidTagId()\n" +
-            "    {\n" +
-            "        return invalidTagId;\n" +
-            "    }\n\n" +
-            "    private int rejectReason = Decoder.NO_ERROR;\n\n" +
-            "    public int rejectReason()\n" +
-            "    {\n" +
-            "        return rejectReason;\n" +
-            "    }\n\n" +
             "    public boolean validate()\n" +
             "    {\n" +
             // validation for some tags performed in the decode method
@@ -714,7 +718,7 @@ class DecoderGenerator extends Generator
                     String.join(", ", interfaces);
 
                 out.append(importFor(AsciiNumberFormatException.class));
-                generateImports("Decoder", AggregateType.COMPONENT, out, Encoder.class);
+                generateImports(out, AggregateType.COMPONENT);
                 importEncoders(component, out);
 
                 out.append(String.format(
@@ -729,6 +733,12 @@ class DecoderGenerator extends Generator
                 }
                 out.append("\n}\n");
             });
+    }
+
+    private void generateImports(final Writer out, final AggregateType component) throws IOException
+    {
+        generateImports("Decoder", component, out,
+            Encoder.class, CommonDecoderImpl.class);
     }
 
     private void interfaceGetter(final Aggregate parent, final Entry entry, final Writer out)
@@ -1133,6 +1143,7 @@ class DecoderGenerator extends Generator
 
     private static String fieldLazyInstantialisation(final Field field, final String fieldName)
     {
+        final int tag = field.number();
         final String decodeMethod;
         switch (field.type())
         {
@@ -1141,7 +1152,9 @@ class DecoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                decodeMethod = String.format("buffer.parseIntAscii(%1$sOffset, %1$sLength)", fieldName);
+                decodeMethod = String.format(
+                    "getIntFlyweight(buffer, %1$sOffset, %1$sLength, %2$d, " + CODEC_VALIDATION_ENABLED + ")",
+                    fieldName, tag);
                 break;
 
             case FLOAT:
@@ -1150,7 +1163,9 @@ class DecoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                decodeMethod = String.format("buffer.getFloat(%1$s, %1$sOffset, %1$sLength)", fieldName);
+                decodeMethod = String.format(
+                    "getFloatFlyweight(buffer, %1$s, %1$sOffset, %1$sLength, %2$d, " + CODEC_VALIDATION_ENABLED + ")",
+                    fieldName, tag);
                 break;
 
             case STRING:
@@ -1352,6 +1367,7 @@ class DecoderGenerator extends Generator
         final String body = entries.stream()
             .map(this::decodeEntry)
             .collect(joining("\n", "", "\n"));
+
         final String suffix =
             "            default:\n" +
             "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
@@ -1394,50 +1410,7 @@ class DecoderGenerator extends Generator
         final boolean isHeader,
         final String endGroupCheck)
     {
-        return "    public int getInt(\n" +
-            "        final AsciiBuffer buffer, final int startInclusive, final int endExclusive, final int tag)\n" +
-            "    {\n" +
-            "        try\n" +
-            "        {\n" +
-            "            return buffer.getInt(startInclusive, endExclusive);" +
-            "        }\n" +
-            "        catch(final AsciiNumberFormatException e)\n" +
-            "        {\n" +
-            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "            {\n" +
-            "                invalidTagId = tag;\n" +
-            "                rejectReason = " + INCORRECT_DATA_FORMAT_FOR_VALUE + ";\n" +
-            "                return MISSING_INT;" +
-            "            }\n" +
-            "            else\n" +
-            "            {\n" +
-            "                throw new AsciiNumberFormatException(e.getMessage() + \" tag=\" + tag);\n" +
-            "            }\n" +
-            "        }\n" +
-            "    }\n" +
-            "    public DecimalFloat getFloat(" +
-            "        final AsciiBuffer buffer, final DecimalFloat number, int offset, int length, final int tag)\n" +
-            "    {\n" +
-            "        try\n" +
-            "        {\n" +
-            "            return buffer.getFloat(number, offset, length);" +
-            "        }\n" +
-            "        catch(final NumberFormatException e)\n" +
-            "        {\n" +
-            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "            {\n" +
-            "                invalidTagId = tag;\n" +
-            "                rejectReason = " + INCORRECT_DATA_FORMAT_FOR_VALUE + ";\n" +
-            "                return number;" +
-            "            }\n" +
-            "            else\n" +
-            "            {\n" +
-            "                throw new NumberFormatException(e.getMessage() + \" tag=\" + tag);\n" +
-            "            }\n" +
-            "        }\n" +
-            "    }\n" +
-            "    private AsciiBuffer buffer;\n\n" +
-            "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
+        return "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
             "    {\n" +
             "        // Decode " + aggregate.name() + "\n" +
             "        int seenFieldCount = 0;\n" +
@@ -1706,7 +1679,8 @@ class DecoderGenerator extends Generator
                 {
                     return "";
                 }
-                decodeMethod = String.format("getInt(buffer, valueOffset, endOfField, %d)", field.number());
+                decodeMethod = String.format(
+                    "getInt(buffer, valueOffset, endOfField, %d, " + CODEC_VALIDATION_ENABLED + ")", field.number());
                 break;
             case FLOAT:
             case PRICE:
@@ -1719,7 +1693,8 @@ class DecoderGenerator extends Generator
                     return "";
                 }
                 decodeMethod = String.format(
-                    "getFloat(buffer, %s, valueOffset, valueLength, %d)", fieldName, field.number());
+                    "getFloat(buffer, %s, valueOffset, valueLength, %d, " + CODEC_VALIDATION_ENABLED + ")",
+                    fieldName, field.number());
                 break;
             case CHAR:
                 decodeMethod = "buffer.getChar(valueOffset)";

@@ -669,7 +669,7 @@ public abstract class AbstractDecoderGeneratorTest
     // --------------------------------------------------------------
 
     @Test
-    public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithoutValidation() throws Exception
+    public void shouldUseNaNToDenoteMissingRequiredPriceFieldsWithValidationDisabled() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(MISSING_REQUIRED_PRICE_FIELDS_MESSAGE);
         assertFloatFieldIsNan(decoder);
@@ -679,6 +679,22 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final DecimalFloat floatField = (DecimalFloat)getFloatField(decoder);
         assertTrue(floatField.toString(), floatField.isNaNValue());
+    }
+
+    @Test
+    public void shouldNotValidateDataFormatForIntsWithValidationDisabled() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(INVALID_INT_VALUE_MESSAGE);
+
+        assertEquals(MISSING_INT, getIntField(decoder));
+    }
+
+    @Test
+    public void shouldNotValidateDataFormatForFloatsWithValidationDisabled() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(INVALID_FLOAT_VALUE_MESSAGE);
+
+        assertEquals(DecimalFloat.MISSING_FLOAT, getFloatField(decoder));
     }
 
     @Test
@@ -1726,7 +1742,7 @@ public abstract class AbstractDecoderGeneratorTest
         return (SessionHeaderDecoder)get(decoder, "header");
     }
 
-    private Decoder decodeHeartbeat(final String example) throws Exception
+    Decoder decodeHeartbeat(final String example) throws Exception
     {
         final Decoder decoder = newHeartbeat();
         decode(example, decoder);
@@ -1746,7 +1762,7 @@ public abstract class AbstractDecoderGeneratorTest
         return decoder;
     }
 
-    private Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
+    Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
     {
         final Decoder decoder = (Decoder)heartbeatWithoutValidation.getConstructor().newInstance();
         decode(example, decoder);
@@ -1791,12 +1807,12 @@ public abstract class AbstractDecoderGeneratorTest
         return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
     }
 
-    private Object getFloatField(final Decoder decoder) throws Exception
+    Object getFloatField(final Decoder decoder) throws Exception
     {
         return get(decoder, FLOAT_FIELD);
     }
 
-    private Object getIntField(final Object decoder) throws Exception
+    Object getIntField(final Object decoder) throws Exception
     {
         return get(decoder, INT_FIELD);
     }

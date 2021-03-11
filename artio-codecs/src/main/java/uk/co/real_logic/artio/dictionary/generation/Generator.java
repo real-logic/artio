@@ -179,21 +179,6 @@ public abstract class Generator
         }
     }
 
-    protected String classDeclaration(
-        final String className,
-        final List<String> interfaces,
-        final boolean isStatic)
-    {
-        final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
-
-        return String.format(
-            "\n\npublic %3$sclass %1$s%2$s\n" +
-            "{\n",
-            className,
-            interfaceList,
-            isStatic ? "static " : "");
-    }
-
     protected String completeResetMethod(
         final boolean isMessage,
         final List<Entry> entries,
