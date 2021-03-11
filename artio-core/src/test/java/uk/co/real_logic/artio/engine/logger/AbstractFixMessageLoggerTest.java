@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.driver.MediaDriver;
+import org.agrona.collections.IntArrayList;
 import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
@@ -56,6 +57,7 @@ public abstract class AbstractFixMessageLoggerTest
 
     final EpochNanoClock clock = new OffsetEpochNanoClock();
     final LongArrayList timestamps = new LongArrayList();
+    final IntArrayList streamIds = new IntArrayList();
 
     private final FixMessageConsumer fixConsumer = (message, buffer, offset, length, header) ->
     {
@@ -66,6 +68,7 @@ public abstract class AbstractFixMessageLoggerTest
         final String body = message.body().trim();
         final long messageNumber = Long.parseLong(body);
         assertEquals(timestamp, messageNumber);
+        streamIds.add(header.streamId());
     };
 
     private MediaDriver mediaDriver;
@@ -104,6 +107,9 @@ public abstract class AbstractFixMessageLoggerTest
     @Test
     public void shouldReOrderMessagesByTimestamp()
     {
+        final int out = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+        final int in = DEFAULT_INBOUND_LIBRARY_STREAM;
+
         onMessage(inboundPublication, 2);
         onMessage(inboundPublication, 3);
         onMessage(inboundPublication, 4);
@@ -115,7 +121,9 @@ public abstract class AbstractFixMessageLoggerTest
 
         assertEventuallyReceives(6);
         assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L, 6L));
+        assertThat(streamIds.toString(), streamIds, contains(out, in, in, in, out, in));
         timestamps.clear();
+        streamIds.clear();
 
         // A message arriving later
         onMessage(inboundPublication, 8);

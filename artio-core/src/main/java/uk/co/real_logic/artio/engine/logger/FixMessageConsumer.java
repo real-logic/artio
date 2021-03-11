@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageStatus;
 
@@ -40,12 +40,12 @@ public interface FixMessageConsumer
      * @param buffer the buffer where the ascii FixMessage is stored.
      * @param offset the offset where the message begins within the buffer.
      * @param length the length of the FixMessage in bytes.
-     * @param header the Aeron header object that can read properties about the framed Aeron message.
+     * @param header a header object that can reflects properties of the original message before it was archived.
      */
     void onMessage(
         FixMessageDecoder message,
         DirectBuffer buffer,
         int offset,
         int length,
-        Header header);
+        ArtioLogHeader header);
 }

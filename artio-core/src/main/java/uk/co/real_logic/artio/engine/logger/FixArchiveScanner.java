@@ -280,16 +280,18 @@ public class FixArchiveScanner implements AutoCloseable
     {
         private final List<ArchiveLocation> archiveLocations;
         private final Subscription replaySubscription;
-        private final int streamId;
+        private final int originalStreamId;
 
         long stopPosition;
         Image image;
 
         RecordingPoller(
-            final Subscription replaySubscription, final int streamId, final List<ArchiveLocation> archiveLocations)
+            final Subscription replaySubscription,
+            final int originalStreamId,
+            final List<ArchiveLocation> archiveLocations)
         {
             this.replaySubscription = replaySubscription;
-            this.streamId = streamId;
+            this.originalStreamId = originalStreamId;
             this.archiveLocations = archiveLocations;
         }
 
@@ -340,7 +342,7 @@ public class FixArchiveScanner implements AutoCloseable
 
         public int streamId()
         {
-            return streamId;
+            return originalStreamId;
         }
 
         private Image lookupImage(final int sessionId)

@@ -18,10 +18,10 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
-import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -351,7 +351,7 @@ public final class FixArchivePrinter
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final Header header)
+        final ArtioLogHeader header)
     {
         System.out.println(message.body());
     }

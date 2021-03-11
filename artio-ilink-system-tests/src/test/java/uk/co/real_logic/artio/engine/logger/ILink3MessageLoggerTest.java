@@ -31,7 +31,10 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
     }
 
     private final ILinkMessageConsumer iLinkMessageConsumer = (iLinkMessage, buffer, offset, header) ->
+    {
         timestamps.add(iLinkMessage.enqueueTime());
+        streamIds.add(header.streamId());
+    };
 
     @Before
     public void setup()

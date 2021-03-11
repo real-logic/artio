@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.MessageHeaderDecoder;
 import iLinkBinary.MessageHeaderEncoder;
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 
 import java.util.function.Consumer;
@@ -48,7 +48,7 @@ public class PrintingILinkMessageConsumer implements ILinkMessageConsumer
     }
 
     public void onBusinessMessage(
-        final FixPMessageDecoder iLinkMessage, final DirectBuffer buffer, final int start, final Header header)
+        final FixPMessageDecoder iLinkMessage, final DirectBuffer buffer, final int start, final ArtioLogHeader header)
     {
         int offset = start + SOFH_LENGTH;
 

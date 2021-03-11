@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 import uk.co.real_logic.artio.util.Lazy;
@@ -38,7 +38,7 @@ final class LazyILinkMessagePrinter implements ILinkMessageConsumer
     }
 
     public void onBusinessMessage(
-        final FixPMessageDecoder iLinkMessage, final DirectBuffer buffer, final int offset, final Header header)
+        final FixPMessageDecoder iLinkMessage, final DirectBuffer buffer, final int offset, final ArtioLogHeader header)
     {
         lazyDelegate.get().onBusinessMessage(iLinkMessage, buffer, offset, header);
     }

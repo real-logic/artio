@@ -18,11 +18,11 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -248,9 +248,9 @@ public class FixMessageLogger implements Agent
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final Header header)
+        final ArtioLogHeader header)
     {
-        System.out.printf("%s: %s%n", fixMessageDecoder.status(), fixMessageDecoder.body());
+        System.out.printf("%s:stream=%s %s%n", fixMessageDecoder.status(), header.streamId(), fixMessageDecoder.body());
     }
 
     private final StreamTimestampZipper zipper;
