@@ -55,4 +55,5 @@ public class DecoderGeneratorCopyingTest extends AbstractDecoderGeneratorTest
         assertEquals(RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation(), decoder.rejectReason());
         assertEquals(FLOAT_FIELD_TAG, decoder.invalidTagId());
     }
+
 }

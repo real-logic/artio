@@ -295,6 +295,21 @@ class EncoderGenerator extends Generator
         out.append("}\n");
     }
 
+    private String classDeclaration(
+        final String className,
+        final List<String> interfaces,
+        final boolean isStatic)
+    {
+        final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
+
+        return String.format(
+            "\n\npublic %3$sclass %1$s%2$s\n" +
+                "{\n",
+            className,
+            interfaceList,
+            isStatic ? "static " : "");
+    }
+
     private String completeResetMethod(
         final Aggregate aggregate, final boolean isMessage, final AggregateType type)
     {

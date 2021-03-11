@@ -16,6 +16,12 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
+import uk.co.real_logic.artio.builder.Decoder;
+
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INVALID_FLOAT_VALUE_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INVALID_INT_VALUE_MESSAGE;
+import static uk.co.real_logic.artio.util.CustomMatchers.assertTargetThrows;
 
 public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
 {
@@ -23,5 +29,23 @@ public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
     public static void generate() throws Exception
     {
         generate(true);
+    }
+
+    @Test
+    public void shouldValidateDataFormatForInts() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_INT_VALUE_MESSAGE);
+
+        assertTargetThrows(() -> getIntField(decoder), NumberFormatException.class,
+            "'A' is not a valid digit @ 33 tag=116");
+    }
+
+    @Test
+    public void shouldValidateDataFormatForFloats() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_FLOAT_VALUE_MESSAGE);
+
+        assertTargetThrows(() -> getFloatField(decoder), NumberFormatException.class,
+            "'A' isn't a valid digit @ 39 tag=117");
     }
 }

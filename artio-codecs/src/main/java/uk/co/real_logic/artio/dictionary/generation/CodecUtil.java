@@ -307,7 +307,6 @@ public final class CodecUtil
                 putTrailingZero(builder, trailingZeros);
             }
         }
-
     }
 
     private static void putTrailingZero(final StringBuilder builder, final int zerosCount)
