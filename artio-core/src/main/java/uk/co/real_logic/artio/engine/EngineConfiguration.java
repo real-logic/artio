@@ -27,6 +27,7 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ErrorHandlerFactory;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
@@ -617,7 +618,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets a handler that will be invoked when an iLink3 message is replayed.
      *
      * This configuration option has been deprecated - please use
-     * {@link #binaryFixPRetransmitHandler(FixPRetransmitHandler)} instead.
+     * {@link #fixPRetransmitHandler(FixPRetransmitHandler)} instead.
      *
      * @param iLink3RetransmitHandler the replay handler
      * @return this
@@ -635,7 +636,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @param fixPRetransmitHandler the replay handler
      * @return this
      */
-    public EngineConfiguration binaryFixPRetransmitHandler(
+    public EngineConfiguration fixPRetransmitHandler(
         final FixPRetransmitHandler fixPRetransmitHandler)
     {
         this.fixPRetransmitHandler = fixPRetransmitHandler;
@@ -747,6 +748,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param authenticationStrategy the authentication strategy to use.
      * @return this
+     * @see EngineConfiguration#authenticationTimeoutInMs(long)
      */
     public EngineConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
     {
@@ -811,18 +813,45 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Enable or disable the deleting of the {@link #logFileDir(String)} on startup. This defaults to
+     * false. When set to true if the log file directory exists when the engine is started up then it will
+     * be deleted. This is usually an undesirable behaviour in a production environment but it can be
+     * very useful when using Artio in automated tests as any previous file system state will not
+     * interfere with your test's repeatability.
+     *
+     * @param deleteLogFileDirOnStart true to enable or false to disable
+     * @return this
+     */
     public EngineConfiguration deleteLogFileDirOnStart(final boolean deleteLogFileDirOnStart)
     {
         this.deleteLogFileDirOnStart = deleteLogFileDirOnStart;
         return this;
     }
 
+    /**
+     * Sets the timeout to be used for the authentication process. It is possible for either a buggy implementation
+     * or a malicious Logon message to cause the
+     * {@link AuthenticationStrategy#authenticateAsync(AbstractLogonDecoder, AuthenticationProxy)} method to not invoke
+     * its authentication proxy. As a result Artio implements a configurable timeout that will close the session if
+     * the proxy isn't used within the timeout. This configuration option defines the length of that timeout.
+     *
+     * @param authenticationTimeoutInMs the timeout to be used for the authentication process.
+     * @return this
+     * @see EngineConfiguration#authenticationStrategy(AuthenticationStrategy)
+     */
     public EngineConfiguration authenticationTimeoutInMs(final long authenticationTimeoutInMs)
     {
         this.authenticationTimeoutInMs = authenticationTimeoutInMs;
         return this;
     }
 
+    /**
+     * Sets the message timing handler for this Engine instance.
+     *
+     * @param messageTimingHandler the message timing handler for this Engine instance.
+     * @return this
+     */
     public EngineConfiguration messageTimingHandler(final MessageTimingHandler messageTimingHandler)
     {
         this.messageTimingHandler = messageTimingHandler;
@@ -1123,7 +1152,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayHandler;
     }
 
-    public FixPRetransmitHandler binaryFixPRetransmitHandler()
+    public FixPRetransmitHandler fixPRetransmitHandler()
     {
         return fixPRetransmitHandler;
     }

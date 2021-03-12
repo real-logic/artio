@@ -80,7 +80,7 @@ public class BinaryEntrypointSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
 //            .monitoringAgentFactory(MonitoringAgentFactory.none())
-            .binaryFixPRetransmitHandler(retransmitHandler)
+            .fixPRetransmitHandler(retransmitHandler)
             .acceptBinaryEntryPoint()
             .bindTo("localhost", port)
             .deleteLogFileDirOnStart(true);
