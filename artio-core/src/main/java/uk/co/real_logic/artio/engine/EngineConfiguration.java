@@ -899,18 +899,44 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the timeout for detecting duplicate engines. Artio throws an exception on startup if it
+     * detects another Artio process trying to use the same directory. It does this by checking whether
+     * files have been updated within a certain timeout - that is configured using this method.
+     *
+     * @param duplicateEngineTimeoutInMs the timeout for detecting duplicate engines.
+     * @return this
+     * @see EngineConfiguration#errorIfDuplicateEngineDetected(boolean)
+     */
     public EngineConfiguration duplicateEngineTimeoutInMs(final long duplicateEngineTimeoutInMs)
     {
         this.duplicateEngineTimeoutInMs = duplicateEngineTimeoutInMs;
         return this;
     }
 
+    /**
+     * Enables or disables the detection startup duplicate engine detection. If Artio detects a duplicate
+     * Engine then it will throw an exception on startup.
+     *
+     * @param errorIfDuplicateEngineDetected true to enable duplicate engine detection or false to disable it.
+     * @return this
+     * @see EngineConfiguration#duplicateEngineTimeoutInMs(long)
+     */
     public EngineConfiguration errorIfDuplicateEngineDetected(final boolean errorIfDuplicateEngineDetected)
     {
         this.errorIfDuplicateEngineDetected = errorIfDuplicateEngineDetected;
         return this;
     }
 
+    /**
+     * Sets the cancel on disconnect timeout handler. This is invoked when a cancel on disconnect event occurs.
+     *
+     * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+     * for more details around Cancel on disconnect support.
+     *
+     * @param cancelOnDisconnectTimeoutHandler the handler to be invoked when a cancel on disconnect event occurs.
+     * @return this
+     */
     public EngineConfiguration cancelOnDisconnectTimeoutHandler(
         final CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler)
     {

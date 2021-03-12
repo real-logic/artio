@@ -26,7 +26,8 @@ package uk.co.real_logic.artio.session;
  *  <li>the CODTimeoutWindow also specified in the logon message must have expired without a reconnect</li>
  * </ul>.
  *
- * Cancel on disconnect fields will be echoed back in the corresponding acceptor logon message.
+ * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+ * for more details around Cancel on disconnect support.
  *
  * Initiator implementations using cancel on disconnect can set the requisite logon fields using a
  * {@link SessionCustomisationStrategy}.
