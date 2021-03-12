@@ -233,9 +233,13 @@ public class Session
     // ---------- PUBLIC API ----------
 
     /**
-     * Check if the session is connected to another session.
+     * Check if the session is connected to a counter-party. It is worth noting that this
+     * method returns the currently known state of the session at a given point in time. It
+     * is strictly possible that the counter-party has disconnected at the exact same point
+     * in time but that Artio hasn't yet detected, for example if the underlying TCP connection
+     * is closed without a `RST` packet being sent by the counter-party.
      *
-     * @return true if the session is connected to another session, false otherwise.
+     * @return true if the session is connected to counter-party, false otherwise.
      */
     public boolean isConnected()
     {
