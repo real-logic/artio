@@ -53,7 +53,7 @@ public class FakeHandler
     private MetaDataStatus lastSessionMetaDataStatus;
 
     private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
-    private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer(lastMessageBuffer);
+    private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer();
     private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
     {
         heartbeatEncoder.testReqID("abc");
@@ -118,6 +118,7 @@ public class FakeHandler
         if (copyMessages)
         {
             lastMessageBuffer.putBytes(0, buffer, offset, length);
+            lastMessage.wrap(lastMessageBuffer);
             lastMessageLength = length;
         }
 
