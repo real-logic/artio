@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.FixPConnectionExistsHandler;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
@@ -29,14 +29,14 @@ import static org.junit.Assert.assertNotNull;
 public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHandler
 {
     private long lastSurrogateSessionId;
-    private FixPIdentification lastIdentification;
+    private FixPContext lastIdentification;
     private Reply<SessionReplyStatus> lastReply;
 
     public ControlledFragmentHandler.Action onConnectionExists(
         final FixLibrary library,
         final long surrogateSessionId,
         final FixPProtocolType protocol,
-        final FixPIdentification identification)
+        final FixPContext identification)
     {
         assertNotNull(library);
         assertEquals(FixPProtocolType.BINARY_ENTRYPOINT, protocol);
@@ -57,7 +57,7 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
         return lastSurrogateSessionId;
     }
 
-    public FixPIdentification lastIdentification()
+    public FixPContext lastIdentification()
     {
         return lastIdentification;
     }
@@ -70,5 +70,12 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
     public boolean invoked()
     {
         return lastIdentification != null;
+    }
+
+    public void reset()
+    {
+        lastSurrogateSessionId = 0;
+        lastReply = null;
+        lastIdentification = null;
     }
 }

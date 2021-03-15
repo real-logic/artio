@@ -1756,7 +1756,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         initFixP(protocolType);
 
-        final FixPIdentification identification = commonFixPParser.lookupIdentification(
+        final FixPContext identification = commonFixPParser.lookupIdentification(
             buffer,
             offset,
             messageLength);

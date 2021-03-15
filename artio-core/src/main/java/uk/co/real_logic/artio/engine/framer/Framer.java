@@ -1762,8 +1762,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onFixPDisconnect(final long connectionId, final DisconnectReason reason)
     {
+        // TODO: can we collapse with the normal FIX disconnect code?
         receiverEndPoints.removeConnection(connectionId, reason);
         fixPSenderEndPoints.removeConnection(connectionId);
+        gatewaySessions.releaseByConnectionId(connectionId);
     }
 
     public Action onLibraryConnect(

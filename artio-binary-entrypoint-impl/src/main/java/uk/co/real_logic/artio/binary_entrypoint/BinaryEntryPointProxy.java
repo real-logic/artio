@@ -21,7 +21,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
@@ -215,9 +215,9 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     }
 
     public ByteBuffer encodeNegotiateReject(
-        final FixPIdentification fixPIdentification, final NegotiateRejectReason rejectReason)
+        final FixPContext fixPContext, final NegotiateRejectReason rejectReason)
     {
-        final BinaryEntryPointIdentification identification = (BinaryEntryPointIdentification)fixPIdentification;
+        final BinaryEntryPointContext identification = (BinaryEntryPointContext)fixPContext;
 
         final NegotiationRejectCode rejectCode;
         switch (rejectReason)

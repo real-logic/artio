@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.artio.fixp;
 
-public interface FixPIdentification
+/**
+ * Interface recording information about a FIXP session that is associated with a session. For example
+ * session id, version id, connect timestamps.
+ */
+public interface FixPContext
 {
 }

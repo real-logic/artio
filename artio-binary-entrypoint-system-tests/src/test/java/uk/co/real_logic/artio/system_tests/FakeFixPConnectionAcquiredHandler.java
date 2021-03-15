@@ -47,4 +47,10 @@ public class FakeFixPConnectionAcquiredHandler implements FixPConnectionAcquired
     {
         return connection;
     }
+
+    public void reset()
+    {
+        invoked = false;
+        connection = null;
+    }
 }

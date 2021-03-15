@@ -119,14 +119,15 @@ abstract class GatewaySessions
         return UNK_SESSION;
     }
 
-    void releaseByConnectionId(final long connectionId)
+    GatewaySession releaseByConnectionId(final long connectionId)
     {
-        final FixGatewaySession session = (FixGatewaySession)removeSessionByConnectionId(connectionId, sessions);
+        final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
             session.onDisconnect();
             session.close();
         }
+        return session;
     }
 
     abstract int pollSessions(long timeInMs);

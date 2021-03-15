@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.validation.FixPAuthenticationProxy;
 import uk.co.real_logic.artio.validation.FixPAuthenticationStrategy;
 
 public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrategy
 {
     private volatile boolean accept;
-    private volatile FixPIdentification lastSessionId;
+    private volatile FixPContext lastSessionId;
 
     public FakeFixPAuthenticationStrategy()
     {
@@ -39,7 +39,7 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
         this.accept = false;
     }
 
-    public void authenticate(final FixPIdentification sessionId, final FixPAuthenticationProxy authProxy)
+    public void authenticate(final FixPContext sessionId, final FixPAuthenticationProxy authProxy)
     {
         lastSessionId = sessionId;
         if (accept)
@@ -52,7 +52,7 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
         }
     }
 
-    public FixPIdentification lastSessionId()
+    public FixPContext lastSessionId()
     {
         return lastSessionId;
     }

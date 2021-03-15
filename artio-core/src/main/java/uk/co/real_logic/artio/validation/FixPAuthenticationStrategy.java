@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.validation;
 
 
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 
 /**
  * Authentication Strategy for a FIXP Session
@@ -37,5 +37,5 @@ public interface FixPAuthenticationStrategy
      *                  <code>BinaryEntryPointIdentification</code> for the Binary Entrypoint protocol.
      * @param authProxy the proxy to notify when you're ready to authenticate.
      */
-    void authenticate(FixPIdentification sessionId, FixPAuthenticationProxy authProxy);
+    void authenticate(FixPContext sessionId, FixPAuthenticationProxy authProxy);
 }

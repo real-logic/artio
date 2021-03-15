@@ -15,16 +15,16 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 
-public class BinaryEntryPointIdentification implements FixPIdentification
+public class BinaryEntryPointContext implements FixPContext
 {
     private final long sessionID;
     private final long sessionVerID;
     private final long requestTimestamp;
     private final long enteringFirm;
 
-    public BinaryEntryPointIdentification(
+    public BinaryEntryPointContext(
         final long sessionID, final long sessionVerID, final long timestamp, final long enteringFirm)
     {
         this.sessionID = sessionID;

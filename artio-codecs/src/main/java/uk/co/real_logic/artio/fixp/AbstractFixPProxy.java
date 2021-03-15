@@ -105,6 +105,6 @@ public abstract class AbstractFixPProxy
     protected abstract int applyHeader(MessageEncoderFlyweight message, MutableDirectBuffer buffer, int offset);
 
     public abstract ByteBuffer encodeNegotiateReject(
-        FixPIdentification identification, NegotiateRejectReason rejectReason);
+        FixPContext identification, NegotiateRejectReason rejectReason);
 
 }

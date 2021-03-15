@@ -132,7 +132,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             negotiate.senderLocation());
     }
 
-    public BinaryEntryPointIdentification lookupIdentification(
+    public BinaryEntryPointContext lookupIdentification(
         final DirectBuffer messageBuffer,
         final int messageOffset,
         final int messageLength)
@@ -150,7 +150,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         {
             case NegotiateDecoder.TEMPLATE_ID:
                 negotiate.wrap(messageBuffer, offset, blockLength, version);
-                return new BinaryEntryPointIdentification(
+                return new BinaryEntryPointContext(
                     negotiate.sessionID(),
                     negotiate.sessionVerID(),
                     negotiate.timestamp().time(),
@@ -158,7 +158,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
 
             case EstablishDecoder.TEMPLATE_ID:
                 establish.wrap(messageBuffer, offset, blockLength, version);
-                return new BinaryEntryPointIdentification(
+                return new BinaryEntryPointContext(
                     establish.sessionID(),
                     establish.sessionVerID(),
                     establish.timestamp().time(),

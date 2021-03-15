@@ -20,7 +20,7 @@ import iLinkBinary.*;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.library.InternalILink3Connection;
 
@@ -77,7 +77,7 @@ public class ILink3Parser extends AbstractFixPParser
         return header.version();
     }
 
-    public FixPIdentification lookupIdentification(
+    public FixPContext lookupIdentification(
         final DirectBuffer messageBuffer,
         final int messageOffset,
         final int messageLength)

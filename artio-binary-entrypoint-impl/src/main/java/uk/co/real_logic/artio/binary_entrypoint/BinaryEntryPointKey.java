@@ -13,18 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.binary_entrypoint;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.fixp.FixPKey;
 
-@FunctionalInterface
-public interface FixPConnectionExistsHandler
+public class BinaryEntryPointKey implements FixPKey
 {
-    ControlledFragmentHandler.Action onConnectionExists(
-        FixLibrary library,
-        long surrogateSessionId,
-        FixPProtocolType protocol,
-        FixPContext identification);
+    private final long sessionID;
+
+    public BinaryEntryPointKey(final long sessionID)
+    {
+        this.sessionID = sessionID;
+    }
+
+    public long sessionID()
+    {
+        return sessionID;
+    }
 }

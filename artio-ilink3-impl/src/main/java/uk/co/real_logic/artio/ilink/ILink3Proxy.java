@@ -24,7 +24,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
@@ -297,7 +297,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     }
 
     public ByteBuffer encodeNegotiateReject(
-        final FixPIdentification identification, final NegotiateRejectReason rejectReason)
+        final FixPContext identification, final NegotiateRejectReason rejectReason)
     {
         return Ilink3Protocol.unsupported();
     }

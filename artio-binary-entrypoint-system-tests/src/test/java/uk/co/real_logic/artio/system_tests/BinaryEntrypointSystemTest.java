@@ -24,7 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointIdentification;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -140,20 +140,45 @@ public class BinaryEntrypointSystemTest
     }
 
     @Test
-    public void shouldRejectConnectionsAccordingToAuthenticationStrategy() throws IOException
+    public void shouldRejectConnectionsIfAuthenticationFails() throws IOException
     {
         fixPAuthenticationStrategy.reject();
 
+        connectionRejected(NegotiationRejectCode.CREDENTIALS);
+    }
+
+    @Test
+    public void shouldRejectConnectionsWithDuplicateIds() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            connectionExistsHandler.reset();
+            connectionAcquiredHandler.reset();
+
+            connectionRejected(NegotiationRejectCode.DUPLICATE_ID);
+
+            clientTerminatesSession(client);
+        }
+
+        // Check that we can Reconnect afterwards
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            clientTerminatesSession(client);
+        }
+    }
+
+    private void connectionRejected(final NegotiationRejectCode negotiationRejectCode) throws IOException
+    {
         try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
         {
             client.writeNegotiate();
 
-            assertEquals(NegotiationRejectCode.CREDENTIALS, client.readNegotiateReject().negotiationRejectCode());
+            assertEquals(negotiationRejectCode, client.readNegotiateReject().negotiationRejectCode());
 
             client.assertDisconnected();
 
-            final BinaryEntryPointIdentification id =
-                (BinaryEntryPointIdentification)fixPAuthenticationStrategy.lastSessionId();
+            final BinaryEntryPointContext id =
+                (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
             assertNotNull(id);
             assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
             assertEquals(1, id.sessionVerID());
@@ -192,8 +217,8 @@ public class BinaryEntrypointSystemTest
 
         testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
         assertEquals(BinaryEntrypointClient.SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
-        final BinaryEntryPointIdentification id =
-            (BinaryEntryPointIdentification)connectionExistsHandler.lastIdentification();
+        final BinaryEntryPointContext id =
+            (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
         assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
         assertEquals(1, id.sessionVerID());
         final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
@@ -223,7 +248,6 @@ public class BinaryEntrypointSystemTest
         return client;
     }
 
-    // DUPLICATE_ID on negotiate
     // SessionVeID must be incremented each time Negotiate message is sent to gateway
 
     // Unnegotiated: Establish request was not preceded by a Negotiation or

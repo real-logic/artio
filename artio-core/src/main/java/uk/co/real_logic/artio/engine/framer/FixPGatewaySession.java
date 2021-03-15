@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -33,7 +33,7 @@ public class FixPGatewaySession extends GatewaySession
     private final FixPGatewaySessions gatewaySessions;
 
     private byte[] firstMessage;
-    private FixPIdentification identification;
+    private FixPContext identification;
 
     FixPGatewaySession(
         final long connectionId,
@@ -117,5 +117,13 @@ public class FixPGatewaySession extends GatewaySession
     public void authenticated()
     {
         receiverEndPoint.authenticated();
+    }
+
+    public void onDisconnect()
+    {
+    }
+
+    public void close()
+    {
     }
 }

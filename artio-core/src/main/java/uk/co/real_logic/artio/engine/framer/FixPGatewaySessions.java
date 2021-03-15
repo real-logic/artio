@@ -16,12 +16,13 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -33,9 +34,10 @@ import uk.co.real_logic.artio.validation.FixPAuthenticationProxy;
 
 public class FixPGatewaySessions extends GatewaySessions
 {
-    private static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
+    static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InboundFixPConnectEncoder.BLOCK_LENGTH;
 
+    private final LongHashSet authenticatedSessionIds = new LongHashSet();
     private final EngineConfiguration engineConfiguration;
 
     FixPGatewaySessions(
@@ -76,7 +78,7 @@ public class FixPGatewaySessions extends GatewaySessions
         final TcpChannel channel,
         final Framer framer,
         final FixPProtocolType protocolType,
-        final FixPIdentification identification,
+        final FixPContext identification,
         final AbstractFixPProxy fixPProxy)
     {
         return new FixPAcceptorLogon(
@@ -102,8 +104,10 @@ public class FixPGatewaySessions extends GatewaySessions
         private final int offset;
         private final int messageSize;
         private final FixPProtocolType protocolType;
-        private final FixPIdentification identification;
+        private final FixPContext identification;
         private final AbstractFixPProxy fixPProxy;
+
+        private NegotiateRejectReason negotiateRejectReason;
 
         FixPAcceptorLogon(
             final long sessionId,
@@ -115,7 +119,7 @@ public class FixPGatewaySessions extends GatewaySessions
             final TcpChannel channel,
             final Framer framer,
             final FixPProtocolType protocolType,
-            final FixPIdentification identification,
+            final FixPContext identification,
             final AbstractFixPProxy fixPProxy)
         {
             super(gatewaySession, connectionId, channel, framer);
@@ -127,7 +131,15 @@ public class FixPGatewaySessions extends GatewaySessions
             this.identification = identification;
             this.fixPProxy = fixPProxy;
 
-            authenticate(connectionId);
+            if (authenticatedSessionIds.add(sessionId))
+            {
+                authenticate(connectionId);
+            }
+            else
+            {
+                // session id is already authenticated
+                reject(NegotiateRejectReason.DUPLICATE_ID);
+            }
         }
 
         protected void authenticate(final long connectionId)
@@ -178,14 +190,30 @@ public class FixPGatewaySessions extends GatewaySessions
 
         protected void encodeRejectMessage()
         {
-            rejectEncodeBuffer = fixPProxy.encodeNegotiateReject(identification, NegotiateRejectReason.CREDENTIALS);
+            rejectEncodeBuffer = fixPProxy.encodeNegotiateReject(identification, negotiateRejectReason);
         }
 
         public void reject()
         {
+            reject(NegotiateRejectReason.CREDENTIALS);
+        }
+
+        private void reject(final NegotiateRejectReason negotiateRejectReason)
+        {
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
+            this.negotiateRejectReason = negotiateRejectReason;
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
+    }
+
+    GatewaySession releaseByConnectionId(final long connectionId)
+    {
+        final GatewaySession session = super.releaseByConnectionId(connectionId);
+        if (session != null)
+        {
+            authenticatedSessionIds.remove(session.sessionId());
+        }
+        return session;
     }
 }

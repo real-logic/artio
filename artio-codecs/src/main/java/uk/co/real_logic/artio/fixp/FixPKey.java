@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Monotonic Ltd.
+ * Copyright 2020 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.library;
+package uk.co.real_logic.artio.fixp;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.messages.FixPProtocolType;
-
-@FunctionalInterface
-public interface FixPConnectionExistsHandler
+/**
+ * Interface recording information that uniquely identifies a FIXP session. This may just be a session id or it may
+ * contain information such as the host and port of the gateway that you're connecting to in the case of an initiator
+ * protocol.
+ */
+public interface FixPKey
 {
-    ControlledFragmentHandler.Action onConnectionExists(
-        FixLibrary library,
-        long surrogateSessionId,
-        FixPProtocolType protocol,
-        FixPContext identification);
 }
