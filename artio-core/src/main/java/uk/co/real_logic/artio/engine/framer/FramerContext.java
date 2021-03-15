@@ -109,7 +109,8 @@ public class FramerContext
                 outboundPublication,
                 errorHandler,
                 sentSequenceNumberIndex,
-                receivedSequenceNumberIndex);
+                receivedSequenceNumberIndex,
+                configuration);
             endPointFactory = null;
         }
         else

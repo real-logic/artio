@@ -24,8 +24,11 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
@@ -291,5 +294,11 @@ public class ILink3Proxy extends AbstractFixPProxy
         }
 
         bufferClaim.commit();
+    }
+
+    public ByteBuffer encodeNegotiateReject(
+        final FixPIdentification identification, final NegotiateRejectReason rejectReason)
+    {
+        return Ilink3Protocol.unsupported();
     }
 }

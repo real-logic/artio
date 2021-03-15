@@ -18,16 +18,24 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.ExclusivePublication;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
+import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
+import java.nio.ByteBuffer;
+
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class BinaryEntryPointProxy extends AbstractFixPProxy
 {
     public static final int BINARY_ENTRYPOINT_HEADER_LENGTH = SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int BINARY_ENTRYPOINT_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + BINARY_ENTRYPOINT_HEADER_LENGTH;
+    private static final int NEGOTIATE_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        NegotiateRejectEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
     private final NegotiateResponseEncoder negotiateResponse = new NegotiateResponseEncoder();
@@ -36,6 +44,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final EstablishRejectEncoder establishReject = new EstablishRejectEncoder();
     private final SequenceEncoder sequence = new SequenceEncoder();
     private final TerminateEncoder terminate = new TerminateEncoder();
+    private final UnsafeBuffer buffer = new UnsafeBuffer();
 
     public BinaryEntryPointProxy(
         final long connectionId,
@@ -165,7 +174,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
             timestampInNs,
             BINARY_ENTRYPOINT_MESSAGE_HEADER,
             BINARY_ENTRYPOINT_HEADER_LENGTH,
-            SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE);
+            BINARY_ENTRYPOINT_TYPE);
     }
 
     protected int applyHeader(
@@ -203,5 +212,41 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         commit();
 
         return position;
+    }
+
+    public ByteBuffer encodeNegotiateReject(
+        final FixPIdentification fixPIdentification, final NegotiateRejectReason rejectReason)
+    {
+        final BinaryEntryPointIdentification identification = (BinaryEntryPointIdentification)fixPIdentification;
+
+        final NegotiationRejectCode rejectCode;
+        switch (rejectReason)
+        {
+            case CREDENTIALS:
+                rejectCode = NegotiationRejectCode.CREDENTIALS;
+                break;
+
+            case DUPLICATE_ID:
+                rejectCode = NegotiationRejectCode.DUPLICATE_ID;
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid reject reason: " + rejectReason);
+        }
+
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(NEGOTIATE_REJECT_LENGTH);
+        buffer.wrap(byteBuffer);
+
+        SimpleOpenFramingHeader.writeSofh(buffer, 0, NEGOTIATE_REJECT_LENGTH, BINARY_ENTRYPOINT_TYPE);
+        negotiateReject
+            .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
+            .sessionID(identification.sessionID())
+            .sessionVerID(identification.sessionVerID())
+            .requestTimestamp().time(identification.requestTimestamp());
+        negotiateReject
+            .enteringFirm(identification.enteringFirm())
+            .negotiationRejectCode(rejectCode);
+
+        return byteBuffer;
     }
 }

@@ -15,27 +15,25 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ExclusivePublication;
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.FixPIdentification;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
-import uk.co.real_logic.artio.messages.InboundFixPConnectEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 public class FixPGatewaySession extends GatewaySession
 {
-    private static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        InboundFixPConnectEncoder.BLOCK_LENGTH;
 
     private final FixPProtocolType protocolType;
     private final AbstractFixPParser parser;
-    private final ExclusivePublication publication;
+    private final AbstractFixPProxy fixPProxy;
     private final BinaryEntryPointReceiverEndPoint receiverEndPoint;
     private final FixPSenderEndPoint senderEndPoint;
+    private final FixPGatewaySessions gatewaySessions;
 
     private byte[] firstMessage;
+    private FixPIdentification identification;
 
     FixPGatewaySession(
         final long connectionId,
@@ -45,16 +43,18 @@ public class FixPGatewaySession extends GatewaySession
         final long authenticationTimeoutInMs,
         final FixPProtocolType protocolType,
         final AbstractFixPParser parser,
-        final ExclusivePublication publication,
+        final AbstractFixPProxy fixPProxy,
         final BinaryEntryPointReceiverEndPoint receiverEndPoint,
-        final FixPSenderEndPoint senderEndPoint)
+        final FixPSenderEndPoint senderEndPoint,
+        final FixPGatewaySessions gatewaySessions)
     {
         super(connectionId, sessionId, address, connectionType, authenticationTimeoutInMs);
         this.protocolType = protocolType;
         this.parser = parser;
-        this.publication = publication;
+        this.fixPProxy = fixPProxy;
         this.receiverEndPoint = receiverEndPoint;
         this.senderEndPoint = senderEndPoint;
+        this.gatewaySessions = gatewaySessions;
     }
 
     public String address()
@@ -77,33 +77,24 @@ public class FixPGatewaySession extends GatewaySession
     }
 
     // Called with the first message sent in the FIXP stream
-    public void onLogon(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
+    public AcceptorLogonResult onLogon(
+        final MutableAsciiBuffer buffer,
+        final int offset,
+        final int messageSize,
+        final TcpChannel channel,
+        final Framer framer)
     {
         firstMessage = new byte[messageSize];
         buffer.getBytes(offset, firstMessage, 0, messageSize);
 
-        // TODO: add in pending acceptor logon lifecycle
-
         sessionId = parser.sessionId(buffer, offset);
+        identification = parser.lookupIdentification(buffer, offset, messageSize);
 
-        final MessageHeaderEncoder header = new MessageHeaderEncoder();
-        final InboundFixPConnectEncoder inboundFixPConnect = new InboundFixPConnectEncoder();
-        final UnsafeBuffer logonBuffer = new UnsafeBuffer(new byte[ACCEPTED_HEADER_LENGTH]);
-        inboundFixPConnect
-            .wrapAndApplyHeader(logonBuffer, 0, header)
-            .connection(connectionId)
-            .sessionId(sessionId)
-            .protocolType(protocolType)
-            .messageLength(messageSize);
+        startAuthentication(System.currentTimeMillis()); // TODO: time
 
-        final long position = publication.offer(
-            logonBuffer, 0, ACCEPTED_HEADER_LENGTH,
-            buffer, offset, messageSize);
-
-        if (position < 0)
-        {
-            System.out.println("position = " + position); // TODO
-        }
+        return gatewaySessions.authenticate(
+            sessionId, buffer, offset, messageSize, this, connectionId, channel, framer, protocolType,
+            identification, fixPProxy);
     }
 
     public FixPProtocolType protocolType()
@@ -121,5 +112,10 @@ public class FixPGatewaySession extends GatewaySession
         libraryId(libraryId);
         receiverEndPoint.libraryId(libraryId);
         senderEndPoint.libraryId(libraryId);
+    }
+
+    public void authenticated()
+    {
+        receiverEndPoint.authenticated();
     }
 }

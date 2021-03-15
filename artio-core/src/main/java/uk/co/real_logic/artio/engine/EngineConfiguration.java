@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
+import org.agrona.Verify;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -38,6 +39,7 @@ import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
+import uk.co.real_logic.artio.validation.FixPAuthenticationStrategy;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
@@ -247,6 +249,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
     private InitialAcceptedSessionOwner initialAcceptedSessionOwner = InitialAcceptedSessionOwner.ENGINE;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
+    private FixPAuthenticationStrategy fixPAuthenticationStrategy = FixPAuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
     private boolean lookupDefaultAcceptorfixDictionary = true;
@@ -742,9 +745,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
+     * Sets the authentication strategy of the FIX Engine to be used for FIX sessions, see
+     * {@link AuthenticationStrategy} for details.
      * <p>
-     * This only needs to be set if this FIX Library is the acceptor library.
+     * This only needs to be set if this FIX Engine is an acceptor and has no impact on an initiator.
      *
      * @param authenticationStrategy the authentication strategy to use.
      * @return this
@@ -752,7 +756,25 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public EngineConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
     {
+        Verify.notNull(authenticationStrategy, "authenticationStrategy");
         this.authenticationStrategy = authenticationStrategy;
+        return this;
+    }
+
+    /**
+     * Sets the authentication strategy of the FIX Engine to be used for FIXP sessions, see
+     * {@link AuthenticationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Engine is an acceptor and has no impact on an initiator.
+     *
+     * @param fixPAuthenticationStrategy the authentication strategy to use.
+     * @return this
+     * @see EngineConfiguration#authenticationTimeoutInMs(long)
+     */
+    public EngineConfiguration fixPAuthenticationStrategy(final FixPAuthenticationStrategy fixPAuthenticationStrategy)
+    {
+        Verify.notNull(fixPAuthenticationStrategy, "fixPAuthenticationStrategy");
+        this.fixPAuthenticationStrategy = fixPAuthenticationStrategy;
         return this;
     }
 
@@ -1165,6 +1187,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public AuthenticationStrategy authenticationStrategy()
     {
         return authenticationStrategy;
+    }
+
+    public FixPAuthenticationStrategy fixPAuthenticationStrategy()
+    {
+        return fixPAuthenticationStrategy;
     }
 
     public long indexFileStateFlushTimeoutInMs()

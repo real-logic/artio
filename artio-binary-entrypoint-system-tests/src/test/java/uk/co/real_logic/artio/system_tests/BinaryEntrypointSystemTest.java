@@ -39,7 +39,7 @@ import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -64,6 +64,7 @@ public class BinaryEntrypointSystemTest
         });
     private final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler = new FakeFixPConnectionAcquiredHandler(
         connectionHandler);
+    private final FakeFixPAuthenticationStrategy fixPAuthenticationStrategy = new FakeFixPAuthenticationStrategy();
 
     private BinaryEntrypointConnection connection;
 
@@ -80,6 +81,7 @@ public class BinaryEntrypointSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
 //            .monitoringAgentFactory(MonitoringAgentFactory.none())
+            .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
             .fixPRetransmitHandler(retransmitHandler)
             .acceptBinaryEntryPoint()
             .bindTo("localhost", port)
@@ -109,7 +111,7 @@ public class BinaryEntrypointSystemTest
     }
 
     @Test
-    public void shouldSupportInitiatorTerminateConnection() throws IOException
+    public void shouldSupportAcceptorTerminateConnection() throws IOException
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
@@ -134,6 +136,30 @@ public class BinaryEntrypointSystemTest
             assertReceivesOrder();
 
             client.readExecutionReportNew();
+        }
+    }
+
+    @Test
+    public void shouldRejectConnectionsAccordingToAuthenticationStrategy() throws IOException
+    {
+        fixPAuthenticationStrategy.reject();
+
+        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
+        {
+            client.writeNegotiate();
+
+            assertEquals(NegotiationRejectCode.CREDENTIALS, client.readNegotiateReject().negotiationRejectCode());
+
+            client.assertDisconnected();
+
+            final BinaryEntryPointIdentification id =
+                (BinaryEntryPointIdentification)fixPAuthenticationStrategy.lastSessionId();
+            assertNotNull(id);
+            assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
+            assertEquals(1, id.sessionVerID());
+
+            assertFalse(connectionExistsHandler.invoked());
+            assertFalse(connectionAcquiredHandler.invoked());
         }
     }
 
@@ -197,6 +223,7 @@ public class BinaryEntrypointSystemTest
         return client;
     }
 
+    // DUPLICATE_ID on negotiate
     // SessionVeID must be incremented each time Negotiate message is sent to gateway
 
     // Unnegotiated: Establish request was not preceded by a Negotiation or

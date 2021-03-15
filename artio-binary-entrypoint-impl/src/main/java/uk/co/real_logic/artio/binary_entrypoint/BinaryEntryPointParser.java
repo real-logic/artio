@@ -152,13 +152,17 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                 negotiate.wrap(messageBuffer, offset, blockLength, version);
                 return new BinaryEntryPointIdentification(
                     negotiate.sessionID(),
-                    negotiate.sessionVerID());
+                    negotiate.sessionVerID(),
+                    negotiate.timestamp().time(),
+                    negotiate.enteringFirm());
 
             case EstablishDecoder.TEMPLATE_ID:
                 establish.wrap(messageBuffer, offset, blockLength, version);
                 return new BinaryEntryPointIdentification(
                     establish.sessionID(),
-                    establish.sessionVerID());
+                    establish.sessionVerID(),
+                    establish.timestamp().time(),
+                    NegotiateDecoder.enteringFirmNullValue());
         }
 
         // TODO: deal with this scenario more politely

@@ -45,6 +45,7 @@ public abstract class ReceiverEndPoint
     protected int libraryId;
     protected int usedBufferData = 0;
     protected SelectionKey selectionKey;
+    protected AcceptorLogonResult pendingAcceptorLogon;
 
     public ReceiverEndPoint(
         final GatewayPublication publication,

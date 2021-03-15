@@ -23,16 +23,8 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
  *
  * Either only call the <code>accept </code>or the <code>reject()</code> method.
  */
-public interface AuthenticationProxy
+public interface AuthenticationProxy extends AbstractAuthenticationProxy
 {
-    /**
-     * Call this method to accept the authentication.
-     *
-     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
-     * successfully called.
-     */
-    void accept();
-
     /**
      * Call this method to accept the authentication and specify a FIX Dictionary based upon the logon message.
      *
@@ -41,14 +33,6 @@ public interface AuthenticationProxy
      * successfully called.
      */
     void accept(Class<? extends FixDictionary> fixDictionaryClass);
-
-    /**
-     * Call this method to reject the authentication.
-     *
-     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
-     * successfully called.
-     */
-    void reject();
 
     /**
      * Call this method to reject the authentication with a custom message.
@@ -62,22 +46,4 @@ public interface AuthenticationProxy
      * successfully called.
      */
     void reject(Encoder encoder, long lingerTimeoutInMs);
-
-    /**
-     * Get the remote IP address and port of the system. Remote addresses would be of the format
-     * <code>"/ip_address:port"</code> eg: <code>"/127.0.0.1:56056"</code>. This can be used to implement per
-     * session IP whitelist.
-     *
-     * @return the remote IP address and port of the system
-     */
-    String remoteAddress();
-
-    /**
-     * Gets the connection id that uniquely identifies this individual connection. This can be used to correlate
-     * logon operations with disconnect callbacks to
-     * {@link AuthenticationStrategy#onDisconnect(long, long)}.
-     *
-     * @return the connection id.
-     */
-    long connectionId();
 }

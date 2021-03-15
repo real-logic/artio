@@ -120,6 +120,11 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
 
     int poll()
     {
+        if (pendingAcceptorLogon != null)
+        {
+            return pollPendingAcceptorLogon();
+        }
+
         try
         {
             final int bytesRead = readData();
@@ -150,6 +155,21 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
 
             saveError(ex);
             onDisconnectDetected();
+        }
+
+        return 1;
+    }
+
+    private int pollPendingAcceptorLogon()
+    {
+        if (pendingAcceptorLogon.poll())
+        {
+            if (!pendingAcceptorLogon.isAccepted())
+            {
+                completeDisconnect(pendingAcceptorLogon.reason());
+            }
+
+            pendingAcceptorLogon = null;
         }
 
         return 1;

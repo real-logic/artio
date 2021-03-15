@@ -19,13 +19,14 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.validation.*;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
@@ -180,7 +181,7 @@ abstract class GatewaySessions
         REJECTED
     }
 
-    protected abstract class PendingAcceptorLogon implements AuthenticationProxy, AcceptorLogonResult
+    protected abstract class PendingAcceptorLogon implements AbstractAuthenticationProxy, AcceptorLogonResult
     {
         private static final long NO_REQUIRED_POSITION = -1;
 
@@ -195,6 +196,7 @@ abstract class GatewaySessions
         protected long requiredPosition = NO_REQUIRED_POSITION;
         protected long lingerTimeoutInMs;
         protected long lingerExpiryTimeInMs;
+        protected ByteBuffer rejectEncodeBuffer;
 
         PendingAcceptorLogon(
             final GatewaySession gatewaySession,
@@ -213,13 +215,13 @@ abstract class GatewaySessions
             final Throwable throwable,
             final long connectionId,
             final String theDefault,
-            final AbstractLogonDecoder logon)
+            final String messageForError)
         {
             final String message = String.format(
                 "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
                 strategyName,
                 connectionId,
-                logon.toString(),
+                messageForError,
                 theDefault);
             onError(new FixGatewayException(message, throwable));
         }
@@ -321,7 +323,40 @@ abstract class GatewaySessions
             return complete;
         }
 
-        protected abstract boolean onSendingRejectMessage();
+        private boolean onSendingRejectMessage()
+        {
+            if (rejectEncodeBuffer == null)
+            {
+                try
+                {
+                    encodeRejectMessage();
+                }
+                catch (final Exception e)
+                {
+                    errorHandler.onError(e);
+                    state = AuthenticationState.REJECTED;
+                    return true;
+                }
+            }
+
+            try
+            {
+                channel.write(rejectEncodeBuffer);
+                if (!rejectEncodeBuffer.hasRemaining())
+                {
+                    lingerExpiryTimeInMs = epochClock.time() + lingerTimeoutInMs;
+                    state = AuthenticationState.LINGERING_REJECT_MESSAGE;
+                }
+            }
+            catch (final IOException e)
+            {
+                // The TCP Connection has disconnected, therefore we consider this complete.
+                state = AuthenticationState.REJECTED;
+                return true;
+            }
+
+            return false;
+        }
 
         protected abstract void encodeRejectMessage();
 
@@ -333,12 +368,7 @@ abstract class GatewaySessions
             }
         }
 
-        public void reject()
-        {
-            validateState();
-
-            reject(DisconnectReason.FAILED_AUTHENTICATION);
-        }
+        public abstract void reject();
 
         public String remoteAddress()
         {

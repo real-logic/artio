@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ExclusivePublication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -25,8 +24,6 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPO
 
 public class BinaryEntryPointReceiverEndPoint extends FixPReceiverEndPoint
 {
-    private final ExclusivePublication publication;
-
     private boolean requiresAuthentication = true;
 
     BinaryEntryPointReceiverEndPoint(
@@ -51,22 +48,24 @@ public class BinaryEntryPointReceiverEndPoint extends FixPReceiverEndPoint
             epochNanoClock,
             correlationId,
             BINARY_ENTRYPOINT_TYPE);
-        this.publication = publication.dataPublication();
     }
 
     void checkMessage(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
     {
-        if (requiresAuthentication)
+        if (requiresAuthentication && pendingAcceptorLogon == null)
         {
-            fixPGatewaySession.onLogon(buffer, offset, messageSize);
-
-            requiresAuthentication = false;
+            pendingAcceptorLogon = fixPGatewaySession.onLogon(buffer, offset, messageSize, channel, framer);
         }
     }
 
     boolean requiresAuthentication()
     {
         return requiresAuthentication;
+    }
+
+    void authenticated()
+    {
+        requiresAuthentication = false;
     }
 
     void trackDisconnect()

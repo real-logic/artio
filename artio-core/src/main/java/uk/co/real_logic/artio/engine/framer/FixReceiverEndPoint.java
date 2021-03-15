@@ -170,7 +170,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private int sequenceIndex;
     private boolean isPaused = false;
 
-    private AcceptorLogonResult pendingAcceptorLogon;
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
     private long lastReadTimestampInNs;

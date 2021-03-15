@@ -21,11 +21,16 @@ public class BinaryEntryPointIdentification implements FixPIdentification
 {
     private final long sessionID;
     private final long sessionVerID;
+    private final long requestTimestamp;
+    private final long enteringFirm;
 
-    public BinaryEntryPointIdentification(final long sessionID, final long sessionVerID)
+    public BinaryEntryPointIdentification(
+        final long sessionID, final long sessionVerID, final long timestamp, final long enteringFirm)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
+        this.requestTimestamp = timestamp;
+        this.enteringFirm = enteringFirm;
     }
 
     public long sessionID()
@@ -36,5 +41,15 @@ public class BinaryEntryPointIdentification implements FixPIdentification
     public long sessionVerID()
     {
         return sessionVerID;
+    }
+
+    public long requestTimestamp()
+    {
+        return requestTimestamp;
+    }
+
+    public long enteringFirm()
+    {
+        return enteringFirm;
     }
 }

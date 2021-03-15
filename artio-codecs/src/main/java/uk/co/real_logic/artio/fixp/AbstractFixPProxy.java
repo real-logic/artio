@@ -22,6 +22,8 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.FixPMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import java.nio.ByteBuffer;
+
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public abstract class AbstractFixPProxy
@@ -101,4 +103,8 @@ public abstract class AbstractFixPProxy
     }
 
     protected abstract int applyHeader(MessageEncoderFlyweight message, MutableDirectBuffer buffer, int offset);
+
+    public abstract ByteBuffer encodeNegotiateReject(
+        FixPIdentification identification, NegotiateRejectReason rejectReason);
+
 }

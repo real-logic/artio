@@ -42,6 +42,7 @@ import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder.SessionsEncoder;
@@ -185,6 +186,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
+    private AbstractFixPProxy fixPProxy;
 
     private boolean performingDisconnectOperation = false;
     private UnbindCommand pendingUnbind = null;
@@ -649,6 +651,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
             fixPParser = fixPProtocol.makeParser(null);
+            fixPProxy = fixPProtocol.makeProxy(null, null);
         }
 
         final long connectionId = newConnectionId();
@@ -678,9 +681,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.authenticationTimeoutInMs(),
             protocolType,
             fixPParser,
-            inboundPublication.dataPublication(),
+            fixPProxy,
             receiverEndPoint,
-            senderEndPoint);
+            senderEndPoint,
+            (FixPGatewaySessions)gatewaySessions);
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
         gatewaySessions.track(gatewaySession);
         receiverEndPoint.gatewaySession(gatewaySession);

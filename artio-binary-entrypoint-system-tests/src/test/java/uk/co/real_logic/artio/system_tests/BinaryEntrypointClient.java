@@ -69,6 +69,8 @@ public final class BinaryEntrypointClient implements AutoCloseable
     private final TestSystem testSystem;
     private int skipTemplateId = NOT_SKIPPING;
 
+    private long negotiateRequestTimestamp;
+
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
@@ -80,6 +82,16 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public NegotiateResponseDecoder readNegotiateResponse()
     {
         return read(new NegotiateResponseDecoder(), 0);
+    }
+
+    public NegotiateRejectDecoder readNegotiateReject()
+    {
+        final NegotiateRejectDecoder reject = read(new NegotiateRejectDecoder(), 0);
+        assertEquals(SESSION_ID, reject.sessionID());
+        assertEquals(1, reject.sessionVerID());
+        assertEquals(negotiateRequestTimestamp, reject.requestTimestamp().time());
+        assertEquals(FIRM_ID, reject.enteringFirm());
+        return reject;
     }
 
     public <T extends MessageDecoderFlyweight> T read(final T messageDecoder, final int nonBlockLength)
@@ -215,10 +227,12 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH);
 
+        negotiateRequestTimestamp = epochNanoClock.nanoTime();
+
         negotiate
             .sessionID(SESSION_ID)
             .sessionVerID(1)
-            .timestamp().time(epochNanoClock.nanoTime());
+            .timestamp().time(negotiateRequestTimestamp);
         negotiate
             .enteringFirm(FIRM_ID)
             .onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue())

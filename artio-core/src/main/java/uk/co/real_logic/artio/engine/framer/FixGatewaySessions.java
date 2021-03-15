@@ -45,7 +45,6 @@ import uk.co.real_logic.artio.util.EpochFractionClocks;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -292,7 +291,6 @@ public class FixGatewaySessions extends GatewaySessions
         private final boolean resetSeqNum;
 
         private Encoder encoder;
-        private ByteBuffer encodeBuffer;
         private Class<? extends FixDictionary> fixDictionaryClass;
 
         FixPendingAcceptorLogon(
@@ -332,7 +330,7 @@ public class FixGatewaySessions extends GatewaySessions
             authenticate(logon, connectionId);
         }
 
-        protected PersistenceLevel getPersistenceLevel(final AbstractLogonDecoder logon, final long connectionId)
+        private PersistenceLevel getPersistenceLevel(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -341,12 +339,12 @@ public class FixGatewaySessions extends GatewaySessions
             catch (final Throwable throwable)
             {
                 onStrategyError(
-                    "persistence", throwable, connectionId, "TRANSIENT_SEQUENCE_NUMBERS", logon);
+                    "persistence", throwable, connectionId, "TRANSIENT_SEQUENCE_NUMBERS", logon.toString());
                 return PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
             }
         }
 
-        protected void authenticate(final AbstractLogonDecoder logon, final long connectionId)
+        private void authenticate(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -354,7 +352,7 @@ public class FixGatewaySessions extends GatewaySessions
             }
             catch (final Throwable throwable)
             {
-                onStrategyError("authentication", throwable, connectionId, "false", logon);
+                onStrategyError("authentication", throwable, connectionId, "false", logon.toString());
 
                 if (state != AuthenticationState.REJECTED)
                 {
@@ -456,46 +454,11 @@ public class FixGatewaySessions extends GatewaySessions
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
 
-        protected boolean onSendingRejectMessage()
-        {
-            if (encodeBuffer == null)
-            {
-                try
-                {
-                    encodeRejectMessage();
-                }
-                catch (final Exception e)
-                {
-                    errorHandler.onError(e);
-                    state = AuthenticationState.REJECTED;
-                    return true;
-                }
-            }
-
-            try
-            {
-                channel.write(encodeBuffer);
-                if (!encodeBuffer.hasRemaining())
-                {
-                    lingerExpiryTimeInMs = epochClock.time() + lingerTimeoutInMs;
-                    state = AuthenticationState.LINGERING_REJECT_MESSAGE;
-                }
-            }
-            catch (final IOException e)
-            {
-                // The TCP Connection has disconnected, therefore we consider this complete.
-                state = AuthenticationState.REJECTED;
-                return true;
-            }
-
-            return false;
-        }
-
         protected void encodeRejectMessage()
         {
-            encodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
+            rejectEncodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
 
-            final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(encodeBuffer);
+            final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(rejectEncodeBuffer);
 
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
@@ -508,8 +471,15 @@ public class FixGatewaySessions extends GatewaySessions
             final int offset = Encoder.offset(result);
             final int length = Encoder.length(result);
 
-            ByteBufferUtil.position(encodeBuffer, offset);
-            ByteBufferUtil.limit(encodeBuffer, offset + length);
+            ByteBufferUtil.position(rejectEncodeBuffer, offset);
+            ByteBufferUtil.limit(rejectEncodeBuffer, offset + length);
+        }
+
+        public void reject()
+        {
+            validateState();
+
+            reject(DisconnectReason.FAILED_AUTHENTICATION);
         }
     }
 }
