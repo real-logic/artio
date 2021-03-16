@@ -180,6 +180,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final LongHashSet requestAllSessionSeenSessions = new LongHashSet();
     private final Image outboundEngineImage;
+    private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
 
     private FixPContexts fixPContexts;
@@ -369,6 +370,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
         outboundEngineImage = librarySubscription.imageBySessionId(outboundPublication.sessionId());
+        outboundEngineSlowImage = slowSubscription.imageBySessionId(outboundPublication.sessionId());
     }
 
     private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
@@ -2139,7 +2141,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             // If there's still a message that was sent by the session when it was managed by the FixEngine
             // then wait for it to be sent.
-            if (outboundEngineImage.position() < gatewaySession.lastSentPosition())
+            if (outboundEngineImage.position() < gatewaySession.lastSentPosition() ||
+                outboundEngineSlowImage.position() < gatewaySession.lastSentPosition())
             {
                 return BACK_PRESSURED;
             }
