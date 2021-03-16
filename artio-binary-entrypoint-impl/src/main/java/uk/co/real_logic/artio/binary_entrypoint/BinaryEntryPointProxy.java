@@ -22,7 +22,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.NegotiateRejectReason;
+import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import java.nio.ByteBuffer;
@@ -36,6 +36,8 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private static final int BINARY_ENTRYPOINT_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + BINARY_ENTRYPOINT_HEADER_LENGTH;
     private static final int NEGOTIATE_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
         NegotiateRejectEncoder.BLOCK_LENGTH;
+    private static final int ESTABLISH_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        EstablishRejectEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
     private final NegotiateResponseEncoder negotiateResponse = new NegotiateResponseEncoder();
@@ -214,38 +216,74 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         return position;
     }
 
-    public ByteBuffer encodeNegotiateReject(
-        final FixPContext fixPContext, final NegotiateRejectReason rejectReason)
+    public ByteBuffer encodeReject(
+        final FixPContext fixPContext, final FirstMessageRejectReason rejectReason)
     {
         final BinaryEntryPointContext identification = (BinaryEntryPointContext)fixPContext;
 
-        final NegotiationRejectCode rejectCode;
+        final boolean isNegotiate;
+        final NegotiationRejectCode negotiationRejectCode;
+        final EstablishRejectCode establishRejectCode;
         switch (rejectReason)
         {
-            case CREDENTIALS:
-                rejectCode = NegotiationRejectCode.CREDENTIALS;
+            case NEGOTIATE_CREDENTIALS:
+                isNegotiate = true;
+                negotiationRejectCode = NegotiationRejectCode.CREDENTIALS;
+                establishRejectCode = null;
                 break;
 
-            case DUPLICATE_ID:
-                rejectCode = NegotiationRejectCode.DUPLICATE_ID;
+            case NEGOTIATE_DUPLICATE_ID:
+                isNegotiate = true;
+                negotiationRejectCode = NegotiationRejectCode.DUPLICATE_ID;
+                establishRejectCode = null;
+                break;
+
+            case NEGOTIATE_UNSPECIFIED:
+                isNegotiate = true;
+                negotiationRejectCode = NegotiationRejectCode.UNSPECIFIED;
+                establishRejectCode = null;
+                break;
+
+            case ESTABLISH_UNNEGOTIATED:
+                isNegotiate = false;
+                negotiationRejectCode = null;
+                establishRejectCode = EstablishRejectCode.UNNEGOTIATED;
                 break;
 
             default:
                 throw new IllegalArgumentException("Invalid reject reason: " + rejectReason);
         }
 
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(NEGOTIATE_REJECT_LENGTH);
-        buffer.wrap(byteBuffer);
+        final ByteBuffer byteBuffer;
+        if (isNegotiate)
+        {
+            byteBuffer = ByteBuffer.allocate(NEGOTIATE_REJECT_LENGTH);
+            buffer.wrap(byteBuffer);
 
-        SimpleOpenFramingHeader.writeSofh(buffer, 0, NEGOTIATE_REJECT_LENGTH, BINARY_ENTRYPOINT_TYPE);
-        negotiateReject
-            .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
-            .sessionID(identification.sessionID())
-            .sessionVerID(identification.sessionVerID())
-            .requestTimestamp().time(identification.requestTimestamp());
-        negotiateReject
-            .enteringFirm(identification.enteringFirm())
-            .negotiationRejectCode(rejectCode);
+            SimpleOpenFramingHeader.writeSofh(buffer, 0, NEGOTIATE_REJECT_LENGTH, BINARY_ENTRYPOINT_TYPE);
+            negotiateReject
+                .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
+                .sessionID(identification.sessionID())
+                .sessionVerID(identification.sessionVerID())
+                .requestTimestamp().time(identification.requestTimestamp());
+            negotiateReject
+                .enteringFirm(identification.enteringFirm())
+                .negotiationRejectCode(negotiationRejectCode);
+        }
+        else
+        {
+            byteBuffer = ByteBuffer.allocate(ESTABLISH_REJECT_LENGTH);
+            buffer.wrap(byteBuffer);
+
+            SimpleOpenFramingHeader.writeSofh(buffer, 0, ESTABLISH_REJECT_LENGTH, BINARY_ENTRYPOINT_TYPE);
+            establishReject
+                .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
+                .sessionID(identification.sessionID())
+                .sessionVerID(identification.sessionVerID())
+                .requestTimestamp().time(identification.requestTimestamp());
+            establishReject
+                .establishmentRejectCode(establishRejectCode);
+        }
 
         return byteBuffer;
     }

@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
 
 public class BinaryEntryPointContext implements FixPContext
 {
     private final long sessionID;
-    private long sessionVerID;
+    private final long sessionVerID;
     private final long requestTimestamp;
     private final long enteringFirm;
     private final boolean fromNegotiate;
@@ -87,37 +88,49 @@ public class BinaryEntryPointContext implements FixPContext
         return key;
     }
 
-    public boolean canAccept(final FixPContext fixPContext)
+    public FirstMessageRejectReason checkConnect(final FixPContext fixPContext)
     {
+        if (fixPContext == null)
+        {
+            return checkFirstConnect();
+        }
+
         // Sanity checks
         if (!(fixPContext instanceof BinaryEntryPointContext))
         {
-            return false;
+            throw new IllegalArgumentException("Unable to compare protocol: " + this + " to " + fixPContext);
         }
 
-        final BinaryEntryPointContext otherContext = (BinaryEntryPointContext)fixPContext;
-        if (sessionID != otherContext.sessionID)
+        final BinaryEntryPointContext oldContext = (BinaryEntryPointContext)fixPContext;
+        if (sessionID != oldContext.sessionID)
         {
-            return false;
+            throw new IllegalArgumentException("Unable to compare: " + sessionID + " to " + oldContext.sessionID);
         }
 
         // negotiations should increment the session ver id
-        if (otherContext.fromNegotiate)
+        if (fromNegotiate)
         {
-            if (otherContext.sessionVerID == sessionVerID + 1)
-            {
-                sessionVerID++;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return oldContext.sessionVerID == sessionVerID - 1 ? null : FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
         }
         // establish messages shouldn't
         else
         {
-            return otherContext.sessionVerID == sessionVerID;
+            return oldContext.sessionVerID == sessionVerID ? null : FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
         }
+    }
+
+    public FirstMessageRejectReason checkFirstConnect()
+    {
+        if (!fromNegotiate)
+        {
+            return FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
+        }
+
+        if (sessionVerID != 1)
+        {
+            return FirstMessageRejectReason.NEGOTIATE_UNSPECIFIED;
+        }
+
+        return null;
     }
 }

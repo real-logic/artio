@@ -67,11 +67,11 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     private final SocketChannel socket;
     private final TestSystem testSystem;
+
     private int skipTemplateId = NOT_SKIPPING;
-
-    private long negotiateRequestTimestamp;
-
     private long sessionVerID = 1;
+    private long negotiateTimestampInNs;
+    private long establishTimestampInNs;
 
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
     {
@@ -102,10 +102,19 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final NegotiateRejectDecoder reject = read(new NegotiateRejectDecoder(), 0);
         assertEquals(SESSION_ID, reject.sessionID());
         assertEquals(sessionVerID, reject.sessionVerID());
-        assertEquals(negotiateRequestTimestamp, reject.requestTimestamp().time());
+        assertEquals(negotiateTimestampInNs, reject.requestTimestamp().time());
         assertEquals(FIRM_ID, reject.enteringFirm());
         assertEquals(negotiationRejectCode, reject.negotiationRejectCode());
         return reject;
+    }
+
+    public void readEstablishReject(final EstablishRejectCode rejectCode)
+    {
+        final EstablishRejectDecoder reject = read(new EstablishRejectDecoder(), 0);
+        assertEquals(SESSION_ID, reject.sessionID());
+        assertEquals(sessionVerID, reject.sessionVerID());
+        assertEquals(establishTimestampInNs, reject.requestTimestamp().time());
+        assertEquals(rejectCode, reject.establishmentRejectCode());
     }
 
     public <T extends MessageDecoderFlyweight> T read(final T messageDecoder, final int nonBlockLength)
@@ -241,12 +250,12 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH);
 
-        negotiateRequestTimestamp = epochNanoClock.nanoTime();
+        negotiateTimestampInNs = epochNanoClock.nanoTime();
 
         negotiate
             .sessionID(SESSION_ID)
             .sessionVerID(sessionVerID)
-            .timestamp().time(negotiateRequestTimestamp);
+            .timestamp().time(negotiateTimestampInNs);
         negotiate
             .enteringFirm(FIRM_ID)
             .onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue())
@@ -260,10 +269,11 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final EstablishEncoder establish = new EstablishEncoder();
         wrap(establish, EstablishEncoder.BLOCK_LENGTH);
 
+        establishTimestampInNs = epochNanoClock.nanoTime();
         establish
             .sessionID(SESSION_ID)
             .sessionVerID(sessionVerID)
-            .timestamp().time(epochNanoClock.nanoTime());
+            .timestamp().time(establishTimestampInNs);
         establish.keepAliveInterval().time(KEEP_ALIVE_INTERVAL_IN_MS);
         establish
             .nextSeqNo(1)

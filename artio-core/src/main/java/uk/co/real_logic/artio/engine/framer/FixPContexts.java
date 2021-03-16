@@ -21,6 +21,7 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
+import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -199,7 +200,8 @@ class FixPContexts
         mappedFile.close();
     }
 
-    public boolean onAcceptorLogon(final long sessionId, final FixPContext context, final long connectionId)
+    public FirstMessageRejectReason onAcceptorLogon(
+        final long sessionId, final FixPContext context, final long connectionId)
     {
         final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
         if (duplicateConnection == MISSING_LONG)
@@ -208,19 +210,16 @@ class FixPContexts
 
             final FixPKey key = context.toKey();
             final FixPContext oldContext = acceptorKeyToContext.get(key);
-            if (oldContext == null)
+            final FirstMessageRejectReason rejectReason = context.checkConnect(oldContext);
+            if (rejectReason == null)
             {
                 acceptorKeyToContext.put(key, context);
-                return true;
             }
-            else
-            {
-                return oldContext.canAccept(context);
-            }
+            return rejectReason;
         }
         else
         {
-            return false;
+            return FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
         }
     }
 

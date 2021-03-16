@@ -161,45 +161,23 @@ public class BinaryEntrypointSystemTest
         }
 
         // Check that we can Reconnect afterwards
-        reconnectWithSessionVerId2();
+        connectWithSessionVerId(2);
     }
 
     @Test
     public void shouldAcceptConnectionsWithIncrementingSessionVerId() throws IOException
     {
-        try (BinaryEntrypointClient client = establishNewConnection())
-        {
-            clientTerminatesSession(client);
-        }
+        successfulConnection();
 
-        connectionExistsHandler.reset();
-        connectionAcquiredHandler.reset();
-
-        reconnectWithSessionVerId2();
-    }
-
-    private void reconnectWithSessionVerId2() throws IOException
-    {
-        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
-        {
-            client.sessionVerID(2);
-            establishNewConnection(client);
-            clientTerminatesSession(client);
-        }
+        connectWithSessionVerId(2);
     }
 
     @Test
     public void shouldRejectConnectionsWithNonIncrementingSessionVerId() throws IOException
     {
-        try (BinaryEntrypointClient client = establishNewConnection())
-        {
-            clientTerminatesSession(client);
-        }
+        successfulConnection();
 
-        connectionExistsHandler.reset();
-        connectionAcquiredHandler.reset();
-
-        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
+        try (BinaryEntrypointClient client = newClient())
         {
             client.writeNegotiate();
 
@@ -208,11 +186,73 @@ public class BinaryEntrypointSystemTest
         }
     }
 
-    // reject if first session ver id isn't 1
+    @Test
+    public void shouldRejectConnectionsWithIncorrectFirstSessionVerId() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.sessionVerID(2);
+            client.writeNegotiate();
+
+            client.readNegotiateReject(NegotiationRejectCode.UNSPECIFIED);
+            client.assertDisconnected();
+        }
+    }
+
+    @Test
+    public void shouldRejectUnNegotiatedEstablish() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish();
+            client.readEstablishReject(EstablishRejectCode.UNNEGOTIATED);
+            client.assertDisconnected();
+        }
+    }
+
+    @Test
+    public void shouldRejectUnNegotiatedEstablishWithHigherSessionVerId() throws IOException
+    {
+        successfulConnection();
+
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.sessionVerID(2);
+            client.writeEstablish();
+            client.readEstablishReject(EstablishRejectCode.UNNEGOTIATED);
+            client.assertDisconnected();
+        }
+    }
+
+    private void connectWithSessionVerId(final int sessionVerID) throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.sessionVerID(sessionVerID);
+            establishNewConnection(client);
+            clientTerminatesSession(client);
+        }
+    }
+
+    private void successfulConnection() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            clientTerminatesSession(client);
+        }
+
+        connectionExistsHandler.reset();
+        connectionAcquiredHandler.reset();
+    }
+
+    private BinaryEntrypointClient newClient() throws IOException
+    {
+        return new BinaryEntrypointClient(port, testSystem);
+    }
 
     private void connectionRejected(final NegotiationRejectCode negotiationRejectCode) throws IOException
     {
-        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
+        try (BinaryEntrypointClient client = newClient())
         {
             client.writeNegotiate();
 
@@ -254,7 +294,7 @@ public class BinaryEntrypointSystemTest
 
     private BinaryEntrypointClient establishNewConnection() throws IOException
     {
-        final BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem);
+        final BinaryEntrypointClient client = newClient();
         establishNewConnection(client);
         return client;
     }
@@ -294,8 +334,6 @@ public class BinaryEntrypointSystemTest
         assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
     }
 
-    // SessionVeID must be incremented each time Negotiate message is sent to gateway
-
     // Unnegotiated: Establish request was not preceded by a Negotiation or
     // session was finalized, requiring renegotiation.
 
@@ -304,7 +342,6 @@ public class BinaryEntrypointSystemTest
 
     // KeepaliveInterval: value is out of accepted range.
 
-    // SessionBlocked: user is not authorized
     // Credentials: failed because identity is not recognized, or the user is not
     // authorized to use this service.
 

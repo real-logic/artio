@@ -18,8 +18,10 @@ package uk.co.real_logic.artio.fixp;
 /**
  * Enum for representing common negotiate reject reasons and codes between different FIXP codec implementations
  */
-public enum NegotiateRejectReason
+public enum FirstMessageRejectReason
 {
-    CREDENTIALS,
-    DUPLICATE_ID,
+    NEGOTIATE_CREDENTIALS,
+    NEGOTIATE_DUPLICATE_ID,
+    NEGOTIATE_UNSPECIFIED,
+    ESTABLISH_UNNEGOTIATED,
 }

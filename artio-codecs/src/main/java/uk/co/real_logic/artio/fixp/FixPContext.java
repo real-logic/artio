@@ -23,5 +23,5 @@ public interface FixPContext
 {
     FixPKey toKey();
 
-    boolean canAccept(FixPContext context);
+    FirstMessageRejectReason checkConnect(FixPContext context);
 }
