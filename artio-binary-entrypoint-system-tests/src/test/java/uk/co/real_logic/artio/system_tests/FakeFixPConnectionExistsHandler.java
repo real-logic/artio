@@ -36,13 +36,13 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
         final FixLibrary library,
         final long surrogateSessionId,
         final FixPProtocolType protocol,
-        final FixPContext identification)
+        final FixPContext context)
     {
         assertNotNull(library);
         assertEquals(FixPProtocolType.BINARY_ENTRYPOINT, protocol);
 
         this.lastSurrogateSessionId = surrogateSessionId;
-        this.lastIdentification = identification;
+        this.lastIdentification = context;
 
         lastReply = library.requestSession(surrogateSessionId,
             FixLibrary.NO_MESSAGE_REPLAY,

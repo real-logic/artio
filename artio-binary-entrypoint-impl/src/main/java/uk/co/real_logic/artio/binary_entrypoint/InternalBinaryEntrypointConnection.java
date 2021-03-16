@@ -33,6 +33,7 @@ class InternalBinaryEntrypointConnection
     extends InternalFixPConnection implements BinaryEntrypointConnection
 {
     private final BinaryEntryPointProxy proxy;
+    private final BinaryEntryPointContext context;
 
     private TerminationCode resendTerminationCode;
 
@@ -50,7 +51,8 @@ class InternalBinaryEntrypointConnection
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final EpochNanoClock clock)
+        final EpochNanoClock clock,
+        final BinaryEntryPointContext context)
     {
         super(
             connectionId,
@@ -60,8 +62,9 @@ class InternalBinaryEntrypointConnection
             clock,
             owner,
             new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication()));
+        this.context = context;
         proxy = (BinaryEntryPointProxy)super.proxy;
-        state(State.ACCEPTED);
+        state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
     }
 
     public long sessionId()
@@ -177,12 +180,20 @@ class InternalBinaryEntrypointConnection
         final CancelOnDisconnectType cancelOnDisconnectType,
         final long codTimeoutWindow)
     {
-        checkSession(sessionID, sessionVerID);
-
         final State state = state();
-        if (state != State.SENT_NEGOTIATE_RESPONSE)
+        if (state == State.NEGOTIATED_REESTABLISH)
         {
-            // TODO: validation error
+            this.sessionId = sessionID;
+            this.sessionVerId = sessionVerID;
+        }
+        else
+        {
+            checkSession(sessionID, sessionVerID);
+
+            if (state != State.SENT_NEGOTIATE_RESPONSE)
+            {
+                // TODO: validation error
+            }
         }
 
         this.cancelOnDisconnectType = cancelOnDisconnectType;

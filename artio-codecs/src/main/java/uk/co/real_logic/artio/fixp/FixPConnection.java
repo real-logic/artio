@@ -71,7 +71,8 @@ public interface FixPConnection
         SENT_ESTABLISH_REJECT,
         /** Acceptor has not sent the Establish reject message due to back-pressure, retrying attempt to send. */
         RETRY_ESTABLISH_REJECT,
-
+        /** Acceptor state, counter-party re-established previous connection with an establish message */
+        NEGOTIATED_REESTABLISH,
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
         /** The session is currently retransmitting messages in response to a NotApplied message. */

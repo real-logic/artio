@@ -224,6 +224,24 @@ public class BinaryEntrypointSystemTest
         }
     }
 
+    @Test
+    public void shouldAcceptReEstablishmentOfSession() throws IOException
+    {
+        successfulConnection();
+
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish();
+
+            libraryAcquiresConnection(client);
+
+            client.readEstablishAck();
+
+            assertConnectionMatches(client);
+            clientTerminatesSession(client);
+        }
+    }
+
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
         try (BinaryEntrypointClient client = newClient())
@@ -303,7 +321,31 @@ public class BinaryEntrypointSystemTest
     {
         client.writeNegotiate();
 
+        libraryAcquiresConnection(client);
+
+        final NegotiateResponseDecoder response = client.readNegotiateResponse();
+        assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
+        assertEquals(client.sessionVerID(), response.sessionVerID());
+        assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
+
+        client.writeEstablish();
+        client.readEstablishAck();
+
+        assertConnectionMatches(client);
+    }
+
+    private void assertConnectionMatches(final BinaryEntrypointClient client)
+    {
+        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
+        assertEquals(BinaryEntrypointClient.SESSION_ID, connection.sessionId());
+        assertEquals(client.sessionVerID(), connection.sessionVerId());
+        assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
+    }
+
+    private void libraryAcquiresConnection(final BinaryEntrypointClient client)
+    {
         testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
+        assertNotNull(fixPAuthenticationStrategy.lastSessionId());
         assertEquals(BinaryEntrypointClient.SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
@@ -315,27 +357,7 @@ public class BinaryEntrypointSystemTest
         assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
 
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
-
-        final NegotiateResponseDecoder response = client.readNegotiateResponse();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
-        assertEquals(client.sessionVerID(), response.sessionVerID());
-        assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
-
-        client.writeEstablish();
-        final EstablishAckDecoder establishAck = client.readEstablishAck();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
-        assertEquals(client.sessionVerID(), establishAck.sessionVerID());
-        assertEquals(1, establishAck.nextSeqNo());
-        assertEquals(0, establishAck.lastIncomingSeqNo());
-
-        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, connection.sessionId());
-        assertEquals(client.sessionVerID(), connection.sessionVerId());
-        assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
     }
-
-    // Unnegotiated: Establish request was not preceded by a Negotiation or
-    // session was finalized, requiring renegotiation.
 
     // AlreadyEstablished: EstablishmentAck was already sent; Establish was
     // redundant.
@@ -346,6 +368,7 @@ public class BinaryEntrypointSystemTest
     // authorized to use this service.
 
     // should support FinishedSending/FinishedReceiving process
+    // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
 
     // shouldCorrectlyAbortBusinessMessage()
     // shouldResendNegotiateAndEstablishOnTimeout() - check protocol spec

@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.fixp;
 
 import io.aeron.ExclusivePublication;
-import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -54,8 +53,6 @@ public abstract class FixPProtocol
         long lastReceivedSequenceNumber,
         long lastSentSequenceNumber,
         long lastConnectPayload,
-        DirectBuffer buffer,
-        int offset,
-        int messageLength,
+        FixPContext context,
         EpochNanoClock epochNanoClock);
 }

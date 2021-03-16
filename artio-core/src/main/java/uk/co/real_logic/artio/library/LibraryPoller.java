@@ -1756,7 +1756,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         initFixP(protocolType);
 
-        final FixPContext identification = commonFixPParser.lookupIdentification(
+        final FixPContext context = commonFixPParser.lookupIdentification(
             buffer,
             offset,
             messageLength);
@@ -1767,7 +1767,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 fixLibrary,
                 sessionId,
                 protocolType,
-                identification);
+                context);
     }
 
     public Action onManageFixPConnection(
@@ -1789,6 +1789,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         try
         {
+            final FixPContext context = commonFixPParser.lookupIdentification(
+                buffer,
+                offset,
+                messageLength);
+
             final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
                 connectionId,
                 outboundPublication,
@@ -1798,9 +1803,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastReceivedSequenceNumber,
                 lastSentSequenceNumber,
                 lastConnectPayload,
-                buffer,
-                offset,
-                messageLength,
+                context,
                 epochNanoClock);
 
             final FixPConnectionHandler handler = configuration

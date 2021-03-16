@@ -26,5 +26,5 @@ public interface FixPConnectionExistsHandler
         FixLibrary library,
         long surrogateSessionId,
         FixPProtocolType protocol,
-        FixPContext identification);
+        FixPContext context);
 }

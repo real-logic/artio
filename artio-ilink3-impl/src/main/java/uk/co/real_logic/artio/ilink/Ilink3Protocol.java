@@ -16,9 +16,9 @@
 package uk.co.real_logic.artio.ilink;
 
 import io.aeron.ExclusivePublication;
-import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -62,9 +62,7 @@ public class Ilink3Protocol extends FixPProtocol
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final DirectBuffer buffer,
-        final int offset,
-        final int messageLength,
+        final FixPContext context,
         final EpochNanoClock epochNanoClock)
     {
         return unsupported();

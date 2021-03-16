@@ -285,7 +285,12 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public EstablishAckDecoder readEstablishAck()
     {
-        return read(new EstablishAckDecoder(), 0);
+        final EstablishAckDecoder establishAck = read(new EstablishAckDecoder(), 0);
+        assertEquals(BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
+        assertEquals(sessionVerID, establishAck.sessionVerID());
+        assertEquals(1, establishAck.nextSeqNo());
+        assertEquals(0, establishAck.lastIncomingSeqNo());
+        return establishAck;
     }
 
     public TerminateDecoder readTerminate()
