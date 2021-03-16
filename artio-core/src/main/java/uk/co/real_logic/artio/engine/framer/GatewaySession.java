@@ -101,7 +101,7 @@ abstract class GatewaySession
     abstract void acceptorSequenceNumbers(
         int lastSentSequenceNumber, int lastReceivedSequenceNumber);
 
-    abstract void onDisconnect();
+    abstract void onDisconnectReleasedByOwner();
 
     abstract void close();
 }

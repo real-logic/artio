@@ -195,7 +195,8 @@ public class FramerTest
             mock(CompletionPosition.class),
             finalImagePositions,
             mock(AgentInvoker.class),
-            mock(RecordingCoordinator.class));
+            mock(RecordingCoordinator.class),
+            mock(FixPContexts.class));
 
         when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,

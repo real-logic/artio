@@ -161,11 +161,54 @@ public class BinaryEntrypointSystemTest
         }
 
         // Check that we can Reconnect afterwards
+        reconnectWithSessionVerId2();
+    }
+
+    @Test
+    public void shouldAcceptConnectionsWithIncrementingSessionVerId() throws IOException
+    {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             clientTerminatesSession(client);
         }
+
+        connectionExistsHandler.reset();
+        connectionAcquiredHandler.reset();
+
+        reconnectWithSessionVerId2();
     }
+
+    private void reconnectWithSessionVerId2() throws IOException
+    {
+        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
+        {
+            client.sessionVerID(2);
+            establishNewConnection(client);
+            clientTerminatesSession(client);
+        }
+    }
+
+    @Test
+    public void shouldRejectConnectionsWithNonIncrementingSessionVerId() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            clientTerminatesSession(client);
+        }
+
+        connectionExistsHandler.reset();
+        connectionAcquiredHandler.reset();
+
+        try (BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem))
+        {
+            client.writeNegotiate();
+
+            client.readNegotiateReject(NegotiationRejectCode.DUPLICATE_ID);
+            client.assertDisconnected();
+        }
+    }
+
+    // reject if first session ver id isn't 1
 
     private void connectionRejected(final NegotiationRejectCode negotiationRejectCode) throws IOException
     {
@@ -173,8 +216,7 @@ public class BinaryEntrypointSystemTest
         {
             client.writeNegotiate();
 
-            assertEquals(negotiationRejectCode, client.readNegotiateReject().negotiationRejectCode());
-
+            client.readNegotiateReject(negotiationRejectCode);
             client.assertDisconnected();
 
             final BinaryEntryPointContext id =
@@ -213,6 +255,12 @@ public class BinaryEntrypointSystemTest
     private BinaryEntrypointClient establishNewConnection() throws IOException
     {
         final BinaryEntrypointClient client = new BinaryEntrypointClient(port, testSystem);
+        establishNewConnection(client);
+        return client;
+    }
+
+    private void establishNewConnection(final BinaryEntrypointClient client)
+    {
         client.writeNegotiate();
 
         testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
@@ -220,7 +268,7 @@ public class BinaryEntrypointSystemTest
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
         assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
-        assertEquals(1, id.sessionVerID());
+        assertEquals(client.sessionVerID(), id.sessionVerID());
         final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
 
         testSystem.awaitCompletedReply(reply);
@@ -230,22 +278,20 @@ public class BinaryEntrypointSystemTest
 
         final NegotiateResponseDecoder response = client.readNegotiateResponse();
         assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
-        assertEquals(1, response.sessionVerID());
+        assertEquals(client.sessionVerID(), response.sessionVerID());
         assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
 
         client.writeEstablish();
         final EstablishAckDecoder establishAck = client.readEstablishAck();
         assertEquals(BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
-        assertEquals(1, establishAck.sessionVerID());
+        assertEquals(client.sessionVerID(), establishAck.sessionVerID());
         assertEquals(1, establishAck.nextSeqNo());
         assertEquals(0, establishAck.lastIncomingSeqNo());
 
         connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
         assertEquals(BinaryEntrypointClient.SESSION_ID, connection.sessionId());
-        assertEquals(1, connection.sessionVerId());
+        assertEquals(client.sessionVerID(), connection.sessionVerId());
         assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
-
-        return client;
     }
 
     // SessionVeID must be incremented each time Negotiate message is sent to gateway

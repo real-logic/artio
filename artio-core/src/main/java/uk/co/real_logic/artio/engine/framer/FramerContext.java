@@ -63,6 +63,7 @@ public class FramerContext
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundPublication;
     private final SessionContexts sessionContexts;
+    private final FixPContexts fixPContexts;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -85,6 +86,10 @@ public class FramerContext
 
         this.sessionContexts = new SessionContexts(
             configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
+        this.fixPContexts = new FixPContexts(
+            configuration.iLink3IdBuffer(),
+            errorHandler,
+            configuration.epochNanoClock());
 
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
@@ -110,7 +115,8 @@ public class FramerContext
                 errorHandler,
                 sentSequenceNumberIndex,
                 receivedSequenceNumberIndex,
-                configuration);
+                configuration,
+                fixPContexts);
             endPointFactory = null;
         }
         else
@@ -172,7 +178,8 @@ public class FramerContext
             engineContext.outboundLibraryCompletionPosition(),
             finalImagePositions,
             conductorAgentInvoker,
-            recordingCoordinator);
+            recordingCoordinator,
+            fixPContexts);
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)

@@ -71,6 +71,8 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     private long negotiateRequestTimestamp;
 
+    private long sessionVerID = 1;
+
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
@@ -79,18 +81,30 @@ public final class BinaryEntrypointClient implements AutoCloseable
         headerDecoder.wrap(unsafeReadBuffer, SOFH_LENGTH);
     }
 
+    public BinaryEntrypointClient sessionVerID(final long sessionVerID)
+    {
+        this.sessionVerID = sessionVerID;
+        return this;
+    }
+
+    public long sessionVerID()
+    {
+        return sessionVerID;
+    }
+
     public NegotiateResponseDecoder readNegotiateResponse()
     {
         return read(new NegotiateResponseDecoder(), 0);
     }
 
-    public NegotiateRejectDecoder readNegotiateReject()
+    public NegotiateRejectDecoder readNegotiateReject(final NegotiationRejectCode negotiationRejectCode)
     {
         final NegotiateRejectDecoder reject = read(new NegotiateRejectDecoder(), 0);
         assertEquals(SESSION_ID, reject.sessionID());
-        assertEquals(1, reject.sessionVerID());
+        assertEquals(sessionVerID, reject.sessionVerID());
         assertEquals(negotiateRequestTimestamp, reject.requestTimestamp().time());
         assertEquals(FIRM_ID, reject.enteringFirm());
+        assertEquals(negotiationRejectCode, reject.negotiationRejectCode());
         return reject;
     }
 
@@ -231,7 +245,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
         negotiate
             .sessionID(SESSION_ID)
-            .sessionVerID(1)
+            .sessionVerID(sessionVerID)
             .timestamp().time(negotiateRequestTimestamp);
         negotiate
             .enteringFirm(FIRM_ID)
@@ -248,7 +262,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
         establish
             .sessionID(SESSION_ID)
-            .sessionVerID(1)
+            .sessionVerID(sessionVerID)
             .timestamp().time(epochNanoClock.nanoTime());
         establish.keepAliveInterval().time(KEEP_ALIVE_INTERVAL_IN_MS);
         establish
@@ -268,7 +282,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     {
         final TerminateDecoder terminate = read(new TerminateDecoder(), 0);
         assertEquals(BinaryEntrypointClient.SESSION_ID, terminate.sessionID());
-        assertEquals(1, terminate.sessionVerID());
+        assertEquals(sessionVerID, terminate.sessionVerID());
         assertEquals(TerminationCode.FINISHED, terminate.terminationCode());
         return terminate;
     }
@@ -286,7 +300,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
         terminate
             .sessionID(SESSION_ID)
-            .sessionVerID(1)
+            .sessionVerID(sessionVerID)
             .terminationCode(TerminationCode.FINISHED);
 
         write();

@@ -182,7 +182,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Image outboundEngineImage;
     private final boolean acceptsFixP;
 
-    private ILink3Contexts iLink3Contexts;
+    private FixPContexts fixPContexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
@@ -222,7 +222,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompletionPosition outboundLibraryCompletionPosition,
         final FinalImagePositions finalImagePositions,
         final AgentInvoker conductorAgentInvoker,
-        final RecordingCoordinator recordingCoordinator)
+        final RecordingCoordinator recordingCoordinator,
+        final FixPContexts fixPContexts)
     {
         this.epochClock = epochClock;
         this.clock = configuration.epochNanoClock();
@@ -257,6 +258,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.initialAcceptedSessionOwner = configuration.initialAcceptedSessionOwner();
         this.soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
         this.acceptsFixP = configuration.acceptsBinaryEntryPoint();
+        this.fixPContexts = fixPContexts;
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
             configuration.acceptorfixDictionary(),
@@ -754,8 +756,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final String host = useBackupHost ? backupHost : primaryHost;
         final InetSocketAddress address = new InetSocketAddress(host, port);
-        final ILink3Contexts iLink3Contexts = iLink3Contexts();
-        final ILink3Context context = iLink3Contexts.calculateUuid(
+        final FixPContexts fixPContexts = this.fixPContexts;
+        final ILink3Context context = fixPContexts.calculateUuid(
             port, primaryHost, accessKeyId, reestablishConnection);
 
         if (checkDuplicateILinkConnection(libraryId, correlationId, useBackupHost, accessKeyId, address, context))
@@ -958,19 +960,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             useBackupHost ? "backup" : "primary"));
 
         return true;
-    }
-
-    private ILink3Contexts iLink3Contexts()
-    {
-        if (iLink3Contexts == null)
-        {
-            iLink3Contexts = new ILink3Contexts(
-                configuration.iLink3IdBuffer(),
-                errorHandler,
-                configuration.epochNanoClock());
-        }
-
-        return iLink3Contexts;
     }
 
     public void onAllFixSessions(final long correlationId)
@@ -1742,7 +1731,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         receiverEndPoints.removeConnection(connectionId, reason);
         fixSenderEndPoints.removeConnection(connectionId);
+        fixPSenderEndPoints.removeConnection(connectionId);
         gatewaySessions.releaseByConnectionId(connectionId);
+        fixPContexts.onDisconnect(connectionId);
 
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
@@ -1758,14 +1749,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
-    }
-
-    void onFixPDisconnect(final long connectionId, final DisconnectReason reason)
-    {
-        // TODO: can we collapse with the normal FIX disconnect code?
-        receiverEndPoints.removeConnection(connectionId, reason);
-        fixPSenderEndPoints.removeConnection(connectionId);
-        gatewaySessions.releaseByConnectionId(connectionId);
     }
 
     public Action onLibraryConnect(
@@ -2019,8 +2002,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         gatewaySession.setManagementTo(libraryId);
+        libraryInfo.addSession(gatewaySession);
 
-        // TODO: add the gateway session to the library info object
         // TODO: lookup sequence numbers + last connect payload
 
         inboundPublication.saveManageFixPConnection(

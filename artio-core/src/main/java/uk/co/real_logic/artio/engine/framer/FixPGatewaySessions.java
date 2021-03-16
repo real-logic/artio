@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -37,8 +36,8 @@ public class FixPGatewaySessions extends GatewaySessions
     static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InboundFixPConnectEncoder.BLOCK_LENGTH;
 
-    private final LongHashSet authenticatedSessionIds = new LongHashSet();
     private final EngineConfiguration engineConfiguration;
+    private final FixPContexts fixPContexts;
 
     FixPGatewaySessions(
         final EpochClock epochClock,
@@ -47,7 +46,8 @@ public class FixPGatewaySessions extends GatewaySessions
         final ErrorHandler errorHandler,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final EngineConfiguration engineConfiguration)
+        final EngineConfiguration engineConfiguration,
+        final FixPContexts fixPContexts)
     {
         super(
             epochClock,
@@ -57,6 +57,7 @@ public class FixPGatewaySessions extends GatewaySessions
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex);
         this.engineConfiguration = engineConfiguration;
+        this.fixPContexts = fixPContexts;
     }
 
     int pollSessions(final long timeInMs)
@@ -131,7 +132,7 @@ public class FixPGatewaySessions extends GatewaySessions
             this.identification = identification;
             this.fixPProxy = fixPProxy;
 
-            if (authenticatedSessionIds.add(sessionId))
+            if (fixPContexts.onAcceptorLogon(sessionId, identification, connectionId))
             {
                 authenticate(connectionId);
             }
@@ -205,15 +206,5 @@ public class FixPGatewaySessions extends GatewaySessions
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
-    }
-
-    GatewaySession releaseByConnectionId(final long connectionId)
-    {
-        final GatewaySession session = super.releaseByConnectionId(connectionId);
-        if (session != null)
-        {
-            authenticatedSessionIds.remove(session.sessionId());
-        }
-        return session;
     }
 }

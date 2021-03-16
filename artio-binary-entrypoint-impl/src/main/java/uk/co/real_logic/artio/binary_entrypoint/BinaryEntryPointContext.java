@@ -20,17 +20,25 @@ import uk.co.real_logic.artio.fixp.FixPContext;
 public class BinaryEntryPointContext implements FixPContext
 {
     private final long sessionID;
-    private final long sessionVerID;
+    private long sessionVerID;
     private final long requestTimestamp;
     private final long enteringFirm;
+    private final boolean fromNegotiate;
+
+    private BinaryEntryPointKey key;
 
     public BinaryEntryPointContext(
-        final long sessionID, final long sessionVerID, final long timestamp, final long enteringFirm)
+        final long sessionID,
+        final long sessionVerID,
+        final long timestamp,
+        final long enteringFirm,
+        final boolean fromNegotiate)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
         this.requestTimestamp = timestamp;
         this.enteringFirm = enteringFirm;
+        this.fromNegotiate = fromNegotiate;
     }
 
     public long sessionID()
@@ -51,5 +59,65 @@ public class BinaryEntryPointContext implements FixPContext
     public long enteringFirm()
     {
         return enteringFirm;
+    }
+
+    public boolean fromNegotiate()
+    {
+        return fromNegotiate;
+    }
+
+    public String toString()
+    {
+        return "BinaryEntryPointContext{" +
+            "sessionID=" + sessionID +
+            ", sessionVerID=" + sessionVerID +
+            ", requestTimestamp=" + requestTimestamp +
+            ", enteringFirm=" + enteringFirm +
+            ", fromNegotiate=" + fromNegotiate +
+            '}';
+    }
+
+    public BinaryEntryPointKey toKey()
+    {
+        if (key == null)
+        {
+            key = new BinaryEntryPointKey(sessionID);
+        }
+
+        return key;
+    }
+
+    public boolean canAccept(final FixPContext fixPContext)
+    {
+        // Sanity checks
+        if (!(fixPContext instanceof BinaryEntryPointContext))
+        {
+            return false;
+        }
+
+        final BinaryEntryPointContext otherContext = (BinaryEntryPointContext)fixPContext;
+        if (sessionID != otherContext.sessionID)
+        {
+            return false;
+        }
+
+        // negotiations should increment the session ver id
+        if (otherContext.fromNegotiate)
+        {
+            if (otherContext.sessionVerID == sessionVerID + 1)
+            {
+                sessionVerID++;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // establish messages shouldn't
+        else
+        {
+            return otherContext.sessionVerID == sessionVerID;
+        }
     }
 }

@@ -16,10 +16,13 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
+import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.FixPKey;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.storage.messages.ILink3ContextDecoder;
@@ -29,8 +32,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
-class ILink3Contexts
+
+class FixPContexts
 {
     private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
     private final MappedFile mappedFile;
@@ -44,9 +49,13 @@ class ILink3Contexts
     private final int actingBlockLength = contextEncoder.sbeBlockLength();
     private final int actingVersion = contextEncoder.sbeSchemaVersion();
 
+    private final Long2LongHashMap authenticatedSessionIdToConnectionId = new Long2LongHashMap(MISSING_LONG);
+    // TODO: persist this state, generify and replace keyToContext
+    private final Map<FixPKey, FixPContext> acceptorKeyToContext = new HashMap<>();
+
     private int offset;
 
-    ILink3Contexts(final MappedFile mappedFile, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
+    FixPContexts(final MappedFile mappedFile, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
@@ -188,6 +197,45 @@ class ILink3Contexts
     public void close()
     {
         mappedFile.close();
+    }
+
+    public boolean onAcceptorLogon(final long sessionId, final FixPContext context, final long connectionId)
+    {
+        final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
+        if (duplicateConnection == MISSING_LONG)
+        {
+            authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
+
+            final FixPKey key = context.toKey();
+            final FixPContext oldContext = acceptorKeyToContext.get(key);
+            if (oldContext == null)
+            {
+                acceptorKeyToContext.put(key, context);
+                return true;
+            }
+            else
+            {
+                return oldContext.canAccept(context);
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public void onDisconnect(final long connectionId)
+    {
+        final Long2LongHashMap.EntryIterator it = authenticatedSessionIdToConnectionId.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+
+            if (it.getLongValue() == connectionId)
+            {
+                it.remove();
+            }
+        }
     }
 
     private static final class ILink3Key

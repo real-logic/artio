@@ -483,7 +483,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         return proxy.lastSentPosition();
     }
 
-    public void onDisconnect()
+    public void onDisconnectReleasedByOwner()
     {
         if (session != null)
         {

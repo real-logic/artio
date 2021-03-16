@@ -29,7 +29,7 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ILINK3_ID_FILE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SESSION_ID_BUFFER_SIZE;
 
-public class ILink3ContextsTest
+public class FixPContextsTest
 {
     public static final int PORT = 1;
     public static final String HOST = "host";
@@ -37,7 +37,7 @@ public class ILink3ContextsTest
 
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private File file;
-    private ILink3Contexts contexts;
+    private FixPContexts contexts;
 
     @Before
     public void setup()
@@ -54,7 +54,7 @@ public class ILink3ContextsTest
     private void newContexts()
     {
         final MappedFile mappedFile = MappedFile.map(file.getPath(), DEFAULT_SESSION_ID_BUFFER_SIZE);
-        contexts = new ILink3Contexts(mappedFile, errorHandler, new OffsetEpochNanoClock());
+        contexts = new FixPContexts(mappedFile, errorHandler, new OffsetEpochNanoClock());
     }
 
     @Test

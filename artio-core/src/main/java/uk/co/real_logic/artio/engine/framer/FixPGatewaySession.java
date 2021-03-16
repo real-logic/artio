@@ -119,11 +119,23 @@ public class FixPGatewaySession extends GatewaySession
         receiverEndPoint.authenticated();
     }
 
-    public void onDisconnect()
+    public void onDisconnectReleasedByOwner()
     {
     }
 
     public void close()
     {
+    }
+
+    public String toString()
+    {
+        return "FixPGatewaySession{" +
+            "protocolType=" + protocolType +
+            ", connectionType=" + connectionType +
+            ", sessionId=" + sessionId +
+            ", connectionId=" + connectionId +
+            ", address='" + address + '\'' +
+            ", libraryId=" + libraryId +
+            '}';
     }
 }

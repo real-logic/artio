@@ -21,4 +21,7 @@ package uk.co.real_logic.artio.fixp;
  */
 public interface FixPContext
 {
+    FixPKey toKey();
+
+    boolean canAccept(FixPContext context);
 }

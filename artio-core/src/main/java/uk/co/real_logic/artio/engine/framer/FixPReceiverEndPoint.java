@@ -86,7 +86,7 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
     void removeEndpointFromFramer()
     {
         trackDisconnect();
-        framer.onFixPDisconnect(connectionId, null);
+        framer.onDisconnect(libraryId, connectionId, null);
     }
 
     void cleanupDisconnectState(final DisconnectReason reason)

@@ -124,7 +124,7 @@ abstract class GatewaySessions
         final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
-            session.onDisconnect();
+            session.onDisconnectReleasedByOwner();
             session.close();
         }
         return session;
@@ -394,4 +394,5 @@ abstract class GatewaySessions
             return connectionId;
         }
     }
+
 }

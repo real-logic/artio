@@ -26,8 +26,24 @@ public class BinaryEntryPointKey implements FixPKey
         this.sessionID = sessionID;
     }
 
-    public long sessionID()
+    public boolean equals(final Object o)
     {
-        return sessionID;
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        final BinaryEntryPointKey that = (BinaryEntryPointKey)o;
+
+        return sessionID == that.sessionID;
+    }
+
+    public int hashCode()
+    {
+        return (int)(sessionID ^ (sessionID >>> 32));
     }
 }

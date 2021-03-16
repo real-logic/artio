@@ -23,7 +23,7 @@ final class ILink3Context
     private long connectLastUuid;
     private long connectUuid;
 
-    private final ILink3Contexts iLink3Contexts;
+    private final FixPContexts fixPContexts;
     private long uuid;
     private long lastUuid;
     private boolean newlyAllocated;
@@ -31,7 +31,7 @@ final class ILink3Context
     private boolean backupConnected;
 
     ILink3Context(
-        final ILink3Contexts iLink3Contexts,
+        final FixPContexts fixPContexts,
         final long uuid,
         final long lastUuid,
         final long connectUuid,
@@ -39,7 +39,7 @@ final class ILink3Context
         final boolean newlyAllocated,
         final int offset)
     {
-        this.iLink3Contexts = iLink3Contexts;
+        this.fixPContexts = fixPContexts;
         this.uuid = uuid;
         this.lastUuid = lastUuid;
         this.connectLastUuid = connectLastUuid;
@@ -110,11 +110,11 @@ final class ILink3Context
 
         if (lastUuid == 0)
         {
-            iLink3Contexts.saveNewUuid(this);
+            fixPContexts.saveNewUuid(this);
         }
         else
         {
-            iLink3Contexts.updateUuid(this);
+            fixPContexts.updateUuid(this);
         }
     }
 
