@@ -16,9 +16,10 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
+import b3.entrypoint.fixp.sbe.EstablishRejectCode;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import org.agrona.DirectBuffer;
-import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -34,6 +35,7 @@ class InternalBinaryEntrypointConnection
 {
     private final BinaryEntryPointProxy proxy;
     private final BinaryEntryPointContext context;
+    private final long maxFixPKeepaliveTimeoutInMs;
 
     private TerminationCode resendTerminationCode;
 
@@ -51,7 +53,7 @@ class InternalBinaryEntrypointConnection
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final EpochNanoClock clock,
+        final CommonConfiguration configuration,
         final BinaryEntryPointContext context)
     {
         super(
@@ -59,9 +61,10 @@ class InternalBinaryEntrypointConnection
             outboundPublication,
             inboundPublication,
             libraryId,
-            clock,
+            configuration.epochNanoClock(),
             owner,
             new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication()));
+        this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.context = context;
         proxy = (BinaryEntryPointProxy)super.proxy;
         state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
@@ -192,7 +195,24 @@ class InternalBinaryEntrypointConnection
 
             if (state != State.SENT_NEGOTIATE_RESPONSE)
             {
-                // TODO: validation error
+                return proxy.sendEstablishReject(
+                    sessionID,
+                    sessionVerID,
+                    timestamp,
+                    EstablishRejectCode.ALREADY_ESTABLISHED);
+            }
+            else if (keepAliveInterval > maxFixPKeepaliveTimeoutInMs)
+            {
+                final long position = proxy.sendEstablishReject(
+                    sessionID,
+                    sessionVerID,
+                    timestamp,
+                    EstablishRejectCode.KEEPALIVE_INTERVAL);
+                if (position > 0)
+                {
+                    fullyUnbind();
+                }
+                return position;
             }
         }
 

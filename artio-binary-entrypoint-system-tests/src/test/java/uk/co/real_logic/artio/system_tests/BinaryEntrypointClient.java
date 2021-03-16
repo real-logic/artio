@@ -49,8 +49,8 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public static final int SESSION_ID = 123;
     public static final int FIRM_ID = 456;
     public static final String SENDER_LOCATION = "LOCATION_1";
-    private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
     public static final int CL_ORD_ID = 1;
+    private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointOffsets.loadSbeIr());
 
@@ -72,6 +72,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     private long sessionVerID = 1;
     private long negotiateTimestampInNs;
     private long establishTimestampInNs;
+    private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
 
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
     {
@@ -92,9 +93,18 @@ public final class BinaryEntrypointClient implements AutoCloseable
         return sessionVerID;
     }
 
+    public void keepAliveIntervalInMs(final long keepAliveIntervalInMs)
+    {
+        this.keepAliveIntervalInMs = keepAliveIntervalInMs;
+    }
+
     public NegotiateResponseDecoder readNegotiateResponse()
     {
-        return read(new NegotiateResponseDecoder(), 0);
+        final NegotiateResponseDecoder response = read(new NegotiateResponseDecoder(), 0);
+        assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
+        assertEquals(sessionVerID, response.sessionVerID());
+        assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
+        return response;
     }
 
     public NegotiateRejectDecoder readNegotiateReject(final NegotiationRejectCode negotiationRejectCode)
@@ -274,7 +284,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
             .sessionID(SESSION_ID)
             .sessionVerID(sessionVerID)
             .timestamp().time(establishTimestampInNs);
-        establish.keepAliveInterval().time(KEEP_ALIVE_INTERVAL_IN_MS);
+        establish.keepAliveInterval().time(keepAliveIntervalInMs);
         establish
             .nextSeqNo(1)
             .cancelOnDisconnectType(CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE)

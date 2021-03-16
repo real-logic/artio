@@ -226,6 +226,8 @@ public class CommonConfiguration
     public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;
     public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
 
+    public static final long DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS = MINUTES.toMillis(1);
+
     public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
@@ -260,6 +262,7 @@ public class CommonConfiguration
     private boolean validateCompIdsOnEveryMessage = true;
     private boolean validateTimeStrictly = true;
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
+    private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -637,6 +640,17 @@ public class CommonConfiguration
         Verify.notNull(sessionEpochFractionFormat, "sessionEpochFractionFormat");
         this.sessionEpochFractionFormat = sessionEpochFractionFormat;
         return this;
+    }
+
+    public CommonConfiguration maxFixPKeepaliveTimeoutInMs(final long maxFixpKeepaliveTimeoutInMs)
+    {
+        this.maxFixPKeepaliveTimeoutInMs = maxFixpKeepaliveTimeoutInMs;
+        return this;
+    }
+
+    public long maxFixPKeepaliveTimeoutInMs()
+    {
+        return maxFixPKeepaliveTimeoutInMs;
     }
 
     public boolean gracefulShutdown()

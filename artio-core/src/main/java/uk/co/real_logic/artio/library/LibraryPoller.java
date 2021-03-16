@@ -1804,7 +1804,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastSentSequenceNumber,
                 lastConnectPayload,
                 context,
-                epochNanoClock);
+                configuration);
 
             final FixPConnectionHandler handler = configuration
                 .fixPConnectionAcquiredHandler()

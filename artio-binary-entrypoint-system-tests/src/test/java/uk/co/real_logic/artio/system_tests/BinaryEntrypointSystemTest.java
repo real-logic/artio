@@ -242,6 +242,52 @@ public class BinaryEntrypointSystemTest
         }
     }
 
+    @Test
+    public void shouldRejectReEstablishmentOfSessionIfAuthenticationFails() throws IOException
+    {
+        successfulConnection();
+
+        fixPAuthenticationStrategy.reject();
+
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish();
+
+            assertAuthStrategyReject(client);
+        }
+    }
+
+    @Test
+    public void shouldRejectLaterEstablishMessage() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            client.writeEstablish();
+
+            client.readEstablishReject(EstablishRejectCode.ALREADY_ESTABLISHED);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    @Test
+    public void shouldRejectEstablishMessageWithInvalidKeepAliveInterval() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.keepAliveIntervalInMs(Long.MAX_VALUE);
+
+            client.writeNegotiate();
+            libraryAcquiresConnection(client);
+            client.readNegotiateResponse();
+
+            client.writeEstablish();
+
+            client.readEstablishReject(EstablishRejectCode.KEEPALIVE_INTERVAL);
+            client.assertDisconnected();
+        }
+    }
+
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
         try (BinaryEntrypointClient client = newClient())
@@ -277,15 +323,20 @@ public class BinaryEntrypointSystemTest
             client.readNegotiateReject(negotiationRejectCode);
             client.assertDisconnected();
 
-            final BinaryEntryPointContext id =
-                (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
-            assertNotNull(id);
-            assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
-            assertEquals(1, id.sessionVerID());
-
-            assertFalse(connectionExistsHandler.invoked());
-            assertFalse(connectionAcquiredHandler.invoked());
+            assertAuthStrategyReject(client);
         }
+    }
+
+    private void assertAuthStrategyReject(final BinaryEntrypointClient client)
+    {
+        final BinaryEntryPointContext id =
+            (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
+        assertNotNull(id);
+        assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
+        assertEquals(client.sessionVerID(), id.sessionVerID());
+
+        assertFalse(connectionExistsHandler.invoked());
+        assertFalse(connectionAcquiredHandler.invoked());
     }
 
     private void assertReceivesOrder()
@@ -323,10 +374,7 @@ public class BinaryEntrypointSystemTest
 
         libraryAcquiresConnection(client);
 
-        final NegotiateResponseDecoder response = client.readNegotiateResponse();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
-        assertEquals(client.sessionVerID(), response.sessionVerID());
-        assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
+        client.readNegotiateResponse();
 
         client.writeEstablish();
         client.readEstablishAck();
@@ -358,11 +406,6 @@ public class BinaryEntrypointSystemTest
 
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
-
-    // AlreadyEstablished: EstablishmentAck was already sent; Establish was
-    // redundant.
-
-    // KeepaliveInterval: value is out of accepted range.
 
     // Credentials: failed because identity is not recognized, or the user is not
     // authorized to use this service.

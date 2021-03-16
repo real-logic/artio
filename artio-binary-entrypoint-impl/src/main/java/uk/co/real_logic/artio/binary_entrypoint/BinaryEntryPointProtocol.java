@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
@@ -58,7 +59,7 @@ public class BinaryEntryPointProtocol extends FixPProtocol
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
         final FixPContext context,
-        final EpochNanoClock epochNanoClock)
+        final CommonConfiguration configuration)
     {
         return new InternalBinaryEntrypointConnection(
             connectionId,
@@ -69,7 +70,7 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             lastReceivedSequenceNumber,
             lastSentSequenceNumber,
             lastConnectPayload,
-            epochNanoClock,
+            configuration,
             (BinaryEntryPointContext)context);
     }
 }

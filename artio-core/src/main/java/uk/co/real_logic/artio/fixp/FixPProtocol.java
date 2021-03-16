@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.fixp;
 
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -54,5 +55,5 @@ public abstract class FixPProtocol
         long lastSentSequenceNumber,
         long lastConnectPayload,
         FixPContext context,
-        EpochNanoClock epochNanoClock);
+        CommonConfiguration configuration);
 }
