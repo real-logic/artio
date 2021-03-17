@@ -28,7 +28,7 @@ public class FixPGatewaySession extends GatewaySession
     private final FixPProtocolType protocolType;
     private final AbstractFixPParser parser;
     private final AbstractFixPProxy fixPProxy;
-    private final BinaryEntryPointReceiverEndPoint receiverEndPoint;
+    private final AcceptorFixPReceiverEndPoint receiverEndPoint;
     private final FixPSenderEndPoint senderEndPoint;
     private final FixPGatewaySessions gatewaySessions;
 
@@ -44,7 +44,7 @@ public class FixPGatewaySession extends GatewaySession
         final FixPProtocolType protocolType,
         final AbstractFixPParser parser,
         final AbstractFixPProxy fixPProxy,
-        final BinaryEntryPointReceiverEndPoint receiverEndPoint,
+        final AcceptorFixPReceiverEndPoint receiverEndPoint,
         final FixPSenderEndPoint senderEndPoint,
         final FixPGatewaySessions gatewaySessions)
     {

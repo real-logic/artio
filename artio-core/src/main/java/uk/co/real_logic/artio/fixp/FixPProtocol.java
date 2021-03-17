@@ -27,10 +27,12 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 public abstract class FixPProtocol
 {
     private final FixPProtocolType protocolType;
+    private final short encodingType;
 
-    protected FixPProtocol(final FixPProtocolType protocolType)
+    protected FixPProtocol(final FixPProtocolType protocolType, final short encodingType)
     {
         this.protocolType = protocolType;
+        this.encodingType = encodingType;
     }
 
     public abstract AbstractFixPParser makeParser(FixPConnection session);
@@ -56,4 +58,9 @@ public abstract class FixPProtocol
         long lastConnectPayload,
         FixPContext context,
         CommonConfiguration configuration);
+
+    public short encodingType()
+    {
+        return encodingType;
+    }
 }

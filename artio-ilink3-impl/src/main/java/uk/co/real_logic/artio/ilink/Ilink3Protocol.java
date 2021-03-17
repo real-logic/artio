@@ -26,6 +26,8 @@ import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.CME_ENCODING_TYPE;
+
 public class Ilink3Protocol extends FixPProtocol
 {
     public static <T> T unsupported()
@@ -35,7 +37,7 @@ public class Ilink3Protocol extends FixPProtocol
 
     public Ilink3Protocol()
     {
-        super(FixPProtocolType.ILINK_3);
+        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE);
     }
 
     public ILink3Parser makeParser(final FixPConnection connection)

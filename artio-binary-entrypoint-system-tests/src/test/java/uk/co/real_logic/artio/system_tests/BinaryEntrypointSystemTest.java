@@ -412,9 +412,6 @@ public class BinaryEntrypointSystemTest
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
 
-    // Credentials: failed because identity is not recognized, or the user is not
-    // authorized to use this service.
-
     // should support FinishedSending/FinishedReceiving process
     // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
 

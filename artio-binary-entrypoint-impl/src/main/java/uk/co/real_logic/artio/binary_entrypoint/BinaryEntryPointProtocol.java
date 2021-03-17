@@ -26,11 +26,13 @@ import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
+
 public class BinaryEntryPointProtocol extends FixPProtocol
 {
     public BinaryEntryPointProtocol()
     {
-        super(FixPProtocolType.BINARY_ENTRYPOINT);
+        super(FixPProtocolType.BINARY_ENTRYPOINT, BINARY_ENTRYPOINT_TYPE);
     }
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)

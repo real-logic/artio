@@ -79,6 +79,7 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
+import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
@@ -665,7 +666,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.messageTimingHandler());
         fixPSenderEndPoints.add(senderEndPoint);
 
-        final BinaryEntryPointReceiverEndPoint receiverEndPoint = new BinaryEntryPointReceiverEndPoint(
+        final AcceptorFixPReceiverEndPoint receiverEndPoint = new AcceptorFixPReceiverEndPoint(
             connectionId,
             channel,
             configuration.receiverBufferSize(),
@@ -674,7 +675,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             inboundPublication,
             ENGINE_LIBRARY_ID,
             configuration.epochNanoClock(),
-            connectionId);
+            connectionId,
+            fixPProtocol.encodingType());
         receiverEndPoints.add(receiverEndPoint);
 
         final FixPGatewaySession gatewaySession = new FixPGatewaySession(

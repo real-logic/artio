@@ -20,13 +20,11 @@ import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
-
-public class BinaryEntryPointReceiverEndPoint extends FixPReceiverEndPoint
+public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
 {
     private boolean requiresAuthentication = true;
 
-    BinaryEntryPointReceiverEndPoint(
+    AcceptorFixPReceiverEndPoint(
         final long connectionId,
         final TcpChannel channel,
         final int bufferSize,
@@ -35,7 +33,8 @@ public class BinaryEntryPointReceiverEndPoint extends FixPReceiverEndPoint
         final GatewayPublication publication,
         final int libraryId,
         final EpochNanoClock epochNanoClock,
-        final long correlationId)
+        final long correlationId,
+        final short encodingType)
     {
         super(
             connectionId,
@@ -47,7 +46,7 @@ public class BinaryEntryPointReceiverEndPoint extends FixPReceiverEndPoint
             libraryId,
             epochNanoClock,
             correlationId,
-            BINARY_ENTRYPOINT_TYPE);
+            encodingType);
     }
 
     void checkMessage(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
