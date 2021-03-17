@@ -226,10 +226,10 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         final EstablishRejectCode establishRejectCode;
         switch (rejectReason)
         {
-            case NEGOTIATE_CREDENTIALS:
-                isNegotiate = true;
+            case CREDENTIALS:
+                isNegotiate = identification.fromNegotiate();
                 negotiationRejectCode = NegotiationRejectCode.CREDENTIALS;
-                establishRejectCode = null;
+                establishRejectCode = EstablishRejectCode.CREDENTIALS;
                 break;
 
             case NEGOTIATE_DUPLICATE_ID:

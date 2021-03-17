@@ -253,6 +253,9 @@ public class BinaryEntrypointSystemTest
         {
             client.writeEstablish();
 
+            client.readEstablishReject(EstablishRejectCode.CREDENTIALS);
+            client.assertDisconnected();
+
             assertAuthStrategyReject(client);
         }
     }
@@ -264,6 +267,8 @@ public class BinaryEntrypointSystemTest
         {
             client.writeEstablish();
 
+            // This establish reject doesn't disconnect the already established connection like the others, it is
+            // just ignored.
             client.readEstablishReject(EstablishRejectCode.ALREADY_ESTABLISHED);
 
             clientTerminatesSession(client);

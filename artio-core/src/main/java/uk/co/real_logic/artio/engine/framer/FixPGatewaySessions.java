@@ -82,7 +82,7 @@ public class FixPGatewaySessions extends GatewaySessions
         final FixPContext identification,
         final AbstractFixPProxy fixPProxy)
     {
-        return new FixPAcceptorLogon(
+        return new FixPPendingAcceptorLogon(
             sessionId,
             buffer,
             offset,
@@ -96,7 +96,7 @@ public class FixPGatewaySessions extends GatewaySessions
             fixPProxy);
     }
 
-    class FixPAcceptorLogon extends PendingAcceptorLogon implements FixPAuthenticationProxy
+    class FixPPendingAcceptorLogon extends PendingAcceptorLogon implements FixPAuthenticationProxy
     {
         public static final int LINGER_TIMEOUT_IN_MS = 500;
 
@@ -110,7 +110,7 @@ public class FixPGatewaySessions extends GatewaySessions
 
         private FirstMessageRejectReason firstMessageRejectReason;
 
-        FixPAcceptorLogon(
+        FixPPendingAcceptorLogon(
             final long sessionId,
             final MutableAsciiBuffer buffer,
             final int offset,
@@ -197,7 +197,7 @@ public class FixPGatewaySessions extends GatewaySessions
 
         public void reject()
         {
-            reject(FirstMessageRejectReason.NEGOTIATE_CREDENTIALS);
+            reject(FirstMessageRejectReason.CREDENTIALS);
         }
 
         private void reject(final FirstMessageRejectReason firstMessageRejectReason)
