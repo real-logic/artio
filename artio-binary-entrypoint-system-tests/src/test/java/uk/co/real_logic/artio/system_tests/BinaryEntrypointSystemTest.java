@@ -43,6 +43,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.CLIENT_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
@@ -136,6 +137,26 @@ public class BinaryEntrypointSystemTest
             assertReceivesOrder();
 
             client.readExecutionReportNew();
+        }
+    }
+
+    @Test
+    public void shouldCorrectlyAbortBusinessMessage() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            connectionHandler.abortReport(true);
+            client.writeNewOrderSingle(CL_ORD_ID);
+            assertReceivesOrder();
+
+            connectionHandler.reset();
+
+            connectionHandler.abortReport(false);
+            final int okClOrdId = CL_ORD_ID + 1;
+            client.writeNewOrderSingle(okClOrdId);
+            assertReceivesOrder();
+
+            client.readExecutionReportNew(okClOrdId);
         }
     }
 
@@ -415,19 +436,19 @@ public class BinaryEntrypointSystemTest
     // should support FinishedSending/FinishedReceiving process
     // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
 
-    // shouldCorrectlyAbortBusinessMessage()
+    // check sequence numbers upon reconnect
+
     // shouldResendNegotiateAndEstablishOnTimeout() - check protocol spec
     // shouldDisconnectIfNoNegotiate()
     // shouldDisconnectIfNegotiateResponseNotRespondedTo()
     // shouldAllowReconnectAfterNegotiateDisconnect()
-    // shouldNegotiationRejectForAuthenticationFailure()
-    // shouldEstablishRejectForInvalidSessionId()
-    // shouldSupportReestablishingConnections() - continue sequence number
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()
     // shouldSupportReestablishingConnectionsAfterNegotiateTimeout()
     // shouldSupportReestablishingConnectionsAfterRestart()
     // shouldSupportResetState()
     // shouldSupportSequenceMessageHeartbeating()
+
+    // sequence number gaps
 
     // timeout disconnect
     // heartbeat / timeout

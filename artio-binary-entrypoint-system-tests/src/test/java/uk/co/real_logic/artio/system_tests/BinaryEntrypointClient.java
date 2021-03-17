@@ -314,8 +314,13 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void readExecutionReportNew()
     {
+        readExecutionReportNew(CL_ORD_ID);
+    }
+
+    public void readExecutionReportNew(final int clOrdId)
+    {
         final ExecutionReport_NewDecoder report = read(new ExecutionReport_NewDecoder(), 0);
-        assertEquals(CL_ORD_ID, report.clOrdID());
+        assertEquals(clOrdId, report.clOrdID());
     }
 
     public void writeTerminate()
@@ -333,11 +338,16 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void writeNewOrderSingle()
     {
+        writeNewOrderSingle(CL_ORD_ID);
+    }
+
+    public void writeNewOrderSingle(final int clOrdId)
+    {
         final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
         wrap(newOrderSingle, NewOrderSingleEncoder.BLOCK_LENGTH);
 
         newOrderSingle
-            .clOrdID(CL_ORD_ID)
+            .clOrdID(clOrdId)
             .securityID(2)
             .price().mantissa(3);
         newOrderSingle

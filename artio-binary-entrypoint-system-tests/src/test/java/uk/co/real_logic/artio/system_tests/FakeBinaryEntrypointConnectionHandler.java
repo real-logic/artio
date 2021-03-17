@@ -38,6 +38,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
 
     private boolean hasReceivedNotApplied;
     private DisconnectReason disconnectReason;
+    private boolean abortReport;
 
     public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -47,6 +48,11 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     public boolean hasReceivedNotApplied()
     {
         return hasReceivedNotApplied;
+    }
+
+    public void abortReport(final boolean abortReport)
+    {
+        this.abortReport = abortReport;
     }
 
     public void onBusinessMessage(
@@ -84,7 +90,14 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
                 .protectionPrice().mantissa(1234);
             executionReport.receivedTime().time(System.nanoTime());
 
-            connection.commit();
+            if (abortReport)
+            {
+                connection.abort();
+            }
+            else
+            {
+                connection.commit();
+            }
         }
     }
 
@@ -137,5 +150,12 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     public List<Exception> exceptions()
     {
         return exceptions;
+    }
+
+    public void reset()
+    {
+        disconnectReason = null;
+        messageIds.clear();
+        exceptions.clear();
     }
 }
