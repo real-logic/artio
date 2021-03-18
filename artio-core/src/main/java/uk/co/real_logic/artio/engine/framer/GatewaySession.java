@@ -23,6 +23,7 @@ abstract class GatewaySession
 
     protected final ConnectionType connectionType;
     protected final long authenticationTimeoutInMs;
+    private final ReceiverEndPoint receiverEndPoint;
 
     protected long sessionId;
     protected long connectionId;
@@ -37,13 +38,15 @@ abstract class GatewaySession
         final long sessionId,
         final String address,
         final ConnectionType connectionType,
-        final long authenticationTimeoutInMs)
+        final long authenticationTimeoutInMs,
+        final ReceiverEndPoint receiverEndPoint)
     {
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.address = address;
         this.connectionType = connectionType;
         this.authenticationTimeoutInMs = authenticationTimeoutInMs;
+        this.receiverEndPoint = receiverEndPoint;
     }
 
     public long connectionId()
@@ -71,14 +74,42 @@ abstract class GatewaySession
         disconnectTimeInMs = NO_TIMEOUT;
     }
 
-    ConnectionType connectionType()
-    {
-        return connectionType;
-    }
-
     void disconnectAt(final long disconnectTimeout)
     {
         this.disconnectTimeInMs = disconnectTimeout;
+    }
+
+    boolean hasDisconnected()
+    {
+        return receiverEndPoint.hasDisconnected();
+    }
+
+    int checkNoLogonDisconnect(final long timeInMs)
+    {
+        if (disconnectTimeInMs == NO_TIMEOUT)
+        {
+            return 0;
+        }
+
+        if (disconnectTimeInMs <= timeInMs && !receiverEndPoint.hasDisconnected())
+        {
+            if (hasStartedAuthentication)
+            {
+                receiverEndPoint.onAuthenticationTimeoutDisconnect();
+            }
+            else
+            {
+                receiverEndPoint.onNoLogonDisconnect();
+            }
+            return 1;
+        }
+
+        return 0;
+    }
+
+    ConnectionType connectionType()
+    {
+        return connectionType;
     }
 
     public void libraryId(final int libraryId)

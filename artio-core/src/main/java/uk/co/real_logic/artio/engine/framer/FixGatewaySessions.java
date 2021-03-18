@@ -47,7 +47,6 @@ import uk.co.real_logic.artio.validation.*;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -215,28 +214,6 @@ public class FixGatewaySessions extends GatewaySessions
             gatewaySession.onLogon(username, password, heartbeatIntervalInS);
             session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
-    }
-
-    int pollSessions(final long timeInMs)
-    {
-        final long timeInNs = clock.nanoTime();
-        final List<GatewaySession> sessions = this.sessions;
-
-        int eventsProcessed = 0;
-        for (int i = 0, size = sessions.size(); i < size;)
-        {
-            final FixGatewaySession session = (FixGatewaySession)sessions.get(i);
-            eventsProcessed += session.poll(timeInMs, timeInNs);
-            if (session.hasDisconnected())
-            {
-                size--;
-            }
-            else
-            {
-                i++;
-            }
-        }
-        return eventsProcessed;
     }
 
     AcceptorLogonResult authenticate(

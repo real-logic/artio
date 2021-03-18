@@ -84,7 +84,8 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         final FixDictionary fixDictionary,
         final EngineConfiguration configuration)
     {
-        super(connectionId, context.sessionId(), address, connectionType, configuration.authenticationTimeoutInMs());
+        super(connectionId, context.sessionId(), address, connectionType, configuration.authenticationTimeoutInMs(),
+            receiverEndPoint);
         this.context = context;
         this.sessionKey = sessionKey;
         this.receiverEndPoint = receiverEndPoint;
@@ -162,34 +163,6 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     {
         final int events = session != null ? session.poll(timeInNs) : 0;
         return events + checkNoLogonDisconnect(timeInMs);
-    }
-
-    private int checkNoLogonDisconnect(final long timeInMs)
-    {
-        if (disconnectTimeInMs == NO_TIMEOUT)
-        {
-            return 0;
-        }
-
-        if (disconnectTimeInMs <= timeInMs && !receiverEndPoint.hasDisconnected())
-        {
-            if (hasStartedAuthentication)
-            {
-                receiverEndPoint.onAuthenticationTimeoutDisconnect();
-            }
-            else
-            {
-                receiverEndPoint.onNoLogonDisconnect();
-            }
-            return 1;
-        }
-
-        return 0;
-    }
-
-    void onAuthenticationResult()
-    {
-        disconnectTimeInMs = NO_TIMEOUT;
     }
 
     public void onLogon(final Session session)
@@ -375,11 +348,6 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     public SessionContext context()
     {
         return context;
-    }
-
-    boolean hasDisconnected()
-    {
-        return receiverEndPoint.hasDisconnected();
     }
 
     void initialResetSeqNum(final boolean resetSeqNum)

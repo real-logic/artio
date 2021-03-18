@@ -27,7 +27,7 @@ import java.nio.channels.Selector;
 import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
-import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 
 public abstract class ReceiverEndPoint
 {
@@ -94,6 +94,16 @@ public abstract class ReceiverEndPoint
         }
     }
 
+    void onNoLogonDisconnect()
+    {
+        completeDisconnect(NO_LOGON);
+    }
+
+    void onAuthenticationTimeoutDisconnect()
+    {
+        completeDisconnect(AUTHENTICATION_TIMEOUT);
+    }
+
     void completeDisconnect(final DisconnectReason reason)
     {
         disconnectEndpoint(reason);
@@ -131,5 +141,10 @@ public abstract class ReceiverEndPoint
     public int libraryId()
     {
         return libraryId;
+    }
+
+    boolean hasDisconnected()
+    {
+        return hasDisconnected;
     }
 }

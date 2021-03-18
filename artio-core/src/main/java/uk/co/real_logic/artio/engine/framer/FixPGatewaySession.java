@@ -48,7 +48,7 @@ public class FixPGatewaySession extends GatewaySession
         final FixPSenderEndPoint senderEndPoint,
         final FixPGatewaySessions gatewaySessions)
     {
-        super(connectionId, sessionId, address, connectionType, authenticationTimeoutInMs);
+        super(connectionId, sessionId, address, connectionType, authenticationTimeoutInMs, receiverEndPoint);
         this.protocolType = protocolType;
         this.parser = parser;
         this.fixPProxy = fixPProxy;
@@ -64,7 +64,7 @@ public class FixPGatewaySession extends GatewaySession
 
     int poll(final long timeInMs, final long timeInNs)
     {
-        return 0;
+        return checkNoLogonDisconnect(timeInMs);
     }
 
     long lastLogonTime()

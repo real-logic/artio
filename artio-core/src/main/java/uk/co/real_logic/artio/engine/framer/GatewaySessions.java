@@ -119,7 +119,7 @@ abstract class GatewaySessions
         return UNK_SESSION;
     }
 
-    GatewaySession releaseByConnectionId(final long connectionId)
+    void releaseByConnectionId(final long connectionId)
     {
         final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
@@ -127,10 +127,28 @@ abstract class GatewaySessions
             session.onDisconnectReleasedByOwner();
             session.close();
         }
-        return session;
     }
 
-    abstract int pollSessions(long timeInMs);
+    int pollSessions(final long timeInMs, final long timeInNs)
+    {
+        final List<GatewaySession> sessions = this.sessions;
+
+        int eventsProcessed = 0;
+        for (int i = 0, size = sessions.size(); i < size;)
+        {
+            final GatewaySession session = sessions.get(i);
+            eventsProcessed += session.poll(timeInMs, timeInNs);
+            if (session.hasDisconnected())
+            {
+                size--;
+            }
+            else
+            {
+                i++;
+            }
+        }
+        return eventsProcessed;
+    }
 
     List<GatewaySession> sessions()
     {

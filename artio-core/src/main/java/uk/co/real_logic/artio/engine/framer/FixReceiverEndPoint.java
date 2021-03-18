@@ -47,8 +47,6 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
-import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
@@ -1074,25 +1072,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         framer.onDisconnect(libraryId, connectionId, null);
     }
 
-    void onNoLogonDisconnect()
-    {
-        completeDisconnect(NO_LOGON);
-    }
-
-    void onAuthenticationTimeoutDisconnect()
-    {
-        completeDisconnect(AUTHENTICATION_TIMEOUT);
-    }
-
     void cleanupDisconnectState(final DisconnectReason reason)
     {
         sessionContexts.onDisconnect(sessionId);
         gatewaySessions.onDisconnect(sessionId, connectionId, reason);
-    }
-
-    boolean hasDisconnected()
-    {
-        return hasDisconnected;
     }
 
     void gatewaySession(final FixGatewaySession gatewaySession)

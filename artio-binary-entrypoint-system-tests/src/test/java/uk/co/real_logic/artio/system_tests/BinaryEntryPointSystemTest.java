@@ -19,6 +19,7 @@ import b3.entrypoint.fixp.sbe.*;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,9 +47,12 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.CLIENT_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public class BinaryEntrypointSystemTest
+public class BinaryEntryPointSystemTest
 {
+    private static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
+
     private final int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
@@ -80,6 +84,7 @@ public class BinaryEntrypointSystemTest
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
+            .noLogonDisconnectTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS)
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
 //            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
@@ -242,6 +247,18 @@ public class BinaryEntrypointSystemTest
             client.writeEstablish();
             client.readEstablishReject(EstablishRejectCode.UNNEGOTIATED);
             client.assertDisconnected();
+        }
+    }
+
+    @Test
+    public void shouldDisconnectIfNoNegotiate() throws IOException
+    {
+        final long timeInMs = System.currentTimeMillis();
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.assertDisconnected();
+            final long durationInMs = System.currentTimeMillis() - timeInMs;
+            assertThat(durationInMs, Matchers.greaterThanOrEqualTo((long)TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS));
         }
     }
 
@@ -439,7 +456,6 @@ public class BinaryEntrypointSystemTest
     // check sequence numbers upon reconnect
 
     // shouldResendNegotiateAndEstablishOnTimeout() - check protocol spec
-    // shouldDisconnectIfNoNegotiate()
     // shouldDisconnectIfNegotiateResponseNotRespondedTo()
     // shouldAllowReconnectAfterNegotiateDisconnect()
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()

@@ -60,11 +60,6 @@ public class FixPGatewaySessions extends GatewaySessions
         this.fixPContexts = fixPContexts;
     }
 
-    int pollSessions(final long timeInMs)
-    {
-        return 0;
-    }
-
     protected void setLastSequenceResetTime(final GatewaySession gatewaySession)
     {
     }

@@ -392,6 +392,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public int doWork() throws Exception
     {
+        final long timeInNs = clock.nanoTime();
         final long timeInMs = epochClock.time();
         fixSenderEndPoints.timeInMs(timeInMs);
         return retryManager.attemptSteps() +
@@ -400,7 +401,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollEndPoints() +
             pollNewConnections(timeInMs) +
             pollLibraries(timeInMs) +
-            gatewaySessions.pollSessions(timeInMs) +
+            gatewaySessions.pollSessions(timeInMs, timeInNs) +
             fixSenderEndPoints.checkTimeouts(timeInMs) +
             adminCommands.drain(onAdminCommand) +
             checkDutyCycle();
@@ -700,7 +701,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void onNewFixConnection(final long timeInMs, final TcpChannel channel)
     {
         final long connectionId = newConnectionId();
-        final GatewaySession gatewaySession = setupFixConnection(
+        final FixGatewaySession gatewaySession = setupFixConnection(
             channel,
             connectionId,
             UNKNOWN_SESSION,
