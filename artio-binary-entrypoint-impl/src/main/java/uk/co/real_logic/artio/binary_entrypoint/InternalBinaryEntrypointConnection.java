@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
@@ -68,6 +69,7 @@ class InternalBinaryEntrypointConnection
         this.context = context;
         proxy = (BinaryEntryPointProxy)super.proxy;
         state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
+        nextReceiveMessageTimeInMs = System.currentTimeMillis() + configuration.noEstablishFixPTimeoutInMs();
     }
 
     public long sessionId()
@@ -133,7 +135,21 @@ class InternalBinaryEntrypointConnection
 
     protected int poll(final long timeInMs)
     {
-        return 0;
+        switch (state)
+        {
+            case ACCEPTED:
+            case SENT_NEGOTIATE_RESPONSE:
+            case RETRY_NEGOTIATE_RESPONSE:
+            case NEGOTIATED_REESTABLISH:
+                if (timeInMs > nextReceiveMessageTimeInMs)
+                {
+                    fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
+                }
+                return 1;
+
+            default:
+                return 0;
+        }
     }
 
     protected void onReplayComplete()

@@ -23,6 +23,7 @@ import org.agrona.Verify;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
 import org.agrona.concurrent.errors.ErrorConsumer;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -263,6 +264,7 @@ public class CommonConfiguration
     private boolean validateTimeStrictly = true;
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
     private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
+    private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -646,6 +648,17 @@ public class CommonConfiguration
     {
         this.maxFixPKeepaliveTimeoutInMs = maxFixpKeepaliveTimeoutInMs;
         return this;
+    }
+
+    public CommonConfiguration noEstablishFixPTimeoutInMs(final long noEstablishFixPTimeoutInMs)
+    {
+        this.noEstablishFixPTimeoutInMs = noEstablishFixPTimeoutInMs;
+        return this;
+    }
+
+    public long noEstablishFixPTimeoutInMs()
+    {
+        return noEstablishFixPTimeoutInMs;
     }
 
     public long maxFixPKeepaliveTimeoutInMs()

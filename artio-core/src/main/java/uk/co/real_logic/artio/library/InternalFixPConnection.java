@@ -181,7 +181,12 @@ public abstract class InternalFixPConnection implements FixPConnection
 
     protected void fullyUnbind()
     {
-        requestDisconnect(LOGOUT);
+        fullyUnbind(LOGOUT);
+    }
+
+    protected void fullyUnbind(final DisconnectReason reason)
+    {
+        requestDisconnect(reason);
         owner.remove(this);
         unbindState(APPLICATION_DISCONNECT);
     }

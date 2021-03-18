@@ -100,6 +100,8 @@ public class BinaryEntryPointSystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .fixPConnectionExistsHandler(connectionExistsHandler)
             .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
+        libraryConfig
+            .noEstablishFixPTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
 
 //        libraryConfig
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
@@ -256,6 +258,21 @@ public class BinaryEntryPointSystemTest
         final long timeInMs = System.currentTimeMillis();
         try (BinaryEntrypointClient client = newClient())
         {
+            client.assertDisconnected();
+            final long durationInMs = System.currentTimeMillis() - timeInMs;
+            assertThat(durationInMs, Matchers.greaterThanOrEqualTo((long)TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS));
+        }
+    }
+
+    @Test
+    public void shouldDisconnectIfEstablish() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            final long timeInMs = System.currentTimeMillis();
+            client.writeNegotiate();
+            client.readNegotiateResponse();
+
             client.assertDisconnected();
             final long durationInMs = System.currentTimeMillis() - timeInMs;
             assertThat(durationInMs, Matchers.greaterThanOrEqualTo((long)TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS));
@@ -451,12 +468,11 @@ public class BinaryEntryPointSystemTest
     }
 
     // should support FinishedSending/FinishedReceiving process
+
     // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
 
     // check sequence numbers upon reconnect
 
-    // shouldResendNegotiateAndEstablishOnTimeout() - check protocol spec
-    // shouldDisconnectIfNegotiateResponseNotRespondedTo()
     // shouldAllowReconnectAfterNegotiateDisconnect()
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()
     // shouldSupportReestablishingConnectionsAfterNegotiateTimeout()
