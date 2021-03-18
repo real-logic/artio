@@ -15,11 +15,16 @@
  */
 package uk.co.real_logic.artio.fixp;
 
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+
 /**
  * Interface recording information that uniquely identifies a FIXP session. This may just be a session id or it may
  * contain information such as the host and port of the gateway that you're connecting to in the case of an initiator
  * protocol.
+ *
+ * Must implement hashcode / equals
  */
 public interface FixPKey
 {
+    FixPProtocolType protocolType();
 }

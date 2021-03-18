@@ -29,7 +29,7 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ILINK3_ID_FILE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SESSION_ID_BUFFER_SIZE;
 
-public class FixPContextsTest
+public class ILink3ContextsTest
 {
     public static final int PORT = 1;
     public static final String HOST = "host";
@@ -183,7 +183,8 @@ public class FixPContextsTest
 
     private ILink3Context calculateUuid(final boolean reestablishConnection)
     {
-        return contexts.calculateUuid(PORT, HOST, ACCESS_KEY_ID, reestablishConnection);
+        final ILink3Key key = new ILink3Key(PORT, HOST, ACCESS_KEY_ID);
+        return (ILink3Context)contexts.calculateInitiatorContext(key, reestablishConnection);
     }
 
     @After

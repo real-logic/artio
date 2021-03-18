@@ -70,4 +70,9 @@ public class Ilink3Protocol extends FixPProtocol
     {
         return unsupported();
     }
+
+    public Ilink3Storage makeCodecs(final EpochNanoClock clock)
+    {
+        return new Ilink3Storage(clock);
+    }
 }

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.fixp;
 
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+
 /**
  * Interface recording information about a FIXP session that is associated with a session. For example
  * session id, version id, connect timestamps.
@@ -23,5 +25,10 @@ public interface FixPContext
 {
     FixPKey toKey();
 
-    FirstMessageRejectReason checkConnect(FixPContext context);
+    // copy offset from old context
+    FirstMessageRejectReason checkAccept(FixPContext context);
+
+    void initiatorReconnect(boolean reestablishConnection);
+
+    FixPProtocolType protocolType();
 }

@@ -79,7 +79,6 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
@@ -761,8 +760,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String host = useBackupHost ? backupHost : primaryHost;
         final InetSocketAddress address = new InetSocketAddress(host, port);
         final FixPContexts fixPContexts = this.fixPContexts;
-        final ILink3Context context = fixPContexts.calculateUuid(
-            port, primaryHost, accessKeyId, reestablishConnection);
+        final ILink3Key key = new ILink3Key(port, primaryHost, accessKeyId);
+        final ILink3Context context = (ILink3Context)fixPContexts.calculateInitiatorContext(key, reestablishConnection);
 
         if (checkDuplicateILinkConnection(libraryId, correlationId, useBackupHost, accessKeyId, address, context))
         {

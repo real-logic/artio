@@ -217,8 +217,8 @@
         </enum>
 
         <enum name="FixPProtocolType" encodingType="uint16" sinceVersion="16">
-            <validValue name="ILINK_3">0</validValue>
-            <validValue name="BINARY_ENTRYPOINT">1</validValue>
+            <validValue name="ILINK_3">1</validValue>
+            <validValue name="BINARY_ENTRYPOINT">2</validValue>
         </enum>
 
         <enum name="CancelOnDisconnectOption" encodingType="uint16" sinceVersion="16">

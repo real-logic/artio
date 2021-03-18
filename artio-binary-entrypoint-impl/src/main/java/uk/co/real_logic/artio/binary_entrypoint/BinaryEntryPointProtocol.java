@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
@@ -74,5 +75,10 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             lastConnectPayload,
             configuration,
             (BinaryEntryPointContext)context);
+    }
+
+    public AbstractFixPStorage makeCodecs(final EpochNanoClock clock)
+    {
+        return new BinaryEntryPointStorage();
     }
 }

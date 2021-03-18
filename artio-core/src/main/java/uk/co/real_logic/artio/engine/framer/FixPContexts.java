@@ -16,43 +16,46 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.Verify;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
-import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.*;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.storage.messages.ILink3ContextDecoder;
-import uk.co.real_logic.artio.storage.messages.ILink3ContextEncoder;
+import uk.co.real_logic.artio.storage.messages.FixPContextWrapperDecoder;
+import uk.co.real_logic.artio.storage.messages.FixPContextWrapperEncoder;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.Function;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 
-class FixPContexts
+public class FixPContexts
 {
-    private final Map<ILink3Key, ILink3Context> keyToContext = new HashMap<>();
+    public static final int WRAPPER_LENGTH = FixPContextWrapperEncoder.BLOCK_LENGTH;
+    private final EnumMap<FixPProtocolType, AbstractFixPStorage> typeToStorage = new EnumMap<>(FixPProtocolType.class);
+    private final Function<FixPProtocolType, AbstractFixPStorage> makeStorageFunc = this::makeStorage;
+
     private final MappedFile mappedFile;
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
     private final EpochNanoClock epochNanoClock;
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final ILink3ContextEncoder contextEncoder = new ILink3ContextEncoder();
-    private final ILink3ContextDecoder contextDecoder = new ILink3ContextDecoder();
-    private final int actingBlockLength = contextEncoder.sbeBlockLength();
-    private final int actingVersion = contextEncoder.sbeSchemaVersion();
+    private final FixPContextWrapperEncoder contextWrapperEncoder = new FixPContextWrapperEncoder();
+    private final FixPContextWrapperDecoder contextWrapperDecoder = new FixPContextWrapperDecoder();
+    private final int actingBlockLength = contextWrapperEncoder.sbeBlockLength();
+    private final int actingVersion = contextWrapperEncoder.sbeSchemaVersion();
 
     private final Long2LongHashMap authenticatedSessionIdToConnectionId = new Long2LongHashMap(MISSING_LONG);
-    // TODO: persist this state, generify and replace keyToContext
-    private final Map<FixPKey, FixPContext> acceptorKeyToContext = new HashMap<>();
+    private final Map<FixPKey, FixPContext> keyToContext = new HashMap<>();
 
     private int offset;
 
@@ -71,8 +74,8 @@ class FixPContexts
             buffer,
             headerEncoder,
             headerDecoder,
-            contextEncoder.sbeSchemaId(),
-            contextEncoder.sbeTemplateId(),
+            contextWrapperEncoder.sbeSchemaId(),
+            contextWrapperEncoder.sbeTemplateId(),
             actingVersion,
             actingBlockLength,
             errorHandler))
@@ -85,109 +88,83 @@ class FixPContexts
         final int capacity = buffer.capacity();
         while (offset < capacity)
         {
-            contextDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
-            final long uuid = contextDecoder.uuid();
-            if (uuid == 0)
+            contextWrapperDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+            final int protocolTypeValue = contextWrapperDecoder.protocolType();
+            final int contextLength = contextWrapperDecoder.contextLength();
+            if (protocolTypeValue == 0)
             {
                 break;
             }
 
-            final int port = contextDecoder.port();
-            final String host = contextDecoder.host();
-            final String accessKeyId = contextDecoder.accessKeyId();
+            offset += WRAPPER_LENGTH;
 
-            keyToContext.put(
-                new ILink3Key(port, host, accessKeyId),
-                new ILink3Context(this, uuid, 0, uuid, 0, false, offset));
+            final FixPProtocolType type = FixPProtocolType.get(protocolTypeValue);
+            final AbstractFixPStorage storage = lookupStorage(type);
+            final FixPContext context = storage.loadContext(buffer, offset, actingVersion, this);
+            keyToContext.put(context.toKey(), context);
 
-            offset = contextDecoder.limit();
+            offset += contextLength;
         }
     }
 
-    ILink3Context calculateUuid(
-        final int port, final String host, final String accessKeyId, final boolean reestablishConnection)
+    private AbstractFixPStorage lookupStorage(final FixPProtocolType type)
     {
-        final ILink3Key key = new ILink3Key(port, host, accessKeyId);
+        return typeToStorage.computeIfAbsent(type, makeStorageFunc);
+    }
 
-        final ILink3Context context = keyToContext.get(key);
+    private AbstractFixPStorage makeStorage(final FixPProtocolType type)
+    {
+        return FixPProtocolFactory.make(type, errorHandler).makeCodecs(epochNanoClock);
+    }
+
+    FixPContext calculateInitiatorContext(
+        final FixPKey key, final boolean reestablishConnection)
+    {
+        Verify.notNull(key, "key");
+
+        final FixPContext context = keyToContext.get(key);
 
         if (context != null)
         {
-            final long connectLastUuid = context.uuid();
-            context.connectLastUuid(connectLastUuid);
-
-            // connectLastUuid == 0 implies that we're attempting to re-establish a connection that failed on its
-            // last attempt, also its first of the week, so we need to generate a new UUID
-            final boolean newlyAllocated = !reestablishConnection || connectLastUuid == 0;
-
-            context.newlyAllocated(newlyAllocated);
-            if (newlyAllocated)
-            {
-                final long newUuid = microSecondTimestamp();
-                context.connectUuid(newUuid);
-            }
-            else
-            {
-                // We may have an invalid connect uuid from a failed connection at this point.
-                context.connectUuid(connectLastUuid);
-            }
+            context.initiatorReconnect(reestablishConnection);
 
             return context;
         }
 
-        return allocateUuid(key);
+        return allocateInitiatorContext(key);
     }
 
-    private ILink3Context allocateUuid(final ILink3Key key)
+    private FixPContext allocateInitiatorContext(final FixPKey key)
     {
-        final ILink3Context context = newUuid();
+        final FixPContext context = newInitiatorContext(key);
         keyToContext.put(key, context);
         return context;
     }
 
-    private ILink3Context newUuid()
+    private FixPContext newInitiatorContext(final FixPKey key)
     {
-        final long newUuid = microSecondTimestamp();
-        return new ILink3Context(this, 0, 0, newUuid, 0, true, offset);
+        return lookupStorage(key.protocolType()).newInitiatorContext(key, offset + WRAPPER_LENGTH, this);
     }
 
-    void updateUuid(final ILink3Context context)
+    void updateContext(final FixPContext context)
     {
-        contextEncoder
-            .wrap(buffer, context.offset())
-            .uuid(context.uuid());
+        lookupStorage(context.protocolType()).updateContext(context, buffer);
     }
 
-    void saveNewUuid(final ILink3Context context)
+    void saveNewContext(final FixPContext context)
     {
-        ILink3Key key = null;
-        for (final Map.Entry<ILink3Key, ILink3Context> entry : keyToContext.entrySet())
-        {
-            if (entry.getValue() == context)
-            {
-                key = entry.getKey();
-                break;
-            }
-        }
+        final FixPProtocolType type = context.protocolType();
+        final AbstractFixPStorage storage = lookupStorage(type);
 
-        if (null == key)
-        {
-            throw new IllegalStateException("expected to find key");
-        }
-
-        contextEncoder
+        contextWrapperEncoder
             .wrap(buffer, offset)
-            .uuid(context.uuid())
-            .port(key.port)
-            .host(key.host)
-            .accessKeyId(key.accessKeyId);
+            .protocolType(type.value());
 
-        offset = contextEncoder.limit();
-    }
+        offset += WRAPPER_LENGTH;
+        final int length = storage.saveContext(context, buffer, offset, actingVersion);
+        contextWrapperEncoder.contextLength(length);
 
-    private long microSecondTimestamp()
-    {
-        return epochNanoClock.nanoTime();
+        offset += length;
     }
 
     int offset()
@@ -209,11 +186,19 @@ class FixPContexts
             authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
 
             final FixPKey key = context.toKey();
-            final FixPContext oldContext = acceptorKeyToContext.get(key);
-            final FirstMessageRejectReason rejectReason = context.checkConnect(oldContext);
+            final FixPContext oldContext = keyToContext.get(key);
+            final FirstMessageRejectReason rejectReason = context.checkAccept(oldContext);
             if (rejectReason == null)
             {
-                acceptorKeyToContext.put(key, context);
+                if (oldContext == null)
+                {
+                    saveNewContext(context);
+                }
+                else
+                {
+                    updateContext(context);
+                }
+                keyToContext.put(key, context);
             }
             return rejectReason;
         }
@@ -237,50 +222,8 @@ class FixPContexts
         }
     }
 
-    private static final class ILink3Key
+    public long nanoSecondTimestamp()
     {
-        private final int port;
-        private final String host;
-        private final String accessKeyId;
-
-        private ILink3Key(final int port, final String host, final String accessKeyId)
-        {
-            this.port = port;
-            this.host = host;
-            this.accessKeyId = accessKeyId;
-        }
-
-        public boolean equals(final Object o)
-        {
-            if (this == o)
-            {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass())
-            {
-                return false;
-            }
-
-            final ILink3Key iLink3Key = (ILink3Key)o;
-
-            if (port != iLink3Key.port)
-            {
-                return false;
-            }
-            if (!Objects.equals(host, iLink3Key.host))
-            {
-                return false;
-            }
-            return Objects.equals(accessKeyId, iLink3Key.accessKeyId);
-        }
-
-        public int hashCode()
-        {
-            int result = port;
-            result = 31 * result + (host != null ? host.hashCode() : 0);
-            result = 31 * result + (accessKeyId != null ? accessKeyId.hashCode() : 0);
-            return result;
-        }
+        return epochNanoClock.nanoTime();
     }
-
 }

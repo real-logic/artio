@@ -17,6 +17,9 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 
 public class BinaryEntryPointContext implements FixPContext
 {
@@ -26,6 +29,7 @@ public class BinaryEntryPointContext implements FixPContext
     private final long enteringFirm;
     private final boolean fromNegotiate;
 
+    private int offset = MISSING_INT;
     private BinaryEntryPointKey key;
 
     public BinaryEntryPointContext(
@@ -40,6 +44,7 @@ public class BinaryEntryPointContext implements FixPContext
         this.requestTimestamp = timestamp;
         this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
+        key = new BinaryEntryPointKey(sessionID);
     }
 
     public long sessionID()
@@ -80,15 +85,10 @@ public class BinaryEntryPointContext implements FixPContext
 
     public BinaryEntryPointKey toKey()
     {
-        if (key == null)
-        {
-            key = new BinaryEntryPointKey(sessionID);
-        }
-
         return key;
     }
 
-    public FirstMessageRejectReason checkConnect(final FixPContext fixPContext)
+    public FirstMessageRejectReason checkAccept(final FixPContext fixPContext)
     {
         if (fixPContext == null)
         {
@@ -107,6 +107,8 @@ public class BinaryEntryPointContext implements FixPContext
             throw new IllegalArgumentException("Unable to compare: " + sessionID + " to " + oldContext.sessionID);
         }
 
+        offset = oldContext.offset();
+
         // negotiations should increment the session ver id
         if (fromNegotiate)
         {
@@ -117,6 +119,16 @@ public class BinaryEntryPointContext implements FixPContext
         {
             return oldContext.sessionVerID == sessionVerID ? null : FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
         }
+    }
+
+    public void initiatorReconnect(final boolean reestablishConnection)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    public FixPProtocolType protocolType()
+    {
+        return FixPProtocolType.BINARY_ENTRYPOINT;
     }
 
     public FirstMessageRejectReason checkFirstConnect()
@@ -132,5 +144,15 @@ public class BinaryEntryPointContext implements FixPContext
         }
 
         return null;
+    }
+
+    void offset(final int offset)
+    {
+        this.offset = offset;
+    }
+
+    int offset()
+    {
+        return offset;
     }
 }

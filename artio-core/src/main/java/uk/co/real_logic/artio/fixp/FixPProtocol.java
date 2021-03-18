@@ -63,4 +63,6 @@ public abstract class FixPProtocol
     {
         return encodingType;
     }
+
+    public abstract AbstractFixPStorage makeCodecs(EpochNanoClock epochNanoClock);
 }

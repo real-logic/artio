@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 public class BinaryEntryPointKey implements FixPKey
 {
@@ -45,5 +46,10 @@ public class BinaryEntryPointKey implements FixPKey
     public int hashCode()
     {
         return (int)(sessionID ^ (sessionID >>> 32));
+    }
+
+    public FixPProtocolType protocolType()
+    {
+        return FixPProtocolType.BINARY_ENTRYPOINT;
     }
 }

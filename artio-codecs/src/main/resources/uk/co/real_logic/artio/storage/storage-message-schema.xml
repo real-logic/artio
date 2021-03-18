@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.storage.messages"
                    id="666"
-                   version="6"
+                   version="7"
                    semanticVersion="0.1"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -70,7 +70,12 @@
         <data name="remoteCompId" id="3" type="Utf8String"/>
     </sbe:message>
 
-    <!-- ILink3 contexts -->
+    <!-- FIXP contexts -->
+    <sbe:message name="FixPContextWrapper" id="32" description="" sinceVersion="7">
+        <field name="protocolType" id="1" type="uint16"/>
+        <field name="contextLength" id="2" type="uint16"/>
+    </sbe:message>
+
     <sbe:message name="ILink3Context" id="29" description="" sinceVersion="4">
         <field name="uuid" id="1" type="int64"/>
         <field name="port" id="2" type="int32"/>

@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-final class ILink3Context
+import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+
+public final class ILink3Context implements FixPContext
 {
     private final int offset;
 
@@ -23,6 +27,7 @@ final class ILink3Context
     private long connectLastUuid;
     private long connectUuid;
 
+    private final ILink3Key key;
     private final FixPContexts fixPContexts;
     private long uuid;
     private long lastUuid;
@@ -30,7 +35,8 @@ final class ILink3Context
     private boolean primaryConnected;
     private boolean backupConnected;
 
-    ILink3Context(
+    public ILink3Context(
+        final ILink3Key key,
         final FixPContexts fixPContexts,
         final long uuid,
         final long lastUuid,
@@ -39,6 +45,7 @@ final class ILink3Context
         final boolean newlyAllocated,
         final int offset)
     {
+        this.key = key;
         this.fixPContexts = fixPContexts;
         this.uuid = uuid;
         this.lastUuid = lastUuid;
@@ -48,7 +55,7 @@ final class ILink3Context
         this.offset = offset;
     }
 
-    long uuid()
+    public long uuid()
     {
         return uuid;
     }
@@ -110,11 +117,11 @@ final class ILink3Context
 
         if (lastUuid == 0)
         {
-            fixPContexts.saveNewUuid(this);
+            fixPContexts.saveNewContext(this);
         }
         else
         {
-            fixPContexts.updateUuid(this);
+            fixPContexts.updateContext(this);
         }
     }
 
@@ -136,6 +143,43 @@ final class ILink3Context
     public long connectUuid()
     {
         return connectUuid;
+    }
+
+    public FirstMessageRejectReason checkAccept(final FixPContext context)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    public void initiatorReconnect(final boolean reestablishConnection)
+    {
+        final long connectLastUuid = uuid();
+        connectLastUuid(connectLastUuid);
+
+        // connectLastUuid == 0 implies that we're attempting to re-establish a connection that failed on its
+        // last attempt, also its first of the week, so we need to generate a new UUID
+        final boolean newlyAllocated = !reestablishConnection || connectLastUuid == 0;
+
+        newlyAllocated(newlyAllocated);
+        if (newlyAllocated)
+        {
+            final long newUuid = fixPContexts.nanoSecondTimestamp();
+            connectUuid(newUuid);
+        }
+        else
+        {
+            // We may have an invalid connect uuid from a failed connection at this point.
+            connectUuid(connectLastUuid);
+        }
+    }
+
+    public FixPProtocolType protocolType()
+    {
+        return FixPProtocolType.ILINK_3;
+    }
+
+    public ILink3Key toKey()
+    {
+        return key;
     }
 
     public String toString()
