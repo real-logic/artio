@@ -278,6 +278,7 @@ public final class FixEngine extends GatewayProcess
                 aeron,
                 aeronArchive,
                 recordingCoordinator);
+            engineContext.catchupIndices();
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration, aeronArchive, duplicateEngineChecker);
         }

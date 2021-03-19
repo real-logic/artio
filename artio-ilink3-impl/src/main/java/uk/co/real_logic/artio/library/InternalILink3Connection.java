@@ -204,6 +204,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             owner, uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid, epochNanoClock,
             new ILink3Proxy(connectionId, outboundPublication.dataPublication(), new ILink3BusinessMessageDissector(),
             epochNanoClock));
+        proxy.ids(connectionId, uuid);
     }
 
     InternalILink3Connection(
@@ -356,26 +357,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     public long lastUuid()
     {
         return lastUuid;
-    }
-
-    public long nextSentSeqNo()
-    {
-        return nextSentSeqNo;
-    }
-
-    public void nextSentSeqNo(final long nextSentSeqNo)
-    {
-        this.nextSentSeqNo = nextSentSeqNo;
-    }
-
-    public long nextRecvSeqNo()
-    {
-        return nextRecvSeqNo;
-    }
-
-    public void nextRecvSeqNo(final long nextRecvSeqNo)
-    {
-        this.nextRecvSeqNo = nextRecvSeqNo;
     }
 
     public long retransmitFillSeqNo()
@@ -1020,16 +1001,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     protected void onReplayComplete()
     {
         state = State.ESTABLISHED;
-    }
-
-    private void onReceivedMessage()
-    {
-        if (state == State.AWAITING_KEEPALIVE)
-        {
-            state = State.ESTABLISHED;
-        }
-
-        nextReceiveMessageTimeInMs = nextTimeoutInMs();
     }
 
 //    private

@@ -87,6 +87,7 @@ public class SequenceNumberIndexWriter implements Index
     private final List<WriteMetaDataResponse> responsesToResend = new ArrayList<>();
     private final Predicate<WriteMetaDataResponse> sendResponseFunc = this::sendResponse;
     private final RandomAccessFile metaDataFile;
+    private final SequenceNumberIndexReader reader;
     private byte[] metaDataWriteBuffer = new byte[0];
     private final Long2ObjectHashMap<LongHashSet> sessionIdToRedactPositions = new Long2ObjectHashMap<>();
 
@@ -102,7 +103,7 @@ public class SequenceNumberIndexWriter implements Index
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positionWriter;
-    private final FixPSequenceNumberExtractor fixPSequenceNumberExtractor;
+    private final FixPSequenceIndexer fixPSequenceIndexer;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -122,7 +123,7 @@ public class SequenceNumberIndexWriter implements Index
         final long indexFileStateFlushTimeoutInMs,
         final EpochClock clock,
         final String metaDataDir,
-        final Long2LongHashMap connectionIdToILinkUuid,
+        final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType)
     {
         this.inMemoryBuffer = inMemoryBuffer;
@@ -132,13 +133,6 @@ public class SequenceNumberIndexWriter implements Index
         this.fileCapacity = indexFile.buffer().capacity();
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
-
-        fixPSequenceNumberExtractor = new FixPSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler, fixPProtocolType,
-            (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
-            // When possRetrans=true we should only update if the number is actually higher as
-            // possRetrans=true messages can be interleaved with normal messages /or/ the last message
-            saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION, possRetrans));
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
@@ -179,6 +173,14 @@ public class SequenceNumberIndexWriter implements Index
             indexFile.close();
             throw e;
         }
+
+        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, metaDataDir);
+        fixPSequenceIndexer = new FixPSequenceIndexer(
+            connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
+            (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
+                // When possRetrans=true we should only update if the number is actually higher as
+                // possRetrans=true messages can be interleaved with normal messages /or/ the last message
+                saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION, possRetrans));
     }
 
     private RandomAccessFile openMetaDataFile(final File metaDataLocation)
@@ -330,7 +332,7 @@ public class SequenceNumberIndexWriter implements Index
 
                 default:
                 {
-                    fixPSequenceNumberExtractor.onFragment(buffer, srcOffset, length, header);
+                    fixPSequenceIndexer.onFragment(buffer, srcOffset, length, header);
                     break;
                 }
             }
@@ -1010,5 +1012,10 @@ public class SequenceNumberIndexWriter implements Index
     public void framerContext(final FramerContext framerContext)
     {
         this.framerContext = framerContext;
+    }
+
+    public SequenceNumberIndexReader reader()
+    {
+        return reader;
     }
 }

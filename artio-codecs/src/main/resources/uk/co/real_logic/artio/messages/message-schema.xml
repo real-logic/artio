@@ -631,6 +631,7 @@
                  sinceVersion="8">
         <field name="connection" id="1" type="ConnectionId"/>
         <field name="enqueueTime" id="2" type="Timestamp" sinceVersion="12"/>
+        <field name="sessionId" id="3" type="FixSessionId"/>
     </sbe:message>
 
     <!-- Messages From either Library or Engine outbound -->

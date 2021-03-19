@@ -341,7 +341,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         newInstanceAfterRestart();
 
-        verify(errorHandler, times(2), IllegalStateException.class);
+        verify(errorHandler, times(3), IllegalStateException.class);
     }
 
     private void corruptIndexFile(final int from, final int length)

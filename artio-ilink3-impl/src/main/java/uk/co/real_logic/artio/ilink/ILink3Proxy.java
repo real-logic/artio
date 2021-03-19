@@ -24,8 +24,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import java.nio.ByteBuffer;
@@ -81,11 +81,6 @@ public class ILink3Proxy extends AbstractFixPProxy
     public ILink3BusinessMessageDissector businessMessageLogger()
     {
         return businessMessageLogger;
-    }
-
-    public void connectionId(final long connectionId)
-    {
-        this.connectionId = connectionId;
     }
 
     public long sendNegotiate(

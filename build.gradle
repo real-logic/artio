@@ -771,6 +771,8 @@ project(':artio-binary-entrypoint-system-tests') {
         testImplementation project(path: ':artio-core', configuration: 'tests')
         testImplementation project(path: ':artio-codecs', configuration: 'tests')
         testImplementation project(path: ':artio-system-tests', configuration: 'tests')
+        testImplementation project(':artio-binary-entrypoint-codecs')
+        testImplementation project(':artio-binary-entrypoint-impl')
 
         implementation project(':artio-core')
         implementation project(':artio-binary-entrypoint-codecs')

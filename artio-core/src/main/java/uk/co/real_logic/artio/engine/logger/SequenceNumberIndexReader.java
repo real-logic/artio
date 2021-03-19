@@ -39,6 +39,9 @@ import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
+/**
+ * Designed to used on a single thread
+ */
 public class SequenceNumberIndexReader implements AutoCloseable
 {
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();

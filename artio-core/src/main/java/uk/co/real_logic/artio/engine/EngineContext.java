@@ -99,7 +99,7 @@ public class EngineContext implements AutoCloseable
         try
         {
             final EpochClock epochClock = new SystemEpochClock();
-            final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
+            final Long2LongHashMap connectionIdToFixPSessionId = new Long2LongHashMap(UNK_SESSION);
             final FixPProtocolType fixPProtocolType = configuration.supportedFixPProtocolType();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
@@ -110,7 +110,7 @@ public class EngineContext implements AutoCloseable
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 configuration.logFileDir(),
-                connectionIdToILinkUuid,
+                connectionIdToFixPSessionId,
                 fixPProtocolType);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
@@ -121,7 +121,7 @@ public class EngineContext implements AutoCloseable
                 configuration.indexFileStateFlushTimeoutInMs(),
                 epochClock,
                 null,
-                connectionIdToILinkUuid,
+                connectionIdToFixPSessionId,
                 fixPProtocolType);
 
             newStreams();
@@ -168,7 +168,8 @@ public class EngineContext implements AutoCloseable
         final String logFileDir,
         final int streamId,
         final RecordingIdLookup recordingIdLookup,
-        final Long2LongHashMap connectionIdToILinkUuid)
+        final Long2LongHashMap connectionIdToILinkUuid,
+        final SequenceNumberIndexReader reader)
     {
         return new ReplayIndex(
             logFileDir,
@@ -181,7 +182,8 @@ public class EngineContext implements AutoCloseable
             errorHandler,
             recordingIdLookup,
             connectionIdToILinkUuid,
-            configuration.supportedFixPProtocolType());
+            configuration.supportedFixPProtocolType(),
+            reader);
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -245,15 +247,14 @@ public class EngineContext implements AutoCloseable
             logFileDir,
             configuration.inboundLibraryStream(),
             recordingCoordinator.indexerInboundRecordingIdLookup(),
-            connectionIdToILinkUuid);
+            connectionIdToILinkUuid,
+            receivedSequenceNumberIndex.reader());
 
         inboundIndexer = new Indexer(
             asList(inboundReplayIndex, receivedSequenceNumberIndex),
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
             inboundCompletionPosition,
-            aeronArchive,
-            errorHandler,
             configuration.archiveReplayStream(),
             configuration.gracefulShutdown());
 
@@ -264,7 +265,8 @@ public class EngineContext implements AutoCloseable
             logFileDir,
             configuration.outboundLibraryStream(),
             recordingCoordinator.indexerOutboundRecordingIdLookup(),
-            connectionIdToILinkUuid));
+            connectionIdToILinkUuid,
+            sentSequenceNumberIndex.reader()));
         outboundIndices.add(sentSequenceNumberIndex);
 
         outboundIndexer = new Indexer(
@@ -272,8 +274,6 @@ public class EngineContext implements AutoCloseable
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
             outboundLibraryCompletionPosition,
-            aeronArchive,
-            errorHandler,
             configuration.archiveReplayStream(),
             configuration.gracefulShutdown());
     }
@@ -311,6 +311,21 @@ public class EngineContext implements AutoCloseable
                 senderSequenceNumbers,
                 replayerCommandQueue,
                 new FixSessionCodecsFactory(configuration.sessionEpochFractionFormat()));
+        }
+    }
+
+    public void catchupIndices()
+    {
+        // when inbound logging disabled
+        if (inboundIndexer != null)
+        {
+            inboundIndexer.catchIndexUp(aeronArchive, errorHandler);
+        }
+
+        // when outbound logging disabled
+        if (outboundIndexer != null)
+        {
+            outboundIndexer.catchIndexUp(aeronArchive, errorHandler);
         }
     }
 
@@ -419,5 +434,4 @@ public class EngineContext implements AutoCloseable
                 sentSequenceNumberIndex, receivedSequenceNumberIndex, pruneInboundReplayQuery);
         }
     }
-
 }

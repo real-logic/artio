@@ -18,10 +18,9 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
-import uk.co.real_logic.artio.fixp.FixPConnection;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -80,5 +79,14 @@ public class BinaryEntryPointProtocol extends FixPProtocol
     public AbstractFixPStorage makeCodecs(final EpochNanoClock clock)
     {
         return new BinaryEntryPointStorage();
+    }
+
+    public AbstractFixPSequenceExtractor makeSequenceExtractor(
+        final FixPSequenceNumberHandler handler,
+        final SequenceNumberIndexReader sequenceNumberReader)
+    {
+        return new BinaryEntryPointSequenceExtractor(
+            handler,
+            sequenceNumberReader);
     }
 }

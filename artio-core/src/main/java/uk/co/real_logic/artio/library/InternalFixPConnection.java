@@ -75,6 +75,27 @@ public abstract class InternalFixPConnection implements FixPConnection
         return connectionId;
     }
 
+
+    public long nextSentSeqNo()
+    {
+        return nextSentSeqNo;
+    }
+
+    public void nextSentSeqNo(final long nextSentSeqNo)
+    {
+        this.nextSentSeqNo = nextSentSeqNo;
+    }
+
+    public long nextRecvSeqNo()
+    {
+        return nextRecvSeqNo;
+    }
+
+    public void nextRecvSeqNo(final long nextRecvSeqNo)
+    {
+        this.nextRecvSeqNo = nextRecvSeqNo;
+    }
+
     public long requestDisconnect(final DisconnectReason reason)
     {
         return outboundPublication.saveRequestDisconnect(libraryId, connectionId, reason);
@@ -132,6 +153,16 @@ public abstract class InternalFixPConnection implements FixPConnection
     // -----------------------------------------------
     // Internal Methods below, not part of the public API
     // -----------------------------------------------
+
+    protected void onReceivedMessage()
+    {
+        if (state == State.AWAITING_KEEPALIVE)
+        {
+            state = State.ESTABLISHED;
+        }
+
+        nextReceiveMessageTimeInMs = nextTimeoutInMs();
+    }
 
     protected long nextTimeoutInMs()
     {

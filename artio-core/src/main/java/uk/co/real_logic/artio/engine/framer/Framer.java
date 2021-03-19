@@ -182,8 +182,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Image outboundEngineImage;
     private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
+    private final FixPContexts fixPContexts;
 
-    private FixPContexts fixPContexts;
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
@@ -2008,20 +2008,80 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         gatewaySession.setManagementTo(libraryId);
         libraryInfo.addSession(gatewaySession);
 
-        // TODO: lookup sequence numbers + last connect payload
-
-        inboundPublication.saveManageFixPConnection(
-            libraryId,
+        schedule(new OnRequestFixPSessionHandover(
             correlationId,
-            gatewaySession.connectionId(),
-            gatewaySession.sessionId(),
-            gatewaySession.protocolType(),
-            0,
-            0,
-            0,
-            gatewaySession.firstMessage());
+            gatewaySession,
+            libraryInfo));
 
         return CONTINUE;
+    }
+
+    class SessionHandover extends UnitOfWork
+    {
+        private final int aeronSessionId;
+        private final long requiredPosition;
+
+        SessionHandover()
+        {
+            super(new ArrayList<>());
+
+            aeronSessionId = outboundPublication.sessionId();
+            requiredPosition = outboundPublication.position();
+        }
+
+        long awaitIndexer()
+        {
+            // Ensure that we've indexed up to this point in time.
+            // If we don't do this then the indexer thread could receive a message sent from the Framer after
+            // the library has sent its first message and get the wrong sent sequence number.
+            // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
+            if (requiredPosition > 0 && configuration.logOutboundMessages())
+            {
+                return sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED;
+            }
+            else
+            {
+                return COMPLETE;
+            }
+        }
+    }
+
+    final class OnRequestFixPSessionHandover extends SessionHandover
+    {
+        private final long correlationId;
+        private final FixPGatewaySession gatewaySession;
+        private final LiveLibraryInfo libraryInfo;
+
+        OnRequestFixPSessionHandover(
+            final long correlationId,
+            final FixPGatewaySession gatewaySession,
+            final LiveLibraryInfo libraryInfo)
+        {
+            this.correlationId = correlationId;
+            this.gatewaySession = gatewaySession;
+            this.libraryInfo = libraryInfo;
+
+            // NB: simpler handover than with FIX between we don't allow the engine to own session management
+            // for FixP connections so we don't need to wait for gateway owned messages to be handed over
+            workList.add(this::awaitIndexer);
+            workList.add(this::sendManageConnection);
+        }
+
+        private long sendManageConnection()
+        {
+            final long sessionId = gatewaySession.sessionId();
+
+            return inboundPublication.saveManageFixPConnection(
+                libraryInfo.libraryId(),
+                correlationId,
+                gatewaySession.connectionId(),
+                sessionId,
+                gatewaySession.protocolType(),
+                receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
+                sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
+                0,
+                gatewaySession.firstMessage());
+        }
     }
 
     private Action onRequestFixSession(
@@ -2061,13 +2121,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    private final class OnRequestFixSessionHandover extends UnitOfWork
+    final class OnRequestFixSessionHandover extends SessionHandover
     {
         private final int libraryId;
         private final LiveLibraryInfo libraryInfo;
         private final FixGatewaySession gatewaySession;
-        private final int aeronSessionId;
-        private final long requiredPosition;
         private final InternalSession session;
         private final long connectionId;
         private final long sessionId;
@@ -2081,14 +2139,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final LiveLibraryInfo libraryInfo,
             final FixGatewaySession gatewaySession)
         {
-            super(new ArrayList<>());
-
             this.libraryInfo = libraryInfo;
             this.gatewaySession = gatewaySession;
 
             libraryId = libraryInfo.libraryId();
-            aeronSessionId = outboundPublication.sessionId();
-            requiredPosition = outboundPublication.position();
             session = gatewaySession.session();
             connectionId = gatewaySession.connectionId();
             sessionId = session.id();
@@ -2099,7 +2153,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
 
             workList.add(this::awaitGatewaySessionMessagesSent);
-            workList.add(this::awaitIndexer);
             workList.add(() -> saveManageSession(
                 libraryId,
                 gatewaySession,
@@ -2121,22 +2174,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceIndex,
                 gatewaySession,
                 lastRecvSeqNum);
-        }
-
-        private long awaitIndexer()
-        {
-            // Ensure that we've indexed up to this point in time.
-            // If we don't do this then the indexer thread could receive a message sent from the Framer after
-            // the library has sent its first message and get the wrong sent sequence number.
-            // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
-            if (requiredPosition > 0 && configuration.logOutboundMessages())
-            {
-                return sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED;
-            }
-            else
-            {
-                return COMPLETE;
-            }
         }
 
         private long awaitGatewaySessionMessagesSent()

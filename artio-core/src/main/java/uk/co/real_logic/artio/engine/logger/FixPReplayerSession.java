@@ -192,7 +192,7 @@ public class FixPReplayerSession extends ReplayerSession
 
     private boolean sendSequence(final int nextSentSequenceNumber)
     {
-        binaryProxy.connectionId(connectionId);
+        binaryProxy.ids(connectionId, sessionId);
         return !Pressure.isBackPressured(binaryProxy.sendSequence(sessionId, nextSentSequenceNumber));
     }
 

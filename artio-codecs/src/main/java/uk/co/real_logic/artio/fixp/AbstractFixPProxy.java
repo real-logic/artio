@@ -36,7 +36,9 @@ public abstract class AbstractFixPProxy
     protected final BufferClaim bufferClaim = new BufferClaim();
 
     protected final ExclusivePublication publication;
+
     protected long connectionId;
+    protected long sessionId;
 
     protected AbstractFixPProxy(final long connectionId, final ExclusivePublication publication)
     {
@@ -44,9 +46,10 @@ public abstract class AbstractFixPProxy
         this.publication = publication;
     }
 
-    public void connectionId(final long connectionId)
+    public void ids(final long connectionId, final long sessionId)
     {
         this.connectionId = connectionId;
+        this.sessionId = sessionId;
     }
 
     public abstract long sendSequence(
@@ -88,6 +91,7 @@ public abstract class AbstractFixPProxy
         fixPMessage
             .wrapAndApplyHeader(buffer, bufferClaim.offset(), messageHeader)
             .connection(connectionId)
+            .sessionId(sessionId)
             .enqueueTime(timestamp);
 
         offset += ARTIO_HEADER_LENGTH;

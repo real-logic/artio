@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.ilink;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
@@ -74,5 +76,15 @@ public class Ilink3Protocol extends FixPProtocol
     public Ilink3Storage makeCodecs(final EpochNanoClock clock)
     {
         return new Ilink3Storage(clock);
+    }
+
+    public ILink3SequenceExtractor makeSequenceExtractor(
+        final FixPSequenceNumberHandler handler,
+        final SequenceNumberIndexReader sequenceNumberReader)
+    {
+        return new ILink3SequenceExtractor(
+            handler,
+            makeOffsets(),
+            makeParser(null));
     }
 }

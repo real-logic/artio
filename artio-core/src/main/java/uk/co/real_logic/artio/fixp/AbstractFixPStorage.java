@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.engine.framer.FixPContexts;
 /**
  * Class to implement by FIXP implementations in order to save or load contexts from a file.
  *
- * Usage can be assumed to be single threaded.
+ * It's safe to assume that usage is single threaded.
  */
 public abstract class AbstractFixPStorage
 {

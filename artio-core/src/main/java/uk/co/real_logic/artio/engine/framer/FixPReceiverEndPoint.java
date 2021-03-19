@@ -83,6 +83,11 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
             .connection(connectionId);
     }
 
+    public void sessionId(final long sessionId)
+    {
+        fixPMessage.sessionId(sessionId);
+    }
+
     void removeEndpointFromFramer()
     {
         trackDisconnect();

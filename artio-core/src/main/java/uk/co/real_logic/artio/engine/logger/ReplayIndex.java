@@ -69,7 +69,7 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
     private final SequenceNumberExtractor sequenceNumberExtractor;
 
-    private final FixPSequenceNumberExtractor fixPSequenceNumberExtractor;
+    private final FixPSequenceIndexer fixPSequenceIndexer;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
@@ -91,8 +91,9 @@ public class ReplayIndex implements Index
         final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler,
         final RecordingIdLookup recordingIdLookup,
-        final Long2LongHashMap connectionIdToILinkUuid,
-        final FixPProtocolType fixPProtocolType)
+        final Long2LongHashMap connectionIdToFixPSessionId,
+        final FixPProtocolType fixPProtocolType,
+        final SequenceNumberIndexReader reader)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -102,8 +103,8 @@ public class ReplayIndex implements Index
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
-        fixPSequenceNumberExtractor = new FixPSequenceNumberExtractor(
-            connectionIdToILinkUuid, errorHandler, fixPProtocolType,
+        fixPSequenceIndexer = new FixPSequenceIndexer(
+            connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
                 sessionIndex(uuid)
                 .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID));
@@ -199,7 +200,7 @@ public class ReplayIndex implements Index
 
                 case FixPMessageDecoder.TEMPLATE_ID:
                 case ILinkConnectDecoder.TEMPLATE_ID:
-                    fixPSequenceNumberExtractor.onFragment(srcBuffer, srcOffset, srcLength, header);
+                    fixPSequenceIndexer.onFragment(srcBuffer, srcOffset, srcLength, header);
                     break;
 
                 case ResetSequenceNumberDecoder.TEMPLATE_ID:

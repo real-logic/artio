@@ -65,8 +65,6 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final Subscription subscription,
         final String agentNamePrefix,
         final CompletionPosition completionPosition,
-        final AeronArchive aeronArchive,
-        final ErrorHandler errorHandler,
         final int archiveReplayStream,
         final boolean gracefulShutdown)
     {
@@ -76,7 +74,6 @@ public class Indexer implements Agent, ControlledFragmentHandler
         this.completionPosition = completionPosition;
         this.archiveReplayStream = archiveReplayStream;
         this.gracefulShutdown = gracefulShutdown;
-        catchIndexUp(aeronArchive, errorHandler);
     }
 
     public int doWork()
@@ -84,7 +81,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
         return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
-    private void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
+    public void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         final AgentInvoker aeronInvoker = aeronArchive.context().aeron().conductorAgentInvoker();

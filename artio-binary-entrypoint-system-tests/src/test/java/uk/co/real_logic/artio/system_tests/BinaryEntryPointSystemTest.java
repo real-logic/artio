@@ -139,11 +139,11 @@ public class BinaryEntryPointSystemTest
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
-            client.writeNewOrderSingle();
+            assertSequenceNumbers(1, 1);
 
-            assertReceivesOrder();
+            exchangeOrderAndReportNew(client);
 
-            client.readExecutionReportNew();
+            assertSequenceNumbers(2, 2);
         }
     }
 
@@ -156,6 +156,8 @@ public class BinaryEntryPointSystemTest
             client.writeNewOrderSingle(CL_ORD_ID);
             assertReceivesOrder();
 
+            assertSequenceNumbers(2, 1);
+
             connectionHandler.reset();
 
             connectionHandler.abortReport(false);
@@ -164,6 +166,8 @@ public class BinaryEntryPointSystemTest
             assertReceivesOrder();
 
             client.readExecutionReportNew(okClOrdId);
+
+            assertSequenceNumbers(3, 2);
         }
     }
 
@@ -293,6 +297,13 @@ public class BinaryEntryPointSystemTest
             client.readEstablishAck();
 
             assertConnectionMatches(client);
+
+            assertSequenceNumbers(2, 2);
+
+            exchangeOrderAndReportNew(client);
+
+            assertSequenceNumbers(3, 3);
+
             clientTerminatesSession(client);
         }
     }
@@ -348,6 +359,19 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    private void exchangeOrderAndReportNew(final BinaryEntrypointClient client)
+    {
+        client.writeNewOrderSingle();
+        assertReceivesOrder();
+        client.readExecutionReportNew();
+    }
+
+    private void assertSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
+    {
+        assertEquals("wrong nextRecvSeqNo", nextRecvSeqNo, connection.nextRecvSeqNo());
+        assertEquals("wrong nextSentSeqNo", nextSentSeqNo, connection.nextSentSeqNo());
+    }
+
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
         try (BinaryEntrypointClient client = newClient())
@@ -362,6 +386,8 @@ public class BinaryEntryPointSystemTest
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
+            exchangeOrderAndReportNew(client);
+
             clientTerminatesSession(client);
         }
 

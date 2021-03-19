@@ -88,6 +88,7 @@ public class FixPGatewaySession extends GatewaySession
         buffer.getBytes(offset, firstMessage, 0, messageSize);
 
         sessionId = parser.sessionId(buffer, offset);
+        receiverEndPoint.sessionId(sessionId);
         identification = parser.lookupIdentification(buffer, offset, messageSize);
 
         startAuthentication(System.currentTimeMillis()); // TODO: time

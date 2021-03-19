@@ -90,7 +90,6 @@ public abstract class AbstractFixPOffsets
 
     public abstract int sendingTimeEpochOffset(int templateId);
 
-
     public static Ir loadSbeIr(final Class<?> encoder, final String fileName)
     {
         try

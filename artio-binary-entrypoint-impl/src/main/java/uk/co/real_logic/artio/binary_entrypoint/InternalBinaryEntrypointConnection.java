@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 /**
  * External users should never rely on this API.
@@ -70,6 +71,19 @@ class InternalBinaryEntrypointConnection
         proxy = (BinaryEntryPointProxy)super.proxy;
         state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
         nextReceiveMessageTimeInMs = System.currentTimeMillis() + configuration.noEstablishFixPTimeoutInMs();
+
+        nextRecvSeqNo = adjustSeqNo(lastReceivedSequenceNumber);
+        nextSentSeqNo = adjustSeqNo(lastSentSequenceNumber);
+    }
+
+    private long adjustSeqNo(final long lastReceivedSequenceNumber)
+    {
+        if (lastReceivedSequenceNumber == UNK_SESSION)
+        {
+            return 1;
+        }
+
+        return lastReceivedSequenceNumber + 1;
     }
 
     public long sessionId()
@@ -97,26 +111,6 @@ class InternalBinaryEntrypointConnection
     public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
     {
         return 0;
-    }
-
-    public long nextSentSeqNo()
-    {
-        return 0;
-    }
-
-    public void nextSentSeqNo(final long nextSentSeqNo)
-    {
-
-    }
-
-    public long nextRecvSeqNo()
-    {
-        return 0;
-    }
-
-    public void nextRecvSeqNo(final long nextRecvSeqNo)
-    {
-
     }
 
     public long retransmitFillSeqNo()
@@ -170,11 +164,17 @@ class InternalBinaryEntrypointConnection
             // TODO: validation error
         }
 
-        this.sessionId = sessionId;
-        this.sessionVerId = sessionVerID;
+        onSessionId(sessionId, sessionVerID);
 
         final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
         return checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE);
+    }
+
+    private void onSessionId(final long sessionId, final long sessionVerID)
+    {
+        this.sessionId = sessionId;
+        this.sessionVerId = sessionVerID;
+        proxy.ids(connectionId, sessionId);
     }
 
     private long checkState(final long position, final State success, final State backPressured)
@@ -202,8 +202,7 @@ class InternalBinaryEntrypointConnection
         final State state = state();
         if (state == State.NEGOTIATED_REESTABLISH)
         {
-            this.sessionId = sessionID;
-            this.sessionVerId = sessionVerID;
+            onSessionId(sessionID, sessionVerID);
         }
         else
         {
@@ -316,7 +315,9 @@ class InternalBinaryEntrypointConnection
         final int version,
         final int sofhMessageSize)
     {
-//        onReceivedMessage();
+        onReceivedMessage();
+
+        nextRecvSeqNo++;
 
         handler.onBusinessMessage(
             this,

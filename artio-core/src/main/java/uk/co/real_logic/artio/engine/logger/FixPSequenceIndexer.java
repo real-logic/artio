@@ -20,46 +20,42 @@ import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
-import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
-import uk.co.real_logic.artio.messages.FixPMessageDecoder;
-import uk.co.real_logic.artio.messages.FixPProtocolType;
-import uk.co.real_logic.artio.messages.ILinkConnectDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.*;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
-import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-class FixPSequenceNumberExtractor
+class FixPSequenceIndexer
 {
-    private final Long2LongHashMap connectionIdToILinkUuid;
+    private final Long2LongHashMap connectionIdToFixPSessionId;
     private final ErrorHandler errorHandler;
     private final FixPProtocolType fixPProtocolType;
-    private final ILinkSequenceNumberHandler handler;
+    private final FixPSequenceNumberHandler handler;
+    private final SequenceNumberIndexReader sequenceNumberReader;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final FixPMessageDecoder iLinkMessage = new FixPMessageDecoder();
+    private final FixPMessageDecoder fixPMessage = new FixPMessageDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
 
-    private AbstractFixPOffsets offsets;
-    private AbstractFixPParser parser;
-    private boolean attemptedILinkInit = false;
+    private AbstractFixPSequenceExtractor sequenceExtractor;
+    private boolean attemptedProtocolInit = false;
 
-    FixPSequenceNumberExtractor(
-        final Long2LongHashMap connectionIdToILinkUuid,
+    FixPSequenceIndexer(
+        final Long2LongHashMap connectionIdToFixPSessionId,
         final ErrorHandler errorHandler,
         final FixPProtocolType fixPProtocolType,
-        final ILinkSequenceNumberHandler handler)
+        final SequenceNumberIndexReader sequenceNumberReader,
+        final FixPSequenceNumberHandler handler)
     {
-        this.connectionIdToILinkUuid = connectionIdToILinkUuid;
+        this.connectionIdToFixPSessionId = connectionIdToFixPSessionId;
         this.errorHandler = errorHandler;
         this.fixPProtocolType = fixPProtocolType;
+        this.sequenceNumberReader = sequenceNumberReader;
         this.handler = handler;
     }
 
@@ -87,7 +83,7 @@ class FixPSequenceNumberExtractor
                 {
                     final int totalLength = BitUtil.align(srcLength, FRAME_ALIGNMENT);
 
-                    onILinkMessage(
+                    onFixPMessage(
                         buffer, endPosition, offset, actingBlockLength, version, totalLength, header.sessionId());
                     break;
                 }
@@ -95,14 +91,21 @@ class FixPSequenceNumberExtractor
                 case ILinkConnectDecoder.TEMPLATE_ID:
                 {
                     iLinkConnect.wrap(buffer, offset, actingBlockLength, version);
-                    connectionIdToILinkUuid.put(iLinkConnect.connection(), iLinkConnect.uuid());
+                    connectionIdToFixPSessionId.put(iLinkConnect.connection(), iLinkConnect.uuid());
+                    break;
+                }
+
+                case InboundFixPConnectDecoder.TEMPLATE_ID:
+                {
+                    inboundFixPConnect.wrap(buffer, offset, actingBlockLength, version);
+                    connectionIdToFixPSessionId.put(inboundFixPConnect.connection(), inboundFixPConnect.sessionId());
                     break;
                 }
             }
         }
     }
 
-    private void onILinkMessage(
+    private void onFixPMessage(
         final DirectBuffer buffer,
         final long endPosition,
         final int offset,
@@ -111,9 +114,9 @@ class FixPSequenceNumberExtractor
         final int totalLength,
         final int aeronSessionId)
     {
-        if (!attemptedILinkInit)
+        if (!attemptedProtocolInit)
         {
-            attemptedILinkInit = true;
+            attemptedProtocolInit = true;
 
             final FixPProtocol protocol = FixPProtocolFactory.make(fixPProtocolType, errorHandler);
             if (protocol == null)
@@ -127,27 +130,19 @@ class FixPSequenceNumberExtractor
                 return;
             }
 
-            parser = protocol.makeParser(null);
-            offsets = protocol.makeOffsets();
+            sequenceExtractor = protocol.makeSequenceExtractor(handler, sequenceNumberReader);
         }
 
-        iLinkMessage.wrap(buffer, offset, actingBlockLength, version);
-        final long connectionId = iLinkMessage.connection();
-
+        fixPMessage.wrap(buffer, offset, actingBlockLength, version);
         final int sofhOffset = offset + FixPMessageDecoder.BLOCK_LENGTH;
         final int headerOffset = sofhOffset + SOFH_LENGTH;
-        final int templateId = parser.templateId(buffer, headerOffset);
-        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
-        final boolean possRetrans = offsets.possRetrans(templateId, buffer, messageOffset) == BOOLEAN_FLAG_TRUE;
 
-        final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
-        if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
-        {
-            final long uuid = connectionIdToILinkUuid.get(connectionId);
-            if (uuid != UNK_SESSION)
-            {
-                handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans);
-            }
-        }
+        sequenceExtractor.onMessage(
+            fixPMessage,
+            buffer,
+            headerOffset,
+            totalLength,
+            endPosition,
+            aeronSessionId);
     }
 }

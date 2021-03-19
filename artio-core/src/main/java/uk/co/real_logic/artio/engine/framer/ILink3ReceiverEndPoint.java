@@ -55,6 +55,7 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
             CME_ENCODING_TYPE);
         this.isBackup = isBackup;
         this.context = context;
+        sessionId(context.connectUuid());
     }
 
     void checkMessage(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
