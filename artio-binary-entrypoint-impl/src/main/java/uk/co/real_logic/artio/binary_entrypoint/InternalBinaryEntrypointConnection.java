@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
+import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 
 /**
  * External users should never rely on this API.
@@ -165,6 +166,18 @@ class InternalBinaryEntrypointConnection
         }
 
         onSessionId(sessionId, sessionVerID);
+
+        // Reset sequence numbers upon successful negotiate
+        nextRecvSeqNo = 1;
+        nextSentSeqNo = 1;
+
+        // Notify inbound sequence number index
+        final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
+            sessionId, 1, NO_REQUIRED_POSITION);
+        if (inboundPos < 0)
+        {
+            return inboundPos;
+        }
 
         final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
         return checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE);

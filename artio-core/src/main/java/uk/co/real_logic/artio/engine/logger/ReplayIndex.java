@@ -216,11 +216,14 @@ public class ReplayIndex implements Index
                     redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
                     // We only update the replay index in response to a redact if it is used to redact all the sequence
                     // numbers within the index
-                    if (redactSequenceUpdateDecoder.correctSequenceNumber() <= 1)
+                    final long fixSessionId = redactSequenceUpdateDecoder.session();
+                    final int sequenceNumber = redactSequenceUpdateDecoder.correctSequenceNumber();
+                    if (sequenceNumber <= 1)
                     {
-                        final long fixSessionId = redactSequenceUpdateDecoder.session();
                         onResetSequenceNumber(fixSessionId);
                     }
+
+                    fixPSequenceIndexer.onRedactSequenceUpdate(fixSessionId, sequenceNumber);
                 }
             }
         }

@@ -114,23 +114,9 @@ class FixPSequenceIndexer
         final int totalLength,
         final int aeronSessionId)
     {
-        if (!attemptedProtocolInit)
+        if (lazyLoadSequenceExtractor(true))
         {
-            attemptedProtocolInit = true;
-
-            final FixPProtocol protocol = FixPProtocolFactory.make(fixPProtocolType, errorHandler);
-            if (protocol == null)
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Configuration Issue: could not setup Binary FIXP protocol on the Engine classpath, despite " +
-                    "Binary FIXP message requiring processing. Sequence Index update ignored. " +
-                    "If you're using iLink3 then you should be the artio-ilink3-codecs and artio-ilink3-impl" +
-                    "dependencies on the classpath. " +
-                    "Binary entrypoint requires a call to EngineConfiguration.acceptBinaryEntryPoint()"));
-                return;
-            }
-
-            sequenceExtractor = protocol.makeSequenceExtractor(handler, sequenceNumberReader);
+            return;
         }
 
         fixPMessage.wrap(buffer, offset, actingBlockLength, version);
@@ -144,5 +130,42 @@ class FixPSequenceIndexer
             totalLength,
             endPosition,
             aeronSessionId);
+    }
+
+    public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
+    {
+        if (lazyLoadSequenceExtractor(false))
+        {
+            return;
+        }
+
+        sequenceExtractor.onRedactSequenceUpdate(sessionId, newSequenceNumber);
+    }
+
+    private boolean lazyLoadSequenceExtractor(final boolean logError)
+    {
+        if (!attemptedProtocolInit)
+        {
+            attemptedProtocolInit = true;
+
+            final FixPProtocol protocol = FixPProtocolFactory.make(fixPProtocolType, logError ? errorHandler : null);
+            if (protocol == null)
+            {
+                if (logError)
+                {
+                    errorHandler.onError(new IllegalStateException(
+                        "Configuration Issue: could not setup Binary FIXP protocol on the Engine classpath, despite " +
+                        "Binary FIXP message requiring processing. Sequence Index update ignored. " +
+                        "If you're using iLink3 then you should be the artio-ilink3-codecs and artio-ilink3-impl" +
+                        "dependencies on the classpath. " +
+                        "Binary entrypoint requires a call to EngineConfiguration.acceptBinaryEntryPoint()"));
+                }
+                return true;
+            }
+
+            sequenceExtractor = protocol.makeSequenceExtractor(handler, sequenceNumberReader);
+        }
+
+        return sequenceExtractor == null;
     }
 }

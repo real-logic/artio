@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.MessageHeaderDecoder;
+import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import b3.entrypoint.fixp.sbe.SimpleNewOrderDecoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -33,7 +34,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
     private static final int LOWEST_APP_TEMPLATE_ID = SimpleNewOrderDecoder.TEMPLATE_ID;
 
     private final Long2ObjectHashMap<Info> sessionIdToInfo = new Long2ObjectHashMap<>();
-    private final LongFunction<Info> onNewConnectionFunc = this::onNewSession;
+    private final LongFunction<Info> onNewConnectionFunc = this::onNewConnection;
     private final MessageHeaderDecoder beHeader = new MessageHeaderDecoder();
     private final SequenceNumberIndexReader sequenceNumberReader;
 
@@ -54,21 +55,42 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
         final int aeronSessionId)
     {
         final int templateId = beHeader.wrap(buffer, headerOffset).templateId();
-        if (templateId >= LOWEST_APP_TEMPLATE_ID)
-        {
-            final long sessionId = fixPMessage.sessionId();
-            final Info info = sessionIdToInfo.computeIfAbsent(sessionId, onNewConnectionFunc);
-            if (info != null)
-            {
-                info.lastSequenceNumber++;
+        final long sessionId = fixPMessage.sessionId();
 
-                handler.onSequenceNumber(
-                    info.lastSequenceNumber, info.sessionId, totalLength, endPosition, aeronSessionId, false);
-            }
+        if (templateId == NegotiateResponseDecoder.TEMPLATE_ID)
+        {
+            // Success sequence number reset
+            final Info info = lookupInfo(sessionId);
+            info.lastSequenceNumber = 0;
+            onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
+        }
+        else if (templateId >= LOWEST_APP_TEMPLATE_ID)
+        {
+            final Info info = lookupInfo(sessionId);
+            info.lastSequenceNumber++;
+            onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
         }
     }
 
-    private Info onNewSession(final long sessionId)
+    public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
+    {
+        final Info info = lookupInfo(sessionId);
+        info.lastSequenceNumber = 0;
+    }
+
+    private Info lookupInfo(final long sessionId)
+    {
+        return sessionIdToInfo.computeIfAbsent(sessionId, onNewConnectionFunc);
+    }
+
+    private void onSequenceNumber(
+        final int totalLength, final long endPosition, final int aeronSessionId, final Info info)
+    {
+        handler.onSequenceNumber(
+            info.lastSequenceNumber, info.sessionId, totalLength, endPosition, aeronSessionId, false);
+    }
+
+    private Info onNewConnection(final long sessionId)
     {
         int lastSequenceNumber = sequenceNumberReader.lastKnownSequenceNumber(sessionId);
         if (lastSequenceNumber == UNK_SESSION)

@@ -380,9 +380,15 @@ public class SequenceNumberIndexWriter implements Index
     private void onRedactSequenceUpdate()
     {
         final RedactSequenceUpdateDecoder redactSequenceUpdate = this.redactSequenceUpdate;
+
+        final int newSequenceNumber = redactSequenceUpdate.correctSequenceNumber();
+        final long sessionId = redactSequenceUpdate.session();
+
+        fixPSequenceIndexer.onRedactSequenceUpdate(sessionId, newSequenceNumber);
+
         saveRecord(
-            redactSequenceUpdate.correctSequenceNumber(),
-            redactSequenceUpdate.session(),
+            newSequenceNumber,
+            sessionId,
             redactSequenceUpdate.position(),
             redactSequenceUpdate.position(),
             false);

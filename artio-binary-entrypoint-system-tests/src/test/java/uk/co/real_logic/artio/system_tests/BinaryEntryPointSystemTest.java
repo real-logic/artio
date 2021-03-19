@@ -139,11 +139,11 @@ public class BinaryEntryPointSystemTest
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
-            assertSequenceNumbers(1, 1);
+            assertNextSequenceNumbers(1, 1);
 
             exchangeOrderAndReportNew(client);
 
-            assertSequenceNumbers(2, 2);
+            assertNextSequenceNumbers(2, 2);
         }
     }
 
@@ -156,7 +156,7 @@ public class BinaryEntryPointSystemTest
             client.writeNewOrderSingle(CL_ORD_ID);
             assertReceivesOrder();
 
-            assertSequenceNumbers(2, 1);
+            assertNextSequenceNumbers(2, 1);
 
             connectionHandler.reset();
 
@@ -167,7 +167,7 @@ public class BinaryEntryPointSystemTest
 
             client.readExecutionReportNew(okClOrdId);
 
-            assertSequenceNumbers(3, 2);
+            assertNextSequenceNumbers(3, 2);
         }
     }
 
@@ -197,7 +197,7 @@ public class BinaryEntryPointSystemTest
     }
 
     @Test
-    public void shouldAcceptConnectionsWithIncrementingSessionVerId() throws IOException
+    public void shouldAcceptReNegotiationsWithIncrementingSessionVerId() throws IOException
     {
         successfulConnection();
 
@@ -298,11 +298,11 @@ public class BinaryEntryPointSystemTest
 
             assertConnectionMatches(client);
 
-            assertSequenceNumbers(2, 2);
+            assertNextSequenceNumbers(2, 2);
 
             exchangeOrderAndReportNew(client);
 
-            assertSequenceNumbers(3, 3);
+            assertNextSequenceNumbers(3, 3);
 
             clientTerminatesSession(client);
         }
@@ -366,10 +366,10 @@ public class BinaryEntryPointSystemTest
         client.readExecutionReportNew();
     }
 
-    private void assertSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
+    private void assertNextSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
     {
-        assertEquals("wrong nextRecvSeqNo", nextRecvSeqNo, connection.nextRecvSeqNo());
         assertEquals("wrong nextSentSeqNo", nextSentSeqNo, connection.nextSentSeqNo());
+        assertEquals("wrong nextRecvSeqNo", nextRecvSeqNo, connection.nextRecvSeqNo());
     }
 
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
@@ -378,6 +378,11 @@ public class BinaryEntryPointSystemTest
         {
             client.sessionVerID(sessionVerID);
             establishNewConnection(client);
+
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
             clientTerminatesSession(client);
         }
     }
@@ -387,6 +392,8 @@ public class BinaryEntryPointSystemTest
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
 
             clientTerminatesSession(client);
         }

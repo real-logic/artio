@@ -48,7 +48,10 @@ public final class FixPProtocolFactory
         catch (final ClassNotFoundException | InstantiationException | IllegalAccessException |
             NoSuchMethodException | InvocationTargetException e)
         {
-            errorHandler.onError(e);
+            if (errorHandler != null)
+            {
+                errorHandler.onError(e);
+            }
             return null;
         }
     }

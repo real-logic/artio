@@ -174,4 +174,5 @@ public class SequenceNumberIndexReader implements AutoCloseable
     {
         CloseHelper.close(metaDataFile);
     }
+
 }

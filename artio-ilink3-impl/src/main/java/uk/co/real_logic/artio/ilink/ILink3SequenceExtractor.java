@@ -57,4 +57,8 @@ class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
             handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans);
         }
     }
+
+    public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
+    {
+    }
 }
