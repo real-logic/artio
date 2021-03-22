@@ -171,20 +171,37 @@ public final class BinaryEntrypointClient implements AutoCloseable
             final int readBody = socket.read(readBuffer);
             final int read = readHeader + readBody;
 
-            messageDecoder.wrap(
-                unsafeReadBuffer,
-                messageOffset,
-                blockLength,
-                version);
-
             print(unsafeReadBuffer, "> ");
 
-            assertEquals(messageDecoder.sbeTemplateId(), templateId);
+            final int decodedTemplateId = messageDecoder.sbeTemplateId();
+            if (decodedTemplateId != templateId)
+            {
+                String msg = "invalid template id: ";
+
+                if (templateId == EstablishRejectDecoder.TEMPLATE_ID)
+                {
+                    final EstablishRejectDecoder establishRejectDecoder = new EstablishRejectDecoder();
+                    establishRejectDecoder.wrap(
+                        unsafeReadBuffer,
+                        messageOffset,
+                        blockLength,
+                        version);
+                    msg += establishRejectDecoder.toString();
+                }
+
+                assertEquals(msg, decodedTemplateId, templateId);
+            }
 
             if (totalLength != read)
             {
                 throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
             }
+
+            messageDecoder.wrap(
+                unsafeReadBuffer,
+                messageOffset,
+                blockLength,
+                version);
 
             assertThat(read, greaterThanOrEqualTo(messageOffset + blockLength));
 
