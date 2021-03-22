@@ -288,6 +288,13 @@ public class BinaryEntryPointSystemTest
     {
         successfulConnection();
 
+        reEstablishConnection(1, 1);
+
+        reEstablishConnection(2, 2);
+    }
+
+    private void reEstablishConnection(final int alreadyRecvMsgCount, final int alreadySentMsgCount) throws IOException
+    {
         try (BinaryEntrypointClient client = newClient())
         {
             client.writeEstablish();
@@ -298,11 +305,11 @@ public class BinaryEntryPointSystemTest
 
             assertConnectionMatches(client);
 
-            assertNextSequenceNumbers(2, 2);
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 1, alreadySentMsgCount + 1);
 
             exchangeOrderAndReportNew(client);
 
-            assertNextSequenceNumbers(3, 3);
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
 
             clientTerminatesSession(client);
         }
@@ -400,6 +407,7 @@ public class BinaryEntryPointSystemTest
 
         connectionExistsHandler.reset();
         connectionAcquiredHandler.reset();
+        connection = null;
     }
 
     private BinaryEntrypointClient newClient() throws IOException
@@ -503,8 +511,6 @@ public class BinaryEntryPointSystemTest
     // should support FinishedSending/FinishedReceiving process
 
     // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
-
-    // check sequence numbers upon reconnect
 
     // shouldAllowReconnectAfterNegotiateDisconnect()
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()
