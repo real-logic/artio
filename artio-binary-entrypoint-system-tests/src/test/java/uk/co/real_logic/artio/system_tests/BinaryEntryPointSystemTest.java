@@ -207,6 +207,10 @@ public class BinaryEntryPointSystemTest
         successfulConnection();
 
         connectWithSessionVerId(2);
+
+        restartArtio();
+
+        connectWithSessionVerId(3);
     }
 
     @Test
@@ -406,6 +410,8 @@ public class BinaryEntryPointSystemTest
 
             clientTerminatesSession(client);
         }
+
+        resetHandlers();
     }
 
     private void successfulConnection() throws IOException
@@ -419,6 +425,11 @@ public class BinaryEntryPointSystemTest
             clientTerminatesSession(client);
         }
 
+        resetHandlers();
+    }
+
+    private void resetHandlers()
+    {
         connectionExistsHandler.reset();
         connectionAcquiredHandler.reset();
         connection = null;
