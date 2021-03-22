@@ -151,7 +151,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_REPLAY_POSITION_BUFFER_SIZE = 4 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = (int)SECONDS.toMillis(5);
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
-    public static final String DEFAULT_ILINK3_ID_FILE = "ilink3_id_buffer";
+    public static final String DEFAULT_FIXP_ID_FILE = "fixp_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
@@ -206,7 +206,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
-    private MappedFile iLink3IdBuffer;
+    private MappedFile fixPBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private IntHashSet gapfillOnRetransmitILinkTemplateIds = new IntHashSet();
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
@@ -1125,13 +1125,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return sessionIdBuffer;
     }
 
-    public MappedFile iLink3IdBuffer()
+    public MappedFile fixPIdBuffer()
     {
-        if (iLink3IdBuffer == null)
+        if (fixPBuffer == null)
         {
-            iLink3IdBuffer = mapFile(DEFAULT_ILINK3_ID_FILE, sessionIdBufferSize);
+            fixPBuffer = mapFile(DEFAULT_FIXP_ID_FILE, sessionIdBufferSize);
         }
-        return iLink3IdBuffer;
+        return fixPBuffer;
     }
 
     public Set<String> gapfillOnReplayMessageTypes()
@@ -1560,6 +1560,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(sentSequenceNumberIndex);
         CloseHelper.close(receivedSequenceNumberIndex);
         CloseHelper.close(sessionIdBuffer);
-        CloseHelper.close(iLink3IdBuffer);
+        CloseHelper.close(fixPBuffer);
     }
 }

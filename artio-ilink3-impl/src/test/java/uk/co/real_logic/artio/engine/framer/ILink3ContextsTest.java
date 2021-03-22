@@ -26,7 +26,7 @@ import java.io.File;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ILINK3_ID_FILE;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_FIXP_ID_FILE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SESSION_ID_BUFFER_SIZE;
 
 public class ILink3ContextsTest
@@ -42,7 +42,7 @@ public class ILink3ContextsTest
     @Before
     public void setup()
     {
-        file = new File(DEFAULT_ILINK3_ID_FILE).getAbsoluteFile();
+        file = new File(DEFAULT_FIXP_ID_FILE).getAbsoluteFile();
         if (file.exists())
         {
             assertTrue(file.delete());

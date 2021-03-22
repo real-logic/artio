@@ -80,6 +80,11 @@ public class BinaryEntryPointSystemTest
 
         testSystem = new TestSystem();
 
+        setupArtio(true);
+    }
+
+    private void setupArtio(final boolean deleteLogFileDirOnStart)
+    {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
@@ -91,7 +96,7 @@ public class BinaryEntryPointSystemTest
             .fixPRetransmitHandler(retransmitHandler)
             .acceptBinaryEntryPoint()
             .bindTo("localhost", port)
-            .deleteLogFileDirOnStart(true);
+            .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
 
         engine = FixEngine.launch(engineConfig);
 
@@ -291,28 +296,9 @@ public class BinaryEntryPointSystemTest
         reEstablishConnection(1, 1);
 
         reEstablishConnection(2, 2);
-    }
 
-    private void reEstablishConnection(final int alreadyRecvMsgCount, final int alreadySentMsgCount) throws IOException
-    {
-        try (BinaryEntrypointClient client = newClient())
-        {
-            client.writeEstablish();
-
-            libraryAcquiresConnection(client);
-
-            client.readEstablishAck();
-
-            assertConnectionMatches(client);
-
-            assertNextSequenceNumbers(alreadyRecvMsgCount + 1, alreadySentMsgCount + 1);
-
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
-
-            clientTerminatesSession(client);
-        }
+        restartArtio();
+        reEstablishConnection(3, 3);
     }
 
     @Test
@@ -363,6 +349,34 @@ public class BinaryEntryPointSystemTest
 
             client.readEstablishReject(EstablishRejectCode.KEEPALIVE_INTERVAL);
             client.assertDisconnected();
+        }
+    }
+
+    private void restartArtio()
+    {
+        closeArtio();
+        setupArtio(false);
+    }
+
+    private void reEstablishConnection(final int alreadyRecvMsgCount, final int alreadySentMsgCount) throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish();
+
+            libraryAcquiresConnection(client);
+
+            client.readEstablishAck();
+
+            assertConnectionMatches(client);
+
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 1, alreadySentMsgCount + 1);
+
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
+
+            clientTerminatesSession(client);
         }
     }
 
@@ -538,6 +552,6 @@ public class BinaryEntryPointSystemTest
     private void closeArtio()
     {
         testSystem.awaitBlocking(() -> CloseHelper.close(engine));
-        CloseHelper.close(library);
+        testSystem.close(library);
     }
 }

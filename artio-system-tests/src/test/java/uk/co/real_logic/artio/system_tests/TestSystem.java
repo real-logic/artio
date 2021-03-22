@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
@@ -83,7 +84,7 @@ public class TestSystem
 
     public void close(final FixLibrary library)
     {
-        library.close();
+        CloseHelper.close(library);
         remove(library);
     }
 

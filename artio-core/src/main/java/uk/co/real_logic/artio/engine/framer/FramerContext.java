@@ -87,7 +87,7 @@ public class FramerContext
         this.sessionContexts = new SessionContexts(
             configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
         this.fixPContexts = new FixPContexts(
-            configuration.iLink3IdBuffer(),
+            configuration.fixPIdBuffer(),
             errorHandler,
             configuration.epochNanoClock());
 
