@@ -46,6 +46,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final EstablishRejectEncoder establishReject = new EstablishRejectEncoder();
     private final SequenceEncoder sequence = new SequenceEncoder();
     private final TerminateEncoder terminate = new TerminateEncoder();
+    private final FinishedReceivingEncoder finishedReceiving = new FinishedReceivingEncoder();
     private final UnsafeBuffer buffer = new UnsafeBuffer();
 
     public BinaryEntryPointProxy(
@@ -182,6 +183,25 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
             .sessionID(sessionId)
             .sessionVerID(sessionVerId)
             .terminationCode(terminationCode);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendFinishedReceiving(final long sessionID, final long sessionVerId, final long timestampInNs)
+    {
+        final FinishedReceivingEncoder finishedReceiving = this.finishedReceiving;
+
+        final long position = claimMessage(FinishedReceivingEncoder.BLOCK_LENGTH, finishedReceiving, timestampInNs);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        finishedReceiving
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerId);
 
         commit();
 

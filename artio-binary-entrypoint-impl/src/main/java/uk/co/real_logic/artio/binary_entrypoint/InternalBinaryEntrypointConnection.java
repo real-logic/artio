@@ -343,4 +343,26 @@ class InternalBinaryEntrypointConnection
 
         return 1;
     }
+
+    public long onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
+    {
+        if (state != State.ESTABLISHED)
+        {
+            // TODO: error
+        }
+
+        checkSession(sessionID, sessionVerID);
+
+        // TODO: check the lastSeqNo and issue retransmit request if needed
+
+        return proxy.sendFinishedReceiving(
+            sessionID,
+            sessionVerID,
+            requestTimestampInNs());
+    }
+
+    public long onFinishedReceiving(final long sessionID, final long sessionVerID)
+    {
+        return 0;
+    }
 }

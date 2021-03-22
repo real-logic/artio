@@ -356,6 +356,23 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldRespondToFinishedSendingWithFinishedReceiving() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            client.writeFinishedSending(1);
+
+            client.readFinishedReceiving();
+
+            clientTerminatesSession(client);
+        }
+    }
+
     private void restartArtio()
     {
         closeArtio();
@@ -533,9 +550,10 @@ public class BinaryEntryPointSystemTest
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
 
-    // should support FinishedSending/FinishedReceiving process
-
-    // Unnegotiated: Establish request after session was finalized, requiring renegotiation.
+    // Gets terminate and responds
+    // shouldCompleteFinishedSendingProcessWithFinishedReceiving
+    // shouldCompleteFinishedSendingProcessWithoutFinishedReceiving (sends terminate on a timer)
+    // shouldRejectReEstablishmentAfterFinishedSendingAcknowledgement
 
     // shouldAllowReconnectAfterNegotiateDisconnect()
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()

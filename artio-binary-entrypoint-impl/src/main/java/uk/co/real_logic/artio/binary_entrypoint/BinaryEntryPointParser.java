@@ -29,6 +29,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private final EstablishDecoder establish = new EstablishDecoder();
     private final TerminateDecoder terminate = new TerminateDecoder();
     private final SequenceDecoder sequence = new SequenceDecoder();
+    private final FinishedSendingDecoder finishedSending = new FinishedSendingDecoder();
+    private final FinishedReceivingDecoder finishedReceiving = new FinishedReceivingDecoder();
 
     private final InternalBinaryEntrypointConnection handler;
 
@@ -80,12 +82,41 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             case SequenceDecoder.TEMPLATE_ID:
                 return onSequence(buffer, offset, blockLength, version);
 
+            case FinishedSendingDecoder.TEMPLATE_ID:
+                return onFinishedSending(buffer, offset, blockLength, version);
+
+            case FinishedReceivingDecoder.TEMPLATE_ID:
+                return onFinishedReceiving(buffer, offset, blockLength, version);
+
             default:
             {
                 final int sofhMessageSize = SimpleOpenFramingHeader.readSofhMessageSize(buffer, start);
                 return handler.onMessage(buffer, offset, templateId, blockLength, version, sofhMessageSize);
             }
         }
+    }
+
+    private long onFinishedSending(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        final FinishedSendingDecoder finishedSending = this.finishedSending;
+        finishedSending.wrap(buffer, offset, blockLength, version);
+
+        return handler.onFinishedSending(
+            finishedSending.sessionID(),
+            finishedSending.sessionVerID(),
+            finishedSending.lastSeqNo());
+    }
+
+    private long onFinishedReceiving(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        final FinishedReceivingDecoder finishedReceiving = this.finishedReceiving;
+        finishedReceiving.wrap(buffer, offset, blockLength, version);
+
+        return handler.onFinishedReceiving(
+            finishedReceiving.sessionID(),
+            finishedReceiving.sessionVerID());
     }
 
     private long onSequence(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

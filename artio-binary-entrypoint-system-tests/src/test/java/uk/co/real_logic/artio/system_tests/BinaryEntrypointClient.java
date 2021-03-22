@@ -417,4 +417,26 @@ public final class BinaryEntrypointClient implements AutoCloseable
             LangUtil.rethrowUnchecked(e);
         }
     }
+
+    public void writeFinishedSending(final long lastSeqNo)
+    {
+        final FinishedSendingEncoder finishedSending = new FinishedSendingEncoder();
+        wrap(finishedSending, FinishedSendingEncoder.BLOCK_LENGTH);
+
+        negotiateTimestampInNs = epochNanoClock.nanoTime();
+
+        finishedSending
+            .sessionID(SESSION_ID)
+            .sessionVerID(sessionVerID)
+            .lastSeqNo(lastSeqNo);
+
+        write();
+    }
+
+    public void readFinishedReceiving()
+    {
+        final FinishedReceivingDecoder finishedReceiving = read(new FinishedReceivingDecoder(), 0);
+        assertEquals(SESSION_ID, finishedReceiving.sessionID());
+        assertEquals(sessionVerID, finishedReceiving.sessionVerID());
+    }
 }
