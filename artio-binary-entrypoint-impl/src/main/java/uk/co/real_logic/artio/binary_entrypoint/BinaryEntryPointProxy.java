@@ -83,34 +83,6 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         return position;
     }
 
-    public long sendNegotiateReject(
-        final long sessionID,
-        final long sessionVerID,
-        final long requestTimestamp,
-        final long enteringFirm,
-        final NegotiationRejectCode negotiationRejectCode)
-    {
-        final NegotiateRejectEncoder negotiateReject = this.negotiateReject;
-
-        final long position = claimMessage(NegotiateRejectEncoder.BLOCK_LENGTH, negotiateReject, requestTimestamp);
-        if (position < 0)
-        {
-            return position;
-        }
-
-        negotiateReject
-            .sessionID(sessionID)
-            .sessionVerID(sessionVerID)
-            .requestTimestamp().time(requestTimestamp);
-        negotiateReject
-            .enteringFirm(enteringFirm)
-            .negotiationRejectCode(negotiationRejectCode);
-
-        commit();
-
-        return position;
-    }
-
     public long sendEstablishAck(
         final long sessionID,
         final long sessionVerID,
