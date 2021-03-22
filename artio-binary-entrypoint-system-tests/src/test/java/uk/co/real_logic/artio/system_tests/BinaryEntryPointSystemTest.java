@@ -131,11 +131,7 @@ public class BinaryEntryPointSystemTest
             connection.terminate(TerminationCode.FINISHED);
             assertEquals(FixPConnection.State.UNBINDING, connection.state());
 
-            client.readTerminate();
-            client.writeTerminate();
-
-            client.assertDisconnected();
-            assertConnectionDisconnected();
+            acceptorTerminatesSession(client);
         }
     }
 
@@ -373,6 +369,24 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldCompleteFinishedSendingProcessWithFinishedReceiving() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            connection.finishSending();
+
+            client.readFinishedSending(1);
+            client.writeFinishedReceiving();
+
+            acceptorTerminatesSession(client);
+        }
+    }
+
     private void restartArtio()
     {
         closeArtio();
@@ -498,6 +512,15 @@ public class BinaryEntryPointSystemTest
         assertConnectionDisconnected();
     }
 
+    private void acceptorTerminatesSession(final BinaryEntrypointClient client)
+    {
+        client.readTerminate();
+        client.writeTerminate();
+
+        client.assertDisconnected();
+        assertConnectionDisconnected();
+    }
+
     private void assertConnectionDisconnected()
     {
         testSystem.await("onDisconnect not called", () -> connectionHandler.disconnectReason() != null);
@@ -550,8 +573,6 @@ public class BinaryEntryPointSystemTest
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
 
-    // Gets terminate and responds
-    // shouldCompleteFinishedSendingProcessWithFinishedReceiving
     // shouldCompleteFinishedSendingProcessWithoutFinishedReceiving (sends terminate on a timer)
     // shouldRejectReEstablishmentAfterFinishedSendingAcknowledgement
 

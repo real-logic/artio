@@ -423,8 +423,6 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final FinishedSendingEncoder finishedSending = new FinishedSendingEncoder();
         wrap(finishedSending, FinishedSendingEncoder.BLOCK_LENGTH);
 
-        negotiateTimestampInNs = epochNanoClock.nanoTime();
-
         finishedSending
             .sessionID(SESSION_ID)
             .sessionVerID(sessionVerID)
@@ -438,5 +436,25 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final FinishedReceivingDecoder finishedReceiving = read(new FinishedReceivingDecoder(), 0);
         assertEquals(SESSION_ID, finishedReceiving.sessionID());
         assertEquals(sessionVerID, finishedReceiving.sessionVerID());
+    }
+
+    public void readFinishedSending(final int lastSeqNo)
+    {
+        final FinishedSendingDecoder finishedSending = read(new FinishedSendingDecoder(), 0);
+        assertEquals(SESSION_ID, finishedSending.sessionID());
+        assertEquals(sessionVerID, finishedSending.sessionVerID());
+        assertEquals(lastSeqNo, finishedSending.lastSeqNo());
+    }
+
+    public void writeFinishedReceiving()
+    {
+        final FinishedReceivingEncoder finishedReceiving = new FinishedReceivingEncoder();
+        wrap(finishedReceiving, FinishedReceivingEncoder.BLOCK_LENGTH);
+
+        finishedReceiving
+            .sessionID(SESSION_ID)
+            .sessionVerID(sessionVerID);
+
+        write();
     }
 }

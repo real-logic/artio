@@ -77,6 +77,10 @@ public interface FixPConnection
         ESTABLISHED,
         /** The session is currently retransmitting messages in response to a NotApplied message. */
         RETRANSMITTING,
+        /** We've sent a finished sending message but not received a finished receiving */
+        SENT_FINISHED_SENDING,
+        /** We've attempted to send a finished sending message but been back-pressured */
+        RETRY_FINISHED_SENDING,
         /**
          * keepAliveInterval has expired without receiving a message from the exchange - we are waiting that long again
          * before terminating.

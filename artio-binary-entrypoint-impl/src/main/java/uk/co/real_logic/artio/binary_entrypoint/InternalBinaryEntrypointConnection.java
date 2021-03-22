@@ -29,6 +29,8 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
+import static uk.co.real_logic.artio.fixp.FixPConnection.State.RETRY_FINISHED_SENDING;
+import static uk.co.real_logic.artio.fixp.FixPConnection.State.SENT_FINISHED_SENDING;
 
 /**
  * External users should never rely on this API.
@@ -101,6 +103,11 @@ class InternalBinaryEntrypointConnection
     {
         validateCanSend();
 
+        return internalTerminate(terminationCode);
+    }
+
+    private long internalTerminate(final TerminationCode terminationCode)
+    {
         return sendTerminate(terminationCode, State.UNBINDING, State.RESEND_TERMINATE);
     }
 
@@ -140,6 +147,10 @@ class InternalBinaryEntrypointConnection
                 {
                     fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
                 }
+                return 1;
+
+            case RETRY_FINISHED_SENDING:
+                finishSending();
                 return 1;
 
             default:
@@ -344,6 +355,16 @@ class InternalBinaryEntrypointConnection
         return 1;
     }
 
+    public void finishSending()
+    {
+        final long position = proxy.sendFinishedSending(
+            sessionId,
+            sessionVerId,
+            nextRecvSeqNo - 1,
+            requestTimestampInNs());
+        checkState(position, SENT_FINISHED_SENDING, RETRY_FINISHED_SENDING);
+    }
+
     public long onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
     {
         if (state != State.ESTABLISHED)
@@ -363,6 +384,14 @@ class InternalBinaryEntrypointConnection
 
     public long onFinishedReceiving(final long sessionID, final long sessionVerID)
     {
-        return 0;
+        final State state = this.state;
+        if (state != SENT_FINISHED_SENDING && state != RETRY_FINISHED_SENDING)
+        {
+            // TODO: error
+        }
+
+        checkSession(sessionID, sessionVerID);
+
+        return internalTerminate(TerminationCode.FINISHED);
     }
 }
