@@ -33,21 +33,23 @@ public class Ilink3Storage extends AbstractFixPStorage
     private final int actingBlockLength = contextEncoder.sbeBlockLength();
     private final int actingVersion = contextEncoder.sbeSchemaVersion();
 
+    private final FixPContexts contexts;
     private final EpochNanoClock clock;
 
-    public Ilink3Storage(final EpochNanoClock clock)
+    public Ilink3Storage(final FixPContexts fixPContexts, final EpochNanoClock clock)
     {
+        this.contexts = fixPContexts;
         this.clock = clock;
     }
 
-    public FixPContext newInitiatorContext(final FixPKey key, final int offset, final FixPContexts contexts)
+    public FixPContext newInitiatorContext(final FixPKey key, final int offset)
     {
         final long newUuid = nanoSecondTimestamp();
         return new ILink3Context((ILink3Key)key, contexts, 0, 0, newUuid, 0, true, offset);
     }
 
     public FixPContext loadContext(
-        final AtomicBuffer buffer, final int offset, final int fileVersion, final FixPContexts contexts)
+        final AtomicBuffer buffer, final int offset, final int fileVersion)
     {
         contextDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
         final long uuid = contextDecoder.uuid();

@@ -163,7 +163,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             negotiate.senderLocation());
     }
 
-    public BinaryEntryPointContext lookupIdentification(
+    public BinaryEntryPointContext lookupContext(
         final DirectBuffer messageBuffer,
         final int messageOffset,
         final int messageLength)

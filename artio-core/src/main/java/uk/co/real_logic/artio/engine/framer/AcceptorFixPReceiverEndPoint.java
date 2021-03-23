@@ -22,6 +22,9 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
 {
+    private static final int FINISHED_SENDING_TEMPLATE_ID = 10;
+    private static final int FINISHED_RECEIVING_TEMPLATE_ID = 11;
+
     private boolean requiresAuthentication = true;
 
     AcceptorFixPReceiverEndPoint(
@@ -54,6 +57,12 @@ public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
         if (requiresAuthentication && pendingAcceptorLogon == null)
         {
             pendingAcceptorLogon = fixPGatewaySession.onLogon(buffer, offset, messageSize, channel, framer);
+        }
+
+        final int templateId = readTemplateId(buffer, offset);
+        if (templateId == FINISHED_SENDING_TEMPLATE_ID || templateId == FINISHED_RECEIVING_TEMPLATE_ID)
+        {
+            fixPGatewaySession.onEndSequence();
         }
     }
 

@@ -308,15 +308,8 @@ public class BinaryEntryPointSystemTest
 
         fixPAuthenticationStrategy.reject();
 
-        try (BinaryEntrypointClient client = newClient())
-        {
-            client.writeEstablish();
-
-            client.readEstablishReject(EstablishRejectCode.CREDENTIALS);
-            client.assertDisconnected();
-
-            assertAuthStrategyReject(client);
-        }
+        final long sessionVerID = rejectedReestablish(EstablishRejectCode.CREDENTIALS);
+        assertAuthStrategyReject(sessionVerID);
     }
 
     @Test
@@ -367,10 +360,16 @@ public class BinaryEntryPointSystemTest
 
             clientTerminatesSession(client);
         }
+
+        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
+
+        restartArtio();
+
+        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
     }
 
     @Test
-    public void shouldCompleteFinishedSendingProcessWithFinishedReceiving() throws IOException
+    public void shouldCompleteFinishedSendingProcess() throws IOException
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
@@ -384,6 +383,19 @@ public class BinaryEntryPointSystemTest
             client.writeFinishedReceiving();
 
             acceptorTerminatesSession(client);
+        }
+    }
+
+    private long rejectedReestablish(final EstablishRejectCode rejectCode) throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish();
+
+            client.readEstablishReject(rejectCode);
+            client.assertDisconnected();
+
+            return client.sessionVerID();
         }
     }
 
@@ -480,17 +492,17 @@ public class BinaryEntryPointSystemTest
             client.readNegotiateReject(negotiationRejectCode);
             client.assertDisconnected();
 
-            assertAuthStrategyReject(client);
+            assertAuthStrategyReject(client.sessionVerID());
         }
     }
 
-    private void assertAuthStrategyReject(final BinaryEntrypointClient client)
+    private void assertAuthStrategyReject(final long sessionVerID)
     {
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
         assertNotNull(id);
         assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
-        assertEquals(client.sessionVerID(), id.sessionVerID());
+        assertEquals(sessionVerID, id.sessionVerID());
 
         assertFalse(connectionExistsHandler.invoked());
         assertFalse(connectionAcquiredHandler.invoked());
@@ -573,7 +585,6 @@ public class BinaryEntryPointSystemTest
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
 
-    // shouldCompleteFinishedSendingProcessWithoutFinishedReceiving (sends terminate on a timer)
     // shouldRejectReEstablishmentAfterFinishedSendingAcknowledgement
 
     // shouldAllowReconnectAfterNegotiateDisconnect()

@@ -100,7 +100,7 @@ public class FixPContexts
 
             final FixPProtocolType type = FixPProtocolType.get(protocolTypeValue);
             final AbstractFixPStorage storage = lookupStorage(type);
-            final FixPContext context = storage.loadContext(buffer, offset, actingVersion, this);
+            final FixPContext context = storage.loadContext(buffer, offset, actingVersion);
             keyToContext.put(context.toKey(), context);
 
             offset += contextLength;
@@ -114,7 +114,7 @@ public class FixPContexts
 
     private AbstractFixPStorage makeStorage(final FixPProtocolType type)
     {
-        return FixPProtocolFactory.make(type, errorHandler).makeCodecs(epochNanoClock);
+        return FixPProtocolFactory.make(type, errorHandler).makeStorage(this, epochNanoClock);
     }
 
     FixPContext calculateInitiatorContext(
@@ -143,15 +143,15 @@ public class FixPContexts
 
     private FixPContext newInitiatorContext(final FixPKey key)
     {
-        return lookupStorage(key.protocolType()).newInitiatorContext(key, offset + WRAPPER_LENGTH, this);
+        return lookupStorage(key.protocolType()).newInitiatorContext(key, offset + WRAPPER_LENGTH);
     }
 
-    void updateContext(final FixPContext context)
+    public void updateContext(final FixPContext context)
     {
         lookupStorage(context.protocolType()).updateContext(context, buffer);
     }
 
-    void saveNewContext(final FixPContext context)
+    public void saveNewContext(final FixPContext context)
     {
         final FixPProtocolType type = context.protocolType();
         final AbstractFixPStorage storage = lookupStorage(type);

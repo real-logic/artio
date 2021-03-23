@@ -31,4 +31,6 @@ public interface FixPContext
     void initiatorReconnect(boolean reestablishConnection);
 
     FixPProtocolType protocolType();
+
+    void onEndSequence();
 }

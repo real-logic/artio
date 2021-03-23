@@ -33,7 +33,7 @@ public class FixPGatewaySession extends GatewaySession
     private final FixPGatewaySessions gatewaySessions;
 
     private byte[] firstMessage;
-    private FixPContext identification;
+    private FixPContext context;
 
     FixPGatewaySession(
         final long connectionId,
@@ -89,13 +89,13 @@ public class FixPGatewaySession extends GatewaySession
 
         sessionId = parser.sessionId(buffer, offset);
         receiverEndPoint.sessionId(sessionId);
-        identification = parser.lookupIdentification(buffer, offset, messageSize);
+        context = parser.lookupContext(buffer, offset, messageSize);
 
         startAuthentication(System.currentTimeMillis()); // TODO: time
 
         return gatewaySessions.authenticate(
             sessionId, buffer, offset, messageSize, this, connectionId, channel, framer, protocolType,
-            identification, fixPProxy);
+            context, fixPProxy);
     }
 
     public FixPProtocolType protocolType()
@@ -122,6 +122,11 @@ public class FixPGatewaySession extends GatewaySession
 
     public void onDisconnectReleasedByOwner()
     {
+    }
+
+    public void onEndSequence()
+    {
+        context.onEndSequence();
     }
 
     public void close()

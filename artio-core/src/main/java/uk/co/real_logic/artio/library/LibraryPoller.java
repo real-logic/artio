@@ -1756,7 +1756,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         initFixP(protocolType);
 
-        final FixPContext context = commonFixPParser.lookupIdentification(
+        final FixPContext context = commonFixPParser.lookupContext(
             buffer,
             offset,
             messageLength);
@@ -1789,7 +1789,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         try
         {
-            final FixPContext context = commonFixPParser.lookupIdentification(
+            final FixPContext context = commonFixPParser.lookupContext(
                 buffer,
                 offset,
                 messageLength);

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import uk.co.real_logic.artio.engine.framer.FixPContexts;
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -23,11 +24,17 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 
 public class BinaryEntryPointContext implements FixPContext
 {
+    // persisted state
     private final long sessionID;
     private final long sessionVerID;
     private final long requestTimestamp;
     private final long enteringFirm;
+    private boolean ended;
+
+    // Not persisted
     private final boolean fromNegotiate;
+    // Set when used in the engine but not library
+    private FixPContexts contexts;
 
     private int offset = MISSING_INT;
     private BinaryEntryPointKey key;
@@ -44,6 +51,8 @@ public class BinaryEntryPointContext implements FixPContext
         this.requestTimestamp = timestamp;
         this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
+
+        ended = false;
         key = new BinaryEntryPointKey(sessionID);
     }
 
@@ -117,7 +126,14 @@ public class BinaryEntryPointContext implements FixPContext
         // establish messages shouldn't
         else
         {
-            return oldContext.sessionVerID == sessionVerID ? null : FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
+            // Continue the same sequence
+            if (oldContext.sessionVerID == sessionVerID)
+            {
+                // cannot re-restablish an ended session
+                return oldContext.ended ? FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED : null;
+            }
+
+            return FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
         }
     }
 
@@ -129,6 +145,12 @@ public class BinaryEntryPointContext implements FixPContext
     public FixPProtocolType protocolType()
     {
         return FixPProtocolType.BINARY_ENTRYPOINT;
+    }
+
+    public void onEndSequence()
+    {
+        ended = true;
+        contexts.updateContext(this);
     }
 
     public FirstMessageRejectReason checkFirstConnect()
@@ -154,5 +176,20 @@ public class BinaryEntryPointContext implements FixPContext
     int offset()
     {
         return offset;
+    }
+
+    void contexts(final FixPContexts contexts)
+    {
+        this.contexts = contexts;
+    }
+
+    boolean ended()
+    {
+        return ended;
+    }
+
+    void ended(final boolean ended)
+    {
+        this.ended = ended;
     }
 }

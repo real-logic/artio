@@ -29,6 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -92,7 +93,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         aeronArchive.startRecording(IPC_CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 
         publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID);
-        gatewayPublication = new GatewayPublication(publication, null, null, null, 1);
+        gatewayPublication = new GatewayPublication(
+            publication, mock(AtomicCounter.class), new YieldingIdleStrategy(), null, 10);
         subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
 
         buffer = new UnsafeBuffer(new byte[512]);

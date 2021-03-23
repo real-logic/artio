@@ -177,6 +177,11 @@ public final class ILink3Context implements FixPContext
         return FixPProtocolType.ILINK_3;
     }
 
+    public void onEndSequence()
+    {
+        // Never happens in iLink3 as it doesn't support the FinishedSending and FinishedReceiving abstractions.
+    }
+
     public ILink3Key toKey()
     {
         return key;

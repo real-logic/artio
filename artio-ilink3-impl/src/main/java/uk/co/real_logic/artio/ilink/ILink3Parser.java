@@ -77,7 +77,7 @@ public class ILink3Parser extends AbstractFixPParser
         return header.version();
     }
 
-    public FixPContext lookupIdentification(
+    public FixPContext lookupContext(
         final DirectBuffer messageBuffer,
         final int messageOffset,
         final int messageLength)

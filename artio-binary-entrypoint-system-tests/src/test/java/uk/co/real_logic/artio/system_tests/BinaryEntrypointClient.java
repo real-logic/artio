@@ -188,6 +188,10 @@ public final class BinaryEntrypointClient implements AutoCloseable
                         version);
                     msg += establishRejectDecoder.toString();
                 }
+                else if (templateId == EstablishAckDecoder.TEMPLATE_ID)
+                {
+                    msg += "received Establish Ack";
+                }
 
                 assertEquals(msg, decodedTemplateId, templateId);
             }

@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.fixp;
 
 import org.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.artio.engine.framer.FixPContexts;
 
 /**
  * Class to implement by FIXP implementations in order to save or load contexts from a file.
@@ -25,9 +24,9 @@ import uk.co.real_logic.artio.engine.framer.FixPContexts;
  */
 public abstract class AbstractFixPStorage
 {
-    public abstract FixPContext newInitiatorContext(FixPKey key, int offset, FixPContexts contexts);
+    public abstract FixPContext newInitiatorContext(FixPKey key, int offset);
 
-    public abstract FixPContext loadContext(AtomicBuffer buffer, int offset, int fileVersion, FixPContexts contexts);
+    public abstract FixPContext loadContext(AtomicBuffer buffer, int offset, int fileVersion);
 
     public abstract int saveContext(FixPContext context, AtomicBuffer buffer, int offset, int fileVersion);
 
