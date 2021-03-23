@@ -297,6 +297,11 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void writeEstablish()
     {
+        writeEstablish(1);
+    }
+
+    public void writeEstablish(final int nextSeqNo)
+    {
         final EstablishEncoder establish = new EstablishEncoder();
         wrap(establish, EstablishEncoder.BLOCK_LENGTH);
 
@@ -307,20 +312,25 @@ public final class BinaryEntrypointClient implements AutoCloseable
             .timestamp().time(establishTimestampInNs);
         establish.keepAliveInterval().time(keepAliveIntervalInMs);
         establish
-            .nextSeqNo(1)
+            .nextSeqNo(nextSeqNo)
             .cancelOnDisconnectType(CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE)
             .codTimeoutWindow().time(DeltaInMillisEncoder.timeNullValue());
 
         write();
     }
 
-    public EstablishAckDecoder readEstablishAck()
+    public EstablishAckDecoder readFirstEstablishAck()
+    {
+        return readEstablishAck(1, 0);
+    }
+
+    public EstablishAckDecoder readEstablishAck(final int nextSeqNo, final int lastIncomingSeqNo)
     {
         final EstablishAckDecoder establishAck = read(new EstablishAckDecoder(), 0);
-        assertEquals(BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
-        assertEquals(sessionVerID, establishAck.sessionVerID());
-        assertEquals(1, establishAck.nextSeqNo());
-        assertEquals(0, establishAck.lastIncomingSeqNo());
+        assertEquals("sessionID", BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
+        assertEquals("sessionVerID", sessionVerID, establishAck.sessionVerID());
+        assertEquals("nextSeqNo", nextSeqNo, establishAck.nextSeqNo());
+        assertEquals("lastIncomingSeqNo", lastIncomingSeqNo, establishAck.lastIncomingSeqNo());
         return establishAck;
     }
 
@@ -460,5 +470,22 @@ public final class BinaryEntrypointClient implements AutoCloseable
             .sessionVerID(sessionVerID);
 
         write();
+    }
+
+    public void writeSequence(final int nextSeqNo)
+    {
+        final SequenceEncoder sequence = new SequenceEncoder();
+        wrap(sequence, SequenceEncoder.BLOCK_LENGTH);
+
+        sequence.nextSeqNo(nextSeqNo);
+
+        write();
+    }
+
+    public void readNotApplied(final int fromSeqNo, final int count)
+    {
+        final NotAppliedDecoder notApplied = read(new NotAppliedDecoder(), 0);
+        assertEquals(fromSeqNo, notApplied.fromSeqNo());
+        assertEquals(count, notApplied.count());
     }
 }

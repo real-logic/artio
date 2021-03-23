@@ -170,7 +170,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private final long lastUuid;
     private final long lastConnectionLastReceivedSequenceNumber;
 
-    private long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
     private long retransmitUuid = NOT_AWAITING_RETRANSMIT;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
     private long retransmitContiguousSeqNo = NOT_AWAITING_RETRANSMIT;

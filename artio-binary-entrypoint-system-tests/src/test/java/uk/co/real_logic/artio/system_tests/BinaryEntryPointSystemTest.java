@@ -392,6 +392,54 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldAcceptRetransmitAfterASequenceMessageBasedGap() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            connectionHandler.replyToOrder(false);
+
+            assertNextSequenceNumbers(2, 2);
+
+            client.writeSequence(4);
+
+            client.readNotApplied(2, 2);
+
+            retransmitAfterGap(client);
+        }
+    }
+
+    @Test
+    public void shouldAcceptRetransmitAfterAnEstablishMessageBasedGap() throws IOException
+    {
+        successfulConnection();
+
+        connectionHandler.replyToOrder(false);
+
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.writeEstablish(4);
+            libraryAcquiresConnection(client);
+            assertConnectionMatches(client);
+            client.readEstablishAck(4, 1);
+
+            retransmitAfterGap(client);
+        }
+    }
+
+    private void retransmitAfterGap(final BinaryEntrypointClient client)
+    {
+        assertNextSequenceNumbers(4, 2);
+
+        connectionHandler.reset();
+        client.writeNewOrderSingle();
+        assertReceivesOrder();
+
+        assertNextSequenceNumbers(5, 2);
+    }
+
     private void assertCannotSendMessage()
     {
         assertThrows(IllegalStateException.class, () -> connection.tryClaim(new ExecutionReport_NewEncoder()));
@@ -420,15 +468,16 @@ public class BinaryEntryPointSystemTest
     {
         try (BinaryEntrypointClient client = newClient())
         {
-            client.writeEstablish();
+            final int nextSeqNo = alreadyRecvMsgCount + 1;
+            client.writeEstablish(nextSeqNo);
 
             libraryAcquiresConnection(client);
 
-            client.readEstablishAck();
+            client.readEstablishAck(nextSeqNo, alreadyRecvMsgCount);
 
             assertConnectionMatches(client);
 
-            assertNextSequenceNumbers(alreadyRecvMsgCount + 1, alreadySentMsgCount + 1);
+            assertNextSequenceNumbers(nextSeqNo, alreadySentMsgCount + 1);
 
             exchangeOrderAndReportNew(client);
 
@@ -566,7 +615,7 @@ public class BinaryEntryPointSystemTest
         client.readNegotiateResponse();
 
         client.writeEstablish();
-        client.readEstablishAck();
+        client.readFirstEstablishAck();
 
         assertConnectionMatches(client);
     }
@@ -603,10 +652,33 @@ public class BinaryEntryPointSystemTest
     // shouldSupportResetState()
     // shouldSupportSequenceMessageHeartbeating()
 
-    // sequence number gaps
+    // sequence
+    // (a) sequence as heartbeat - only use a low keepalive for a test where this is needed
+    // 1. sends a sequence as a keepalive
+    // 2. notices a keepalive gap from the client
 
-    // timeout disconnect
-    // heartbeat / timeout
+    // (b) sequence number gaps
+    // 1. receives sequence with too high seqno, sends not applied in response to a sequence number gap, then:
+    // iii. accepts re-establish with new seq no and sends no not applied
+    // iv. accepts re-establish after a restart with new seq no
+    // 2. receives establish with too high seqno, sends establishack in response to a sequence number gap, then:
+    // iii. accepts re-establish with new seq no and sends no not applied
+    // iv. accepts re-establish after a restart with new seq no
+    // (c) number too low
+    // 1. sequence received with sequence number too low: send terminate, don't send any more messages, disconnect
+    // after a timeout. then:
+    //  i. renegotiate with new session ver id
+    //  ii. reestablish with correct nextSeqNo
+    //  iii. reject again with low nextSeqNo
+    //  iv. all of the above but with a restart first.
+    // 2. establish received with sequence number too low: send terminate, don't send any more messages, disconnect
+    // after a timeout. then:
+    //  i. renegotiate with new session ver id
+    //  ii. reestablish with correct nextSeqNo
+    //  iii. reject again with low nextSeqNo
+    //  iv. all of the above but with a restart first.
+
+    // responses to retransmits
 
     @After
     public void close()

@@ -15,14 +15,16 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public class FixPGatewaySession extends GatewaySession
+public class FixPGatewaySession extends GatewaySession implements SessionInfo
 {
 
     private final FixPProtocolType protocolType;
@@ -143,5 +145,15 @@ public class FixPGatewaySession extends GatewaySession
             ", address='" + address + '\'' +
             ", libraryId=" + libraryId +
             '}';
+    }
+
+    public CompositeKey sessionKey()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    public int sequenceIndex()
+    {
+        throw new UnsupportedOperationException();
     }
 }

@@ -254,17 +254,24 @@ class InternalBinaryEntrypointConnection
             }
         }
 
-        this.cancelOnDisconnectType = cancelOnDisconnectType;
-        this.codTimeoutWindow = codTimeoutWindow;
-
         final long position = proxy.sendEstablishAck(
             sessionID,
             sessionVerID,
             timestamp,
             keepAliveInterval,
-            1,
-            0);
-        return checkState(position, State.ESTABLISHED, State.RETRY_ESTABLISH_ACK);
+            nextSeqNo,
+            nextRecvSeqNo - 1);
+
+        if (position > 0)
+        {
+            this.cancelOnDisconnectType = cancelOnDisconnectType;
+            this.codTimeoutWindow = codTimeoutWindow;
+            this.nextRecvSeqNo = nextSeqNo;
+
+            state(ESTABLISHED);
+        }
+
+        return position;
     }
 
     public long onTerminate(
@@ -327,7 +334,33 @@ class InternalBinaryEntrypointConnection
 
     public long onSequence(final long nextSeqNo)
     {
-        return 0;
+        onReceivedMessage();
+
+        return checkSeqNo(nextSeqNo);
+    }
+
+    private long checkSeqNo(final long nextSeqNo)
+    {
+        final long nextRecvSeqNo = this.nextRecvSeqNo;
+
+        if (nextSeqNo > nextRecvSeqNo)
+        {
+            final long position = proxy.sendNotApplied(
+                nextRecvSeqNo, nextSeqNo - nextRecvSeqNo, requestTimestampInNs());
+
+            if (position > 0)
+            {
+                this.nextRecvSeqNo = nextSeqNo;
+            }
+
+            return position;
+        }
+        else if (nextSeqNo < nextRecvSeqNo)
+        {
+
+        }
+
+        return 1;
     }
 
     public long onMessage(

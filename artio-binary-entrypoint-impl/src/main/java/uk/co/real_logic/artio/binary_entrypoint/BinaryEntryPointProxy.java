@@ -48,6 +48,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final TerminateEncoder terminate = new TerminateEncoder();
     private final FinishedReceivingEncoder finishedReceiving = new FinishedReceivingEncoder();
     private final FinishedSendingEncoder finishedSending = new FinishedSendingEncoder();
+    private final NotAppliedEncoder notApplied = new NotAppliedEncoder();
     private final UnsafeBuffer buffer = new UnsafeBuffer();
 
     public BinaryEntryPointProxy(
@@ -224,6 +225,25 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
             .sessionID(sessionId)
             .sessionVerID(sessionVerId)
             .lastSeqNo(lastSeqNo);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendNotApplied(final long fromSeqNo, final long count, final long timestampInNs)
+    {
+        final NotAppliedEncoder notApplied = this.notApplied;
+
+        final long position = claimMessage(NotAppliedEncoder.BLOCK_LENGTH, notApplied, timestampInNs);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        notApplied
+            .fromSeqNo(fromSeqNo)
+            .count(count);
 
         commit();
 

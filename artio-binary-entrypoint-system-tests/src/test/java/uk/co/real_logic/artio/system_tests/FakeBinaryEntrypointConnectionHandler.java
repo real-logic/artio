@@ -38,6 +38,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
 
     private boolean hasReceivedNotApplied;
     private DisconnectReason disconnectReason;
+    private boolean replyToOrder = true;
     private boolean abortReport;
 
     public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
@@ -55,6 +56,11 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         this.abortReport = abortReport;
     }
 
+    public void replyToOrder(final boolean replyToOrder)
+    {
+        this.replyToOrder = replyToOrder;
+    }
+
     public void onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
@@ -66,7 +72,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     {
         messageIds.add(templateId);
 
-        if (templateId == NewOrderSingleDecoder.TEMPLATE_ID)
+        if (replyToOrder && templateId == NewOrderSingleDecoder.TEMPLATE_ID)
         {
             final NewOrderSingleDecoder newOrderSingle = new NewOrderSingleDecoder();
             newOrderSingle.wrap(buffer, offset, blockLength, version);

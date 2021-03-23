@@ -53,7 +53,7 @@ public abstract class AbstractFixPProxy
     }
 
     public abstract long sendSequence(
-        long uuid, long nextSentSeqNo);
+        long sessionId, long nextSentSeqNo);
 
     public abstract long claimMessage(
         int messageLength,

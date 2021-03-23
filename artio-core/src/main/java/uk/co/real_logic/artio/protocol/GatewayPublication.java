@@ -25,8 +25,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
@@ -967,7 +967,7 @@ public class GatewayPublication extends ClaimablePublication
     public long saveControlNotification(
         final int libraryId,
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
-        final List<ConnectedSessionInfo> sessions)
+        final List<?> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(CONTROL_NOTIFICATION_LENGTH +
@@ -989,8 +989,8 @@ public class GatewayPublication extends ClaimablePublication
         final SessionsEncoder sessionsEncoder = controlNotification.sessionsCount(sessionsCount);
         for (int i = 0; i < sessionsCount; i++)
         {
-            final long sessionId = sessions.get(i).sessionId();
-            sessionsEncoder.next().sessionId(sessionId);
+            final SessionInfo session = (SessionInfo)sessions.get(i);
+            sessionsEncoder.next().sessionId(session.sessionId());
         }
 
         bufferClaim.commit();

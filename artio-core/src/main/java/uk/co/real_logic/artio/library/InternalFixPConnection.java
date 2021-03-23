@@ -44,6 +44,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected long nextSentSeqNo;
     protected long nextRecvSeqNo;
 
+    protected long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
     protected long nextReceiveMessageTimeInMs;
     protected long nextSendMessageTimeInMs;
     protected long requestedKeepAliveIntervalInMs;
