@@ -81,6 +81,8 @@ public interface FixPConnection
         SENT_FINISHED_SENDING,
         /** We've attempted to send a finished sending message but been back-pressured */
         RETRY_FINISHED_SENDING,
+        /** We've received a finished sending message and are awaiting termination */
+        FINISHED_SENDING,
         /**
          * keepAliveInterval has expired without receiving a message from the exchange - we are waiting that long again
          * before terminating.

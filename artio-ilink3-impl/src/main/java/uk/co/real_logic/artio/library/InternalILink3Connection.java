@@ -565,7 +565,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     private int pollResendTerminate()
     {
-        terminate(resendTerminateReason, resendTerminateErrorCodes);
+        sendTerminate(resendTerminateReason, resendTerminateErrorCodes, State.UNBINDING, State.RESEND_TERMINATE);
         return 0;
     }
 

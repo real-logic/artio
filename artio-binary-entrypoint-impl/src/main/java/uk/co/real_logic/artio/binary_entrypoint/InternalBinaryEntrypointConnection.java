@@ -29,8 +29,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
-import static uk.co.real_logic.artio.fixp.FixPConnection.State.RETRY_FINISHED_SENDING;
-import static uk.co.real_logic.artio.fixp.FixPConnection.State.SENT_FINISHED_SENDING;
+import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 
 /**
  * External users should never rely on this API.
@@ -367,7 +366,8 @@ class InternalBinaryEntrypointConnection
 
     public long onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
     {
-        if (state != State.ESTABLISHED)
+        final State state = this.state;
+        if (state != ESTABLISHED && state != FINISHED_SENDING)
         {
             // TODO: error
         }
@@ -375,6 +375,8 @@ class InternalBinaryEntrypointConnection
         checkSession(sessionID, sessionVerID);
 
         // TODO: check the lastSeqNo and issue retransmit request if needed
+
+        this.state = FINISHED_SENDING;
 
         return proxy.sendFinishedReceiving(
             sessionID,

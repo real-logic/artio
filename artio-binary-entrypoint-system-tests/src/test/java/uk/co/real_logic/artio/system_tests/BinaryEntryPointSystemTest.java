@@ -40,6 +40,7 @@ import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -47,7 +48,6 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.CLIENT_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class BinaryEntryPointSystemTest
 {
@@ -358,6 +358,8 @@ public class BinaryEntryPointSystemTest
 
             client.readFinishedReceiving();
 
+            assertCannotSendMessage();
+
             clientTerminatesSession(client);
         }
 
@@ -379,11 +381,20 @@ public class BinaryEntryPointSystemTest
 
             connection.finishSending();
 
+            assertCannotSendMessage();
+
             client.readFinishedSending(1);
             client.writeFinishedReceiving();
 
+            assertCannotSendMessage();
+
             acceptorTerminatesSession(client);
         }
+    }
+
+    private void assertCannotSendMessage()
+    {
+        assertThrows(IllegalStateException.class, () -> connection.tryClaim(new ExecutionReport_NewEncoder()));
     }
 
     private long rejectedReestablish(final EstablishRejectCode rejectCode) throws IOException
@@ -584,8 +595,6 @@ public class BinaryEntryPointSystemTest
 
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
-
-    // shouldRejectReEstablishmentAfterFinishedSendingAcknowledgement
 
     // shouldAllowReconnectAfterNegotiateDisconnect()
     // shouldSupportReestablishingConnectionsAfterNegotiateReject()
