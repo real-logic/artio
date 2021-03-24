@@ -435,9 +435,68 @@ public class BinaryEntryPointSystemTest
         assertSequenceUpdatePersistedInIndex();
     }
 
+    @Test
+    public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException
+    {
+        shouldTerminateSessionWhenSequenceNumberTooLow();
+
+        resetHandlers();
+
+        reEstablishConnection(1, 1);
+    }
+
+    @Test
+    public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiate() throws IOException
+    {
+        shouldTerminateSessionWhenSequenceNumberTooLow();
+
+        resetHandlers();
+
+        connectWithSessionVerId(2);
+    }
+
+    @Test
+    public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablishAfterRestart() throws IOException
+    {
+        shouldTerminateSessionWhenSequenceNumberTooLow();
+
+        restartArtio();
+        resetHandlers();
+
+        reEstablishConnection(1, 1);
+    }
+
+    @Test
+    public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiateAfterRestart() throws IOException
+    {
+        shouldTerminateSessionWhenSequenceNumberTooLow();
+
+        restartArtio();
+        resetHandlers();
+
+        connectWithSessionVerId(2);
+    }
+
+    private void shouldTerminateSessionWhenSequenceNumberTooLow() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+            connectionHandler.replyToOrder(false);
+            assertNextSequenceNumbers(2, 2);
+
+            client.writeSequence(1);
+
+            client.readTerminate();
+            client.assertDisconnected();
+        }
+
+        connectionHandler.replyToOrder(true);
+    }
+
     private void assertSequenceUpdatePersistedInIndex() throws IOException
     {
-        connectionHandler.replyToOrder(true);
+        resetHandlers();
         reEstablishConnection(4, 1);
 
         restartArtio();
@@ -549,6 +608,7 @@ public class BinaryEntryPointSystemTest
 
     private void resetHandlers()
     {
+        connectionHandler.replyToOrder(true);
         connectionExistsHandler.reset();
         connectionAcquiredHandler.reset();
         connection = null;
@@ -652,7 +712,7 @@ public class BinaryEntryPointSystemTest
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
         assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
-        assertEquals(client.sessionVerID(), id.sessionVerID());
+        assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
         final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
 
         testSystem.awaitCompletedReply(reply);
@@ -674,12 +734,6 @@ public class BinaryEntryPointSystemTest
     // 2. notices a keepalive gap from the client
 
     // (c) number too low
-    // 1. sequence received with sequence number too low: send terminate, don't send any more messages, disconnect
-    // after a timeout. then:
-    //  i. renegotiate with new session ver id
-    //  ii. reestablish with correct nextSeqNo
-    //  iii. reject again with low nextSeqNo
-    //  iv. all of the above but with a restart first.
     // 2. establish received with sequence number too low: send terminate, don't send any more messages, disconnect
     // after a timeout. then:
     //  i. renegotiate with new session ver id

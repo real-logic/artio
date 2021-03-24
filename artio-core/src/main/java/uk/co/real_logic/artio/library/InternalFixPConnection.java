@@ -211,6 +211,27 @@ public abstract class InternalFixPConnection implements FixPConnection
         initiateReply = null;
     }
 
+    protected int commonPoll(final State state, final long timeInMs)
+    {
+        switch (state)
+        {
+            case UNBINDING:
+                return pollUnbinding(timeInMs);
+
+            default:
+                return 0;
+        }
+    }
+
+    protected int pollUnbinding(final long timeInMs)
+    {
+        if (timeInMs > nextSendMessageTimeInMs)
+        {
+            fullyUnbind();
+        }
+        return 0;
+    }
+
     protected void fullyUnbind()
     {
         fullyUnbind(LOGOUT);

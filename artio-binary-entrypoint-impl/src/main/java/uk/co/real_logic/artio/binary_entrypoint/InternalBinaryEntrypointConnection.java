@@ -155,7 +155,7 @@ class InternalBinaryEntrypointConnection
                 return 1;
 
             default:
-                return 0;
+                return commonPoll(state, timeInMs);
         }
     }
 
@@ -376,7 +376,7 @@ class InternalBinaryEntrypointConnection
         }
         else if (nextSeqNo < nextRecvSeqNo)
         {
-
+            return internalTerminate(TerminationCode.FINISHED);
         }
 
         return 1;

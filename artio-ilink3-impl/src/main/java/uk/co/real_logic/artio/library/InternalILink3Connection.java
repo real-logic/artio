@@ -539,21 +539,9 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             case RESEND_TERMINATE_ACK:
                 return pollResendTerminateAck();
 
-            case UNBINDING:
-                return pollUnbinding(timeInMs);
-
             default:
-                return 0;
+                return commonPoll(state, timeInMs);
         }
-    }
-
-    private int pollUnbinding(final long timeInMs)
-    {
-        if (timeInMs > nextSendMessageTimeInMs)
-        {
-            fullyUnbind();
-        }
-        return 0;
     }
 
     private int pollResendTerminateAck()
