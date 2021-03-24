@@ -759,6 +759,8 @@ public class SequenceNumberIndexWriter implements Index
                     errorHandler.onError(e);
                 }
             }
+
+            reader.close();
         }
     }
 

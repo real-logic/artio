@@ -46,8 +46,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.CLIENT_LOGS;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class BinaryEntryPointSystemTest
 {
@@ -86,7 +85,7 @@ public class BinaryEntryPointSystemTest
     private void setupArtio(final boolean deleteLogFileDirOnStart)
     {
         final EngineConfiguration engineConfig = new EngineConfiguration()
-            .logFileDir(CLIENT_LOGS)
+            .logFileDir(ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
             .noLogonDisconnectTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS)
