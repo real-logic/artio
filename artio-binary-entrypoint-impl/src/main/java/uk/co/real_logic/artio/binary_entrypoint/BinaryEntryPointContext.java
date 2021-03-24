@@ -121,7 +121,7 @@ public class BinaryEntryPointContext implements FixPContext
         // negotiations should increment the session ver id
         if (fromNegotiate)
         {
-            return oldContext.sessionVerID == sessionVerID - 1 ? null : FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
+            return sessionVerID > oldContext.sessionVerID ? null : FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
         }
         // establish messages shouldn't
         else
@@ -158,11 +158,6 @@ public class BinaryEntryPointContext implements FixPContext
         if (!fromNegotiate)
         {
             return FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
-        }
-
-        if (sessionVerID != 1)
-        {
-            return FirstMessageRejectReason.NEGOTIATE_UNSPECIFIED;
         }
 
         return null;

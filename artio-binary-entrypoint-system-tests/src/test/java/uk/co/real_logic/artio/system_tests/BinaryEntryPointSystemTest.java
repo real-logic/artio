@@ -204,9 +204,12 @@ public class BinaryEntryPointSystemTest
 
         connectWithSessionVerId(2);
 
+        // Also accept renegotiations with a gap
+        connectWithSessionVerId(4);
+
         restartArtio();
 
-        connectWithSessionVerId(3);
+        connectWithSessionVerId(5);
     }
 
     @Test
@@ -224,14 +227,14 @@ public class BinaryEntryPointSystemTest
     }
 
     @Test
-    public void shouldRejectConnectionsWithIncorrectFirstSessionVerId() throws IOException
+    public void shouldAcceptConnectionsWithArbitraryFirstSessionVerId() throws IOException
     {
         try (BinaryEntrypointClient client = newClient())
         {
             client.sessionVerID(2);
             client.writeNegotiate();
 
-            client.readNegotiateReject(NegotiationRejectCode.UNSPECIFIED);
+            client.readNegotiateResponse();
             client.assertDisconnected();
         }
     }
