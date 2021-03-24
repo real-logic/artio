@@ -412,6 +412,8 @@ public class BinaryEntryPointSystemTest
 
             retransmitAfterGap(client);
         }
+
+        assertSequenceUpdatePersistedInIndex();
     }
 
     @Test
@@ -430,6 +432,18 @@ public class BinaryEntryPointSystemTest
 
             retransmitAfterGap(client);
         }
+
+        assertSequenceUpdatePersistedInIndex();
+    }
+
+    private void assertSequenceUpdatePersistedInIndex() throws IOException
+    {
+        connectionHandler.replyToOrder(true);
+        reEstablishConnection(4, 1);
+
+        restartArtio();
+
+        reEstablishConnection(5, 2);
     }
 
     private void retransmitAfterGap(final BinaryEntrypointClient client)
@@ -660,13 +674,6 @@ public class BinaryEntryPointSystemTest
     // 1. sends a sequence as a keepalive
     // 2. notices a keepalive gap from the client
 
-    // (b) sequence number gaps
-    // 1. receives sequence with too high seqno, sends not applied in response to a sequence number gap, then:
-    // iii. accepts re-establish with new seq no and sends no not applied
-    // iv. accepts re-establish after a restart with new seq no
-    // 2. receives establish with too high seqno, sends establishack in response to a sequence number gap, then:
-    // iii. accepts re-establish with new seq no and sends no not applied
-    // iv. accepts re-establish after a restart with new seq no
     // (c) number too low
     // 1. sequence received with sequence number too low: send terminate, don't send any more messages, disconnect
     // after a timeout. then:

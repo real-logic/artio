@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.MessageHeaderDecoder;
 import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
+import b3.entrypoint.fixp.sbe.SequenceDecoder;
 import b3.entrypoint.fixp.sbe.SimpleNewOrderDecoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -37,6 +38,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
     private final LongFunction<Info> onNewConnectionFunc = this::onNewConnection;
     private final MessageHeaderDecoder beHeader = new MessageHeaderDecoder();
     private final SequenceNumberIndexReader sequenceNumberReader;
+    private final SequenceDecoder sequence = new SequenceDecoder();
 
     BinaryEntryPointSequenceExtractor(
         final FixPSequenceNumberHandler handler,
@@ -64,6 +66,13 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
             info.lastSequenceNumber = 0;
             onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
         }
+        else if (templateId == SequenceDecoder.TEMPLATE_ID)
+        {
+            final int msgOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+            sequence.wrap(buffer, msgOffset, beHeader.blockLength(), beHeader.version());
+            final Info info = lookupInfo(sessionId);
+            info.lastSequenceNumber = (int)(sequence.nextSeqNo() - 1);
+        }
         else if (templateId >= LOWEST_APP_TEMPLATE_ID)
         {
             final Info info = lookupInfo(sessionId);
@@ -75,7 +84,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
     {
         final Info info = lookupInfo(sessionId);
-        info.lastSequenceNumber = 0;
+        info.lastSequenceNumber = newSequenceNumber - 1;
     }
 
     private Info lookupInfo(final long sessionId)

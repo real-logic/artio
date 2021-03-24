@@ -47,6 +47,8 @@ class InternalBinaryEntrypointConnection
     private long sessionVerId;
     private CancelOnDisconnectType cancelOnDisconnectType;
     private long codTimeoutWindow;
+    // true iff we've sent a redact then got back-pressured sending a message after
+    private boolean suppressRedactResend = false;
 
     InternalBinaryEntrypointConnection(
         final long connectionId,
@@ -254,6 +256,22 @@ class InternalBinaryEntrypointConnection
             }
         }
 
+        // Notify the inbound sequence number
+        if (!suppressRedactResend)
+        {
+            final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
+                sessionId, (int)nextSeqNo, NO_REQUIRED_POSITION);
+
+            if (inboundPos > 0)
+            {
+                suppressRedactResend = true;
+            }
+            else
+            {
+                return inboundPos;
+            }
+        }
+
         final long position = proxy.sendEstablishAck(
             sessionID,
             sessionVerID,
@@ -267,6 +285,7 @@ class InternalBinaryEntrypointConnection
             this.cancelOnDisconnectType = cancelOnDisconnectType;
             this.codTimeoutWindow = codTimeoutWindow;
             this.nextRecvSeqNo = nextSeqNo;
+            this.suppressRedactResend = false;
 
             state(ESTABLISHED);
         }
