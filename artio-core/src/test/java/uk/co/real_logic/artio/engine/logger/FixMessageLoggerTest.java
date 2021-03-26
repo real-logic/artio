@@ -25,8 +25,6 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.stream.Collectors.joining;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 
 public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 {
@@ -49,7 +47,7 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
     void onMessage(final GatewayPublication inboundPublication, final long timestamp)
     {
         fakeMessageBuffer.putLongAscii(0, timestamp);
-        final long position = inboundPublication.saveMessage(
+        untilComplete(() -> inboundPublication.saveMessage(
             fakeMessageBuffer,
             0,
             fakeMessageBuffer.capacity(),
@@ -60,7 +58,6 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
             CONNECTION_ID,
             MessageStatus.OK,
             (int)timestamp,
-            timestamp);
-        assertThat(position, greaterThan(0L));
+            timestamp));
     }
 }

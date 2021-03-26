@@ -23,6 +23,7 @@ import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -36,11 +37,13 @@ import uk.co.real_logic.artio.messages.ReplayerTimestampEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
@@ -71,6 +74,7 @@ public abstract class AbstractFixMessageLoggerTest
         streamIds.add(header.streamId());
     };
 
+    private String libraryChannel;
     private MediaDriver mediaDriver;
     private Aeron aeron;
     private FixMessageLogger logger;
@@ -81,13 +85,15 @@ public abstract class AbstractFixMessageLoggerTest
 
     void setup(final ILinkMessageConsumer iLinkMessageConsumer)
     {
+        libraryChannel = "aeron:udp?endpoint=localhost:" + TestFixtures.unusedPort();
         mediaDriver = TestFixtures.launchJustMediaDriver();
         aeron = Aeron.connect();
 
         final FixMessageLogger.Configuration config = new FixMessageLogger.Configuration()
             .fixMessageConsumer(fixConsumer)
             .iLinkMessageConsumer(iLinkMessageConsumer)
-            .compactionSize(compactionSize);
+            .compactionSize(compactionSize)
+            .libraryAeronChannel(libraryChannel);
         logger = new FixMessageLogger(config);
 
         inboundPublication = newPublication(DEFAULT_INBOUND_LIBRARY_STREAM);
@@ -263,17 +269,29 @@ public abstract class AbstractFixMessageLoggerTest
             .wrapAndApplyHeader(timestampBuffer, 0, headerEncoder)
             .timestamp(timestampInNs);
 
-        final long position = replayStream.offer(timestampBuffer);
-        assertThat(position, greaterThan(0L));
+        untilComplete(() -> replayStream.offer(timestampBuffer));
+    }
+
+    protected void untilComplete(final LongSupplier op)
+    {
+        while (true)
+        {
+            final long position = op.getAsLong();
+            if (position > 0)
+            {
+                return;
+            }
+            Thread.yield();
+        }
     }
 
     private GatewayPublication newPublication(final int streamId)
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(
-            IPC_CHANNEL, streamId);
+            libraryChannel, streamId);
         return new GatewayPublication(
             publication,
-            null,
+            mock(AtomicCounter.class),
             CommonConfiguration.backoffIdleStrategy(),
             clock,
             1);
