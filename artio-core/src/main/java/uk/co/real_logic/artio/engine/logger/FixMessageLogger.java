@@ -27,8 +27,6 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
-import java.util.stream.IntStream;
-
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
@@ -276,18 +274,24 @@ public class FixMessageLogger implements Agent
         final Aeron aeron = configuration.aeron;
 
         final String libraryAeronChannel = configuration.libraryAeronChannel;
-        final SubscriptionPoller[] pollers = IntStream.of(
-            configuration.inboundStreamId,
-            configuration.outboundStreamId,
-            configuration.outboundReplayStreamId)
-            .mapToObj(id -> new SubscriptionPoller(aeron.addSubscription(libraryAeronChannel, id)))
-            .toArray(SubscriptionPoller[]::new);
+        final SubscriptionPoller[] pollers =
+        {
+            newSubscriptionPoller(aeron, libraryAeronChannel, configuration.inboundStreamId),
+            newSubscriptionPoller(aeron, libraryAeronChannel, configuration.outboundStreamId),
+            newSubscriptionPoller(aeron, IPC_CHANNEL, configuration.outboundReplayStreamId),
+        };
 
         zipper = new StreamTimestampZipper(
             configuration.fixMessageConsumer,
             configuration.iLinkMessageConsumer,
             configuration.compactionSize,
             pollers);
+    }
+
+    private SubscriptionPoller newSubscriptionPoller(
+        final Aeron aeron, final String libraryAeronChannel, final int streamId)
+    {
+        return new SubscriptionPoller(aeron.addSubscription(libraryAeronChannel, streamId));
     }
 
     public int doWork()

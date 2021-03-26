@@ -21,9 +21,6 @@ import uk.co.real_logic.artio.ilink.ILink3Proxy;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-
 public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
 {
     {
@@ -43,11 +40,10 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
     {
         final ILink3Proxy proxy = new ILink3Proxy(1, publication.dataPublication(), null, null);
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();
-        final long position = proxy.claimILinkMessage(
+        untilComplete(() -> proxy.claimILinkMessage(
             ExecutionReportStatus532Encoder.BLOCK_LENGTH,
             executionReportStatus,
-            timestamp);
-        assertThat(position, greaterThan(0L));
+            timestamp));
 
         executionReportStatus
             .seqNum(1)
