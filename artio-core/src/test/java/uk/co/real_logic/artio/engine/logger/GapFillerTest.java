@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
+import org.agrona.concurrent.SystemEpochNanoClock;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -43,7 +44,7 @@ public class GapFillerTest extends AbstractLogTest
     private final SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
     private final GapFiller gapFiller = new GapFiller(
         subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers,
-        mock(ReplayerCommandQueue.class), new FakeFixSessionCodecsFactory());
+        mock(ReplayerCommandQueue.class), new FakeFixSessionCodecsFactory(), new SystemEpochNanoClock());
 
     @Test
     public void shouldGapFillInResponseToResendRequest()

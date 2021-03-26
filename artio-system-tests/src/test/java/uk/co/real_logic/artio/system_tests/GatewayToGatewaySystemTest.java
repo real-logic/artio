@@ -17,11 +17,8 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
-import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.status.CountersReader;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -77,8 +74,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private CapturingAuthenticationStrategy auth;
     private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
 
-    private AgentRunner logger;
-
     @Before
     public void launch()
     {
@@ -104,12 +99,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
-    }
-
-    @After
-    public void teardown()
-    {
-        CloseHelper.close(logger);
     }
 
     @Test
