@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -88,6 +89,8 @@ public class AbstractGatewayToGatewaySystemTest
 
     TimeRange connectTimeRange;
 
+    AgentRunner logger;
+
     @After
     public void close()
     {
@@ -96,6 +99,8 @@ public class AbstractGatewayToGatewaySystemTest
 
         CloseHelper.close(initiatingLibrary);
         closeAcceptingLibrary();
+
+        CloseHelper.close(logger);
 
         cleanupMediaDriver(mediaDriver);
     }

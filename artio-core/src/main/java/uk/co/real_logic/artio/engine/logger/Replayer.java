@@ -25,7 +25,10 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -48,7 +51,6 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
@@ -63,8 +65,6 @@ import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
 public class Replayer implements Agent, ControlledFragmentHandler
 {
     public static final int MOST_RECENT_MESSAGE = 0;
-
-    private static final long TIMESTAMP_MESSAGE_INTERVAL = SECONDS.toNanos(2);
 
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
         ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -104,11 +104,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final ILinkMessageEncoder iLinkMessageEncoder = new ILinkMessageEncoder();
 
-    // Timestamp state
-    private final UnsafeBuffer timestampBuffer = new UnsafeBuffer(new byte[
-        ENCODED_LENGTH + ReplayerTimestampDecoder.BLOCK_LENGTH]);
-    private final ReplayerTimestampEncoder replayerTimestampEncoder = new ReplayerTimestampEncoder();
-    private long nextTimestampMessageInNs;
+    private final ReplayTimestamper timestamper;
 
     private final Long2ObjectHashMap<ReplayChannel> connectionIdToReplayerChannel = new Long2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -186,9 +182,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         iLink3Proxy = new Lazy<>(() -> AbstractILink3Proxy.make(publication, errorHandler, nanoClock));
         iLink3Offsets = new Lazy<>(() -> AbstractILink3Offsets.make(errorHandler));
 
-        nextTimestampMessageInNs = nanoClock.nanoTime() + TIMESTAMP_MESSAGE_INTERVAL;
-        replayerTimestampEncoder
-            .wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
+        timestamper = new ReplayTimestamper(publication, nanoClock);
     }
 
     public Action onFragment(
@@ -442,25 +436,11 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     public int doWork()
     {
-        sendTimestampMessage();
+        timestamper.sendTimestampMessage();
 
         int work = replayerCommandQueue.poll();
         work += pollReplayerChannels();
         return work + inboundSubscription.controlledPoll(this, POLL_LIMIT);
-    }
-
-    private void sendTimestampMessage()
-    {
-        final long timeInNs = nanoClock.nanoTime();
-        if (timeInNs > nextTimestampMessageInNs)
-        {
-            replayerTimestampEncoder.timestamp(timeInNs);
-            final long position = publication.offer(timestampBuffer);
-            if (position > 0)
-            {
-                nextTimestampMessageInNs = timeInNs + TIMESTAMP_MESSAGE_INTERVAL;
-            }
-        }
     }
 
     private int pollReplayerChannels()

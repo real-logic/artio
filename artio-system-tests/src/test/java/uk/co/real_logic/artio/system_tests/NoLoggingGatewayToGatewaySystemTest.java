@@ -28,10 +28,13 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+
     @Before
     public void launch()
     {
         mediaDriver = launchMediaDriver();
+
+        // logger = FixMessageLogger.start();
 
         acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .logInboundMessages(false)

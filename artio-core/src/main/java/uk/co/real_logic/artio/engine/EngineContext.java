@@ -304,7 +304,8 @@ public class EngineContext implements AutoCloseable
                 configuration.agentNamePrefix(),
                 senderSequenceNumbers,
                 replayerCommandQueue,
-                new FixSessionCodecsFactory(configuration.sessionEpochFractionFormat()));
+                new FixSessionCodecsFactory(configuration.sessionEpochFractionFormat()),
+                clock);
         }
     }
 

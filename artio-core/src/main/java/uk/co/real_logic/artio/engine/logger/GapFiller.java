@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
@@ -51,6 +52,7 @@ public class GapFiller implements ProtocolHandler, Agent
     private final GatewayPublication publication;
     private final String agentNamePrefix;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final ReplayTimestamper timestamper;
 
     public GapFiller(
         final Subscription inboundSubscription,
@@ -58,7 +60,8 @@ public class GapFiller implements ProtocolHandler, Agent
         final String agentNamePrefix,
         final SenderSequenceNumbers senderSequenceNumbers,
         final ReplayerCommandQueue replayerCommandQueue,
-        final FixSessionCodecsFactory fixSessionCodecsFactory)
+        final FixSessionCodecsFactory fixSessionCodecsFactory,
+        final EpochNanoClock clock)
     {
         this.inboundSubscription = inboundSubscription;
         this.publication = publication;
@@ -67,10 +70,14 @@ public class GapFiller implements ProtocolHandler, Agent
         this.replayerCommandQueue = replayerCommandQueue;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.protocolSubscription = ProtocolSubscription.of(this, fixSessionCodecsFactory);
+
+        timestamper = new ReplayTimestamper(publication.dataPublication(), clock);
     }
 
     public int doWork()
     {
+        timestamper.sendTimestampMessage();
+
         return replayerCommandQueue.poll() + inboundSubscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
     }
 
