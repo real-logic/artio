@@ -243,7 +243,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer tableBuffer = newBuffer();
 
-        new SequenceNumberIndexReader(tableBuffer, errorHandler, recordingIdLookup,null);
+        new SequenceNumberIndexReader(tableBuffer, errorHandler, recordingIdLookup, null);
 
         verify(errorHandler, times(1), IllegalStateException.class);
     }
