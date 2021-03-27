@@ -94,14 +94,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID);
         gatewayPublication = new GatewayPublication(
-            publication, mock(AtomicCounter.class), new YieldingIdleStrategy(), null, 10);
+            publication, mock(AtomicCounter.class), YieldingIdleStrategy.INSTANCE, null, 10);
         subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
 
         buffer = new UnsafeBuffer(new byte[512]);
 
         deleteFiles();
 
-        recordingIdLookup = new RecordingIdLookup(new YieldingIdleStrategy(), aeron.countersReader());
+        recordingIdLookup = new RecordingIdLookup(YieldingIdleStrategy.INSTANCE, aeron.countersReader());
         writer = newWriter(inMemoryBuffer);
         reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, null);
     }
@@ -229,7 +229,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         try (ExclusivePublication publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID))
         {
             final GatewayPublication gatewayPublication = new GatewayPublication(
-                publication, null, null, null, 1);
+                publication, null, YieldingIdleStrategy.INSTANCE, null, 1);
 
             final long redactMessagePosition = gatewayPublication.saveRedactSequenceUpdate(
                 SESSION_ID, SEQUENCE_NUMBER, fixMessageToRedactPosition);
@@ -243,9 +243,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer tableBuffer = newBuffer();
 
-        new SequenceNumberIndexReader(tableBuffer, errorHandler,
-            recordingIdLookup,
-            null);
+        new SequenceNumberIndexReader(tableBuffer, errorHandler, recordingIdLookup,null);
 
         verify(errorHandler, times(1), IllegalStateException.class);
     }
