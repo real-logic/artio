@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
+import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.CountersReader;
 import org.junit.Before;
@@ -959,11 +960,23 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         testSystem.awaitSend("Failed to disconnect", () -> initiatingSession.requestDisconnect());
 
-        sleep(2_500);
+        sleep(1_000);
 
-        final long remainingFileCount = Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath())
-            .count();
-        assertEquals(31L, remainingFileCount);
+        testSystem.await("Failed to cleanup resources", () -> remainingFileCount() == 31);
+    }
+
+    private long remainingFileCount()
+    {
+        try
+        {
+            return Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath())
+                .count();
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return 0;
+        }
     }
 
     private void sleep(final int timeInMs)
