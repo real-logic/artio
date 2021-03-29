@@ -219,12 +219,11 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 return !handler.sessions().contains(session);
             });
 
-            // Use sequence number 3 to ensure that we're getting a logon reply
-            final LogonDecoder logonReply = connection.readLogon();
-            assertEquals(3, logonReply.header().msgSeqNum());
+            connection.readLogon();
+            // check that it really is a logon and not the logout
+            assertThat(connection.lastMessageAsString(), containsString("\00135=A\001"));
 
-            final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
-            assertEquals(4, logoutDecoder.header().msgSeqNum());
+            connection.logoutAndAwaitReply();
         }
     }
 

@@ -444,7 +444,7 @@ public final class FixConnection implements AutoCloseable
         return heartbeat;
     }
 
-    private String lastMessageAsString()
+    public String lastMessageAsString()
     {
         return asciiReadBuffer.getAscii(OFFSET, endOfMessage);
     }
