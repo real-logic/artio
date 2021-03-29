@@ -23,6 +23,10 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.AlreadyBoundException;
+import java.nio.channels.ServerSocketChannel;
 import java.util.Arrays;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -39,12 +43,39 @@ public final class TestFixtures
 
     public static int unusedPort()
     {
-        if (port < HIGH_PORT)
+        while (port < HIGH_PORT)
         {
-            return port++;
+            port++;
+
+            if (portIsUnbound())
+            {
+                return port;
+            }
         }
 
         throw new IllegalStateException("The test framework has run out of ports");
+    }
+
+    private static boolean portIsUnbound()
+    {
+        try
+        {
+            ServerSocketChannel
+                .open()
+                .bind(new InetSocketAddress("localhost", port))
+                .close();
+            return true;
+        }
+        catch (final AlreadyBoundException e)
+        {
+            // not an error, deliberately blank
+            return false;
+        }
+        catch (final IOException e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static ArchivingMediaDriver launchMediaDriver()
