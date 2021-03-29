@@ -414,17 +414,20 @@ class FixReplayerSession extends ReplayerSession
         if (beginGapFillSeqNum != NONE)
         {
             final int newSequenceNumber = endSeqNo + 1;
-            final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
+            if (newSequenceNumber > beginGapFillSeqNum)
+            {
+                final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
 
-            DebugLogger.log(
-                REPLAY,
-                replayer.completeReplayGapfillFormatter,
-                action.name(),
-                replayedMessages,
-                beginGapFillSeqNum,
-                newSequenceNumber);
+                DebugLogger.log(
+                    REPLAY,
+                    replayer.completeReplayGapfillFormatter,
+                    action.name(),
+                    replayedMessages,
+                    beginGapFillSeqNum,
+                    newSequenceNumber);
 
-            return action != ABORT;
+                return action != ABORT;
+            }
         }
         else
         {

@@ -285,7 +285,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             connection.readReject();
             connection.readLogout();
 
-            sleepToAwaitResend();
+            sleep(200);
 
             connection.logout();
             assertFalse("Read a resent FIX message instead of a disconnect", connection.isConnected());
@@ -347,7 +347,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             {
                 final int reportSeqNum = connection.readExecutionReport().header().msgSeqNum();
 
-                sleepToAwaitResend();
+                sleep(200);
 
                 // Send an invalid resend request
                 final int invalidSeqNum = reportSeqNum + 100;
@@ -360,7 +360,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 assertTrue(secondExecutionReport.header().possDupFlag());
                 assertEquals(reportSeqNum, secondExecutionReport.header().msgSeqNum());
 
-                sleepToAwaitResend();
+                sleep(200);
 
                 final HeartbeatDecoder heartbeat = connection.exchangeTestRequestHeartbeat("ABC2");
                 assertFalse(heartbeat.header().hasPossDupFlag());
@@ -513,11 +513,6 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         assertEquals("wrong refSeqNum", refSeqNum, reject.refSeqNum());
         assertEquals("Throttle limit exceeded (" + limitOfMessages + " in 300ms)",
             reject.textAsString());
-    }
-
-    private void sleepToAwaitResend()
-    {
-        sleep(200);
     }
 
     private void sleep(final int timeInMs)

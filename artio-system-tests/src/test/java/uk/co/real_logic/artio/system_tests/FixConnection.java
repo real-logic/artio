@@ -70,6 +70,7 @@ public final class FixConnection implements AutoCloseable
 
     private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final MutableAsciiBuffer asciiReadBuffer = new MutableAsciiBuffer(readBuffer);
+    private int endOfMessage;
     private int bytesRemaining = 0;
 
     public static FixConnection initiate(final int port) throws IOException
@@ -313,7 +314,7 @@ public final class FixConnection implements AutoCloseable
             DebugLogger.log(FIX_TEST,
                 "< [" + ascii + "] for attempted: " + decoder.getClass());
 
-            int endOfMessage = ascii.indexOf("8=FIX.4.4", 9);
+            endOfMessage = ascii.indexOf("8=FIX.4.4", 9);
             if (endOfMessage == -1)
             {
                 endOfMessage = bytesToParse;
@@ -437,9 +438,15 @@ public final class FixConnection implements AutoCloseable
     public HeartbeatDecoder readHeartbeat(final String testReqID)
     {
         final HeartbeatDecoder heartbeat = readHeartbeat();
-        assertTrue(heartbeat.hasTestReqID());
-        assertEquals(testReqID, heartbeat.testReqIDAsString());
+        final String message = lastMessageAsString();
+        assertTrue(message, heartbeat.hasTestReqID());
+        assertEquals(message, testReqID, heartbeat.testReqIDAsString());
         return heartbeat;
+    }
+
+    private String lastMessageAsString()
+    {
+        return asciiReadBuffer.getAscii(OFFSET, endOfMessage);
     }
 
     public HeartbeatDecoder readHeartbeat()
