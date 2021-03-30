@@ -50,6 +50,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class BinaryEntryPointSystemTest
 {
+    private static final int TIMEOUT_EPSILON_IN_MS = 10;
     private static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
 
     private final int port = unusedPort();
@@ -271,7 +272,8 @@ public class BinaryEntryPointSystemTest
         {
             client.assertDisconnected();
             final long durationInMs = System.currentTimeMillis() - timeInMs;
-            assertThat(durationInMs, Matchers.greaterThanOrEqualTo((long)TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS));
+            final long acceptableLowerBoundInMs = TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS - TIMEOUT_EPSILON_IN_MS;
+            assertThat(durationInMs, Matchers.greaterThanOrEqualTo(acceptableLowerBoundInMs));
         }
     }
 
