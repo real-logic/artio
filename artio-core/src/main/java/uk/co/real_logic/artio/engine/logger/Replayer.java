@@ -100,8 +100,9 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final Lazy<AbstractFixPParser> binaryFixPParser;
     private final Lazy<AbstractFixPProxy> binaryFixPProxy;
     private final Lazy<AbstractFixPOffsets> abstractBinaryFixPOffsets;
-    private final LongHashSet iLinkConnectionIds = new LongHashSet();
+    private final LongHashSet fixPConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
+    private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
     private final FixPMessageEncoder fixPMessageEncoder = new FixPMessageEncoder();
     private final ReplayTimestamper timestamper;
 
@@ -224,7 +225,20 @@ public class Replayer implements Agent, ControlledFragmentHandler
                     blockLength,
                     version);
 
-                iLinkConnectionIds.add(iLinkConnect.connection());
+                fixPConnectionIds.add(iLinkConnect.connection());
+
+                return CONTINUE;
+            }
+
+            case InboundFixPConnectDecoder.TEMPLATE_ID:
+            {
+                inboundFixPConnect.wrap(
+                    buffer,
+                    offset,
+                    blockLength,
+                    version);
+
+                fixPConnectionIds.add(inboundFixPConnect.connection());
 
                 return CONTINUE;
             }
@@ -268,7 +282,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     private void onDisconnect(final long connectionId)
     {
-        iLinkConnectionIds.remove(connectionId);
+        fixPConnectionIds.remove(connectionId);
 
         final ReplayChannel replayChannel = connectionIdToReplayerChannel.remove(connectionId);
         if (replayChannel != null)
@@ -363,7 +377,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             return processFixResendRequest(
                 sessionId, connectionId, (int)beginSeqNo, (int)endSeqNo, sequenceIndex, asciiBuffer, sessionCodecs);
         }
-        else if (iLinkConnectionIds.contains(connectionId))
+        else if (fixPConnectionIds.contains(connectionId))
         {
             DebugLogger.log(REPLAY,
                 receivedResendFormatter,

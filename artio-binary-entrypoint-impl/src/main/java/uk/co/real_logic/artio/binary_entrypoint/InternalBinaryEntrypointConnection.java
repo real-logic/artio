@@ -19,6 +19,7 @@ import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.EstablishRejectCode;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
@@ -37,6 +38,8 @@ import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 class InternalBinaryEntrypointConnection
     extends InternalFixPConnection implements BinaryEntrypointConnection
 {
+    private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
+
     private final BinaryEntryPointProxy proxy;
     private final BinaryEntryPointContext context;
     private final long maxFixPKeepaliveTimeoutInMs;
@@ -481,5 +484,27 @@ class InternalBinaryEntrypointConnection
         checkSession(sessionID, sessionVerID);
 
         return internalTerminate(TerminationCode.FINISHED);
+    }
+
+    public long onRetransmitRequest(
+        final long sessionID, final long timestamp, final long fromSeqNo, final long count)
+    {
+        final State state = this.state;
+        if (state != ESTABLISHED && state != AWAITING_KEEPALIVE)
+        {
+            // TODO: error
+        }
+
+        final long endSequenceNumber = fromSeqNo + count - 1;
+
+        return inboundPublication.saveValidResendRequest(
+            sessionID,
+            connectionId,
+            fromSeqNo,
+            endSequenceNumber,
+            (int)sessionVerId, // TODO
+            EMPTY_BUFFER,
+            0,
+            0);
     }
 }

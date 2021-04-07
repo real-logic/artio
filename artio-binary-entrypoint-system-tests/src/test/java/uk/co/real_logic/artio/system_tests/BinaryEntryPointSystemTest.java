@@ -431,6 +431,10 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    // -------------------------------
+    // BEGIN SEQUENCE NUMBER GAP TESTS
+    // -------------------------------
+
     @Test
     public void shouldAcceptRetransmitAfterASequenceMessageBasedGap() throws IOException
     {
@@ -473,6 +477,31 @@ public class BinaryEntryPointSystemTest
 
         assertSequenceUpdatePersistedInIndex();
     }
+
+    @Test
+    public void shouldAcceptValidRetransmitRequest() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client, 1);
+            exchangeOrderAndReportNew(client, 2);
+            exchangeOrderAndReportNew(client, 3);
+            exchangeOrderAndReportNew(client, 4);
+            assertNextSequenceNumbers(5, 5);
+
+            client.writeRetransmitRequest(2, 2);
+            client.readExecutionReportNew(2);
+            client.readExecutionReportNew(3);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    // -------------------------------
+    // END SEQUENCE NUMBER GAP TESTS
+    // -------------------------------
 
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException
@@ -686,9 +715,14 @@ public class BinaryEntryPointSystemTest
 
     private void exchangeOrderAndReportNew(final BinaryEntrypointClient client)
     {
-        client.writeNewOrderSingle();
+        exchangeOrderAndReportNew(client, CL_ORD_ID);
+    }
+
+    private void exchangeOrderAndReportNew(final BinaryEntrypointClient client, final int clOrdId)
+    {
+        client.writeNewOrderSingle(clOrdId);
         assertReceivesOrder();
-        client.readExecutionReportNew();
+        client.readExecutionReportNew(clOrdId);
     }
 
     private void assertNextSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
@@ -844,26 +878,6 @@ public class BinaryEntryPointSystemTest
 
         testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
-
-    // shouldAllowReconnectAfterNegotiateDisconnect()
-    // shouldSupportReestablishingConnectionsAfterNegotiateReject()
-    // shouldSupportReestablishingConnectionsAfterNegotiateTimeout()
-    // shouldSupportReestablishingConnectionsAfterRestart()
-    // shouldSupportResetState()
-
-    // sequence
-    // (a) sequence as heartbeat - only use a low keepalive for a test where this is needed
-    // 2. notices a keepalive gap from the client
-
-    // (c) number too low
-    // 2. establish received with sequence number too low: send terminate, don't send any more messages, disconnect
-    // after a timeout. then:
-    //  i. renegotiate with new session ver id
-    //  ii. reestablish with correct nextSeqNo
-    //  iii. reject again with low nextSeqNo
-    //  iv. all of the above but with a restart first.
-
-    // responses to retransmits
 
     @After
     public void close()

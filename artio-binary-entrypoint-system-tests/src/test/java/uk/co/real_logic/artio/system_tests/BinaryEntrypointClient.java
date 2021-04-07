@@ -498,6 +498,21 @@ public final class BinaryEntrypointClient implements AutoCloseable
         write();
     }
 
+    public void writeRetransmitRequest(final long fromSeqNo, final long count)
+    {
+        final RetransmitRequestEncoder retransmitRequest = new RetransmitRequestEncoder();
+        wrap(retransmitRequest, RetransmitRequestEncoder.BLOCK_LENGTH);
+
+        retransmitRequest
+            .sessionID(SESSION_ID)
+            .timestamp().time(epochNanoClock.nanoTime());
+        retransmitRequest
+            .fromSeqNo(fromSeqNo)
+            .count(count);
+
+        write();
+    }
+
     public void writeSequence(final int nextSeqNo)
     {
         final SequenceEncoder sequence = new SequenceEncoder();

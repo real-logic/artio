@@ -31,6 +31,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private final SequenceDecoder sequence = new SequenceDecoder();
     private final FinishedSendingDecoder finishedSending = new FinishedSendingDecoder();
     private final FinishedReceivingDecoder finishedReceiving = new FinishedReceivingDecoder();
+    private final RetransmitRequestDecoder retransmitRequest = new RetransmitRequestDecoder();
 
     private final InternalBinaryEntrypointConnection handler;
 
@@ -88,12 +89,28 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             case FinishedReceivingDecoder.TEMPLATE_ID:
                 return onFinishedReceiving(buffer, offset, blockLength, version);
 
+            case RetransmitRequestDecoder.TEMPLATE_ID:
+                return onRetransmitRequest(buffer, offset, blockLength, version);
+
             default:
             {
                 final int sofhMessageSize = SimpleOpenFramingHeader.readSofhMessageSize(buffer, start);
                 return handler.onMessage(buffer, offset, templateId, blockLength, version, sofhMessageSize);
             }
         }
+    }
+
+    private long onRetransmitRequest(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        final RetransmitRequestDecoder retransmitRequest = this.retransmitRequest;
+        retransmitRequest.wrap(buffer, offset, blockLength, version);
+
+        return handler.onRetransmitRequest(
+            retransmitRequest.sessionID(),
+            retransmitRequest.timestamp().time(),
+            retransmitRequest.fromSeqNo(),
+            retransmitRequest.count());
     }
 
     private long onFinishedSending(
