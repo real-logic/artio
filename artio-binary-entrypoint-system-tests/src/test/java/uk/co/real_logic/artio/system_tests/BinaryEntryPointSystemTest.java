@@ -501,6 +501,34 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldUseSequenceMessagesAsLivenessIndicator() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            lowKeepAliveTimeout(client);
+            establishNewConnection(client);
+
+            sleep(200);
+
+            client.skipSequence();
+            exchangeOrderAndReportNew(client);
+            client.dontSkip();
+
+            // Use a sequence message to test that they keep the connection alive.
+            sleep(400);
+            client.writeSequence(2);
+
+            sleep(200);
+            client.readSequence(2);
+            client.skipSequence();
+
+            // Eventually get disconnected when there's no sequence message for longer than the timeout
+            client.readTerminate(TerminationCode.UNSPECIFIED);
+            client.assertDisconnected();
+        }
+    }
+
     private void lowKeepAliveTimeout(final BinaryEntrypointClient client)
     {
         client.keepAliveIntervalInMs(500);
@@ -773,7 +801,6 @@ public class BinaryEntryPointSystemTest
     // shouldSupportReestablishingConnectionsAfterNegotiateTimeout()
     // shouldSupportReestablishingConnectionsAfterRestart()
     // shouldSupportResetState()
-    // shouldSupportSequenceMessageHeartbeating()
 
     // sequence
     // (a) sequence as heartbeat - only use a low keepalive for a test where this is needed

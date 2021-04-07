@@ -351,10 +351,15 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public TerminateDecoder readTerminate()
     {
+        return readTerminate(TerminationCode.FINISHED);
+    }
+
+    public TerminateDecoder readTerminate(final TerminationCode terminationCode)
+    {
         final TerminateDecoder terminate = read(new TerminateDecoder(), 0);
         assertEquals(BinaryEntrypointClient.SESSION_ID, terminate.sessionID());
         assertEquals(sessionVerID, terminate.sessionVerID());
-        assertEquals(TerminationCode.FINISHED, terminate.terminationCode());
+        assertEquals(terminationCode, terminate.terminationCode());
         return terminate;
     }
 
