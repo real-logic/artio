@@ -53,6 +53,7 @@ class InternalBinaryEntrypointConnection
     private long codTimeoutWindow;
     // true iff we've sent a redact then got back-pressured sending a message after
     private boolean suppressRedactResend = false;
+    private boolean suppressRetransmissionResend = false;
 
     InternalBinaryEntrypointConnection(
         final long connectionId,
@@ -503,7 +504,16 @@ class InternalBinaryEntrypointConnection
             return proxy.sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, requestTimestampInNs(), timestampInNs);
         }
 
-        return inboundPublication.saveValidResendRequest(
+        if (!suppressRetransmissionResend)
+        {
+            final long position = proxy.sendRetransmission(fromSeqNo, count, requestTimestampInNs(), timestampInNs);
+            if (position < 0)
+            {
+                return position;
+            }
+        }
+
+        final long position = inboundPublication.saveValidResendRequest(
             sessionID,
             connectionId,
             fromSeqNo,
@@ -512,5 +522,10 @@ class InternalBinaryEntrypointConnection
             EMPTY_BUFFER,
             0,
             0);
+
+        // suppress if we've failed to send the resend request to the replayer as this will cause this handler to be
+        // retried
+        suppressRetransmissionResend = position < 0;
+        return position;
     }
 }

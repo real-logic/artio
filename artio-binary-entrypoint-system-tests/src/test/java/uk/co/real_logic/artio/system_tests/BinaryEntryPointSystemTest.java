@@ -492,6 +492,7 @@ public class BinaryEntryPointSystemTest
             assertNextSequenceNumbers(5, 5);
 
             client.writeRetransmitRequest(2, 2);
+            client.readRetransmission(2, 2);
             client.readExecutionReportNew(2);
             client.readExecutionReportNew(3);
 

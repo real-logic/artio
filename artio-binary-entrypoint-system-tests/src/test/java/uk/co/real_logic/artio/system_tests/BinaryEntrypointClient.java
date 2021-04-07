@@ -209,6 +209,10 @@ public final class BinaryEntrypointClient implements AutoCloseable
                 {
                     msg += "received Establish Ack";
                 }
+                else if (templateId == ExecutionReport_NewDecoder.TEMPLATE_ID)
+                {
+                    msg += "received Execution Report New";
+                }
 
                 assertEquals(msg, decodedTemplateId, templateId);
             }
@@ -539,5 +543,14 @@ public final class BinaryEntrypointClient implements AutoCloseable
         assertEquals(SESSION_ID, retransmitReject.sessionID());
         assertEquals(retransmitRequestTimestampInNs, retransmitReject.requestTimestamp().time());
         assertEquals(rejectCode, retransmitReject.retransmitRejectCode());
+    }
+
+    public void readRetransmission(final long nextSeqNo, final long count)
+    {
+        final RetransmissionDecoder retransmission = read(new RetransmissionDecoder(), 0);
+        assertEquals(SESSION_ID, retransmission.sessionID());
+        assertEquals(retransmitRequestTimestampInNs, retransmission.requestTimestamp().time());
+        assertEquals(nextSeqNo, retransmission.nextSeqNo());
+        assertEquals(count, retransmission.count());
     }
 }
