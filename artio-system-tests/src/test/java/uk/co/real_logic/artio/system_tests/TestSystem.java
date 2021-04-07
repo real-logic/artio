@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 
 public class TestSystem
 {
+    private static final int LONG_AWAIT_TIMEOUT_IN_MS = 60_000;
     private final List<FixLibrary> libraries;
     private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;
@@ -249,6 +250,14 @@ public class TestSystem
             operation.run();
             return null;
         });
+    }
+
+    public void awaitLongBlocking(final Runnable operation)
+    {
+        final long awaitTimeoutInMs = this.awaitTimeoutInMs;
+        awaitTimeoutInMs(LONG_AWAIT_TIMEOUT_IN_MS);
+        awaitBlocking(operation);
+        awaitTimeoutInMs(awaitTimeoutInMs);
     }
 
     public <T> T awaitBlocking(final Callable<T> operation)

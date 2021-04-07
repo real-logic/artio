@@ -210,7 +210,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         assertInitSeqNum(3, 3, 0);
         assertAccSeqNum(3, 3, 0);
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 

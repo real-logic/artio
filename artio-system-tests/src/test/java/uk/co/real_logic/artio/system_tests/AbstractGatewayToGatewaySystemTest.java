@@ -26,6 +26,7 @@ import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -94,15 +95,13 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
-        closeInitiatingEngine();
-        closeAcceptingEngine();
-
-        CloseHelper.close(initiatingLibrary);
-        closeAcceptingLibrary();
-
-        CloseHelper.close(logger);
-
-        cleanupMediaDriver(mediaDriver);
+        Exceptions.closeAll(
+            this::closeInitiatingEngine,
+            this::closeAcceptingEngine,
+            initiatingLibrary,
+            this::closeAcceptingLibrary,
+            logger,
+            () -> cleanupMediaDriver(mediaDriver));
     }
 
     void closeAcceptingLibrary()
@@ -128,7 +127,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         if (testSystem != null)
         {
-            testSystem.awaitBlocking(() -> CloseHelper.close(engine));
+            testSystem.awaitLongBlocking(() -> CloseHelper.close(engine));
         }
         else
         {
