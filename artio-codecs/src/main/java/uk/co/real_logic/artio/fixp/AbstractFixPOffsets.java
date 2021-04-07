@@ -95,6 +95,11 @@ public abstract class AbstractFixPOffsets
         try
         {
             final InputStream stream = encoder.getResourceAsStream(fileName);
+            if (stream == null)
+            {
+                throw new IllegalStateException("Unable to find SBE IR: " + fileName +
+                    " associated with resource: " + encoder);
+            }
             final int length = stream.available();
             final byte[] bytes = new byte[length];
             int remaining = length;
