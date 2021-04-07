@@ -18,11 +18,12 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.ExclusivePublication;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import java.nio.ByteBuffer;
@@ -50,17 +51,33 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final FinishedSendingEncoder finishedSending = new FinishedSendingEncoder();
     private final NotAppliedEncoder notApplied = new NotAppliedEncoder();
     private final UnsafeBuffer buffer = new UnsafeBuffer();
+    private final EpochNanoClock clock;
 
     public BinaryEntryPointProxy(
         final long connectionId,
-        final ExclusivePublication publication)
+        final ExclusivePublication publication,
+        final EpochNanoClock clock)
     {
         super(connectionId, publication);
+        this.clock = clock;
     }
 
-    public long sendSequence(final long uuid, final long nextSentSeqNo)
+    public long sendSequence(final long sessionId, final long nextSentSeqNo)
     {
-        return 0;
+        final SequenceEncoder sequence = this.sequence;
+
+        final long position = claimMessage(SequenceEncoder.BLOCK_LENGTH, sequence, clock.nanoTime());
+        if (position < 0)
+        {
+            return position;
+        }
+
+        sequence
+            .nextSeqNo(nextSentSeqNo);
+
+        commit();
+
+        return position;
     }
 
     public long sendNegotiateResponse(

@@ -225,7 +225,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy);
         initiateReply(initiateReply);
         handler(configuration.handler());
-        requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
+        this.requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
 
         this.configuration = configuration;
         this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
@@ -302,7 +302,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 "msgCount [" + msgCount + "] cannot be larger than " + retransmitRequestMessageLimit);
         }
 
-        sentMessage();
+        onAttemptedToSendMessage();
         final long requestTimestamp = requestTimestampInNs();
         final long thisUuid = this.uuid;
         final long lastUuid = lookupRetransmitLastUuid(uuid, thisUuid);
@@ -527,12 +527,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             case SENT_ESTABLISH:
                 return pollSentEstablish(timeInMs);
 
-            case ESTABLISHED:
-                return pollEstablished(timeInMs);
-
-            case AWAITING_KEEPALIVE:
-                return pollAwaitingKeepAlive(timeInMs);
-
             case RESEND_TERMINATE:
                 return pollResendTerminate();
 
@@ -556,17 +550,13 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return 0;
     }
 
-    private int pollAwaitingKeepAlive(final long timeInMs)
+    protected void keepAliveExpiredTerminate()
     {
-        if (timeInMs > nextReceiveMessageTimeInMs)
-        {
-            final int expiry = 2 * configuration.requestedKeepAliveIntervalInMs();
-            terminate(expiry + "ms expired without message", KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE);
-        }
-        return 0;
+        final long expiry = 2 * requestedKeepAliveIntervalInMs;
+        terminate(expiry + "ms expired without message", KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE);
     }
 
-    private int pollEstablished(final long timeInMs)
+    protected int pollEstablished(final long timeInMs)
     {
         int events = 0;
         final long retransmitFillTimeoutInMs = this.retransmitFillTimeoutInMs;
@@ -656,9 +646,27 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
+    protected int pollExtraEstablished(final long timeInMs)
+    {
+        final long retransmitFillTimeoutInMs = this.retransmitFillTimeoutInMs;
+        if (retransmitFillTimeoutInMs != NOT_AWAITING_RETRANSMIT && timeInMs >= retransmitFillTimeoutInMs)
+        {
+            handler.onRetransmitTimeout(this);
+            // suppress future calls.
+            this.retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
+            return 1;
+        }
+        return 0;
+    }
+
     public long trySendSequence()
     {
         return sendSequence(NotLapsed);
+    }
+
+    protected long sendSequence(final boolean lapsed)
+    {
+        return sendSequence(lapsed ? Lapsed : NotLapsed);
     }
 
     private long sendSequence(final KeepAliveLapsed keepAliveIntervalLapsed)
@@ -666,7 +674,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final long position = proxy.sendSequence(uuid, nextSentSeqNo, FTI.Primary, keepAliveIntervalLapsed);
         if (position > 0)
         {
-            sentMessage();
+            onAttemptedToSendMessage();
         }
 
         // Will be retried on next poll if enqueue back pressured.
@@ -1500,7 +1508,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private long sendRetransmitRequest(
         final long lastUuid, final long fromSeqNo, final int msgCount, final long requestTimestamp)
     {
-        sentMessage();
+        onAttemptedToSendMessage();
         return proxy.sendRetransmitRequest(uuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
     }
 

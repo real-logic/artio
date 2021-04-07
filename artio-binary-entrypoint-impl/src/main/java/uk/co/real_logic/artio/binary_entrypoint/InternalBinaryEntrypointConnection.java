@@ -69,12 +69,17 @@ class InternalBinaryEntrypointConnection
             libraryId,
             configuration.epochNanoClock(),
             owner,
-            new BinaryEntryPointProxy(connectionId, outboundPublication.dataPublication()));
+            new BinaryEntryPointProxy(
+            connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()));
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.context = context;
         proxy = (BinaryEntryPointProxy)super.proxy;
         state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
-        nextReceiveMessageTimeInMs = System.currentTimeMillis() + configuration.noEstablishFixPTimeoutInMs();
+
+        final long timeInMs = System.currentTimeMillis();
+        nextSendMessageTimeInMs = nextReceiveMessageTimeInMs = timeInMs + configuration.noEstablishFixPTimeoutInMs();
+        // default this to the max to suppress accidentally sending sequence messages during the logon process
+        requestedKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
 
         nextRecvSeqNo = adjustSeqNo(lastReceivedSequenceNumber);
         nextSentSeqNo = adjustSeqNo(lastSentSequenceNumber);
@@ -100,6 +105,11 @@ class InternalBinaryEntrypointConnection
         return sessionVerId;
     }
 
+    protected void keepAliveExpiredTerminate()
+    {
+        terminate(TerminationCode.UNSPECIFIED);
+    }
+
     public long terminate(final TerminationCode terminationCode)
     {
         validateCanSend();
@@ -114,7 +124,13 @@ class InternalBinaryEntrypointConnection
 
     public long trySendSequence()
     {
-        return 0;
+        final long position = proxy.sendSequence(sessionId, nextSentSeqNo);
+        if (position > 0)
+        {
+            // Must check back-pressure here or we threated to suppress our retry
+            onAttemptedToSendMessage();
+        }
+        return position;
     }
 
     public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
@@ -159,6 +175,16 @@ class InternalBinaryEntrypointConnection
         }
     }
 
+    protected int pollExtraEstablished(final long timeInMs)
+    {
+        return 0;
+    }
+
+    protected long sendSequence(final boolean lapsed)
+    {
+        return trySendSequence();
+    }
+
     protected void onReplayComplete()
     {
     }
@@ -192,6 +218,7 @@ class InternalBinaryEntrypointConnection
         }
 
         final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
+        onAttemptedToSendMessage();
         return checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE);
     }
 
@@ -219,7 +246,7 @@ class InternalBinaryEntrypointConnection
         final long sessionID,
         final long sessionVerID,
         final long timestamp,
-        final long keepAliveInterval,
+        final long keepAliveIntervalInMs,
         final long nextSeqNo,
         final CancelOnDisconnectType cancelOnDisconnectType,
         final long codTimeoutWindow)
@@ -235,14 +262,16 @@ class InternalBinaryEntrypointConnection
 
             if (state != State.SENT_NEGOTIATE_RESPONSE)
             {
+                onAttemptedToSendMessage();
                 return proxy.sendEstablishReject(
                     sessionID,
                     sessionVerID,
                     timestamp,
                     EstablishRejectCode.ALREADY_ESTABLISHED);
             }
-            else if (keepAliveInterval > maxFixPKeepaliveTimeoutInMs)
+            else if (keepAliveIntervalInMs > maxFixPKeepaliveTimeoutInMs)
             {
+                onAttemptedToSendMessage();
                 final long position = proxy.sendEstablishReject(
                     sessionID,
                     sessionVerID,
@@ -259,6 +288,7 @@ class InternalBinaryEntrypointConnection
         // Notify the inbound sequence number
         if (!suppressRedactResend)
         {
+            onAttemptedToSendMessage();
             final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
                 sessionId, (int)nextSeqNo, NO_REQUIRED_POSITION);
 
@@ -276,9 +306,13 @@ class InternalBinaryEntrypointConnection
             sessionID,
             sessionVerID,
             timestamp,
-            keepAliveInterval,
+            keepAliveIntervalInMs,
             nextSeqNo,
             nextRecvSeqNo - 1);
+
+        this.requestedKeepAliveIntervalInMs = keepAliveIntervalInMs;
+        onAttemptedToSendMessage();
+        onReceivedMessage();
 
         if (position > 0)
         {
@@ -339,12 +373,12 @@ class InternalBinaryEntrypointConnection
 
         if (position > 0)
         {
-            state = finalState;
+            state(finalState);
             resendTerminationCode = null;
         }
         else
         {
-            state = resendState;
+            state(resendState);
             resendTerminationCode = terminationCode;
         }
 
@@ -428,7 +462,7 @@ class InternalBinaryEntrypointConnection
 
         // TODO: check the lastSeqNo and issue retransmit request if needed
 
-        this.state = FINISHED_SENDING;
+        state(FINISHED_SENDING);
 
         return proxy.sendFinishedReceiving(
             sessionID,

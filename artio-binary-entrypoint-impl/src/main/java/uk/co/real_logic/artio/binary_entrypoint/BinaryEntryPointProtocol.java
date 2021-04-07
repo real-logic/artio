@@ -44,7 +44,7 @@ public class BinaryEntryPointProtocol extends FixPProtocol
     public BinaryEntryPointProxy makeProxy(
         final ExclusivePublication publication, final EpochNanoClock epochNanoClock)
     {
-        return new BinaryEntryPointProxy(0, publication);
+        return new BinaryEntryPointProxy(0, publication, epochNanoClock);
     }
 
     public BinaryEntryPointOffsets makeOffsets()

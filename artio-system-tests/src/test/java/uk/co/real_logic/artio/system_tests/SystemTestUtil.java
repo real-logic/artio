@@ -71,7 +71,7 @@ public final class SystemTestUtil
     static final String INITIATOR_ID3 = "initiator3";
     public static final String CLIENT_LOGS = "client-logs";
     static final long TIMEOUT_IN_MS = 100;
-    static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
+    static final long AWAIT_TIMEOUT_IN_MS = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;
 
     static final String USERNAME = "bob";
@@ -431,7 +431,7 @@ public final class SystemTestUtil
         assertEventuallyTrue(
             () -> "libraries haven't disconnected yet",
             () -> libraries(engine, testSystem).size() == 1,
-            AWAIT_TIMEOUT,
+            AWAIT_TIMEOUT_IN_MS,
             () ->
             {
             }
@@ -480,7 +480,7 @@ public final class SystemTestUtil
                 library.poll(5);
                 return library.isConnected();
             },
-            AWAIT_TIMEOUT,
+            AWAIT_TIMEOUT_IN_MS,
             () -> {}
         );
     }

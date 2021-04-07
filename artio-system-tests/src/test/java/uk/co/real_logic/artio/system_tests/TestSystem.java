@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.exceptions.TimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
-import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
@@ -249,11 +250,18 @@ public class TestSystem
         {
             final Future<T> future = executor.submit(operation);
 
+            final long deadlineInMs = System.currentTimeMillis() + SystemTestUtil.AWAIT_TIMEOUT_IN_MS;
+
             while (!future.isDone())
             {
                 poll();
 
                 Thread.yield();
+
+                if (System.currentTimeMillis() > deadlineInMs)
+                {
+                    throw new TimeoutException(operation + " failed: timed out");
+                }
             }
 
             try

@@ -46,7 +46,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
 public class BinaryEntryPointSystemTest
 {
@@ -89,6 +90,7 @@ public class BinaryEntryPointSystemTest
             .logFileDir(ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .noLogonDisconnectTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS)
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
 //            .monitoringAgentFactory(MonitoringAgentFactory.none())
@@ -479,10 +481,53 @@ public class BinaryEntryPointSystemTest
         connectWithSessionVerId(2);
     }
 
+    @Test
+    public void shouldSendSequenceMessageAfterTimeElapsed() throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            lowKeepAliveTimeout(client);
+            establishNewConnection(client);
+
+            client.readSequence(1);
+            client.skipSequence();
+            exchangeOrderAndReportNew(client);
+            client.dontSkip();
+
+            sleep(100);
+            client.writeSequence(2);
+
+            client.readSequence(2);
+        }
+    }
+
+    private void lowKeepAliveTimeout(final BinaryEntrypointClient client)
+    {
+        client.keepAliveIntervalInMs(500);
+    }
+
+    private void sleep(final int timeInMs)
+    {
+        testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                Thread.sleep(timeInMs);
+            }
+            catch (final InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+    }
+
     private void shouldTerminateSessionWhenSequenceNumberTooLow() throws IOException
     {
-        try (BinaryEntrypointClient client = establishNewConnection())
+        try (BinaryEntrypointClient client = newClient())
         {
+            lowKeepAliveTimeout(client);
+            establishNewConnection(client);
+            client.skipSequence();
             exchangeOrderAndReportNew(client);
             connectionHandler.replyToOrder(false);
             assertNextSequenceNumbers(2, 2);
@@ -732,7 +777,6 @@ public class BinaryEntryPointSystemTest
 
     // sequence
     // (a) sequence as heartbeat - only use a low keepalive for a test where this is needed
-    // 1. sends a sequence as a keepalive
     // 2. notices a keepalive gap from the client
 
     // (c) number too low

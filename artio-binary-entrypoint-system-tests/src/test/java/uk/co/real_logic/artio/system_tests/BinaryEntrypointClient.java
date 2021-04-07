@@ -88,6 +88,21 @@ public final class BinaryEntrypointClient implements AutoCloseable
         return this;
     }
 
+    public void skipTemplateId(final int skipTemplateId)
+    {
+        this.skipTemplateId = skipTemplateId;
+    }
+
+    public void skipSequence()
+    {
+        skipTemplateId(SequenceDecoder.TEMPLATE_ID);
+    }
+
+    public void dontSkip()
+    {
+        skipTemplateId(NOT_SKIPPING);
+    }
+
     public long sessionVerID()
     {
         return sessionVerID;
@@ -458,6 +473,12 @@ public final class BinaryEntrypointClient implements AutoCloseable
         assertEquals(SESSION_ID, finishedSending.sessionID());
         assertEquals(sessionVerID, finishedSending.sessionVerID());
         assertEquals(lastSeqNo, finishedSending.lastSeqNo());
+    }
+
+    public void readSequence(final long nextSeqNo)
+    {
+        final SequenceDecoder sequence = read(new SequenceDecoder(), 0);
+        assertEquals(nextSeqNo, sequence.nextSeqNo());
     }
 
     public void writeFinishedReceiving()

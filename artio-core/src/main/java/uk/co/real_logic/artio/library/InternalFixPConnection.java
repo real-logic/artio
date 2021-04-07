@@ -41,13 +41,13 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected FixPConnectionHandler handler;
     protected LibraryReply<InternalFixPConnection> initiateReply;
 
+    protected long requestedKeepAliveIntervalInMs;
     protected long nextSentSeqNo;
     protected long nextRecvSeqNo;
 
     protected long retransmitFillTimeoutInMs = NOT_AWAITING_RETRANSMIT;
     protected long nextReceiveMessageTimeInMs;
     protected long nextSendMessageTimeInMs;
-    protected long requestedKeepAliveIntervalInMs;
 
     protected InternalFixPConnection(
         final long connectionId,
@@ -141,7 +141,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     {
         proxy.commit();
 
-        sentMessage();
+        onAttemptedToSendMessage();
     }
 
     public void abort()
@@ -159,7 +159,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     {
         if (state == State.AWAITING_KEEPALIVE)
         {
-            state = State.ESTABLISHED;
+            state(State.ESTABLISHED);
         }
 
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
@@ -170,7 +170,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         return System.currentTimeMillis() + requestedKeepAliveIntervalInMs;
     }
 
-    protected void sentMessage()
+    // This just suppresses sending sequence heartbeating messages
+    protected void onAttemptedToSendMessage()
     {
         nextSendMessageTimeInMs = nextTimeoutInMs();
     }
@@ -215,6 +216,12 @@ public abstract class InternalFixPConnection implements FixPConnection
     {
         switch (state)
         {
+            case ESTABLISHED:
+                return pollEstablished(timeInMs);
+
+            case AWAITING_KEEPALIVE:
+                return pollAwaitingKeepAlive(timeInMs);
+
             case UNBINDING:
                 return pollUnbinding(timeInMs);
 
@@ -222,6 +229,20 @@ public abstract class InternalFixPConnection implements FixPConnection
                 return 0;
         }
     }
+
+    protected int pollAwaitingKeepAlive(final long timeInMs)
+    {
+        if (timeInMs > nextReceiveMessageTimeInMs)
+        {
+            keepAliveExpiredTerminate();
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // Should switch into unbinding or resend terminate state after this.
+    protected abstract void keepAliveExpiredTerminate();
 
     protected int pollUnbinding(final long timeInMs)
     {
@@ -231,6 +252,32 @@ public abstract class InternalFixPConnection implements FixPConnection
         }
         return 0;
     }
+
+    protected int pollEstablished(final long timeInMs)
+    {
+        int events = pollExtraEstablished(timeInMs);
+
+        if (timeInMs > nextReceiveMessageTimeInMs)
+        {
+            sendSequence(true);
+
+            onReceivedMessage();
+
+            state(State.AWAITING_KEEPALIVE);
+            events++;
+        }
+        else if (timeInMs > nextSendMessageTimeInMs)
+        {
+            sendSequence(false);
+            events++;
+        }
+
+        return events;
+    }
+
+    protected abstract int pollExtraEstablished(long timeInMs);
+
+    protected abstract long sendSequence(boolean lapsed);
 
     protected void fullyUnbind()
     {
@@ -246,7 +293,7 @@ public abstract class InternalFixPConnection implements FixPConnection
 
     protected void unbindState(final DisconnectReason reason)
     {
-        state = State.UNBOUND;
+        state(State.UNBOUND);
         handler.onDisconnect(this, reason);
 
         // Complete the reply if we're in the process of trying to establish a connection and we haven't provided

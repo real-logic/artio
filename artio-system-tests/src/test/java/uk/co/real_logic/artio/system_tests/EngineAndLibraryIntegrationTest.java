@@ -177,7 +177,7 @@ public class EngineAndLibraryIntegrationTest
                 library.poll(5);
                 return !library.isConnected();
             },
-            AWAIT_TIMEOUT,
+            AWAIT_TIMEOUT_IN_MS,
             () ->
             {
             }
@@ -260,7 +260,7 @@ public class EngineAndLibraryIntegrationTest
                 testSystem.poll();
                 return libraries(engine).size() == count + 1;
             },
-            AWAIT_TIMEOUT,
+            AWAIT_TIMEOUT_IN_MS,
             () ->
             {
             }
