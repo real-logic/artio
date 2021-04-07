@@ -39,6 +39,8 @@ import static uk.co.real_logic.artio.util.CustomMatchers.assertThrows;
 
 public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final int LONG_AWAIT_TIMEOUT_IN_MS = 10_000;
+
     private ArtioAdmin artioAdmin;
 
     @Before
@@ -66,6 +68,8 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldQuerySessionStatus()
     {
+        testSystem.awaitTimeoutInMs(LONG_AWAIT_TIMEOUT_IN_MS);
+
         connectSessions();
         acquireAcceptingSession();
         messagesCanBeExchanged();
