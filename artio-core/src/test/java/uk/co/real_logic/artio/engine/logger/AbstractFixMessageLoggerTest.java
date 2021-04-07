@@ -28,7 +28,6 @@ import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
-import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
@@ -46,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -126,6 +126,7 @@ public abstract class AbstractFixMessageLoggerTest
         onReplayerTimestamp(replayPublication, 10);
 
         assertEventuallyReceives(6);
+        assertTimestampCountEventually(6);
         assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L, 6L));
         assertThat(streamIds.toString(), streamIds, contains(out, in, in, in, out, in));
         timestamps.clear();
@@ -142,6 +143,7 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(inboundPublication, 9);
         onMessage(outboundPublication, 10);
         assertEventuallyReceives(2);
+        assertTimestampCountEventually(2);
         assertThat(timestamps, contains(8L, 9L));
         timestamps.clear();
 
@@ -176,11 +178,12 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(outboundPublication, 6);
         onReplayerTimestamp(replayPublication, 10);
         assertEventuallyReads(4);
-        assertThat(timestamps, contains(1L, 2L, 3L, 4L, 5L));
+        assertTimestampCountEventually(5);
+        assertThat(timestamps.toString(), timestamps, contains(1L, 2L, 3L, 4L, 5L));
         timestamps.clear();
         logger.onClose();
 
-        assertThat(timestamps, contains(6L));
+        assertThat(timestamps.toString(), timestamps, contains(6L));
         timestamps.clear();
 
         assertEquals("failed to reshuffle", 0, logger.bufferPosition());
@@ -195,11 +198,13 @@ public abstract class AbstractFixMessageLoggerTest
         onMessage(inboundPublication, 1603800570513023097L);
         onReplayerTimestamp(replayPublication, 1603800571498664415L);
         assertEventuallyReads(3);
+        assertTimestampCountEventually(1);
         assertThat(timestamps, contains(1603800570460284857L));
         timestamps.clear();
 
         onMessage(outboundPublication, 1603800578520566892L);
         assertEventuallyReads(1);
+        assertTimestampCountEventually(1);
         assertThat(timestamps, contains(1603800570513023097L));
         timestamps.clear();
 
@@ -218,12 +223,13 @@ public abstract class AbstractFixMessageLoggerTest
         // finally a replay timestamp flushes out the previous messages
         onReplayerTimestamp(replayPublication, 1603800591079715486L);
         assertEventuallyReads(1);
+        assertTimestampCountEventually(3);
         assertThat(timestamps, contains(1603800578520566892L, 1603800581079423921L, 1603800586520278849L));
     }
 
     private void assertEventuallyReceives(final int messageCount)
     {
-        Timing.assertEventuallyTrue(
+        assertEventuallyTrue(
             () -> "Failed to receive a message: " + timestamps,
             () ->
             {
@@ -236,9 +242,18 @@ public abstract class AbstractFixMessageLoggerTest
             });
     }
 
+    private void assertTimestampCountEventually(final int count)
+    {
+        assertEventuallyTrue("Failed to process all timestamps", () ->
+        {
+            logger.doWork();
+            return timestamps.size() >= count;
+        });
+    }
+
     private void assertEventuallyReads(final int messageCount)
     {
-        Timing.assertEventuallyTrue(
+        assertEventuallyTrue(
             () -> "Failed to receive a message: " + timestamps,
             new BooleanSupplier()
             {

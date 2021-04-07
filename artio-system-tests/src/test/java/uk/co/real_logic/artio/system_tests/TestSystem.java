@@ -21,6 +21,7 @@ import org.agrona.LangUtil;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -35,6 +36,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
@@ -45,7 +47,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 
 public class TestSystem
 {
-    private static final int LONG_AWAIT_TIMEOUT_IN_MS = 60_000;
+    private static final int LONG_AWAIT_TIMEOUT_IN_MS = (int)MINUTES.toMillis(10);
     private final List<FixLibrary> libraries;
     private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;
@@ -277,6 +279,8 @@ public class TestSystem
 
                 if (System.currentTimeMillis() > deadlineInMs)
                 {
+                    Exceptions.printStackTracesForAllThreads();
+
                     throw new TimeoutException(operation + " failed: timed out");
                 }
             }

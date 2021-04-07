@@ -39,8 +39,6 @@ import static uk.co.real_logic.artio.util.CustomMatchers.assertThrows;
 
 public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final int LONG_AWAIT_TIMEOUT_IN_MS = 10_000;
-
     private ArtioAdmin artioAdmin;
 
     @Before
@@ -68,13 +66,11 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldQuerySessionStatus()
     {
-        testSystem.awaitTimeoutInMs(LONG_AWAIT_TIMEOUT_IN_MS);
-
         connectSessions();
         acquireAcceptingSession();
         messagesCanBeExchanged();
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
             assertFalse(artioAdmin.isClosed());
@@ -111,7 +107,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged(otherInitSession);
         assertThat(acceptingLibrary.sessions(), hasSize(1));
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -141,7 +137,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         acquireAcceptingSession();
         messagesCanBeExchanged();
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -154,7 +150,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldThrowWhenAttemptingToDisconnectUnknownSession()
     {
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -170,7 +166,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         createOfflineSession();
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -189,7 +185,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged();
         assertInitSeqNum(3, 3, 0);
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -227,7 +223,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         createOfflineSession();
 
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 
@@ -246,7 +242,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldThrowWhenAttemptingToResetSequenceNumbersOfUnknownSession()
     {
-        testSystem.awaitBlocking(() ->
+        testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();
 

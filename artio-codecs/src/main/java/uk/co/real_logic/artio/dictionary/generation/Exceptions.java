@@ -20,6 +20,9 @@ import org.agrona.concurrent.Agent;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -106,6 +109,13 @@ public final class Exceptions
             System.out.println(Thread.currentThread().getName());
             ex.printStackTrace(System.out);
         }
+    }
+
+    public static void printStackTracesForAllThreads()
+    {
+        final ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+        final ThreadInfo[] threads = bean.dumpAllThreads(true, true);
+        System.err.println(Arrays.toString(threads));
     }
 
     public static boolean isJustDisconnect(final Exception ex)
