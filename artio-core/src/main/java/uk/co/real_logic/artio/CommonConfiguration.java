@@ -20,7 +20,10 @@ import io.aeron.archive.client.AeronArchive;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.errors.DistinctErrorLog;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -116,7 +119,9 @@ public class CommonConfiguration
      * Property name for character to separate debug logging of FIX messages
      */
     public static final String LOGGING_SEPARATOR_PROPERTY = "fix.core.debug.separator";
+    public static final int NO_FIXP_MAX_RETRANSMISSION_RANGE = 0;
     protected ThreadFactory threadFactory;
+    private int fixPAcceptedSessionMaxRetransmissionRange = NO_FIXP_MAX_RETRANSMISSION_RANGE;
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -656,6 +661,20 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the maximum count allowed in a FIXP retransmit request. This is only used for accepted FIXP sessions,
+     * such as Binary Entrypoint.
+     *
+     * @param fixPAcceptedSessionMaxRetransmissionRange the maximum count allowed in a FIXP retransmit request.
+     * @return this
+     */
+    public CommonConfiguration fixPAcceptedSessionMaxRetransmissionRange(
+        final int fixPAcceptedSessionMaxRetransmissionRange)
+    {
+        this.fixPAcceptedSessionMaxRetransmissionRange = fixPAcceptedSessionMaxRetransmissionRange;
+        return this;
+    }
+
     public long noEstablishFixPTimeoutInMs()
     {
         return noEstablishFixPTimeoutInMs;
@@ -779,6 +798,11 @@ public class CommonConfiguration
     public EpochFractionFormat sessionEpochFractionFormat()
     {
         return sessionEpochFractionFormat;
+    }
+
+    public int fixPAcceptedSessionMaxRetransmissionRange()
+    {
+        return fixPAcceptedSessionMaxRetransmissionRange;
     }
 
     protected void conclude(final String fixSuffix)

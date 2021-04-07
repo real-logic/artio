@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
@@ -44,6 +45,7 @@ class InternalBinaryEntrypointConnection
     private final BinaryEntryPointProxy proxy;
     private final BinaryEntryPointContext context;
     private final long maxFixPKeepaliveTimeoutInMs;
+    private final int maxRetransmissionRange;
 
     private TerminationCode resendTerminationCode;
 
@@ -85,6 +87,7 @@ class InternalBinaryEntrypointConnection
         nextSendMessageTimeInMs = nextReceiveMessageTimeInMs = timeInMs + configuration.noEstablishFixPTimeoutInMs();
         // default this to the max to suppress accidentally sending sequence messages during the logon process
         requestedKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
+        maxRetransmissionRange = configuration.fixPAcceptedSessionMaxRetransmissionRange();
 
         nextRecvSeqNo = adjustSeqNo(lastReceivedSequenceNumber);
         nextSentSeqNo = adjustSeqNo(lastSentSequenceNumber);
@@ -500,6 +503,11 @@ class InternalBinaryEntrypointConnection
         if (this.sessionId != sessionID)
         {
             return sendRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs);
+        }
+
+        if (maxRetransmissionRange != NO_FIXP_MAX_RETRANSMISSION_RANGE && count > maxRetransmissionRange)
+        {
+            return sendRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs);
         }
 
         final long endSequenceNumber = fromSeqNo + count - 1;

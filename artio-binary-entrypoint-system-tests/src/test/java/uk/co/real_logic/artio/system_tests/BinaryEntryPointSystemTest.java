@@ -46,6 +46,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
@@ -86,10 +87,16 @@ public class BinaryEntryPointSystemTest
 
     private void setupArtio(final boolean deleteLogFileDirOnStart)
     {
-        setupArtio(deleteLogFileDirOnStart, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+        setupArtio(
+            deleteLogFileDirOnStart,
+            DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE);
     }
 
-    private void setupArtio(final boolean deleteLogFileDirOnStart, final int shortLogonTimeoutInMs)
+    private void setupArtio(
+        final boolean deleteLogFileDirOnStart,
+        final int shortLogonTimeoutInMs,
+        final int fixPAcceptedSessionMaxRetransmissionRange)
     {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(ACCEPTOR_LOGS)
@@ -113,7 +120,8 @@ public class BinaryEntryPointSystemTest
             .fixPConnectionExistsHandler(connectionExistsHandler)
             .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
         libraryConfig
-            .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs);
+            .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs)
+            .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
 
 //        libraryConfig
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
@@ -290,7 +298,7 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldDisconnectIfNoNegotiate() throws IOException
     {
-        setupArtio(true, TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+        setupArtio(true, TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS, 1);
 
         final long timeInMs = System.currentTimeMillis();
         try (BinaryEntrypointClient client = newClient())
@@ -544,6 +552,25 @@ public class BinaryEntryPointSystemTest
             exchangeOrderAndReportNew(client, 1);
             client.writeRetransmitRequest(1000, 1, 1);
             client.readRetransmitReject(RetransmitRejectCode.INVALID_SESSION);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    @Test
+    public void shouldRejectRetransmitRequestLimitExceeded() throws IOException
+    {
+        setupArtio(
+            true,
+            DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
+            1);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client, 1);
+            exchangeOrderAndReportNew(client, 2);
+            client.writeRetransmitRequest(1, 2);
+            client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
 
             clientTerminatesSession(client);
         }
