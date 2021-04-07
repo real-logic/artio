@@ -534,6 +534,21 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldRejectRetransmitRequestWithWrongSessionId() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client, 1);
+            client.writeRetransmitRequest(1000, 1, 1);
+            client.readRetransmitReject(RetransmitRejectCode.INVALID_SESSION);
+
+            clientTerminatesSession(client);
+        }
+    }
+
     // -------------------------------
     // END SEQUENCE NUMBER GAP TESTS
     // -------------------------------

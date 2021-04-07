@@ -506,12 +506,17 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void writeRetransmitRequest(final long fromSeqNo, final long count)
     {
+        writeRetransmitRequest(SESSION_ID, fromSeqNo, count);
+    }
+
+    public void writeRetransmitRequest(final int sessionId, final long fromSeqNo, final long count)
+    {
         final RetransmitRequestEncoder retransmitRequest = new RetransmitRequestEncoder();
         wrap(retransmitRequest, RetransmitRequestEncoder.BLOCK_LENGTH);
 
         retransmitRequestTimestampInNs = epochNanoClock.nanoTime();
         retransmitRequest
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .timestamp().time(retransmitRequestTimestampInNs);
         retransmitRequest
             .fromSeqNo(fromSeqNo)

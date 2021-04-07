@@ -497,11 +497,15 @@ class InternalBinaryEntrypointConnection
             // TODO: error
         }
 
-        final long endSequenceNumber = fromSeqNo + count - 1;
+        if (this.sessionId != sessionID)
+        {
+            return sendRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs);
+        }
 
+        final long endSequenceNumber = fromSeqNo + count - 1;
         if (endSequenceNumber >= nextSentSeqNo)
         {
-            return proxy.sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, requestTimestampInNs(), timestampInNs);
+            return sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs);
         }
 
         if (!suppressRetransmissionResend)
@@ -527,5 +531,10 @@ class InternalBinaryEntrypointConnection
         // retried
         suppressRetransmissionResend = position < 0;
         return position;
+    }
+
+    private long sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)
+    {
+        return proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs);
     }
 }
