@@ -50,6 +50,8 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final FinishedReceivingEncoder finishedReceiving = new FinishedReceivingEncoder();
     private final FinishedSendingEncoder finishedSending = new FinishedSendingEncoder();
     private final NotAppliedEncoder notApplied = new NotAppliedEncoder();
+    private final RetransmissionEncoder retransmission = new RetransmissionEncoder();
+    private final RetransmitRejectEncoder retransmitReject = new RetransmitRejectEncoder();
     private final UnsafeBuffer buffer = new UnsafeBuffer();
     private final EpochNanoClock clock;
 
@@ -261,6 +263,50 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         notApplied
             .fromSeqNo(fromSeqNo)
             .count(count);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendRetransmission(
+        final long nextSeqNo, final long count, final long timestampInNs, final long requestTimestampInNs)
+    {
+        final RetransmissionEncoder retransmission = this.retransmission;
+
+        final long position = claimMessage(RetransmissionEncoder.BLOCK_LENGTH, retransmission, timestampInNs);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        retransmission
+            .sessionID(sessionId)
+            .requestTimestamp().time(requestTimestampInNs);
+        retransmission
+            .nextSeqNo(nextSeqNo)
+            .count(count);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendRetransmitReject(
+        final RetransmitRejectCode retransmitRejectCode, final long timestampInNs, final long requestTimestampInNs)
+    {
+        final RetransmitRejectEncoder retransmitReject = this.retransmitReject;
+
+        final long position = claimMessage(RetransmitRejectEncoder.BLOCK_LENGTH, retransmitReject, timestampInNs);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        retransmitReject
+            .sessionID(sessionId)
+            .requestTimestamp().time(requestTimestampInNs);
+        retransmitReject.retransmitRejectCode(retransmitRejectCode);
 
         commit();
 

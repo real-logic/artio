@@ -72,6 +72,8 @@ public final class BinaryEntrypointClient implements AutoCloseable
     private long sessionVerID = 1;
     private long negotiateTimestampInNs;
     private long establishTimestampInNs;
+    private long retransmitRequestTimestampInNs;
+
     private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
 
     public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
@@ -503,9 +505,10 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final RetransmitRequestEncoder retransmitRequest = new RetransmitRequestEncoder();
         wrap(retransmitRequest, RetransmitRequestEncoder.BLOCK_LENGTH);
 
+        retransmitRequestTimestampInNs = epochNanoClock.nanoTime();
         retransmitRequest
             .sessionID(SESSION_ID)
-            .timestamp().time(epochNanoClock.nanoTime());
+            .timestamp().time(retransmitRequestTimestampInNs);
         retransmitRequest
             .fromSeqNo(fromSeqNo)
             .count(count);
@@ -528,5 +531,13 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final NotAppliedDecoder notApplied = read(new NotAppliedDecoder(), 0);
         assertEquals(fromSeqNo, notApplied.fromSeqNo());
         assertEquals(count, notApplied.count());
+    }
+
+    public void readRetransmitReject(final RetransmitRejectCode rejectCode)
+    {
+        final RetransmitRejectDecoder retransmitReject = read(new RetransmitRejectDecoder(), 0);
+        assertEquals(SESSION_ID, retransmitReject.sessionID());
+        assertEquals(retransmitRequestTimestampInNs, retransmitReject.requestTimestamp().time());
+        assertEquals(rejectCode, retransmitReject.retransmitRejectCode());
     }
 }

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.EstablishRejectCode;
+import b3.entrypoint.fixp.sbe.RetransmitRejectCode;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -487,7 +488,7 @@ class InternalBinaryEntrypointConnection
     }
 
     public long onRetransmitRequest(
-        final long sessionID, final long timestamp, final long fromSeqNo, final long count)
+        final long sessionID, final long timestampInNs, final long fromSeqNo, final long count)
     {
         final State state = this.state;
         if (state != ESTABLISHED && state != AWAITING_KEEPALIVE)
@@ -496,6 +497,11 @@ class InternalBinaryEntrypointConnection
         }
 
         final long endSequenceNumber = fromSeqNo + count - 1;
+
+        if (endSequenceNumber >= nextSentSeqNo)
+        {
+            return proxy.sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, requestTimestampInNs(), timestampInNs);
+        }
 
         return inboundPublication.saveValidResendRequest(
             sessionID,

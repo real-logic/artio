@@ -499,6 +499,40 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldRejectRetransmitRequestWithHighEndNo() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client, 1);
+            exchangeOrderAndReportNew(client, 2);
+            assertNextSequenceNumbers(3, 3);
+
+            client.writeRetransmitRequest(2, 2);
+            client.readRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    @Test
+    public void shouldRejectRetransmitRequestWithHighStartNo() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            assertNextSequenceNumbers(1, 1);
+
+            client.writeRetransmitRequest(2, 2);
+            client.readRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE);
+
+            clientTerminatesSession(client);
+        }
+    }
+
     // -------------------------------
     // END SEQUENCE NUMBER GAP TESTS
     // -------------------------------
