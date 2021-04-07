@@ -45,12 +45,14 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
 public class BinaryEntryPointSystemTest
 {
+    private static final int AWAIT_TIMEOUT_IN_MS = 10_000;
     private static final int TIMEOUT_EPSILON_IN_MS = 10;
     private static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
 
@@ -79,19 +81,22 @@ public class BinaryEntryPointSystemTest
     {
         mediaDriver = launchMediaDriver();
 
-        testSystem = new TestSystem();
-
-        setupArtio(true);
+        testSystem = new TestSystem().awaitTimeoutInMs(AWAIT_TIMEOUT_IN_MS);
     }
 
     private void setupArtio(final boolean deleteLogFileDirOnStart)
+    {
+        setupArtio(deleteLogFileDirOnStart, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+    }
+
+    private void setupArtio(final boolean deleteLogFileDirOnStart, final int shortLogonTimeoutInMs)
     {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .noLogonDisconnectTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS)
+            .noLogonDisconnectTimeoutInMs(shortLogonTimeoutInMs)
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
 //            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
@@ -108,7 +113,7 @@ public class BinaryEntryPointSystemTest
             .fixPConnectionExistsHandler(connectionExistsHandler)
             .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
         libraryConfig
-            .noEstablishFixPTimeoutInMs(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+            .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs);
 
 //        libraryConfig
 //            .errorHandlerFactory(errorBuffer -> errorHandler)
@@ -119,6 +124,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldEstablishConnectionAtBeginningOfWeek() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             clientTerminatesSession(client);
@@ -128,6 +135,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldSupportAcceptorTerminateConnection() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             connection.terminate(TerminationCode.FINISHED);
@@ -140,6 +149,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldExchangeBusinessMessage() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             assertNextSequenceNumbers(1, 1);
@@ -153,6 +164,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldCorrectlyAbortBusinessMessage() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             connectionHandler.abortReport(true);
@@ -177,6 +190,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRejectConnectionsIfAuthenticationFails() throws IOException
     {
+        setupArtio(true);
+
         fixPAuthenticationStrategy.reject();
 
         connectionRejected(NegotiationRejectCode.CREDENTIALS);
@@ -185,6 +200,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRejectConnectionsWithDuplicateIds() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             connectionExistsHandler.reset();
@@ -231,6 +248,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldAcceptConnectionsWithArbitraryFirstSessionVerId() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             client.sessionVerID(2);
@@ -244,6 +263,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRejectUnNegotiatedEstablish() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             client.writeEstablish();
@@ -269,6 +290,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldDisconnectIfNoNegotiate() throws IOException
     {
+        setupArtio(true, TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+
         final long timeInMs = System.currentTimeMillis();
         try (BinaryEntrypointClient client = newClient())
         {
@@ -282,6 +305,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldDisconnectIfEstablish() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             final long timeInMs = System.currentTimeMillis();
@@ -321,6 +346,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRejectLaterEstablishMessage() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             client.writeEstablish();
@@ -336,6 +363,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRejectEstablishMessageWithInvalidKeepAliveInterval() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             client.keepAliveIntervalInMs(Long.MAX_VALUE);
@@ -354,6 +383,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldRespondToFinishedSendingWithFinishedReceiving() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);
@@ -379,6 +410,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldCompleteFinishedSendingProcess() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);
@@ -401,6 +434,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldAcceptRetransmitAfterASequenceMessageBasedGap() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);
@@ -442,6 +477,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException
     {
+        setupArtio(true);
+
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
         resetHandlers();
@@ -452,6 +489,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiate() throws IOException
     {
+        setupArtio(true);
+
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
         resetHandlers();
@@ -462,6 +501,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablishAfterRestart() throws IOException
     {
+        setupArtio(true);
+
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
         restartArtio();
@@ -473,6 +514,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiateAfterRestart() throws IOException
     {
+        setupArtio(true);
+
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
         restartArtio();
@@ -484,6 +527,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldSendSequenceMessageAfterTimeElapsed() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             lowKeepAliveTimeout(client);
@@ -504,6 +549,8 @@ public class BinaryEntryPointSystemTest
     @Test
     public void shouldUseSequenceMessagesAsLivenessIndicator() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = newClient())
         {
             lowKeepAliveTimeout(client);
@@ -669,6 +716,8 @@ public class BinaryEntryPointSystemTest
 
     private void successfulConnection() throws IOException
     {
+        setupArtio(true);
+
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);

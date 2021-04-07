@@ -49,6 +49,8 @@ public class TestSystem
     private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;
 
+    private long awaitTimeoutInMs = SystemTestUtil.AWAIT_TIMEOUT_IN_MS;
+
     public TestSystem(final LockStepFramerEngineScheduler scheduler, final FixLibrary... libraries)
     {
         this.scheduler = scheduler;
@@ -60,6 +62,12 @@ public class TestSystem
     public TestSystem(final FixLibrary... libraries)
     {
         this(null, libraries);
+    }
+
+    public TestSystem awaitTimeoutInMs(final long awaitTimeoutInMs)
+    {
+        this.awaitTimeoutInMs = awaitTimeoutInMs;
+        return this;
     }
 
     public void poll()
@@ -250,7 +258,7 @@ public class TestSystem
         {
             final Future<T> future = executor.submit(operation);
 
-            final long deadlineInMs = System.currentTimeMillis() + SystemTestUtil.AWAIT_TIMEOUT_IN_MS;
+            final long deadlineInMs = System.currentTimeMillis() + awaitTimeoutInMs;
 
             while (!future.isDone())
             {
