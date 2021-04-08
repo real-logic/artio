@@ -24,8 +24,10 @@ import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AlreadyBoundException;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Arrays;
 
@@ -41,7 +43,7 @@ public final class TestFixtures
 
     private static int port = LOW_PORT;
 
-    public static int unusedPort()
+    public static synchronized int unusedPort()
     {
         while (port < HIGH_PORT)
         {
@@ -64,9 +66,13 @@ public final class TestFixtures
                 .open()
                 .bind(new InetSocketAddress("localhost", port))
                 .close();
+
+            DatagramChannel.open()
+                .bind(new InetSocketAddress("localhost", port))
+                .close();
             return true;
         }
-        catch (final AlreadyBoundException e)
+        catch (final AlreadyBoundException | BindException e)
         {
             // not an error, deliberately blank
             return false;

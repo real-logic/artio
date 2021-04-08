@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
+import org.agrona.LangUtil;
 import org.agrona.Verify;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -279,14 +280,26 @@ public class FixMessageLogger implements Agent
         configuration.conclude();
         this.configuration = configuration;
         final Aeron aeron = configuration.aeron;
+        SubscriptionPoller[] pollers = null;
 
-        final String libraryAeronChannel = configuration.libraryAeronChannel;
-        final SubscriptionPoller[] pollers =
+        try
         {
-            newSubscriptionPoller(aeron, libraryAeronChannel, configuration.inboundStreamId),
-            newSubscriptionPoller(aeron, libraryAeronChannel, configuration.outboundStreamId),
-            newSubscriptionPoller(aeron, IPC_CHANNEL, configuration.outboundReplayStreamId),
-        };
+            final String libraryAeronChannel = configuration.libraryAeronChannel;
+            pollers = new SubscriptionPoller[]
+            {
+                newSubscriptionPoller(aeron, libraryAeronChannel, configuration.inboundStreamId),
+                newSubscriptionPoller(aeron, libraryAeronChannel, configuration.outboundStreamId),
+                newSubscriptionPoller(aeron, IPC_CHANNEL, configuration.outboundReplayStreamId),
+            };
+        }
+        catch (final Throwable t)
+        {
+            if (configuration.ownsAeronClient)
+            {
+                aeron.close();
+            }
+            LangUtil.rethrowUnchecked(t);
+        }
 
         zipper = new StreamTimestampZipper(
             configuration.fixMessageConsumer,
@@ -312,7 +325,10 @@ public class FixMessageLogger implements Agent
         {
             closed = true;
 
-            zipper.onClose();
+            if (zipper != null)
+            {
+                zipper.onClose();
+            }
 
             if (configuration.ownsAeronClient)
             {
@@ -353,6 +369,11 @@ public class FixMessageLogger implements Agent
         public int streamId()
         {
             return subscription.streamId();
+        }
+
+        public void close()
+        {
+            subscription.close();
         }
     }
 }

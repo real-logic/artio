@@ -179,6 +179,11 @@ public class StreamTimestampZipper
 
         positions.clear();
         reorderBufferOffset = 0;
+
+        for (final StreamPoller poller : pollers)
+        {
+            poller.close();
+        }
     }
 
     static class BufferedPosition
@@ -279,6 +284,11 @@ public class StreamTimestampZipper
             return "StreamPoller{" +
                 "header=" + header +
                 '}';
+        }
+
+        public void close()
+        {
+            poller.close();
         }
     }
 
@@ -437,5 +447,7 @@ public class StreamTimestampZipper
         int poll(FragmentAssembler fragmentAssembler);
 
         int streamId();
+
+        void close();
     }
 }

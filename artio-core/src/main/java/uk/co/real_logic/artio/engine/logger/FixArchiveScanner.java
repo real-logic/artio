@@ -358,6 +358,11 @@ public class FixArchiveScanner implements AutoCloseable
 
             return image;
         }
+
+        public void close()
+        {
+            // don't own replay subscription so no need to close it.
+        }
     }
 
     public void close()

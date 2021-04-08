@@ -106,8 +106,8 @@ public abstract class AbstractFixMessageLoggerTest
     @After
     public void teardown()
     {
-        Exceptions.closeAll(aeron, mediaDriver);
         Exceptions.closeAll(logger);
+        Exceptions.closeAll(aeron, mediaDriver);
     }
 
     @Test
