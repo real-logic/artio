@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -311,9 +312,12 @@ public class BinaryEntryPointSystemTest
     }
 
     @Test
-    public void shouldDisconnectIfEstablish() throws IOException
+    public void shouldDisconnectIfEstablishNotSent() throws IOException
     {
-        setupArtio(true);
+        setupArtio(
+            true,
+            TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE);
 
         try (BinaryEntrypointClient client = newClient())
         {
@@ -493,19 +497,52 @@ public class BinaryEntryPointSystemTest
 
         try (BinaryEntrypointClient client = establishNewConnection())
         {
-            exchangeOrderAndReportNew(client, 1);
-            exchangeOrderAndReportNew(client, 2);
-            exchangeOrderAndReportNew(client, 3);
-            exchangeOrderAndReportNew(client, 4);
-            assertNextSequenceNumbers(5, 5);
+            exchange4OrdersAndReports(client);
 
-            client.writeRetransmitRequest(2, 2);
-            client.readRetransmission(2, 2);
-            client.readExecutionReportNew(2);
-            client.readExecutionReportNew(3);
+            assertMessagesRetransmitted(client);
 
             clientTerminatesSession(client);
+
+            assertNextSequenceNumbers(5, 5);
         }
+
+        assertMessagesFromBeforeReEstablishRetransmitted();
+
+        // test repeatability
+        assertMessagesFromBeforeReEstablishRetransmitted();
+
+        restartArtio();
+
+        assertMessagesFromBeforeReEstablishRetransmitted();
+    }
+
+    private void assertMessagesFromBeforeReEstablishRetransmitted() throws IOException
+    {
+        withReEstablishedConnection(4, client ->
+        {
+            assertNextSequenceNumbers(5, 5);
+
+            assertMessagesRetransmitted(client);
+
+            clientTerminatesSession(client);
+        });
+    }
+
+    private void assertMessagesRetransmitted(final BinaryEntrypointClient client)
+    {
+        client.writeRetransmitRequest(2, 2);
+        client.readRetransmission(2, 2);
+        client.readExecutionReportNew(2);
+        client.readExecutionReportNew(3);
+    }
+
+    private void exchange4OrdersAndReports(final BinaryEntrypointClient client)
+    {
+        exchangeOrderAndReportNew(client, 1);
+        exchangeOrderAndReportNew(client, 2);
+        exchangeOrderAndReportNew(client, 3);
+        exchangeOrderAndReportNew(client, 4);
+        assertNextSequenceNumbers(5, 5);
     }
 
     @Test
@@ -769,6 +806,22 @@ public class BinaryEntryPointSystemTest
 
     private void reEstablishConnection(final int alreadyRecvMsgCount, final int alreadySentMsgCount) throws IOException
     {
+        withReEstablishedConnection(alreadyRecvMsgCount, client ->
+        {
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 1, alreadySentMsgCount + 1);
+
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
+
+            clientTerminatesSession(client);
+        });
+    }
+
+    private void withReEstablishedConnection(
+        final int alreadyRecvMsgCount,
+        final Consumer<BinaryEntrypointClient> handler) throws IOException
+    {
         try (BinaryEntrypointClient client = newClient())
         {
             final int nextSeqNo = alreadyRecvMsgCount + 1;
@@ -780,13 +833,7 @@ public class BinaryEntryPointSystemTest
 
             assertConnectionMatches(client);
 
-            assertNextSequenceNumbers(nextSeqNo, alreadySentMsgCount + 1);
-
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
-
-            clientTerminatesSession(client);
+            handler.accept(client);
         }
     }
 

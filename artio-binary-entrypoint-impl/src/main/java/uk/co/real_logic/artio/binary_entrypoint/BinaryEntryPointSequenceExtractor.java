@@ -57,6 +57,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
         final int aeronSessionId)
     {
         final int templateId = beHeader.wrap(buffer, headerOffset).templateId();
+        final int msgOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
         final long sessionId = fixPMessage.sessionId();
 
         if (templateId == NegotiateResponseDecoder.TEMPLATE_ID)
@@ -68,7 +69,6 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
         }
         else if (templateId == SequenceDecoder.TEMPLATE_ID)
         {
-            final int msgOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
             sequence.wrap(buffer, msgOffset, beHeader.blockLength(), beHeader.version());
             final Info info = lookupInfo(sessionId);
             info.lastSequenceNumber = (int)(sequence.nextSeqNo() - 1);
@@ -84,7 +84,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
     {
         final Info info = lookupInfo(sessionId);
-        info.lastSequenceNumber = newSequenceNumber - 1;
+        info.lastSequenceNumber = newSequenceNumber;
     }
 
     private Info lookupInfo(final long sessionId)

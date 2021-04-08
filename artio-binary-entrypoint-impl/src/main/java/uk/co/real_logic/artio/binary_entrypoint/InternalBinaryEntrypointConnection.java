@@ -89,8 +89,8 @@ class InternalBinaryEntrypointConnection
         requestedKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
         maxRetransmissionRange = configuration.fixPAcceptedSessionMaxRetransmissionRange();
 
-        nextRecvSeqNo = adjustSeqNo(lastReceivedSequenceNumber);
-        nextSentSeqNo = adjustSeqNo(lastSentSequenceNumber);
+        nextRecvSeqNo(adjustSeqNo(lastReceivedSequenceNumber));
+        nextSentSeqNo(adjustSeqNo(lastSentSequenceNumber));
     }
 
     private long adjustSeqNo(final long lastReceivedSequenceNumber)
@@ -219,7 +219,7 @@ class InternalBinaryEntrypointConnection
 
         // Notify inbound sequence number index
         final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
-            sessionId, 1, NO_REQUIRED_POSITION);
+            sessionId, 0, NO_REQUIRED_POSITION);
         if (inboundPos < 0)
         {
             return inboundPos;
@@ -297,8 +297,9 @@ class InternalBinaryEntrypointConnection
         if (!suppressRedactResend)
         {
             onAttemptedToSendMessage();
+            final int correctSequenceNumber = (int)nextSeqNo - 1;
             final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
-                sessionId, (int)nextSeqNo, NO_REQUIRED_POSITION);
+                sessionId, correctSequenceNumber, NO_REQUIRED_POSITION);
 
             if (inboundPos > 0)
             {
