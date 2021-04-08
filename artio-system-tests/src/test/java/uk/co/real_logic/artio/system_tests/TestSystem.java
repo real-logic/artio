@@ -291,7 +291,11 @@ public class TestSystem
             }
             catch (final InterruptedException | ExecutionException e)
             {
-                Exceptions.printStackTracesForAllThreads();
+                if (e.getCause() instanceof TimeoutException ||
+                    e.getCause() instanceof java.util.concurrent.TimeoutException)
+                {
+                    Exceptions.printStackTracesForAllThreads();
+                }
 
                 LangUtil.rethrowUnchecked(e);
             }
