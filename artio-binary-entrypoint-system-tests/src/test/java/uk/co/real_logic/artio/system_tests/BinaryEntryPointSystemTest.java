@@ -528,6 +528,7 @@ public class BinaryEntryPointSystemTest
 
             final long timeInNs = client.timeInNs();
 
+            client.skipTemplateId(ExecutionReport_NewDecoder.TEMPLATE_ID);
             client.writeRetransmitRequest(SESSION_ID, 2, 2, timeInNs);
             client.writeRetransmitRequest(SESSION_ID, 2, 1, timeInNs);
             client.readRetransmission(2, 2);
