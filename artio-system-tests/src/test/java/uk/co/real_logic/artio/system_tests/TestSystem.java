@@ -291,6 +291,8 @@ public class TestSystem
             }
             catch (final InterruptedException | ExecutionException e)
             {
+                Exceptions.printStackTracesForAllThreads();
+
                 LangUtil.rethrowUnchecked(e);
             }
 

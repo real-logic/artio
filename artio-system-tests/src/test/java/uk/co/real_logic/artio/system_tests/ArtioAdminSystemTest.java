@@ -24,12 +24,15 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.admin.ArtioAdmin;
 import uk.co.real_logic.artio.admin.ArtioAdminConfiguration;
 import uk.co.real_logic.artio.admin.FixAdminSession;
+import uk.co.real_logic.artio.engine.DefaultEngineScheduler;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -47,6 +50,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         mediaDriver = launchMediaDriver();
 
         acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
+            .scheduler(new DefaultEngineScheduler())
             .deleteLogFileDirOnStart(true));
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
@@ -283,8 +287,8 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(session.id(), adminSession.sessionId());
         assertEquals(session.compositeKey().toString(), adminSession.sessionKey().toString());
         connectTimeRange.assertWithinRange(adminSession.lastLogonTime());
-        assertEquals(session.lastReceivedMsgSeqNum(), adminSession.lastReceivedMsgSeqNum());
-        assertEquals(session.lastSentMsgSeqNum(), adminSession.lastSentMsgSeqNum());
+        assertEquals(session.lastReceivedMsgSeqNum(), adminSession.lastReceivedMsgSeqNum(), 1);
+        assertEquals(session.lastSentMsgSeqNum(), adminSession.lastSentMsgSeqNum(), 1);
         assertTrue(adminSession.isConnected());
         assertFalse(adminSession.isSlow());
     }
@@ -293,6 +297,7 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         final ArtioAdminConfiguration config = new ArtioAdminConfiguration();
         config.aeronChannel(acceptingEngine.configuration().libraryAeronChannel());
+        config.replyTimeoutInNs(MINUTES.toNanos(2));
         artioAdmin = ArtioAdmin.launch(config);
     }
 }
