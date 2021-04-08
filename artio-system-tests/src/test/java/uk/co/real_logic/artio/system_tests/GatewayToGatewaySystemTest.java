@@ -38,8 +38,8 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.IntSupplier;
@@ -973,7 +973,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             return Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath())
                 .count();
         }
-        catch (final NoSuchFileException e)
+        catch (final UncheckedIOException e)
         {
             // retry if the file-system changes under us
             return remainingFileCount();
