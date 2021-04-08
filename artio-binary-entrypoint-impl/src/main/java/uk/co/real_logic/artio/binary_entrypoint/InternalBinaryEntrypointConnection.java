@@ -56,6 +56,7 @@ class InternalBinaryEntrypointConnection
     // true iff we've sent a redact then got back-pressured sending a message after
     private boolean suppressRedactResend = false;
     private boolean suppressRetransmissionResend = false;
+    private boolean replaying = false;
 
     InternalBinaryEntrypointConnection(
         final long connectionId,
@@ -141,24 +142,9 @@ class InternalBinaryEntrypointConnection
         return position;
     }
 
-    public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
-    {
-        return 0;
-    }
-
-    public long retransmitFillSeqNo()
-    {
-        return 0;
-    }
-
-    public long nextRetransmitSeqNo()
-    {
-        return 0;
-    }
-
-    // -----------------------------------------------
+    // --------------------------------------------------
     // Internal Methods below, not part of the public API
-    // -----------------------------------------------
+    // --------------------------------------------------
 
     protected int poll(final long timeInMs)
     {
@@ -195,6 +181,7 @@ class InternalBinaryEntrypointConnection
 
     protected void onReplayComplete()
     {
+        replaying = false;
     }
 
     public long onNegotiate(
@@ -517,6 +504,11 @@ class InternalBinaryEntrypointConnection
             return sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs);
         }
 
+        if (replaying)
+        {
+            return sendRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs);
+        }
+
         if (!suppressRetransmissionResend)
         {
             final long position = proxy.sendRetransmission(fromSeqNo, count, requestTimestampInNs(), timestampInNs);
@@ -535,6 +527,11 @@ class InternalBinaryEntrypointConnection
             EMPTY_BUFFER,
             0,
             0);
+
+        if (position > 0)
+        {
+            replaying = true;
+        }
 
         // suppress if we've failed to send the resend request to the replayer as this will cause this handler to be
         // retried

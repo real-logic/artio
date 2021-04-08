@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
+import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.SESSION_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
@@ -516,6 +517,24 @@ public class BinaryEntryPointSystemTest
         assertMessagesFromBeforeReEstablishRetransmitted();
     }
 
+    @Test
+    public void shouldRejectMultipleResendRequests() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchange4OrdersAndReports(client);
+
+            final long timeInNs = client.timeInNs();
+
+            client.writeRetransmitRequest(SESSION_ID, 2, 2, timeInNs);
+            client.writeRetransmitRequest(SESSION_ID, 2, 1, timeInNs);
+            client.readRetransmission(2, 2);
+            client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
+        }
+    }
+
     private void assertMessagesFromBeforeReEstablishRetransmitted() throws IOException
     {
         withReEstablishedConnection(4, client ->
@@ -919,7 +938,7 @@ public class BinaryEntryPointSystemTest
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
         assertNotNull(id);
-        assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
+        assertEquals(SESSION_ID, id.sessionID());
         assertEquals(sessionVerID, id.sessionVerID());
 
         assertFalse(connectionExistsHandler.invoked());
@@ -981,7 +1000,7 @@ public class BinaryEntryPointSystemTest
     private void assertConnectionMatches(final BinaryEntrypointClient client)
     {
         connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, connection.sessionId());
+        assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(client.sessionVerID(), connection.sessionVerId());
         assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
     }
@@ -990,10 +1009,10 @@ public class BinaryEntryPointSystemTest
     {
         testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
         assertNotNull(fixPAuthenticationStrategy.lastSessionId());
-        assertEquals(BinaryEntrypointClient.SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
+        assertEquals(SESSION_ID, connectionExistsHandler.lastSurrogateSessionId());
         final BinaryEntryPointContext id =
             (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
-        assertEquals(BinaryEntrypointClient.SESSION_ID, id.sessionID());
+        assertEquals(SESSION_ID, id.sessionID());
         assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
         final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
 

@@ -181,18 +181,6 @@ public interface FixPConnection
      */
     long requestDisconnect(DisconnectReason reason);
 
-    /**
-     * Send a custom retransmit request.
-     *
-     * @param uuid the UUID of the connection to request a retransmit request. This doesn't necessarily have to be the
-     *             current UUID, but it does have to be one for the same session on the same market segment.
-     * @param fromSeqNo the sequence number to start from.
-     * @param msgCount the number of messages to request a retransmit of.
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     */
-    long tryRetransmitRequest(long uuid, long fromSeqNo, int msgCount);
-
     // -----------------------------------------------
     // Accessors
     // -----------------------------------------------
@@ -238,22 +226,6 @@ public interface FixPConnection
      * @param nextRecvSeqNo the next sequence number to be expected when receiving  a new business layer message.
      */
     void nextRecvSeqNo(long nextRecvSeqNo);
-
-    /**
-     * Gets the next received sequence number that will fill the current retransmit request. If there is no
-     * retransmit operation in process NOT_AWAITING_RETRANSMIT will be returned.
-     *
-     * @return the next received sequence number that will fill the current retransmit request.
-     */
-    long retransmitFillSeqNo();
-
-    /**
-     * Gets the next sequence number that Artio expects to received in the current retransmit request. If there is no
-     * retransmit operation in process NOT_AWAITING_RETRANSMIT will be returned.
-     *
-     * @return the next sequence number that Artio expects to received in the current retransmit request.
-     */
-    long nextRetransmitSeqNo();
 
     /**
      * Check if a message can be sent. This is when you're in the ESTABLISHED or AWAITING_KEEPALIVE state.

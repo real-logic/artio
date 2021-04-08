@@ -302,7 +302,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH);
 
-        negotiateTimestampInNs = epochNanoClock.nanoTime();
+        negotiateTimestampInNs = timeInNs();
 
         negotiate
             .sessionID(SESSION_ID)
@@ -326,7 +326,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         final EstablishEncoder establish = new EstablishEncoder();
         wrap(establish, EstablishEncoder.BLOCK_LENGTH);
 
-        establishTimestampInNs = epochNanoClock.nanoTime();
+        establishTimestampInNs = timeInNs();
         establish
             .sessionID(SESSION_ID)
             .sessionVerID(sessionVerID)
@@ -511,10 +511,16 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void writeRetransmitRequest(final int sessionId, final long fromSeqNo, final long count)
     {
+        writeRetransmitRequest(sessionId, fromSeqNo, count, timeInNs());
+    }
+
+    public void writeRetransmitRequest(final int sessionId, final long fromSeqNo, final long count, final long timeInNs)
+    {
         final RetransmitRequestEncoder retransmitRequest = new RetransmitRequestEncoder();
         wrap(retransmitRequest, RetransmitRequestEncoder.BLOCK_LENGTH);
 
-        retransmitRequestTimestampInNs = epochNanoClock.nanoTime();
+        retransmitRequestTimestampInNs = timeInNs;
+
         retransmitRequest
             .sessionID(sessionId)
             .timestamp().time(retransmitRequestTimestampInNs);
@@ -554,8 +560,13 @@ public final class BinaryEntrypointClient implements AutoCloseable
     {
         final RetransmissionDecoder retransmission = read(new RetransmissionDecoder(), 0);
         assertEquals(SESSION_ID, retransmission.sessionID());
-        assertEquals(retransmitRequestTimestampInNs, retransmission.requestTimestamp().time());
         assertEquals(nextSeqNo, retransmission.nextSeqNo());
         assertEquals(count, retransmission.count());
+        assertEquals(retransmitRequestTimestampInNs, retransmission.requestTimestamp().time());
+    }
+
+    public long timeInNs()
+    {
+        return epochNanoClock.nanoTime();
     }
 }
