@@ -517,25 +517,6 @@ public class BinaryEntryPointSystemTest
         assertMessagesFromBeforeReEstablishRetransmitted();
     }
 
-    @Test
-    public void shouldRejectMultipleResendRequests() throws IOException
-    {
-        setupArtio(true);
-
-        try (BinaryEntrypointClient client = establishNewConnection())
-        {
-            exchange4OrdersAndReports(client);
-
-            final long timeInNs = client.timeInNs();
-
-            client.skipTemplateId(ExecutionReport_NewDecoder.TEMPLATE_ID);
-            client.writeRetransmitRequest(SESSION_ID, 2, 2, timeInNs);
-            client.writeRetransmitRequest(SESSION_ID, 2, 1, timeInNs);
-            client.readRetransmission(2, 2);
-            client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
-        }
-    }
-
     private void assertMessagesFromBeforeReEstablishRetransmitted() throws IOException
     {
         withReEstablishedConnection(4, client ->
