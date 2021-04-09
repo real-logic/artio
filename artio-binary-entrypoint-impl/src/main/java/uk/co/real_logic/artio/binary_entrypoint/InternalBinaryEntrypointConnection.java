@@ -188,7 +188,16 @@ class InternalBinaryEntrypointConnection
                 }
                 return 1;
 
+            case REPLIED_FINISHED_SENDING:
+            case SENT_FINISHED_SENDING:
+                if (timeInMs > nextSendMessageTimeInMs)
+                {
+                    finishSending();
+                }
+                return 1;
+
             case RETRY_FINISHED_SENDING:
+            case RETRY_REPLY_FINISHED_SENDING:
                 finishSending();
                 return 1;
 
@@ -479,6 +488,8 @@ class InternalBinaryEntrypointConnection
             sessionVerId,
             nextSentSeqNo - 1,
             requestTimestampInNs());
+
+        onAttemptedToSendMessage();
 
         if (weInitiatedFinishedSending)
         {

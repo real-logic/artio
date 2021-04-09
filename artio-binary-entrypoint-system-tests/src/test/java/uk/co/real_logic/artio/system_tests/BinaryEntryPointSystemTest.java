@@ -579,12 +579,7 @@ public class BinaryEntryPointSystemTest
 
         try (BinaryEntrypointClient client = establishNewConnection())
         {
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(2, 2);
-
-            client.writeFinishedSending(1);
-            client.readFinishedReceiving();
+            clientInitiatedFinishSending(client);
 
             assertTrue("onFinishedSending() not invoked", connectionHandler.hasFinishedSending());
 
@@ -614,6 +609,16 @@ public class BinaryEntryPointSystemTest
         connectWithSessionVerId(2);
     }
 
+    private void clientInitiatedFinishSending(final BinaryEntrypointClient client)
+    {
+        exchangeOrderAndReportNew(client);
+
+        assertNextSequenceNumbers(2, 2);
+
+        client.writeFinishedSending(1);
+        client.readFinishedReceiving();
+    }
+
     @Test
     public void shouldCompleteFinishedSendingProcess() throws IOException
     {
@@ -640,6 +645,27 @@ public class BinaryEntryPointSystemTest
 
             acceptorTerminatesSession(client);
         }
+    }
+
+    // FIXP Spec 7.4.2
+    @Test
+    public void shouldUseFinishedSendingAsAHeartbeatKeepAliveInTheAbsenceOfResponse() throws IOException
+    {
+        setupArtio(true);
+
+        withLowKeepAliveClient(client ->
+        {
+            clientInitiatedFinishSending(client);
+
+            connection.finishSending();
+
+            client.readFinishedSending(1);
+            client.readFinishedSending(1);
+
+            client.writeFinishedReceiving();
+
+            acceptorTerminatesSession(client);
+        });
     }
 
     // ----------------------------------
@@ -701,11 +727,8 @@ public class BinaryEntryPointSystemTest
     {
         setupArtio(true);
 
-        try (BinaryEntrypointClient client = newClient())
+        withLowKeepAliveClient(client ->
         {
-            lowKeepAliveTimeout(client);
-            establishNewConnection(client);
-
             client.readSequence(1);
             client.skipSequence();
             exchangeOrderAndReportNew(client);
@@ -715,7 +738,7 @@ public class BinaryEntryPointSystemTest
             client.writeSequence(2);
 
             client.readSequence(2);
-        }
+        });
     }
 
     @Test
@@ -723,11 +746,8 @@ public class BinaryEntryPointSystemTest
     {
         setupArtio(true);
 
-        try (BinaryEntrypointClient client = newClient())
+        withLowKeepAliveClient(client ->
         {
-            lowKeepAliveTimeout(client);
-            establishNewConnection(client);
-
             sleep(200);
 
             client.skipSequence();
@@ -745,12 +765,22 @@ public class BinaryEntryPointSystemTest
             // Eventually get disconnected when there's no sequence message for longer than the timeout
             client.readTerminate(TerminationCode.UNSPECIFIED);
             client.assertDisconnected();
-        }
+        });
     }
 
     private void lowKeepAliveTimeout(final BinaryEntrypointClient client)
     {
         client.keepAliveIntervalInMs(500);
+    }
+
+    private void withLowKeepAliveClient(final Consumer<BinaryEntrypointClient> handler) throws IOException
+    {
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.keepAliveIntervalInMs(500);
+            establishNewConnection(client);
+            handler.accept(client);
+        }
     }
 
     private void sleep(final int timeInMs)
@@ -770,10 +800,8 @@ public class BinaryEntryPointSystemTest
 
     private void shouldTerminateSessionWhenSequenceNumberTooLow() throws IOException
     {
-        try (BinaryEntrypointClient client = newClient())
+        withLowKeepAliveClient(client ->
         {
-            lowKeepAliveTimeout(client);
-            establishNewConnection(client);
             client.skipSequence();
             exchangeOrderAndReportNew(client);
             connectionHandler.replyToOrder(false);
@@ -783,7 +811,7 @@ public class BinaryEntryPointSystemTest
 
             client.readTerminate();
             client.assertDisconnected();
-        }
+        });
 
         connectionHandler.replyToOrder(true);
     }
