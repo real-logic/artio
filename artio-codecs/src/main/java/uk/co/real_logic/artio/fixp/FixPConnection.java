@@ -75,14 +75,23 @@ public interface FixPConnection
         NEGOTIATED_REESTABLISH,
         /** Establish accepted, messages can be exchanged */
         ESTABLISHED,
-        /** The session is currently retransmitting messages in response to a NotApplied message. */
+        /** An idempotent flow session is currently retransmitting messages in response to a NotApplied message. */
         RETRANSMITTING,
         /** We've sent a finished sending message but not received a finished receiving */
         SENT_FINISHED_SENDING,
         /** We've attempted to send a finished sending message but been back-pressured */
         RETRY_FINISHED_SENDING,
-        /** We've received a finished sending message and are awaiting termination */
-        FINISHED_SENDING,
+        /**
+         * We've received a finished receiving from a counter-party in response to our finished sending but
+         * haven't been sent a finished sending.
+         */
+        RECV_FINISHED_RECEIVING_ONLY,
+        /** We've received a finished sending message and sent a reply */
+        RECV_FINISHED_SENDING,
+        /** We've sent our own finished sending message, having received a finished sending message */
+        REPLIED_FINISHED_SENDING,
+        /** We're trying to resend our own finished sending message, having received a finished sending message */
+        RETRY_REPLY_FINISHED_SENDING,
         /**
          * keepAliveInterval has expired without receiving a message from the exchange - we are waiting that long again
          * before terminating.

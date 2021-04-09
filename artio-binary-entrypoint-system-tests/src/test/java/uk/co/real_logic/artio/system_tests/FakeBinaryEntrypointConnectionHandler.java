@@ -40,6 +40,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     private DisconnectReason disconnectReason;
     private boolean replyToOrder = true;
     private boolean abortReport;
+    private boolean finishedSending = false;
 
     public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -61,6 +62,11 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         this.replyToOrder = replyToOrder;
     }
 
+    public boolean hasFinishedSending()
+    {
+        return finishedSending;
+    }
+
     public void onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
@@ -77,33 +83,47 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
             final NewOrderSingleDecoder newOrderSingle = new NewOrderSingleDecoder();
             newOrderSingle.wrap(buffer, offset, blockLength, version);
 
-            final ExecutionReport_NewEncoder executionReport = new ExecutionReport_NewEncoder();
-            final long position = connection.tryClaim(executionReport);
-            assertThat(position, Matchers.greaterThan(0L));
+            final long clOrderID = newOrderSingle.clOrdID();
+            final long securityID = newOrderSingle.securityID();
 
-            executionReport
-                .orderID(newOrderSingle.clOrdID())
-                .clOrdID(newOrderSingle.clOrdID())
-                .securityID(newOrderSingle.securityID())
-                .secondaryOrderID(ExecutionReport_NewEncoder.secondaryOrderIDNullValue())
-                .ordStatus(OrdStatus.NEW)
-                .execRestatementReason(ExecRestatementReason.NULL_VAL)
-                .multiLegReportingType(MultiLegReportingType.NULL_VAL)
-                .workingIndicator(Bool.NULL_VAL)
-                .transactTime().time(System.nanoTime());
-            executionReport
-                .putTradeDate(1, 2)
-                .protectionPrice().mantissa(1234);
-            executionReport.receivedTime().time(System.nanoTime());
+            sendExecutionReportNew(connection, clOrderID, securityID, abortReport);
+        }
+    }
 
-            if (abortReport)
-            {
-                connection.abort();
-            }
-            else
-            {
-                connection.commit();
-            }
+    public void onFinishedSending(final FixPConnection connection)
+    {
+        finishedSending = true;
+    }
+
+    static void sendExecutionReportNew(
+        final FixPConnection connection, final long clOrderID, final long securityID, final boolean abortReport)
+    {
+        final ExecutionReport_NewEncoder executionReport = new ExecutionReport_NewEncoder();
+        final long position = connection.tryClaim(executionReport);
+        assertThat(position, Matchers.greaterThan(0L));
+
+        executionReport
+            .orderID(clOrderID)
+            .clOrdID(clOrderID)
+            .securityID(securityID)
+            .secondaryOrderID(ExecutionReport_NewEncoder.secondaryOrderIDNullValue())
+            .ordStatus(OrdStatus.NEW)
+            .execRestatementReason(ExecRestatementReason.NULL_VAL)
+            .multiLegReportingType(MultiLegReportingType.NULL_VAL)
+            .workingIndicator(Bool.NULL_VAL)
+            .transactTime().time(System.nanoTime());
+        executionReport
+            .putTradeDate(1, 2)
+            .protectionPrice().mantissa(1234);
+        executionReport.receivedTime().time(System.nanoTime());
+
+        if (abortReport)
+        {
+            connection.abort();
+        }
+        else
+        {
+            connection.commit();
         }
     }
 

@@ -150,10 +150,11 @@ class InternalBinaryEntrypointConnection
     {
         validateCanSend();
 
-        return internalTerminate(terminationCode);
+        return internalTerminateInclResend(terminationCode);
     }
 
-    private long internalTerminate(final TerminationCode terminationCode)
+    // Handles resends
+    private long internalTerminateInclResend(final TerminationCode terminationCode)
     {
         return sendTerminate(terminationCode, State.UNBINDING, State.RESEND_TERMINATE);
     }
@@ -433,7 +434,7 @@ class InternalBinaryEntrypointConnection
         }
         else if (nextSeqNo < nextRecvSeqNo)
         {
-            return internalTerminate(TerminationCode.FINISHED);
+            return internalTerminateInclResend(TerminationCode.FINISHED);
         }
 
         return 1;
@@ -465,45 +466,86 @@ class InternalBinaryEntrypointConnection
 
     public void finishSending()
     {
+        final State state = state();
+        final boolean weInitiatedFinishedSending = state == ESTABLISHED;
+        final boolean theyInitiatedFinishedSending = state == RECV_FINISHED_SENDING;
+        if (!weInitiatedFinishedSending && !theyInitiatedFinishedSending)
+        {
+            // TODO: error
+        }
+
         final long position = proxy.sendFinishedSending(
             sessionId,
             sessionVerId,
-            nextRecvSeqNo - 1,
+            nextSentSeqNo - 1,
             requestTimestampInNs());
-        checkState(position, SENT_FINISHED_SENDING, RETRY_FINISHED_SENDING);
+
+        if (weInitiatedFinishedSending)
+        {
+            checkState(position, SENT_FINISHED_SENDING, RETRY_FINISHED_SENDING);
+        }
+        else // theyInitiatedFinishedSending
+        {
+            checkState(position, REPLIED_FINISHED_SENDING, RETRY_REPLY_FINISHED_SENDING);
+        }
     }
 
     public long onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
     {
         final State state = this.state;
-        if (state != ESTABLISHED && state != FINISHED_SENDING)
+        final boolean weInitiatedFinishedSending = state == RECV_FINISHED_RECEIVING_ONLY;
+        if (state != ESTABLISHED && !weInitiatedFinishedSending)
         {
             // TODO: error
         }
 
         checkSession(sessionID, sessionVerID);
 
-        // TODO: check the lastSeqNo and issue retransmit request if needed
-
-        state(FINISHED_SENDING);
-
-        return proxy.sendFinishedReceiving(
+        final long position = proxy.sendFinishedReceiving(
             sessionID,
             sessionVerID,
             requestTimestampInNs());
+
+        if (position > 0)
+        {
+            if (weInitiatedFinishedSending)
+            {
+                internalTerminateInclResend(TerminationCode.FINISHED);
+            }
+            else // they initiated finished sending
+            {
+                // we're now awaiting a finished receiving or possible retransmit request
+                state(RECV_FINISHED_SENDING);
+            }
+
+            handler.onFinishedSending(this);
+        }
+
+        return position;
     }
 
     public long onFinishedReceiving(final long sessionID, final long sessionVerID)
     {
         final State state = this.state;
-        if (state != SENT_FINISHED_SENDING && state != RETRY_FINISHED_SENDING)
+        final boolean weInitiatedFinishedSending = state == SENT_FINISHED_SENDING || state == RETRY_FINISHED_SENDING;
+        final boolean theyInitiatedFinishedSending = state == REPLIED_FINISHED_SENDING;
+        if (!weInitiatedFinishedSending && !theyInitiatedFinishedSending)
         {
             // TODO: error
         }
 
         checkSession(sessionID, sessionVerID);
 
-        return internalTerminate(TerminationCode.FINISHED);
+        if (weInitiatedFinishedSending)
+        {
+            state(RECV_FINISHED_RECEIVING_ONLY);
+        }
+        else // theyInitiatedFinishedSending and we've replied to them
+        {
+            internalTerminateInclResend(TerminationCode.FINISHED);
+        }
+
+        return 1;
     }
 
     public long onRetransmitRequest(

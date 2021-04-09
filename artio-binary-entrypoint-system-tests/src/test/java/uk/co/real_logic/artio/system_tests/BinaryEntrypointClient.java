@@ -51,6 +51,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public static final String SENDER_LOCATION = "LOCATION_1";
     public static final int CL_ORD_ID = 1;
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
+    public static final long SECURITY_ID = 2;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointOffsets.loadSbeIr());
 
@@ -405,7 +406,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
         newOrderSingle
             .clOrdID(clOrdId)
-            .securityID(2)
+            .securityID(SECURITY_ID)
             .price().mantissa(3);
         newOrderSingle
             .putOrderQty(1, 2, 3, 4)

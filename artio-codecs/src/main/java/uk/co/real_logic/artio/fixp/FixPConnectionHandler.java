@@ -100,10 +100,29 @@ public interface FixPConnectionHandler
     void onError(FixPConnection connection, Exception ex);
 
     /**
-     * Call when this connection is disconnected.
+     * Callback invoked when this connection is disconnected.
      *
      * @param connection the connection that was disconnected.
      * @param reason the reason for the disconnection.
      */
     void onDisconnect(FixPConnection connection, DisconnectReason reason);
+
+    /**
+     * Callback invoked when this connection receives a FinishedSending message from a counter-party.
+     *
+     * No more business messages will be received from the counter-party after this point. If your application
+     * has no more messages to send then it should invoke <code>connection.finishedSending()</code> unless it has
+     * already called <code>finishedSending()</code> to start the process. Your application may continue to send
+     * messages until it has invoked that method.
+     *
+     * NB: implementing this method is strictly optional. Not all FIXP protocols (eg: iLink3) implement the finished
+     * sending / finished receiving mechanism for protocol finalization and this method won't be invoked in the case
+     * of those protocols.
+     *
+     * @param connection the connection that has received the FinishedSending message
+     */
+    default void onFinishedSending(final FixPConnection connection)
+    {
+        // Deliberately empty as it's optional for a FIXP protocol to implement this method.
+    }
 }

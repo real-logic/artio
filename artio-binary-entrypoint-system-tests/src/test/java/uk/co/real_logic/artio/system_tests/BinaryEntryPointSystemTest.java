@@ -48,8 +48,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
-import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.CL_ORD_ID;
-import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.SESSION_ID;
+import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.*;
+import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
@@ -393,57 +393,6 @@ public class BinaryEntryPointSystemTest
         }
     }
 
-    @Test
-    public void shouldRespondToFinishedSendingWithFinishedReceiving() throws IOException
-    {
-        setupArtio(true);
-
-        try (BinaryEntrypointClient client = establishNewConnection())
-        {
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(2, 2);
-
-            client.writeFinishedSending(1);
-
-            client.readFinishedReceiving();
-
-            assertCannotSendMessage();
-
-            clientTerminatesSession(client);
-        }
-
-        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
-
-        restartArtio();
-
-        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
-    }
-
-    @Test
-    public void shouldCompleteFinishedSendingProcess() throws IOException
-    {
-        setupArtio(true);
-
-        try (BinaryEntrypointClient client = establishNewConnection())
-        {
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(2, 2);
-
-            connection.finishSending();
-
-            assertCannotSendMessage();
-
-            client.readFinishedSending(1);
-            client.writeFinishedReceiving();
-
-            assertCannotSendMessage();
-
-            acceptorTerminatesSession(client);
-        }
-    }
-
     // -------------------------------
     // BEGIN SEQUENCE NUMBER GAP TESTS
     // -------------------------------
@@ -617,6 +566,85 @@ public class BinaryEntryPointSystemTest
     // -------------------------------
     // END SEQUENCE NUMBER GAP TESTS
     // -------------------------------
+
+    // ----------------------------------
+    // BEGIN FINALIZATION TESTS
+    // ----------------------------------
+
+    // FIXP Spec 7.4.1
+    @Test
+    public void shouldRespondToFinishedSendingWithFinishedReceiving() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            client.writeFinishedSending(1);
+            client.readFinishedReceiving();
+
+            assertTrue("onFinishedSending() not invoked", connectionHandler.hasFinishedSending());
+
+            // can still send a message before we send finished sending.
+            final int clOrderID = 2;
+            sendExecutionReportNew(connection, clOrderID, SECURITY_ID, false);
+            client.readExecutionReportNew(clOrderID);
+
+            assertNextSequenceNumbers(2, 3);
+
+            connection.finishSending();
+            assertCannotSendMessage();
+
+            client.readFinishedSending(2);
+            client.writeFinishedReceiving();
+
+            clientTerminatesSession(client);
+        }
+
+        // Cannot re-establish finished sequence
+        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
+        restartArtio();
+        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
+
+        // Can reconnect with higher session ver id
+        resetHandlers();
+        connectWithSessionVerId(2);
+    }
+
+    @Test
+    public void shouldCompleteFinishedSendingProcess() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            connection.finishSending();
+
+            assertCannotSendMessage();
+
+            client.readFinishedSending(1);
+            client.writeFinishedReceiving();
+
+            // reply
+            client.writeFinishedSending(1);
+            client.readFinishedReceiving();
+
+            assertCannotSendMessage();
+
+            acceptorTerminatesSession(client);
+        }
+    }
+
+    // ----------------------------------
+    // END FINALIZATION TESTS
+    // ----------------------------------
 
     @Test
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException

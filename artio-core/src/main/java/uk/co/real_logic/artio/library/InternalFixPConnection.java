@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
@@ -105,7 +106,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     public boolean canSendMessage()
     {
         final State state = this.state;
-        return state == State.ESTABLISHED || state == State.AWAITING_KEEPALIVE;
+        return state == ESTABLISHED || state == AWAITING_KEEPALIVE || state == RECV_FINISHED_SENDING;
     }
 
     public State state()
@@ -157,9 +158,9 @@ public abstract class InternalFixPConnection implements FixPConnection
 
     protected void onReceivedMessage()
     {
-        if (state == State.AWAITING_KEEPALIVE)
+        if (state == AWAITING_KEEPALIVE)
         {
-            state(State.ESTABLISHED);
+            state(ESTABLISHED);
         }
 
         nextReceiveMessageTimeInMs = nextTimeoutInMs();
@@ -186,7 +187,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         if (!canSendMessage())
         {
             throw new IllegalStateException(
-                "State should be ESTABLISHED or AWAITING_KEEPALIVE in order to send but is " + state);
+                "State should be ESTABLISHED or AWAITING_KEEPALIVE or RECV_FINISHED_SENDING in order to send but is " +
+                state);
         }
     }
 
@@ -263,7 +265,7 @@ public abstract class InternalFixPConnection implements FixPConnection
 
             onReceivedMessage();
 
-            state(State.AWAITING_KEEPALIVE);
+            state(AWAITING_KEEPALIVE);
             events++;
         }
         else if (timeInMs > nextSendMessageTimeInMs)
