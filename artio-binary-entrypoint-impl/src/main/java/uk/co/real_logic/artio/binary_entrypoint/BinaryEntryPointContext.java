@@ -27,7 +27,7 @@ public class BinaryEntryPointContext implements FixPContext
     // persisted state
     private final long sessionID;
     private final long sessionVerID;
-    private final long requestTimestamp;
+    private final long requestTimestampInNs;
     private final long enteringFirm;
     private boolean ended;
 
@@ -42,13 +42,13 @@ public class BinaryEntryPointContext implements FixPContext
     public BinaryEntryPointContext(
         final long sessionID,
         final long sessionVerID,
-        final long timestamp,
+        final long timestampInNs,
         final long enteringFirm,
         final boolean fromNegotiate)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
-        this.requestTimestamp = timestamp;
+        this.requestTimestampInNs = timestampInNs;
         this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
 
@@ -66,9 +66,9 @@ public class BinaryEntryPointContext implements FixPContext
         return sessionVerID;
     }
 
-    public long requestTimestamp()
+    public long requestTimestampInNs()
     {
-        return requestTimestamp;
+        return requestTimestampInNs;
     }
 
     public long enteringFirm()
@@ -86,7 +86,7 @@ public class BinaryEntryPointContext implements FixPContext
         return "BinaryEntryPointContext{" +
             "sessionID=" + sessionID +
             ", sessionVerID=" + sessionVerID +
-            ", requestTimestamp=" + requestTimestamp +
+            ", requestTimestampInNs=" + requestTimestampInNs +
             ", enteringFirm=" + enteringFirm +
             ", fromNegotiate=" + fromNegotiate +
             '}';

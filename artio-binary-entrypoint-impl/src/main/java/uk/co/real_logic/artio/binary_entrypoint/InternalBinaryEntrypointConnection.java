@@ -70,6 +70,34 @@ class InternalBinaryEntrypointConnection
         final CommonConfiguration configuration,
         final BinaryEntryPointContext context)
     {
+        this(
+            connectionId,
+            outboundPublication,
+            inboundPublication,
+            libraryId,
+            owner,
+            lastReceivedSequenceNumber,
+            lastSentSequenceNumber,
+            lastConnectPayload,
+            configuration,
+            context,
+            new BinaryEntryPointProxy(
+            connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()));
+    }
+
+    InternalBinaryEntrypointConnection(
+        final long connectionId,
+        final GatewayPublication outboundPublication,
+        final GatewayPublication inboundPublication,
+        final int libraryId,
+        final FixPSessionOwner owner,
+        final long lastReceivedSequenceNumber,
+        final long lastSentSequenceNumber,
+        final long lastConnectPayload,
+        final CommonConfiguration configuration,
+        final BinaryEntryPointContext context,
+        final BinaryEntryPointProxy proxy)
+    {
         super(
             connectionId,
             outboundPublication,
@@ -77,11 +105,10 @@ class InternalBinaryEntrypointConnection
             libraryId,
             configuration.epochNanoClock(),
             owner,
-            new BinaryEntryPointProxy(
-            connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()));
+            proxy);
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.context = context;
-        proxy = (BinaryEntryPointProxy)super.proxy;
+        this.proxy = (BinaryEntryPointProxy)super.proxy;
         state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
 
         final long timeInMs = System.currentTimeMillis();

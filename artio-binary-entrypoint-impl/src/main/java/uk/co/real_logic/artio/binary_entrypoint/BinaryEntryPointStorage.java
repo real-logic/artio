@@ -89,7 +89,7 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
 
     private void putTimestamp(final AtomicBuffer buffer, final BinaryEntryPointContext context, final int offset)
     {
-        buffer.putLong(offset + TIMESTAMP_OFFSET, context.requestTimestamp(), ByteOrder.LITTLE_ENDIAN);
+        buffer.putLong(offset + TIMESTAMP_OFFSET, context.requestTimestampInNs(), ByteOrder.LITTLE_ENDIAN);
     }
 
     private void putSessionVerId(final AtomicBuffer buffer, final BinaryEntryPointContext context, final int offset)

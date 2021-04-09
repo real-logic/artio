@@ -276,11 +276,11 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     }
 
     public long sendRetransmission(
-        final long nextSeqNo, final long count, final long timestampInNs, final long requestTimestampInNs)
+        final long nextSeqNo, final long count, final long internalTimestampInNs, final long requestTimestampInNs)
     {
         final RetransmissionEncoder retransmission = this.retransmission;
 
-        final long position = claimMessage(RetransmissionEncoder.BLOCK_LENGTH, retransmission, timestampInNs);
+        final long position = claimMessage(RetransmissionEncoder.BLOCK_LENGTH, retransmission, internalTimestampInNs);
         if (position < 0)
         {
             return position;
@@ -399,7 +399,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
                 .sessionID(identification.sessionID())
                 .sessionVerID(identification.sessionVerID())
-                .requestTimestamp().time(identification.requestTimestamp());
+                .requestTimestamp().time(identification.requestTimestampInNs());
             negotiateReject
                 .enteringFirm(identification.enteringFirm())
                 .negotiationRejectCode(negotiationRejectCode);
@@ -416,7 +416,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
                 .sessionID(identification.sessionID())
                 .sessionVerID(identification.sessionVerID())
-                .requestTimestamp().time(identification.requestTimestamp());
+                .requestTimestamp().time(identification.requestTimestampInNs());
             establishReject
                 .establishmentRejectCode(establishRejectCode);
 
