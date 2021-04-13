@@ -233,6 +233,11 @@ class InternalBinaryEntrypointConnection
         if (!(state == State.ACCEPTED || state == State.SENT_NEGOTIATE_RESPONSE))
         {
             // TODO: validation error
+
+            if (checkFinishedSending(state))
+            {
+                return 1;
+            }
         }
 
         onSessionId(sessionId, sessionVerID);
@@ -422,6 +427,11 @@ class InternalBinaryEntrypointConnection
     {
         onReceivedMessage();
 
+        if (checkFinishedSending(state))
+        {
+            return 1;
+        }
+
         return checkSeqNo(nextSeqNo);
     }
 
@@ -459,18 +469,40 @@ class InternalBinaryEntrypointConnection
     {
         onReceivedMessage();
 
-        nextRecvSeqNo++;
+        final State state = state();
+        if (state == ESTABLISHED || state == RETRANSMITTING || state == AWAITING_KEEPALIVE)
+        {
+            nextRecvSeqNo++;
 
-        handler.onBusinessMessage(
-            this,
-            templateId,
-            buffer,
-            offset,
-            blockLength,
-            version,
-            false);
+            handler.onBusinessMessage(
+                this,
+                templateId,
+                buffer,
+                offset,
+                blockLength,
+                version,
+                false);
+        }
+        else
+        {
+            checkFinishedSending(state);
+        }
 
         return 1;
+    }
+
+    private boolean checkFinishedSending(final State state)
+    {
+        if (state == RECV_FINISHED_SENDING ||
+            state == REPLIED_FINISHED_SENDING ||
+            state == RETRY_REPLY_FINISHED_SENDING)
+        {
+            internalTerminateInclResend(TerminationCode.UNSPECIFIED);
+
+            return true;
+        }
+
+        return false;
     }
 
     public void finishSending()
@@ -565,7 +597,7 @@ class InternalBinaryEntrypointConnection
         final State state = this.state;
         if (state != ESTABLISHED && state != AWAITING_KEEPALIVE)
         {
-            // TODO: error
+            // TODO: error, actually error should only happen if we haven't established the connection yet
         }
 
         if (this.sessionId != sessionID)

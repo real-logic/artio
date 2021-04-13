@@ -93,8 +93,8 @@ public interface FixPConnection
         /** We're trying to resend our own finished sending message, having received a finished sending message */
         RETRY_REPLY_FINISHED_SENDING,
         /**
-         * keepAliveInterval has expired without receiving a message from the exchange - we are waiting that long again
-         * before terminating.
+         * keepAliveInterval has expired without receiving a message from the counter-party - we are waiting that long
+         * again before terminating.
          */
         AWAITING_KEEPALIVE,
         /**

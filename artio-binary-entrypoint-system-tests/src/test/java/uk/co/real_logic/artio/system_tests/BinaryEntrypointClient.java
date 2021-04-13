@@ -194,28 +194,9 @@ public final class BinaryEntrypointClient implements AutoCloseable
             final int decodedTemplateId = messageDecoder.sbeTemplateId();
             if (decodedTemplateId != templateId)
             {
-                String msg = "invalid template id: ";
-
-                if (templateId == EstablishRejectDecoder.TEMPLATE_ID)
-                {
-                    final EstablishRejectDecoder establishRejectDecoder = new EstablishRejectDecoder();
-                    establishRejectDecoder.wrap(
-                        unsafeReadBuffer,
-                        messageOffset,
-                        blockLength,
-                        version);
-                    msg += establishRejectDecoder.toString();
-                }
-                else if (templateId == EstablishAckDecoder.TEMPLATE_ID)
-                {
-                    msg += "received Establish Ack";
-                }
-                else if (templateId == ExecutionReport_NewDecoder.TEMPLATE_ID)
-                {
-                    msg += "received Execution Report New";
-                }
-
-                assertEquals(msg, decodedTemplateId, templateId);
+                final StringBuilder sb = new StringBuilder("invalid template id: ");
+                jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
+                assertEquals(sb.toString(), decodedTemplateId, templateId);
             }
 
             if (totalLength != read)

@@ -117,6 +117,7 @@ public class BinaryEntryPointContext implements FixPContext
         }
 
         offset = oldContext.offset();
+        contexts = oldContext.contexts;
 
         // negotiations should increment the session ver id
         if (fromNegotiate)

@@ -605,7 +605,6 @@ public class BinaryEntryPointSystemTest
         rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
 
         // Can reconnect with higher session ver id
-        resetHandlers();
         connectWithSessionVerId(2);
     }
 
@@ -630,12 +629,7 @@ public class BinaryEntryPointSystemTest
 
             assertNextSequenceNumbers(2, 2);
 
-            connection.finishSending();
-
-            assertCannotSendMessage();
-
-            client.readFinishedSending(1);
-            client.writeFinishedReceiving();
+            acceptorInitiatedFinishSending(client);
 
             // reply
             client.writeFinishedSending(1);
@@ -645,6 +639,16 @@ public class BinaryEntryPointSystemTest
 
             acceptorTerminatesSession(client);
         }
+    }
+
+    private void acceptorInitiatedFinishSending(final BinaryEntrypointClient client)
+    {
+        connection.finishSending();
+
+        assertCannotSendMessage();
+
+        client.readFinishedSending(1);
+        client.writeFinishedReceiving();
     }
 
     // FIXP Spec 7.4.2
@@ -666,6 +670,103 @@ public class BinaryEntryPointSystemTest
 
             acceptorTerminatesSession(client);
         });
+    }
+
+    // FIXP Spec 7.4.3
+    @Test
+    public void shouldProcessRetransmitRequestsInResponseToFinishSending() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            clientInitiatedFinishSending(client);
+
+            processRetransmitRequestsDuringFinishSending(client);
+
+            acceptorTerminatesSession(client);
+        }
+    }
+
+    @Test
+    public void shouldProcessRetransmitRequestsInResponseToAcceptorFinishSending() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            processRetransmitRequestsDuringFinishSending(client);
+
+            client.writeFinishedSending(1);
+            client.readFinishedReceiving();
+
+            acceptorTerminatesSession(client);
+        }
+    }
+
+    // FIXP Spec 7.4.4
+    @Test
+    public void shouldTerminateInResponseToReceivingTerminate() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            acceptorInitiatedFinishSending(client);
+
+            client.writeTerminate();
+            client.readTerminate();
+        }
+    }
+
+    // FIXP Spec 7.4.5
+    @Test
+    public void shouldTerminateInResponseToReceivingMessageAfterFinishedSending() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            terminatedBySendingMessageAfterFinishedSending(client, () ->
+                client.writeNewOrderSingle(2));
+        }
+
+        reNegotiateWithVerId(3, client ->
+            terminatedBySendingMessageAfterFinishedSending(client, () ->
+            client.writeSequence(1)));
+
+        reNegotiateWithVerId(4, client ->
+            terminatedBySendingMessageAfterFinishedSending(client, client::writeNegotiate));
+    }
+
+    private void terminatedBySendingMessageAfterFinishedSending(
+        final BinaryEntrypointClient client,
+        final Runnable sendMessage)
+    {
+        exchangeOrderAndReportNew(client);
+
+        client.writeFinishedSending(1);
+        client.readFinishedReceiving();
+
+        sendMessage.run();
+
+        client.readTerminate(TerminationCode.UNSPECIFIED);
+    }
+
+    private void processRetransmitRequestsDuringFinishSending(final BinaryEntrypointClient client)
+    {
+        connection.finishSending();
+
+        client.readFinishedSending(1);
+
+        client.writeRetransmitRequest(1, 1);
+        client.readRetransmission(1, 1);
+        client.readExecutionReportNew();
+        client.writeFinishedReceiving();
     }
 
     // ----------------------------------
@@ -691,8 +792,6 @@ public class BinaryEntryPointSystemTest
 
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
-        resetHandlers();
-
         connectWithSessionVerId(2);
     }
 
@@ -717,7 +816,6 @@ public class BinaryEntryPointSystemTest
         shouldTerminateSessionWhenSequenceNumberTooLow();
 
         restartArtio();
-        resetHandlers();
 
         connectWithSessionVerId(2);
     }
@@ -914,19 +1012,31 @@ public class BinaryEntryPointSystemTest
 
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
-        try (BinaryEntrypointClient client = newClient())
+        reNegotiateWithVerId(sessionVerID, client ->
         {
-            client.sessionVerID(sessionVerID);
-            establishNewConnection(client);
-
             exchangeOrderAndReportNew(client);
 
             assertNextSequenceNumbers(2, 2);
 
             clientTerminatesSession(client);
-        }
+        });
 
         resetHandlers();
+    }
+
+    private void reNegotiateWithVerId(
+        final int sessionVerID, final Consumer<BinaryEntrypointClient> handler)
+        throws IOException
+    {
+        resetHandlers();
+
+        try (BinaryEntrypointClient client = newClient())
+        {
+            client.sessionVerID(sessionVerID);
+            establishNewConnection(client);
+
+            handler.accept(client);
+        }
     }
 
     private void successfulConnection() throws IOException
