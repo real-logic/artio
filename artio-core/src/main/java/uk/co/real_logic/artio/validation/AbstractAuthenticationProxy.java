@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.validation;
 
+import uk.co.real_logic.artio.messages.DisconnectReason;
+
 /**
  * Interface to notify the gateway whether a session should be authenticated or not. Either invoker accept or reject.
  *
@@ -50,7 +52,7 @@ public interface AbstractAuthenticationProxy
     /**
      * Gets the connection id that uniquely identifies this individual connection. This can be used to correlate
      * logon operations with disconnect callbacks to
-     * {@link AuthenticationStrategy#onDisconnect(long, long)}.
+     * {@link AuthenticationStrategy#onDisconnect(long, long, DisconnectReason)}.
      *
      * @return the connection id.
      */

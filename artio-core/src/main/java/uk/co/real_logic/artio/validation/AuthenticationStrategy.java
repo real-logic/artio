@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 
 /**
  * Implement this interface in order to add customisable checks to logon messages.
@@ -105,10 +106,12 @@ public interface AuthenticationStrategy
      *
      * @param sessionId the session id of the session that has disconnected
      * @param connectionId the connection id of the session that has disconnected.
+     * @param reason the reason of the session disconnect
      */
     default void onDisconnect(
         final long sessionId,
-        final long connectionId)
+        final long connectionId,
+        final DisconnectReason reason)
     {
         // Deliberately blank for backwards compatibility
     }

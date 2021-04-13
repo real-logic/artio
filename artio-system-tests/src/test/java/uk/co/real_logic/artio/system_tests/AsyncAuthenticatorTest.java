@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
@@ -230,28 +231,30 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldNotifyAuthStrategyUponAcceptorLogoff()
     {
-        notifyAuthStrategyUpon(this::logoutAcceptingSession);
+        notifyAuthStrategyUpon(this::logoutAcceptingSession, DisconnectReason.REMOTE_DISCONNECT);
     }
 
     @Test
     public void shouldNotifyAuthStrategyUponInitiatorLogoff()
     {
-        notifyAuthStrategyUpon(this::logoutInitiatingSession);
+        notifyAuthStrategyUpon(this::logoutInitiatingSession, DisconnectReason.LOGOUT);
     }
 
     @Test
     public void shouldNotifyAuthStrategyUponAcceptorDisconnect()
     {
-        notifyAuthStrategyUpon(() -> testSystem.awaitRequestDisconnect(acceptingSession));
+        notifyAuthStrategyUpon(
+            () -> testSystem.awaitRequestDisconnect(acceptingSession), DisconnectReason.APPLICATION_DISCONNECT);
     }
 
     @Test
     public void shouldNotifyAuthStrategyUponInitiatorDisconnect()
     {
-        notifyAuthStrategyUpon(() -> testSystem.awaitRequestDisconnect(initiatingSession));
+        notifyAuthStrategyUpon(
+            () -> testSystem.awaitRequestDisconnect(initiatingSession), DisconnectReason.REMOTE_DISCONNECT);
     }
 
-    private void notifyAuthStrategyUpon(final Runnable disconnector)
+    private void notifyAuthStrategyUpon(final Runnable disconnector, final DisconnectReason reason)
     {
         shouldConnectedAcceptedAuthentications();
         acquireAcceptingSession();
@@ -264,6 +267,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(acceptingSession.id(), auth.disconnectSessionId);
         assertEquals(connectionId, auth.disconnectConnectionId);
         assertEquals(connectionId, auth.authConnectionId);
+        assertEquals(reason, auth.disconnectReason);
     }
 
     private RejectEncoder newRejectEncoder()
@@ -306,6 +310,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         private long authConnectionId;
         private long disconnectSessionId;
         private long disconnectConnectionId;
+        private DisconnectReason disconnectReason;
         private volatile boolean hasDisconnected;
 
         public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
@@ -360,10 +365,12 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         public void onDisconnect(
             final long sessionId,
-            final long connectionId)
+            final long connectionId,
+            final DisconnectReason reason)
         {
             this.disconnectSessionId = sessionId;
             this.disconnectConnectionId = connectionId;
+            this.disconnectReason = reason;
             hasDisconnected = true;
         }
     }
