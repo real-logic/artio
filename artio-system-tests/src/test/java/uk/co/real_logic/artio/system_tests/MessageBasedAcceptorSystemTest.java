@@ -203,7 +203,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
-            // The previous connection hasn't yet been detected as it's still active.
+            // The previous disconnection hasn't yet been detected as it's still active.
             assertTrue(session.isActive());
 
             connection.msgSeqNum(3);
@@ -212,6 +212,8 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             // During this loop the logout message for the disconnected connection is sent,
             // But not received by the new connection.
+            // Send a test request here to increase likelihood of triggering the race
+            SystemTestUtil.sendTestRequest(session, "badTestRequest");
             Timing.assertEventuallyTrue("Library has disconnected old session", () ->
             {
                 testSystem.poll();
@@ -221,7 +223,9 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             connection.readLogon();
             // check that it really is a logon and not the logout
-            assertThat(connection.lastMessageAsString(), containsString("\00135=A\001"));
+            assertThat(
+                connection.lastTotalBytesRead(),
+                containsString("\00135=A\001"));
 
             connection.logoutAndAwaitReply();
         }

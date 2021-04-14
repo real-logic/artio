@@ -72,6 +72,7 @@ public final class FixConnection implements AutoCloseable
     private final MutableAsciiBuffer asciiReadBuffer = new MutableAsciiBuffer(readBuffer);
     private int endOfMessage;
     private int bytesRemaining = 0;
+    private String ascii;
 
     public static FixConnection initiate(final int port) throws IOException
     {
@@ -309,7 +310,7 @@ public final class FixConnection implements AutoCloseable
         try
         {
             final int bytesToParse = bytesRemaining == 0 ? socket.read(readBuffer) : bytesRemaining;
-            final String ascii = asciiReadBuffer.getAscii(OFFSET, bytesToParse);
+            ascii = asciiReadBuffer.getAscii(OFFSET, bytesToParse);
 
             DebugLogger.log(FIX_TEST,
                 "< [" + ascii + "] for attempted: " + decoder.getClass());
@@ -447,6 +448,11 @@ public final class FixConnection implements AutoCloseable
     public String lastMessageAsString()
     {
         return asciiReadBuffer.getAscii(OFFSET, endOfMessage);
+    }
+
+    public String lastTotalBytesRead()
+    {
+        return ascii;
     }
 
     public HeartbeatDecoder readHeartbeat()
