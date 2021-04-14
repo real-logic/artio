@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
@@ -161,11 +162,12 @@ public class AbstractLogTest
 
         messageFrame
             .wrapAndApplyHeader(buffer, offset, header)
-            .messageType(messageType)
             .session(sessionId)
             .connection(CONNECTION_ID)
+            .status(MessageStatus.OK)
             .sequenceIndex(sequenceIndex)
             .libraryId(LIBRARY_ID)
+            .messageType(messageType)
             .putMetaData(new byte[0], 0, 0)
             .putBody(asciiBuffer, 0, logEntryLength);
 

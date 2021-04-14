@@ -501,4 +501,9 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
     {
         return proxy.lastSentPosition();
     }
+
+    public void onSequenceReset(final long resetTimeInNs)
+    {
+        context.onSequenceReset(resetTimeInNs);
+    }
 }
