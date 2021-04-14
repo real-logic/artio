@@ -844,17 +844,20 @@ public class Session
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)NANOSECONDS.toSeconds(heartbeatIntervalInNs);
-        nextSequenceIndex(clock.nanoTime());
         final long position = proxy.sendLogon(
             sentSeqNum,
             heartbeatIntervalInS,
             username(),
             password(),
             true,
-            sequenceIndex(),
+            sequenceIndex() + 1, // the sequence index update is only saved if this message is sent
             lastMsgSeqNumProcessed,
             cancelOnDisconnectOption,
             getCancelOnDisconnectTimeoutWindowInMs());
+        if (position >= 0)
+        {
+            nextSequenceIndex(clock.nanoTime());
+        }
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;

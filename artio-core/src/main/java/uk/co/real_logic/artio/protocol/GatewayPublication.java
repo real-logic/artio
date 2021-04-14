@@ -373,9 +373,7 @@ public class GatewayPublication extends ClaimablePublication
                 bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : (byte)END_FLAG).commit();
             }
         }
-
         DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued ", srcBuffer, srcOffset, srcLength);
-
         return position;
     }
 

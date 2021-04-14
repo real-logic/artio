@@ -204,55 +204,60 @@ class FixReplayerSession extends ReplayerSession
             actingBlockLength,
             version);
 
-        final int metaDataAdjustment = version >= metaDataSinceVersion() ?
-            metaDataHeaderLength() + FIX_MESSAGE.metaDataLength() : 0;
-        final int messageFrameBlockLength = MESSAGE_FRAME_BLOCK_LENGTH + metaDataAdjustment;
-        final int messageOffset = srcOffset + messageFrameBlockLength;
-        final int messageLength = srcLength - messageFrameBlockLength;
-
-        final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
-        final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
-
-        ASCII_BUFFER.wrap(srcBuffer);
-        replayHandler.onReplayedMessage(
-            ASCII_BUFFER,
-            messageOffset,
-            messageLength,
-            FIX_MESSAGE.libraryId(),
-            FIX_MESSAGE.session(),
-            FIX_MESSAGE.sequenceIndex(),
-            messageType);
-
-        if (gapFillMessageTypes.contains(messageType))
+        if (FIX_MESSAGE.status() == MessageStatus.OK)
         {
-            if (beginGapFillSeqNum == NONE)
-            {
-                beginGapFillSeqNum = lastSeqNo + 1;
-            }
+            final int metaDataAdjustment = version >= metaDataSinceVersion() ?
+                metaDataHeaderLength() + FIX_MESSAGE.metaDataLength() : 0;
+            final int messageFrameBlockLength = MESSAGE_FRAME_BLOCK_LENGTH + metaDataAdjustment;
+            final int messageOffset = srcOffset + messageFrameBlockLength;
+            final int messageLength = srcLength - messageFrameBlockLength;
 
-            lastSeqNo = msgSeqNum;
-            return CONTINUE;
-        }
-        else
-        {
-            if (beginGapFillSeqNum != NONE)
-            {
-                sendGapFill(beginGapFillSeqNum, msgSeqNum);
-            }
-            else if (msgSeqNum > lastSeqNo + 1)
-            {
-                sendGapFill(lastSeqNo, msgSeqNum);
-            }
+            final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
+            final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
 
-            final Action action = possDupEnabler.enablePossDupFlag(
-                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
-            if (action != ABORT)
+            ASCII_BUFFER.wrap(srcBuffer);
+            replayHandler.onReplayedMessage(
+                ASCII_BUFFER,
+                messageOffset,
+                messageLength,
+                FIX_MESSAGE.libraryId(),
+                FIX_MESSAGE.session(),
+                FIX_MESSAGE.sequenceIndex(),
+                messageType);
+
+            if (gapFillMessageTypes.contains(messageType))
             {
+                if (beginGapFillSeqNum == NONE)
+                {
+                    beginGapFillSeqNum = lastSeqNo + 1;
+                }
+
                 lastSeqNo = msgSeqNum;
+                return CONTINUE;
             }
+            else
+            {
+                if (beginGapFillSeqNum != NONE)
+                {
+                    sendGapFill(beginGapFillSeqNum, msgSeqNum);
+                }
+                else if (msgSeqNum > lastSeqNo + 1)
+                {
+                    sendGapFill(lastSeqNo, msgSeqNum);
+                }
 
-            return action;
+                final Action action = possDupEnabler.enablePossDupFlag(
+                    srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
+                if (action != ABORT)
+                {
+                    lastSeqNo = msgSeqNum;
+                }
+
+                return action;
+            }
         }
+
+        return CONTINUE;
     }
 
     private Action onThrottleReject(

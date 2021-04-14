@@ -339,6 +339,9 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 buffer = passwordCleaner.cleanedBuffer();
                 length = passwordCleaner.cleanedLength();
 
+                // No need to save this sequenceIndex update as we are at a point where a genuine session doesn't exist
+                sequenceIndex++;
+
                 final long position = publication.saveMessage(
                     buffer,
                     offset,
@@ -410,7 +413,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     // true - no more framed messages in the buffer data to process. This could mean no more messages, or some data
     // that is an incomplete message.
     // false - needs to be retried, aka back-pressured
-    private boolean frameMessages(final long readTimestamp)
+    private boolean frameMessages(final long readTimestampInNs)
     {
         final MutableAsciiBuffer buffer = this.buffer;
         int offset = checkProxyLine(buffer);
@@ -425,7 +428,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
             try
             {
-                final int startOfBodyLength = scanForBodyLength(offset, readTimestamp);
+                final int startOfBodyLength = scanForBodyLength(offset, readTimestampInNs);
                 if (startOfBodyLength < 0)
                 {
                     return startOfBodyLength == UNKNOWN_INDEX;
@@ -447,7 +450,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag, readTimestamp);
+                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag, readTimestampInNs);
                     if (endOfMessage == BREAK)
                     {
                         break;
@@ -459,8 +462,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int endOfMessage = scanEndOfMessage(startOfChecksumValue);
                 if (endOfMessage == UNKNOWN_INDEX)
                 {
-                    // Need more data
-                    break;
+                    break; // Need more data
                 }
 
                 final long messageType = getMessageType(endOfBodyLength, endOfMessage);
@@ -468,14 +470,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
                     DebugLogger.log(FIX_MESSAGE, "Invalidated (checksum): ", buffer, offset, length);
-
-                    if (saveInvalidChecksumMessage(offset, messageType, length, readTimestamp))
+                    if (saveInvalidChecksumMessage(offset, messageType, length, readTimestampInNs))
                     {
                         return false;
                     }
                 }
                 else
                 {
+                    final boolean firstMessage = messagesRead.incrementOrdered() == 0;
                     if (requiresAuthentication())
                     {
                         startAuthenticationFlow(offset, length, messageType);
@@ -485,10 +487,9 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     }
                     else if (messageType == LOGON_MESSAGE_TYPE)
                     {
-                        sequenceIndex++;
+                        onLogon(readTimestampInNs, firstMessage);
                     }
-                    messagesRead.incrementOrdered();
-                    if (!saveMessage(offset, messageType, length, readTimestamp))
+                    if (!saveMessage(offset, messageType, length, readTimestampInNs, firstMessage))
                     {
                         return false;
                     }
@@ -498,7 +499,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             }
             catch (final IllegalArgumentException ex)
             {
-                return !invalidateMessage(offset, readTimestamp);
+                return !invalidateMessage(offset, readTimestampInNs);
             }
             catch (final Exception ex)
             {
@@ -509,6 +510,15 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
         moveRemainingDataToBufferStart(offset);
         return true;
+    }
+
+    private void onLogon(final long readTimestampInNs, final boolean firstMessage)
+    {
+        if (!firstMessage)
+        {
+            gatewaySession.onSequenceReset(readTimestampInNs);
+        }
+        sequenceIndex++;
     }
 
     private int checkProxyLine(final MutableAsciiBuffer buffer)
@@ -806,9 +816,18 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return backPressured;
     }
 
-    private boolean saveMessage(final int offset, final long messageType, final int length, final long readTimestamp)
+    private boolean saveMessage(
+        final int offset, final long messageType, final int length, final long readTimestampInNs,
+        final boolean firstMessage)
     {
-        return saveMessage(offset, messageType, length, sessionId, sequenceIndex, readTimestamp);
+        if (firstMessage && messageType != LOGON_MESSAGE_TYPE)
+        {
+            // cover off case where the first message isn't a logon message
+            gatewaySession.onSequenceReset(readTimestampInNs);
+            sequenceIndex++;
+        }
+
+        return saveMessage(offset, messageType, length, sessionId, sequenceIndex, readTimestampInNs);
     }
 
     private boolean saveMessage(

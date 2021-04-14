@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
@@ -378,12 +379,23 @@ public class AbstractGatewayToGatewaySystemTest
         {
             assertThat(acceptingSession, hasSequenceIndex(sequenceIndex));
         }
+
+        assertEngineSequenceIndexIs(acceptingEngine, sequenceIndex);
     }
 
     void assertInitiatingSequenceIndexIs(final int sequenceIndex)
     {
         assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
 
+        assertEngineSequenceIndexIs(initiatingEngine, sequenceIndex);
+    }
+
+    private void assertEngineSequenceIndexIs(final FixEngine engine, final int sequenceIndex)
+    {
+        for (final SessionInfo sessionInfo : engine.allSessions())
+        {
+            assertEquals(sessionInfo.toString(), sequenceIndex, sessionInfo.sequenceIndex());
+        }
     }
 
     void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)

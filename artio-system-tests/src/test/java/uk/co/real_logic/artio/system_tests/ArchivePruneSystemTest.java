@@ -136,6 +136,9 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.await("Failed to received logon in reply", () ->
             acceptingSession.lastReceivedMsgSeqNum() == 1);
 
+        assertAcceptingSessionHasSequenceIndex(1);
+        assertInitiatingSequenceIndexIs(1);
+
         assertPruneWorks(false, true);
     }
 

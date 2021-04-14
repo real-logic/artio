@@ -489,4 +489,9 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         }
         return ok;
     }
+
+    public void onSequenceReset(final long resetTimeInNs)
+    {
+        context.onSequenceReset(resetTimeInNs);
+    }
 }
