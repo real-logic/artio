@@ -248,7 +248,8 @@ public class FixGatewaySessions extends GatewaySessions
     {
         authenticationStrategy.onDisconnect(
             sessionId,
-            connectionId);
+            connectionId,
+            reason);
     }
 
     protected void setLastSequenceResetTime(final GatewaySession session)
