@@ -90,7 +90,12 @@ public class DuplicateEngineCheckerTest
         oldEngine.check();
 
         Thread.sleep(timeoutInMs);
-        assertEquals(1, oldEngine.doWork());
+        int work = 0;
+        while (work < 1)
+        {
+            work += oldEngine.doWork();
+            Thread.sleep(1);
+        }
 
         newEngine = new DuplicateEngineChecker(
             timeoutInMs, THIS_DIR, true);
