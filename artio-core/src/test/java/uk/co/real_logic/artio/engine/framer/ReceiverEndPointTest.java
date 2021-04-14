@@ -563,7 +563,7 @@ public class ReceiverEndPointTest
     {
         return verify(publication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
-            eq(messageType), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
+            eq(messageType), eq(SESSION_ID), anyInt(), eq(CONNECTION_ID),
             eq(status), eq(0), eq(TIMESTAMP));
     }
 
@@ -577,7 +577,7 @@ public class ReceiverEndPointTest
             eq(LIBRARY_ID),
             eq(MESSAGE_TYPE),
             eq(SESSION_ID),
-            eq(SEQUENCE_INDEX),
+            anyInt(),
             eq(CONNECTION_ID),
             eq(OK),
             eq(0),
@@ -590,7 +590,7 @@ public class ReceiverEndPointTest
             eq(LIBRARY_ID),
             eq(MESSAGE_TYPE),
             eq(SESSION_ID),
-            eq(SEQUENCE_INDEX),
+            anyInt(),
             eq(CONNECTION_ID),
             eq(OK),
             eq(0),

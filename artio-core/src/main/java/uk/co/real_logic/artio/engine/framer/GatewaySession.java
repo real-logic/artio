@@ -492,4 +492,9 @@ class GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
         senderEndPoint = null;
         onGatewaySessionLogon = null;
     }
+
+    public void onSequenceReset(final long resetTimeInNs)
+    {
+        context.onSequenceReset(resetTimeInNs);
+    }
 }
