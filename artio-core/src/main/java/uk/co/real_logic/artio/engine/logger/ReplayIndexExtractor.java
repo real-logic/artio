@@ -1,5 +1,6 @@
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -140,43 +141,50 @@ public final class ReplayIndexExtractor
     public static void extract(final File file, final ReplayIndexHandler handler)
     {
         final MappedByteBuffer mappedByteBuffer = LoggerUtil.mapExistingFile(file);
-        final UnsafeBuffer buffer = new UnsafeBuffer(mappedByteBuffer);
-
-        final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
-        final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
-
-        messageFrameHeader.wrap(buffer, 0);
-        final int actingBlockLength = messageFrameHeader.blockLength();
-        final int actingVersion = messageFrameHeader.version();
-
-        final int capacity = recordCapacity(buffer.capacity());
-
-        long iteratorPosition = beginChangeVolatile(buffer);
-        long stopIteratingPosition = iteratorPosition + capacity;
-
-        while (iteratorPosition < stopIteratingPosition)
+        try
         {
-            final long changePosition = endChangeVolatile(buffer);
+            final UnsafeBuffer buffer = new UnsafeBuffer(mappedByteBuffer);
 
-            if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+            final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
+            final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
+
+            messageFrameHeader.wrap(buffer, 0);
+            final int actingBlockLength = messageFrameHeader.blockLength();
+            final int actingVersion = messageFrameHeader.version();
+
+            final int capacity = recordCapacity(buffer.capacity());
+
+            long iteratorPosition = beginChangeVolatile(buffer);
+            long stopIteratingPosition = iteratorPosition + capacity;
+
+            while (iteratorPosition < stopIteratingPosition)
             {
-                handler.onLapped();
-                iteratorPosition = changePosition;
-                stopIteratingPosition = iteratorPosition + capacity;
+                final long changePosition = endChangeVolatile(buffer);
+
+                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                {
+                    handler.onLapped();
+                    iteratorPosition = changePosition;
+                    stopIteratingPosition = iteratorPosition + capacity;
+                }
+
+                final int offset = offset(iteratorPosition, capacity);
+                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
+                final long beginPosition = indexRecord.position();
+
+                if (beginPosition == 0)
+                {
+                    break;
+                }
+
+                handler.onEntry(indexRecord);
+
+                iteratorPosition += RECORD_LENGTH;
             }
-
-            final int offset = offset(iteratorPosition, capacity);
-            indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
-            final long beginPosition = indexRecord.position();
-
-            if (beginPosition == 0)
-            {
-                break;
-            }
-
-            handler.onEntry(indexRecord);
-
-            iteratorPosition += RECORD_LENGTH;
+        }
+        finally
+        {
+            IoUtil.unmap(mappedByteBuffer);
         }
     }
 }
