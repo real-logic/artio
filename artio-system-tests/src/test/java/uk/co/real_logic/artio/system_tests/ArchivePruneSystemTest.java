@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.SessionInfo;
 
 import java.util.Map;
 
@@ -35,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static uk.co.real_logic.artio.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -104,6 +106,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         setupSessionWithSegmentOfFiles();
         resetSequenceWithResetSequenceNumber();
+        assertEngineSequenceIndexBecomes(1);
 
         assertPruneWorks(true, true);
     }
@@ -121,7 +124,17 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.awaitSend("failed to trySendSequenceReset", () ->
             acceptingSession.trySendSequenceReset(1, 1));
 
+        assertThat(acceptingSession, hasSequenceIndex(1));
+        assertEngineSequenceIndexBecomes(1);
+
         assertPruneWorks(true, true);
+    }
+
+    private void assertEngineSequenceIndexBecomes(final int sequenceIndex)
+    {
+        final SessionInfo sessionInfo = acceptingEngine.allSessions().get(0);
+        testSystem.await("Engine failed to update sequence index",
+            () -> sessionInfo.sequenceIndex() == sequenceIndex);
     }
 
     @Test

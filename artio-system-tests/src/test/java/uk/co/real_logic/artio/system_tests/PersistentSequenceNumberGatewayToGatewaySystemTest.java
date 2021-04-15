@@ -543,6 +543,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             acceptingEngine.resetSequenceNumber(acceptingSession.id()));
     }
 
+    @SuppressWarnings("deprecation")
     private void resetSessions()
     {
         testSystem.awaitCompletedReplies(
