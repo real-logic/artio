@@ -205,7 +205,7 @@ public class ReplayQuery implements AutoCloseable
             long stopIteratingPosition = iteratorPosition + capacity;
 
             int lastSequenceNumber = -1;
-            while (iteratorPosition != stopIteratingPosition)
+            while (iteratorPosition < stopIteratingPosition)
             {
                 final long changePosition = endChangeVolatile(buffer);
 

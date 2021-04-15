@@ -24,7 +24,9 @@ import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.session.Session;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.junit.Assert.assertEquals;
 
 public class ReportFactory
 {
@@ -36,9 +38,26 @@ public class ReportFactory
     private int encodedLength;
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
 
-    public ControlledFragmentHandler.Action sendReport(final Session session, final Side side)
+    public ControlledFragmentHandler.Action trySendReport(final Session session, final Side side)
     {
-        encodedLength = encoder.putLongAscii(0, session.lastSentMsgSeqNum());
+        setupReport(side, session.lastSentMsgSeqNum());
+
+        return Pressure.apply(session.trySend(executionReport));
+    }
+
+    public void sendReport(final Session session, final Side side)
+    {
+        assertEquals(CONTINUE, trySendReport(session, side));
+    }
+
+    public static void sendOneReport(final Session session, final Side side)
+    {
+        new ReportFactory().sendReport(session, side);
+    }
+
+    public void setupReport(final Side side, final int execAndOrderId)
+    {
+        final int encodedLength = encoder.putLongAscii(0, execAndOrderId);
 
         executionReport.orderID(encodeBuffer, encodedLength)
             .execID(encodeBuffer, encodedLength);
@@ -48,7 +67,5 @@ public class ReportFactory
             .side(side);
 
         executionReport.instrument().symbol(MSFT.getBytes(US_ASCII));
-
-        return Pressure.apply(session.trySend(executionReport));
     }
 }

@@ -24,10 +24,14 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -50,6 +54,16 @@ public class AbstractMessageBasedAcceptorSystemTest
     void setup(final boolean sequenceNumberReset, final boolean shouldBind)
     {
         setup(sequenceNumberReset, shouldBind, true);
+    }
+
+    void setupLibrary()
+    {
+        otfAcceptor = new FakeOtfAcceptor();
+        handler = new FakeHandler(otfAcceptor);
+        final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
+        configuration.messageValidationStrategy(MessageValidationStrategy.none());
+        library = connect(configuration);
+        testSystem = new TestSystem(library);
     }
 
     void setup(
@@ -98,6 +112,15 @@ public class AbstractMessageBasedAcceptorSystemTest
 
         final LogonDecoder logon = connection.readLogonReply();
         assertTrue(logon.resetSeqNumFlag());
+    }
+
+    Session acquireSession()
+    {
+        final long sessionId = handler.awaitSessionId(testSystem::poll);
+        handler.clearSessionExistsInfos();
+        final Session session = SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
+        assertNotNull(session);
+        return session;
     }
 
     @After
