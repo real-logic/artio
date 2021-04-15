@@ -136,12 +136,15 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Resets the set of session ids.
+     * Resets the set of session ids. Use of just this method on its own can result in inconsistent Artio state.
+     * It is recommended that you use the {@link #resetState(File)} method or {@link #pruneArchive(Long2LongHashMap)}
+     * instead to reset state. This method is Deprecated and may be removed in a future version of Artio.
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
+    @Deprecated
     public Reply<?> resetSessionIds(final File backupLocation)
     {
         return framerContext.resetSessionIds(backupLocation);

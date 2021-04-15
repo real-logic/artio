@@ -229,6 +229,9 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         testSystem.awaitCompletedReplies(reply);
 
         assertNoMetaData();
+
+        // sequence index reset so no need to validate it
+        acceptingSession = null;
     }
 
     @Test(timeout = 10_000L)
@@ -236,6 +239,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     {
         writeMetaDataThenDisconnect();
 
+        @SuppressWarnings("deprecation")
         final Reply<?> reply = acceptingEngine.resetSessionIds(null);
         testSystem.awaitCompletedReplies(reply);
 

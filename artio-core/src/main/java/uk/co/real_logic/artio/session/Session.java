@@ -707,9 +707,10 @@ public class Session
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        nextSequenceIndex(clock.nanoTime());
+        final int newSequenceIndex = sequenceIndex() + 1;
         final long position = proxy.sendSequenceReset(
-            lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
+            lastSentMsgSeqNum, nextSentMessageSequenceNumber, newSequenceIndex, lastMsgSeqNumProcessed);
+        nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
 
         return position;
@@ -769,10 +770,13 @@ public class Session
         return trySendSequenceReset(nextSentMessageSequenceNumber, nextReceivedMessageSequenceNumber);
     }
 
-    private void nextSequenceIndex(final long messageTime)
+    private void nextSequenceIndex(final long messageTimeInNs, final long position)
     {
-        sequenceIndex++;
-        lastSequenceResetTime(messageTime);
+        if (position >= 0)
+        {
+            sequenceIndex++;
+            lastSequenceResetTime(messageTimeInNs);
+        }
     }
 
     /**
@@ -795,10 +799,7 @@ public class Session
             true,
             sequenceIndex() + 1, // the sequence index update is only saved if this message is sent
             lastMsgSeqNumProcessed);
-        if (position >= 0)
-        {
-            nextSequenceIndex(clock.nanoTime());
-        }
+        nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -856,6 +857,13 @@ public class Session
 
         return this;
     }
+
+    private void nextSequenceIndex(final long messageTimeInNs)
+    {
+        sequenceIndex++;
+        lastSequenceResetTime(messageTimeInNs);
+    }
+
 
     /**
      * This returns the time of the last received logon message for the current session. The source
