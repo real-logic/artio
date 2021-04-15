@@ -82,6 +82,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         backup.assertStateReset(mediaDriver, lessThanOrEqualTo(4));
 
         clearMessages();
+        acceptingSession = null;
         close();
 
         // resetState should be idempotent

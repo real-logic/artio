@@ -764,9 +764,10 @@ public class Session
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        nextSequenceIndex(clock.nanoTime());
+        final int newSequenceIndex = sequenceIndex() + 1;
         final long position = proxy.sendSequenceReset(
-            lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
+            lastSentMsgSeqNum, nextSentMessageSequenceNumber, newSequenceIndex, lastMsgSeqNumProcessed);
+        nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
 
         return position;
@@ -826,6 +827,15 @@ public class Session
         return trySendSequenceReset(nextSentMessageSequenceNumber, nextReceivedMessageSequenceNumber);
     }
 
+    private void nextSequenceIndex(final long messageTimeInNs, final long position)
+    {
+        if (position >= 0)
+        {
+            sequenceIndex++;
+            lastSequenceResetTimeInNs(messageTimeInNs);
+        }
+    }
+
     private void nextSequenceIndex(final long messageTimeInNs)
     {
         sequenceIndex++;
@@ -854,10 +864,7 @@ public class Session
             lastMsgSeqNumProcessed,
             cancelOnDisconnectOption,
             getCancelOnDisconnectTimeoutWindowInMs());
-        if (position >= 0)
-        {
-            nextSequenceIndex(clock.nanoTime());
-        }
+        nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;

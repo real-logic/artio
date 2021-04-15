@@ -15,17 +15,14 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import org.agrona.LangUtil;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
-
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
+import java.util.List;
 
 /**
  * Prints out the state of a replay index file.
@@ -34,60 +31,48 @@ public final class ReplayIndexDumper
 {
     public static void main(final String[] args) throws IOException
     {
-        final String fileName = args[0];
+        final File file = new File(args[0]);
         final String output = "replay-index-dump.csv";
-        final MappedByteBuffer mappedByteBuffer = LoggerUtil.mapExistingFile(new File(fileName));
-        final UnsafeBuffer buffer = new UnsafeBuffer(mappedByteBuffer);
-
-        final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
-        final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
-
-        messageFrameHeader.wrap(buffer, 0);
-        final int actingBlockLength = messageFrameHeader.blockLength();
-        final int actingVersion = messageFrameHeader.version();
-
-        final int capacity = recordCapacity(buffer.capacity());
-
-        long iteratorPosition = beginChangeVolatile(buffer);
-        long stopIteratingPosition = iteratorPosition + capacity;
-
         try (BufferedWriter out = new BufferedWriter(new FileWriter(output)))
         {
             out.write("beginPosition,sequenceIndex,sequenceNumber,recordingId,readLength\n");
 
-            while (iteratorPosition < stopIteratingPosition)
+            ReplayIndexExtractor.extract(file, new ReplayIndexExtractor.ReplayIndexHandler()
             {
-                final long changePosition = endChangeVolatile(buffer);
-
-                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                public void onEntry(final ReplayIndexRecordDecoder indexRecord)
                 {
-                    System.err.println("Internal state error in file: lapped by writer condition met");
-                    iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + capacity;
+                    final long beginPosition = indexRecord.position();
+                    final int sequenceIndex = indexRecord.sequenceIndex();
+                    final int sequenceNumber = indexRecord.sequenceNumber();
+                    final long recordingId = indexRecord.recordingId();
+                    final int readLength = indexRecord.length();
+
+                    try
+                    {
+                        out.write(
+                            beginPosition + "," +
+                            sequenceIndex + "," +
+                            sequenceNumber + "," +
+                            recordingId + "," +
+                            readLength + "\n");
+                    }
+                    catch (final IOException e)
+                    {
+                        LangUtil.rethrowUnchecked(e);
+                    }
                 }
 
-                final int offset = offset(iteratorPosition, capacity);
-                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
-                final long beginPosition = indexRecord.position();
-                final int sequenceIndex = indexRecord.sequenceIndex();
-                final int sequenceNumber = indexRecord.sequenceNumber();
-                final long recordingId = indexRecord.recordingId();
-                final int readLength = indexRecord.length();
-
-                if (beginPosition == 0)
+                public void onLapped()
                 {
-                    break;
+                    System.err.println("Error: lapped by writer currently updating the file");
                 }
-
-                out.write(
-                    beginPosition + "," +
-                    sequenceIndex + "," +
-                    sequenceNumber + "," +
-                    recordingId + "," +
-                    readLength + "\n");
-
-                iteratorPosition += RECORD_LENGTH;
-            }
+            });
         }
+
+        final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
+        ReplayIndexExtractor.extract(file, validator);
+
+        final List<ReplayIndexExtractor.ValidationError> errors = validator.errors();
+        errors.forEach(System.err::println);
     }
 }

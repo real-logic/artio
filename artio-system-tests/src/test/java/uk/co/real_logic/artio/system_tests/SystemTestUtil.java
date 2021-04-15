@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
+import uk.co.real_logic.artio.engine.logger.ReplayIndexExtractor;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -47,8 +48,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.CommonConfiguration.*;
@@ -538,5 +538,32 @@ public final class SystemTestUtil
         final long position = session.startLogout();
         assertThat(position, greaterThan(0L));
         return position;
+    }
+
+    public static void validateReplayIndex(final FixEngine engine, final Session session)
+    {
+        if (session == null || engine == null)
+        {
+            return;
+        }
+
+        final EngineConfiguration config = engine.configuration();
+        final long sessionId = session.id();
+        if (config.logInboundMessages())
+        {
+            validateReplayIndex(config, sessionId, true);
+        }
+        if (config.logOutboundMessages())
+        {
+            validateReplayIndex(config, sessionId, false);
+        }
+    }
+
+    private static void validateReplayIndex(
+        final EngineConfiguration config, final long sessionId, final boolean inbound)
+    {
+        final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
+        ReplayIndexExtractor.extract(config, sessionId, inbound, validator);
+        assertThat(validator.errors(), hasSize(0));
     }
 }
