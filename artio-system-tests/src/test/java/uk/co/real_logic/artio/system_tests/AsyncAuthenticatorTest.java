@@ -72,7 +72,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldConnectedAcceptedAuthentications()
     {
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
 
         auth.accept();
         completeConnectInitiatingSession(reply);
@@ -83,7 +83,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldBeAbleToRejectLogons()
     {
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
 
         auth.reject();
 
@@ -93,7 +93,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void logonsCanBeRejectedWithCustomMessages()
     {
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
 
         final RejectEncoder rejectEncoder = newRejectEncoder();
 
@@ -116,7 +116,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test(expected = NullPointerException.class)
     public void rejectWithEncoderMustProvideAnEncoder()
     {
-        acquireAuthProxy();
+        acquireExecutingAuthProxy();
 
         try
         {
@@ -132,7 +132,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test(expected = IllegalArgumentException.class)
     public void lingerTimeoutShouldBeValid()
     {
-        acquireAuthProxy();
+        acquireExecutingAuthProxy();
 
         final RejectEncoder encoder = newRejectEncoder();
 
@@ -150,7 +150,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void invalidEncoderShouldStillDisconnect()
     {
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
 
         final RejectEncoder invalidEncoder = new RejectEncoder();
 
@@ -172,7 +172,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
     {
-        final Reply<Session> invalidReply = acquireAuthProxy();
+        final Reply<Session> invalidReply = acquireExecutingAuthProxy();
 
         auth.reject();
 
@@ -180,7 +180,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.reset();
 
-        final Reply<Session> validReply = acquireAuthProxy();
+        final Reply<Session> validReply = acquireExecutingAuthProxy();
 
         auth.accept();
         completeConnectInitiatingSession(validReply);
@@ -191,7 +191,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldOnlyUseFirstMethodCall()
     {
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
 
         auth.accept();
 
@@ -215,7 +215,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     public void shouldDisconnectPendingAuthenticationAfterTimeout()
     {
         final long start = System.currentTimeMillis();
-        final Reply<Session> reply = acquireAuthProxy();
+        final Reply<Session> reply = acquireExecutingAuthProxy();
         assertDisconnectRejected(reply);
         final long duration = System.currentTimeMillis() - start;
         assertThat(duration, is(greaterThanOrEqualTo(AUTHENTICATION_TIMEOUT_IN_MS)));
@@ -290,6 +290,15 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertThat(reply.error().getMessage(), containsString("UNABLE_TO_LOGON: Disconnected before session active"));
     }
 
+    private Reply<Session> acquireExecutingAuthProxy()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        assertEquals(reply.toString(), Reply.State.EXECUTING, reply.state());
+
+        return reply;
+    }
+
     private Reply<Session> acquireAuthProxy()
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
@@ -299,8 +308,6 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             testSystem.poll();
             return auth.hasAuthenticateBeenInvoked();
         }, TEST_REPLY_TIMEOUT_IN_MS);
-
-        assertEquals(reply.toString(), Reply.State.EXECUTING, reply.state());
 
         return reply;
     }
