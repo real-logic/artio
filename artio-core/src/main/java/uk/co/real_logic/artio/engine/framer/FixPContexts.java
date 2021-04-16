@@ -17,9 +17,11 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.Verify;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.engine.FixPSessionInfo;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 import uk.co.real_logic.artio.fixp.*;
@@ -29,9 +31,7 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.storage.messages.FixPContextWrapperDecoder;
 import uk.co.real_logic.artio.storage.messages.FixPContextWrapperEncoder;
 
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
@@ -56,6 +56,7 @@ public class FixPContexts
 
     private final Long2LongHashMap authenticatedSessionIdToConnectionId = new Long2LongHashMap(MISSING_LONG);
     private final Map<FixPKey, FixPContext> keyToContext = new HashMap<>();
+    private final List<FixPSessionInfo> sessionInfos = new ArrayList<>();
 
     private int offset;
 
@@ -101,9 +102,19 @@ public class FixPContexts
             final FixPProtocolType type = FixPProtocolType.get(protocolTypeValue);
             final AbstractFixPStorage storage = lookupStorage(type);
             final FixPContext context = storage.loadContext(buffer, offset, actingVersion);
-            keyToContext.put(context.toKey(), context);
+            addContext(context);
 
             offset += contextLength;
+        }
+    }
+
+    private void addContext(final FixPContext context)
+    {
+        final FixPContext oldContext = keyToContext.put(context.key(), context);
+        sessionInfos.add(new InfoWrapper(context));
+        if (oldContext != null)
+        {
+            CollectionUtil.removeIf(sessionInfos, info -> ((InfoWrapper)info).context == oldContext);
         }
     }
 
@@ -137,7 +148,7 @@ public class FixPContexts
     private FixPContext allocateInitiatorContext(final FixPKey key)
     {
         final FixPContext context = newInitiatorContext(key);
-        keyToContext.put(key, context);
+        addContext(context);
         return context;
     }
 
@@ -185,7 +196,7 @@ public class FixPContexts
         {
             authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
 
-            final FixPKey key = context.toKey();
+            final FixPKey key = context.key();
             final FixPContext oldContext = keyToContext.get(key);
             final FirstMessageRejectReason rejectReason = context.checkAccept(oldContext);
             if (rejectReason == null)
@@ -198,7 +209,7 @@ public class FixPContexts
                 {
                     updateContext(context);
                 }
-                keyToContext.put(key, context);
+                addContext(context);
             }
             return rejectReason;
         }
@@ -222,8 +233,28 @@ public class FixPContexts
         }
     }
 
+    public List<FixPSessionInfo> allSessions()
+    {
+        return sessionInfos;
+    }
+
     public long nanoSecondTimestamp()
     {
         return epochNanoClock.nanoTime();
+    }
+
+    static class InfoWrapper implements FixPSessionInfo
+    {
+        private final FixPContext context;
+
+        InfoWrapper(final FixPContext context)
+        {
+            this.context = context;
+        }
+
+        public FixPKey key()
+        {
+            return context.key();
+        }
     }
 }

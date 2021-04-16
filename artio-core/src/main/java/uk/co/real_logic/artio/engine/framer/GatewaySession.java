@@ -15,9 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.engine.AbstractConnectedSessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 
-abstract class GatewaySession
+abstract class GatewaySession implements AbstractConnectedSessionInfo
 {
     protected static final int NO_TIMEOUT = -1;
 

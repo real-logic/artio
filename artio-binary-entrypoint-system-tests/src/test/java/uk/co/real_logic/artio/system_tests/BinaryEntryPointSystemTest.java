@@ -27,31 +27,32 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
-import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
+import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.*;
 import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class BinaryEntryPointSystemTest
 {
@@ -871,9 +872,49 @@ public class BinaryEntryPointSystemTest
         });
     }
 
-    private void lowKeepAliveTimeout(final BinaryEntrypointClient client)
+    @Test
+    public void sessionsListedInAdminApi() throws IOException
     {
-        client.keepAliveIntervalInMs(500);
+        setupArtio(true);
+
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            final List<LibraryInfo> libraries = libraries(engine);
+            assertThat(libraries, hasSize(2));
+
+            final LibraryInfo library = libraries.get(0);
+            assertEquals(this.library.libraryId(), library.libraryId());
+
+            final List<FixPConnectedSessionInfo> connections = library.fixPConnections();
+            assertThat(connections, hasSize(1));
+
+            final FixPConnectedSessionInfo connectedSessionInfo = connections.get(0);
+            assertThat(connectedSessionInfo.address(), Matchers.anyOf(
+                containsString("localhost"), containsString("127.0.0.1")));
+
+            final int port = client.remoteAddress().getPort();
+            assertThat(connectedSessionInfo.address(), containsString(String.valueOf(port)));
+            assertEquals(connection.connectionId(), connectedSessionInfo.connectionId());
+
+            assertEquals(connectedSessionInfo.key(), connection.key());
+
+            final LibraryInfo gatewayLibraryInfo = libraries.get(1);
+            assertEquals(ENGINE_LIBRARY_ID, gatewayLibraryInfo.libraryId());
+            assertThat(gatewayLibraryInfo.sessions(), hasSize(0));
+
+            assertAllSessionsOnlyContains(engine, connection);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
+    {
+        final List<FixPSessionInfo> allSessions = engine.allFixPSessions();
+        assertThat(allSessions, hasSize(1));
+
+        final FixPSessionInfo sessionInfo = allSessions.get(0);
+        assertEquals(sessionInfo.key(), connection.key());
     }
 
     private void withLowKeepAliveClient(final Consumer<BinaryEntrypointClient> handler) throws IOException

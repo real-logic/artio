@@ -182,7 +182,7 @@ public final class ILink3Context implements FixPContext
         // Never happens in iLink3 as it doesn't support the FinishedSending and FinishedReceiving abstractions.
     }
 
-    public ILink3Key toKey()
+    public ILink3Key key()
     {
         return key;
     }

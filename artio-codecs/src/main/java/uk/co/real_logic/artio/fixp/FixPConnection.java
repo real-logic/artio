@@ -242,4 +242,11 @@ public interface FixPConnection
      * @return true if a message can be sent, false otherwise
      */
     boolean canSendMessage();
+
+    /**
+     * Gets the key associated with this connection. This uniquely identifies it over multiple establishments
+     *
+     * @return the key associated with this connection.
+     */
+    FixPKey key();
 }

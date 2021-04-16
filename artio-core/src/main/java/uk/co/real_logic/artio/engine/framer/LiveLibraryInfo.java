@@ -18,11 +18,13 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 
 final class LiveLibraryInfo implements LibraryInfo
@@ -33,25 +35,38 @@ final class LiveLibraryInfo implements LibraryInfo
     private final int aeronSessionId;
     private final LibrarySlowPeeker librarySlowPeeker;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
-    @SuppressWarnings("unchecked")
-    private final List<ConnectedSessionInfo> unmodifiableAllSessions =
-        unmodifiableList((List<? extends ConnectedSessionInfo>)(List<?>)allSessions);
+    private final List<ConnectedSessionInfo> unmodifiableFixSessions;
+    private final List<FixPConnectedSessionInfo> unmodifiableFixPConnections;
     private final Long2ObjectHashMap<ConnectingSession> correlationIdToConnectingSession = new Long2ObjectHashMap<>();
 
     private long acquireAtPosition;
 
+    @SuppressWarnings("unchecked")
     LiveLibraryInfo(
         final int libraryId,
         final String libraryName,
         final LivenessDetector livenessDetector,
         final int aeronSessionId,
-        final LibrarySlowPeeker librarySlowPeeker)
+        final LibrarySlowPeeker librarySlowPeeker,
+        final boolean isFixP)
     {
         this.libraryId = libraryId;
         this.libraryName = libraryName;
         this.livenessDetector = livenessDetector;
         this.aeronSessionId = aeronSessionId;
         this.librarySlowPeeker = librarySlowPeeker;
+
+        if (isFixP)
+        {
+            unmodifiableFixSessions = emptyList();
+            unmodifiableFixPConnections = unmodifiableList(
+                (List<? extends FixPConnectedSessionInfo>)(List<?>)allSessions);
+        }
+        else
+        {
+            unmodifiableFixSessions = unmodifiableList((List<? extends ConnectedSessionInfo>)(List<?>)allSessions);
+            unmodifiableFixPConnections = emptyList();
+        }
     }
 
     public int libraryId()
@@ -66,7 +81,12 @@ final class LiveLibraryInfo implements LibraryInfo
 
     public List<ConnectedSessionInfo> sessions()
     {
-        return unmodifiableAllSessions;
+        return unmodifiableFixSessions;
+    }
+
+    public List<FixPConnectedSessionInfo> fixPConnections()
+    {
+        return unmodifiableFixPConnections;
     }
 
     public String toString()
@@ -137,7 +157,7 @@ final class LiveLibraryInfo implements LibraryInfo
         return index == -1 ? null : allSessions.get(index);
     }
 
-    public void removeSession(final GatewaySession gatewaySession)
+    void removeSession(final GatewaySession gatewaySession)
     {
         allSessions.remove(gatewaySession);
     }

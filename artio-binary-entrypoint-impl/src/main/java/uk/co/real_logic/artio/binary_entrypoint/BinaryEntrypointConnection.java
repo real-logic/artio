@@ -39,4 +39,6 @@ public interface BinaryEntrypointConnection extends FixPConnection
     long sessionVerId();
 
     void finishSending();
+
+    BinaryEntryPointKey key();
 }

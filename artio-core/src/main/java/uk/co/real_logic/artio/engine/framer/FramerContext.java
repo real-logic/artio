@@ -26,10 +26,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.EngineContext;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
@@ -354,4 +351,8 @@ public class FramerContext
         return sessionContexts.allSessions();
     }
 
+    public List<FixPSessionInfo> allFixPSessions()
+    {
+        return fixPContexts.allSessions();
+    }
 }

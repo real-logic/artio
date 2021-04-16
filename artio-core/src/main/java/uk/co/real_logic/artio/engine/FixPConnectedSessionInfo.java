@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 package uk.co.real_logic.artio.engine;
 
 /**
- * Exposes information that an Engine is aware of about a FIX session that is currently connected.
+ * Exposes information that an Engine is aware of about a FIXP connection that is currently connected.
  */
-public interface ConnectedSessionInfo extends SessionInfo, AbstractConnectedSessionInfo
+public interface FixPConnectedSessionInfo extends AbstractConnectedSessionInfo, FixPSessionInfo
 {
-    /**
-     * Returns the number of bytes outstanding in the slow consumer buffer to send.
-     *
-     * @return number of bytes outstanding in the slow consumer buffer to send.
-     */
-    long bytesInBuffer();
 }

@@ -205,7 +205,7 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Gets session info for all sessions the FixEngine is aware of including offline ones.
+     * Gets session info for all FIX sessions the FixEngine is aware of including offline ones.
      * Can be used to acquire offline sessions or for administration purposes.
      * The returned list is updated in a thread-safe manner when new sessions are created.
      *
@@ -214,6 +214,17 @@ public final class FixEngine extends GatewayProcess
     public List<SessionInfo> allSessions()
     {
         return framerContext.allSessions();
+    }
+
+    /**
+     * Gets session info for all FIXP sessions the FixEngine is aware of including offline ones.
+     * The returned list is updated in a thread-safe manner when new sessions are created.
+     *
+     * @return the list of FIXP session infos.
+     */
+    public List<FixPSessionInfo> allFixPSessions()
+    {
+        return framerContext.allFixPSessions();
     }
 
     /**

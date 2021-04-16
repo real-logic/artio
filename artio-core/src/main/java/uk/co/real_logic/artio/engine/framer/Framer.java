@@ -1827,7 +1827,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             final LiveLibraryInfo library = new LiveLibraryInfo(
-                libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker);
+                libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker,
+                gatewaySessions instanceof FixPGatewaySessions);
             idToLibrary.put(libraryId, library);
 
             DebugLogger.log(LIBRARY_MANAGEMENT, libraryConnectedFormatter, libraryId, libraryName);

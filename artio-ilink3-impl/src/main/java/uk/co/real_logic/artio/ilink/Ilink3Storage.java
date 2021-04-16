@@ -65,7 +65,7 @@ public class Ilink3Storage extends AbstractFixPStorage
         final FixPContext fixPContext, final AtomicBuffer buffer, final int offset, final int fileVersion)
     {
         final ILink3Context context = (ILink3Context)fixPContext;
-        final ILink3Key key = context.toKey();
+        final ILink3Key key = context.key();
         contextEncoder
             .wrap(buffer, offset)
             .uuid(context.uuid())

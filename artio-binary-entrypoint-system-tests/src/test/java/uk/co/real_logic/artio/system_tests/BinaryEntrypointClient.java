@@ -43,7 +43,6 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
 public final class BinaryEntrypointClient implements AutoCloseable
 {
     private static final int NOT_SKIPPING = -1;
-    private static final int OFFSET = 0;
 
     public static final int BUFFER_SIZE = 8 * 1024;
     public static final int SESSION_ID = 123;
@@ -94,6 +93,19 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public void skipTemplateId(final int skipTemplateId)
     {
         this.skipTemplateId = skipTemplateId;
+    }
+
+    public InetSocketAddress remoteAddress()
+    {
+        try
+        {
+            return (InetSocketAddress)socket.getLocalAddress();
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     public void skipSequence()

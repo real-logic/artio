@@ -141,6 +141,11 @@ class InternalBinaryEntrypointConnection
         return sessionVerId;
     }
 
+    public BinaryEntryPointKey key()
+    {
+        return context.key();
+    }
+
     protected void keepAliveExpiredTerminate()
     {
         terminate(TerminationCode.UNSPECIFIED);

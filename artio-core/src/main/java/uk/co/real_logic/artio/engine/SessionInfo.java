@@ -17,17 +17,20 @@ package uk.co.real_logic.artio.engine;
 
 import uk.co.real_logic.artio.session.CompositeKey;
 
+/**
+ * Expose information about an Artio FIX Session.
+ */
 public interface SessionInfo
 {
-    /**
-     * The used to identify a session that hasn't yet been identified
-     */
-    int UNK_SESSION = -1;
-
     /**
      * The used to identify a sequenceIndex that hasn't yet been identified
      */
     int UNKNOWN_SEQUENCE_INDEX = -1;
+
+    /**
+     * The used to identify a session that hasn't yet been identified
+     */
+    int UNK_SESSION = -1;
 
     /**
      * Get the identification number of the session in question or {@link #UNK_SESSION}

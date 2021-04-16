@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,22 @@
 package uk.co.real_logic.artio.engine;
 
 /**
- * Exposes information that an Engine is aware of about a FIX session that is currently connected.
+ * Exposes information that an Engine is aware of about a session that is currently connected.
+ * This is abstract in the sense that it could be a FIX or FIXP session.
  */
-public interface ConnectedSessionInfo extends SessionInfo, AbstractConnectedSessionInfo
+public interface AbstractConnectedSessionInfo
 {
     /**
-     * Returns the number of bytes outstanding in the slow consumer buffer to send.
+     * Get the identification number of the connection in question.
      *
-     * @return number of bytes outstanding in the slow consumer buffer to send.
+     * @return the identification number of the connection in question.
      */
-    long bytesInBuffer();
+    long connectionId();
+
+    /**
+     * Get the remove address to which this session is connected.
+     *
+     * @return the remove address to which this session is connected.
+     */
+    String address();
 }

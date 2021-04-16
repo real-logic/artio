@@ -23,7 +23,7 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
  */
 public interface FixPContext
 {
-    FixPKey toKey();
+    FixPKey key();
 
     // copy offset from old context
     FirstMessageRejectReason checkAccept(FixPContext context);

@@ -92,7 +92,7 @@ public class BinaryEntryPointContext implements FixPContext
             '}';
     }
 
-    public BinaryEntryPointKey toKey()
+    public BinaryEntryPointKey key()
     {
         return key;
     }

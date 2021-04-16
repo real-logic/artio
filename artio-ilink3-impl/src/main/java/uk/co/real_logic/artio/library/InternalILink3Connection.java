@@ -26,6 +26,8 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.engine.framer.ILink3Key;
+import uk.co.real_logic.artio.fixp.FixPKey;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -169,6 +171,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     private final long lastUuid;
     private final long lastConnectionLastReceivedSequenceNumber;
+    private final FixPKey key;
 
     private long retransmitUuid = NOT_AWAITING_RETRANSMIT;
     private long retransmitFillSeqNo = NOT_AWAITING_RETRANSMIT;
@@ -246,6 +249,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         this.lastConnectionLastReceivedSequenceNumber = calculateSequenceNumber(lastReceivedSequenceNumber);
 
         state = State.CONNECTED;
+
+        key = new ILink3Key(
+            configuration.port(),
+            configuration.host(),
+            configuration.accessKeyId());
     }
 
     private long calculateSequenceNumber(final long lookedUpSequenceNumber)
@@ -356,6 +364,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     public long lastUuid()
     {
         return lastUuid;
+    }
+
+    public FixPKey key()
+    {
+        return key;
     }
 
     public long retransmitFillSeqNo()

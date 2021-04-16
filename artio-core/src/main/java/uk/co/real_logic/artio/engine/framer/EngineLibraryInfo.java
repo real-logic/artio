@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
 
 import java.util.*;
 
@@ -23,13 +24,21 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 class EngineLibraryInfo implements LibraryInfo
 {
-    private final ArrayList<ConnectedSessionInfo> sessions;
+    private final List<ConnectedSessionInfo> sessions;
     private final GatewaySessions gatewaySessions;
 
     @SuppressWarnings("unchecked")
     EngineLibraryInfo(final GatewaySessions gatewaySessions)
     {
-        sessions = new ArrayList<>((List<ConnectedSessionInfo>)(List<?>)gatewaySessions.sessions()); // TODO
+        if (gatewaySessions instanceof FixGatewaySessions)
+        {
+            sessions = new ArrayList<>((List<ConnectedSessionInfo>)(List<?>)gatewaySessions.sessions());
+        }
+        else
+        {
+            sessions = Collections.emptyList();
+        }
+
         this.gatewaySessions = gatewaySessions;
     }
 
@@ -48,10 +57,15 @@ class EngineLibraryInfo implements LibraryInfo
         return sessions;
     }
 
+    public List<FixPConnectedSessionInfo> fixPConnections()
+    {
+        return Collections.emptyList();
+    }
+
     public String toString()
     {
         return "EngineLibraryInfo{" +
-            "sessions=" + sessions +
+            "FIX sessions=" + sessions +
             '}';
     }
 
