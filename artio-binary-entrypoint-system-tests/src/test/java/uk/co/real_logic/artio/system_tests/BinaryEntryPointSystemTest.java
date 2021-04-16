@@ -298,7 +298,7 @@ public class BinaryEntryPointSystemTest
     }
 
     @Test
-    public void shouldDisconnectIfNoNegotiate() throws IOException
+    public void shouldDisconnectIfNegotiateTimeout() throws IOException
     {
         setupArtio(true, TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS, 1);
 
@@ -310,6 +310,11 @@ public class BinaryEntryPointSystemTest
             final long acceptableLowerBoundInMs = TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS - TIMEOUT_EPSILON_IN_MS;
             assertThat(durationInMs, Matchers.greaterThanOrEqualTo(acceptableLowerBoundInMs));
         }
+
+        // Test that we can still establish the connection after this
+        resetHandlers();
+
+        establishSuccessNewConnection();
     }
 
     @Test
@@ -1043,6 +1048,13 @@ public class BinaryEntryPointSystemTest
     {
         setupArtio(true);
 
+        establishSuccessNewConnection();
+
+        resetHandlers();
+    }
+
+    private void establishSuccessNewConnection() throws IOException
+    {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             exchangeOrderAndReportNew(client);
@@ -1051,8 +1063,6 @@ public class BinaryEntryPointSystemTest
 
             clientTerminatesSession(client);
         }
-
-        resetHandlers();
     }
 
     private void resetHandlers()

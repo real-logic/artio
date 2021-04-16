@@ -37,7 +37,7 @@ public class BinaryEntryPointContext implements FixPContext
     private FixPContexts contexts;
 
     private int offset = MISSING_INT;
-    private BinaryEntryPointKey key;
+    private final BinaryEntryPointKey key;
 
     public BinaryEntryPointContext(
         final long sessionID,
