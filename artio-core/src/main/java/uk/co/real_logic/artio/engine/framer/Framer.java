@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ControlledFragmentAssembler;
-import io.aeron.Image;
-import io.aeron.ImageControlledFragmentAssembler;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -29,6 +26,8 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.CountersReader;
+import org.agrona.concurrent.status.UnsafeBufferPosition;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -67,6 +66,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
+import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
@@ -143,6 +143,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final FixSenderEndPoints fixSenderEndPoints;
+    private final CountersReader countersReader;
+    private final long outboundIndexRegistrationId;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
     private final EngineConfiguration configuration;
@@ -224,7 +226,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FinalImagePositions finalImagePositions,
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator,
-        final FixPContexts fixPContexts)
+        final FixPContexts fixPContexts,
+        final CountersReader countersReader,
+        final long outboundIndexRegistrationId)
     {
         this.epochClock = epochClock;
         this.clock = configuration.epochNanoClock();
@@ -245,6 +249,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.fixSenderEndPoints = new FixSenderEndPoints(errorHandler);
+        this.countersReader = countersReader;
+        this.outboundIndexRegistrationId = outboundIndexRegistrationId;
         this.fixPSenderEndPoints = new FixPSenderEndPoints();
         this.removeILink3SenderEndPoints = fixPSenderEndPoints::removeConnection;
         this.conductorAgentInvoker = conductorAgentInvoker;
@@ -2445,8 +2451,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int srcLength,
         final Header header)
     {
-//        recordingCoordinator.trackLibrary();
-
         asciiBuffer.wrap(srcBuffer);
         final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(asciiBuffer, srcOffset, srcLength);
         final SessionHeaderDecoder acceptorHeaderDecoder =
@@ -2468,10 +2472,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey, fixDictionary);
         final long sessionId = sessionContext.sessionId();
 
-        schedule(() -> inboundPublication.saveFollowerSessionReply(
+        schedule(new UnitOfWork(
+            () -> inboundPublication.saveFollowerSessionReply(
             libraryId,
             correlationId,
-            sessionId));
+            sessionId),
+            () -> outboundPublication.saveFollowerSessionReply(
+            libraryId,
+            correlationId,
+            sessionId)));
 
         return CONTINUE;
     }
@@ -3094,6 +3103,51 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             unbindCommand.success();
         }
+    }
+
+    class CounterIdFinder implements CountersReader.MetaData
+    {
+        private final String aeronSessionId;
+
+        int counterId = NULL_COUNTER_ID;
+
+        CounterIdFinder(final int aeronSessionId)
+        {
+            this.aeronSessionId = String.valueOf(aeronSessionId);
+        }
+
+        public void accept(final int counterId, final int typeId, final DirectBuffer keyBuffer, final String label)
+        {
+            if (typeId == AeronCounters.DRIVER_SUBSCRIBER_POSITION_TYPE_ID &&
+                countersReader.getCounterRegistrationId(counterId) == outboundIndexRegistrationId &&
+                label.contains(aeronSessionId))
+            {
+                this.counterId = counterId;
+            }
+        }
+    }
+
+    public void onPositionRequest(final PositionRequestCommand command)
+    {
+        final int libraryId = command.libraryId();
+        final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        if (libraryInfo == null)
+        {
+            command.error(new IllegalStateException("Unknown Library: " + libraryId));
+            return;
+        }
+
+        final CounterIdFinder finder = new CounterIdFinder(libraryInfo.aeronSessionId());
+        countersReader.forEach(finder);
+        final int counterId = finder.counterId;
+
+        if (counterId == NULL_COUNTER_ID)
+        {
+            command.error(new IllegalStateException("Unable to find counter for: " + libraryId));
+            return;
+        }
+
+        command.position(new UnsafeBufferPosition((UnsafeBuffer)countersReader.valuesBuffer(), counterId));
     }
 
     public void onWriteMetaDataResponse(final WriteMetaDataResponse response)

@@ -58,13 +58,27 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
-
-        connectSessions();
     }
 
     @Test(timeout = 10_000L)
     public void shouldReadWrittenSessionMetaData()
     {
+        connectSessions();
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+
+        writeMetaData(writeBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadWrittenSessionMetaDataForFollowerSession()
+    {
+        createFollowerSession(TEST_REPLY_TIMEOUT_IN_MS);
+
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
         writeBuffer.putInt(0, META_DATA_VALUE);
 
@@ -77,6 +91,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldReadWrittenSessionSendMetaData()
     {
+        connectSessions();
+
         acquireAcceptingSession();
 
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
@@ -113,6 +129,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldReceiveSessionMetaDataWhenSessionAcquired()
     {
+        connectSessions();
+
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
         writeBuffer.putInt(0, META_DATA_VALUE);
         writeMetaData(writeBuffer);
@@ -127,6 +145,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldNotReceiveSessionMetaDataWhenSessionAcquiredWithNoMetaData()
     {
+        connectSessions();
+
         acquireAcceptingSession();
         assertEquals(MetaDataStatus.NO_META_DATA, acceptingHandler.lastSessionMetaDataStatus());
         final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
@@ -136,6 +156,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
     {
+        connectSessions();
+
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
 
         writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
@@ -161,6 +183,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldUpdateWrittenSessionMetaDataTooBigForOldSlot()
     {
+        connectSessions();
+
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
 
         writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
@@ -190,18 +214,24 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldReceiveReadErrorForUnwrittenSessionMetaData()
     {
+        connectSessions();
+
         assertNoMetaData();
     }
 
     @Test(timeout = 10_000L)
     public void shouldReceiveReadErrorForMetaDataWithUnknownSession()
     {
+        connectSessions();
+
         assertUnknownSessionMetaData(META_DATA_WRONG_SESSION_ID);
     }
 
     @Test(timeout = 10_000L)
     public void shouldReceiveWriteErrorForMetaDataWithUnknownSession()
     {
+        connectSessions();
+
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
         final Reply<?> reply = writeMetaData(writeBuffer, META_DATA_WRONG_SESSION_ID);
         assertEquals(MetaDataStatus.UNKNOWN_SESSION, reply.resultIfPresent());
@@ -210,6 +240,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldResetMetaDataWhenSequenceNumberResetsWithLogon()
     {
+        connectSessions();
+
         writeMetaDataThenDisconnect();
 
         // Support reading meta data after logout, but before sequence number reset
@@ -224,6 +256,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldResetMetaDataWhenSequenceNumberResetsWhenSessionIdExplicitlyReset()
     {
+        connectSessions();
+
         writeMetaDataThenDisconnect();
 
         final Reply<?> reply = acceptingEngine.resetSequenceNumber(META_DATA_SESSION_ID);
@@ -238,6 +272,8 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = 10_000L)
     public void shouldResetMetaDataWhenSequenceNumberResetsWithExplicitResetSessionIds()
     {
+        connectSessions();
+
         writeMetaDataThenDisconnect();
 
         @SuppressWarnings("deprecation")

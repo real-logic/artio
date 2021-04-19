@@ -24,6 +24,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.QueuedPipe;
+import org.agrona.concurrent.status.CountersReader;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -196,7 +197,9 @@ public class FramerTest
             finalImagePositions,
             mock(AgentInvoker.class),
             mock(RecordingCoordinator.class),
-            mock(FixPContexts.class));
+            mock(FixPContexts.class),
+            mock(CountersReader.class),
+            1);
 
         when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,

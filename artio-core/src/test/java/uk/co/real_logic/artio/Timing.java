@@ -30,6 +30,12 @@ public final class Timing
 
     public static <T> T withTimeout(final String message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
     {
+        return withTimeout(() -> message, supplier, timeoutInMs);
+    }
+
+    public static <T> T withTimeout(
+        final Supplier<String> message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
+    {
         final long endTime = System.currentTimeMillis() + timeoutInMs;
 
         do
@@ -44,7 +50,7 @@ public final class Timing
         }
         while (System.currentTimeMillis() < endTime);
 
-        fail(message);
+        fail(message.get());
         // Never run:
         throw new Error();
     }

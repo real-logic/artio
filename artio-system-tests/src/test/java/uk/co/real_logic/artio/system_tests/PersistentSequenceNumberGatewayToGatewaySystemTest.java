@@ -15,18 +15,15 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.status.ReadablePosition;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
@@ -57,7 +54,7 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int HIGH_INITIAL_SEQUENCE_NUMBER = 1000;
-    private static final long TEST_TIMEOUT = 10_000L;
+    private static final long TEST_TIMEOUT_IN_MS = 10_000L;
     private static final int DOES_NOT_MATTER = -1;
     private static final int DEFAULT_SEQ_NUM_AFTER = 4;
 
@@ -103,7 +100,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void sequenceNumbersCanPersistOverRestarts()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
@@ -115,7 +112,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceResetBeforeLastLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void previousMessagesAreReplayed()
     {
         onAcquireSession = this::requestReplayWhenReacquiringSession;
@@ -126,7 +123,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(4, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCopeWithCatchupReplayOfMissingMessages()
     {
         duringRestart = () ->
@@ -145,7 +142,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(1, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCopeWithResendRequestOfMissingMessagesWithHighInitialSequenceNumberSet()
     {
         exchangeMessagesAroundARestart(
@@ -168,7 +165,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(1, initiatingOtfAcceptor.receivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void messagesCanBeReplayedOverRestart()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
@@ -190,7 +187,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(4, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void customInitialSequenceNumbersCanBeSet()
     {
         exchangeMessagesAroundARestart(4, DEFAULT_SEQ_NUM_AFTER);
@@ -202,7 +199,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceResetBeforeLastLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void sessionsCanBeReset()
     {
         beforeReconnect = this::resetSessions;
@@ -217,7 +214,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void sequenceNumbersCanBeResetWhileSessionDisconnected()
     {
         beforeReconnect = this::resetSequenceNumbers;
@@ -231,7 +228,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void sequenceNumbersCanBeResetOnLogon()
     {
         resetSequenceNumbersOnLogon = true;
@@ -247,7 +244,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReceiveRelevantLogoutErrorTextDuringConnect()
     {
         onInitiateReply = reply ->
@@ -467,7 +464,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         launch(this::nothing);
 
-        final SessionWriter sessionWriter = createFollowerSession();
+        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
         final long sessionId = sessionWriter.id();
 
         acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
@@ -477,21 +474,19 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test
     public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSession()
     {
-        printErrorMessages = false;
+        printErrorMessages = true;
 
         launch(this::nothing);
 
-        final SessionWriter sessionWriter = createFollowerSession();
+        final int libraryId = acceptingLibrary.libraryId();
+        final ReadablePosition positionCounter = testSystem.awaitCompletedReply(
+            acceptingEngine.libraryIndexedPosition(libraryId)).resultIfPresent();
 
-        final ReportFactory reportFactory = new ReportFactory();
-        final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, 1);
-        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        final SystemEpochClock clock = new SystemEpochClock();
-        report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()))
-            .msgSeqNum(1);
+        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
 
-        assertThat(sessionWriter.send(report, 1), greaterThan(0L));
+        final long position = sendReportOnFollowerSession(testSystem, sessionWriter);
+
+        testSystem.await("Failed to complete index", () -> positionCounter.getVolatile() >= position);
 
         receivedReplayFromReconnectedSession();
     }
@@ -747,16 +742,5 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
         assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
         assertEquals("Y", executionReport.possDup());
-    }
-
-    private SessionWriter createFollowerSession()
-    {
-        final HeaderEncoder headerEncoder = new HeaderEncoder()
-            .senderCompID(INITIATOR_ID)
-            .targetCompID(ACCEPTOR_ID);
-
-        final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
-            acceptingLibrary.followerSession(headerEncoder, TEST_TIMEOUT));
-        return followerSession.resultIfPresent();
     }
 }

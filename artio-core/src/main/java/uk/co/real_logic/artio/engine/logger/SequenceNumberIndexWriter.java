@@ -49,6 +49,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
@@ -75,6 +76,7 @@ public class SequenceNumberIndexWriter implements Index
     private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
     private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
+    private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -303,6 +305,13 @@ public class SequenceNumberIndexWriter implements Index
                     break;
                 }
 
+                case FollowerSessionReplyDecoder.TEMPLATE_ID:
+                {
+                    followerSessionReply.wrap(buffer, offset, actingBlockLength, version);
+                    onFollowerSessionReply();
+                    break;
+                }
+
                 case RedactSequenceUpdateDecoder.TEMPLATE_ID:
                 {
                     redactSequenceUpdate.wrap(buffer, offset, actingBlockLength, version);
@@ -340,6 +349,16 @@ public class SequenceNumberIndexWriter implements Index
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
         positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
+    }
+
+    private void onFollowerSessionReply()
+    {
+        // create an entry here for a follower session so that metadata can be saved before
+        final long sessionId = followerSessionReply.session();
+        if (reader.lastKnownSequenceNumber(sessionId) == UNK_SESSION)
+        {
+            onRedactSequenceUpdate(0, sessionId, NO_REQUIRED_POSITION);
+        }
     }
 
     private boolean onThrottleReject(final long position)
@@ -384,13 +403,18 @@ public class SequenceNumberIndexWriter implements Index
         final int newSequenceNumber = redactSequenceUpdate.correctSequenceNumber();
         final long sessionId = redactSequenceUpdate.session();
 
+        onRedactSequenceUpdate(newSequenceNumber, sessionId, redactSequenceUpdate.position());
+    }
+
+    private void onRedactSequenceUpdate(final int newSequenceNumber, final long sessionId, final long position)
+    {
         fixPSequenceIndexer.onRedactSequenceUpdate(sessionId, newSequenceNumber);
 
         saveRecord(
             newSequenceNumber,
             sessionId,
-            redactSequenceUpdate.position(),
-            redactSequenceUpdate.position(),
+            position,
+            position,
             false);
     }
 

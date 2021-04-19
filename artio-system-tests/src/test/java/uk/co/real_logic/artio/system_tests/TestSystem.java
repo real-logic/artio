@@ -186,7 +186,7 @@ public class TestSystem
     public FixMessage awaitMessageOf(
         final FakeOtfAcceptor otfAcceptor, final String messageType, final Predicate<FixMessage> predicate)
     {
-        return Timing.withTimeout("Never received " + messageType, () ->
+        return Timing.withTimeout(() -> "Never received " + messageType + " only: " + otfAcceptor.messages(), () ->
         {
             poll();
 
@@ -224,9 +224,11 @@ public class TestSystem
         awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.trySend(encoder));
     }
 
-    public void awaitSend(final String message, final LongSupplier operation)
+    public long awaitSend(final String message, final LongSupplier operation)
     {
-        await(message, () -> operation.getAsLong() > 0);
+        final long[] position = new long[1];
+        await(message, () -> (position[0] = operation.getAsLong()) > 0);
+        return position[0];
     }
 
     public void await(final String message, final BooleanSupplier predicate)

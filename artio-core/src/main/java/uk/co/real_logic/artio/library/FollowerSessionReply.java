@@ -53,6 +53,6 @@ class FollowerSessionReply extends LibraryReply<SessionWriter>
     {
         final long position = libraryPoller.saveFollowerSessionRequest(correlationId, buffer, offset, length);
 
-        requiresResend = position > 0;
+        requiresResend = position < 0;
     }
 }

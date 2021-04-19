@@ -15,12 +15,11 @@
  */
 package uk.co.real_logic.artio.engine;
 
-import io.aeron.ExclusivePublication;
-import io.aeron.Image;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.status.ReadablePosition;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
@@ -202,6 +201,19 @@ public final class FixEngine extends GatewayProcess
                 stateHasBeenReset = true;
             }
         }
+    }
+
+    /**
+     * Gets a ReadablePosition that exposes where the Artio indexer has indexed up to for a library id. This can be
+     * used to track the persistence of messages that are sent via an Artio library.
+     *
+     * @param libraryId the library id of the library that you want to track the position for.
+     * @return a reply that either succeeds with the ReadablePosition or errors if the Engine doesn't know about
+     * the library in question.
+     */
+    public Reply<ReadablePosition> libraryIndexedPosition(final int libraryId)
+    {
+        return framerContext.libraryIndexedPosition(libraryId);
     }
 
     /**

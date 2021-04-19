@@ -15,13 +15,11 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.Aeron;
-import io.aeron.ExclusivePublication;
-import io.aeron.Image;
-import io.aeron.Subscription;
+import io.aeron.*;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.ReadablePosition;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
@@ -176,7 +174,9 @@ public class FramerContext
             finalImagePositions,
             conductorAgentInvoker,
             recordingCoordinator,
-            fixPContexts);
+            fixPContexts,
+            aeron.countersReader(),
+            engineContext.outboundIndexRegistrationId());
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)
@@ -354,5 +354,18 @@ public class FramerContext
     public List<FixPSessionInfo> allFixPSessions()
     {
         return fixPContexts.allSessions();
+    }
+
+    public Reply<ReadablePosition> libraryIndexedPosition(final int libraryId)
+    {
+        final PositionRequestCommand command = new PositionRequestCommand(
+            libraryId);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
     }
 }

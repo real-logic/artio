@@ -18,13 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.concurrent.OffsetEpochNanoClock;
-import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.*;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
@@ -34,6 +33,7 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
@@ -42,6 +42,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -707,5 +708,29 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(sessionId.surrogateId(), session.id());
         assertEquals(compositeKey.localCompId(), sessionId.localCompId());
         assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
+    }
+
+    SessionWriter createFollowerSession(final long timeoutInMs)
+    {
+        final HeaderEncoder headerEncoder = new HeaderEncoder()
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
+
+        final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
+            acceptingLibrary.followerSession(headerEncoder, timeoutInMs));
+        return followerSession.resultIfPresent();
+    }
+
+    long sendReportOnFollowerSession(final TestSystem testSystem, final SessionWriter sessionWriter)
+    {
+        final ReportFactory reportFactory = new ReportFactory();
+        final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, 1);
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        final SystemEpochClock clock = new SystemEpochClock();
+        report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()))
+            .msgSeqNum(1);
+
+        return testSystem.awaitSend("failed to send", () -> sessionWriter.send(report, 1));
     }
 }
