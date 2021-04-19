@@ -82,7 +82,17 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
         writeBuffer.putInt(0, META_DATA_VALUE);
 
-        writeMetaData(writeBuffer);
+        // Retry in case the follower session operation hasn't been indexed yet.
+        while (true)
+        {
+            final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
+            final MetaDataStatus status = reply.resultIfPresent();
+            if (status != MetaDataStatus.UNKNOWN_SESSION)
+            {
+                assertEquals(MetaDataStatus.OK, status);
+                break;
+            }
+        }
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
