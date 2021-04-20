@@ -128,6 +128,7 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
     public void onEndSequence()
     {
         context.onEndSequence();
+        gatewaySessions.fixPContexts().updateContext(context);
     }
 
     public void close()

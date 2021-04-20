@@ -125,7 +125,7 @@ public class FixPContexts
 
     private AbstractFixPStorage makeStorage(final FixPProtocolType type)
     {
-        return FixPProtocolFactory.make(type, errorHandler).makeStorage(this, epochNanoClock);
+        return FixPProtocolFactory.make(type, errorHandler).makeStorage(epochNanoClock);
     }
 
     FixPContext calculateInitiatorContext(

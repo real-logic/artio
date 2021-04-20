@@ -1,7 +1,6 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import org.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.artio.engine.framer.FixPContexts;
 import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
@@ -25,11 +24,8 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     private static final int ENDED_LENGTH = SIZE_OF_SHORT;
     private static final int ENTRY_LENGTH = ENDED_OFFSET + ENDED_LENGTH;
 
-    private final FixPContexts contexts;
-
-    public BinaryEntryPointStorage(final FixPContexts contexts)
+    public BinaryEntryPointStorage()
     {
-        this.contexts = contexts;
     }
 
     public BinaryEntryPointContext newInitiatorContext(
@@ -49,7 +45,6 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
 
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
             sessionId, sessionVerId, timestamp, enteringFirm, false);
-        context.contexts(contexts);
         context.ended(ended);
         context.offset(offset);
         return context;
@@ -60,7 +55,6 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     {
         final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPContext;
         context.offset(offset);
-        context.contexts(contexts);
 
         buffer.putLong(offset + SESSION_ID_OFFSET, context.sessionID(), ByteOrder.LITTLE_ENDIAN);
         putSessionVerId(buffer, context, offset);

@@ -22,9 +22,14 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
  * contain information such as the host and port of the gateway that you're connecting to in the case of an initiator
  * protocol.
  *
- * Must implement hashcode / equals
+ * Implementations must provide appropriate value based hashcode / equals implementation.
  */
 public interface FixPKey
 {
+    /**
+     * Gets the protocol type for this key.
+     *
+     * @return the protocol type for this key.
+     */
     FixPProtocolType protocolType();
 }

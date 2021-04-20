@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.fixp;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.engine.framer.FixPContexts;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
@@ -38,17 +37,22 @@ public abstract class FixPProtocol
         this.encodingType = encodingType;
     }
 
+    public FixPProtocolType protocolType()
+    {
+        return protocolType;
+    }
+
+    public short encodingType()
+    {
+        return encodingType;
+    }
+
     public abstract AbstractFixPParser makeParser(FixPConnection session);
 
     public abstract AbstractFixPProxy makeProxy(
         ExclusivePublication publication, EpochNanoClock epochNanoClock);
 
     public abstract AbstractFixPOffsets makeOffsets();
-
-    public FixPProtocolType protocolType()
-    {
-        return protocolType;
-    }
 
     public abstract InternalFixPConnection makeAcceptorConnection(
         long connectionId,
@@ -62,13 +66,8 @@ public abstract class FixPProtocol
         FixPContext context,
         CommonConfiguration configuration);
 
-    public short encodingType()
-    {
-        return encodingType;
-    }
-
     public abstract AbstractFixPStorage makeStorage(
-        FixPContexts fixPContexts, EpochNanoClock epochNanoClock);
+        EpochNanoClock epochNanoClock);
 
     public abstract AbstractFixPSequenceExtractor makeSequenceExtractor(
         FixPSequenceNumberHandler handler,

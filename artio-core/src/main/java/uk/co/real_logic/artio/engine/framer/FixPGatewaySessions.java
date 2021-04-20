@@ -91,6 +91,11 @@ public class FixPGatewaySessions extends GatewaySessions
             fixPProxy);
     }
 
+    public FixPContexts fixPContexts()
+    {
+        return fixPContexts;
+    }
+
     class FixPPendingAcceptorLogon extends PendingAcceptorLogon implements FixPAuthenticationProxy
     {
         public static final int LINGER_TIMEOUT_IN_MS = 500;

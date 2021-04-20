@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.ilink;
 
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.engine.framer.FixPContexts;
 import uk.co.real_logic.artio.engine.framer.ILink3Context;
 import uk.co.real_logic.artio.engine.framer.ILink3Key;
 import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
@@ -33,19 +32,17 @@ public class Ilink3Storage extends AbstractFixPStorage
     private final int actingBlockLength = contextEncoder.sbeBlockLength();
     private final int actingVersion = contextEncoder.sbeSchemaVersion();
 
-    private final FixPContexts contexts;
     private final EpochNanoClock clock;
 
-    public Ilink3Storage(final FixPContexts fixPContexts, final EpochNanoClock clock)
+    public Ilink3Storage(final EpochNanoClock clock)
     {
-        this.contexts = fixPContexts;
         this.clock = clock;
     }
 
     public FixPContext newInitiatorContext(final FixPKey key, final int offset)
     {
         final long newUuid = nanoSecondTimestamp();
-        return new ILink3Context((ILink3Key)key, contexts, 0, 0, newUuid, 0, true, offset);
+        return new ILink3Context((ILink3Key)key, clock, 0, 0, newUuid, 0, true, offset);
     }
 
     public FixPContext loadContext(
@@ -58,7 +55,7 @@ public class Ilink3Storage extends AbstractFixPStorage
         final String accessKeyId = contextDecoder.accessKeyId();
 
         final ILink3Key key = new ILink3Key(port, host, accessKeyId);
-        return new ILink3Context(key, contexts, uuid, 0, uuid, 0, false, offset);
+        return new ILink3Context(key, clock, uuid, 0, uuid, 0, false, offset);
     }
 
     public int saveContext(

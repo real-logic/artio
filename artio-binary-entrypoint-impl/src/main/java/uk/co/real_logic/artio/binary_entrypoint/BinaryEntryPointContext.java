@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import uk.co.real_logic.artio.engine.framer.FixPContexts;
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -33,8 +32,6 @@ public class BinaryEntryPointContext implements FixPContext
 
     // Not persisted
     private final boolean fromNegotiate;
-    // Set when used in the engine but not library
-    private FixPContexts contexts;
 
     private int offset = MISSING_INT;
     private final BinaryEntryPointKey key;
@@ -117,7 +114,6 @@ public class BinaryEntryPointContext implements FixPContext
         }
 
         offset = oldContext.offset();
-        contexts = oldContext.contexts;
 
         // negotiations should increment the session ver id
         if (fromNegotiate)
@@ -151,7 +147,6 @@ public class BinaryEntryPointContext implements FixPContext
     public void onEndSequence()
     {
         ended = true;
-        contexts.updateContext(this);
     }
 
     public FirstMessageRejectReason checkFirstConnect()
@@ -172,11 +167,6 @@ public class BinaryEntryPointContext implements FixPContext
     int offset()
     {
         return offset;
-    }
-
-    void contexts(final FixPContexts contexts)
-    {
-        this.contexts = contexts;
     }
 
     boolean ended()

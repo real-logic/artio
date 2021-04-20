@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -28,7 +29,7 @@ public final class ILink3Context implements FixPContext
     private long connectUuid;
 
     private final ILink3Key key;
-    private final FixPContexts fixPContexts;
+    private final EpochNanoClock clock;
     private long uuid;
     private long lastUuid;
     private boolean newlyAllocated;
@@ -37,7 +38,7 @@ public final class ILink3Context implements FixPContext
 
     public ILink3Context(
         final ILink3Key key,
-        final FixPContexts fixPContexts,
+        final EpochNanoClock clock,
         final long uuid,
         final long lastUuid,
         final long connectUuid,
@@ -46,7 +47,7 @@ public final class ILink3Context implements FixPContext
         final int offset)
     {
         this.key = key;
-        this.fixPContexts = fixPContexts;
+        this.clock = clock;
         this.uuid = uuid;
         this.lastUuid = lastUuid;
         this.connectLastUuid = connectLastUuid;
@@ -110,7 +111,7 @@ public final class ILink3Context implements FixPContext
         return offset;
     }
 
-    public void confirmUuid()
+    public void confirmUuid(final FixPContexts fixPContexts)
     {
         uuid = connectUuid;
         lastUuid = connectLastUuid;
@@ -162,7 +163,7 @@ public final class ILink3Context implements FixPContext
         newlyAllocated(newlyAllocated);
         if (newlyAllocated)
         {
-            final long newUuid = fixPContexts.nanoSecondTimestamp();
+            final long newUuid = clock.nanoTime();
             connectUuid(newUuid);
         }
         else

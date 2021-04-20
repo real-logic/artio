@@ -28,6 +28,7 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
 
     private final boolean isBackup;
     private final ILink3Context context;
+    private final FixPContexts fixPContexts;
 
     ILink3ReceiverEndPoint(
         final long connectionId,
@@ -40,7 +41,8 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
         final boolean isBackup,
         final ILink3Context context,
         final EpochNanoClock epochNanoClock,
-        final long correlationId)
+        final long correlationId,
+        final FixPContexts fixPContexts)
     {
         super(
             connectionId,
@@ -55,6 +57,7 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
             CME_ENCODING_TYPE);
         this.isBackup = isBackup;
         this.context = context;
+        this.fixPContexts = fixPContexts;
         sessionId(context.connectUuid());
     }
 
@@ -62,7 +65,7 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
     {
         if (readTemplateId(buffer, offset) == NEGOTIATION_RESPONSE)
         {
-            context.confirmUuid();
+            context.confirmUuid(fixPContexts);
         }
     }
 
