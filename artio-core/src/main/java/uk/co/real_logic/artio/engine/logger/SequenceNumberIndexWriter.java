@@ -214,10 +214,7 @@ public class SequenceNumberIndexWriter implements Index
         }
         catch (final IOException | IllegalStateException e)
         {
-            if (file != null)
-            {
-                Exceptions.suppressingClose(file, e);
-            }
+            Exceptions.suppressingClose(file, e);
             LangUtil.rethrowUnchecked(e);
         }
 

@@ -88,13 +88,16 @@ public final class Exceptions
 
     public static void suppressingClose(final AutoCloseable closeable, final Exception originalException)
     {
-        try
+        if (closeable != null)
         {
-            closeable.close();
-        }
-        catch (final Exception ex)
-        {
-            originalException.addSuppressed(ex);
+            try
+            {
+                closeable.close();
+            }
+            catch (final Exception ex)
+            {
+                originalException.addSuppressed(ex);
+            }
         }
     }
 

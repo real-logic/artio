@@ -237,49 +237,62 @@ public class EngineContext implements AutoCloseable
 
     private void newIndexers()
     {
-        final int cacheSetSize = configuration.loggerCacheSetSize();
-        final int cacheNumSets = configuration.loggerCacheNumSets();
-        final String logFileDir = configuration.logFileDir();
+        ReplayIndex inboundReplayIndex = null;
+        ReplayIndex outboundReplayIndex = null;
 
-        final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
-        final ReplayIndex inboundReplayIndex = newReplayIndex(
-            cacheSetSize,
-            cacheNumSets,
-            logFileDir,
-            configuration.inboundLibraryStream(),
-            recordingCoordinator.indexerInboundRecordingIdLookup(),
-            connectionIdToILinkUuid,
-            receivedSequenceNumberIndex.reader());
+        try
+        {
+            final int cacheSetSize = configuration.loggerCacheSetSize();
+            final int cacheNumSets = configuration.loggerCacheNumSets();
+            final String logFileDir = configuration.logFileDir();
 
-        inboundIndexer = new Indexer(
-            asList(inboundReplayIndex, receivedSequenceNumberIndex),
-            inboundLibraryStreams.subscription("inboundIndexer"),
-            configuration.agentNamePrefix(),
-            inboundCompletionPosition,
-            configuration.archiveReplayStream(),
-            configuration.gracefulShutdown());
+            final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
+            inboundReplayIndex = newReplayIndex(
+                cacheSetSize,
+                cacheNumSets,
+                logFileDir,
+                configuration.inboundLibraryStream(),
+                recordingCoordinator.indexerInboundRecordingIdLookup(),
+                connectionIdToILinkUuid,
+                receivedSequenceNumberIndex.reader());
 
-        final List<Index> outboundIndices = new ArrayList<>();
-        outboundIndices.add(newReplayIndex(
-            cacheSetSize,
-            cacheNumSets,
-            logFileDir,
-            configuration.outboundLibraryStream(),
-            recordingCoordinator.indexerOutboundRecordingIdLookup(),
-            connectionIdToILinkUuid,
-            sentSequenceNumberIndex.reader()));
-        outboundIndices.add(sentSequenceNumberIndex);
+            inboundIndexer = new Indexer(
+                asList(inboundReplayIndex, receivedSequenceNumberIndex),
+                inboundLibraryStreams.subscription("inboundIndexer"),
+                configuration.agentNamePrefix(),
+                inboundCompletionPosition,
+                configuration.archiveReplayStream(),
+                configuration.gracefulShutdown());
 
-        final Subscription outboundIndexSubscription = outboundLibraryStreams.subscription("outboundIndexer");
-        outboundIndexRegistrationId = outboundIndexSubscription.registrationId();
+            final List<Index> outboundIndices = new ArrayList<>();
+            outboundReplayIndex = newReplayIndex(
+                cacheSetSize,
+                cacheNumSets,
+                logFileDir,
+                configuration.outboundLibraryStream(),
+                recordingCoordinator.indexerOutboundRecordingIdLookup(),
+                connectionIdToILinkUuid,
+                sentSequenceNumberIndex.reader());
+            outboundIndices.add(outboundReplayIndex);
+            outboundIndices.add(sentSequenceNumberIndex);
 
-        this.outboundIndexer = new Indexer(
-            outboundIndices,
-            outboundIndexSubscription,
-            configuration.agentNamePrefix(),
-            outboundLibraryCompletionPosition,
-            configuration.archiveReplayStream(),
-            configuration.gracefulShutdown());
+            final Subscription outboundIndexSubscription = outboundLibraryStreams.subscription("outboundIndexer");
+            outboundIndexRegistrationId = outboundIndexSubscription.registrationId();
+
+            this.outboundIndexer = new Indexer(
+                outboundIndices,
+                outboundIndexSubscription,
+                configuration.agentNamePrefix(),
+                outboundLibraryCompletionPosition,
+                configuration.archiveReplayStream(),
+                configuration.gracefulShutdown());
+        }
+        catch (final Exception e)
+        {
+            suppressingClose(inboundReplayIndex, e);
+            suppressingClose(outboundReplayIndex, e);
+            throw e;
+        }
     }
 
     public long outboundIndexRegistrationId()
