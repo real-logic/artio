@@ -176,6 +176,11 @@ public class BinaryEntryPointSystemTest
     {
         setupArtio(true);
 
+        connectAndExchangeBusinessMessage();
+    }
+
+    private void connectAndExchangeBusinessMessage() throws IOException
+    {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
             assertNextSequenceNumbers(1, 1);
@@ -954,6 +959,35 @@ public class BinaryEntryPointSystemTest
 
         testSystem.awaitErroredReply(reply, allOf(
             containsString("INVALID_CONFIGURATION"), containsString("FIXP")));
+    }
+
+    @Test
+    public void shouldSupportResetState() throws IOException
+    {
+        final Backup backup = new Backup();
+
+        try
+        {
+            shouldExchangeBusinessMessage();
+
+            closeArtio();
+
+            backup.resetState(engine);
+            backup.assertStateReset(mediaDriver, is(0));
+            backup.assertRecordingsTruncated();
+            // Idempotence
+            backup.resetState(engine);
+
+            // all old sessions are removed and we can renegotiate
+            setupArtio(false);
+            final List<FixPSessionInfo> sessionInfos = engine.allFixPSessions();
+            assertThat(sessionInfos, hasSize(0));
+            connectAndExchangeBusinessMessage();
+        }
+        finally
+        {
+            backup.cleanup();
+        }
     }
 
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)

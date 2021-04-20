@@ -256,5 +256,12 @@ public class FixPContexts
         {
             return context.key();
         }
+
+        public String toString()
+        {
+            return "InfoWrapper{" +
+                "context=" + context +
+                '}';
+        }
     }
 }

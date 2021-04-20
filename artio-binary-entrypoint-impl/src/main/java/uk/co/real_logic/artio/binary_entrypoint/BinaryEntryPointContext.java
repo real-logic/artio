@@ -32,9 +32,9 @@ public class BinaryEntryPointContext implements FixPContext
 
     // Not persisted
     private final boolean fromNegotiate;
+    private final BinaryEntryPointKey key;
 
     private int offset = MISSING_INT;
-    private final BinaryEntryPointKey key;
 
     public BinaryEntryPointContext(
         final long sessionID,
