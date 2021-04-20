@@ -148,7 +148,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             "Proxy v2 detected for connId=%s,addr=%s,line=%s");
     }
 
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
     private final AtomicCounter messagesRead;
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
     private final BusinessRejectRefIdExtractor businessRejectRefIdExtractor = new BusinessRejectRefIdExtractor();
@@ -181,7 +181,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final SessionContexts sessionContexts,
+        final FixContexts fixContexts,
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
@@ -194,14 +194,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final int throttleLimitOfMessages)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
-        Objects.requireNonNull(sessionContexts, "sessionContexts");
+        Objects.requireNonNull(fixContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
 
         this.formatters = formatters;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex - 1; // Incremented on first logon
-        this.sessionContexts = sessionContexts;
+        this.fixContexts = fixContexts;
         this.messagesRead = messagesRead;
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
@@ -1093,7 +1093,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     void cleanupDisconnectState(final DisconnectReason reason)
     {
-        sessionContexts.onDisconnect(sessionId);
+        fixContexts.onDisconnect(sessionId);
         gatewaySessions.onDisconnect(sessionId, connectionId, reason);
     }
 

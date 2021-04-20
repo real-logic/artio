@@ -107,7 +107,7 @@ public class FramerTest
     private final SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private final SessionContexts sessionContexts = mock(SessionContexts.class);
+    private final FixContexts fixContexts = mock(FixContexts.class);
     private final FixGatewaySessions gatewaySessions = mock(FixGatewaySessions.class);
     private final FixGatewaySession gatewaySession = mock(FixGatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
@@ -186,7 +186,7 @@ public class FramerTest
             inboundPublication,
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
-            sessionContexts,
+            fixContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             gatewaySessions,
@@ -201,13 +201,13 @@ public class FramerTest
             mock(CountersReader.class),
             1);
 
-        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
+        when(fixContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,
             SESSION_ID,
             SessionInfo.UNKNOWN_SEQUENCE_INDEX,
             Session.UNKNOWN_TIME,
             System.currentTimeMillis(),
-            sessionContexts,
+            fixContexts,
             0,
             EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX,
             fixDictionary));
@@ -347,8 +347,8 @@ public class FramerTest
 
         notifyLibraryOfConnection();
 
-        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass())))
-            .thenReturn(SessionContexts.DUPLICATE_SESSION);
+        when(fixContexts.onLogon(any(), any(fixDictionary.getClass())))
+            .thenReturn(FixContexts.DUPLICATE_SESSION);
 
         // Don't wait for connection of duplicated session because it should not connect.
         libraryConnects();

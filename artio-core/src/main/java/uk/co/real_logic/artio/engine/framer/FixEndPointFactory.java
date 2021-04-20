@@ -29,7 +29,7 @@ class FixEndPointFactory
         new FixReceiverEndPoint.FixReceiverEndPointFormatters();
 
     private final EngineConfiguration configuration;
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
     private final GatewayPublication inboundLibraryPublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
@@ -41,7 +41,7 @@ class FixEndPointFactory
 
     FixEndPointFactory(
         final EngineConfiguration configuration,
-        final SessionContexts sessionContexts,
+        final FixContexts fixContexts,
         final GatewayPublication inboundLibraryPublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
@@ -50,7 +50,7 @@ class FixEndPointFactory
         final MessageTimingHandler messageTimingHandler)
     {
         this.configuration = configuration;
-        this.sessionContexts = sessionContexts;
+        this.fixContexts = fixContexts;
         this.inboundLibraryPublication = inboundLibraryPublication;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
@@ -74,7 +74,7 @@ class FixEndPointFactory
             connectionId,
             sessionId,
             sequenceIndex,
-            sessionContexts,
+            fixContexts,
             fixCounters.messagesRead(connectionId, channel.remoteAddress()),
             framer,
             errorHandler,

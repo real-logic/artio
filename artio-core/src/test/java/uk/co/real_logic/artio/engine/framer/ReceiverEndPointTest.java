@@ -71,7 +71,7 @@ public class ReceiverEndPointTest
     private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
     private final TcpChannel mockChannel = mock(TcpChannel.class);
     private final GatewayPublication publication = mock(GatewayPublication.class);
-    private final SessionContexts mockSessionContexts = mock(SessionContexts.class);
+    private final FixContexts mockFixContexts = mock(FixContexts.class);
     private final AtomicCounter messagesRead = mock(AtomicCounter.class);
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final Framer framer = mock(Framer.class);
@@ -146,7 +146,7 @@ public class ReceiverEndPointTest
     {
         endPoint = new FixReceiverEndPoint(
             mockChannel, BUFFER_SIZE, publication,
-            CONNECTION_ID, sessionId, SEQUENCE_INDEX + 1, mockSessionContexts,
+            CONNECTION_ID, sessionId, SEQUENCE_INDEX + 1, mockFixContexts,
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,
@@ -318,7 +318,7 @@ public class ReceiverEndPointTest
 
         endPoint.poll();
 
-        verify(mockSessionContexts).onDisconnect(anyLong());
+        verify(mockFixContexts).onDisconnect(anyLong());
         verifyDisconnected();
     }
 

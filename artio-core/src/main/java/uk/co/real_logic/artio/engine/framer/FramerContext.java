@@ -57,7 +57,7 @@ public class FramerContext
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundPublication;
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
     private final FixPContexts fixPContexts;
 
     public FramerContext(
@@ -79,7 +79,7 @@ public class FramerContext
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
-        this.sessionContexts = new SessionContexts(
+        this.fixContexts = new FixContexts(
             configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
         this.fixPContexts = new FixPContexts(
             configuration.fixPIdBuffer(),
@@ -125,7 +125,7 @@ public class FramerContext
                 fixCounters,
                 configuration,
                 errorHandler,
-                sessionContexts,
+                fixContexts,
                 configuration.sessionPersistenceStrategy(),
                 sentSequenceNumberIndex,
                 receivedSequenceNumberIndex,
@@ -133,7 +133,7 @@ public class FramerContext
 
             endPointFactory = new FixEndPointFactory(
                 configuration,
-                sessionContexts,
+                fixContexts,
                 inboundPublication,
                 fixCounters,
                 errorHandler,
@@ -163,7 +163,7 @@ public class FramerContext
             inboundPublication,
             this.adminCommands,
             sessionIdStrategy,
-            sessionContexts,
+            fixContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             gatewaySessions,
@@ -224,7 +224,7 @@ public class FramerContext
         final ResetSequenceNumberCommand reply = new ResetSequenceNumberCommand(
             sessionId,
             gatewaySessions,
-            sessionContexts,
+            configuration.acceptsBinaryEntryPoint() ? fixPContexts : fixContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
             inboundPublication,
@@ -348,7 +348,7 @@ public class FramerContext
 
     public List<SessionInfo> allSessions()
     {
-        return sessionContexts.allSessions();
+        return fixContexts.allSessions();
     }
 
     public List<FixPSessionInfo> allFixPSessions()

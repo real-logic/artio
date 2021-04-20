@@ -152,7 +152,11 @@ public final class FixEngine extends GatewayProcess
 
     /**
      * Resets the sequence number of a given session. Asynchronous method, the Reply instance
-     * needs to be polled to ensure that it has completed.
+     * needs to be polled to ensure that it has completed. This operation can be used to reset the sequence numbers of
+     * FIX or FIXP sessions.
+     *
+     * In the case of FIXP sessions the sequence numbers can only be reset when the session is
+     * disconnected. The sequence number reset behaviour is dependent on the protocol.
      *
      * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
      * should be retried on a duty cycle.

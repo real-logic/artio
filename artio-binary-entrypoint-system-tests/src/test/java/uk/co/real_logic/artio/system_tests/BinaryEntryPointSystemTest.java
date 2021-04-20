@@ -990,6 +990,16 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldResetSequenceNumbersOfDisconnectedSessions() throws IOException
+    {
+        shouldExchangeBusinessMessage();
+
+        testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
+
+        rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
+    }
+
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
     {
         final List<FixPSessionInfo> allSessions = engine.allFixPSessions();

@@ -78,7 +78,7 @@ import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
-import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
+import static uk.co.real_logic.artio.engine.framer.FixContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
@@ -161,7 +161,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final CompletionPosition outboundLibraryCompletionPosition;
     private final FinalImagePositions finalImagePositions;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
@@ -215,7 +215,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewayPublication inboundPublication,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionContexts sessionContexts,
+        final FixContexts fixContexts,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
@@ -257,7 +257,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.recordingCoordinator = recordingCoordinator;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(fixSenderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sessionContexts = sessionContexts;
+        this.fixContexts = fixContexts;
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
@@ -859,7 +859,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CancelOnDisconnectTimeoutHandler handler = configuration.cancelOnDisconnectTimeoutHandler();
         if (handler != null)
         {
-            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
             if (entry == null)
             {
                 errorHandler.onError(new IllegalStateException("Unknown session id when performing cancel on" +
@@ -992,7 +992,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LongHashSet seenSessions = this.requestAllSessionSeenSessions;
         try
         {
-            final List<SessionInfo> allSessions = sessionContexts.allSessions();
+            final List<SessionInfo> allSessions = fixContexts.allSessions();
             final int sessionsCount = allSessions.size();
             final SessionsEncoder sessionsEncoder = adminReplyPublication.startRequestAllFixSessions(
                 correlationId,
@@ -1025,13 +1025,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onDisconnectSession(final long correlationId, final long sessionId)
     {
-        if (!sessionContexts.isKnownSessionId(sessionId))
+        if (!fixContexts.isKnownSessionId(sessionId))
         {
             schedule(() -> saveUnknownSessionAdminReply(correlationId, sessionId));
             return;
         }
 
-        if (!sessionContexts.isAuthenticated(sessionId))
+        if (!fixContexts.isAuthenticated(sessionId))
         {
             schedule(() -> saveNotAuthenticatedAdminReply(correlationId, sessionId));
             return;
@@ -1128,7 +1128,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onAdminResetSequenceNumbersRequest(final long correlationId, final long sessionId)
     {
-        if (!sessionContexts.isKnownSessionId(sessionId))
+        if (!fixContexts.isKnownSessionId(sessionId))
         {
             schedule(() -> saveUnknownSessionAdminReply(correlationId, sessionId));
             return;
@@ -1139,7 +1139,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ResetSequenceNumberCommand resetSequenceNumberCommand = new ResetSequenceNumberCommand(
             sessionId,
             gatewaySessions,
-            sessionContexts,
+            fixContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
             inboundPublication,
@@ -1257,7 +1257,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
             senderCompId, senderSubId, senderLocationId,
             targetCompId, targetSubId, targetLocationId);
-        final SessionContext sessionContext = sessionContexts.onLogon(
+        final SessionContext sessionContext = fixContexts.onLogon(
             sessionKey, FixDictionary.of(fixDictionaryClass));
 
         if (isUnsafeDuplicateSession(sessionContext, library))
@@ -1277,7 +1277,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     if (ex != null)
                     {
-                        sessionContexts.onDisconnect(sessionContext.sessionId());
+                        fixContexts.onDisconnect(sessionContext.sessionId());
                         library.connectionFinishesConnecting(correlationId);
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
@@ -1304,7 +1304,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final Exception ex)
         {
-            sessionContexts.onDisconnect(sessionContext.sessionId());
+            fixContexts.onDisconnect(sessionContext.sessionId());
             return saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
         }
 
@@ -1314,7 +1314,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private Action sendDuplicateSessionError(
         final int libraryId, final long correlationId, final CompositeKey sessionKey)
     {
-        final long sessionId = sessionContexts.lookupSessionId(sessionKey);
+        final long sessionId = fixContexts.lookupSessionId(sessionKey);
         final int owningLibraryId = fixSenderEndPoints.libraryLookup().applyAsInt(sessionId);
         final String msg = "Duplicate Session for: " + sessionKey + " Surrogate Key: " + sessionId +
             " Currently owned by " + owningLibraryId;
@@ -1324,7 +1324,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private boolean isUnsafeDuplicateSession(final SessionContext sessionContext, final LiveLibraryInfo library)
     {
         // Obvious
-        if (sessionContext == SessionContexts.DUPLICATE_SESSION)
+        if (sessionContext == FixContexts.DUPLICATE_SESSION)
         {
             return true;
         }
@@ -1370,7 +1370,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return CONTINUE;
         }
 
-        sessionContexts.onDisconnect(connectingSession.sessionId());
+        fixContexts.onDisconnect(connectingSession.sessionId());
         final InetSocketAddress address = connectingSession.address();
         stopConnecting(address);
 
@@ -1628,7 +1628,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (messageType == LOGON_MESSAGE_TYPE)
         {
             // Always a sequence reset
-            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
@@ -1638,7 +1638,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
         {
             // If it's not a gap-fill it's a sequence reset
-            final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+            final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
@@ -2195,7 +2195,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int replayFromSequenceIndex,
         final int replayFromSequenceNumber)
     {
-        final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+        final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
         if (entry == null)
         {
             return false;
@@ -2456,7 +2456,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return CONTINUE;
         }
 
-        final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey, fixDictionary);
+        final SessionContext sessionContext = fixContexts.newSessionContext(compositeKey, fixDictionary);
         final long sessionId = sessionContext.sessionId();
 
         schedule(new UnitOfWork(
@@ -2814,7 +2814,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 try
                 {
-                    sessionContexts.reset(backupLocation);
+                    fixContexts.reset(backupLocation);
                 }
                 catch (final Exception ex)
                 {
@@ -2882,7 +2882,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             command.remoteSubId,
             command.remoteLocationId);
 
-        final long sessionId = sessionContexts.lookupSessionId(compositeKey);
+        final long sessionId = fixContexts.lookupSessionId(compositeKey);
 
         if (sessionId == Session.UNKNOWN)
         {

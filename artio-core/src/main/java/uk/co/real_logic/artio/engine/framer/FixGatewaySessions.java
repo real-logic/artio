@@ -55,8 +55,8 @@ import java.util.function.Function;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
-import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
-import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
+import static uk.co.real_logic.artio.engine.framer.FixContexts.DUPLICATE_SESSION;
+import static uk.co.real_logic.artio.engine.framer.FixContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 public class FixGatewaySessions extends GatewaySessions
@@ -77,7 +77,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final boolean logAllMessages;
     private final boolean validateCompIdsOnEveryMessage;
     private final boolean validateTimeStrictly;
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final EpochNanoClock clock;
     private final EpochFractionFormat epochFractionPrecision;
@@ -95,7 +95,7 @@ public class FixGatewaySessions extends GatewaySessions
         final FixCounters fixCounters,
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final SessionContexts sessionContexts,
+        final FixContexts fixContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
@@ -121,7 +121,7 @@ public class FixGatewaySessions extends GatewaySessions
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.epochNanoClock();
-        this.sessionContexts = sessionContexts;
+        this.fixContexts = fixContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.epochFractionPrecision = epochFractionPrecision;
         this.epochFractionClock = EpochFractionClocks.create(epochClock, configuration.epochNanoClock(),
@@ -227,7 +227,7 @@ public class FixGatewaySessions extends GatewaySessions
         gatewaySession.startAuthentication(epochClock.time());
 
         return new FixPendingAcceptorLogon(
-            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel, fixDictionary, framer);
+            sessionIdStrategy, gatewaySession, logon, connectionId, fixContexts, channel, fixDictionary, framer);
     }
 
     void onUserRequest(
@@ -264,7 +264,7 @@ public class FixGatewaySessions extends GatewaySessions
         private final SessionIdStrategy sessionIdStrategy;
         private final FixGatewaySession session;
         private final AbstractLogonDecoder logon;
-        private final SessionContexts sessionContexts;
+        private final FixContexts fixContexts;
         private FixDictionary fixDictionary;
         private final boolean resetSeqNum;
 
@@ -276,7 +276,7 @@ public class FixGatewaySessions extends GatewaySessions
             final FixGatewaySession gatewaySession,
             final AbstractLogonDecoder logon,
             final long connectionId,
-            final SessionContexts sessionContexts,
+            final FixContexts fixContexts,
             final TcpChannel channel,
             final FixDictionary fixDictionary,
             final Framer framer)
@@ -286,7 +286,7 @@ public class FixGatewaySessions extends GatewaySessions
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
-            this.sessionContexts = sessionContexts;
+            this.fixContexts = fixContexts;
             this.fixDictionary = fixDictionary;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
@@ -373,7 +373,7 @@ public class FixGatewaySessions extends GatewaySessions
                 return;
             }
 
-            sessionContext = sessionContexts.onLogon(compositeKey, fixDictionary);
+            sessionContext = fixContexts.onLogon(compositeKey, fixDictionary);
 
             if (sessionContext == DUPLICATE_SESSION)
             {

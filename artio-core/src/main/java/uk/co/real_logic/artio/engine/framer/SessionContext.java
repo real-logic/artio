@@ -27,7 +27,7 @@ class SessionContext implements SessionInfo
 {
     private final CompositeKey compositeKey;
     private final long sessionId;
-    private final SessionContexts sessionContexts;
+    private final FixContexts fixContexts;
 
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
@@ -47,7 +47,7 @@ class SessionContext implements SessionInfo
         final int sequenceIndex,
         final long lastLogonTime,
         final long lastSequenceResetTimeInNs,
-        final SessionContexts sessionContexts,
+        final FixContexts fixContexts,
         final int filePosition,
         final int initialSequenceIndex,
         final FixDictionary lastFixDictionary)
@@ -58,7 +58,7 @@ class SessionContext implements SessionInfo
         this.initialSequenceIndex = initialSequenceIndex;
         lastLogonTime(lastLogonTime);
         this.lastSequenceResetTimeInNs = lastSequenceResetTimeInNs;
-        this.sessionContexts = sessionContexts;
+        this.fixContexts = fixContexts;
         this.filePosition = filePosition;
         this.lastFixDictionary = lastFixDictionary;
     }
@@ -92,7 +92,7 @@ class SessionContext implements SessionInfo
 
     private void save()
     {
-        sessionContexts.updateSavedData(this, filePosition);
+        fixContexts.updateSavedData(this, filePosition);
     }
 
     void filePosition(final int filePosition)

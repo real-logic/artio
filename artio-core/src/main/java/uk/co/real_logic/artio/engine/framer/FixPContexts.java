@@ -37,7 +37,7 @@ import java.util.function.Function;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 
-public class FixPContexts
+public class FixPContexts implements SessionContexts
 {
     public static final int WRAPPER_LENGTH = FixPContextWrapperEncoder.BLOCK_LENGTH;
     private final EnumMap<FixPProtocolType, AbstractFixPStorage> typeToStorage = new EnumMap<>(FixPProtocolType.class);
@@ -238,9 +238,38 @@ public class FixPContexts
         return sessionInfos;
     }
 
-    public long nanoSecondTimestamp()
+    public void sequenceReset(final long sessionId, final long resetTimeInNs)
     {
-        return epochNanoClock.nanoTime();
+        final FixPContext context = lookupContext(sessionId);
+        if (context != null)
+        {
+            context.onEndSequence();
+            updateContext(context);
+        }
+    }
+
+    public boolean isKnownSessionId(final long sessionId)
+    {
+        return lookupContext(sessionId) != null;
+    }
+
+    private FixPContext lookupContext(final long sessionId)
+    {
+        final Iterator<Map.Entry<FixPKey, FixPContext>> it = keyToContext.entrySet().iterator();
+        while (it.hasNext())
+        {
+            final Map.Entry<FixPKey, FixPContext> entry = it.next();
+            if (entry.getKey().sessionIdIfExists() == sessionId)
+            {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public boolean isAuthenticated(final long sessionId)
+    {
+        return authenticatedSessionIdToConnectionId.containsKey(sessionId);
     }
 
     static class InfoWrapper implements FixPSessionInfo

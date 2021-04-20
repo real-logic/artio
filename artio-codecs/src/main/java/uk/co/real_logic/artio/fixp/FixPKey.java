@@ -27,9 +27,22 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
 public interface FixPKey
 {
     /**
+     * The used to identify a session that hasn't yet been identified
+     */
+    int UNK_SESSION = -1;
+
+    /**
      * Gets the protocol type for this key.
      *
      * @return the protocol type for this key.
      */
     FixPProtocolType protocolType();
+
+    /**
+     * Gets the long surrogate sessionId value for this FIXP protocol. If there is no appropriate conversion then
+     * {@link #UNK_SESSION} will be returned.
+     *
+     * @return the long surrogate sessionId value for this FIXP protocol
+     */
+    long sessionIdIfExists();
 }

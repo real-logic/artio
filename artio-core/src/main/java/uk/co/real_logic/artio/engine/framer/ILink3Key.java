@@ -84,4 +84,9 @@ public final class ILink3Key implements FixPKey
     {
         return FixPProtocolType.ILINK_3;
     }
+
+    public long sessionIdIfExists()
+    {
+        return UNK_SESSION;
+    }
 }

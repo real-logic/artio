@@ -53,6 +53,11 @@ public class BinaryEntryPointKey implements FixPKey
         return FixPProtocolType.BINARY_ENTRYPOINT;
     }
 
+    public long sessionIdIfExists()
+    {
+        return sessionID;
+    }
+
     public String toString()
     {
         return "BinaryEntryPointKey{" +
