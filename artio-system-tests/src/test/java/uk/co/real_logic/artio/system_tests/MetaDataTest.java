@@ -22,10 +22,11 @@ import org.junit.Test;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.util.concurrent.locks.LockSupport;
 
@@ -46,18 +47,21 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
     public void launch()
     {
         mediaDriver = launchMediaDriver();
+        testSystem = new TestSystem();
 
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
-            .deleteLogFileDirOnStart(true);
-        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
-        acceptingEngine = FixEngine.launch(acceptingConfig);
+        launchAcceptingArtio(true);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        initiatingLibrary = testSystem.connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock));
+    }
 
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
-        acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
-        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
+    void launchAcceptingArtio(final boolean deleteLogFileDirOnStart)
+    {
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
+            .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        acceptingEngine = FixEngine.launch(acceptingConfig);
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
     }
 
     @Test(timeout = 10_000L)
@@ -82,17 +86,26 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
         writeBuffer.putInt(0, META_DATA_VALUE);
 
-        // Retry in case the follower session operation hasn't been indexed yet.
-        while (true)
-        {
-            final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
-            final MetaDataStatus status = reply.resultIfPresent();
-            if (status != MetaDataStatus.UNKNOWN_SESSION)
-            {
-                assertEquals(MetaDataStatus.OK, status);
-                break;
-            }
-        }
+        retryableWriteMetadata(writeBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadWrittenSessionMetaDataForFollowerSessionAfterRestart()
+    {
+        createFollowerSession(TEST_REPLY_TIMEOUT_IN_MS);
+
+        final SessionReplyStatus status = requestSession(acceptingLibrary, META_DATA_SESSION_ID, testSystem);
+        assertEquals(SessionReplyStatus.OK, status);
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+
+        retryableWriteMetadata(writeBuffer);
+
+        restartArtio();
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
@@ -296,6 +309,29 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         acquireAcceptingSession();
 
         assertNoMetaData();
+    }
+
+    private void restartArtio()
+    {
+        Exceptions.closeAll(
+            this::closeAcceptingEngine,
+            this::closeAcceptingLibrary);
+
+        launchAcceptingArtio(false);
+    }
+
+    private void retryableWriteMetadata(final UnsafeBuffer writeBuffer)
+    {
+        while (true)
+        {
+            final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
+            final MetaDataStatus status = reply.resultIfPresent();
+            if (status != MetaDataStatus.UNKNOWN_SESSION)
+            {
+                assertEquals(MetaDataStatus.OK, status);
+                break;
+            }
+        }
     }
 
     private void assertUnknownSessionMetaData(final long sessionId)
