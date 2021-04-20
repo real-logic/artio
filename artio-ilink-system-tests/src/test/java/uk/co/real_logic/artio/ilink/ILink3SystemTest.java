@@ -1438,9 +1438,7 @@ public class ILink3SystemTest
 
     private void assertConnectError(final Matcher<String> messageMatcher)
     {
-        testSystem.awaitReply(reply);
-        assertEquals(Reply.State.ERRORED, reply.state());
-        assertThat(reply.error().getMessage(), messageMatcher);
+        testSystem.awaitErroredReply(reply, messageMatcher);
     }
 
     private void readEstablish()

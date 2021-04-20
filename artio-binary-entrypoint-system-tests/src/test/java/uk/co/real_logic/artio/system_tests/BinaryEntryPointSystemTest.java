@@ -24,15 +24,19 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.ilink.ILink3Connection;
+import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,8 +45,7 @@ import java.util.function.Consumer;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -80,6 +83,8 @@ public class BinaryEntryPointSystemTest
 
     private BinaryEntrypointConnection connection;
 
+    private boolean printErrors = true;
+
     @Before
     public void setUp()
     {
@@ -107,13 +112,18 @@ public class BinaryEntryPointSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .noLogonDisconnectTimeoutInMs(shortLogonTimeoutInMs)
-//            .errorHandlerFactory(errorBuffer -> errorHandler)
-//            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
             .fixPRetransmitHandler(retransmitHandler)
             .acceptBinaryEntryPoint()
             .bindTo("localhost", port)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
+
+        if (!printErrors)
+        {
+            engineConfig
+                .errorHandlerFactory(errorBuffer -> errorHandler)
+                .monitoringAgentFactory(MonitoringAgentFactory.none());
+        }
 
         engine = FixEngine.launch(engineConfig);
 
@@ -126,9 +136,13 @@ public class BinaryEntryPointSystemTest
             .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs)
             .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
 
-//        libraryConfig
-//            .errorHandlerFactory(errorBuffer -> errorHandler)
-//            .monitoringAgentFactory(MonitoringAgentFactory.none());
+        if (!printErrors)
+        {
+            libraryConfig
+                .errorHandlerFactory(errorBuffer -> errorHandler)
+                .monitoringAgentFactory(MonitoringAgentFactory.none());
+        }
+
         library = testSystem.connect(libraryConfig);
     }
 
@@ -908,6 +922,40 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    @Test
+    public void shouldBlockInitiationOfOtherFixPProtocols()
+    {
+        printErrors = false;
+
+        setupArtio(true);
+
+        final Reply<ILink3Connection> reply = library.initiate(ILink3ConnectionConfiguration.builder()
+            .host("127.0.0.1")
+            .port(123)
+            .sessionId("ABC")
+            .firmId("DEF")
+            .userKey("blahblah")
+            .accessKeyId("access")
+            .handler(new FakeILink3ConnectionHandler())
+            .build());
+
+        testSystem.awaitErroredReply(reply, allOf(
+            containsString("INVALID_CONFIGURATION"), containsString("BINARY_ENTRYPOINT")));
+    }
+
+    @Test
+    public void shouldBlockInitiationOfOtherFixProtocols()
+    {
+        printErrors = false;
+
+        setupArtio(true);
+
+        final Reply<Session> reply = initiate(library, port, "ABC", "DEF");
+
+        testSystem.awaitErroredReply(reply, allOf(
+            containsString("INVALID_CONFIGURATION"), containsString("FIXP")));
+    }
+
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
     {
         final List<FixPSessionInfo> allSessions = engine.allFixPSessions();
@@ -1227,7 +1275,10 @@ public class BinaryEntryPointSystemTest
         closeArtio();
         cleanupMediaDriver(mediaDriver);
 
-        verifyNoInteractions(errorHandler);
+        if (printErrors)
+        {
+            verifyNoInteractions(errorHandler);
+        }
 
         Mockito.framework().clearInlineMocks();
     }

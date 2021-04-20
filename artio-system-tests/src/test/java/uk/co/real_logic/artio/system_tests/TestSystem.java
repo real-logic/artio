@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
+import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -171,9 +172,22 @@ public class TestSystem
         return reply;
     }
 
+    public void awaitErroredReply(final Reply<?> reply, final Matcher<String> messageMatcher)
+    {
+        awaitReply(reply);
+        assertEquals(Reply.State.ERRORED, reply.state());
+        assertThat(reply.error().getMessage(), messageMatcher);
+    }
+
     public <T> Reply<T> awaitCompletedReply(final Reply<T> reply)
     {
         awaitReply(reply);
+
+        if (reply.error() != null)
+        {
+            reply.error().printStackTrace();
+        }
+
         assertEquals(reply.toString(), COMPLETED, reply.state());
         return reply;
     }

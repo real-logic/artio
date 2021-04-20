@@ -767,6 +767,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String host = useBackupHost ? backupHost : primaryHost;
         final InetSocketAddress address = new InetSocketAddress(host, port);
         final FixPContexts fixPContexts = this.fixPContexts;
+
+        final FixPProtocolType protocolType = configuration.supportedFixPProtocolType();
+        if (protocolType != FixPProtocolType.ILINK_3)
+        {
+            saveError(INVALID_CONFIGURATION, libraryId, correlationId, new IllegalStateException(
+                "Invalid configured protocol type: " + protocolType));
+            return CONTINUE;
+        }
+
         final ILink3Key key = new ILink3Key(port, primaryHost, accessKeyId);
         final ILink3Context context = (ILink3Context)fixPContexts.calculateInitiatorContext(key, reestablishConnection);
 
@@ -833,7 +842,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         correlationId));
                 });
         }
-        catch (final IOException ex)
+        catch (final Exception ex)
         {
             cancelILink3LookupConnectOperation(correlationId, false);
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
@@ -1212,25 +1221,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     public Action onInitiateConnection(
-        final int libraryId,
-        final int port,
-        final String host,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final String targetSubId,
-        final String targetLocationId,
+        final int libraryId, final int port, final String host,
+        final String senderCompId, final String senderSubId, final String senderLocationId,
+        final String targetCompId, final String targetSubId, final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
-        final int requestedInitialReceivedSequenceNumber,
-        final int requestedInitialSentSequenceNumber,
-        final boolean resetSequenceNumber,
-        final boolean closedResendInterval,
-        final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed,
-        final String username,
-        final String password,
+        final int requestedInitialReceivedSequenceNumber, final int requestedInitialSentSequenceNumber,
+        final boolean resetSequenceNumber, final boolean closedResendInterval, final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests, final boolean enableLastMsgSeqNumProcessed,
+        final String username, final String password,
         final Class<? extends FixDictionary> fixDictionaryClass,
         final int heartbeatIntervalInS,
         final long correlationId,
@@ -1239,9 +1237,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
-            saveUnknownLibrary(libraryId, correlationId);
+            return saveUnknownLibrary(libraryId, correlationId);
+        }
 
-            return CONTINUE;
+        if (acceptsFixP)
+        {
+            return saveError(INVALID_CONFIGURATION, libraryId, correlationId, new IllegalStateException(
+                "Artio configured as a FIXP acceptor, cannot initiate FIX connection in this configuration."));
         }
 
         final boolean logInboundMessages = configuration.logInboundMessages();
@@ -1252,35 +1254,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
-            senderCompId,
-            senderSubId,
-            senderLocationId,
-            targetCompId,
-            targetSubId,
-            targetLocationId);
-
+            senderCompId, senderSubId, senderLocationId,
+            targetCompId, targetSubId, targetLocationId);
         final SessionContext sessionContext = sessionContexts.onLogon(
             sessionKey, FixDictionary.of(fixDictionaryClass));
 
         if (isUnsafeDuplicateSession(sessionContext, library))
         {
-            final long sessionId = sessionContexts.lookupSessionId(sessionKey);
-            final int owningLibraryId = fixSenderEndPoints.libraryLookup().applyAsInt(sessionId);
-            final String msg =
-                "Duplicate Session for: " + sessionKey +
-                " Surrogate Key: " + sessionId +
-                " Currently owned by " + owningLibraryId;
-
-            saveError(DUPLICATE_SESSION, libraryId, correlationId, msg);
-
-            return CONTINUE;
+            return sendDuplicateSessionError(libraryId, correlationId, sessionKey);
         }
 
         try
         {
-            DebugLogger.log(
-                FIX_CONNECTION,
-                connectingFormatter, host, port, libraryId);
+            DebugLogger.log(FIX_CONNECTION, connectingFormatter, host, port, libraryId);
 
             final InetSocketAddress address = new InetSocketAddress(host, port);
             final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
@@ -1298,20 +1284,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     onFixConnectionOpen(
                         libraryId,
-                        senderCompId,
-                        senderSubId,
-                        senderLocationId,
-                        targetCompId,
-                        targetSubId,
-                        targetLocationId,
+                        senderCompId, senderSubId, senderLocationId,
+                        targetCompId, targetSubId, targetLocationId,
                         sequenceNumberType,
-                        resetSequenceNumber,
-                        closedResendInterval,
-                        resendRequestChunkSize,
-                        sendRedundantResendRequests,
+                        resetSequenceNumber, closedResendInterval, resendRequestChunkSize, sendRedundantResendRequests,
                         enableLastMsgSeqNumProcessed,
-                        username,
-                        password,
+                        username, password,
                         fixDictionaryClass,
                         heartbeatIntervalInS,
                         correlationId,
@@ -1325,14 +1303,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final Exception ex)
         {
-            sessionContexts.onDisconnect(
-                sessionContext.sessionId());
-            saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
-
-            return CONTINUE;
+            sessionContexts.onDisconnect(sessionContext.sessionId());
+            return saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
         }
 
         return CONTINUE;
+    }
+
+    private Action sendDuplicateSessionError(
+        final int libraryId, final long correlationId, final CompositeKey sessionKey)
+    {
+        final long sessionId = sessionContexts.lookupSessionId(sessionKey);
+        final int owningLibraryId = fixSenderEndPoints.libraryLookup().applyAsInt(sessionId);
+        final String msg = "Duplicate Session for: " + sessionKey + " Surrogate Key: " + sessionId +
+            " Currently owned by " + owningLibraryId;
+        return saveError(DUPLICATE_SESSION, libraryId, correlationId, msg);
     }
 
     private boolean isUnsafeDuplicateSession(final SessionContext sessionContext, final LiveLibraryInfo library)
@@ -1355,9 +1340,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return isOwnedSession(sessionId);
     }
 
-    private void saveUnknownLibrary(final int libraryId, final long correlationId)
+    private Action saveUnknownLibrary(final int libraryId, final long correlationId)
     {
-        saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "Unknown Library");
+        return saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "Unknown Library");
     }
 
     public Action onMidConnectionDisconnect(final int libraryId, final long correlationId)
@@ -1593,16 +1578,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             library));
     }
 
-    void saveError(final GatewayError error, final int libraryId, final long replyToId, final String message)
+    Action saveError(final GatewayError error, final int libraryId, final long replyToId, final String message)
     {
         schedule(() -> inboundPublication.saveError(error, libraryId, replyToId, message));
+        return CONTINUE;
     }
 
-    private void saveError(final GatewayError error, final int libraryId, final long replyToId, final Exception e)
+    private Action saveError(final GatewayError error, final int libraryId, final long replyToId, final Exception e)
     {
         final String message = e.getMessage();
         errorHandler.onError(e);
-        saveError(error, libraryId, replyToId, message == null ? e.getClass().getName() : message);
+        return saveError(error, libraryId, replyToId, message == null ? e.getClass().getName() : message);
     }
 
     public Action onMessage(
