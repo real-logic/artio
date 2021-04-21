@@ -50,12 +50,12 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
     private static final int BUFFER_CAPACITY = 16 * 1024;
-    private static final int TEST_TIMEOUT = 20_000;
 
     private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final int port = unusedPort();
@@ -74,7 +74,7 @@ public class SlowConsumerTest
     private SocketChannel socket;
     private Session session;
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
         final int senderMaxBytesInBuffer = 8 * 1024;
@@ -115,7 +115,7 @@ public class SlowConsumerTest
         assertTrue(hasBecomeSlow);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRestoreConnectionFromSlowGroupWhenItCatchesUp() throws IOException
     {
         final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
@@ -148,7 +148,7 @@ public class SlowConsumerTest
         assertTrue(socketIsConnected());
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotifyLibraryOfSlowConnectionWhenAcquired() throws IOException
     {
         sessionBecomesSlow(null);

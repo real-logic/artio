@@ -44,7 +44,7 @@ public class ReliableHandoverSystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         connectSessions();

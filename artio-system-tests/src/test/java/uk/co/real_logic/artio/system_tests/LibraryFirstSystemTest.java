@@ -52,7 +52,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         connectSessions();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void engineAndLibraryPairsShouldBeRestartableOutOfOrder()
         throws ExecutionException, InterruptedException
     {

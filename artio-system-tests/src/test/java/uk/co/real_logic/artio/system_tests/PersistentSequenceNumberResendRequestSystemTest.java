@@ -88,7 +88,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReplayMessageBeforeARestart()
     {
         final int resendSeqNum = exchangeMessages();

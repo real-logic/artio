@@ -52,7 +52,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         testSystem = new TestSystem(initiatingLibrary);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void connectsOnceSystemIsUp()
     {
         debugTcpChannelSupplier.disable();

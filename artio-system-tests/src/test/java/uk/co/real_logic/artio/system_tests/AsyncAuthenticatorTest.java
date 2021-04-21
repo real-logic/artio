@@ -69,7 +69,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldConnectedAcceptedAuthentications()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
@@ -80,7 +80,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertInitiatingSequenceIndexIs(0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToRejectLogons()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
@@ -90,7 +90,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertDisconnectRejected(reply);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void logonsCanBeRejectedWithCustomMessages()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
@@ -113,7 +113,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test(timeout = TEST_TIMEOUT_IN_MS, expected = NullPointerException.class)
     public void rejectWithEncoderMustProvideAnEncoder()
     {
         acquireExecutingAuthProxy();
@@ -129,7 +129,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(timeout = TEST_TIMEOUT_IN_MS, expected = IllegalArgumentException.class)
     public void lingerTimeoutShouldBeValid()
     {
         acquireExecutingAuthProxy();
@@ -147,7 +147,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void invalidEncoderShouldStillDisconnect()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
@@ -159,7 +159,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertDisconnectRejected(reply);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectSessionsWhenAuthStrategyFails()
     {
         auth.throwWhenInvoked = true;
@@ -169,7 +169,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertDisconnectRejected(reply);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
     {
         final Reply<Session> invalidReply = acquireExecutingAuthProxy();
@@ -188,7 +188,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertInitiatingSequenceIndexIs(1);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldOnlyUseFirstMethodCall()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
@@ -211,7 +211,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertInitiatingSequenceIndexIs(0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectPendingAuthenticationAfterTimeout()
     {
         final long start = System.currentTimeMillis();
@@ -228,27 +228,27 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.verifyNoBlockingCalls();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotifyAuthStrategyUponAcceptorLogoff()
     {
         // can be either logout or remote disconnect
         notifyAuthStrategyUpon(this::logoutAcceptingSession, null);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotifyAuthStrategyUponInitiatorLogoff()
     {
         notifyAuthStrategyUpon(this::logoutInitiatingSession, DisconnectReason.LOGOUT);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotifyAuthStrategyUponAcceptorDisconnect()
     {
         notifyAuthStrategyUpon(
             () -> testSystem.awaitRequestDisconnect(acceptingSession), DisconnectReason.APPLICATION_DISCONNECT);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotifyAuthStrategyUponInitiatorDisconnect()
     {
         notifyAuthStrategyUpon(

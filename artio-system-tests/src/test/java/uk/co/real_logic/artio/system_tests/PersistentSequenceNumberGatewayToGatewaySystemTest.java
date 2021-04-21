@@ -54,7 +54,6 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int HIGH_INITIAL_SEQUENCE_NUMBER = 1000;
-    private static final long TEST_TIMEOUT_IN_MS = 10_000L;
     private static final int DOES_NOT_MATTER = -1;
     private static final int DEFAULT_SEQ_NUM_AFTER = 4;
 
@@ -270,7 +269,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldPersistSequenceNumbersWithoutARestart()
     {
         launch(this::nothing);
@@ -308,7 +307,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(4, 0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotAllowResendRequestSpamming()
     {
         printErrorMessages = false;
@@ -367,7 +366,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertThat(errorCounter.lastObservationCount(), lessThan(messageCount * 5));
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectIncorrectInitiatorSequenceNumber()
     {
         printErrorMessages = false;
@@ -425,7 +424,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(ERRORED, reply.state());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReadOldMetaDataOverPersistentConnectionReconnect()
     {
         launch(this::nothing);
@@ -441,7 +440,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         readMetaData(acceptingSession.id());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldStoreAndForwardMessagesSentWhilstOffline()
     {
         launch(this::nothing);
@@ -459,7 +458,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         receiveReplayFromOfflineSession(sessionId);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldStoreAndForwardMessagesSentWithNewSession()
     {
         launch(this::nothing);
@@ -471,7 +470,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         receiveReplayFromOfflineSession(sessionId);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSession()
     {
         printErrorMessages = true;
@@ -491,7 +490,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         receivedReplayFromReconnectedSession();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldResetSequenceNumbersOfOfflineSessions()
     {
         printErrorMessages = false;

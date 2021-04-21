@@ -54,7 +54,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         return initiatingLibrary.initiate(config);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void lastMsgSeqNumProcessedUpdatedByEngine()
     {
         messagesCanBeExchanged();
@@ -64,7 +64,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         assertLastInitiatorReceivedMsgSeqNumProcessed(2);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void lastMsgSeqNumProcessedUpdatedByLibrary()
     {
         acquireAcceptingSession();
@@ -77,7 +77,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         assertEquals(2, acceptingOtfAcceptor.lastReceivedMsgSeqNumProcessed());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void lastMsgSeqNumProcessedCorrectInLowSequenceNumberLogout()
     {
         messagesCanBeExchanged();

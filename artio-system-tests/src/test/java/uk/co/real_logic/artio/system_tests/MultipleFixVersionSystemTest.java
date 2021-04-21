@@ -111,7 +111,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         acceptingEngine = FixEngine.launch(acceptingConfiguration);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToSendMessagesFromInitiatorToBothAcceptors()
     {
         connectSessions();
@@ -120,7 +120,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         bothSessionsCanExchangeMessages();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToAquireSessions()
     {
         connectSessions();
@@ -141,7 +141,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         assertHeaderHasApplVerId(acceptingOtfAcceptor);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToAcceptAFixVersionBasedUponLogonMessage()
     {
         connectOtherSession();

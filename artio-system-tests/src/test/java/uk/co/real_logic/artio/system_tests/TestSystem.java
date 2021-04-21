@@ -37,7 +37,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
@@ -48,7 +47,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 
 public class TestSystem
 {
-    private static final int LONG_AWAIT_TIMEOUT_IN_MS = (int)MINUTES.toMillis(10);
+    public static final long LONG_AWAIT_TIMEOUT_IN_MS = 600_000_000;
+
     private final List<FixLibrary> libraries;
     private final List<Runnable> operations;
     private final LockStepFramerEngineScheduler scheduler;

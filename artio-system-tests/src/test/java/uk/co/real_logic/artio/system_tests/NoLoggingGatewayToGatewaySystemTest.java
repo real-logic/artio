@@ -54,7 +54,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         connectSessions();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         messagesCanBeExchanged();
@@ -62,7 +62,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         assertInitiatingSequenceIndexIs(0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void messagesCanBeSentFromInitiatorToAcceptingLibrary()
     {
         acquireAcceptingSession();
@@ -72,13 +72,13 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         assertSequenceIndicesAre(0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void sessionsCanReconnect()
     {
         super.sessionsCanReconnect();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void librariesShouldBeAbleToReleaseInitiatedSessionToEngine()
     {
         acquireAcceptingSession();
@@ -86,7 +86,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void librariesShouldBeAbleToReleaseAcceptedSessionToEngine()
     {
         acquireAcceptingSession();
@@ -94,7 +94,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void enginesShouldManageAcceptingSession()
     {
         acquireAcceptingSession();
@@ -102,7 +102,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         engineShouldManageSession(acceptingSession, acceptingLibrary, initiatingSession, initiatingOtfAcceptor);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void enginesShouldManageInitiatingSession()
     {
         acquireAcceptingSession();
@@ -110,7 +110,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         engineShouldManageSession(initiatingSession, initiatingLibrary, acceptingSession, acceptingOtfAcceptor);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void engineShouldAcquireTimedOutAcceptingSessions()
     {
         acquireAcceptingSession();
@@ -120,7 +120,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void engineShouldAcquireTimedOutInitiatingSessions()
     {
         testSystem.remove(initiatingLibrary);

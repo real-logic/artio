@@ -79,7 +79,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         connectSessions();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTriggerCancelOnDisconnectTimeoutForLogout()
     {
         setup(CANCEL_ON_LOGOUT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
@@ -89,7 +89,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTriggerCancelOnDisconnectTimeoutForDisconnect()
     {
         setup(CANCEL_ON_DISCONNECT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
@@ -99,7 +99,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTriggerCancelOnDisconnectTimeoutForLogoutLibrary()
     {
         setup(CANCEL_ON_LOGOUT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
@@ -111,7 +111,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTriggerCancelOnDisconnectTimeoutForDisconnectLibrary()
     {
         setup(CANCEL_ON_DISCONNECT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
@@ -121,7 +121,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotTriggerCancelOnDisconnectTimeoutWhenConfiguredNotTo()
     {
         setup(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), 0);
@@ -132,7 +132,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotTriggerCancelOnDisconnectTimeoutWithNoLogonOptions()
     {
         setup(SessionCustomisationStrategy.none());
@@ -143,7 +143,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCorrectTimeoutsOverLimit()
     {
         setup(CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), 100_000_000);

@@ -89,7 +89,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRoundTripMessagesViaExternalSystem()
     {
         connectSessions();
@@ -106,7 +106,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReconnectConnections()
     {
         shouldRoundTripMessagesViaExternalSystem();
@@ -126,7 +126,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
         final long writerSessionId = writeMessageWithSessionWriter();
@@ -141,7 +141,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals("Y", resentNewOrderSingle.possDup());
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToAdjustSequenceNumbersFromTheControlSystem()
     {
         connectSessions();

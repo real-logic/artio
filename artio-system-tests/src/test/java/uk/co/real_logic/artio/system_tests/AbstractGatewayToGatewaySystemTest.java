@@ -65,6 +65,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
 {
+    public static final long TEST_TIMEOUT_IN_MS = 20_000L;
+
     static final int META_DATA_VALUE = 123;
     static final int META_DATA_WRONG_VALUE = 124;
     static final long META_DATA_SESSION_ID = 1L;

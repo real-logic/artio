@@ -53,7 +53,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         connectSessions();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhilstGatewayRunningOneStream()
     {
         setupAndExchangeMessages();
@@ -61,7 +61,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertOutboundArchiveContainsMessages("hi");
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhilstGatewayRunningBothStreams()
     {
         setupAndExchangeMessages();
@@ -69,7 +69,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertArchiveContainsBothMessages("hi");
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveForLargeMessages()
     {
         acquireAcceptingSession();
@@ -85,7 +85,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertOutboundArchiveContainsMessages(largeTestReqId());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhenGatewayStoppedOneStream()
     {
         setupAndExchangeMessages();
@@ -95,7 +95,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertOutboundArchiveContainsMessages("hi");
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhenGatewayStoppedBothStreams()
     {
         setupAndExchangeMessages();
