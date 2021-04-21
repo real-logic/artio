@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InboundFixPConnectEncoder;
@@ -108,7 +108,7 @@ public class FixPGatewaySessions extends GatewaySessions
         private final FixPContext identification;
         private final AbstractFixPProxy fixPProxy;
 
-        private FirstMessageRejectReason firstMessageRejectReason;
+        private FixPFirstMessageResponse fixPFirstMessageResponse;
 
         FixPPendingAcceptorLogon(
             final long sessionId,
@@ -132,9 +132,9 @@ public class FixPGatewaySessions extends GatewaySessions
             this.identification = identification;
             this.fixPProxy = fixPProxy;
 
-            final FirstMessageRejectReason rejectReason = fixPContexts.onAcceptorLogon(
+            final FixPFirstMessageResponse rejectReason = fixPContexts.onAcceptorLogon(
                 sessionId, identification, connectionId);
-            if (rejectReason == null)
+            if (rejectReason == FixPFirstMessageResponse.OK)
             {
                 authenticate(connectionId);
             }
@@ -192,18 +192,18 @@ public class FixPGatewaySessions extends GatewaySessions
 
         protected void encodeRejectMessage()
         {
-            rejectEncodeBuffer = fixPProxy.encodeReject(identification, firstMessageRejectReason);
+            rejectEncodeBuffer = fixPProxy.encodeReject(identification, fixPFirstMessageResponse);
         }
 
         public void reject()
         {
-            reject(FirstMessageRejectReason.CREDENTIALS);
+            reject(FixPFirstMessageResponse.CREDENTIALS);
         }
 
-        private void reject(final FirstMessageRejectReason firstMessageRejectReason)
+        private void reject(final FixPFirstMessageResponse response)
         {
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
-            this.firstMessageRejectReason = firstMessageRejectReason;
+            this.fixPFirstMessageResponse = response;
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }

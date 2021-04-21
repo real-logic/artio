@@ -188,7 +188,7 @@ public class FixPContexts implements SessionContexts
         mappedFile.close();
     }
 
-    public FirstMessageRejectReason onAcceptorLogon(
+    public FixPFirstMessageResponse onAcceptorLogon(
         final long sessionId, final FixPContext context, final long connectionId)
     {
         final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
@@ -198,8 +198,8 @@ public class FixPContexts implements SessionContexts
 
             final FixPKey key = context.key();
             final FixPContext oldContext = keyToContext.get(key);
-            final FirstMessageRejectReason rejectReason = context.checkAccept(oldContext);
-            if (rejectReason == null)
+            final FixPFirstMessageResponse rejectReason = context.checkAccept(oldContext);
+            if (rejectReason == FixPFirstMessageResponse.OK)
             {
                 if (oldContext == null)
                 {
@@ -215,7 +215,7 @@ public class FixPContexts implements SessionContexts
         }
         else
         {
-            return FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
+            return FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
         }
     }
 

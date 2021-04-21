@@ -1989,8 +1989,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixPGatewaySession gatewaySession = (FixPGatewaySession)gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
-            return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+            if (isOwnedSession(sessionId))
+            {
+                saveOtherSessionOwner(libraryInfo, correlationId);
+                return CONTINUE;
+            }
+            else
+            {
+                return Pressure.apply(inboundPublication.saveRequestSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+            }
         }
 
         if (gatewaySession.libraryId() != ENGINE_LIBRARY_ID)
@@ -2203,8 +2211,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (isOwnedSession(sessionId))
         {
-            schedule(() -> inboundPublication.saveRequestSessionReply(
-                libraryInfo.libraryId(), OTHER_SESSION_OWNER, correlationId));
+            saveOtherSessionOwner(libraryInfo, correlationId);
         }
         else
         {
@@ -2219,6 +2226,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return true;
+    }
+
+    private void saveOtherSessionOwner(final LiveLibraryInfo libraryInfo, final long correlationId)
+    {
+        schedule(() -> inboundPublication.saveRequestSessionReply(
+            libraryInfo.libraryId(), OTHER_SESSION_OWNER, correlationId));
     }
 
     private boolean isOwnedSession(final long sessionId)

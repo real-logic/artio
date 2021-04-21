@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
@@ -146,7 +146,7 @@ public final class ILink3Context implements FixPContext
         return connectUuid;
     }
 
-    public FirstMessageRejectReason checkAccept(final FixPContext context)
+    public FixPFirstMessageResponse checkAccept(final FixPContext context)
     {
         throw new UnsupportedOperationException();
     }

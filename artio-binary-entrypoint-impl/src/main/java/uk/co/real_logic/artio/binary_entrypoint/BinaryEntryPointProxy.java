@@ -23,7 +23,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
@@ -351,7 +351,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     }
 
     public ByteBuffer encodeReject(
-        final FixPContext fixPContext, final FirstMessageRejectReason rejectReason)
+        final FixPContext fixPContext, final FixPFirstMessageResponse rejectReason)
     {
         final BinaryEntryPointContext identification = (BinaryEntryPointContext)fixPContext;
 

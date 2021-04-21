@@ -31,9 +31,20 @@ public interface FixPContext
      */
     FixPKey key();
 
-    // copy offset from old context
-    FirstMessageRejectReason checkAccept(FixPContext oldContext);
+    /**
+     * Invoked when an acceptor reconnects.
+     *
+     * @param oldContext the FixPContext from the previous connect
+     * @return a response that might be a reason to reject this connection or OK if there is no error.
+     */
+    FixPFirstMessageResponse checkAccept(FixPContext oldContext);
 
+    /**
+     * Invoked when an initiator reconnects.
+     *
+     * @param reestablishConnection true if the initiator's configuration for reestablishing the connection has set
+     *                              this value to true.
+     */
     void initiatorReconnect(boolean reestablishConnection);
 
     /**
@@ -43,5 +54,16 @@ public interface FixPContext
      */
     FixPProtocolType protocolType();
 
+    /**
+     * Invoked when a sequence is ended. There are two cases for that:
+     *
+     * <ul>
+     *     <li>When the <code>FixEngine.resetSequenceNumber(sessionId)</code> method is invoked.</li>
+     *     <li>For FIXP protocols that implement the FinishedSending / FinishedReceiving mechanism, it is invoked
+     *     upon receipt of either of those methods.</li>
+     * </ul>
+     *
+     * Implementations should be idempotent.
+     */
     void onEndSequence();
 }

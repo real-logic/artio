@@ -28,6 +28,8 @@ import static org.junit.Assert.assertNotNull;
 
 public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHandler
 {
+    private static final int REQUEST_TIMEOUT_IN_MS = 10_000;
+
     private long lastSurrogateSessionId;
     private FixPContext lastIdentification;
     private Reply<SessionReplyStatus> lastReply;
@@ -44,12 +46,17 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
         this.lastSurrogateSessionId = surrogateSessionId;
         this.lastIdentification = context;
 
-        lastReply = library.requestSession(surrogateSessionId,
-            FixLibrary.NO_MESSAGE_REPLAY,
-            FixLibrary.NO_MESSAGE_REPLAY,
-            10_000);
+        lastReply = requestSession(library, surrogateSessionId);
 
         return ControlledFragmentHandler.Action.CONTINUE;
+    }
+
+    static Reply<SessionReplyStatus> requestSession(final FixLibrary library, final long surrogateSessionId)
+    {
+        return library.requestSession(surrogateSessionId,
+            FixLibrary.NO_MESSAGE_REPLAY,
+            FixLibrary.NO_MESSAGE_REPLAY,
+            REQUEST_TIMEOUT_IN_MS);
     }
 
     public long lastSurrogateSessionId()

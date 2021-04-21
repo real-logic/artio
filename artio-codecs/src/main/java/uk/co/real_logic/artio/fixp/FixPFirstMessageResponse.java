@@ -19,8 +19,10 @@ package uk.co.real_logic.artio.fixp;
  * Enum for representing common negotiate and establish reject reasons and codes between different FIXP codec
  * implementations
  */
-public enum FirstMessageRejectReason
+public enum FixPFirstMessageResponse
 {
+    /** No problem has been identified for the first message */
+    OK,
     /**
      * Might require either an establish or negotiate reject being sent depending upon which message you're replying to
      */

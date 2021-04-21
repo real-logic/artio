@@ -15,11 +15,12 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import uk.co.real_logic.artio.fixp.FirstMessageRejectReason;
+import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 
 public class BinaryEntryPointContext implements FixPContext
 {
@@ -94,7 +95,7 @@ public class BinaryEntryPointContext implements FixPContext
         return key;
     }
 
-    public FirstMessageRejectReason checkAccept(final FixPContext fixPContext)
+    public FixPFirstMessageResponse checkAccept(final FixPContext fixPContext)
     {
         if (fixPContext == null)
         {
@@ -118,7 +119,7 @@ public class BinaryEntryPointContext implements FixPContext
         // negotiations should increment the session ver id
         if (fromNegotiate)
         {
-            return sessionVerID > oldContext.sessionVerID ? null : FirstMessageRejectReason.NEGOTIATE_DUPLICATE_ID;
+            return sessionVerID > oldContext.sessionVerID ? OK : NEGOTIATE_DUPLICATE_ID;
         }
         // establish messages shouldn't
         else
@@ -127,10 +128,10 @@ public class BinaryEntryPointContext implements FixPContext
             if (oldContext.sessionVerID == sessionVerID)
             {
                 // cannot re-restablish an ended session
-                return oldContext.ended ? FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED : null;
+                return oldContext.ended ? ESTABLISH_UNNEGOTIATED : OK;
             }
 
-            return FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
+            return ESTABLISH_UNNEGOTIATED;
         }
     }
 
@@ -149,14 +150,14 @@ public class BinaryEntryPointContext implements FixPContext
         ended = true;
     }
 
-    public FirstMessageRejectReason checkFirstConnect()
+    public FixPFirstMessageResponse checkFirstConnect()
     {
         if (!fromNegotiate)
         {
-            return FirstMessageRejectReason.ESTABLISH_UNNEGOTIATED;
+            return ESTABLISH_UNNEGOTIATED;
         }
 
-        return null;
+        return OK;
     }
 
     void offset(final int offset)
