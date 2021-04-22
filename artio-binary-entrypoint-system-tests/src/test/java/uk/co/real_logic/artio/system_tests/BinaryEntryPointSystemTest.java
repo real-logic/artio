@@ -997,9 +997,7 @@ public class BinaryEntryPointSystemTest
     {
         shouldExchangeBusinessMessage();
 
-//        testSystem.awaitCompletedReply();
-
-        engine.resetSequenceNumber(connection.sessionId());
+        testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
 
         rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
     }

@@ -16,17 +16,20 @@
 package uk.co.real_logic.artio.library;
 
 /**
- * Callback that is invoked when a library is notified of a session existing.
+ * Callback that is invoked when a library is notified of a FIX session existing.
  *
  * This will either be called when a new session is accepted on the gateway or
  * when the library first connects.
  *
  * @see LibraryConfiguration#sessionExistsHandler(SessionExistsHandler)
+ * @see FixPConnectionExistsHandler the FIXP equivalent
  */
 @FunctionalInterface
 public interface SessionExistsHandler
 {
     /**
+     * Invoked when a session exists.
+     *
      * If either of the subId or locationId fields are not present in the logon message <code>""</code> will
      * be passed as an argument.
      *
