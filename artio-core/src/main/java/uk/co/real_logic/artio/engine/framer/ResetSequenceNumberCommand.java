@@ -45,7 +45,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final long resetTimeInNs;
     private Session session;
     private LongToIntFunction libraryLookup;
-    private long waitSequence = 1;
+    private long awaitSequenceNumber = 1;
 
     private boolean isAdminReset = false;
     private long adminCorrelationId;
@@ -187,7 +187,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 final long position = session.tryResetSequenceNumbers();
                 if (!Pressure.isBackPressured(position))
                 {
-                    waitSequence = 1;
+                    awaitSequenceNumber = 1;
                     step = Step.AWAIT_RECV;
                 }
                 return false;
@@ -201,7 +201,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                     if (!Pressure.isBackPressured(
                         inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
                     {
-                        waitSequence = 1;
+                        awaitSequenceNumber = 1;
                         step = Step.AWAIT_RECV;
                     }
                 }
@@ -215,11 +215,11 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
             }
 
             case RESET_RECV:
-                waitSequence = 0;
+                awaitSequenceNumber = 0;
                 return reset(inboundPublication, Step.RESET_SENT);
 
             case RESET_SENT:
-                waitSequence = 0;
+                awaitSequenceNumber = 0;
                 return reset(outboundPublication, Step.AWAIT_RECV);
 
             case AWAIT_RECV:
@@ -267,7 +267,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private boolean await(final SequenceNumberIndexReader sequenceNumberIndex, final Step nextStep)
     {
         final int lastKnownSequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-        final boolean done = lastKnownSequenceNumber <= waitSequence;
+        final boolean done = lastKnownSequenceNumber <= awaitSequenceNumber;
         if (done)
         {
             step = nextStep;

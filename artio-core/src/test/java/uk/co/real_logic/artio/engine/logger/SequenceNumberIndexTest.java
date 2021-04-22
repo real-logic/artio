@@ -27,6 +27,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -94,7 +95,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID);
         gatewayPublication = new GatewayPublication(
-            publication, mock(AtomicCounter.class), YieldingIdleStrategy.INSTANCE, null, 10);
+            publication,
+            mock(AtomicCounter.class),
+            YieldingIdleStrategy.INSTANCE,
+            mock(EpochNanoClock.class),
+            10);
         subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
 
         buffer = new UnsafeBuffer(new byte[512]);
@@ -229,7 +234,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         try (ExclusivePublication publication = aeron.addExclusivePublication(IPC_CHANNEL, STREAM_ID))
         {
             final GatewayPublication gatewayPublication = new GatewayPublication(
-                publication, null, YieldingIdleStrategy.INSTANCE, null, 1);
+                publication, mock(AtomicCounter.class), YieldingIdleStrategy.INSTANCE,
+                mock(EpochNanoClock.class), 1);
 
             final long redactMessagePosition = gatewayPublication.saveRedactSequenceUpdate(
                 SESSION_ID, SEQUENCE_NUMBER, fixMessageToRedactPosition);
