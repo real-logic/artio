@@ -1,13 +1,14 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.IoUtil;
+import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
-import java.io.File;
+import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,45 @@ public final class ReplayIndexExtractor
         void onEntry(ReplayIndexRecordDecoder indexRecord);
 
         void onLapped();
+    }
+
+    public static class PrintError implements ReplayIndexExtractor.ReplayIndexHandler
+    {
+        private final BufferedWriter out;
+
+        public PrintError(final BufferedWriter out) throws IOException
+        {
+            this.out = out;
+            out.write("beginPosition,sequenceIndex,sequenceNumber,recordingId,readLength\n");
+        }
+
+        public void onEntry(final ReplayIndexRecordDecoder indexRecord)
+        {
+            final long beginPosition = indexRecord.position();
+            final int sequenceIndex = indexRecord.sequenceIndex();
+            final int sequenceNumber = indexRecord.sequenceNumber();
+            final long recordingId = indexRecord.recordingId();
+            final int readLength = indexRecord.length();
+
+            try
+            {
+                out.write(
+                    beginPosition + "," +
+                        sequenceIndex + "," +
+                        sequenceNumber + "," +
+                        recordingId + "," +
+                        readLength + "\n");
+            }
+            catch (final IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+        }
+
+        public void onLapped()
+        {
+            System.err.println("Error: lapped by writer currently updating the file");
+        }
     }
 
     public static class ValidationError

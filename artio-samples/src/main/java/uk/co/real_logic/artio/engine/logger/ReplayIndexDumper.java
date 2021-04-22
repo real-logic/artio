@@ -35,38 +35,7 @@ public final class ReplayIndexDumper
         final String output = "replay-index-dump.csv";
         try (BufferedWriter out = new BufferedWriter(new FileWriter(output)))
         {
-            out.write("beginPosition,sequenceIndex,sequenceNumber,recordingId,readLength\n");
-
-            ReplayIndexExtractor.extract(file, new ReplayIndexExtractor.ReplayIndexHandler()
-            {
-                public void onEntry(final ReplayIndexRecordDecoder indexRecord)
-                {
-                    final long beginPosition = indexRecord.position();
-                    final int sequenceIndex = indexRecord.sequenceIndex();
-                    final int sequenceNumber = indexRecord.sequenceNumber();
-                    final long recordingId = indexRecord.recordingId();
-                    final int readLength = indexRecord.length();
-
-                    try
-                    {
-                        out.write(
-                            beginPosition + "," +
-                            sequenceIndex + "," +
-                            sequenceNumber + "," +
-                            recordingId + "," +
-                            readLength + "\n");
-                    }
-                    catch (final IOException e)
-                    {
-                        LangUtil.rethrowUnchecked(e);
-                    }
-                }
-
-                public void onLapped()
-                {
-                    System.err.println("Error: lapped by writer currently updating the file");
-                }
-            });
+            ReplayIndexExtractor.extract(file, new ReplayIndexExtractor.PrintError(out));
         }
 
         final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
