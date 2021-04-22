@@ -18,11 +18,13 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -40,6 +42,7 @@ import java.util.function.Predicate;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -327,5 +330,14 @@ public class TestSystem
     public void awaitUnbind(final ILink3Connection session)
     {
         await("Failed to unbind session", () -> session.state() == ILink3Connection.State.UNBOUND);
+    }
+
+    public Long2LongHashMap pruneArchive(
+        final Long2LongHashMap minimumPosition, final FixEngine engine)
+    {
+        final Reply<Long2LongHashMap> pruneReply = engine.pruneArchive(minimumPosition);
+        assertNotNull(pruneReply);
+        awaitCompletedReplies(pruneReply);
+        return pruneReply.resultIfPresent();
     }
 }

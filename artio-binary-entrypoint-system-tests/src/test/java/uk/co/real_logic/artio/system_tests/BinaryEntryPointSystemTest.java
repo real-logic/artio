@@ -17,13 +17,16 @@ package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.Long2LongHashMap;
 import org.hamcrest.Matchers;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
@@ -43,6 +46,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.logbuffer.LogBufferDescriptor.TERM_MIN_LENGTH;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -54,6 +58,7 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.ArchivePruneSystemTest.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntrypointClient.*;
 import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
 import static uk.co.real_logic.artio.system_tests.FakeFixPConnectionExistsHandler.requestSession;
@@ -87,23 +92,41 @@ public class BinaryEntryPointSystemTest
 
     private boolean printErrors = true;
 
-    @Before
-    public void setUp()
+    private void setupArtio(final boolean deleteLogFileDirOnStart)
+    {
+        setup();
+        setupJustArtio(deleteLogFileDirOnStart);
+    }
+
+    private void setup()
     {
         mediaDriver = launchMediaDriver();
+        newTestSystem();
+    }
 
+    private void newTestSystem()
+    {
         testSystem = new TestSystem().awaitTimeoutInMs(AWAIT_TIMEOUT_IN_MS);
     }
 
-    private void setupArtio(final boolean deleteLogFileDirOnStart)
+    private void setupArtio(
+        final boolean deleteLogFileDirOnStart,
+        final int logonTimeoutInMs,
+        final int fixPAcceptedSessionMaxRetransmissionRange)
     {
-        setupArtio(
+        setup();
+        setupJustArtio(deleteLogFileDirOnStart, logonTimeoutInMs, fixPAcceptedSessionMaxRetransmissionRange);
+    }
+
+    private void setupJustArtio(final boolean deleteLogFileDirOnStart)
+    {
+        setupJustArtio(
             deleteLogFileDirOnStart,
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE);
     }
 
-    private void setupArtio(
+    private void setupJustArtio(
         final boolean deleteLogFileDirOnStart,
         final int shortLogonTimeoutInMs,
         final int fixPAcceptedSessionMaxRetransmissionRange)
@@ -981,7 +1004,7 @@ public class BinaryEntryPointSystemTest
             backup.resetState(engine);
 
             // all old sessions are removed and we can renegotiate
-            setupArtio(false);
+            setupJustArtio(false);
             final List<FixPSessionInfo> sessionInfos = engine.allFixPSessions();
             assertThat(sessionInfos, hasSize(0));
             connectAndExchangeBusinessMessage();
@@ -1014,6 +1037,63 @@ public class BinaryEntryPointSystemTest
             assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, reply.resultIfPresent());
         }
     }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldPruneAwayOldArchivePositions() throws IOException
+    {
+        mediaDriver = launchMediaDriver(TERM_MIN_LENGTH);
+        newTestSystem();
+        setupJustArtio(true);
+
+        exchangeOverASegmentOfMessages();
+
+        connectWithSessionVerId(2);
+
+        assertPruneWorks();
+    }
+
+    private void assertPruneWorks() throws IOException
+    {
+        try (AeronArchive archive = newArchive(engine))
+        {
+            final Long2LongHashMap prePruneRecordingIdToStartPos = getRecordingStartPos(archive);
+
+            final Long2LongHashMap recordingIdToStartPos = testSystem.pruneArchive(null, engine);
+            final Long2LongHashMap prunedRecordingIdToStartPos = getRecordingStartPos(archive);
+
+            DebugLogger.log(LogTag.STATE_CLEANUP,
+                "prePruneRecordingIdToStartPos = " + prePruneRecordingIdToStartPos +
+                ", prunedRecordingIdToStartPos = " + prunedRecordingIdToStartPos +
+                ", recordingIdToStartPos = " + recordingIdToStartPos);
+
+            assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos,
+                hasEntry(is(0L), greaterThanOrEqualTo((long)TERM_MIN_LENGTH)));
+
+            assertRecordingsPruned(
+                prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
+
+            restartArtio();
+
+            connectWithSessionVerId(3);
+
+            // Ensure that the recordings have been extended
+            final Long2LongHashMap endRecordingIdToStartPos = getRecordingStartPos(archive);
+            assertEquals(prunedRecordingIdToStartPos, endRecordingIdToStartPos);
+        }
+    }
+
+    private void exchangeOverASegmentOfMessages() throws IOException
+    {
+        try (BinaryEntrypointClient client = establishNewConnection())
+        {
+            final int overASegmentOfMessages = TERM_MIN_LENGTH / NewOrderSingleEncoder.BLOCK_LENGTH;
+            for (int i = 0; i < overASegmentOfMessages; i++)
+            {
+                exchangeOrderAndReportNew(client, i);
+            }
+        }
+    }
+
 
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
     {
@@ -1109,7 +1189,7 @@ public class BinaryEntryPointSystemTest
     private void restartArtio()
     {
         closeArtio();
-        setupArtio(false);
+        setupJustArtio(false);
     }
 
     private void reEstablishConnection(final int alreadyRecvMsgCount, final int alreadySentMsgCount) throws IOException

@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.system_tests;
 import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
-import org.hamcrest.Matchers;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
@@ -27,8 +26,6 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
@@ -99,8 +96,19 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         final FixPConnection connection, final long clOrderID, final long securityID, final boolean abortReport)
     {
         final ExecutionReport_NewEncoder executionReport = new ExecutionReport_NewEncoder();
-        final long position = connection.tryClaim(executionReport);
-        assertThat(position, Matchers.greaterThan(0L));
+
+        while (true)
+        {
+            final long position = connection.tryClaim(executionReport);
+            if (position >= 0)
+            {
+                break;
+            }
+            else
+            {
+                Thread.yield();
+            }
+        }
 
         executionReport
             .orderID(clOrderID)

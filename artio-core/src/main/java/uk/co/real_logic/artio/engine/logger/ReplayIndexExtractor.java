@@ -52,10 +52,10 @@ public final class ReplayIndexExtractor
             {
                 out.write(
                     beginPosition + "," +
-                        sequenceIndex + "," +
-                        sequenceNumber + "," +
-                        recordingId + "," +
-                        readLength + "\n");
+                    sequenceIndex + "," +
+                    sequenceNumber + "," +
+                    recordingId + "," +
+                    readLength + "\n");
             }
             catch (final IOException e)
             {

@@ -35,7 +35,6 @@ import static io.aeron.logbuffer.LogBufferDescriptor.TERM_MIN_LENGTH;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -71,7 +70,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         acceptingEngine = FixEngine.launch(acceptingConfig);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldPruneAwayOldArchivePositions()
     {
         setupSessionWithSegmentOfFiles();
@@ -157,7 +156,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
     private void assertPruneWorks(final boolean reconnectSession, final boolean hasConnectedLibrary)
     {
-        try (AeronArchive archive = newArchive())
+        try (AeronArchive archive = newArchive(acceptingEngine))
         {
             final Long2LongHashMap prePruneRecordingIdToStartPos = getRecordingStartPos(archive);
 
@@ -167,7 +166,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             final long notPrunedRecordingId = 1;
             minimumPosition.put(notPrunedRecordingId, 0);
 
-            final Long2LongHashMap recordingIdToStartPos = pruneArchive(minimumPosition);
+            final Long2LongHashMap recordingIdToStartPos = testSystem.pruneArchive(minimumPosition, acceptingEngine);
             final Long2LongHashMap prunedRecordingIdToStartPos = getRecordingStartPos(archive);
 
             DebugLogger.log(LogTag.STATE_CLEANUP,
@@ -175,9 +174,9 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
                 ", prunedRecordingIdToStartPos = " + prunedRecordingIdToStartPos +
                 ", recordingIdToStartPos = " + recordingIdToStartPos);
 
-            assertThat(recordingIdToStartPos, not(hasKey(notPrunedRecordingId)));
-            assertThat(recordingIdToStartPos, hasKey(0L));
-            assertThat(recordingIdToStartPos, hasKey(4L));
+            assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos, not(hasKey(notPrunedRecordingId)));
+            assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos, hasKey(0L));
+            assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos, hasKey(4L));
 
             assertRecordingsPruned(
                 prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
@@ -226,7 +225,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    private void assertRecordingsPruned(
+    public static void assertRecordingsPruned(
         final Long2LongHashMap prePruneRecordingIdToStartPos,
         final Long2LongHashMap recordingIdToStartPos,
         final Long2LongHashMap prunedRecordingIdToStartPos)
@@ -244,22 +243,13 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    private Long2LongHashMap pruneArchive(final Long2LongHashMap minimumPosition)
+    public static AeronArchive newArchive(final FixEngine engine)
     {
-        final Reply<Long2LongHashMap> pruneReply = acceptingEngine.pruneArchive(minimumPosition);
-        assertNotNull(pruneReply);
-        testSystem.awaitCompletedReplies(pruneReply);
-
-        return pruneReply.resultIfPresent();
-    }
-
-    private AeronArchive newArchive()
-    {
-        final AeronArchive.Context archiveContext = acceptingEngine.configuration().archiveContextClone();
+        final AeronArchive.Context archiveContext = engine.configuration().archiveContextClone();
         return AeronArchive.connect(archiveContext);
     }
 
-    private Long2LongHashMap getRecordingStartPos(final AeronArchive archive)
+    public static Long2LongHashMap getRecordingStartPos(final AeronArchive archive)
     {
         final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
         archive.listRecordings(0, 100,

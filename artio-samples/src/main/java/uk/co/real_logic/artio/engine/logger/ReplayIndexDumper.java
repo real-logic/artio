@@ -15,9 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import org.agrona.LangUtil;
-import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
