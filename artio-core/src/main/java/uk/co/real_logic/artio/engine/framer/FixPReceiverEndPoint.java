@@ -133,9 +133,13 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
         try
         {
             final int bytesRead = readData();
-            if (bytesRead > 0 && !frameMessages())
+            if (bytesRead > 0)
             {
-                return -bytesRead;
+                return frameMessages() ? bytesRead : -bytesRead;
+            }
+            else if (usedBufferData > 0)
+            {
+                return frameMessages() ? 1 : -1;
             }
 
             return bytesRead;
