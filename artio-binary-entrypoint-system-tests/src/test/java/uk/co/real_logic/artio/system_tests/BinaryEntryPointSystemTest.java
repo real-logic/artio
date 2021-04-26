@@ -640,11 +640,7 @@ public class BinaryEntryPointSystemTest
 
             assertNextSequenceNumbers(2, 3);
 
-            connection.finishSending();
-            assertCannotSendMessage();
-
-            client.readFinishedSending(2);
-            client.writeFinishedReceiving();
+            acceptorInitiatedFinishSending(client, 2);
 
             clientTerminatesSession(client);
         }
@@ -693,11 +689,16 @@ public class BinaryEntryPointSystemTest
 
     private void acceptorInitiatedFinishSending(final BinaryEntrypointClient client)
     {
+        acceptorInitiatedFinishSending(client, 1);
+    }
+
+    private void acceptorInitiatedFinishSending(final BinaryEntrypointClient client, final int lastSeqNo)
+    {
         connection.finishSending();
 
         assertCannotSendMessage();
 
-        client.readFinishedSending(1);
+        client.readFinishedSending(lastSeqNo);
         client.writeFinishedReceiving();
     }
 
@@ -1020,7 +1021,7 @@ public class BinaryEntryPointSystemTest
     {
         shouldExchangeBusinessMessage();
 
-        testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
+        resetSequenceNumber();
 
         rejectedReestablish(EstablishRejectCode.UNNEGOTIATED);
     }
@@ -1038,16 +1039,45 @@ public class BinaryEntryPointSystemTest
         }
     }
 
+    // ----------------------------------
+    // BEGIN PRUNE TESTS
+    // ----------------------------------
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldPruneAwayOldArchivePositions() throws IOException
+    public void shouldPruneAwayOldArchivePositionsAfterRenegotiate() throws IOException
+    {
+        shouldPruneAwayOldArchivePositions(false, () -> connectWithSessionVerId(2));
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldPruneAwayOldArchivePositionsAfterResetSequenceNumbers() throws IOException
+    {
+        shouldPruneAwayOldArchivePositions(false, this::resetSequenceNumber);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldPruneAwayOldArchivePositionsAfterFinishSendingAndRenegotiate() throws IOException
+    {
+        // Don't support purging the sequence after a finish sending on it's own as a resend
+        // request could come in after that point.
+        shouldPruneAwayOldArchivePositions(true, () -> connectWithSessionVerId(2));
+    }
+
+    private interface ResetOperation
+    {
+        void reset() throws IOException;
+    }
+
+    private void shouldPruneAwayOldArchivePositions(
+        final boolean finishSending, final ResetOperation resetOp) throws IOException
     {
         mediaDriver = launchMediaDriver(TERM_MIN_LENGTH);
         newTestSystem();
         setupJustArtio(true);
 
-        exchangeOverASegmentOfMessages();
+        exchangeOverASegmentOfMessages(finishSending);
 
-        connectWithSessionVerId(2);
+        resetOp.reset();
 
         assertPruneWorks();
     }
@@ -1066,8 +1096,8 @@ public class BinaryEntryPointSystemTest
                 ", prunedRecordingIdToStartPos = " + prunedRecordingIdToStartPos +
                 ", recordingIdToStartPos = " + recordingIdToStartPos);
 
-            assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos,
-                hasEntry(is(0L), greaterThanOrEqualTo((long)TERM_MIN_LENGTH)));
+            assertHasBeenPruned(recordingIdToStartPos, 0L);
+            assertHasBeenPruned(recordingIdToStartPos, 2L);
 
             assertRecordingsPruned(
                 prePruneRecordingIdToStartPos, recordingIdToStartPos, prunedRecordingIdToStartPos);
@@ -1082,7 +1112,13 @@ public class BinaryEntryPointSystemTest
         }
     }
 
-    private void exchangeOverASegmentOfMessages() throws IOException
+    private void assertHasBeenPruned(final Long2LongHashMap recordingIdToStartPos, final long recordingId)
+    {
+        assertThat(recordingIdToStartPos.toString(), recordingIdToStartPos,
+            hasEntry(is(recordingId), greaterThanOrEqualTo((long)TERM_MIN_LENGTH)));
+    }
+
+    private void exchangeOverASegmentOfMessages(final boolean finishSending) throws IOException
     {
         try (BinaryEntrypointClient client = establishNewConnection())
         {
@@ -1091,9 +1127,24 @@ public class BinaryEntryPointSystemTest
             {
                 exchangeOrderAndReportNew(client, i);
             }
+
+            if (finishSending)
+            {
+                client.writeFinishedSending(overASegmentOfMessages);
+                client.readFinishedReceiving();
+                acceptorInitiatedFinishSending(client, overASegmentOfMessages);
+            }
         }
     }
 
+    // ----------------------------------
+    // END PRUNE TESTS
+    // ----------------------------------
+
+    private void resetSequenceNumber()
+    {
+        testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
+    }
 
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
     {

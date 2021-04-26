@@ -62,10 +62,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
 
         if (templateId == NegotiateResponseDecoder.TEMPLATE_ID)
         {
-            // Success sequence number reset
-            final Info info = lookupInfo(sessionId);
-            info.lastSequenceNumber = 0;
-            onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
+            onSequenceReset(totalLength, endPosition, aeronSessionId, sessionId);
         }
         else if (templateId == SequenceDecoder.TEMPLATE_ID)
         {
@@ -79,6 +76,14 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
             info.lastSequenceNumber++;
             onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
         }
+    }
+
+    private void onSequenceReset(
+        final int totalLength, final long endPosition, final int aeronSessionId, final long sessionId)
+    {
+        final Info info = lookupInfo(sessionId);
+        info.lastSequenceNumber = 0;
+        onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
     }
 
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)

@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;

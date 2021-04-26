@@ -106,8 +106,7 @@ public class ReplayIndex implements Index
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
-                sessionIndex(uuid)
-                .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID));
+                onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
         checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
@@ -115,6 +114,24 @@ public class ReplayIndex implements Index
         positionWriter = new IndexedPositionWriter(
             positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup);
         positionReader = new IndexedPositionReader(positionBuffer);
+    }
+
+    private void onFixPSequenceUpdate(
+        final int sequenceNumber,
+        final long sessionId,
+        final int messageSize,
+        final long endPosition,
+        final int aeronSessionId)
+    {
+        if (sequenceNumber == 0)
+        {
+            onResetSequenceNumber(sessionId);
+        }
+        else
+        {
+            sessionIndex(sessionId)
+                .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID);
+        }
     }
 
     private long continuedFixSessionId;
@@ -214,16 +231,8 @@ public class ReplayIndex implements Index
                 case RedactSequenceUpdateDecoder.TEMPLATE_ID:
                 {
                     redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
-                    // We only update the replay index in response to a redact if it is used to redact all the sequence
-                    // numbers within the index
-                    final long fixSessionId = redactSequenceUpdateDecoder.session();
-                    final int sequenceNumber = redactSequenceUpdateDecoder.correctSequenceNumber();
-                    if (sequenceNumber <= 1)
-                    {
-                        onResetSequenceNumber(fixSessionId);
-                    }
-
-                    fixPSequenceIndexer.onRedactSequenceUpdate(fixSessionId, sequenceNumber);
+                    onRedactSequenceUpdateDecoder();
+                    break;
                 }
             }
         }
@@ -235,6 +244,20 @@ public class ReplayIndex implements Index
 
         positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
         positionWriter.updateChecksums();
+    }
+
+    private void onRedactSequenceUpdateDecoder()
+    {
+        // We only update the replay index in response to a redact if it is used to redact all the sequence
+        // numbers within the index
+        final long fixSessionId = redactSequenceUpdateDecoder.session();
+        final int sequenceNumber = redactSequenceUpdateDecoder.correctSequenceNumber();
+        if (sequenceNumber <= 1)
+        {
+            onResetSequenceNumber(fixSessionId);
+        }
+
+        fixPSequenceIndexer.onRedactSequenceUpdate(fixSessionId, sequenceNumber);
     }
 
     private void onFixMessage(
@@ -278,9 +301,9 @@ public class ReplayIndex implements Index
         }
     }
 
-    private void onResetSequenceNumber(final long fixSessionId)
+    private void onResetSequenceNumber(final long sessionId)
     {
-        final SessionIndex index = fixSessionIdToIndex.remove(fixSessionId);
+        final SessionIndex index = fixSessionIdToIndex.remove(sessionId);
 
         if (index != null)
         {
@@ -289,7 +312,7 @@ public class ReplayIndex implements Index
         else
         {
             // File might be present but not within the cache.
-            final File replayIndexFile = replayIndexFile(fixSessionId);
+            final File replayIndexFile = replayIndexFile(sessionId);
             if (replayIndexFile.exists())
             {
                 deleteFile(replayIndexFile);
