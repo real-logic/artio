@@ -111,18 +111,23 @@ public final class ILink3Context implements FixPContext
         return offset;
     }
 
-    public void confirmUuid(final FixPContexts fixPContexts)
+    public boolean onInitiatorNegotiateResponse()
     {
         uuid = connectUuid;
         lastUuid = connectLastUuid;
 
-        if (lastUuid == 0)
+        return lastUuid == 0;
+    }
+
+    public void onInitiatorDisconnect()
+    {
+        if (backupConnected)
         {
-            fixPContexts.saveNewContext(this);
+            backupConnected(false);
         }
         else
         {
-            fixPContexts.updateContext(this);
+            primaryConnected(false);
         }
     }
 
@@ -198,5 +203,10 @@ public final class ILink3Context implements FixPContext
             ", primaryConnected=" + primaryConnected +
             ", backupConnected=" + backupConnected +
             '}';
+    }
+
+    public long surrogateSessionId()
+    {
+        return connectUuid;
     }
 }

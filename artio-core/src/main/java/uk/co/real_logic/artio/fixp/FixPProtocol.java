@@ -28,13 +28,34 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 // Implementation classes should be stateless
 public abstract class FixPProtocol
 {
+    public static final int DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID = -1;
+
     private final FixPProtocolType protocolType;
     private final short encodingType;
+    private final int finishedSendingTemplateId;
+    private final int finishedReceivingTemplateId;
+    private final int negotiateResponseTemplateId;
 
-    protected FixPProtocol(final FixPProtocolType protocolType, final short encodingType)
+    protected FixPProtocol(
+        final FixPProtocolType protocolType, final short encodingType, final int negotiateResponseTemplateId)
+    {
+        this(protocolType, encodingType,
+            DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID, DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
+            negotiateResponseTemplateId);
+    }
+
+    protected FixPProtocol(
+        final FixPProtocolType protocolType,
+        final short encodingType,
+        final int finishedSendingTemplateId,
+        final int finishedReceivingTemplateId,
+        final int negotiateResponseTemplateId)
     {
         this.protocolType = protocolType;
         this.encodingType = encodingType;
+        this.finishedSendingTemplateId = finishedSendingTemplateId;
+        this.finishedReceivingTemplateId = finishedReceivingTemplateId;
+        this.negotiateResponseTemplateId = negotiateResponseTemplateId;
     }
 
     public FixPProtocolType protocolType()
@@ -45,6 +66,21 @@ public abstract class FixPProtocol
     public short encodingType()
     {
         return encodingType;
+    }
+
+    public int finishedSendingTemplateId()
+    {
+        return finishedSendingTemplateId;
+    }
+
+    public int finishedReceivingTemplateId()
+    {
+        return finishedReceivingTemplateId;
+    }
+
+    public int negotiateResponseTemplateId()
+    {
+        return negotiateResponseTemplateId;
     }
 
     public abstract AbstractFixPParser makeParser(FixPConnection session);

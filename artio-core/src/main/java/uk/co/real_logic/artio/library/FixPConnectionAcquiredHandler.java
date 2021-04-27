@@ -18,8 +18,20 @@ package uk.co.real_logic.artio.library;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 
+/**
+ * Callback that gets invoked when a new FIXP session comes under the control of
+ * the library interface that its associated with.
+ *
+ * @see LibraryConfiguration#fixPConnectionAcquiredHandler(FixPConnectionAcquiredHandler)
+ */
 @FunctionalInterface
 public interface FixPConnectionAcquiredHandler
 {
+    /**
+     * Method invoked to notify you of a library acquiring a session.
+     *
+     * @param connection the object representing the FIXP Connection that has been acquired.
+     * @return the {@link FixPConnectionHandler} that will receive messages associated with this Session.
+     */
     FixPConnectionHandler onConnectionAcquired(FixPConnection connection);
 }

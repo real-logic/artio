@@ -19,6 +19,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 
 /**
  * Interface to notify the gateway whether a session should be authenticated or not. Either invoker accept or reject.
+ * This is common to both FIX ({@link AuthenticationProxy}) and FIXP ({@link FixPAuthenticationProxy}) authentications.
  *
  * Either only call the <code>accept </code>or the <code>reject()</code> method.
  */

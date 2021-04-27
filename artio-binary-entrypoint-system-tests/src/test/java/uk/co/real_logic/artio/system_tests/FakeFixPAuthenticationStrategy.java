@@ -39,9 +39,9 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
         this.accept = false;
     }
 
-    public void authenticate(final FixPContext sessionId, final FixPAuthenticationProxy authProxy)
+    public void authenticate(final FixPContext context, final FixPAuthenticationProxy authProxy)
     {
-        lastSessionId = sessionId;
+        lastSessionId = context;
         if (accept)
         {
             authProxy.accept();

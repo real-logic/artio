@@ -17,20 +17,18 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.CME_ENCODING_TYPE;
-
-class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
+class InitiatorFixPReceiverEndPoint extends FixPReceiverEndPoint
 {
-    private static final int NEGOTIATION_RESPONSE = 501;
-
-    private final boolean isBackup;
-    private final ILink3Context context;
+    private final FixPContext context;
     private final FixPContexts fixPContexts;
+    private final int negotiationResponse;
 
-    ILink3ReceiverEndPoint(
+    InitiatorFixPReceiverEndPoint(
         final long connectionId,
         final TcpChannel channel,
         final int bufferSize,
@@ -38,11 +36,11 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
         final Framer framer,
         final GatewayPublication publication,
         final int libraryId,
-        final boolean isBackup,
-        final ILink3Context context,
+        final FixPContext context,
         final EpochNanoClock epochNanoClock,
         final long correlationId,
-        final FixPContexts fixPContexts)
+        final FixPContexts fixPContexts,
+        final FixPProtocol fixPProtocol)
     {
         super(
             connectionId,
@@ -54,31 +52,31 @@ class ILink3ReceiverEndPoint extends FixPReceiverEndPoint
             libraryId,
             epochNanoClock,
             correlationId,
-            CME_ENCODING_TYPE);
-        this.isBackup = isBackup;
+            fixPProtocol.encodingType());
         this.context = context;
         this.fixPContexts = fixPContexts;
-        sessionId(context.connectUuid());
+        this.negotiationResponse = fixPProtocol.negotiateResponseTemplateId();
+        sessionId(context.surrogateSessionId());
     }
 
     void checkMessage(final MutableAsciiBuffer buffer, final int offset, final int messageSize)
     {
-        if (readTemplateId(buffer, offset) == NEGOTIATION_RESPONSE)
+        if (readTemplateId(buffer, offset) == negotiationResponse)
         {
-            context.confirmUuid(fixPContexts);
+            if (context.onInitiatorNegotiateResponse())
+            {
+                fixPContexts.saveNewContext(context);
+            }
+            else
+            {
+                fixPContexts.updateContext(context);
+            }
         }
     }
 
     void trackDisconnect()
     {
-        if (isBackup)
-        {
-            context.backupConnected(false);
-        }
-        else
-        {
-            context.primaryConnected(false);
-        }
+        context.onInitiatorDisconnect();
     }
 
     boolean requiresAuthentication()

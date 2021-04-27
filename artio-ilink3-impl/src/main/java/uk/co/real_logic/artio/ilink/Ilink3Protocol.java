@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.NegotiationResponse501Decoder;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -39,7 +40,7 @@ public class Ilink3Protocol extends FixPProtocol
 
     public Ilink3Protocol()
     {
-        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE);
+        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID);
     }
 
     public ILink3Parser makeParser(final FixPConnection connection)

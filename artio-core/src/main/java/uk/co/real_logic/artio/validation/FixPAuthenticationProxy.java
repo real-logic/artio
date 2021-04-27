@@ -15,6 +15,12 @@
  */
 package uk.co.real_logic.artio.validation;
 
+/**
+ * Interface to notify the gateway whether a FIXP acceptor session should be authenticated or not.
+ *
+ * Either only call the <code>accept </code>or the <code>reject()</code> method. See
+ *  * {@link AbstractAuthenticationProxy} for more options to invoke.
+ */
 public interface FixPAuthenticationProxy extends AbstractAuthenticationProxy
 {
 }

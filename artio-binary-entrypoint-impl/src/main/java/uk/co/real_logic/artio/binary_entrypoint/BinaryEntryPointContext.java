@@ -19,6 +19,7 @@ import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
+import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol.unsupported;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 
@@ -137,7 +138,17 @@ public class BinaryEntryPointContext implements FixPContext
 
     public void initiatorReconnect(final boolean reestablishConnection)
     {
-        throw new UnsupportedOperationException();
+        unsupported();
+    }
+
+    public boolean onInitiatorNegotiateResponse()
+    {
+        return unsupported();
+    }
+
+    public void onInitiatorDisconnect()
+    {
+        unsupported();
     }
 
     public FixPProtocolType protocolType()
@@ -178,5 +189,10 @@ public class BinaryEntryPointContext implements FixPContext
     void ended(final boolean ended)
     {
         this.ended = ended;
+    }
+
+    public long surrogateSessionId()
+    {
+        return sessionID;
     }
 }

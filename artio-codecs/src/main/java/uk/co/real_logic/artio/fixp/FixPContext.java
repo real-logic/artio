@@ -40,14 +40,6 @@ public interface FixPContext
     FixPFirstMessageResponse checkAccept(FixPContext oldContext);
 
     /**
-     * Invoked when an initiator reconnects.
-     *
-     * @param reestablishConnection true if the initiator's configuration for reestablishing the connection has set
-     *                              this value to true.
-     */
-    void initiatorReconnect(boolean reestablishConnection);
-
-    /**
      * Gets the protocol type for this key.
      *
      * @return the protocol type for this key.
@@ -66,4 +58,24 @@ public interface FixPContext
      * Implementations should be idempotent.
      */
     void onEndSequence();
+
+    /**
+     * Invoked when an initiator reconnects.
+     *
+     * @param reestablishConnection true if the initiator's configuration for reestablishing the connection has set
+     *                              this value to true.
+     * @throws UnsupportedOperationException if protocol not implemented as an initiator
+     */
+    void initiatorReconnect(boolean reestablishConnection);
+
+    /**
+     * Invoked when an iniator receives a response to its negotiate.
+     *
+     * @return true iff this is a new context, false if it's an update
+     */
+    boolean onInitiatorNegotiateResponse();
+
+    void onInitiatorDisconnect();
+
+    long surrogateSessionId();
 }

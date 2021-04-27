@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.library;
 import uk.co.real_logic.artio.session.Session;
 
 /**
- * Callback that gets invoked when a new session comes under the control of
+ * Callback that gets invoked when a new FIX session comes under the control of
  * the library interface that its associated with.
  *
  * @see LibraryConfiguration#sessionAcquireHandler(SessionAcquireHandler)
@@ -27,8 +27,7 @@ import uk.co.real_logic.artio.session.Session;
 public interface SessionAcquireHandler
 {
     /**
-     * Callback invoked when a new session comes under the control of
-     *  * the library interface that its associated with.
+     * Method invoked to notify you of a library acquiring a session.
      *
      * @param session the session object that has been acquired.
      * @param acquiredInfo the information associated with this session

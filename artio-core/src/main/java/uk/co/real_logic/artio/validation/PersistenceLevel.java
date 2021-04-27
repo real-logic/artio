@@ -30,15 +30,15 @@ public enum PersistenceLevel
     /**
      * Automatically resets sequence numbers upon connect
      *
-     *  Deprecated and will be removed in future. Renamed to {@link #TRANSIENT_SEQUENCE_NUMBERS}.
+     * Deprecated and will be removed in future. Renamed to {@link #TRANSIENT_SEQUENCE_NUMBERS}.
      */
     @Deprecated
     UNINDEXED,
 
     /**
-     *  Persists sequence numbers over reconnects.
+     * Persists sequence numbers over reconnects.
      *
-     *  Deprecated and will be removed in future. Renamed to {@link #PERSISTENT_SEQUENCE_NUMBERS}.
+     * Deprecated and will be removed in future. Renamed to {@link #PERSISTENT_SEQUENCE_NUMBERS}.
      */
     @Deprecated
     INDEXED

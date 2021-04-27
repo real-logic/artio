@@ -23,11 +23,26 @@ public enum FixPFirstMessageResponse
 {
     /** No problem has been identified for the first message */
     OK,
+
     /**
-     * Might require either an establish or negotiate reject being sent depending upon which message you're replying to
+     * The first message has been rejected due to invalid credentials.
+     *
+     * Might require either an establish or negotiate reject being sent depending upon which message you're replying to.
      */
     CREDENTIALS,
+
+    /**
+     * A Negotiate message has been rejected due to a duplicate session id.
+     */
     NEGOTIATE_DUPLICATE_ID,
+
+    /**
+     * A Negotiate message has been rejected with an unspecified reason.
+     */
     NEGOTIATE_UNSPECIFIED,
+
+    /**
+     * An establish message has been rejected due the session not having been negotiated yet.
+     */
     ESTABLISH_UNNEGOTIATED,
 }

@@ -19,9 +19,10 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 
 /**
- * Interface to notify the gateway whether a Logon should be authenticated or not. Either invoker accept or reject.
+ * Interface to notify the gateway whether a FIX Logon should be authenticated or not.
  *
- * Either only call the <code>accept </code>or the <code>reject()</code> method.
+ * Either only call the <code>accept </code>or the <code>reject()</code> method. See
+ * {@link AbstractAuthenticationProxy} for more options to invoke.
  */
 public interface AuthenticationProxy extends AbstractAuthenticationProxy
 {

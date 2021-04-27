@@ -271,7 +271,7 @@ class ReceiverEndPoints extends TransportPoller
         for (int i = 0; i < length; i++)
         {
             final ReceiverEndPoint endPoint = endPoints[i];
-            if (endPoint.libraryId() == libraryId && endPoint instanceof ILink3ReceiverEndPoint)
+            if (endPoint.libraryId() == libraryId && endPoint instanceof InitiatorFixPReceiverEndPoint)
             {
                 removeFunc.accept(endPoint.connectionId());
                 endPoint.close(DisconnectReason.LIBRARY_DISCONNECT);

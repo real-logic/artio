@@ -22,5 +22,10 @@ import uk.co.real_logic.artio.fixp.FixPKey;
  */
 public interface FixPSessionInfo
 {
+    /**
+     * Gets the key associated with this session.
+     *
+     * @return the key associated with this session.
+     */
     FixPKey key();
 }

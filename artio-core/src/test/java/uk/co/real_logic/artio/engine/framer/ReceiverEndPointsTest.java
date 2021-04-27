@@ -49,7 +49,7 @@ public class ReceiverEndPointsTest
     @Test
     public void shouldRemoveILink3EndPoint()
     {
-        final ReceiverEndPoint[] endPoints = { mock(ILink3ReceiverEndPoint.class) };
+        final ReceiverEndPoint[] endPoints = { mock(InitiatorFixPReceiverEndPoint.class) };
         final ReceiverEndPoint[] expected = { };
 
         isOwned(endPoints, 0);
@@ -74,10 +74,10 @@ public class ReceiverEndPointsTest
     {
         final ReceiverEndPoint[] endPoints = new ReceiverEndPoint[5];
         endPoints[0] = mock(FixReceiverEndPoint.class);
-        endPoints[1] = mock(ILink3ReceiverEndPoint.class);
+        endPoints[1] = mock(InitiatorFixPReceiverEndPoint.class);
         endPoints[2] = mock(FixReceiverEndPoint.class);
-        endPoints[3] = mock(ILink3ReceiverEndPoint.class);
-        endPoints[4] = mock(ILink3ReceiverEndPoint.class);
+        endPoints[3] = mock(InitiatorFixPReceiverEndPoint.class);
+        endPoints[4] = mock(InitiatorFixPReceiverEndPoint.class);
         return endPoints;
     }
 

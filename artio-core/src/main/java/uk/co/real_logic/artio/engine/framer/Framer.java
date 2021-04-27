@@ -657,13 +657,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewFixPConnection(final long timeInMs, final TcpChannel channel)
     {
-        final FixPProtocolType protocolType = configuration.supportedFixPProtocolType();
-        if (fixPProtocol == null)
-        {
-            fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
-            fixPParser = fixPProtocol.makeParser(null);
-            fixPProxy = fixPProtocol.makeProxy(null, null);
-        }
+        final FixPProtocolType protocolType = initFixPProtocol();
 
         final long connectionId = newConnectionId();
 
@@ -682,7 +676,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             ENGINE_LIBRARY_ID,
             configuration.epochNanoClock(),
             connectionId,
-            fixPProtocol.encodingType());
+            fixPProtocol);
         receiverEndPoints.add(receiverEndPoint);
 
         final FixPGatewaySession gatewaySession = new FixPGatewaySession(
@@ -702,6 +696,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         receiverEndPoint.gatewaySession(gatewaySession);
 
         saveConnect(channel, connectionId);
+    }
+
+    private FixPProtocolType initFixPProtocol()
+    {
+        final FixPProtocolType protocolType = configuration.supportedFixPProtocolType();
+        if (fixPProtocol == null)
+        {
+            fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
+            fixPParser = fixPProtocol.makeParser(null);
+            fixPProxy = fixPProtocol.makeProxy(null, null);
+        }
+        return protocolType;
     }
 
     private void onNewFixConnection(final long timeInMs, final TcpChannel channel)
@@ -771,14 +777,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixPProtocolType protocolType = configuration.supportedFixPProtocolType();
         if (protocolType != FixPProtocolType.ILINK_3)
         {
-            saveError(INVALID_CONFIGURATION, libraryId, correlationId, new IllegalStateException(
-                "Invalid configured protocol type: " + protocolType));
-            return CONTINUE;
+            return invalidFixPProtocol(libraryId, correlationId, protocolType);
+        }
+        else if (fixPProtocol == null)
+        {
+            initFixPProtocol();
         }
 
         final ILink3Key key = new ILink3Key(port, primaryHost, accessKeyId);
         final ILink3Context context = (ILink3Context)fixPContexts.calculateInitiatorContext(key, reestablishConnection);
-
         if (checkDuplicateILinkConnection(libraryId, correlationId, useBackupHost, accessKeyId, address, context))
         {
             return CONTINUE;
@@ -788,12 +795,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Image image = librarySubscription.imageBySessionId(aeronSessionId);
         final long position = image.position();
         final ILink3LookupConnectOperation lookupInformation = new ILink3LookupConnectOperation(
-            libraryId,
-            correlationId,
-            context,
-            aeronSessionId,
-            position,
-            address);
+            libraryId, correlationId, context, aeronSessionId, position, address);
         schedule(lookupInformation);
 
         try
@@ -811,8 +813,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         return;
                     }
 
-                    DebugLogger.log(FIX_CONNECTION,
-                        initiatingSessionFormatter, context.connectUuid(), libraryId);
+                    DebugLogger.log(FIX_CONNECTION, initiatingSessionFormatter, context.connectUuid(), libraryId);
                     final long connectionId = newConnectionId();
 
                     lookupInformation.connected(connectionId);
@@ -828,7 +829,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     fixPSenderEndPoints.add(new FixPSenderEndPoint(
                         connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId,
                         configuration.messageTimingHandler()));
-                    receiverEndPoints.add(new ILink3ReceiverEndPoint(
+                    receiverEndPoints.add(new InitiatorFixPReceiverEndPoint(
                         connectionId,
                         channel,
                         configuration.receiverBufferSize(),
@@ -836,21 +837,25 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         this,
                         inboundPublication,
                         libraryId,
-                        useBackupHost,
                         context,
                         configuration.epochNanoClock(),
                         correlationId,
-                        fixPContexts));
+                        fixPContexts, fixPProtocol));
                 });
         }
         catch (final Exception ex)
         {
             cancelILink3LookupConnectOperation(correlationId, false);
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
-
-            return CONTINUE;
         }
+        return CONTINUE;
+    }
 
+    private Action invalidFixPProtocol(
+        final int libraryId, final long correlationId, final FixPProtocolType protocolType)
+    {
+        saveError(INVALID_CONFIGURATION, libraryId, correlationId, new IllegalStateException(
+            "Invalid configured protocol type: " + protocolType));
         return CONTINUE;
     }
 

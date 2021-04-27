@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import b3.entrypoint.fixp.sbe.FinishedReceivingDecoder;
+import b3.entrypoint.fixp.sbe.FinishedSendingDecoder;
+import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -30,9 +33,19 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPO
 
 public class BinaryEntryPointProtocol extends FixPProtocol
 {
+    public static <T> T unsupported()
+    {
+        throw new UnsupportedOperationException("Binary Entrypoint is only implemented as an acceptor");
+    }
+
     public BinaryEntryPointProtocol()
     {
-        super(FixPProtocolType.BINARY_ENTRYPOINT, BINARY_ENTRYPOINT_TYPE);
+        super(
+            FixPProtocolType.BINARY_ENTRYPOINT,
+            BINARY_ENTRYPOINT_TYPE,
+            FinishedSendingDecoder.TEMPLATE_ID,
+            FinishedReceivingDecoder.TEMPLATE_ID,
+            NegotiateResponseDecoder.TEMPLATE_ID);
     }
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)

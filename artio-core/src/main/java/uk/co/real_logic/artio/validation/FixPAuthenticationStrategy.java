@@ -16,26 +16,46 @@
 package uk.co.real_logic.artio.validation;
 
 
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPContext;
 
 /**
- * Authentication Strategy for a FIXP Session
+ * Authentication Strategy for a FIXP Session. Implement this interface in order to add customisable checks to for
+ * negotiate and establish messages. Unlike FIX Artio doesn't support a synchronous authentication method.
+ *
+ * When Artio receives a negotiate message or an establish message in an attempt to re-establish the connection then
+ * the {@link #authenticate(FixPContext, FixPAuthenticationProxy)} method is invoked.
+ *
+ * Your implementation can be configured using the
+ * {@link EngineConfiguration#fixPAuthenticationStrategy(FixPAuthenticationStrategy)} method.
  */
 @FunctionalInterface
 public interface FixPAuthenticationStrategy
 {
+    /**
+     * Returns an authentication strategy that accepts any logon attempt. This is the default authentication strategy
+     * used by Artio.
+     *
+     * @return the authentication strategy.
+     */
     static FixPAuthenticationStrategy none()
     {
         return (sessionId, authProxy) -> authProxy.accept();
     }
 
     /**
-     * Asynchronous authentication strategy.
+     * This method is invoked when an attempt to authentication a connection is made with either the negotiate or
+     * establish messages. In order to uniquely identify the type of connection that is being attempted you are
+     * passed the context object for the session in question. This contains identifying fields that are sent on either
+     * Negotiate or Establish messages. The fields are defined on a FIXP implementation by implementation basis.
      *
-     * @param sessionId the session identification for the FIXP session, this can be casted to the the session
+     * In order to accept or reject the connection invoke the appropriate methods on the
+     * {@link FixPAuthenticationProxy}.
+     *
+     * @param context the session identification for the FIXP session, this can be casted to the the session
      *                  identification type for your specific FIXP session, for example
      *                  <code>BinaryEntryPointIdentification</code> for the Binary Entrypoint protocol.
      * @param authProxy the proxy to notify when you're ready to authenticate.
      */
-    void authenticate(FixPContext sessionId, FixPAuthenticationProxy authProxy);
+    void authenticate(FixPContext context, FixPAuthenticationProxy authProxy);
 }
