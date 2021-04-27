@@ -477,15 +477,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         launch(this::nothing);
 
-        final int libraryId = acceptingLibrary.libraryId();
-        final ReadablePosition positionCounter = testSystem.awaitCompletedReply(
-            acceptingEngine.libraryIndexedPosition(libraryId)).resultIfPresent();
+        final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
 
         final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
 
         final long position = sendReportOnFollowerSession(testSystem, sessionWriter);
 
-        testSystem.await("Failed to complete index", () -> positionCounter.getVolatile() >= position);
+        testSystem.awaitPosition(positionCounter, position);
 
         receivedReplayFromReconnectedSession();
     }

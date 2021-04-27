@@ -21,6 +21,7 @@ import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
@@ -1019,7 +1020,13 @@ public class BinaryEntryPointSystemTest
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldResetSequenceNumbersOfDisconnectedSessions() throws IOException
     {
-        shouldExchangeBusinessMessage();
+        setupArtio(true);
+
+        final ReadablePosition positionCounter = testSystem.libraryPosition(engine, library);
+
+        connectAndExchangeBusinessMessage();
+
+        testSystem.awaitPosition(positionCounter, connectionHandler.lastPosition());
 
         resetSequenceNumber();
 

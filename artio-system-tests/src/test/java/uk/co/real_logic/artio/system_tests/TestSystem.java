@@ -19,6 +19,7 @@ import io.aeron.exceptions.TimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
@@ -195,6 +196,13 @@ public class TestSystem
         return reply;
     }
 
+    public ReadablePosition libraryPosition(final FixEngine engine, final FixLibrary library)
+    {
+        final int libraryId = library.libraryId();
+        return awaitCompletedReply(
+            engine.libraryIndexedPosition(libraryId)).resultIfPresent();
+    }
+
     public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
         return awaitMessageOf(otfAcceptor, messageType, msg -> true);
@@ -339,5 +347,10 @@ public class TestSystem
         assertNotNull(pruneReply);
         awaitCompletedReplies(pruneReply);
         return pruneReply.resultIfPresent();
+    }
+
+    public void awaitPosition(final ReadablePosition positionCounter, final long position)
+    {
+        await("Failed to complete index", () -> positionCounter.getVolatile() >= position);
     }
 }

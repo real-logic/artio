@@ -38,6 +38,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     private boolean replyToOrder = true;
     private boolean abortReport;
     private boolean finishedSending = false;
+    private long lastPosition;
 
     public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
     {
@@ -83,7 +84,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
             final long clOrderID = newOrderSingle.clOrdID();
             final long securityID = newOrderSingle.securityID();
 
-            sendExecutionReportNew(connection, clOrderID, securityID, abortReport);
+            lastPosition = sendExecutionReportNew(connection, clOrderID, securityID, abortReport);
         }
     }
 
@@ -92,14 +93,16 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         finishedSending = true;
     }
 
-    static void sendExecutionReportNew(
+    static long sendExecutionReportNew(
         final FixPConnection connection, final long clOrderID, final long securityID, final boolean abortReport)
     {
         final ExecutionReport_NewEncoder executionReport = new ExecutionReport_NewEncoder();
 
+        long position;
+
         while (true)
         {
-            final long position = connection.tryClaim(executionReport);
+            position = connection.tryClaim(executionReport);
             if (position >= 0)
             {
                 break;
@@ -133,6 +136,8 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         {
             connection.commit();
         }
+
+        return position;
     }
 
     public void onNotApplied(
@@ -186,8 +191,14 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         return exceptions;
     }
 
+    public long lastPosition()
+    {
+        return lastPosition;
+    }
+
     public void reset()
     {
+        lastPosition = 0;
         disconnectReason = null;
         messageIds.clear();
         exceptions.clear();
