@@ -80,17 +80,6 @@ public class BinaryEntryPointContext implements FixPContext
         return fromNegotiate;
     }
 
-    public String toString()
-    {
-        return "BinaryEntryPointContext{" +
-            "sessionID=" + sessionID +
-            ", sessionVerID=" + sessionVerID +
-            ", requestTimestampInNs=" + requestTimestampInNs +
-            ", enteringFirm=" + enteringFirm +
-            ", fromNegotiate=" + fromNegotiate +
-            '}';
-    }
-
     public BinaryEntryPointKey key()
     {
         return key;
@@ -194,5 +183,53 @@ public class BinaryEntryPointContext implements FixPContext
     public long surrogateSessionId()
     {
         return sessionID;
+    }
+
+    public boolean equals(final Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        final BinaryEntryPointContext that = (BinaryEntryPointContext)o;
+
+        if (sessionID != that.sessionID)
+        {
+            return false;
+        }
+        if (sessionVerID != that.sessionVerID)
+        {
+            return false;
+        }
+        if (requestTimestampInNs != that.requestTimestampInNs)
+        {
+            return false;
+        }
+        return enteringFirm == that.enteringFirm;
+    }
+
+    public int hashCode()
+    {
+        int result = (int)(sessionID ^ (sessionID >>> 32));
+        result = 31 * result + (int)(sessionVerID ^ (sessionVerID >>> 32));
+        result = 31 * result + (int)(requestTimestampInNs ^ (requestTimestampInNs >>> 32));
+        result = 31 * result + (int)(enteringFirm ^ (enteringFirm >>> 32));
+        return result;
+    }
+
+    public String toString()
+    {
+        return "BinaryEntryPointContext{" +
+            "sessionID=" + sessionID +
+            ", sessionVerID=" + sessionVerID +
+            ", requestTimestampInNs=" + requestTimestampInNs +
+            ", enteringFirm=" + enteringFirm +
+            ", fromNegotiate=" + fromNegotiate +
+            '}';
     }
 }

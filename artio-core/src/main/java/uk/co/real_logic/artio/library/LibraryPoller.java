@@ -1239,7 +1239,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
-    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
         final FixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
         if (subscription != null)
@@ -1783,6 +1783,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int offset,
         final int messageLength)
     {
+        if (libraryId != this.libraryId)
+        {
+            return CONTINUE;
+        }
+
         initFixP(protocolType);
 
         final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.get(correlationId);

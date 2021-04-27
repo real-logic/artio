@@ -110,7 +110,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         iLinkMessage.wrap(buffer, offset, blockLength, version);
         final long connectionId = iLinkMessage.connection();
-        return protocolHandler.onILinkMessage(
+        return protocolHandler.onFixPMessage(
             connectionId,
             buffer,
             offset + FixPMessageDecoder.BLOCK_LENGTH);

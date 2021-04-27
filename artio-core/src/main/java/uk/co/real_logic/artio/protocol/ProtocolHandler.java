@@ -39,5 +39,5 @@ public interface ProtocolHandler
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);
 
-    Action onILinkMessage(long connectionId, DirectBuffer buffer, int offset);
+    Action onFixPMessage(long connectionId, DirectBuffer buffer, int offset);
 }

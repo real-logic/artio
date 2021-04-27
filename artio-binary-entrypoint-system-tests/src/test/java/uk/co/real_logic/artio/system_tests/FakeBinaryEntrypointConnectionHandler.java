@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
+import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
@@ -30,24 +31,19 @@ import java.util.function.Consumer;
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
     private final IntArrayList messageIds = new IntArrayList();
+    private final LongArrayList sessionIds = new LongArrayList();
     private final List<Exception> exceptions = new ArrayList<>();
     private final Consumer<NotAppliedResponse> notAppliedResponse;
 
-    private boolean hasReceivedNotApplied;
     private DisconnectReason disconnectReason;
     private boolean replyToOrder = true;
     private boolean abortReport;
     private boolean finishedSending = false;
     private long lastPosition;
 
-    public FakeBinaryEntrypointConnectionHandler(final Consumer<NotAppliedResponse> notAppliedResponse)
+    public FakeBinaryEntrypointConnectionHandler()
     {
-        this.notAppliedResponse = notAppliedResponse;
-    }
-
-    public boolean hasReceivedNotApplied()
-    {
-        return hasReceivedNotApplied;
+        this.notAppliedResponse = ignore -> {};
     }
 
     public void abortReport(final boolean abortReport)
@@ -75,6 +71,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         final boolean possRetrans)
     {
         messageIds.add(templateId);
+        sessionIds.add(connection.key().sessionIdIfExists());
 
         if (replyToOrder && templateId == NewOrderSingleDecoder.TEMPLATE_ID)
         {
@@ -146,7 +143,6 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         final long msgCount,
         final NotAppliedResponse response)
     {
-        hasReceivedNotApplied = true;
         notAppliedResponse.accept(response);
     }
 
@@ -186,6 +182,11 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         return messageIds;
     }
 
+    public LongArrayList sessionIds()
+    {
+        return sessionIds;
+    }
+
     public List<Exception> exceptions()
     {
         return exceptions;
@@ -202,5 +203,6 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         disconnectReason = null;
         messageIds.clear();
         exceptions.clear();
+        sessionIds.clear();
     }
 }

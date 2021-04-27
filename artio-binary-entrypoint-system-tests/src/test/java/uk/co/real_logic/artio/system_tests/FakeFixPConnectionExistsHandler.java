@@ -34,6 +34,13 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
     private FixPContext lastIdentification;
     private Reply<SessionReplyStatus> lastReply;
 
+    private boolean request = true;
+
+    public void request(final boolean request)
+    {
+        this.request = request;
+    }
+
     public ControlledFragmentHandler.Action onConnectionExists(
         final FixLibrary library,
         final long surrogateSessionId,
@@ -46,7 +53,10 @@ public class FakeFixPConnectionExistsHandler implements FixPConnectionExistsHand
         this.lastSurrogateSessionId = surrogateSessionId;
         this.lastIdentification = context;
 
-        lastReply = requestSession(library, surrogateSessionId);
+        if (request)
+        {
+            lastReply = requestSession(library, surrogateSessionId);
+        }
 
         return ControlledFragmentHandler.Action.CONTINUE;
     }

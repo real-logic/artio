@@ -137,7 +137,7 @@ public class GapFiller implements ProtocolHandler, Agent
         return Action.CONTINUE;
     }
 
-    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
         return CONTINUE;
     }

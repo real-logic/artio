@@ -40,12 +40,13 @@ import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProxy.BINARY_ENTRYPOINT_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
 
-public final class BinaryEntrypointClient implements AutoCloseable
+public final class BinaryEntryPointClient implements AutoCloseable
 {
     private static final int NOT_SKIPPING = -1;
 
     public static final int BUFFER_SIZE = 8 * 1024;
     public static final int SESSION_ID = 123;
+    public static final int SESSION_ID_2 = SESSION_ID + 1;
     public static final int FIRM_ID = 456;
     public static final String SENDER_LOCATION = "LOCATION_1";
     public static final int CL_ORD_ID = 1;
@@ -69,6 +70,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     private final TestSystem testSystem;
 
     private int skipTemplateId = NOT_SKIPPING;
+    private int sessionId = SESSION_ID;
     private long sessionVerID = 1;
     private long negotiateTimestampInNs;
     private long establishTimestampInNs;
@@ -76,7 +78,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
 
-    public BinaryEntrypointClient(final int port, final TestSystem testSystem) throws IOException
+    public BinaryEntryPointClient(final int port, final TestSystem testSystem) throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
         this.testSystem = testSystem;
@@ -84,10 +86,14 @@ public final class BinaryEntrypointClient implements AutoCloseable
         headerDecoder.wrap(unsafeReadBuffer, SOFH_LENGTH);
     }
 
-    public BinaryEntrypointClient sessionVerID(final long sessionVerID)
+    public void sessionVerID(final long sessionVerID)
     {
         this.sessionVerID = sessionVerID;
-        return this;
+    }
+
+    public void sessionId(final int sessionId)
+    {
+        this.sessionId = sessionId;
     }
 
     public void skipTemplateId(final int skipTemplateId)
@@ -123,6 +129,11 @@ public final class BinaryEntrypointClient implements AutoCloseable
         return sessionVerID;
     }
 
+    public int sessionId()
+    {
+        return sessionId;
+    }
+
     public void keepAliveIntervalInMs(final long keepAliveIntervalInMs)
     {
         this.keepAliveIntervalInMs = keepAliveIntervalInMs;
@@ -131,16 +142,16 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public NegotiateResponseDecoder readNegotiateResponse()
     {
         final NegotiateResponseDecoder response = read(new NegotiateResponseDecoder(), 0);
-        assertEquals(BinaryEntrypointClient.SESSION_ID, response.sessionID());
+        assertEquals(sessionId, response.sessionID());
         assertEquals(sessionVerID, response.sessionVerID());
-        assertEquals(BinaryEntrypointClient.FIRM_ID, response.enteringFirm());
+        assertEquals(BinaryEntryPointClient.FIRM_ID, response.enteringFirm());
         return response;
     }
 
     public NegotiateRejectDecoder readNegotiateReject(final NegotiationRejectCode negotiationRejectCode)
     {
         final NegotiateRejectDecoder reject = read(new NegotiateRejectDecoder(), 0);
-        assertEquals(SESSION_ID, reject.sessionID());
+        assertEquals(sessionId, reject.sessionID());
         assertEquals(sessionVerID, reject.sessionVerID());
         assertEquals(negotiateTimestampInNs, reject.requestTimestamp().time());
         assertEquals(FIRM_ID, reject.enteringFirm());
@@ -151,7 +162,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public void readEstablishReject(final EstablishRejectCode rejectCode)
     {
         final EstablishRejectDecoder reject = read(new EstablishRejectDecoder(), 0);
-        assertEquals(SESSION_ID, reject.sessionID());
+        assertEquals(sessionId, reject.sessionID());
         assertEquals(sessionVerID, reject.sessionVerID());
         assertEquals(establishTimestampInNs, reject.requestTimestamp().time());
         assertEquals(rejectCode, reject.establishmentRejectCode());
@@ -299,7 +310,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         negotiateTimestampInNs = timeInNs();
 
         negotiate
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .sessionVerID(sessionVerID)
             .timestamp().time(negotiateTimestampInNs);
         negotiate
@@ -322,7 +333,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
         establishTimestampInNs = timeInNs();
         establish
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .sessionVerID(sessionVerID)
             .timestamp().time(establishTimestampInNs);
         establish.keepAliveInterval().time(keepAliveIntervalInMs);
@@ -342,7 +353,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public EstablishAckDecoder readEstablishAck(final int nextSeqNo, final int lastIncomingSeqNo)
     {
         final EstablishAckDecoder establishAck = read(new EstablishAckDecoder(), 0);
-        assertEquals("sessionID", BinaryEntrypointClient.SESSION_ID, establishAck.sessionID());
+        assertEquals("sessionID", sessionId, establishAck.sessionID());
         assertEquals("sessionVerID", sessionVerID, establishAck.sessionVerID());
         assertEquals("nextSeqNo", nextSeqNo, establishAck.nextSeqNo());
         assertEquals("lastIncomingSeqNo", lastIncomingSeqNo, establishAck.lastIncomingSeqNo());
@@ -357,7 +368,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public TerminateDecoder readTerminate(final TerminationCode terminationCode)
     {
         final TerminateDecoder terminate = read(new TerminateDecoder(), 0);
-        assertEquals(BinaryEntrypointClient.SESSION_ID, terminate.sessionID());
+        assertEquals(sessionId, terminate.sessionID());
         assertEquals(sessionVerID, terminate.sessionVerID());
         assertEquals(terminationCode, terminate.terminationCode());
         return terminate;
@@ -380,7 +391,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         wrap(terminate, TerminateEncoder.BLOCK_LENGTH);
 
         terminate
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .sessionVerID(sessionVerID)
             .terminationCode(TerminationCode.FINISHED);
 
@@ -458,7 +469,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         wrap(finishedSending, FinishedSendingEncoder.BLOCK_LENGTH);
 
         finishedSending
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .sessionVerID(sessionVerID)
             .lastSeqNo(lastSeqNo);
 
@@ -468,14 +479,14 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public void readFinishedReceiving()
     {
         final FinishedReceivingDecoder finishedReceiving = read(new FinishedReceivingDecoder(), 0);
-        assertEquals(SESSION_ID, finishedReceiving.sessionID());
+        assertEquals(sessionId, finishedReceiving.sessionID());
         assertEquals(sessionVerID, finishedReceiving.sessionVerID());
     }
 
     public void readFinishedSending(final int lastSeqNo)
     {
         final FinishedSendingDecoder finishedSending = read(new FinishedSendingDecoder(), 0);
-        assertEquals(SESSION_ID, finishedSending.sessionID());
+        assertEquals(sessionId, finishedSending.sessionID());
         assertEquals(sessionVerID, finishedSending.sessionVerID());
         assertEquals(lastSeqNo, finishedSending.lastSeqNo());
     }
@@ -492,7 +503,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
         wrap(finishedReceiving, FinishedReceivingEncoder.BLOCK_LENGTH);
 
         finishedReceiving
-            .sessionID(SESSION_ID)
+            .sessionID(sessionId)
             .sessionVerID(sessionVerID);
 
         write();
@@ -500,7 +511,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
 
     public void writeRetransmitRequest(final long fromSeqNo, final long count)
     {
-        writeRetransmitRequest(SESSION_ID, fromSeqNo, count);
+        writeRetransmitRequest(sessionId, fromSeqNo, count);
     }
 
     public void writeRetransmitRequest(final int sessionId, final long fromSeqNo, final long count)
@@ -545,7 +556,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public void readRetransmitReject(final RetransmitRejectCode rejectCode)
     {
         final RetransmitRejectDecoder retransmitReject = read(new RetransmitRejectDecoder(), 0);
-        assertEquals(SESSION_ID, retransmitReject.sessionID());
+        assertEquals(sessionId, retransmitReject.sessionID());
         assertEquals(retransmitRequestTimestampInNs, retransmitReject.requestTimestamp().time());
         assertEquals(rejectCode, retransmitReject.retransmitRejectCode());
     }
@@ -553,7 +564,7 @@ public final class BinaryEntrypointClient implements AutoCloseable
     public void readRetransmission(final long nextSeqNo, final long count)
     {
         final RetransmissionDecoder retransmission = read(new RetransmissionDecoder(), 0);
-        assertEquals(SESSION_ID, retransmission.sessionID());
+        assertEquals(sessionId, retransmission.sessionID());
         assertEquals(nextSeqNo, retransmission.nextSeqNo());
         assertEquals(count, retransmission.count());
         assertEquals(retransmitRequestTimestampInNs, retransmission.requestTimestamp().time());

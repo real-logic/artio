@@ -320,7 +320,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return Action.CONTINUE;
                 }
 
-                public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+                public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
                 {
                     return fixPSenderEndPoints.onMessage(connectionId, buffer, offset);
                 }
@@ -365,7 +365,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return Action.CONTINUE;
                 }
 
-                public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+                public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
                 {
                     return CONTINUE;
                 }
@@ -1659,7 +1659,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
         return fixPSenderEndPoints.onMessage(connectionId, buffer, offset);
     }
