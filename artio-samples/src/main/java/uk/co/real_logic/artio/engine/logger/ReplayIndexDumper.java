@@ -29,6 +29,14 @@ public final class ReplayIndexDumper
     public static void main(final String[] args) throws IOException
     {
         final File file = new File(args[0]);
+
+        final ReplayIndexExtractor.StartPositionExtractor positionExtractor =
+            new ReplayIndexExtractor.StartPositionExtractor();
+        ReplayIndexExtractor.extract(file, positionExtractor);
+        System.out.println("positionExtractor.highestSequenceIndex() = " + positionExtractor.highestSequenceIndex());
+        System.out.println("positionExtractor.recordingIdToStartPosition() = " +
+            positionExtractor.recordingIdToStartPosition());
+
         final String output = "replay-index-dump.csv";
         try (BufferedWriter out = new BufferedWriter(new FileWriter(output)))
         {

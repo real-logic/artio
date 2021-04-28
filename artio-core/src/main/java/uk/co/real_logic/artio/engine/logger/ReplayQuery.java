@@ -133,25 +133,6 @@ public class ReplayQuery implements AutoCloseable
         }
     }
 
-    private void aggregateLowerPosition(
-        final Long2LongHashMap recordingIdToStartPosition, final Long2LongHashMap newStartPositions)
-    {
-        final Long2LongHashMap.EntryIterator it = recordingIdToStartPosition.entrySet().iterator();
-        while (it.hasNext())
-        {
-            it.next();
-
-            final long recordingId = it.getLongKey();
-            final long position = it.getLongValue();
-
-            final long oldPosition = newStartPositions.get(recordingId);
-            if (oldPosition == NULL_VALUE || position < oldPosition)
-            {
-                newStartPositions.put(recordingId, position);
-            }
-        }
-    }
-
     private SessionQuery lookupSessionQuery(final long sessionId)
     {
         return fixSessionToIndex.computeIfAbsent(sessionId, newSessionQuery);
@@ -398,22 +379,8 @@ public class ReplayQuery implements AutoCloseable
                         return recordingIdToStartPosition;
                     }
 
-                    if (sequenceIndex > highestSequenceIndex)
-                    {
-                        // Don't want the lower positions of a previous sequence index to matter.
-                        recordingIdToStartPosition.clear();
-                        recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
-                        highestSequenceIndex = sequenceIndex;
-                    }
-                    else if (sequenceIndex == highestSequenceIndex)
-                    {
-                        // Might have other messages on different recording ids
-                        final long oldPosition = recordingIdToStartPosition.get(recordingId);
-                        if (oldPosition == NULL_VALUE)
-                        {
-                            recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
-                        }
-                    }
+                    highestSequenceIndex = updateStartPosition(
+                        sequenceIndex, highestSequenceIndex, recordingIdToStartPosition, recordingId, beginPosition);
 
                     iteratorPosition += RECORD_LENGTH;
                 }
@@ -426,16 +393,63 @@ public class ReplayQuery implements AutoCloseable
             return recordingIdToStartPosition;
         }
 
-        private long trueBeginPosition(final long beginPosition)
-        {
-            return beginPosition - FRAME_ALIGNMENT;
-        }
-
         public void close()
         {
             if (wrappedBuffer instanceof MappedByteBuffer)
             {
                 IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
+            }
+        }
+    }
+
+    static int updateStartPosition(
+        final int sequenceIndex,
+        final int highestSequenceIndex,
+        final Long2LongHashMap recordingIdToStartPosition,
+        final long recordingId,
+        final long beginPosition)
+    {
+        if (sequenceIndex > highestSequenceIndex)
+        {
+            // Don't want the lower positions of a previous sequence index to matter.
+            recordingIdToStartPosition.clear();
+            recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
+            // new highestSequenceIndex
+            return sequenceIndex;
+        }
+        else if (sequenceIndex == highestSequenceIndex)
+        {
+            // Might have other messages on different recording ids
+            final long oldPosition = recordingIdToStartPosition.get(recordingId);
+            if (oldPosition == NULL_VALUE)
+            {
+                recordingIdToStartPosition.put(recordingId, trueBeginPosition(beginPosition));
+            }
+        }
+
+        return highestSequenceIndex;
+    }
+
+    static long trueBeginPosition(final long beginPosition)
+    {
+        return beginPosition - FRAME_ALIGNMENT;
+    }
+
+    static void aggregateLowerPosition(
+        final Long2LongHashMap recordingIdToStartPosition, final Long2LongHashMap newStartPositions)
+    {
+        final Long2LongHashMap.EntryIterator it = recordingIdToStartPosition.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+
+            final long recordingId = it.getLongKey();
+            final long position = it.getLongValue();
+
+            final long oldPosition = newStartPositions.get(recordingId);
+            if (oldPosition == NULL_VALUE || position < oldPosition)
+            {
+                newStartPositions.put(recordingId, position);
             }
         }
     }

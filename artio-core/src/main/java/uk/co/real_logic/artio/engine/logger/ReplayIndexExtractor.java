@@ -3,6 +3,7 @@ package uk.co.real_logic.artio.engine.logger;
 import org.agrona.IoUtil;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -11,11 +12,15 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static io.aeron.Aeron.NULL_VALUE;
 import static uk.co.real_logic.artio.builder.Encoder.BITS_IN_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
+import static uk.co.real_logic.artio.engine.logger.ReplayQuery.trueBeginPosition;
 
 /**
  * Utility for extracting information from replay index file. Mostly used for debugging Artio state.
@@ -28,6 +33,161 @@ public final class ReplayIndexExtractor
         void onEntry(ReplayIndexRecordDecoder indexRecord);
 
         void onLapped();
+    }
+
+    public static class StartPositionExtractor implements ReplayIndexExtractor.ReplayIndexHandler
+    {
+        private final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
+        private int highestSequenceIndex = 0;
+
+        public void onEntry(final ReplayIndexRecordDecoder indexRecord)
+        {
+            final long beginPosition = indexRecord.position();
+            final int sequenceIndex = indexRecord.sequenceIndex();
+            final long recordingId = indexRecord.recordingId();
+
+            highestSequenceIndex = ReplayQuery.updateStartPosition(
+                sequenceIndex, highestSequenceIndex, recordingIdToStartPosition, recordingId, beginPosition);
+        }
+
+        public void onLapped()
+        {
+            System.err.println("Error: lapped by writer currently updating the file");
+        }
+
+        public Long2LongHashMap recordingIdToStartPosition()
+        {
+            return recordingIdToStartPosition;
+        }
+
+        public int highestSequenceIndex()
+        {
+            return highestSequenceIndex;
+        }
+    }
+
+    public static class SequencePosition
+    {
+        private final long sequenceIndex;
+        private final long position;
+
+        public SequencePosition(final long sequenceIndex, final long position)
+        {
+            this.sequenceIndex = sequenceIndex;
+            this.position = position;
+        }
+
+        public long position()
+        {
+            return position;
+        }
+
+        public long sequenceIndex()
+        {
+            return sequenceIndex;
+        }
+
+        public String toString()
+        {
+            return "SequencePosition{" +
+                "sequenceIndex=" + sequenceIndex +
+                ", position=" + position +
+                '}';
+        }
+    }
+
+    public static class BoundaryPositionExtractor implements ReplayIndexExtractor.ReplayIndexHandler
+    {
+        private final Long2LongHashMap recordingIdToPosition = new Long2LongHashMap(NULL_VALUE);
+        private final Long2ObjectHashMap<Long2LongHashMap> recordingIdToSequenceIndexToPosition =
+            new Long2ObjectHashMap<>();
+
+        private final boolean min;
+
+        public BoundaryPositionExtractor(final boolean min)
+        {
+            this.min = min;
+        }
+
+        public void onEntry(final ReplayIndexRecordDecoder indexRecord)
+        {
+            final long beginPosition = trueBeginPosition(indexRecord.position());
+            final int sequenceIndex = indexRecord.sequenceIndex();
+            final long recordingId = indexRecord.recordingId();
+
+            boundaryUpdate(recordingIdToPosition, beginPosition, recordingId, min);
+
+            final Long2LongHashMap sequenceIndexToPosition = recordingIdToSequenceIndexToPosition.computeIfAbsent(
+                recordingId, k -> new Long2LongHashMap(NULL_VALUE));
+
+            boundaryUpdate(sequenceIndexToPosition, beginPosition, sequenceIndex, true);
+        }
+
+        private void boundaryUpdate(
+            final Long2LongHashMap keyToPosition, final long beginPosition, final long key, final boolean min)
+        {
+            final long oldPosition = keyToPosition.get(key);
+            if (beyondBounary(oldPosition, beginPosition, min))
+            {
+                keyToPosition.put(key, beginPosition);
+            }
+        }
+
+        private boolean beyondBounary(final long oldPosition, final long beginPosition, final boolean min)
+        {
+            if (oldPosition == NULL_VALUE)
+            {
+                return true;
+            }
+
+            if (min)
+            {
+                return beginPosition < oldPosition;
+            }
+            else
+            {
+                return beginPosition > oldPosition;
+            }
+        }
+
+        public void onLapped()
+        {
+            System.err.println("Error: lapped by writer currently updating the file");
+        }
+
+        public Long2LongHashMap recordingIdToPosition()
+        {
+            return recordingIdToPosition;
+        }
+
+        public Long2ObjectHashMap<Long2LongHashMap> recordingIdToSequenceIndexToPosition()
+        {
+            return recordingIdToSequenceIndexToPosition;
+        }
+
+        public void findInconsistentSequenceIndexPositions()
+        {
+            recordingIdToSequenceIndexToPosition.forEach((recordingId, sequenceIndexToPosition) ->
+            {
+                final List<SequencePosition> sequencePositions = sequenceIndexToPosition
+                    .entrySet()
+                    .stream()
+                    .map(e -> new SequencePosition(e.getKey(), e.getValue()))
+                    .sorted(Comparator.comparingLong(SequencePosition::position))
+                    .collect(Collectors.toList());
+
+                sequenceIndexToPosition.forEach((sequenceIndex, position) ->
+                {
+                    sequencePositions
+                        .stream()
+                        .filter(rp -> rp.position < position && rp.sequenceIndex > sequenceIndex)
+                        .findFirst()
+                        .ifPresent(sp ->
+                        System.out.println("Found suppressor for " + sequenceIndex + " @ " + position + ": " +
+                        sp.sequenceIndex + " @ " + sp.position));
+                });
+            });
+        }
     }
 
     public static class PrintError implements ReplayIndexExtractor.ReplayIndexHandler
