@@ -298,6 +298,13 @@ public final class FixConnection implements AutoCloseable
         return readMessage(new ExecutionReportDecoder());
     }
 
+    public ExecutionReportDecoder readExecutionReport(final int msgSeqNum)
+    {
+        final ExecutionReportDecoder executionReport = readExecutionReport();
+        assertSeqNum(msgSeqNum, executionReport);
+        return executionReport;
+    }
+
     public <T extends Decoder> T readMessage(final T decoder)
     {
         try
@@ -384,6 +391,18 @@ public final class FixConnection implements AutoCloseable
     public LogonDecoder readLogonReply()
     {
         return readMessage(new LogonDecoder());
+    }
+
+    public LogonDecoder readLogon(final int msgSeqNum)
+    {
+        final LogonDecoder logonReply = readLogonReply();
+        assertSeqNum(msgSeqNum, logonReply);
+        return logonReply;
+    }
+
+    private void assertSeqNum(final int msgSeqNum, final Decoder decoder)
+    {
+        assertEquals(decoder.toString(), msgSeqNum, decoder.header().msgSeqNum());
     }
 
     public RejectDecoder readReject()
