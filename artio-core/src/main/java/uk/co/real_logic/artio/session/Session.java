@@ -125,6 +125,10 @@ public class Session
     // The last msg seq no before you hit the end of the resend request
     private int endOfResendRequestRange = INITIAL_END_OF_RESEND_REQUEST_RANGE;
 
+    // Set when the tryResetSequenceNumbers() method is invoked in order to remember that we're awaiting a logon message
+    // reply from the counter-party.
+    private boolean awaitingLogonReply = false;
+
     private boolean awaitingHeartbeat = INITIAL_AWAITING_HEARTBEAT;
 
     private boolean enableLastMsgSeqNumProcessed;
@@ -801,6 +805,10 @@ public class Session
             lastMsgSeqNumProcessed);
         nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(sentSeqNum, position);
+        if (position >= 0)
+        {
+            awaitingLogonReply = true;
+        }
 
         return position;
     }
@@ -1283,7 +1291,7 @@ public class Session
 
         if (state() == initialState())
         {
-            // Initial income connection logic
+            // Initial incoming connection logic
             final int expectedMsgSeqNo = expectedReceivedSeqNum();
             if (expectedMsgSeqNo == msgSeqNum)
             {
@@ -1364,9 +1372,14 @@ public class Session
         final long logonTime,
         final int msgSeqNo)
     {
-        // if we have just received a reset request and not a response to one we just sent.
-        if (lastSentMsgSeqNum() != INITIAL_SEQUENCE_NUMBER)
+        if (awaitingLogonReply || lastSentMsgSeqNum() == INITIAL_SEQUENCE_NUMBER)
         {
+            lastReceivedMsgSeqNumOnly(msgSeqNo);
+            awaitingLogonReply = false;
+        }
+        else
+        {
+            // if we have just received a reset request and not a response to one we just sent.
             final int logonSequenceIndex = isInitialRequest() ? sequenceIndex() : sequenceIndex() + 1;
             final long position = proxy.sendLogon(INITIAL_SEQUENCE_NUMBER, heartbeatInterval,
                 null,
@@ -1382,10 +1395,6 @@ public class Session
             lastReceivedMsgSeqNum(msgSeqNo);
             lastLogonTime(logonTime);
             lastSequenceResetTime(logonTime);
-        }
-        else
-        {
-            lastReceivedMsgSeqNumOnly(msgSeqNo);
         }
 
         // logon time becomes time of the confirmation message.
