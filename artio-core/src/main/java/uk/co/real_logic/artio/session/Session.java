@@ -43,8 +43,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.*;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.validateMessageThrottleOptions;
-import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -52,10 +50,12 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.validateMessageThrottleOptions;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNKNOWN_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -125,6 +125,10 @@ public class Session
     private int lastResendChunkMsgSeqNum = INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM;
     // The last msg seq no before you hit the end of the resend request
     private int endOfResendRequestRange = INITIAL_END_OF_RESEND_REQUEST_RANGE;
+
+    // Set when the tryResetSequenceNumbers() method is invoked in order to remember that we're awaiting a logon message
+    // reply from the counter-party.
+    private boolean awaitingLogonReply = false;
 
     private boolean awaitingHeartbeat = INITIAL_AWAITING_HEARTBEAT;
 
@@ -866,6 +870,10 @@ public class Session
             getCancelOnDisconnectTimeoutWindowInMs());
         nextSequenceIndex(clock.nanoTime(), position);
         lastSentMsgSeqNum(sentSeqNum, position);
+        if (position >= 0)
+        {
+            awaitingLogonReply = true;
+        }
 
         return position;
     }
@@ -1363,7 +1371,7 @@ public class Session
 
         if (state() == initialState())
         {
-            // Initial income connection logic
+            // Initial incoming connection logic
             final int expectedMsgSeqNo = expectedReceivedSeqNum();
             if (expectedMsgSeqNo == msgSeqNum)
             {
@@ -1444,9 +1452,14 @@ public class Session
         final long logonTimeInNs,
         final int msgSeqNo)
     {
-        // if we have just received a reset request and not a response to one we just sent.
-        if (lastSentMsgSeqNum() != INITIAL_SEQUENCE_NUMBER)
+        if (awaitingLogonReply || lastSentMsgSeqNum() == INITIAL_SEQUENCE_NUMBER)
         {
+            lastReceivedMsgSeqNumOnly(msgSeqNo);
+            awaitingLogonReply = false;
+        }
+        else
+        {
+            // if we have just received a reset request and not a response to one we just sent.
             final int logonSequenceIndex = isInitialRequest() ? sequenceIndex() : sequenceIndex() + 1;
             final long position = proxy.sendLogon(INITIAL_SEQUENCE_NUMBER, heartbeatInterval,
                 null,
@@ -1465,10 +1478,6 @@ public class Session
             lastReceivedMsgSeqNum(msgSeqNo);
             lastLogonTimeInNs(logonTimeInNs);
             lastSequenceResetTimeInNs(logonTimeInNs);
-        }
-        else
-        {
-            lastReceivedMsgSeqNumOnly(msgSeqNo);
         }
 
         // logon time becomes time of the confirmation message.

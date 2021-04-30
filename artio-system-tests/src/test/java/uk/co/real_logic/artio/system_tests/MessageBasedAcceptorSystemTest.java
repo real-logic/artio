@@ -45,20 +45,21 @@ import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.FixConnection.BUFFER_SIZE;
 import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldComplyWithLogonBasedSequenceNumberResetOn()
         throws IOException
     {
         shouldComplyWithLogonBasedSequenceNumberReset(true);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldComplyWithLogonBasedSequenceNumberResetOff()
         throws IOException
     {
@@ -75,7 +76,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         logonThenLogout();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotNotifyLibraryOfSessionUntilLoggedOn() throws IOException
     {
         setup(true, true);
@@ -97,7 +98,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectExceptionalLogonMessageAndLogout() throws IOException
     {
         setup(true, true);
@@ -115,7 +116,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectExceptionalSessionMessage() throws IOException
     {
         setup(true, true);
@@ -134,7 +135,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldShutdownWithNotLoggedInSessionsOpen() throws IOException
     {
         setup(true, true);
@@ -145,19 +146,19 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectConnectionWithNoLogonEngine() throws IOException
     {
         shouldDisconnectConnectionWithNoLogon(ENGINE);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectConnectionWithNoLogonSoleLibrary() throws IOException
     {
         shouldDisconnectConnectionWithNoLogon(SOLE_LIBRARY);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectConnectionWithNoLogoutReply() throws IOException
     {
         setup(true, true);
@@ -179,7 +180,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportRapidLogonAndLogoutOperations() throws IOException
     {
         setup(false, true, true);
@@ -231,7 +232,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectMessageWithInvalidSenderAndTargetCompIds() throws IOException
     {
         setup(true, true);
@@ -266,7 +267,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectInvalidResendRequestsWrongCompId() throws IOException
     {
         setup(true, true);
@@ -295,7 +296,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectInvalidResendRequestsHighBeginSeqNo() throws IOException
     {
         setup(true, true);
@@ -309,7 +310,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
             final Session session = acquireSession();
-            ReportFactory.sendOneReport(session, Side.SELL);
+            ReportFactory.sendOneReport(testSystem, session, Side.SELL);
 
             testSystem.awaitBlocking(() ->
             {
@@ -330,7 +331,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReplyWithOnlyValidMessageSequenceWithHighEndSeqNo() throws IOException
     {
         setup(true, true);
@@ -344,7 +345,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             final int headerSeqNum = connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
             final Session session = acquireSession();
-            ReportFactory.sendOneReport(session, Side.SELL);
+            ReportFactory.sendOneReport(testSystem, session, Side.SELL);
 
             testSystem.awaitBlocking(() ->
             {
@@ -376,7 +377,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectInvalidLogonWithMissingTargetCompId()
     {
         setup(true, true, true, SOLE_LIBRARY);
@@ -424,7 +425,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         assertThat("sessions = " + sessions, sessions, hasSize(0));
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectMessagesOverThrottle() throws IOException
     {
         setup(true, true, true, ENGINE, true);
@@ -466,6 +467,43 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
                 connection.logoutAndAwaitReply();
             });
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportLogonBasedSequenceNumberResetWithImmediateMessageSend() throws IOException
+    {
+        // Replicates a bug reported where if you send a message on a FIX session after a tryResetSequenceNumbers
+        // and before the counter-party replies with their logon then it can result in an infinite logon loop.
+
+        setup(true, true);
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final ReportFactory reportFactory = new ReportFactory();
+
+            final Session session = acquireSession();
+            reportFactory.sendReport(testSystem, session, Side.SELL);
+            connection.readExecutionReport(2);
+            connection.sendExecutionReport(2, false);
+            testSystem.awaitReceivedSequenceNumber(session, 2);
+
+            testSystem.awaitSend(session::tryResetSequenceNumbers);
+            reportFactory.sendReport(testSystem, session, Side.SELL);
+            assertEquals(2, session.lastSentMsgSeqNum());
+            assertEquals(2, session.lastReceivedMsgSeqNum());
+
+            assertTrue(connection.readLogon(1).resetSeqNumFlag());
+            connection.readExecutionReport(2);
+            connection.msgSeqNum(1).logon(true);
+
+            testSystem.awaitReceivedSequenceNumber(session, 1);
+            reportFactory.sendReport(testSystem, session, Side.SELL);
+            assertEquals(3, session.lastSentMsgSeqNum());
+            connection.readExecutionReport(3);
         }
     }
 

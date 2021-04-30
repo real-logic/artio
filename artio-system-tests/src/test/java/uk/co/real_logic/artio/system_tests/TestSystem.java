@@ -249,6 +249,11 @@ public class TestSystem
         awaitSend("Unable to send " + encoder.getClass().getSimpleName(), () -> session.trySend(encoder));
     }
 
+    public long awaitSend(final LongSupplier operation)
+    {
+        return awaitSend("Failed to send", operation);
+    }
+
     public long awaitSend(final String message, final LongSupplier operation)
     {
         final long[] position = new long[1];

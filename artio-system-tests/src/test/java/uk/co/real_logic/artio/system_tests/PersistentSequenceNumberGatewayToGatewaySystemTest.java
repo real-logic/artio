@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
@@ -323,7 +322,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int messageCount = 100;
         for (int i = 0; i < messageCount; i++)
         {
-            assertEquals(CONTINUE, reportFactory.trySendReport(acceptingSession, Side.BUY));
+            reportFactory.sendReport(testSystem, acceptingSession, Side.BUY);
         }
 
         final int lastSeqNum = messageCount + 1;
@@ -507,8 +506,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         cannotConnectWithSequence(acceptorSequenceNumber, 1);
 
         assertEquals(0, acceptingSession.sequenceIndex());
-        assertThat(acceptingSession.trySendSequenceReset(1, 1),
-            greaterThan(0L));
+        testSystem.awaitSend(() -> acceptingSession.trySendSequenceReset(1, 1));
         assertEquals(1, acceptingSession.sequenceIndex());
 
         initiatingOtfAcceptor.messages().clear();
@@ -725,7 +723,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         assertOfflineSession(sessionId, acceptingSession);
 
-        ReportFactory.sendOneReport(acceptingSession, Side.BUY);
+        ReportFactory.sendOneReport(testSystem, acceptingSession, Side.BUY);
 
         receivedReplayFromReconnectedSession();
     }

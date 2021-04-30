@@ -66,7 +66,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 {
                     newOrderSingle.decode(asciiBuffer, 0, length);
 
-                    final Action action = reportFactory.trySendReport(session, newOrderSingle.sideAsEnum());
+                    final Action action = reportFactory.trySendReportAct(session, newOrderSingle.sideAsEnum());
                     if (action == ABORT)
                     {
                         return action;
