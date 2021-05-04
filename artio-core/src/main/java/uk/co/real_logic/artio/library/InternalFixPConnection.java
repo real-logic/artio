@@ -21,6 +21,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
@@ -30,7 +31,6 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
 public abstract class InternalFixPConnection implements FixPConnection
 {
-    protected final long connectionId;
     protected final GatewayPublication outboundPublication;
     protected final GatewayPublication inboundPublication;
     protected final int libraryId;
@@ -41,6 +41,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected State state;
     protected FixPConnectionHandler handler;
     protected LibraryReply<InternalFixPConnection> initiateReply;
+    protected long connectionId;
 
     protected long requestedKeepAliveIntervalInMs;
     protected long nextSentSeqNo;
@@ -76,7 +77,6 @@ public abstract class InternalFixPConnection implements FixPConnection
     {
         return connectionId;
     }
-
 
     public long nextSentSeqNo()
     {
@@ -320,5 +320,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected abstract int poll(long timeInMs);
 
     protected abstract void onReplayComplete();
+
+    protected abstract void onOfflineReconnect(long connectionId, FixPContext context);
 
 }

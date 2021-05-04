@@ -164,29 +164,37 @@ public class FixPGatewaySessions extends GatewaySessions
 
         protected void onAuthenticated()
         {
-            ((FixPGatewaySession)session).authenticated();
+            final FixPGatewaySession session = (FixPGatewaySession)this.session;
+            session.authenticated();
 
-            final MessageHeaderEncoder header = new MessageHeaderEncoder();
-            final InboundFixPConnectEncoder inboundFixPConnect = new InboundFixPConnectEncoder();
-            final UnsafeBuffer logonBuffer = new UnsafeBuffer(new byte[ACCEPTED_HEADER_LENGTH]);
-            inboundFixPConnect
-                .wrapAndApplyHeader(logonBuffer, 0, header)
-                .connection(connectionId)
-                .sessionId(sessionId)
-                .protocolType(protocolType)
-                .messageLength(messageSize);
-
-            final long position = inboundPublication.dataPublication().offer(
-                logonBuffer, 0, ACCEPTED_HEADER_LENGTH,
-                buffer, offset, messageSize);
-
-            if (position < 0)
+            if (framer.onFixPLogonMessageReceived(session, sessionId))
             {
-                System.out.println("position = " + position); // TODO
+                state = AuthenticationState.ACCEPTED;
             }
             else
             {
-                state = AuthenticationState.ACCEPTED;
+                final MessageHeaderEncoder header = new MessageHeaderEncoder();
+                final InboundFixPConnectEncoder inboundFixPConnect = new InboundFixPConnectEncoder();
+                final UnsafeBuffer logonBuffer = new UnsafeBuffer(new byte[ACCEPTED_HEADER_LENGTH]);
+                inboundFixPConnect
+                    .wrapAndApplyHeader(logonBuffer, 0, header)
+                    .connection(connectionId)
+                    .sessionId(sessionId)
+                    .protocolType(protocolType)
+                    .messageLength(messageSize);
+
+                final long position = inboundPublication.dataPublication().offer(
+                    logonBuffer, 0, ACCEPTED_HEADER_LENGTH,
+                    buffer, offset, messageSize);
+
+                if (position < 0)
+                {
+                    System.out.println("position = " + position); // TODO
+                }
+                else
+                {
+                    state = AuthenticationState.ACCEPTED;
+                }
             }
         }
 

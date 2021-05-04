@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.framer.ILink3Key;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -1591,6 +1592,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         onRetransmitFilled();
 
         return 1;
+    }
+
+    protected void onOfflineReconnect(final long connectionId, final FixPContext context)
+    {
+        Ilink3Protocol.unsupported();
     }
 
     public String toString()

@@ -23,6 +23,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -109,7 +110,7 @@ class InternalBinaryEntrypointConnection
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
-        state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
+        initialState(context);
 
         final long timeInMs = System.currentTimeMillis();
         nextSendMessageTimeInMs = nextReceiveMessageTimeInMs = timeInMs + configuration.noEstablishFixPTimeoutInMs();
@@ -119,6 +120,11 @@ class InternalBinaryEntrypointConnection
 
         nextRecvSeqNo(adjustSeqNo(lastReceivedSequenceNumber));
         nextSentSeqNo(adjustSeqNo(lastSentSequenceNumber));
+    }
+
+    private void initialState(final BinaryEntryPointContext context)
+    {
+        state(context.fromNegotiate() ? State.ACCEPTED : State.NEGOTIATED_REESTABLISH);
     }
 
     private long adjustSeqNo(final long lastReceivedSequenceNumber)
@@ -226,6 +232,14 @@ class InternalBinaryEntrypointConnection
         replaying = false;
     }
 
+    protected void onOfflineReconnect(final long connectionId, final FixPContext context)
+    {
+        initialState((BinaryEntryPointContext)context);
+
+        this.connectionId = connectionId;
+        proxy.ids(connectionId, sessionId);
+    }
+
     public long onNegotiate(
         final long sessionId,
         final long sessionVerID,
@@ -238,6 +252,7 @@ class InternalBinaryEntrypointConnection
         if (state == UNBOUND)
         {
             // Offline session
+            onSessionId(sessionId, sessionVerID);
             return 1;
         }
 

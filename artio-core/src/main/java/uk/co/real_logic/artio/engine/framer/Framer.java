@@ -1988,24 +1988,31 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId,
         final long correlationId)
     {
+        return Pressure.apply(onRequestFixPSessionInternal(libraryId, libraryInfo, sessionId, correlationId));
+    }
+
+    private long onRequestFixPSessionInternal(
+        final int libraryId, final LiveLibraryInfo libraryInfo, final long sessionId, final long correlationId)
+    {
         final FixPGatewaySession gatewaySession = (FixPGatewaySession)gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
             if (requestOfflineFixPSession(libraryInfo, sessionId, correlationId))
             {
-                return CONTINUE;
+                return 1;
             }
             else
             {
-                return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+                return inboundPublication.saveRequestSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             }
         }
 
-        if (gatewaySession.libraryId() != ENGINE_LIBRARY_ID)
+        final int currentLibraryId = gatewaySession.libraryId();
+        if (currentLibraryId != ENGINE_LIBRARY_ID && currentLibraryId != libraryId)
         {
-            return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                libraryId, OTHER_SESSION_OWNER, correlationId));
+            return inboundPublication.saveRequestSessionReply(
+                libraryId, OTHER_SESSION_OWNER, correlationId);
         }
 
         gatewaySession.setManagementTo(libraryId);
@@ -2014,9 +2021,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         schedule(new OnRequestFixPSessionHandover(
             correlationId,
             gatewaySession,
-            libraryInfo, false));
+            libraryInfo,
+            false));
 
-        return CONTINUE;
+        return 1;
     }
 
     private boolean requestOfflineFixPSession(
@@ -2740,7 +2748,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    boolean onLogonMessageReceived(final FixGatewaySession gatewaySession, final long sessionId)
+    boolean onFixLogonMessageReceived(final FixGatewaySession gatewaySession, final long sessionId)
     {
         if (checkOfflineSession(gatewaySession, sessionId))
         {
@@ -2764,7 +2772,31 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return false;
     }
 
+    public boolean onFixPLogonMessageReceived(final FixPGatewaySession session, final long sessionId)
+    {
+        final LiveLibraryInfo library = lookupOfflineLibrary(session, sessionId);
+        if (library == null)
+        {
+            return false;
+        }
+
+        // Handover reconnected FIXP session to existing library that owns the offline version of the session.
+        final int libraryId = library.libraryId();
+        final Action action = onRequestFixPSession(libraryId, library, sessionId, NO_CORRELATION_ID);
+        if (action != CONTINUE)
+        {
+            schedule(() -> onRequestFixPSessionInternal(libraryId, library, sessionId, NO_CORRELATION_ID));
+        }
+
+        return true;
+    }
+
     private boolean checkOfflineSession(final GatewaySession gatewaySession, final long sessionId)
+    {
+        return lookupOfflineLibrary(gatewaySession, sessionId) != null;
+    }
+
+    private LiveLibraryInfo lookupOfflineLibrary(final GatewaySession gatewaySession, final long sessionId)
     {
         for (final LiveLibraryInfo library : idToLibrary.values())
         {
@@ -2774,11 +2806,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.consumeOfflineSession(oldGatewaySession);
                 // the handover process will associate the new gateway session with the library
                 library.removeSession(gatewaySession);
-                return true;
+                return library;
             }
         }
-
-        return false;
+        return null;
     }
 
     void onGatewaySessionSetup(final FixGatewaySession gatewaySession, final boolean isOfflineReconnect)

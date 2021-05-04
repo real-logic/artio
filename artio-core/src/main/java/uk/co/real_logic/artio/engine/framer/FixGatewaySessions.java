@@ -381,7 +381,7 @@ public class FixGatewaySessions extends GatewaySessions
                 return;
             }
 
-            final boolean isOfflineReconnect = framer.onLogonMessageReceived(session, sessionContext.sessionId());
+            final boolean isOfflineReconnect = framer.onFixLogonMessageReceived(session, sessionContext.sessionId());
 
             final long logonTime = clock.nanoTime();
             sessionContext.onLogon(resetSeqNum, logonTime, fixDictionary);

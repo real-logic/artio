@@ -1280,12 +1280,30 @@ public class BinaryEntryPointSystemTest
         assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
         acquireConnection(connectionAcquiredHandler);
         assertEquals(FixPConnection.State.UNBOUND, connection.state());
+        assertNextSequenceNumbers(2, 2);
+        assertEquals(sessionId, connection.sessionId());
+        assertEquals(1, connection.sessionVerId());
 
-        // send offline message
-        sendExecutionReportNew(connection, CL_ORD_ID, SECURITY_ID, false);
+        connectionAcquiredHandler.reset();
 
-        // check that the message is retransmitted when the client reconnects.
-//        reEstablishConnection(1, 1);
+        // Reconnect should automatically send the reconnected session to the library that owns the offline session
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeEstablish(2);
+
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+            final BinaryEntrypointConnection offlineConnection = this.connection;
+            acquireConnection(connectionAcquiredHandler);
+            assertFalse(connectionExistsHandler.invoked());
+            assertSame(offlineConnection, connection);
+
+            assertConnectionMatches(client);
+            client.readEstablishAck(2, 1);
+
+            exchangeOrderAndReportNew(client);
+
+            clientTerminatesSession(client);
+        }
     }
 
     // ----------------------------------

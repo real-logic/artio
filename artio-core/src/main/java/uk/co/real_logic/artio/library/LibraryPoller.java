@@ -1779,7 +1779,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final boolean offline, final DirectBuffer buffer,
+        final boolean offline,
+        final DirectBuffer buffer,
         final int offset,
         final int messageLength)
     {
@@ -1790,8 +1791,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         initFixP(protocolType);
 
-        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.get(correlationId);
-
+        RequestSessionReply reply = null;
         try
         {
             final FixPContext context = commonFixPParser.lookupContext(
@@ -1799,40 +1799,49 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 offset,
                 messageLength);
 
-            final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
-                connectionId,
-                outboundPublication,
-                inboundPublication,
-                libraryId,
-                this,
-                lastReceivedSequenceNumber,
-                lastSentSequenceNumber,
-                lastConnectPayload,
-                context,
-                configuration);
-
-            if (offline)
+            if (correlationId == NO_CORRELATION_ID)
             {
-                connection.state(FixPConnection.State.UNBOUND);
+                // Reconnect of an offline session
+                final InternalFixPConnection connection = findFixPConnection(context);
+                if (connection == null)
+                {
+                    throw new IllegalStateException(
+                        "Unable to find reconnecting connection associated with " + context);
+                }
+                connection.onOfflineReconnect(connectionId, context);
+
+                handleFixPConnection(connectionId, offline, buffer, offset, connection);
             }
-
-            final FixPConnectionHandler handler = configuration
-                .fixPConnectionAcquiredHandler()
-                .onConnectionAcquired(connection);
-
-            connection.handler(handler);
-
-            final FixPSubscription subscription = new FixPSubscription(
-                fixPProtocol.makeParser(connection), connection);
-            connectionIdToFixPSubscription.put(connectionId, subscription);
-
-            subscription.onMessage(buffer, offset);
-
-            fixPConnections = ArrayUtil.add(fixPConnections, connection);
-
-            if (reply != null)
+            else
             {
-                reply.onComplete(SessionReplyStatus.OK);
+                reply = (RequestSessionReply)correlationIdToReply.get(correlationId);
+
+                final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
+                    connectionId,
+                    outboundPublication,
+                    inboundPublication,
+                    libraryId,
+                    this,
+                    lastReceivedSequenceNumber,
+                    lastSentSequenceNumber,
+                    lastConnectPayload,
+                    context,
+                    configuration);
+
+                if (offline)
+                {
+                    connection.state(FixPConnection.State.UNBOUND);
+                }
+
+                handleFixPConnection(connectionId, offline, buffer, offset, connection);
+
+                fixPConnections = ArrayUtil.add(fixPConnections, connection);
+
+                if (reply != null)
+                {
+                    reply.onComplete(SessionReplyStatus.OK);
+                }
+
             }
         }
         catch (final Exception e)
@@ -1845,6 +1854,42 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    private InternalFixPConnection findFixPConnection(final FixPContext context)
+    {
+        final FixPKey key = context.key();
+        for (final InternalFixPConnection connection : fixPConnections)
+        {
+            if (connection.key().equals(key))
+            {
+                return connection;
+            }
+        }
+        return null;
+    }
+
+    private void handleFixPConnection(
+        final long connectionId,
+        final boolean offline,
+        final DirectBuffer buffer,
+        final int offset,
+        final InternalFixPConnection connection)
+    {
+        final FixPConnectionHandler handler = configuration
+            .fixPConnectionAcquiredHandler()
+            .onConnectionAcquired(connection);
+
+        connection.handler(handler);
+
+        final FixPSubscription subscription = new FixPSubscription(
+            fixPProtocol.makeParser(connection), connection);
+        subscription.onMessage(buffer, offset);
+
+        if (!offline)
+        {
+            connectionIdToFixPSubscription.put(connectionId, subscription);
+        }
     }
 
     public Action onThrottleNotification(
