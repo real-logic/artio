@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
@@ -303,7 +304,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             final String testReqId = "ABC";
             connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
-            final Session session = acquireSession();
+            session = acquireSession();
             ReportFactory.sendOneReport(testSystem, session, Side.SELL);
 
             testSystem.awaitBlocking(() ->
@@ -338,7 +339,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             final String testReqId = "ABC";
             final int headerSeqNum = connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
-            final Session session = acquireSession();
+            session = acquireSession();
             ReportFactory.sendOneReport(testSystem, session, Side.SELL);
 
             testSystem.awaitBlocking(() ->
@@ -422,19 +423,63 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportLogonBasedSequenceNumberResetWithImmediateMessageSend() throws IOException
     {
+        shouldSupportLogonBasedSequenceNumberReset(ENGINE, (connection, reportFactory) ->
+        {
+            connection.msgSeqNum(1).logon(true);
+
+            testSystem.awaitReceivedSequenceNumber(session, 1);
+            reportFactory.sendReport(testSystem, session, Side.SELL);
+            assertEquals(3, session.lastSentMsgSeqNum());
+            connection.readExecutionReport(3);
+        });
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportLogonBasedSequenceNumberResetWithLowSequenceNumberReconnect() throws IOException
+    {
+        shouldSupportLogonBasedSequenceNumberReset(SOLE_LIBRARY, (connection, reportFactory) ->
+        {
+            // Replicate a buggy client triggering a disconnect whilst the session is performing a
+            // sequence number reset that results in a logon not being replied to
+            connection.sendExecutionReport(1, false);
+            assertSessionDisconnected(testSystem, session);
+            assertEquals("MsgSeqNum too low, expecting 3 but received 1",
+                connection.readLogout().textAsString());
+            assertFalse(connection.isConnected());
+        });
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            awaitedLogon(connection);
+        }
+    }
+
+    private void shouldSupportLogonBasedSequenceNumberReset(
+        final InitialAcceptedSessionOwner owner,
+        final BiConsumer<FixConnection, ReportFactory> onNext)
+        throws IOException
+    {
         // Replicates a bug reported where if you send a message on a FIX session after a tryResetSequenceNumbers
         // and before the counter-party replies with their logon then it can result in an infinite logon loop.
 
-        setup(true, true);
+        setup(true, true, true, owner);
         setupLibrary();
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
-            logon(connection);
+            awaitedLogon(connection);
 
             final ReportFactory reportFactory = new ReportFactory();
 
-            final Session session = acquireSession();
+            if (owner == ENGINE)
+            {
+                session = acquireSession();
+            }
+            else
+            {
+                session = handler.lastSession();
+                assertNotNull(session);
+            }
             reportFactory.sendReport(testSystem, session, Side.SELL);
             connection.readExecutionReport(2);
             connection.sendExecutionReport(2, false);
@@ -447,12 +492,9 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             assertTrue(connection.readLogon(1).resetSeqNumFlag());
             connection.readExecutionReport(2);
-            connection.msgSeqNum(1).logon(true);
 
-            testSystem.awaitReceivedSequenceNumber(session, 1);
-            reportFactory.sendReport(testSystem, session, Side.SELL);
-            assertEquals(3, session.lastSentMsgSeqNum());
-            connection.readExecutionReport(3);
+            // Last sequence numbers Artio->Client: 2, Client->Artio: 2, client needs to send logon,seqnum=1 after
+            onNext.accept(connection, reportFactory);
         }
     }
 
