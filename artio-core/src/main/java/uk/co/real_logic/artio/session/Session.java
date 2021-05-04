@@ -872,7 +872,7 @@ public class Session
         lastSentMsgSeqNum(sentSeqNum, position);
         if (position >= 0)
         {
-            awaitingLogonReply = true;
+            awaitingLogonReply(true);
         }
 
         return position;
@@ -1452,10 +1452,10 @@ public class Session
         final long logonTimeInNs,
         final int msgSeqNo)
     {
-        if (awaitingLogonReply || lastSentMsgSeqNum() == INITIAL_SEQUENCE_NUMBER)
+        if (awaitingLogonReply || lastSentMsgSeqNum == INITIAL_SEQUENCE_NUMBER)
         {
             lastReceivedMsgSeqNumOnly(msgSeqNo);
-            awaitingLogonReply = false;
+            awaitingLogonReply(false);
         }
         else
         {
@@ -2329,6 +2329,11 @@ public class Session
     void enableLastMsgSeqNumProcessed(final boolean enableLastMsgSeqNumProcessed)
     {
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+    }
+
+    void awaitingLogonReply(final boolean awaitingLogonReply)
+    {
+        this.awaitingLogonReply = awaitingLogonReply;
     }
 
     OnMessageInfo messageInfo()

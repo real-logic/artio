@@ -55,6 +55,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     FakeHandler handler;
     FixLibrary library;
     TestSystem testSystem;
+    Session session;
 
     void setup(final boolean sequenceNumberReset, final boolean shouldBind)
     {
@@ -124,6 +125,11 @@ public class AbstractMessageBasedAcceptorSystemTest
             .monitoringAgentFactory(MonitoringAgentFactory.none())
             .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);
+    }
+
+    void awaitedLogon(final FixConnection connection)
+    {
+        testSystem.awaitBlocking(() -> logon(connection));
     }
 
     void logon(final FixConnection connection)
