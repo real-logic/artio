@@ -544,6 +544,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageFixPConnection.lastReceivedSequenceNumber(),
             manageFixPConnection.lastSentSequenceNumber(),
             manageFixPConnection.lastConnectPayload(),
+            manageFixPConnection.offline() == Bool.TRUE,
             buffer,
             limit,
             manageFixPConnection.messageLength());

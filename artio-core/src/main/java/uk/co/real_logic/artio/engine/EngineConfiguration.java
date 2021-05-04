@@ -1484,6 +1484,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                 sessionBufferSize()));
         }
 
+        if (acceptsBinaryEntryPoint() && !logAllMessages())
+        {
+            throw new IllegalArgumentException("FIXP acceptor is not supported without logging messages");
+        }
+
         if (deleteLogFileDirOnStart())
         {
             final File logFileDir = new File(logFileDir());

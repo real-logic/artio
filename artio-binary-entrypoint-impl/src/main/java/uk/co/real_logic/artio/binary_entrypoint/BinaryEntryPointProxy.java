@@ -42,10 +42,16 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         NegotiateRejectEncoder.BLOCK_LENGTH;
     private static final int ESTABLISH_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
         EstablishRejectEncoder.BLOCK_LENGTH;
+    private static final int NEGOTIATE_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        NegotiateEncoder.BLOCK_LENGTH;
+    private static final int ESTABLISH_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        EstablishEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
+    private final NegotiateEncoder negotiate = new NegotiateEncoder();
     private final NegotiateResponseEncoder negotiateResponse = new NegotiateResponseEncoder();
     private final NegotiateRejectEncoder negotiateReject = new NegotiateRejectEncoder();
+    private final EstablishEncoder establish = new EstablishEncoder();
     private final EstablishAckEncoder establishAck = new EstablishAckEncoder();
     private final EstablishRejectEncoder establishReject = new EstablishRejectEncoder();
     private final SequenceEncoder sequence = new SequenceEncoder();
@@ -424,5 +430,50 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         }
 
         return byteBuffer;
+    }
+
+    public byte[] encodeFirstMessage(final FixPContext fixPContext)
+    {
+        final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPContext;
+        final byte[] bytes;
+        if (context.fromNegotiate())
+        {
+            bytes = initBytes(NEGOTIATE_LENGTH);
+
+            negotiate
+                .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
+                .sessionID(context.sessionID())
+                .sessionVerID(context.sessionVerID())
+                .timestamp().time(context.requestTimestampInNs());
+            negotiate.enteringFirm(context.enteringFirm());
+            negotiate.onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue());
+            negotiate.senderLocation("");
+        }
+        else
+        {
+            bytes = initBytes(ESTABLISH_LENGTH);
+
+            establish
+                .wrapAndApplyHeader(buffer, SOFH_LENGTH, beMessageHeader)
+                .sessionID(context.sessionID())
+                .sessionVerID(context.sessionVerID())
+                .timestamp().time(context.requestTimestampInNs());
+            establish.keepAliveInterval().time(0);
+            establish
+                .nextSeqNo(EstablishEncoder.nextSeqNoNullValue())
+                .cancelOnDisconnectType(CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE)
+                .codTimeoutWindow().time(0);
+        }
+
+        return bytes;
+    }
+
+    private byte[] initBytes(final int length)
+    {
+        final byte[] bytes;
+        bytes = new byte[length];
+        buffer.wrap(bytes);
+        SimpleOpenFramingHeader.writeSofh(buffer, 0, NEGOTIATE_LENGTH, BINARY_ENTRYPOINT_TYPE);
+        return bytes;
     }
 }

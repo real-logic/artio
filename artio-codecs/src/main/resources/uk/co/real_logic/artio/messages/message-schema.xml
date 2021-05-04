@@ -143,7 +143,7 @@
             <validValue name="DISCONNECTING"
                         description="Session is trying to disconnect, will retry disconnecting until not backpressured">8</validValue>
             <validValue name="DISCONNECTED"
-                        description="Session has been disconnected and can't send messages.">9</validValue>
+                        description="Session has been disconnected.">9</validValue>
             <validValue name="DISABLED"
                         description="DISCONNECTED and unable to reconnect.">10</validValue>
         </enum>
@@ -552,6 +552,7 @@
         <!-- BinaryEntrypoint: sessionVerId -->
         <field name="lastConnectPayload" id="8" type="uint64"/>
         <field name="messageLength" id="9" type="uint16"/>
+        <field name="offline" id="10" type="Bool"/>
         <!-- then the first message sent -->
     </sbe:message>
 

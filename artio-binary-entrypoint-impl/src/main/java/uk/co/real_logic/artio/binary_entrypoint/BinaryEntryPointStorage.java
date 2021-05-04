@@ -12,6 +12,9 @@ import static org.agrona.BitUtil.SIZE_OF_SHORT;
 
 public class BinaryEntryPointStorage extends AbstractFixPStorage
 {
+    private static final short SHORT_TRUE = (short)1;
+    private static final short SHORT_FALSE = (short)0;
+
     private static final int SESSION_ID_OFFSET = 0;
     private static final int SESSION_ID_LENGTH = SIZE_OF_LONG;
     private static final int SESSION_VER_ID_OFFSET = SESSION_ID_OFFSET + SESSION_ID_LENGTH;
@@ -22,7 +25,9 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     private static final int ENTERING_FIRM_LENGTH = SIZE_OF_LONG;
     private static final int ENDED_OFFSET = ENTERING_FIRM_OFFSET + ENTERING_FIRM_LENGTH;
     private static final int ENDED_LENGTH = SIZE_OF_SHORT;
-    private static final int ENTRY_LENGTH = ENDED_OFFSET + ENDED_LENGTH;
+    private static final int FROM_NEGOTIATE_OFFSET = ENDED_OFFSET + ENDED_LENGTH;
+    private static final int FROM_NEGOTIATE_LENGTH = SIZE_OF_SHORT;
+    private static final int ENTRY_LENGTH = FROM_NEGOTIATE_OFFSET + FROM_NEGOTIATE_LENGTH;
 
     public BinaryEntryPointStorage()
     {
@@ -41,10 +46,11 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
         final long sessionVerId = buffer.getLong(offset + SESSION_VER_ID_OFFSET);
         final long timestamp = buffer.getLong(offset + TIMESTAMP_OFFSET);
         final long enteringFirm = buffer.getLong(offset + ENTERING_FIRM_OFFSET);
-        final boolean ended = buffer.getInt(offset + ENDED_OFFSET) == 1;
+        final boolean ended = buffer.getShort(offset + ENDED_OFFSET) == SHORT_TRUE;
+        final boolean fromNegotiate = buffer.getShort(offset + FROM_NEGOTIATE_OFFSET) == SHORT_TRUE;
 
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
-            sessionId, sessionVerId, timestamp, enteringFirm, false);
+            sessionId, sessionVerId, timestamp, enteringFirm, fromNegotiate);
         context.ended(ended);
         context.offset(offset);
         return context;
@@ -60,7 +66,8 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
         putSessionVerId(buffer, context, offset);
         putTimestamp(buffer, context, offset);
         buffer.putLong(offset + ENTERING_FIRM_OFFSET, context.enteringFirm(), ByteOrder.LITTLE_ENDIAN);
-        putEnded(buffer, context, offset);
+        putEnded(buffer, context, offset + ENDED_OFFSET);
+        putShort(buffer, offset + FROM_NEGOTIATE_OFFSET, context.fromNegotiate());
 
         return ENTRY_LENGTH;
     }
@@ -73,12 +80,17 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
 
         putSessionVerId(buffer, context, offset);
         putTimestamp(buffer, context, offset);
-        putEnded(buffer, context, offset);
+        putEnded(buffer, context, offset + ENDED_OFFSET);
     }
 
     private void putEnded(final AtomicBuffer buffer, final BinaryEntryPointContext context, final int offset)
     {
-        buffer.putInt(offset + ENDED_OFFSET, context.ended() ? 1 : 0, ByteOrder.LITTLE_ENDIAN);
+        putShort(buffer, offset, context.ended());
+    }
+
+    private void putShort(final AtomicBuffer buffer, final int offset, final boolean value)
+    {
+        buffer.putShort(offset, value ? SHORT_TRUE : SHORT_FALSE, ByteOrder.LITTLE_ENDIAN);
     }
 
     private void putTimestamp(final AtomicBuffer buffer, final BinaryEntryPointContext context, final int offset)

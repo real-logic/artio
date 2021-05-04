@@ -130,6 +130,7 @@ public interface LibraryEndPointHandler
         long lastReceivedSequenceNumber,
         long lastSentSequenceNumber,
         long lastConnectPayload,
+        boolean offline,
         DirectBuffer buffer,
         int limit,
         int messageLength);

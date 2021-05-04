@@ -99,6 +99,16 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
             context, fixPProxy);
     }
 
+    void setupOfflineSession(
+        final FixPContext context,
+        final byte[] firstMessage,
+        final int libraryId)
+    {
+        this.context = context;
+        this.firstMessage = firstMessage;
+        libraryId(libraryId);
+    }
+
     public FixPProtocolType protocolType()
     {
         return protocolType;

@@ -106,7 +106,8 @@ public abstract class InternalFixPConnection implements FixPConnection
     public boolean canSendMessage()
     {
         final State state = this.state;
-        return state == ESTABLISHED || state == AWAITING_KEEPALIVE || state == RECV_FINISHED_SENDING;
+        return state == ESTABLISHED || state == AWAITING_KEEPALIVE || state == RECV_FINISHED_SENDING ||
+            state == UNBOUND;
     }
 
     public State state()

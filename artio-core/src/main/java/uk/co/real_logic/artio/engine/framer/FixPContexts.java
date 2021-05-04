@@ -253,7 +253,7 @@ public class FixPContexts implements SessionContexts
         return lookupContext(sessionId) != null;
     }
 
-    private FixPContext lookupContext(final long sessionId)
+    FixPContext lookupContext(final long sessionId)
     {
         final Iterator<Map.Entry<FixPKey, FixPContext>> it = keyToContext.entrySet().iterator();
         while (it.hasNext())

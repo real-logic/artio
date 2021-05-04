@@ -1457,7 +1457,8 @@ public class GatewayPublication extends ClaimablePublication
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final byte[] firstMessage)
+        final byte[] firstMessage,
+        final boolean offline)
     {
         final int messageLength = firstMessage.length;
         final long position = claim(MANAGE_FIXP_CONNECTION_LENGTH + messageLength);
@@ -1479,7 +1480,8 @@ public class GatewayPublication extends ClaimablePublication
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastConnectPayload(lastConnectPayload)
-            .messageLength(messageLength);
+            .messageLength(messageLength)
+            .offline(toBool(offline));
 
         buffer.putBytes(manageFixPConnection.limit(), firstMessage, 0, messageLength);
 

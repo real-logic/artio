@@ -1256,6 +1256,42 @@ public class BinaryEntryPointSystemTest
     // END CARDINALITY TESTS
     // ----------------------------------
 
+    // ----------------------------------
+    // BEGIN OFFLINE TESTS
+    // ----------------------------------
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportOfflineSessions() throws IOException
+    {
+        setupArtio(true);
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            exchangeOrderAndReportNew(client);
+
+            clientTerminatesSession(client);
+        }
+
+        final long sessionId = connection.sessionId();
+        resetHandlers();
+
+        final Reply<SessionReplyStatus> reply = requestSession(library, sessionId);
+        testSystem.awaitCompletedReply(reply);
+        assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
+        acquireConnection(connectionAcquiredHandler);
+        assertEquals(FixPConnection.State.UNBOUND, connection.state());
+
+        // send offline message
+        sendExecutionReportNew(connection, CL_ORD_ID, SECURITY_ID, false);
+
+        // check that the message is retransmitted when the client reconnects.
+//        reEstablishConnection(1, 1);
+    }
+
+    // ----------------------------------
+    // END OFFLINE TESTS
+    // ----------------------------------
+
     private void resetSequenceNumber()
     {
         testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
@@ -1579,10 +1615,15 @@ public class BinaryEntryPointSystemTest
     private void assertConnectionMatches(
         final BinaryEntryPointClient client, final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
     {
-        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
+        acquireConnection(connectionAcquiredHandler);
         assertEquals(client.sessionId(), connection.sessionId());
         assertEquals(client.sessionVerID(), connection.sessionVerId());
         assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
+    }
+
+    private void acquireConnection(final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
+    {
+        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
     }
 
     private void libraryAcquiresConnection(final BinaryEntryPointClient client)

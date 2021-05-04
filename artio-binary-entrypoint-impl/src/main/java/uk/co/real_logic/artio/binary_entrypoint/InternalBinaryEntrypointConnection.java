@@ -235,6 +235,12 @@ class InternalBinaryEntrypointConnection
         final String senderLocation)
     {
         final State state = state();
+        if (state == UNBOUND)
+        {
+            // Offline session
+            return 1;
+        }
+
         if (!(state == State.ACCEPTED || state == State.SENT_NEGOTIATE_RESPONSE))
         {
             // TODO: validation error

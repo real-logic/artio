@@ -40,10 +40,7 @@ import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPe
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.fixp.AbstractFixPParser;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
-import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.messages.AllFixSessionsReplyEncoder.SessionsEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
@@ -1994,9 +1991,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixPGatewaySession gatewaySession = (FixPGatewaySession)gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
-            if (isOwnedSession(sessionId))
+            if (requestOfflineFixPSession(libraryInfo, sessionId, correlationId))
             {
-                saveOtherSessionOwner(libraryInfo, correlationId);
                 return CONTINUE;
             }
             else
@@ -2018,9 +2014,57 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         schedule(new OnRequestFixPSessionHandover(
             correlationId,
             gatewaySession,
-            libraryInfo));
+            libraryInfo, false));
 
         return CONTINUE;
+    }
+
+    private boolean requestOfflineFixPSession(
+        final LiveLibraryInfo libraryInfo,
+        final long sessionId,
+        final long correlationId)
+    {
+        final FixPContext context = fixPContexts.lookupContext(sessionId);
+        if (context == null)
+        {
+            return false;
+        }
+
+        if (isOwnedSession(sessionId))
+        {
+            saveOtherSessionOwner(libraryInfo, correlationId);
+        }
+        else
+        {
+            // Create GatewaySession for offline session and associate it with the library
+            final FixPProtocolType protocolType = initFixPProtocol();
+
+            final int libraryId = libraryInfo.libraryId();
+            final FixPGatewaySession gatewaySession = new FixPGatewaySession(
+                NO_CONNECTION_ID,
+                sessionId,
+                ":" + NO_CONNECTION_ID,
+                ACCEPTOR,
+                configuration.authenticationTimeoutInMs(),
+                protocolType,
+                fixPParser,
+                fixPProxy,
+                null,
+                null,
+                (FixPGatewaySessions)gatewaySessions);
+
+            final byte[] firstMessage = fixPProxy.encodeFirstMessage(context);
+            gatewaySession.setupOfflineSession(context, firstMessage, libraryId);
+            libraryInfo.addSession(gatewaySession);
+
+            schedule(new OnRequestFixPSessionHandover(
+                correlationId,
+                gatewaySession,
+                libraryInfo,
+                true));
+        }
+
+        return true;
     }
 
     class SessionHandover extends UnitOfWork
@@ -2058,15 +2102,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private final long correlationId;
         private final FixPGatewaySession gatewaySession;
         private final LiveLibraryInfo libraryInfo;
+        private final boolean offline;
 
         OnRequestFixPSessionHandover(
             final long correlationId,
             final FixPGatewaySession gatewaySession,
-            final LiveLibraryInfo libraryInfo)
+            final LiveLibraryInfo libraryInfo,
+            final boolean offline)
         {
             this.correlationId = correlationId;
             this.gatewaySession = gatewaySession;
             this.libraryInfo = libraryInfo;
+            this.offline = offline;
 
             // NB: simpler handover than with FIX between we don't allow the engine to own session management
             // for FixP connections so we don't need to wait for gateway owned messages to be handed over
@@ -2087,7 +2134,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
                 sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
                 0,
-                gatewaySession.firstMessage());
+                gatewaySession.firstMessage(),
+                offline);
         }
     }
 
@@ -2102,8 +2150,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixGatewaySession gatewaySession = (FixGatewaySession)gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
-            // Session is offline.
-            if (requestOfflineSession(
+            // Session maybe offline.
+            if (requestOfflineFixSession(
                 libraryInfo, sessionId, correlationId, replayFromSequenceIndex, replayFromSequenceNumber))
             {
                 return CONTINUE;
@@ -2201,7 +2249,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    private boolean requestOfflineSession(
+    private boolean requestOfflineFixSession(
         final LiveLibraryInfo libraryInfo,
         final long sessionId,
         final long correlationId,

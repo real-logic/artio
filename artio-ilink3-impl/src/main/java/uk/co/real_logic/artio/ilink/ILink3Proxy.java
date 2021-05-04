@@ -296,4 +296,9 @@ public class ILink3Proxy extends AbstractFixPProxy
     {
         return Ilink3Protocol.unsupported();
     }
+
+    public byte[] encodeFirstMessage(final FixPContext context)
+    {
+        return Ilink3Protocol.unsupported();
+    }
 }

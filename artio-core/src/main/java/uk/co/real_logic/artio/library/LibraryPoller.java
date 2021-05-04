@@ -1779,7 +1779,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
-        final DirectBuffer buffer,
+        final boolean offline, final DirectBuffer buffer,
         final int offset,
         final int messageLength)
     {
@@ -1810,6 +1810,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastConnectPayload,
                 context,
                 configuration);
+
+            if (offline)
+            {
+                connection.state(FixPConnection.State.UNBOUND);
+            }
 
             final FixPConnectionHandler handler = configuration
                 .fixPConnectionAcquiredHandler()

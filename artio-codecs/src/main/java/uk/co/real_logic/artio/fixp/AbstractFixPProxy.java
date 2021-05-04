@@ -111,4 +111,5 @@ public abstract class AbstractFixPProxy
     public abstract ByteBuffer encodeReject(
         FixPContext identification, FixPFirstMessageResponse rejectReason);
 
+    public abstract byte[] encodeFirstMessage(FixPContext context);
 }
