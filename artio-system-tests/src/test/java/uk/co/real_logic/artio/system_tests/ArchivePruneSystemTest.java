@@ -25,8 +25,10 @@ import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
 
+import java.io.File;
 import java.util.Map;
 
 import static io.aeron.Aeron.NULL_VALUE;
@@ -35,6 +37,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -151,7 +154,24 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertAcceptingSessionHasSequenceIndex(1);
         assertInitiatingSequenceIndexIs(1);
 
+        final File file = RecordingCoordinator.recordingIdsFile(acceptingEngine.configuration());
+        assertTrue("Failed to create recording coordinator file", file.exists());
+
         assertPruneWorks(false, true);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbersProcessTerminated()
+    {
+        RecordingCoordinator.saveOnShutdownTesting(false);
+        try
+        {
+            shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbers();
+        }
+        finally
+        {
+            RecordingCoordinator.saveOnShutdownTesting(true);
+        }
     }
 
     private void assertPruneWorks(final boolean reconnectSession, final boolean hasConnectedLibrary)
@@ -193,6 +213,9 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             // Restart engines to ensure that the positions can be continued after pruning.
             closeAcceptingEngine();
             closeAcceptingLibrary();
+
+            final File file = RecordingCoordinator.recordingIdsFile(acceptingEngine.configuration());
+            assertTrue("Failed to create recording coordinator file", file.exists());
 
             newAcceptingEngine(false);
             newAcceptingLibrary();
