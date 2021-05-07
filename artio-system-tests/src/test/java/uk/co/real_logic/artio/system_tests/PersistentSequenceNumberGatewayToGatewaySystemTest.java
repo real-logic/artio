@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.session.SessionWriter;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
@@ -492,6 +493,29 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         printErrorMessages = false;
 
+        resetSomeSequenceNumbersOfOfflineSessions(
+            () -> acceptingSession.trySendSequenceReset(1, 1),
+            1,
+            1);
+
+        // Ensure that the sequenceIndex is correct after the reset
+        assertEquals(1, acceptingSession.sequenceIndex());
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldResetReceivedSequenceNumbersOfOfflineSessions()
+    {
+        resetSomeSequenceNumbersOfOfflineSessions(
+            () -> acceptingSession.tryUpdateReceivedSequenceNumber(1),
+            4,
+            4);
+    }
+
+    private void resetSomeSequenceNumbersOfOfflineSessions(
+        final LongSupplier resetSeqNums,
+        final int logonSequenceNumber,
+        final int initiatorInitialReceivedSequenceNumber)
+    {
         launch(this::nothing);
         connectPersistingSessions();
         assertEquals(0, acceptingSession.sequenceIndex());
@@ -505,20 +529,21 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
         cannotConnectWithSequence(acceptorSequenceNumber, 1);
 
+        final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
+
         assertEquals(0, acceptingSession.sequenceIndex());
-        testSystem.awaitSend(() -> acceptingSession.trySendSequenceReset(1, 1));
+        final long position = testSystem.awaitSend(resetSeqNums);
         assertEquals(1, acceptingSession.sequenceIndex());
+        assertEquals(0, acceptingSession.lastReceivedMsgSeqNum());
 
         initiatingOtfAcceptor.messages().clear();
 
         onAcquireSession = this::nothing;
-        connectPersistingSessions(1, 1, false);
+        testSystem.awaitPosition(positionCounter, position);
+        connectPersistingSessions(1, initiatorInitialReceivedSequenceNumber, false);
 
         final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
-        assertEquals(1, logon.messageSequenceNumber());
-
-        // Ensure that the sequenceIndex is correct after the reset
-        assertEquals(1, acceptingSession.sequenceIndex());
+        assertEquals(logonSequenceNumber, logon.messageSequenceNumber());
     }
 
     private void connectPersistingSessions()

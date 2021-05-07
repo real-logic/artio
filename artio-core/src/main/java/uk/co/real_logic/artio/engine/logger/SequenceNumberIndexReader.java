@@ -102,7 +102,8 @@ public class SequenceNumberIndexReader implements AutoCloseable
 
             if (lastKnownDecoder.sessionId() == sessionId)
             {
-                return lastKnownDecoder.sequenceNumber();
+                final int sequenceNumber = lastKnownDecoder.sequenceNumber();
+                return sequenceNumber;
             }
 
             position += RECORD_SIZE;

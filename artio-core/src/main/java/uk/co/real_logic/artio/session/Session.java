@@ -829,6 +829,27 @@ public class Session
     }
 
     /**
+     * Useful for administrative operations that need to reset the received sequence number of the session in question.
+     * This method can be used to reset sequence numbers of offline sessions.
+     *
+     * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
+     *                                          received.
+     * @return the position in the stream that corresponds to the end of this message.
+     */
+    public long tryUpdateReceivedSequenceNumber(
+        final int nextReceivedMessageSequenceNumber)
+    {
+        // Do not reset the sequence index at this point.
+        final int lastReceivedMsgSeqNum = nextReceivedMessageSequenceNumber - 1;
+        final long position = saveRedact(NO_REQUIRED_POSITION, lastReceivedMsgSeqNum);
+        if (position > 0)
+        {
+            lastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
+        }
+        return position;
+    }
+
+    /**
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
      * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
@@ -933,7 +954,16 @@ public class Session
         checkCancelOnDisconnectDisconnect();
     }
 
-    // Also checks the sequence index
+    /**
+     * Sets the sequence number of the last message received. It is exceedingly unlikely that any Artio users want to
+     * use this method to set the sequence number. If you want to update this value in a way that will be reliably
+     * persisted and update the state of your index then you should use {@link #tryUpdateReceivedSequenceNumber(int)}.
+     *
+     * This method does check and update the sequence index value.
+     *
+     * @param lastReceivedMsgSeqNum the sequence number of the last message received.
+     * @return this
+     */
     public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
     {
         if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
@@ -1311,7 +1341,12 @@ public class Session
     {
         messageInfo.isValid(false);
 
-        return inboundPublication.saveRedactSequenceUpdate(id, lastReceivedMsgSeqNum, position) < 0;
+        return saveRedact(position, lastReceivedMsgSeqNum) < 0;
+    }
+
+    private long saveRedact(final long position, final int lastReceivedMsgSeqNum)
+    {
+        return inboundPublication.saveRedactSequenceUpdate(id, lastReceivedMsgSeqNum, position);
     }
 
     private Action checkPosition(final long position)
