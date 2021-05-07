@@ -236,6 +236,7 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
 
     void onSlowStatusNotification(final int libraryId, final boolean hasBecomeSlow)
     {
+        session.isSlowConsumer(hasBecomeSlow);
         handler.onSlowStatus(libraryId, session, hasBecomeSlow);
     }
 

@@ -101,6 +101,7 @@ public class SlowConsumerTest
             {
                 if (handler.isSlow(session))
                 {
+                    assertTrue(session.isSlowConsumer());
                     hasBecomeSlow = true;
                 }
 
@@ -190,11 +191,13 @@ public class SlowConsumerTest
     private void assertIsSlow()
     {
         assertTrue(handler.isSlow(session));
+        assertTrue(session.isSlowConsumer());
     }
 
     private void assertNotSlow()
     {
         assertFalse(handler.isSlow(session));
+        assertFalse(session.isSlowConsumer());
     }
 
     private void bytesInBufferAtLeast(final ConnectedSessionInfo sessionInfo, final long bytesInBuffer)

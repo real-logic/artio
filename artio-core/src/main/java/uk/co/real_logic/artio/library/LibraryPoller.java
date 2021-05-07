@@ -1958,6 +1958,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionTimer,
             this,
             configuration.replyTimeoutInMs());
+        session.isSlowConsumer(sessionAcquiredInfo.isSlow());
         subscriber.reply(reply);
         subscriber.handler(configuration.sessionAcquireHandler().onSessionAcquired(session, sessionAcquiredInfo));
 

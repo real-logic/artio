@@ -315,4 +315,9 @@ public class InternalSession extends Session implements AutoCloseable
 
         return false;
     }
+
+    public void isSlowConsumer(final boolean hasBecomeSlow)
+    {
+        super.isSlowConsumer(hasBecomeSlow);
+    }
 }

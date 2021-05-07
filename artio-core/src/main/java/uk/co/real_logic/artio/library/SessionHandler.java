@@ -63,7 +63,10 @@ public interface SessionHandler
 
     /**
      * Invoked if a session has been detected as being, or no longer being demarcated as a slow
-     * session.
+     * session. See
+     * <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">the wiki</a>
+     * for details on what a slow consumer is.
+     *
      *  @param libraryId the id of library which the session used to owned by.
      * @param session the session that has become slow.
      * @param hasBecomeSlow true iff the session has been detected as slow, false if it is no longer slow.

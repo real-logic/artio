@@ -457,6 +457,12 @@ public final class FixEngine extends GatewayProcess
      * details. This means that if there are less than a segment's worth of messages that can be
      * freed up then no space is pruned.
      *
+     * The recordingIdToMinimumPrunePositions parameter can be useful for users who are doing a Streaming backup of the
+     * Aeron Archiver log. If you are streaming off the recorded streams from Artio to an external location, eg: a cloud
+     * backup location, then this parameter allows you to stop Artio from accidentally pruning away parts of the
+     * recorded Stream that this streaming backup is processing by providing the position that this streaming
+     * recording is at.
+     *
      * @param recordingIdToMinimumPrunePositions the minimum positions to prune or <code>null</code> otherwise.
      *                                           If you're archiving segments of the
      *                                           Aeron archive log then this parameter can be used in order to stop

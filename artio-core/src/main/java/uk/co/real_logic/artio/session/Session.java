@@ -166,6 +166,7 @@ public class Session
     private FixDictionary fixDictionary;
 
     private long cancelOnDisconnectTimeoutWindowInNs = MISSING_LONG;
+    private boolean isSlowConsumer;
     CancelOnDisconnectOption cancelOnDisconnectOption;
 
     Session(
@@ -425,6 +426,18 @@ public class Session
     public long cancelOnDisconnectTimeoutWindowInNs()
     {
         return cancelOnDisconnectTimeoutWindowInNs;
+    }
+
+    /**
+     * Gets the slow consumer status for this session. See
+     * <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">the wiki</a>
+     * for details on what a slow consumer is.
+     *
+     * @return true if the session is a slow consumer, false otherwise.
+     */
+    public boolean isSlowConsumer()
+    {
+        return isSlowConsumer;
     }
 
     /**
@@ -2367,5 +2380,10 @@ public class Session
     boolean areCountersClosed()
     {
         return sentMsgSeqNo.isClosed() || receivedMsgSeqNo.isClosed();
+    }
+
+    void isSlowConsumer(final boolean hasBecomeSlow)
+    {
+        this.isSlowConsumer = hasBecomeSlow;
     }
 }
