@@ -140,4 +140,11 @@ public class MappedFile implements AutoCloseable
             }
         }
     }
+
+    public String toString()
+    {
+        return "MappedFile{" +
+            "file=" + file +
+            '}';
+    }
 }

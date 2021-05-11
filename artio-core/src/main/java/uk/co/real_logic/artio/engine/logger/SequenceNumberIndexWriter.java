@@ -766,22 +766,20 @@ public class SequenceNumberIndexWriter implements Index
         }
         finally
         {
-            indexFile.close();
-            writableFile.close();
-
-            if (metaDataFile != null)
+            Exceptions.closeAll(indexFile, writableFile, reader, () ->
             {
-                try
+                if (metaDataFile != null)
                 {
-                    metaDataFile.close();
+                    try
+                    {
+                        metaDataFile.close();
+                    }
+                    catch (final IOException e)
+                    {
+                        errorHandler.onError(e);
+                    }
                 }
-                catch (final IOException e)
-                {
-                    errorHandler.onError(e);
-                }
-            }
-
-            reader.close();
+            });
         }
     }
 
