@@ -246,6 +246,11 @@ public class FixPContexts implements SessionContexts
             context.onEndSequence();
             updateContext(context);
         }
+        else
+        {
+            errorHandler.onError(new IllegalArgumentException(
+                "Unable to reset sequence number for " + sessionId + " unknown session"));
+        }
     }
 
     public boolean isKnownSessionId(final long sessionId)
