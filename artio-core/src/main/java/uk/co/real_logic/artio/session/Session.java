@@ -897,35 +897,47 @@ public class Session
     }
 
     /**
-     * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
-     * sending a Logon message with ResetSeqNum flag set to Y.
+     * Resets both the receiver and sender sequence numbers of this session. When this session is online this is
+     * equivalent to sending a Logon message with ResetSeqNum flag set to Y. This method
+     * can be used to reset sequence numbers of offline sessions, when used as such, it is equivalent to calling
+     * <code>trySendSequenceReset(1, 1)</code>.
      * <p>
-     * If you want to send a sequence reset message then you should use {@link #trySendSequenceReset(int, int)}.
+     * If you want to send a sequence reset message to a connected FIX session then you should use
+     * {@link #trySendSequenceReset(int, int)}. The key difference between these two methods is that this should be
+     * used to reset sequence numbers back to 1, whilst {@link #trySendSequenceReset(int, int)} should be used to
+     * increase the sequence numbers from their current position.
      *
      * @return the position in the stream that corresponds to the end of this message.
      */
     public long tryResetSequenceNumbers()
     {
-        final int sentSeqNum = 1;
-        final int heartbeatIntervalInS = (int)NANOSECONDS.toSeconds(heartbeatIntervalInNs);
-        final long position = proxy.sendLogon(
-            sentSeqNum,
-            heartbeatIntervalInS,
-            username(),
-            password(),
-            true,
-            sequenceIndex() + 1, // the sequence index update is only saved if this message is sent
-            lastMsgSeqNumProcessed,
-            cancelOnDisconnectOption,
-            getCancelOnDisconnectTimeoutWindowInMs());
-        nextSequenceIndex(clock.nanoTime(), position);
-        lastSentMsgSeqNum(sentSeqNum, position);
-        if (position >= 0)
+        if (state == DISCONNECTED)
         {
-            awaitingLogonReply(true);
+            return trySendSequenceReset(1, 1);
         }
+        else
+        {
+            final int sentSeqNum = 1;
+            final int heartbeatIntervalInS = (int)NANOSECONDS.toSeconds(heartbeatIntervalInNs);
+            final long position = proxy.sendLogon(
+                sentSeqNum,
+                heartbeatIntervalInS,
+                username(),
+                password(),
+                true,
+                sequenceIndex() + 1, // the sequence index update is only saved if this message is sent
+                lastMsgSeqNumProcessed,
+                cancelOnDisconnectOption,
+                getCancelOnDisconnectTimeoutWindowInMs());
+            nextSequenceIndex(clock.nanoTime(), position);
+            lastSentMsgSeqNum(sentSeqNum, position);
+            if (position >= 0)
+            {
+                awaitingLogonReply(true);
+            }
 
-        return position;
+            return position;
+        }
     }
 
     /**

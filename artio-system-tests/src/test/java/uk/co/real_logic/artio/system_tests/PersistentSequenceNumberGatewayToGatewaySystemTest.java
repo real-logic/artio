@@ -500,6 +500,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldResetSequenceNumbersOfOfflineSessionsWithResetSequenceNumbers()
+    {
+        resetSomeSequenceNumbersOfOfflineSessions(
+            () -> acceptingSession.tryResetSequenceNumbers(),
+            1,
+            1);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldResetReceivedSequenceNumbersOfOfflineSessions()
     {
         resetSomeSequenceNumbersOfOfflineSessions(
