@@ -497,9 +497,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             () -> acceptingSession.trySendSequenceReset(1, 1),
             1,
             1);
-
-        // Ensure that the sequenceIndex is correct after the reset
-        assertEquals(1, acceptingSession.sequenceIndex());
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -533,7 +530,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertEquals(0, acceptingSession.sequenceIndex());
         final long position = testSystem.awaitSend(resetSeqNums);
-        assertEquals(1, acceptingSession.sequenceIndex());
+        assertThat(acceptingSession, FixMatchers.hasSequenceIndex(1));
         assertEquals(0, acceptingSession.lastReceivedMsgSeqNum());
 
         initiatingOtfAcceptor.messages().clear();
@@ -544,6 +541,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
         assertEquals(logonSequenceNumber, logon.messageSequenceNumber());
+
+        assertAcceptingSessionHasSequenceIndex(1);
     }
 
     private void connectPersistingSessions()

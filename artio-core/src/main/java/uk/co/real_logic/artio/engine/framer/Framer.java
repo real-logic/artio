@@ -1749,6 +1749,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
+    public Action onSeqIndexSync(final int libraryId, final long sessionId, final int sequenceIndex)
+    {
+        final long timeInNs = clock.nanoTime();
+        fixContexts.onSequenceIndex(sessionId, timeInNs, sequenceIndex);
+        return CONTINUE;
+    }
+
     public Action onLibraryConnect(
         final int libraryId,
         final String libraryName,

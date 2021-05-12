@@ -135,4 +135,6 @@ public interface EngineEndPointHandler
 
     Action onThrottleConfiguration(
         int libraryId, long correlationId, long session, int throttleWindowInMs, int throttleLimitOfMessages);
+
+    Action onSeqIndexSync(int libraryId, long sessionId, int sequenceIndex);
 }

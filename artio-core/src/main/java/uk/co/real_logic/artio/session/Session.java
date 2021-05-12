@@ -39,6 +39,8 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.function.BooleanSupplier;
+
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
@@ -110,6 +112,8 @@ public class Session
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
     private final ConnectionType connectionType;
+
+    private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -822,7 +826,7 @@ public class Session
         lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
         if (redact(NO_REQUIRED_POSITION))
         {
-            this.sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+            sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
         }
 
         return position;
@@ -844,9 +848,21 @@ public class Session
         final long position = saveRedact(NO_REQUIRED_POSITION, lastReceivedMsgSeqNum);
         if (position > 0)
         {
+            if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
+            {
+                if (!saveSeqIndexSync())
+                {
+                    sessionProcessHandler.enqueueTask(saveSeqIndexSyncFunc);
+                }
+            }
             lastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
         }
         return position;
+    }
+
+    private boolean saveSeqIndexSync()
+    {
+        return outboundPublication.saveSeqIndexSync(libraryId, id, sequenceIndex + 1) > 0;
     }
 
     /**

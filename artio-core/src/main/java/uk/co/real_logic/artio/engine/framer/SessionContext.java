@@ -70,8 +70,14 @@ class SessionContext implements SessionInfo
 
     void onSequenceReset(final long resetTimeInNs)
     {
+        final int newSequenceIndex = sequenceIndex == UNKNOWN_SEQUENCE_INDEX ? initialSequenceIndex : sequenceIndex + 1;
+        onSequenceIndex(resetTimeInNs, newSequenceIndex);
+    }
+
+    void onSequenceIndex(final long resetTimeInNs, final int sequenceIndex)
+    {
         lastSequenceResetTimeInNs = resetTimeInNs;
-        sequenceIndex = sequenceIndex == UNKNOWN_SEQUENCE_INDEX ? initialSequenceIndex : sequenceIndex + 1;
+        this.sequenceIndex = sequenceIndex;
         save();
     }
 

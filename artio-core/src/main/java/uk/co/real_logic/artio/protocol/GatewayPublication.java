@@ -118,6 +118,7 @@ public class GatewayPublication extends ClaimablePublication
     private static final int THROTTLE_CONFIGURATION_LENGTH = HEADER_LENGTH + ThrottleConfigurationEncoder.BLOCK_LENGTH;
     private static final int THROTTLE_CONFIGURATION_REPLY_LENGTH = HEADER_LENGTH +
         ThrottleConfigurationReplyEncoder.BLOCK_LENGTH;
+    private static final int SEQ_INDEX_SYNC_LENGTH = HEADER_LENGTH + SeqIndexSyncEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -157,6 +158,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ThrottleConfigurationEncoder throttleConfiguration = new ThrottleConfigurationEncoder();
     private final ThrottleConfigurationReplyEncoder throttleConfigurationReply =
         new ThrottleConfigurationReplyEncoder();
+    private final SeqIndexSyncEncoder seqIndexSyncEncoder = new SeqIndexSyncEncoder();
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -1622,12 +1624,39 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveSeqIndexSync(
+        final int libraryId,
+        final long sessionId,
+        final int sequenceIndex)
+    {
+        final long position = claim(SEQ_INDEX_SYNC_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        seqIndexSyncEncoder
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .sessionId(sessionId)
+            .sequenceIndex(sequenceIndex);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, seqIndexSyncEncoder);
+
+        return position;
+    }
+
     public long saveThrottleConfigurationReply(
         final int libraryId,
         final long replyToId,
         final ThrottleConfigurationStatus status)
     {
-        final long position = claim(THROTTLE_CONFIGURATION_LENGTH);
+        final long position = claim(THROTTLE_CONFIGURATION_REPLY_LENGTH);
         if (position < 0)
         {
             return position;

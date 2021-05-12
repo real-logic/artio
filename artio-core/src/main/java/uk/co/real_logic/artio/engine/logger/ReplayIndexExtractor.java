@@ -335,7 +335,10 @@ public final class ReplayIndexExtractor
     {
         final int streamId = inbound ? configuration.inboundLibraryStream() : configuration.outboundLibraryStream();
         final File file = replayIndexFile(configuration.logFileDir(), sessionId, streamId);
-        extract(file, handler);
+        if (file.exists())
+        {
+            extract(file, handler);
+        }
     }
 
     public static void extract(final File file, final ReplayIndexHandler handler)

@@ -119,6 +119,16 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final SeqIndexSyncEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
         final ThrottleConfigurationEncoder encoder)
     {
         if (isEnabled(tag))
@@ -716,6 +726,7 @@ public final class DebugLogger
         private final ThrottleConfigurationDecoder throttleConfiguration = new ThrottleConfigurationDecoder();
         private final ThrottleConfigurationReplyDecoder throttleConfigurationReply =
             new ThrottleConfigurationReplyDecoder();
+        private final SeqIndexSyncDecoder seqIndexSync = new SeqIndexSyncDecoder();
 
         // Engine -> Library
         private final ErrorDecoder error = new ErrorDecoder();
@@ -768,6 +779,18 @@ public final class DebugLogger
                 RedactSequenceUpdateEncoder.BLOCK_LENGTH,
                 RedactSequenceUpdateEncoder.SCHEMA_VERSION);
             redactSequenceUpdate.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final SeqIndexSyncEncoder encoder)
+        {
+            appendStart();
+            seqIndexSync.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                SeqIndexSyncEncoder.BLOCK_LENGTH,
+                SeqIndexSyncEncoder.SCHEMA_VERSION);
+            seqIndexSync.appendTo(builder);
             finish(tag);
         }
 

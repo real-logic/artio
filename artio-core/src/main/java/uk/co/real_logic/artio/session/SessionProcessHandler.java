@@ -37,6 +37,7 @@ public interface SessionProcessHandler
         int replayToSequenceIndex,
         long timeout);
 
+    // supplier returns true when it completes
     void enqueueTask(BooleanSupplier task);
 
     Reply<ThrottleConfigurationStatus> messageThrottle(

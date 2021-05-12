@@ -46,6 +46,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final CancelOnDisconnectTriggerDecoder cancelOnDisconnectTrigger = new CancelOnDisconnectTriggerDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final ThrottleConfigurationDecoder throttleConfiguration = new ThrottleConfigurationDecoder();
+    private final SeqIndexSyncDecoder seqIndexSync = new SeqIndexSyncDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -109,9 +110,24 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
 
             case ThrottleConfigurationDecoder.TEMPLATE_ID:
                 return onThrottleConfiguration(buffer, offset, blockLength, version, header);
+
+            case SeqIndexSyncDecoder.TEMPLATE_ID:
+                return onSeqIndexSync(buffer, offset, blockLength, version, header);
         }
 
         return CONTINUE;
+    }
+
+    private Action onSeqIndexSync(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+    {
+        final SeqIndexSyncDecoder seqIndexSync = this.seqIndexSync;
+        seqIndexSync.wrap(buffer, offset, blockLength, version);
+
+        return handler.onSeqIndexSync(
+            seqIndexSync.libraryId(),
+            seqIndexSync.sessionId(),
+            seqIndexSync.sequenceIndex());
     }
 
     private Action onThrottleConfiguration(
