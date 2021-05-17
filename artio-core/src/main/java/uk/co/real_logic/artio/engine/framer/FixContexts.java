@@ -357,7 +357,7 @@ public class FixContexts implements SessionContexts
                         .wrap(buffer, filePosition)
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
-                        .logonTime(context.lastLogonTime())
+                        .logonTime(context.lastLogonTimeInNs())
                         .lastSequenceResetTime(context.lastSequenceResetTime())
                         .compositeKeyLength(compositeKeyLength)
                         .lastFixDictionary(fixDictionaryName);
@@ -481,7 +481,7 @@ public class FixContexts implements SessionContexts
         {
             sessionIdEncoder
                 .sequenceIndex(context.sequenceIndex())
-                .logonTime(context.lastLogonTime())
+                .logonTime(context.lastLogonTimeInNs())
                 .lastSequenceResetTime(context.lastSequenceResetTime());
 
             updateSectorChecksum(filePosition);

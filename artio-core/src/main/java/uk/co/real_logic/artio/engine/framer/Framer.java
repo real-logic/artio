@@ -1011,7 +1011,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 if (!seenSessions.contains(sessionInfo.sessionId()))
                 {
                     final SessionContext context = (SessionContext)sessionInfo;
-                    final long lastLogonTime = context.lastLogonTime();
+                    final long lastLogonTime = context.lastLogonTimeInNs();
                     replySession(sessionsEncoder, NO_CONNECTION_ID, "", sessionInfo, lastLogonTime, false);
                 }
             }
@@ -1477,7 +1477,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 enableLastMsgSeqNumProcessed,
                 fixDictionary);
             gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
-            gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
+            gatewaySession.lastLogonTime(sessionContext.lastLogonTimeInNs());
             library.addSession(gatewaySession);
 
             handoverNewConnectionToLibrary(
@@ -2372,7 +2372,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     sessionContext.lastFixDictionary(),
                     configuration);
                 gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
-                gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
+                gatewaySession.lastLogonTime(sessionContext.lastLogonTimeInNs());
                 gatewaySession.libraryId(libraryId);
                 libraryInfo.addSession(gatewaySession);
 
