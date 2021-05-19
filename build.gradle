@@ -114,13 +114,6 @@ allprojects {
         mavenCentral()
     }
 
-    idea {
-        module {
-            downloadJavadoc = true
-            downloadSources = true
-        }
-    }
-
     tasks.withType(Sign) {
         onlyIf { isReleaseVersion }
     }
