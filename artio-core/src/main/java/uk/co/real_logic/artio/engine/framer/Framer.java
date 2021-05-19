@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 
@@ -2198,8 +2199,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private final InternalSession session;
         private final long connectionId;
         private final long sessionId;
-        private final int lastSentSeqNum;
-        private final int lastRecvSeqNum;
+
+        // captured in awaitGatewaySessionMessagesSent
+        private int lastSentSeqNum;
+        private int lastRecvSeqNum;
 
         OnRequestFixSessionHandover(
             final long correlationId,
@@ -2215,13 +2218,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             session = gatewaySession.session();
             connectionId = gatewaySession.connectionId();
             sessionId = session.id();
-            lastSentSeqNum = session.lastSentMsgSeqNum();
-            lastRecvSeqNum = session.lastReceivedMsgSeqNum();
 
             final DirectBuffer buffer = new UnsafeBuffer();
             final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
 
             workList.add(this::awaitGatewaySessionMessagesSent);
+            workList.add(this::awaitIndexer);
+
             workList.add(() -> saveManageSession(
                 libraryId,
                 gatewaySession,
@@ -2234,7 +2237,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 correlationId,
                 status,
                 buffer));
-            catchupSession(
+            scheduleCatchupSession(
                 workList,
                 libraryId,
                 connectionId,
@@ -2242,7 +2245,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceNumber,
                 replayFromSequenceIndex,
                 gatewaySession,
-                lastRecvSeqNum);
+                () -> lastRecvSeqNum);
         }
 
         private long awaitGatewaySessionMessagesSent()
@@ -2256,6 +2259,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+            // only capture sequences after receiver has been stopped
+            lastRecvSeqNum = session.lastReceivedMsgSeqNum();
+            lastSentSeqNum = session.lastSentMsgSeqNum();
+
             libraryInfo.addSession(gatewaySession);
             DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
 
@@ -2378,7 +2385,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 workList.add(this::checkLoggerUpToDate);
                 workList.add(this::saveManageSession);
-                catchupSession(
+                scheduleCatchupSession(
                     workList,
                     libraryId,
                     NO_CONNECTION_ID,
@@ -2386,7 +2393,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     gatewaySession,
-                    lastReceivedSequenceNumber);
+                    () -> lastReceivedSequenceNumber);
             }
             else
             {
@@ -2637,7 +2644,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
     }
 
-    private void catchupSession(
+    private void scheduleCatchupSession(
         final List<Continuation> continuations,
         final int libraryId,
         final long connectionId,
@@ -2645,7 +2652,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int replayFromSequenceNumber,
         final int requestedReplayFromSequenceIndex,
         final FixGatewaySession session,
-        final int lastReceivedSeqNum)
+        final IntSupplier lastReceivedSeqNumSupplier)
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
@@ -2664,41 +2671,45 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return;
             }
 
-            final int replayFromSequenceIndex;
-            final int sequenceIndex = session.sequenceIndex();
-            if (requestedReplayFromSequenceIndex == CURRENT_SEQUENCE)
+            continuations.add(() ->
             {
-                replayFromSequenceIndex = sequenceIndex;
-            }
-            else
-            {
-                if (requestedReplayFromSequenceIndex > sequenceIndex ||
-                    (requestedReplayFromSequenceIndex == sequenceIndex &&
-                    replayFromSequenceNumber > lastReceivedSeqNum))
+                final int replayFromSequenceIndex;
+                final int sequenceIndex = session.sequenceIndex();
+                final int lastReceivedSeqNum = lastReceivedSeqNumSupplier.getAsInt();
+                if (requestedReplayFromSequenceIndex == CURRENT_SEQUENCE)
                 {
-                    continuations.add(() -> sequenceNumberTooHigh(libraryId, correlationId, session));
-                    return;
+                    replayFromSequenceIndex = sequenceIndex;
                 }
-                replayFromSequenceIndex = requestedReplayFromSequenceIndex;
-            }
+                else
+                {
+                    if (requestedReplayFromSequenceIndex > sequenceIndex ||
+                        (requestedReplayFromSequenceIndex == sequenceIndex &&
+                        replayFromSequenceNumber > lastReceivedSeqNum))
+                    {
+                        return sequenceNumberTooHigh(libraryId, correlationId, session);
+                    }
+                    replayFromSequenceIndex = requestedReplayFromSequenceIndex;
+                }
 
-            continuations.add(new CatchupReplayer(
-                receivedSequenceNumberIndex,
-                inboundMessages,
-                inboundPublication,
-                errorHandler,
-                correlationId,
-                connectionId,
-                libraryId,
-                lastReceivedSeqNum,
-                sequenceIndex,
-                replayFromSequenceNumber,
-                replayFromSequenceIndex,
-                session,
-                catchupEndTimeInMs(),
-                CatchupReplayer.ReplayFor.REQUEST_SESSION,
-                catchupReplayFormatters,
-                configuration.sessionEpochFractionFormat()));
+                schedule(new CatchupReplayer(
+                    receivedSequenceNumberIndex,
+                    inboundMessages,
+                    inboundPublication,
+                    errorHandler,
+                    correlationId,
+                    connectionId,
+                    libraryId,
+                    lastReceivedSeqNum,
+                    sequenceIndex,
+                    replayFromSequenceNumber,
+                    replayFromSequenceIndex,
+                    session,
+                    catchupEndTimeInMs(),
+                    CatchupReplayer.ReplayFor.REQUEST_SESSION,
+                    catchupReplayFormatters,
+                    configuration.sessionEpochFractionFormat()));
+                return COMPLETE;
+            });
         }
         else
         {
