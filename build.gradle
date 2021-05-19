@@ -108,8 +108,6 @@ ext {
 allprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
-    apply plugin: 'eclipse'
-    apply plugin: 'idea'
 
     repositories {
         mavenLocal()
