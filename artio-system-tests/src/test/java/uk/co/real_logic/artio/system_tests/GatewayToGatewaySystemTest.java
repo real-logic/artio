@@ -677,7 +677,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
-        acceptingEngine.close();
+        closeAcceptingEngine();
 
         assertAllMessagesHaveSequenceIndex(0);
 
