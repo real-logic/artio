@@ -25,6 +25,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -43,7 +44,6 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static uk.co.real_logic.artio.engine.PossDupFinder.NO_ENTRY;
 import static uk.co.real_logic.artio.engine.framer.CatchupReplayer.FRAME_LENGTH;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR_LENGTH;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.SEPARATOR;
 
@@ -144,7 +144,7 @@ public class PossDupEnabler
                     newLength,
                     metaDataAdjustment))
                 {
-                    return commit(true);
+                    return commit(true, messageLength);
                 }
                 else
                 {
@@ -173,7 +173,7 @@ public class PossDupEnabler
                 setPossDupFlag(possDupSrcOffset, messageOffset, writeOffset, writeBuffer);
                 updateSendingTime(messageOffset);
 
-                return commit(false);
+                return commit(false, messageLength);
             }
             catch (final Exception ex)
             {
@@ -212,9 +212,9 @@ public class PossDupEnabler
         }
     }
 
-    private Action commit(final boolean hasAlteredBodyLength)
+    private Action commit(final boolean hasAlteredBodyLength, final int origMessageLength)
     {
-        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH + metaDataHeaderLength() : 0;
+        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH : 0;
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
@@ -272,7 +272,7 @@ public class PossDupEnabler
                 "Resending: ",
                 buffer,
                 offset + logLengthOffset,
-                bufferClaim.length() - logLengthOffset);
+                origMessageLength);
 
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();

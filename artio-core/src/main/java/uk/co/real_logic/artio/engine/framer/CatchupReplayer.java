@@ -47,6 +47,7 @@ import static uk.co.real_logic.artio.LogTag.CATCHUP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.bodyHeaderLength;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -71,7 +72,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     public static final int FRAME_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
+        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength() +
+            + metaDataHeaderLength();
 
     enum ReplayFor
     {
