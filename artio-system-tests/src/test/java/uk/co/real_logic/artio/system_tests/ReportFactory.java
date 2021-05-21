@@ -80,8 +80,8 @@ public class ReportFactory
         if (possDupFlag)
         {
             executionReport.header()
-                .possDupFlag(possDupFlag)
-                .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()));
+                .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
+                .possDupFlag(possDupFlag);
         }
 
         return executionReport;

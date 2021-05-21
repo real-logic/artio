@@ -196,7 +196,7 @@ public class PossDupEnabler
         final int claimOffset)
     {
         final int possDupClaimOffset = srcToClaim(possDupSrcOffset, messageOffset, claimOffset);
-        mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
+        mutableAsciiFlyweight.putCharAscii(possDupClaimOffset, 'Y');
     }
 
     private void abort()

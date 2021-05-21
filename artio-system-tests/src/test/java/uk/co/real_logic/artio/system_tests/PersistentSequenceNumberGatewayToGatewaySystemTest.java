@@ -786,7 +786,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final FixMessage executionReport = testSystem.awaitMessageOf(
             initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR, msg -> msg.messageSequenceNumber() == msgSeqNum);
         assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
-        assertEquals("Y", executionReport.possDup().substring(0, 1));
+        assertEquals("Y", executionReport.possDup());
         assertEquals(executionReport + " has incorrect status", MessageStatus.OK, executionReport.status());
         assertTrue(executionReport + " was not valid", executionReport.isValid());
     }
