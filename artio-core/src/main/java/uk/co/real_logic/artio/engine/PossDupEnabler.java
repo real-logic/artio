@@ -25,7 +25,6 @@ import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -144,7 +143,7 @@ public class PossDupEnabler
                     newLength,
                     metaDataAdjustment))
                 {
-                    return commit(true, messageLength);
+                    return commit();
                 }
                 else
                 {
@@ -169,11 +168,17 @@ public class PossDupEnabler
             {
                 final MutableDirectBuffer writeBuffer = writeBuffer();
                 final int writeOffset = writeOffset();
-                writeBuffer.putBytes(writeOffset, srcBuffer, messageOffset, messageLength);
-                setPossDupFlag(possDupSrcOffset, messageOffset, writeOffset, writeBuffer);
-                updateSendingTime(messageOffset);
+                writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, srcLength);
+                mutableAsciiFlyweight.wrap(writeBuffer);
+                setPossDupFlag(possDupSrcOffset, srcOffset, writeOffset);
+                updateSendingTime(srcOffset);
 
-                return commit(false, messageLength);
+                final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
+                final int messageEndOffset = messageClaimOffset + messageLength;
+                final int beforeChecksum = srcToClaim(possDupFinder.checkSumOffset(), srcOffset, writeOffset) - 4;
+                updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
+
+                return commit();
             }
             catch (final Exception ex)
             {
@@ -183,6 +188,15 @@ public class PossDupEnabler
         }
 
         return CONTINUE;
+    }
+
+    private void setPossDupFlag(
+        final int possDupSrcOffset,
+        final int messageOffset,
+        final int claimOffset)
+    {
+        final int possDupClaimOffset = srcToClaim(possDupSrcOffset, messageOffset, claimOffset);
+        mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
     }
 
     private void abort()
@@ -212,9 +226,8 @@ public class PossDupEnabler
         }
     }
 
-    private Action commit(final boolean hasAlteredBodyLength, final int origMessageLength)
+    private Action commit()
     {
-        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH : 0;
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
@@ -224,8 +237,8 @@ public class PossDupEnabler
                 logTag,
                 "Resending: ",
                 fragmentedMessageBuffer,
-                fragmentOffset + logLengthOffset,
-                fragmentedMessageLength - logLengthOffset);
+                fragmentOffset + FRAME_LENGTH,
+                fragmentedMessageLength - FRAME_LENGTH);
 
             while (fragmentedMessageLength > 0)
             {
@@ -267,13 +280,12 @@ public class PossDupEnabler
             final MutableDirectBuffer buffer = bufferClaim.buffer();
             final int offset = bufferClaim.offset();
 
-            final int bodyLength = hasAlteredBodyLength ? bufferClaim.length() - logLengthOffset : origMessageLength;
             DebugLogger.log(
                 logTag,
                 "Resending: ",
                 buffer,
-                offset + logLengthOffset,
-                bodyLength);
+                offset + FRAME_LENGTH,
+                bufferClaim.length() - FRAME_LENGTH);
 
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();
@@ -417,17 +429,6 @@ public class PossDupEnabler
         final int checksumValueOffset = messageEndOffset - (CHECKSUM_VALUE_LENGTH + SEPARATOR_LENGTH);
         mutableAsciiFlyweight.putNaturalPaddedIntAscii(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
         mutableAsciiFlyweight.putSeparator(checksumValueOffset + CHECKSUM_VALUE_LENGTH);
-    }
-
-    private void setPossDupFlag(
-        final int possDupSrcOffset,
-        final int messageOffset,
-        final int claimOffset,
-        final MutableDirectBuffer claimBuffer)
-    {
-        final int possDupClaimOffset = srcToClaim(possDupSrcOffset, messageOffset, claimOffset);
-        mutableAsciiFlyweight.wrap(claimBuffer);
-        mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
     }
 
     private int srcToClaim(final int srcIndexedOffset, final int srcOffset, final int claimOffset)

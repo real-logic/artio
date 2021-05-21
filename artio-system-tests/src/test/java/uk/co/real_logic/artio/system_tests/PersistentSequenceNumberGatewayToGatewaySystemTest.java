@@ -15,16 +15,20 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
+import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -81,6 +85,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private boolean dirsDeleteOnStart = true;
 
     private TimeRange firstConnectTimeRange;
+
+    private int possDupMsgSeqNum;
+    private int normalMsgSeqNum;
 
     @Before
     public void setUp() throws IOException
@@ -481,9 +488,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
 
-        final long position = sendReportOnFollowerSession(testSystem, sessionWriter);
-
-        testSystem.awaitPosition(positionCounter, position);
+        sendReportsOnFollowerSession(testSystem, sessionWriter, positionCounter);
 
         receivedReplayFromReconnectedSession();
     }
@@ -756,7 +761,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         assertOfflineSession(sessionId, acceptingSession);
 
-        ReportFactory.sendOneReport(testSystem, acceptingSession, Side.BUY);
+        final ReportFactory factory = new ReportFactory();
+        factory.sendReport(testSystem, acceptingSession, Side.BUY);
+        normalMsgSeqNum = factory.lastMsgSeqNum();
+
+        factory.possDupFlag(true);
+        factory.sendReport(testSystem, acceptingSession, Side.BUY);
+        possDupMsgSeqNum = factory.lastMsgSeqNum();
 
         receivedReplayFromReconnectedSession();
     }
@@ -766,9 +777,46 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         onAcquireSession = this::nothing;
         connectPersistingSessions();
 
+        assertReceivedReplayedReport(normalMsgSeqNum);
+        assertReceivedReplayedReport(possDupMsgSeqNum);
+    }
+
+    private void assertReceivedReplayedReport(final int msgSeqNum)
+    {
         final FixMessage executionReport = testSystem.awaitMessageOf(
-            initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+            initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR, msg -> msg.messageSequenceNumber() == msgSeqNum);
         assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
-        assertEquals("Y", executionReport.possDup());
+        assertEquals("Y", executionReport.possDup().substring(0, 1));
+        assertEquals(executionReport + " has incorrect status", MessageStatus.OK, executionReport.status());
+        assertTrue(executionReport + " was not valid", executionReport.isValid());
+    }
+
+    void sendReportsOnFollowerSession(
+        final TestSystem testSystem,
+        final SessionWriter sessionWriter,
+        final ReadablePosition positionCounter)
+    {
+        sendReportOnFollowerSession(testSystem, sessionWriter, 1, false);
+        normalMsgSeqNum = 1;
+        final long position = sendReportOnFollowerSession(testSystem, sessionWriter, 2, true);
+        possDupMsgSeqNum = 2;
+
+        testSystem.awaitPosition(positionCounter, position);
+    }
+
+    private long sendReportOnFollowerSession(
+        final TestSystem testSystem, final SessionWriter sessionWriter, final int msgSeqNum, final boolean possDupFlag)
+    {
+        final ReportFactory reportFactory = new ReportFactory();
+        reportFactory.possDupFlag(possDupFlag);
+        final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, msgSeqNum);
+
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        final SystemEpochClock clock = new SystemEpochClock();
+        report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()))
+            .msgSeqNum(msgSeqNum);
+
+        return testSystem.awaitSend("failed to send", () -> sessionWriter.send(report, msgSeqNum));
     }
 }

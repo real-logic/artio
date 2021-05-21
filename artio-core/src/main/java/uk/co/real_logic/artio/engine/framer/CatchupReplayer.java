@@ -73,7 +73,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength() +
-            + metaDataHeaderLength();
+        metaDataHeaderLength();
 
     enum ReplayFor
     {

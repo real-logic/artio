@@ -173,7 +173,6 @@ class FixReplayerSession extends ReplayerSession
         final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
         final int version = messageHeader.version();
 
-
         switch (templateId)
         {
             case FixMessageDecoder.TEMPLATE_ID:

@@ -34,6 +34,7 @@ public class PossDupFinder implements OtfMessageAcceptor
     private int lengthOfBodyLength;
     private int origSendingTimeOffset;
     private int origSendingTimeLength;
+    private int checkSumOffset;
 
     public MessageControl onNext()
     {
@@ -45,6 +46,7 @@ public class PossDupFinder implements OtfMessageAcceptor
         bodyLength = NO_ENTRY;
         bodyLengthOffset = NO_ENTRY;
         lengthOfBodyLength = NO_ENTRY;
+        checkSumOffset = NO_ENTRY;
         return MessageControl.CONTINUE;
     }
 
@@ -71,6 +73,11 @@ public class PossDupFinder implements OtfMessageAcceptor
                 lengthOfBodyLength = length;
                 bodyLength = buffer.getInt(offset, offset + length);
                 break;
+
+            case SessionConstants.CHECKSUM:
+                checkSumOffset = offset;
+                break;
+
         }
         return MessageControl.CONTINUE;
     }
@@ -107,6 +114,11 @@ public class PossDupFinder implements OtfMessageAcceptor
     int possDupOffset()
     {
         return possDupOffset;
+    }
+
+    public int checkSumOffset()
+    {
+        return checkSumOffset;
     }
 
     int sendingTimeEnd()

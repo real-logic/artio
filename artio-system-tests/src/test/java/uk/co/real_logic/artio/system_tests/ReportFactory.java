@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.OrdStatus;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.session.Session;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -34,6 +35,9 @@ public class ReportFactory
     private final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
     private final byte[] encodeBuffer = new byte[SIZE_OF_ASCII_LONG];
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
+    private final UtcTimestampEncoder timestamp = new UtcTimestampEncoder();
+
+    private boolean possDupFlag = false;
 
     public Action trySendReportAct(final Session session, final Side side)
     {
@@ -73,6 +77,23 @@ public class ReportFactory
 
         executionReport.instrument().symbol(MSFT.getBytes(US_ASCII));
 
+        if (possDupFlag)
+        {
+            executionReport.header()
+                .possDupFlag(possDupFlag)
+                .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()));
+        }
+
         return executionReport;
+    }
+
+    public int lastMsgSeqNum()
+    {
+        return executionReport.header().msgSeqNum();
+    }
+
+    public void possDupFlag(final boolean possDupFlag)
+    {
+        this.possDupFlag = possDupFlag;
     }
 }

@@ -22,7 +22,6 @@ import org.agrona.concurrent.*;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -33,7 +32,6 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
-import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
@@ -712,18 +710,5 @@ public class AbstractGatewayToGatewaySystemTest
         final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
             acceptingLibrary.followerSession(headerEncoder, timeoutInMs));
         return followerSession.resultIfPresent();
-    }
-
-    long sendReportOnFollowerSession(final TestSystem testSystem, final SessionWriter sessionWriter)
-    {
-        final ReportFactory reportFactory = new ReportFactory();
-        final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, 1);
-        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        final SystemEpochClock clock = new SystemEpochClock();
-        report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()))
-            .msgSeqNum(1);
-
-        return testSystem.awaitSend("failed to send", () -> sessionWriter.send(report, 1));
     }
 }
