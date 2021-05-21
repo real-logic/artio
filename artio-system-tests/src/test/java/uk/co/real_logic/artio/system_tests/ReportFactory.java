@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.OrdStatus;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.session.Session;
 
@@ -29,6 +30,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public class ReportFactory
 {
+
     private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
     public static final String MSFT = "MSFT";
 
@@ -37,7 +39,7 @@ public class ReportFactory
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
     private final UtcTimestampEncoder timestamp = new UtcTimestampEncoder();
 
-    private boolean possDupFlag = false;
+    private PossDupOption possDupFlag = PossDupOption.NONE;
 
     public Action trySendReportAct(final Session session, final Side side)
     {
@@ -77,11 +79,21 @@ public class ReportFactory
 
         executionReport.instrument().symbol(MSFT.getBytes(US_ASCII));
 
-        if (possDupFlag)
+        final HeaderEncoder header = executionReport.header();
+
+        switch (possDupFlag)
         {
-            executionReport.header()
-                .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
-                .possDupFlag(possDupFlag);
+            case Y:
+                header
+                    .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
+                    .possDupFlag(true);
+                break;
+
+            case N:
+                header
+                    .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
+                    .possDupFlag(false);
+                break;
         }
 
         return executionReport;
@@ -92,7 +104,7 @@ public class ReportFactory
         return executionReport.header().msgSeqNum();
     }
 
-    public void possDupFlag(final boolean possDupFlag)
+    public void possDupFlag(final PossDupOption possDupFlag)
     {
         this.possDupFlag = possDupFlag;
     }

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.collections.IntArrayList;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.junit.After;
@@ -86,8 +87,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private TimeRange firstConnectTimeRange;
 
-    private int possDupMsgSeqNum;
-    private int normalMsgSeqNum;
+    private IntArrayList resendMsgSeqNums = new IntArrayList();
 
     @Before
     public void setUp() throws IOException
@@ -763,11 +763,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final ReportFactory factory = new ReportFactory();
         factory.sendReport(testSystem, acceptingSession, Side.BUY);
-        normalMsgSeqNum = factory.lastMsgSeqNum();
+        resendMsgSeqNums.add(factory.lastMsgSeqNum());
 
-        factory.possDupFlag(true);
+        factory.possDupFlag(PossDupOption.Y);
         factory.sendReport(testSystem, acceptingSession, Side.BUY);
-        possDupMsgSeqNum = factory.lastMsgSeqNum();
+        resendMsgSeqNums.add(factory.lastMsgSeqNum());
+
+        factory.possDupFlag(PossDupOption.N);
+        factory.sendReport(testSystem, acceptingSession, Side.BUY);
+        resendMsgSeqNums.add(factory.lastMsgSeqNum());
 
         receivedReplayFromReconnectedSession();
     }
@@ -777,8 +781,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         onAcquireSession = this::nothing;
         connectPersistingSessions();
 
-        assertReceivedReplayedReport(normalMsgSeqNum);
-        assertReceivedReplayedReport(possDupMsgSeqNum);
+        for (final int resendMsgSeqNum : resendMsgSeqNums)
+        {
+            assertReceivedReplayedReport(resendMsgSeqNum);
+        }
     }
 
     private void assertReceivedReplayedReport(final int msgSeqNum)
@@ -796,16 +802,20 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final SessionWriter sessionWriter,
         final ReadablePosition positionCounter)
     {
-        sendReportOnFollowerSession(testSystem, sessionWriter, 1, false);
-        normalMsgSeqNum = 1;
-        final long position = sendReportOnFollowerSession(testSystem, sessionWriter, 2, true);
-        possDupMsgSeqNum = 2;
+        sendReportOnFollowerSession(testSystem, sessionWriter, 1, PossDupOption.NONE);
+        sendReportOnFollowerSession(testSystem, sessionWriter, 2, PossDupOption.Y);
+        final long position = sendReportOnFollowerSession(testSystem, sessionWriter, 3, PossDupOption.N);
+
+        resendMsgSeqNums.add(1);
+        resendMsgSeqNums.add(2);
+        resendMsgSeqNums.add(3);
 
         testSystem.awaitPosition(positionCounter, position);
     }
 
     private long sendReportOnFollowerSession(
-        final TestSystem testSystem, final SessionWriter sessionWriter, final int msgSeqNum, final boolean possDupFlag)
+        final TestSystem testSystem, final SessionWriter sessionWriter, final int msgSeqNum,
+        final PossDupOption possDupFlag)
     {
         final ReportFactory reportFactory = new ReportFactory();
         reportFactory.possDupFlag(possDupFlag);
