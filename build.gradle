@@ -855,3 +855,16 @@ wrapper {
     gradleVersion = '6.8.3'
     distributionType = 'ALL'
 }
+
+task copyTestLogs(type: Copy) {
+    from '.'
+    include '**/build/test-output/**'
+    include '**/*.log'
+    include '**/*.tlog'
+    include 'LICENSE'
+    exclude 'build'
+    into 'build/test_logs'
+
+    includeEmptyDirs = false
+}
+
