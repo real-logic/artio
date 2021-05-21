@@ -267,12 +267,13 @@ public class PossDupEnabler
             final MutableDirectBuffer buffer = bufferClaim.buffer();
             final int offset = bufferClaim.offset();
 
+            final int bodyLength = hasAlteredBodyLength ? bufferClaim.length() - logLengthOffset : origMessageLength;
             DebugLogger.log(
                 logTag,
                 "Resending: ",
                 buffer,
                 offset + logLengthOffset,
-                origMessageLength);
+                bodyLength);
 
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();
