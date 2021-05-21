@@ -836,15 +836,13 @@ public class Session
      * Useful for administrative operations that need to reset the received sequence number of the session in question.
      * This method can be used to reset sequence numbers of offline sessions.
      *
-     * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
-     *                                          received.
+     * @param lastReceivedMsgSeqNum  the sequence number of the last message received.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long tryUpdateReceivedSequenceNumber(
-        final int nextReceivedMessageSequenceNumber)
+    public long tryUpdateLastReceivedSequenceNumber(
+        final int lastReceivedMsgSeqNum)
     {
         // Do not reset the sequence index at this point.
-        final int lastReceivedMsgSeqNum = nextReceivedMessageSequenceNumber - 1;
         final long position = saveRedact(NO_REQUIRED_POSITION, lastReceivedMsgSeqNum);
         if (position > 0)
         {
@@ -985,7 +983,7 @@ public class Session
     /**
      * Sets the sequence number of the last message received. It is exceedingly unlikely that any Artio users want to
      * use this method to set the sequence number. If you want to update this value in a way that will be reliably
-     * persisted and update the state of your index then you should use {@link #tryUpdateReceivedSequenceNumber(int)}.
+     * persisted and update the state of your index then you should use {@link #tryUpdateLastReceivedSequenceNumber(int)}.
      *
      * This method does check and update the sequence index value.
      *

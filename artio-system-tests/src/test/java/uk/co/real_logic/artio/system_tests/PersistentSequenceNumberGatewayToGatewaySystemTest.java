@@ -512,7 +512,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     public void shouldResetReceivedSequenceNumbersOfOfflineSessions()
     {
         resetSomeSequenceNumbersOfOfflineSessions(
-            () -> acceptingSession.tryUpdateReceivedSequenceNumber(1),
+            () -> acceptingSession.tryUpdateLastReceivedSequenceNumber(0),
             4,
             4);
     }
