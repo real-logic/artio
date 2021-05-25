@@ -193,7 +193,7 @@ public class ReplayOperation
             case POLL_IMAGE_CLOSING:
             {
                 DebugLogger.log(logTag, POLL_IMAGE_CLOSING_FORMATTER.get(), replaySessionId);
-                while (!(image.isClosed() || image.isEndOfStream()))
+                while (!(null == image || image.isClosed() || image.isEndOfStream()))
                 {
                     image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
                 }
