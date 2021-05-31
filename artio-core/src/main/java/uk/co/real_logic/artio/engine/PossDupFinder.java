@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
-public class PossDupFinder implements OtfMessageAcceptor
+class PossDupFinder implements OtfMessageAcceptor
 {
     public static final int NO_ENTRY = -1;
 
@@ -141,7 +141,7 @@ public class PossDupFinder implements OtfMessageAcceptor
         return origSendingTimeOffset;
     }
 
-    public int origSendingTimeLength()
+    int origSendingTimeLength()
     {
         return origSendingTimeLength;
     }

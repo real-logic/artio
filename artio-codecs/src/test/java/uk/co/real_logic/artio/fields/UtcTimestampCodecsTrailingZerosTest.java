@@ -28,8 +28,8 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.NANO_OF_SECOND;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
 import static uk.co.real_logic.artio.fields.EpochFractionFormat.*;
+import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoderValidCasesTest.*;
 
 public class UtcTimestampCodecsTrailingZerosTest

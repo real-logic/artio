@@ -109,14 +109,13 @@ public class PossDupEnabler
         final int metaDataAdjustment)
     {
         parser.onMessage(srcBuffer, messageOffset, messageLength);
-        final int possDupSrcOffset = possDupFinder.possDupOffset();
-        if (possDupSrcOffset == NO_ENTRY)
+        final boolean missingPossDup = possDupFinder.possDupOffset() == NO_ENTRY;
+        final boolean missingOrigSendingTime = possDupFinder.origSendingTimeOffset() == NO_ENTRY;
+        if (missingPossDup || missingOrigSendingTime)
         {
             final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();
-            final int lengthOfAddedFields = POSS_DUP_FIELD.length +
-                ORIG_SENDING_TIME_PREFIX.length +
-                possDupFinder.sendingTimeLength() +
-                SEPARATOR_LENGTH;
+            final int possDupLengthDelta = missingPossDup ? POSS_DUP_FIELD.length : 0;
+            final int lengthOfAddedFields = possDupLengthDelta + origSendingTimeLength();
             int newLength = srcLength + lengthOfAddedFields;
             final int newBodyLength = possDupFinder.bodyLength() + lengthOfAddedFields;
             final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(newBodyLength);
@@ -159,44 +158,61 @@ public class PossDupEnabler
         }
         else
         {
-            if (!claim(srcLength))
-            {
-                return ABORT;
-            }
-
-            try
-            {
-                final MutableDirectBuffer writeBuffer = writeBuffer();
-                final int writeOffset = writeOffset();
-                writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, srcLength);
-                mutableAsciiFlyweight.wrap(writeBuffer);
-                setPossDupFlag(possDupSrcOffset, srcOffset, writeOffset);
-                updateSendingTime(srcOffset);
-
-                final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
-                final int messageEndOffset = messageClaimOffset + messageLength;
-                final int beforeChecksum = srcToClaim(possDupFinder.checkSumOffset(), srcOffset, writeOffset) - 4;
-                updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
-
-                return commit();
-            }
-            catch (final Exception ex)
-            {
-                abort();
-                errorHandler.onError(ex);
-            }
+            return enablePossDupFlagSameLength(
+                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, possDupFinder.possDupOffset());
         }
 
         return CONTINUE;
     }
 
-    private void setPossDupFlag(
-        final int possDupSrcOffset,
-        final int messageOffset,
-        final int claimOffset)
+    private int origSendingTimeLength()
     {
-        final int possDupClaimOffset = srcToClaim(possDupSrcOffset, messageOffset, claimOffset);
-        mutableAsciiFlyweight.putCharAscii(possDupClaimOffset, 'Y');
+        return ORIG_SENDING_TIME_PREFIX.length +
+            possDupFinder.sendingTimeLength() +
+            SEPARATOR_LENGTH;
+    }
+
+    private Action enablePossDupFlagSameLength(
+        final DirectBuffer srcBuffer,
+        final int messageOffset,
+        final int messageLength,
+        final int srcOffset,
+        final int srcLength,
+        final int possDupSrcOffset)
+    {
+        // Poss Dup flag is already set in the src message and orig sending time is present.
+        if (!claim(srcLength))
+        {
+            return ABORT;
+        }
+
+        try
+        {
+            final MutableDirectBuffer writeBuffer = writeBuffer();
+            final int writeOffset = writeOffset();
+            writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, srcLength);
+            mutableAsciiFlyweight.wrap(writeBuffer);
+
+            // Set poss dup flag to Y
+            final int possDupClaimOffset = srcToClaim(possDupSrcOffset, srcOffset, writeOffset);
+            mutableAsciiFlyweight.putCharAscii(possDupClaimOffset, 'Y');
+
+            updateSendingTime(srcOffset);
+
+            final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
+            final int messageEndOffset = messageClaimOffset + messageLength;
+            final int beforeChecksum = srcToClaim(possDupFinder.checkSumOffset(), srcOffset, writeOffset) - 4;
+            updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
+
+            return commit();
+        }
+        catch (final Exception ex)
+        {
+            abort();
+            errorHandler.onError(ex);
+        }
+
+        return CONTINUE;
     }
 
     private void abort()
@@ -317,6 +333,7 @@ public class PossDupEnabler
     {
         final MutableDirectBuffer writeBuffer = writeBuffer();
         final int writeOffset = writeOffset();
+        mutableAsciiFlyweight.wrap(writeBuffer);
 
         // Sending time is a required field just before the poss dup field
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
@@ -326,15 +343,30 @@ public class PossDupEnabler
         }
 
         // Put messages up to the end of sending time
-        final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
-        writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, lengthToPossDup);
+        final int lengthToSendingTimeEnd = sendingTimeSrcEnd - srcOffset;
+        writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, lengthToSendingTimeEnd);
 
-        // Insert Poss Dup Field
-        final int possDupClaimOffset = writeOffset + lengthToPossDup;
-        writeBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
+        final int possDupSrcOffset = possDupFinder.possDupOffset();
+
+        final int origSendingTimePrefixClaimOffset;
+        if (possDupSrcOffset == NO_ENTRY)
+        {
+            // Insert Poss Dup Field
+            final int possDupClaimOffset = writeOffset + lengthToSendingTimeEnd;
+            writeBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
+            // When inserting poss dup field, the orig sending time goes after the poss dup,
+            origSendingTimePrefixClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
+        }
+        else
+        {
+            // Update poss dup field
+            final int possDupValueClaimOffset = srcToClaim(possDupSrcOffset, srcOffset, writeOffset);
+            mutableAsciiFlyweight.putCharAscii(possDupValueClaimOffset, 'Y');
+            // When updating poss dup field, the orig sending time goes after the sending time
+            origSendingTimePrefixClaimOffset = writeOffset + lengthToSendingTimeEnd;
+        }
 
         // Insert Orig Sending Time Field
-        final int origSendingTimePrefixClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
         writeBuffer.putBytes(origSendingTimePrefixClaimOffset, ORIG_SENDING_TIME_PREFIX);
 
         final int origSendingTimeValueClaimOffset = origSendingTimePrefixClaimOffset + ORIG_SENDING_TIME_PREFIX.length;
@@ -347,7 +379,7 @@ public class PossDupEnabler
 
         // Insert the rest of the message
         final int remainingClaimOffset = separatorClaimOffset + SEPARATOR_LENGTH;
-        final int remainingLength = srcLength - lengthToPossDup;
+        final int remainingLength = srcLength - lengthToSendingTimeEnd;
         writeBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
 
         // Update the sending time
@@ -356,7 +388,7 @@ public class PossDupEnabler
         updateFrameBodyLength(messageLength, writeBuffer, writeOffset, totalLengthDelta, metaDataAdjustment);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
         updateBodyLengthAndChecksum(
-            srcOffset, messageClaimOffset, writeBuffer, writeOffset, newBodyLength, writeOffset + newLength);
+            srcOffset, messageClaimOffset, writeOffset, newBodyLength, writeOffset + newLength);
 
         return true;
     }
@@ -389,13 +421,10 @@ public class PossDupEnabler
     private void updateBodyLengthAndChecksum(
         final int srcOffset,
         final int messageClaimOffset,
-        final MutableDirectBuffer claimBuffer,
         final int claimOffset,
         final int newBodyLength,
         final int messageEndOffset)
     {
-        mutableAsciiFlyweight.wrap(claimBuffer);
-
         // BEGIN Update body length
         final int bodyLengthClaimOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
         final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();

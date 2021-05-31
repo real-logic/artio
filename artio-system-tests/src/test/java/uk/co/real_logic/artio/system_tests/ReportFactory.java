@@ -39,7 +39,7 @@ public class ReportFactory
     private final UnsafeBuffer encoder = new UnsafeBuffer(encodeBuffer);
     private final UtcTimestampEncoder timestamp = new UtcTimestampEncoder();
 
-    private PossDupOption possDupFlag = PossDupOption.NONE;
+    private PossDupOption possDupFlag = PossDupOption.MISSING_FIELD;
 
     public Action trySendReportAct(final Session session, final Side side)
     {
@@ -67,6 +67,8 @@ public class ReportFactory
 
     public ExecutionReportEncoder setupReport(final Side side, final int execAndOrderId)
     {
+        executionReport.reset();
+
         final int encodedLength = encoder.putLongAscii(0, execAndOrderId);
 
         executionReport.orderID(encodeBuffer, encodedLength)
@@ -83,16 +85,22 @@ public class ReportFactory
 
         switch (possDupFlag)
         {
-            case Y:
-                header
-                    .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
-                    .possDupFlag(true);
+            case YES:
+            case YES_WITHOUT_ORIG_SENDING_TIME:
+                header.possDupFlag(true);
                 break;
 
-            case N:
-                header
-                    .origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()))
-                    .possDupFlag(false);
+            case NO:
+            case NO_WITHOUT_ORIG_SENDING_TIME:
+                header.possDupFlag(false);
+                break;
+        }
+
+        switch (possDupFlag)
+        {
+            case YES:
+            case NO:
+                header.origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()));
                 break;
         }
 

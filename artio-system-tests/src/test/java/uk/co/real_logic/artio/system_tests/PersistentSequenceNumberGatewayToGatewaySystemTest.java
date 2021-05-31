@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.collections.IntArrayList;
-import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.ReadablePosition;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +36,9 @@ import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
@@ -58,6 +61,9 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alway
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final DateTimeFormatter FORMATTER =
+        DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss[.nnn]");
+
     private static final int HIGH_INITIAL_SEQUENCE_NUMBER = 1000;
     private static final int DOES_NOT_MATTER = -1;
     private static final int DEFAULT_SEQ_NUM_AFTER = 4;
@@ -480,7 +486,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSession()
     {
-        printErrorMessages = true;
+        printErrorMessages = false;
 
         launch(this::nothing);
 
@@ -491,6 +497,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         sendReportsOnFollowerSession(testSystem, sessionWriter, positionCounter);
 
         receivedReplayFromReconnectedSession();
+
+        logoutInitiatingSession();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -765,11 +773,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         factory.sendReport(testSystem, acceptingSession, Side.BUY);
         resendMsgSeqNums.add(factory.lastMsgSeqNum());
 
-        factory.possDupFlag(PossDupOption.Y);
+        factory.possDupFlag(PossDupOption.YES);
         factory.sendReport(testSystem, acceptingSession, Side.BUY);
         resendMsgSeqNums.add(factory.lastMsgSeqNum());
 
-        factory.possDupFlag(PossDupOption.N);
+        factory.possDupFlag(PossDupOption.NO);
         factory.sendReport(testSystem, acceptingSession, Side.BUY);
         resendMsgSeqNums.add(factory.lastMsgSeqNum());
 
@@ -795,6 +803,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("Y", executionReport.possDup());
         assertEquals(executionReport + " has incorrect status", MessageStatus.OK, executionReport.status());
         assertTrue(executionReport + " was not valid", executionReport.isValid());
+
+        final LocalDateTime sendingTime = LocalDateTime.parse(executionReport.get(SENDING_TIME), FORMATTER);
+        final LocalDateTime origSendingTime = LocalDateTime.parse(executionReport.get(ORIG_SENDING_TIME), FORMATTER);
+        assertThat(origSendingTime, Matchers.lessThan(sendingTime));
     }
 
     void sendReportsOnFollowerSession(
@@ -802,13 +814,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final SessionWriter sessionWriter,
         final ReadablePosition positionCounter)
     {
-        sendReportOnFollowerSession(testSystem, sessionWriter, 1, PossDupOption.NONE);
-        sendReportOnFollowerSession(testSystem, sessionWriter, 2, PossDupOption.Y);
-        final long position = sendReportOnFollowerSession(testSystem, sessionWriter, 3, PossDupOption.N);
+        sendReportOnFollowerSession(testSystem, sessionWriter, 1, PossDupOption.MISSING_FIELD);
+        sendReportOnFollowerSession(testSystem, sessionWriter, 2, PossDupOption.YES);
+        sendReportOnFollowerSession(testSystem, sessionWriter, 3, PossDupOption.NO);
+        sendReportOnFollowerSession(
+            testSystem, sessionWriter, 4, PossDupOption.NO_WITHOUT_ORIG_SENDING_TIME);
+        final long position = sendReportOnFollowerSession(
+            testSystem, sessionWriter, 5, PossDupOption.YES_WITHOUT_ORIG_SENDING_TIME);
 
-        resendMsgSeqNums.add(1);
-        resendMsgSeqNums.add(2);
-        resendMsgSeqNums.add(3);
+        resendMsgSeqNums.addAll(Arrays.asList(1, 2, 3, 4, 5));
 
         testSystem.awaitPosition(positionCounter, position);
     }
@@ -822,9 +836,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, msgSeqNum);
 
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        final SystemEpochClock clock = new SystemEpochClock();
+        final long timeInThePast = System.currentTimeMillis() - 100;
         report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()))
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(timeInThePast))
             .msgSeqNum(msgSeqNum);
 
         return testSystem.awaitSend("failed to send", () -> sessionWriter.send(report, msgSeqNum));

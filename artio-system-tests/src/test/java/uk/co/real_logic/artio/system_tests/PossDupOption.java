@@ -17,5 +17,5 @@ package uk.co.real_logic.artio.system_tests;
 
 enum PossDupOption
 {
-    Y, N, NONE
+    YES, YES_WITHOUT_ORIG_SENDING_TIME, NO, NO_WITHOUT_ORIG_SENDING_TIME, MISSING_FIELD
 }
