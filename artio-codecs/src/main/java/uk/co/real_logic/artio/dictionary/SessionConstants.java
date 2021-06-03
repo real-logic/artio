@@ -27,6 +27,7 @@ public final class SessionConstants
 
     // Message Types
     public static final int BEGIN_SEQ_NO = 7;
+    public static final int END_SEQ_NO = 16;
     public static final int BODY_LENGTH = 9;
     public static final int CHECKSUM = 10;
     public static final int MSG_SEQ_NO = 34;
