@@ -34,6 +34,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
@@ -300,6 +301,26 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectInvalidResendRequestsHighBeginSeqNo() throws IOException
     {
+        shouldRejectInvalidResendRequests((connection, reportSeqNum) ->
+        {
+            final int invalidSeqNum = reportSeqNum + 1;
+            return connection.sendResendRequest(invalidSeqNum, invalidSeqNum);
+        });
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectInvalidResendRequestsEndSeqNoBelowBeginSeqNo() throws IOException
+    {
+        shouldRejectInvalidResendRequests((connection, reportSeqNum) ->
+        {
+            return connection.sendResendRequest(reportSeqNum, reportSeqNum - 1);
+        });
+    }
+
+    private void shouldRejectInvalidResendRequests(
+        final BiFunction<FixConnection, Integer, ResendRequestEncoder> resendRequester)
+        throws IOException
+    {
         setup(true, true);
         setupLibrary();
 
@@ -318,8 +339,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 final int reportSeqNum = connection.readExecutionReport().header().msgSeqNum();
 
                 // Send an invalid resend request
-                final int invalidSeqNum = reportSeqNum + 1;
-                final ResendRequestEncoder resendRequest = connection.sendResendRequest(invalidSeqNum, invalidSeqNum);
+                final ResendRequestEncoder resendRequest = resendRequester.apply(connection, reportSeqNum);
 
                 final RejectDecoder reject = connection.readReject();
                 assertEquals(RESEND_REQUEST_MESSAGE_AS_STR, reject.refMsgTypeAsString());

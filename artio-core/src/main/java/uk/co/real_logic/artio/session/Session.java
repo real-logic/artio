@@ -1907,12 +1907,15 @@ public class Session
             // Just an invalid range.
             if (endSeqNum < beginSeqNum)
             {
-                final String message = messageBuffer.getAscii(messageOffset, messageLength);
-                throw new IllegalStateException(String.format(
-                    "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
-                    message,
-                    endSeqNum,
-                    beginSeqNum));
+                return checkPosition(proxy.sendReject(
+                    newSentSeqNum(),
+                    msgSeqNum,
+                    END_SEQ_NO,
+                    RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+                    RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
+                    VALUE_IS_INCORRECT.representation(),
+                    sequenceIndex(),
+                    lastMsgSeqNumProcessed));
             }
 
             // begin too high - reject
