@@ -35,6 +35,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
     private int sequenceIndex;
     private MessageStatus status;
     private boolean valid;
+    private boolean outOfSequence;
 
     public FixMessage()
     {
@@ -118,6 +119,16 @@ public class FixMessage extends Int2ObjectHashMap<String>
     public boolean isValid()
     {
         return valid;
+    }
+
+    public void isOutOfSequence(final boolean outOfSequence)
+    {
+        this.outOfSequence = outOfSequence;
+    }
+
+    public boolean isOutOfSequence()
+    {
+        return outOfSequence;
     }
 
     public int cancelOnDisconnectType()

@@ -113,6 +113,7 @@ public class FakeHandler
         parsedMessage.sequenceIndex(sequenceIndex);
         parsedMessage.status(messageInfo.status());
         parsedMessage.isValid(messageInfo.isValid());
+        parsedMessage.isOutOfSequence(messageInfo.isOutOfSequence());
         acceptor.forSession(session);
 
         if (copyMessages)

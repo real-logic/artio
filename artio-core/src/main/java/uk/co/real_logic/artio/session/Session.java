@@ -1250,7 +1250,7 @@ public class Session
             }
             else if (msgSeqNum > endOfResendRequestRange)
             {
-                messageInfo.isValid(false);
+                messageInfo.isOutOfSequence(false);
                 if (sendRedundantResendRequests)
                 {
                     return Pressure.apply(trySendResendRequest(endOfResendRequestRange + 1, msgSeqNum));
@@ -1309,7 +1309,7 @@ public class Session
         final long position = trySendResendRequest(expectedSeqNo, receivedMsgSeqNo);
         if (position >= 0)
         {
-            messageInfo.isValid(false);
+            messageInfo.isOutOfSequence(false);
             awaitingResend = true;
             lastResentMsgSeqNo = expectedSeqNo - 1;
             lastReceivedMsgSeqNum = receivedMsgSeqNo;

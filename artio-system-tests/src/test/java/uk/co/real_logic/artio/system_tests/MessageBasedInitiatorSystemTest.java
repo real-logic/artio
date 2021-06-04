@@ -461,13 +461,13 @@ public class MessageBasedInitiatorSystemTest
         final FixMessage logon = messages.get(0);
         assertEquals(logon.toString(), 4, logon.messageSequenceNumber());
         assertEquals(logon.toString(), LOGON_MESSAGE_AS_STR, logon.msgType());
-        assertFalse(logon.toString(), logon.isValid());
+        assertFalse(logon.toString(), logon.isOutOfSequence());
 
         final FixMessage invalidReport5 = messages.get(1);
         assertEquals(invalidReport5.toString(), 5, invalidReport5.messageSequenceNumber());
         assertEquals(invalidReport5.toString(), EXECUTION_REPORT_MESSAGE_AS_STR, invalidReport5.msgType());
         assertNull(invalidReport5.toString(), invalidReport5.possDup());
-        assertFalse(invalidReport5.toString(), invalidReport5.isValid());
+        assertFalse(invalidReport5.toString(), invalidReport5.isOutOfSequence());
 
         final FixMessage report3 = messages.get(2);
         assertEquals(report3.toString(), 3, report3.messageSequenceNumber());

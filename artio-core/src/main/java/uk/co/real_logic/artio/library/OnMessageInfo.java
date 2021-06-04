@@ -20,7 +20,8 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 public class OnMessageInfo
 {
     private MessageStatus status;
-    private boolean isValid;
+    private boolean valid;
+    private boolean outOfSequence;
 
     public OnMessageInfo status(final MessageStatus status)
     {
@@ -30,7 +31,13 @@ public class OnMessageInfo
 
     public OnMessageInfo isValid(final boolean valid)
     {
-        isValid = valid;
+        this.valid = valid;
+        return this;
+    }
+
+    public OnMessageInfo isOutOfSequence(final boolean isOutOfSequence)
+    {
+        this.outOfSequence = isOutOfSequence;
         return this;
     }
 
@@ -41,6 +48,11 @@ public class OnMessageInfo
 
     public boolean isValid()
     {
-        return isValid;
+        return valid;
+    }
+
+    public boolean isOutOfSequence()
+    {
+        return outOfSequence;
     }
 }
