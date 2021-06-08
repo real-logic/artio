@@ -1002,22 +1002,37 @@ public class Session
         final boolean possDup,
         final long position)
     {
-        if (state() == SessionState.CONNECTED)
+        final long timeInNs = time();
+        final Action action = checkStateAndValidateMessage(msgSeqNo, timeInNs, msgType, msgTypeLength,
+            sendingTime, origSendingTime, isPossDupOrResend, possDup, position);
+        if (action != null)
+        {
+            return action;
+        }
+        return checkSeqNoChange(msgSeqNo, timeInNs, isPossDupOrResend, position);
+    }
+
+    Action checkStateAndValidateMessage(
+        final int msgSeqNo,
+        final long timeInNs,
+        final char[] msgType,
+        final int msgTypeLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend,
+        final boolean possDup,
+        final long position)
+    {
+        final SessionState state = state();
+        if (state == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
             return Pressure.apply(requestDisconnect(FIRST_MESSAGE_NOT_LOGON));
         }
         else
         {
-            final long time = time();
-            final Action action = validateRequiredFieldsAndCodec(
-                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
-            if (action != null)
-            {
-                return action;
-            }
-
-            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend, position);
+            return validateRequiredFieldsAndCodec(
+                msgSeqNo, timeInNs, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
         }
     }
 
@@ -1718,18 +1733,29 @@ public class Session
         final int messageOffset,
         final int messageLength)
     {
-        final Action action = onMessage(
+        final long timeInNs = time();
+        final Action action = checkStateAndValidateMessage(
             msgSeqNum,
+            timeInNs,
             RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+            RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
             sendingTime,
             origSendingTime,
             isPossDupOrResend,
             possDup,
             position);
 
-        if (action == ABORT || !messageInfo.isValid())
+        // validate here, so that out of sequence resendrequest is executed
+        // can't rely on own resend request
+        if (action != null || !messageInfo.isValid())
         {
             return action;
+        }
+
+        final Action checkSeqAction = checkNormalSeqNoChange(msgSeqNum, timeInNs, isPossDupOrResend, position);
+        if (checkSeqAction == ABORT)
+        {
+            return checkSeqAction;
         }
 
         final boolean replayUpToMostRecent = endSeqNum == Replayer.MOST_RECENT_MESSAGE;
