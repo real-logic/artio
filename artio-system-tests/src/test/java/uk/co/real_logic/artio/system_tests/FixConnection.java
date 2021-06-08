@@ -260,6 +260,11 @@ public final class FixConnection implements AutoCloseable
         return this;
     }
 
+    int msgSeqNum()
+    {
+        return msgSeqNum;
+    }
+
     int acquireMsgSeqNum()
     {
         return this.msgSeqNum++;
@@ -408,6 +413,14 @@ public final class FixConnection implements AutoCloseable
     public RejectDecoder readReject()
     {
         return readMessage(new RejectDecoder());
+    }
+
+    public ResendRequestDecoder readResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        final ResendRequestDecoder resendRequest = readMessage(new ResendRequestDecoder());
+        assertEquals(resendRequest.toString(), beginSeqNo, resendRequest.beginSeqNo());
+        assertEquals(resendRequest.toString(), endSeqNo, resendRequest.endSeqNo());
+        return resendRequest;
     }
 
     public HeartbeatDecoder exchangeTestRequestHeartbeat(final String testReqID)
