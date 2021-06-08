@@ -492,6 +492,35 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldAnswerResendRequestWithHighSeqNum() throws IOException
+    {
+        setup(true, true);
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            testSystem.poll();
+
+            final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
+            assertEquals(2, abc.header().msgSeqNum());
+
+            // shift msg seq num
+            connection.msgSeqNum(connection.msgSeqNum() + 3);
+            connection.sendResendRequest(1, 2);
+            // answers with resend
+            connection.readResendRequest(3, 0);
+            // because original resend request is not resent, but rather gap filled
+            connection.sendGapFill(3, connection.msgSeqNum() + 1);
+            // answers the resend as well
+            final SequenceResetDecoder sequenceResetDecoder = connection.readMessage(new SequenceResetDecoder());
+            assertEquals(sequenceResetDecoder.header().msgSeqNum(), 1);
+            assertEquals(sequenceResetDecoder.newSeqNo(), 3);
+        }
+    }
+
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportLogonBasedSequenceNumberResetWithImmediateMessageSend() throws IOException
     {
         shouldSupportLogonBasedSequenceNumberReset(ENGINE, (connection, reportFactory) ->
