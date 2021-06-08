@@ -811,6 +811,10 @@ public class Session
      * Acts like {@link #trySendSequenceReset(int)} but also resets the received sequence number. This method
      * can be used to reset sequence numbers of offline sessions.
      *
+     * If the return value of this method is negative it indicates back-pressure has been applied and this method
+     * should be retried. See {@link Publication} for constant values indicating the meaning of the back-pressure
+     * values.
+     *
      * @param nextSentMessageSequenceNumber     the new sequence number of the next message to be
      *                                          sent.
      * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
@@ -822,13 +826,15 @@ public class Session
         final int nextReceivedMessageSequenceNumber)
     {
         final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
-        // Do not reset the sequence index at this point.
-        lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
-        if (redact(NO_REQUIRED_POSITION))
+        if (position >= 0)
         {
-            sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+            // Do not reset the sequence index at this point.
+            lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
+            if (redact(NO_REQUIRED_POSITION))
+            {
+                sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+            }
         }
-
         return position;
     }
 
