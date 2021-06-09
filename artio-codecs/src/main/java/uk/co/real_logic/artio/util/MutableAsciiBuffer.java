@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.util;
 
+import org.agrona.AsciiEncoding;
 import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -307,50 +308,27 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         final int minusAdj = value < 0 ? 1 : 0;
         final int start = offset + minusAdj;
 
-        // Encode the value into a tmp space, leaving the longest possible space required
-        final int tmpEnd = start + LONGEST_LONG_LENGTH;
-        final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + 1;
+        final int length = remainder == Long.MIN_VALUE ? AsciiEncoding.MIN_LONG_VALUE.length - 1 :
+            AsciiEncoding.endOffset(-remainder) + 1;
 
-        // Move the value to the beginning once you've encoded it
-        if (scale > 0)
+        if (length <= scale)
         {
-            final int end = start + length;
-            final int split = end - scale;
-            final int digitsBeforeDot = length - scale;
-            if (digitsBeforeDot <= 0)
-            {
-                int cursor = start;
-                putByte(cursor++, ZERO);
-                putByte(cursor++, DOT);
-                final int numberOfZeros = -digitsBeforeDot;
-                final int endOfZeros = cursor + numberOfZeros;
-                for (; cursor < endOfZeros; cursor++)
-                {
-                    putByte(cursor, ZERO);
-                }
-                putBytes(cursor, this, tmpStart, length);
-
-                return minusAdj + ZERO_LENGTH + DOT_LENGTH + numberOfZeros + length;
-            }
-            else
-            {
-                putBytes(start, this, tmpStart, digitsBeforeDot);
-                putByte(split, DOT);
-                putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
-
-                return minusAdj + length + DOT_LENGTH;
-            }
+            putByte(start, ZERO);
+            putByte(start + 1, DOT);
+            putTrailingZero(start + 2, scale - length);
+            putLong(remainder, start + scale + DOT_LENGTH);
+            return minusAdj + scale + 2;
+        }
+        else if (scale > 0)
+        {
+            putLong(remainder, start + length + DOT_LENGTH - 1, scale);
+            return minusAdj + length + DOT_LENGTH;
         }
         else
         {
-            putBytes(start, this, tmpStart, length);
-            final int trailingZeros = -scale;
-            if (trailingZeros > 0)
-            {
-                putTrailingZero(start + length, trailingZeros);
-            }
-            return length + minusAdj + trailingZeros;
+            putLong(remainder, start + length - 1);
+            putTrailingZero(start + length, -scale);
+            return minusAdj + length - scale;
         }
     }
 
@@ -384,7 +362,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
         else
         {
-            // Deal with negatives to avoid overflow for Integer.MAX_VALUE
+            // Deal with negatives to avoid overflow for LONG.MAX_VALUE
             return -1L * value;
         }
     }
@@ -399,6 +377,29 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             remainder = remainder / 10;
             putByte(index, (byte)(ZERO + (-1L * digit)));
             index--;
+        }
+
+        return index;
+    }
+
+    @SuppressWarnings("FinalParameters")
+    private int putLong(long remainder, final int end, int scale)
+    {
+        int index = end;
+        while (remainder < 0)
+        {
+            if (scale == 0)
+            {
+                putByte(index, DOT);
+            }
+            else
+            {
+                final long digit = remainder % 10;
+                remainder = remainder / 10;
+                putByte(index, (byte)(ZERO + (-1L * digit)));
+            }
+            index--;
+            scale--;
         }
 
         return index;
