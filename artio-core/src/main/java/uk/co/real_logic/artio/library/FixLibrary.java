@@ -85,7 +85,7 @@ public class FixLibrary extends GatewayProcess
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
             poller = new LibraryPoller(
-                configuration, timers, fixCounters, transport, this, new SystemEpochClock());
+                configuration, timers, fixCounters, transport, this, new SystemEpochClock(), errorHandler);
         }
         catch (final Exception e)
         {

@@ -98,6 +98,7 @@ public final class UtcTimestampDecoder
      * @param length the length of the FIX encoded value in bytes / ASCII characters
      * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of milliseconds since the Unix Epoch that represents this timestamp
+     * @throws NumberFormatException if the value in the buffer isn't a valid timestamp.
      */
     public static long decode(final AsciiBuffer timestamp, final int offset, final int length, final boolean strict)
     {
@@ -113,6 +114,7 @@ public final class UtcTimestampDecoder
      * @param length the length of the FIX encoded value in bytes / ASCII characters
      * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of microseconds since the Unix Epoch that represents this timestamp
+     * @throws NumberFormatException if the value in the buffer isn't a valid timestamp.
      */
     public static long decodeMicros(final AsciiBuffer timestamp, final int offset, final int length,
         final boolean strict)
@@ -129,6 +131,7 @@ public final class UtcTimestampDecoder
      * @param length the length of the FIX encoded value in bytes / ASCII characters
      * @param strict if length of FIX encoded value has to be checked to match FIX specification
      * @return the number of nanoseconds since the Unix Epoch that represents this timestamp
+     * @throws NumberFormatException if the value in the buffer isn't a valid timestamp.
      */
     public static long decodeNanos(final AsciiBuffer timestamp, final int offset, final int length,
         final boolean strict)

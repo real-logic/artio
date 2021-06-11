@@ -128,8 +128,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Long2ObjectHashMap<FixPSubscription> connectionIdToFixPSubscription =
         new Long2ObjectHashMap<>();
 
-    private static final ErrorHandler THROW_ERRORS = LangUtil::rethrowUnchecked;
-
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
 
@@ -144,6 +142,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Timer receiveTimer;
     private final SessionExistsHandler sessionExistsHandler;
     private final boolean enginesAreClustered;
+    private final ErrorHandler errorHandler;
     private final FixCounters fixCounters;
 
     private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
@@ -204,7 +203,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixCounters fixCounters,
         final LibraryTransport transport,
         final FixLibrary fixLibrary,
-        final EpochClock epochClock)
+        final EpochClock epochClock,
+        final ErrorHandler errorHandler)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
@@ -220,6 +220,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.epochClock = epochClock;
         epochNanoClock = configuration.epochNanoClock();
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
+        this.errorHandler = errorHandler;
         this.epochFractionClock = EpochFractionClocks.create(
             epochClock, configuration.epochNanoClock(), configuration.sessionEpochFractionFormat());
     }
@@ -1371,9 +1372,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 final InternalFixPConnection connection = makeILink3Connection(
                     configuration, connectionId, reply, libraryId, this,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
-                final FixPProtocol protocol = FixPProtocolFactory.make(FixPProtocolType.ILINK_3, THROW_ERRORS);
+                final FixPProtocol protocol = FixPProtocolFactory.make(FixPProtocolType.ILINK_3, errorHandler);
                 final FixPSubscription subscription = new FixPSubscription(
-                    protocol.makeParser((ILink3Connection)connection), connection);
+                    protocol.makeParser(connection), connection);
                 connectionIdToFixPSubscription.put(connectionId, subscription);
                 fixPConnections = ArrayUtil.add(fixPConnections, connection);
             }
@@ -1926,7 +1927,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (fixPProtocol == null)
         {
-            fixPProtocol = FixPProtocolFactory.make(protocolType, THROW_ERRORS);
+            fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
             commonFixPParser = fixPProtocol.makeParser(null);
         }
     }
@@ -1946,7 +1947,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, validationStrategy,
-            THROW_ERRORS, configuration.validateCompIdsOnEveryMessage(), configuration.validateTimeStrictly(),
+            errorHandler, configuration.validateCompIdsOnEveryMessage(), configuration.validateTimeStrictly(),
             messageInfo, sessionIdStrategy);
         parser.sessionKey(compositeKey);
         parser.fixDictionary(fixDictionary);

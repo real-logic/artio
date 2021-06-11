@@ -52,7 +52,7 @@ jobs:
           distribution: 'zulu'
           java-version: 8
       - name: Build with Gradle
-        run: ./gradlew
+        run: ./gradlew -Dfix.core.debug=STATE_CLEANUP
       - name: Copy test logs
         id: copy_test_logs
         if: failure()

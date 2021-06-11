@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.Subscription;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
@@ -340,7 +341,8 @@ public class LibraryPollerTest
             counters,
             transport,
             fixLibrary,
-            clock);
+            clock,
+            LangUtil::rethrowUnchecked);
     }
 
     private OngoingStubbing<Integer> whenPolled()
