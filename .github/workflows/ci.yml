@@ -9,7 +9,7 @@ on:
       - master
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP"
 
 jobs:
   build:
@@ -52,7 +52,7 @@ jobs:
           distribution: 'zulu'
           java-version: 8
       - name: Build with Gradle
-        run: ./gradlew -Dfix.core.debug=STATE_CLEANUP
+        run: ./gradlew
       - name: Copy test logs
         id: copy_test_logs
         if: failure()
