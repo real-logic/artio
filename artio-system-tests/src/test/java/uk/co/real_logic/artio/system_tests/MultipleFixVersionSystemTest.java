@@ -41,9 +41,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.artio.MonitoringAgentFactory.consumeDistinctErrors;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.MonitoringAgentFactory.none;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.fixt.ApplVerID.FIX50;
@@ -62,8 +60,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         uk.co.real_logic.artio.other.FixDictionaryImpl.class;
     static final String TEST_VALUE = "test";
 
-    private final ErrorCounter engineErrorCounter = new ErrorCounter();
-    private final ErrorHandler libraryErrorHandler = mock(ErrorHandler.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private Session fixtInitiatingSession;
     private Session fixtAcceptingSession;
@@ -111,7 +108,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         if (!printErrorMessages)
         {
             configuration.monitoringAgentFactory(none());
-            configuration.errorHandlerFactory(errorBuffer -> libraryErrorHandler);
+            configuration.errorHandlerFactory(errorBuffer -> errorHandler);
         }
 
         acceptingLibrary = connect(configuration);
@@ -135,7 +132,8 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
 
         if (!printErrorMessages)
         {
-            acceptingConfiguration.monitoringAgentFactory(consumeDistinctErrors(engineErrorCounter));
+            configuration.monitoringAgentFactory(none());
+            configuration.errorHandlerFactory(errorBuffer -> errorHandler);
         }
 
         acceptingEngine = FixEngine.launch(acceptingConfiguration);
@@ -212,8 +210,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
 
         assertMessagesOfInvalidTypeAreRejected();
 
-        verify(libraryErrorHandler).onError(any());
-        assertEquals(1, engineErrorCounter.lastObservationCount());
+        verify(errorHandler, times(2)).onError(any());
     }
 
     private void assertMessagesOfInvalidTypeAreRejected()
