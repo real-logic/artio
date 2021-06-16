@@ -186,11 +186,8 @@ public class FixArchiveScanner implements AutoCloseable
     {
         final List<ArchiveLocation> archiveLocations = new ArrayList<>();
 
-        aeronArchive.listRecordingsForUri(
-            0,
+        aeronArchive.listRecordings(0,
             Integer.MAX_VALUE,
-            aeronChannel,
-            queryStreamId,
             (controlSessionId,
             correlationId,
             recordingId,
@@ -208,7 +205,10 @@ public class FixArchiveScanner implements AutoCloseable
             originalChannel,
             sourceIdentity) ->
             {
-                archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
+                if (streamId == queryStreamId && strippedChannel.contains(aeronChannel))
+                {
+                    archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
+                }
             });
 
         if (!follow)
