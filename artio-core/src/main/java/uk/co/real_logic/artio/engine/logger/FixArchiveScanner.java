@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.Aeron;
-import io.aeron.FragmentAssembler;
-import io.aeron.Image;
-import io.aeron.Subscription;
+import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
@@ -205,7 +202,11 @@ public class FixArchiveScanner implements AutoCloseable
             originalChannel,
             sourceIdentity) ->
             {
-                if (streamId == queryStreamId && strippedChannel.contains(aeronChannel))
+                final ChannelUri uri = ChannelUri.parse(strippedChannel);
+                uri.remove(CommonContext.SESSION_ID_PARAM_NAME);
+                final String comparableChannel = uri.toString();
+
+                if (streamId == queryStreamId && comparableChannel.contains(aeronChannel))
                 {
                     archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
                 }
