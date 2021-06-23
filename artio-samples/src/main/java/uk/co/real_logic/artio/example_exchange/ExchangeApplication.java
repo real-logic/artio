@@ -34,7 +34,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
-public class ExchangeApplication
+public final class ExchangeApplication
 {
     public static final String ACCEPTOR_COMP_ID = "exexchange";
     public static final String INITIATOR_COMP_ID = "extrader";

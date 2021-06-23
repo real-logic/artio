@@ -87,15 +87,15 @@ public final class SessionConfiguration
         final boolean enableLastMsgSeqNumProcessed,
         final Class<? extends FixDictionary> fixDictionary)
     {
-        Objects.requireNonNull(hosts);
-        Objects.requireNonNull(ports);
-        Objects.requireNonNull(senderCompId);
-        Objects.requireNonNull(senderSubId);
-        Objects.requireNonNull(senderLocationId);
-        Objects.requireNonNull(targetCompId);
-        Objects.requireNonNull(targetSubId);
-        Objects.requireNonNull(targetLocationId);
-        Objects.requireNonNull(fixDictionary);
+        Objects.requireNonNull(hosts, "hosts");
+        Objects.requireNonNull(ports, "ports");
+        Objects.requireNonNull(senderCompId, "senderCompId");
+        Objects.requireNonNull(senderSubId, "senderSubId");
+        Objects.requireNonNull(senderLocationId, "senderLocationId");
+        Objects.requireNonNull(targetCompId, "targetCompId");
+        Objects.requireNonNull(targetSubId, "targetSubId");
+        Objects.requireNonNull(targetLocationId, "targetLocationId");
+        Objects.requireNonNull(fixDictionary, "fixDictionary");
 
         requireNonEmpty(hosts, "hosts");
         requireNonEmpty(ports, "ports");
