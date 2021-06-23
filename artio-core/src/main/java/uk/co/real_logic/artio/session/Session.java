@@ -1456,6 +1456,12 @@ public class Session
                     return ABORT;
                 }
 
+                if (proxy.seqNumResetRequested())
+                {
+                    lastReceivedMsgSeqNum = 0;
+                    nextSequenceIndex(logonTimeInNs);
+                }
+
                 // Don't configure this session as active until successful outbound publication
                 setupCompleteLogonState(logonTimeInNs, heartbeatIntervalInS, username, password, timeInNs());
                 // If this is the first logon message this session has received, even if sequence
@@ -1481,9 +1487,9 @@ public class Session
                 final boolean requestSeqNumReset = proxy.seqNumResetRequested();
                 if (requestSeqNumReset) // if we requested sequence number reset then do not await for replay
                 {
-                    lastReceivedMsgSeqNum = 0; // TODO: should this not be msgSeqNum?
+                    lastReceivedMsgSeqNum = 0;
                     setupCompleteLogonStateReset(logonTimeInNs, heartbeatIntervalInS, username, password, timeInNs());
-
+                    nextSequenceIndex(logonTimeInNs); // reset asked so reset
                     return CONTINUE;
                 }
                 else

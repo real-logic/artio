@@ -74,6 +74,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         assertEquals(CONTINUE, onLogon(1));
 
         assertState(ACTIVE);
+        verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
         verifyNotifiesLoginListener();
         assertHasLogonTime();
