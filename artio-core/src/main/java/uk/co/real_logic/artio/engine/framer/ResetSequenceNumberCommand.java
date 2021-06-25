@@ -158,14 +158,15 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 }
 
                 final GatewaySession gatewaySession = gatewaySessions.sessionById(sessionId);
-                // Engine Managed
-                if (gatewaySession != null)
+                if (gatewaySession instanceof FixGatewaySession)
                 {
-                    if (gatewaySession instanceof FixGatewaySession)
-                    {
-                        session = ((FixGatewaySession)gatewaySession).session();
-                        step = Step.RESET_ENGINE_SESSION;
-                    }
+                    session = ((FixGatewaySession)gatewaySession).session();
+                }
+
+                // Engine Managed
+                if (session != null)
+                {
+                    step = Step.RESET_ENGINE_SESSION;
                 }
                 // Library Managed
                 else if (isAuthenticated())
