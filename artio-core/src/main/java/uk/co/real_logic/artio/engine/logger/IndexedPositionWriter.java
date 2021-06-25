@@ -223,6 +223,7 @@ class IndexedPositionWriter
                 // May not have setup the recording id when these messages come in.
                 case LibraryConnectDecoder.TEMPLATE_ID:
                 case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+                case ConnectDecoder.TEMPLATE_ID: // handover new connection awaits it to be indexed, can't ignore
                     trackPosition(aeronSessionId, endPosition);
                     return;
 
@@ -232,7 +233,6 @@ class IndexedPositionWriter
                 case ControlNotificationDecoder.TEMPLATE_ID:
                 case EndOfDayDecoder.TEMPLATE_ID:
                 case DisconnectDecoder.TEMPLATE_ID:
-                case ConnectDecoder.TEMPLATE_ID:
                     return;
             }
             recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
