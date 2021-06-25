@@ -84,6 +84,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         onLogon(1);
 
         verifyLogon();
+        verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
         assertState(ACTIVE);
     }
