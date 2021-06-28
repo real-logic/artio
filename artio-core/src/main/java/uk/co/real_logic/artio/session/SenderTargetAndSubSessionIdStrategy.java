@@ -219,7 +219,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         {
             return "CompositeKey{" +
                 "localCompId=" + localCompId() +
-                "localSubId=" + localSubId() +
+                ", localSubId=" + localSubId() +
                 ", remoteCompId=" + remoteCompId() +
                 '}';
         }
