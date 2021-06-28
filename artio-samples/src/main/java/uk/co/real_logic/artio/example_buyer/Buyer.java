@@ -89,7 +89,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
             else
             {
                 System.err.printf("Session connect failed %s%n", initiateReply.state());
-                final Exception error = initiateReply.error();
+                final Throwable error = initiateReply.error();
                 if (error != null)
                 {
                     error.printStackTrace();

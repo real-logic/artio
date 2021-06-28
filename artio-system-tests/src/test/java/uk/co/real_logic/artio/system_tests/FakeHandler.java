@@ -39,6 +39,8 @@ import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 public class FakeHandler
     implements SessionHandler, SessionAcquireHandler, SessionExistsHandler
 {
+    public static final String SESSION_START_ERROR = "Unexpected Error";
+
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
 
@@ -55,6 +57,10 @@ public class FakeHandler
     private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
     private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer();
     private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
+
+    private boolean throwInOnSessionStart = false;
+    private boolean onSessionStartCalled = false;
+
     {
         heartbeatEncoder.testReqID("abc");
     }
@@ -175,6 +181,12 @@ public class FakeHandler
 
     public void onSessionStart(final Session session)
     {
+        onSessionStartCalled = true;
+
+        if (throwInOnSessionStart)
+        {
+            throw new RuntimeException(SESSION_START_ERROR);
+        }
     }
 
     public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
@@ -338,5 +350,15 @@ public class FakeHandler
     public MetaDataStatus lastSessionMetaDataStatus()
     {
         return lastSessionMetaDataStatus;
+    }
+
+    public void shouldThrowInOnSessionStart(final boolean throwInOnSessionStart)
+    {
+        this.throwInOnSessionStart = throwInOnSessionStart;
+    }
+
+    public boolean onSessionStartCalled()
+    {
+        return onSessionStartCalled;
     }
 }

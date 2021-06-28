@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
@@ -34,6 +35,8 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
@@ -45,6 +48,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     public static final int THROTTLE_MSG_LIMIT = 3;
     public static final int RESET_THROTTLE_MSG_LIMIT = 5;
 
+    ErrorHandler errorHandler = mock(ErrorHandler.class);
     int port = unusedPort();
 
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
@@ -68,6 +72,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         handler = new FakeHandler(otfAcceptor);
         final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
         configuration.messageValidationStrategy(MessageValidationStrategy.none());
+        configuration.errorHandlerFactory(errorBuffer -> errorHandler);
         library = connect(configuration);
         testSystem = new TestSystem(library);
     }
@@ -164,5 +169,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         close(library);
 
         cleanupMediaDriver(mediaDriver);
+
+        verifyNoMoreInteractions(errorHandler);
     }
 }

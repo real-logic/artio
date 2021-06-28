@@ -36,7 +36,7 @@ abstract class LibraryReply<T> implements Reply<T>
     boolean requiresResend;
     long correlationId;
 
-    private Exception error;
+    private Throwable error;
     private T result;
     private State state = State.EXECUTING;
 
@@ -62,7 +62,7 @@ abstract class LibraryReply<T> implements Reply<T>
         correlationId = libraryPoller.register(this);
     }
 
-    public Exception error()
+    public Throwable error()
     {
         return error;
     }
@@ -83,7 +83,7 @@ abstract class LibraryReply<T> implements Reply<T>
         state = State.COMPLETED;
     }
 
-    void onError(final Exception error)
+    void onError(final Throwable error)
     {
         this.error = error;
         state = State.ERRORED;

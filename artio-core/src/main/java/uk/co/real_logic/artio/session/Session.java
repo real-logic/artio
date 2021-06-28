@@ -528,7 +528,7 @@ public class Session
         return logoutAndDisconnect(APPLICATION_DISCONNECT);
     }
 
-    private long logoutAndDisconnect(final DisconnectReason reason)
+    long logoutAndDisconnect(final DisconnectReason reason)
     {
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
