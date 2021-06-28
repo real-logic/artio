@@ -1,7 +1,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
-import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 
 import java.io.IOException;
@@ -138,8 +138,16 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
 
     public void close()
     {
-        CloseHelper.close(listeningChannel);
-        CloseHelper.close(selector);
+        Exceptions.closeAll(
+            selector,
+            () ->
+            {
+                if (listeningChannel != null)
+                {
+                    listeningChannel.configureBlocking(true);
+                }
+            },
+            listeningChannel);
     }
 
     public void open(final InetSocketAddress address, final TcpChannelSupplier.InitiatedChannelHandler channelHandler)
