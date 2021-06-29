@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Side;
@@ -41,6 +42,7 @@ import static org.agrona.CloseHelper.close;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
@@ -552,6 +554,32 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         {
             awaitedLogon(connection);
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldGracefullyHandleExceptionsInOnSessionStart() throws IOException
+    {
+        setup(true, true, true, SOLE_LIBRARY);
+
+        setupLibrary();
+
+        handler.shouldThrowInOnSessionStart(true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                connection.logon(false);
+
+                final LogonDecoder logonReply = connection.readLogon();
+                assertEquals(1, logonReply.header().msgSeqNum());
+
+                connection.readLogout();
+            });
+        }
+
+        assertTrue(handler.onSessionStartCalled());
+        verify(errorHandler).onError(ArgumentMatchers.any(RuntimeException.class));
     }
 
     private void shouldSupportLogonBasedSequenceNumberReset(

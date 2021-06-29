@@ -48,7 +48,7 @@ public final class Exceptions
             return;
         }
 
-        final List<Exception> exceptions = new ArrayList<>();
+        final List<Throwable> exceptions = new ArrayList<>();
         for (final AutoCloseable closeable : closeables)
         {
             if (closeable != null)
@@ -57,7 +57,7 @@ public final class Exceptions
                 {
                     closeable.close();
                 }
-                catch (final Exception ex)
+                catch (final Throwable ex)
                 {
                     exceptions.add(ex);
                 }
@@ -66,7 +66,7 @@ public final class Exceptions
 
         if (!exceptions.isEmpty())
         {
-            final Exception exception = exceptions.remove(0);
+            final Throwable exception = exceptions.remove(0);
             exceptions.forEach(exception::addSuppressed);
             LangUtil.rethrowUnchecked(exception);
         }

@@ -78,7 +78,7 @@ public interface Reply<T>
      *
      * @return the error iff <code>hasErrored() == true</code> or null otherwise.
      */
-    Exception error();
+    Throwable error();
 
     /**
      * Gets the result if the operation has completed successfully or null.

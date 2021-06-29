@@ -25,7 +25,7 @@ import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL
 import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
 
-public class BuyerApplication
+public final class BuyerApplication
 {
     public static final String AERON_DIRECTORY_NAME = "buyer";
     public static final String AERON_ARCHIVE_DIRECTORY_NAME = "buyer-archive";

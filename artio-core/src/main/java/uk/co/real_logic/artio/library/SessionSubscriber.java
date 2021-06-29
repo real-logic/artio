@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -39,6 +40,7 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
     private final Timer sessionTimer;
     private final LibraryPoller libraryPoller;
     private final long replyTimeoutInMs;
+    private final ErrorHandler errorHandler;
 
     private SessionHandler handler;
     private InitiateSessionReply initiateSessionReply;
@@ -51,7 +53,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
         final Timer receiveTimer,
         final Timer sessionTimer,
         final LibraryPoller libraryPoller,
-        final long replyTimeoutInMs)
+        final long replyTimeoutInMs,
+        final ErrorHandler errorHandler)
     {
         this.info = info;
         this.parser = parser;
@@ -60,6 +63,7 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
         this.sessionTimer = sessionTimer;
         this.libraryPoller = libraryPoller;
         this.replyTimeoutInMs = replyTimeoutInMs;
+        this.errorHandler = errorHandler;
         this.session.sessionProcessHandler(this);
     }
 
@@ -184,14 +188,33 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
 
     public void onLogon(final Session session)
     {
-        handler.onSessionStart(session);
-
-        if (initiateSessionReply != null)
+        try
         {
-            initiateSessionReply.onComplete(session);
-            // Don't want to hold a reference to the reply object for the
-            // lifetime of the Session
-            initiateSessionReply = null;
+            handler.onSessionStart(session);
+
+            if (initiateSessionReply != null)
+            {
+                initiateSessionReply.onComplete(session);
+                // Don't want to hold a reference to the reply object for the
+                // lifetime of the Session
+                initiateSessionReply = null;
+            }
+        }
+        catch (final Throwable t)
+        {
+            if (initiateSessionReply != null)
+            {
+                initiateSessionReply.onError(t);
+                // Don't want to hold a reference to the reply object for the
+                // lifetime of the Session
+                initiateSessionReply = null;
+            }
+            else
+            {
+                errorHandler.onError(t);
+            }
+
+            ((InternalSession)session).logoutAndDisconnect(DisconnectReason.CALLBACK_EXCEPTION);
         }
     }
 

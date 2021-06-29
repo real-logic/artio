@@ -15,7 +15,7 @@ import static uk.co.real_logic.artio.example_exchange.ExchangeApplication.cleanu
 
 public class BuyerAgent implements Agent
 {
-    private FixEngine gateway;
+    private FixEngine engine;
     private FixLibrary library;
     private final Buyer buyer = new Buyer();
 
@@ -36,7 +36,7 @@ public class BuyerAgent implements Agent
 
         cleanupOldLogFileDir(engineConfiguration);
 
-        gateway = FixEngine.launch(engineConfiguration);
+        engine = FixEngine.launch(engineConfiguration);
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
@@ -60,7 +60,7 @@ public class BuyerAgent implements Agent
     @Override
     public void onClose()
     {
-        CloseHelper.close(gateway);
+        CloseHelper.close(engine);
     }
 
     @Override
