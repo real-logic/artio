@@ -45,7 +45,7 @@ def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
 
-defaultTasks 'clean', 'build', 'javadoc'
+defaultTasks 'clean', 'build'
 
 def projectPom = {
     name = 'artio'
@@ -341,6 +341,9 @@ project(':artio-ilink3-codecs') {
     }
 
     sourcesJar {
+        if (iLink3Enabled) {
+            dependsOn 'generateMessages'
+        }
         from sourceSets.generated.java
     }
 
@@ -403,10 +406,10 @@ project(':artio-binary-entrypoint-codecs') {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
         classpath = configurations.codecGeneration
         systemProperties(
-                'sbe.output.dir': generatedDir,
-                'sbe.target.language': 'Java',
-                'sbe.java.generate.interfaces': 'true',
-                'sbe.generate.ir': 'true')
+            'sbe.output.dir': generatedDir,
+            'sbe.target.language': 'Java',
+            'sbe.java.generate.interfaces': 'true',
+            'sbe.generate.ir': 'true')
         args = [ sbePath ]
     }
 
@@ -476,7 +479,10 @@ project(':artio-ilink3-impl') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        api project(':artio-ilink3-codecs')
+        if (iLink3Enabled) {
+            api project(':artio-ilink3-codecs')
+        }
+
         api project(':artio-codecs')
         api project(':artio-core')
     }
