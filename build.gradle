@@ -270,6 +270,7 @@ project(':artio-codecs') {
     }
 
     sourcesJar {
+        dependsOn 'generateMessages'
         from sourceSets.generated.java
     }
 
@@ -322,7 +323,7 @@ project(':artio-ilink3-codecs') {
         compileGeneratedJava.dependsOn 'generateMessages', 'copySbeIr'
 
         task generateMessages(type: JavaExec) {
-            main = 'uk.co.real_logic.sbe.SbeTool'
+            mainClass.set('uk.co.real_logic.sbe.SbeTool')
             classpath = configurations.codecGeneration
             systemProperties(
                 'sbe.output.dir': generatedDir,
@@ -416,6 +417,7 @@ project(':artio-binary-entrypoint-codecs') {
     }
 
     sourcesJar {
+        dependsOn 'generateMessages'
         from sourceSets.generated.java
     }
 
@@ -542,6 +544,7 @@ project(':artio-session-codecs') {
     }
 
     sourcesJar {
+        dependsOn 'generateCodecs', 'generateOtherCodecs'
         from sourceSets.generated.java
     }
 
@@ -576,7 +579,10 @@ project(':artio-session-fixt-codecs') {
 
     def generatedDir = file("$buildDir/generated-src")
     sourceSets {
-        generated.java.srcDir generatedDir
+        generated {
+            java.srcDir generatedDir
+            compileClasspath += configurations.codecGeneration
+        }
     }
 
     compileJava.dependsOn 'compileGeneratedJava'
@@ -599,6 +605,7 @@ project(':artio-session-fixt-codecs') {
     }
 
     sourcesJar {
+        dependsOn 'generateCodecs'
         from sourceSets.generated.java
     }
 
@@ -773,9 +780,9 @@ project(':artio-binary-entrypoint-system-tests') {
 
     test {
         systemProperties(
-                'aeron.dir.warn.if.exists': 'false',
-                'aeron.use.windows.high.res.timer': 'true',
-                'aeron.term.buffer.sparse.file': 'true')
+            'aeron.dir.warn.if.exists': 'false',
+            'aeron.use.windows.high.res.timer': 'true',
+            'aeron.term.buffer.sparse.file': 'true')
     }
 
     publishing {
