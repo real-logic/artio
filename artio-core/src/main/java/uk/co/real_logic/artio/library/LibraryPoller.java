@@ -25,10 +25,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.ArrayUtil;
-import org.agrona.collections.CollectionUtil;
-import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.LongHashSet;
+import org.agrona.collections.*;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -114,6 +111,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private final Long2ObjectHashMap<WeakReference<InternalSession>> sessionIdToCachedSession =
         new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<WeakReference<SessionWriter>> sessionIdToFollowerSessionWriter =
+        new Long2ObjectHashMap<>(0, Hashing.DEFAULT_LOAD_FACTOR);
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private InternalFixPConnection[] fixPConnections = EMPTY_FIXP_CONNECTIONS;
     private final List<InternalFixPConnection> unmodifiableFixPConnections =
@@ -297,20 +296,20 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resendFromSequenceIndex);
     }
 
-    SessionWriter followerSession(final long id, final long connectionId, final int sequenceIndex)
+    SessionWriter sessionWriter(final long sessionId, final long connectionId, final int sequenceIndex)
     {
         checkState();
 
         return new SessionWriter(
             libraryId,
-            id,
+            sessionId,
             connectionId,
             sessionBuffer(),
             outboundPublication,
             sequenceIndex);
     }
 
-    Reply<SessionWriter> followerSession(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
+    Reply<SessionWriter> sessionWriter(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         validateEndOfDay();
 
@@ -1037,7 +1036,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             remoteCompId, remoteSubId, remoteLocationId);
 
         session.username(username); session.password(password);
-        session.setupSession(sessionId, compositeKey);
+        session.setupSession(sessionId, compositeKey, sessionIdToFollowerSessionWriter.get(sessionId));
         session.closedResendInterval(closedResendInterval);
         session.resendRequestChunkSize(resendRequestChunkSize);
         session.sendRedundantResendRequests(sendRedundantResendRequests);
@@ -1319,10 +1318,46 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FollowerSessionReply reply = (FollowerSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
-            reply.onComplete(followerSession(sessionId, NO_CONNECTION_ID, 0));
+            reply.onComplete(followerSession(sessionId));
         }
 
         return CONTINUE;
+    }
+
+    SessionWriter followerSession(final long sessionId)
+    {
+        checkState();
+
+        // requestFollowerSession called twice for the same session id
+        final WeakReference<SessionWriter> ref = sessionIdToFollowerSessionWriter.get(sessionId);
+        if (ref != null)
+        {
+            final SessionWriter oldRef = ref.get();
+            if (oldRef != null)
+            {
+                return oldRef;
+            }
+        }
+
+        final SessionWriter sessionWriter = sessionWriter(sessionId, GatewayProcess.NO_CONNECTION_ID, 0);
+        sessionIdToFollowerSessionWriter.put(sessionId, new WeakReference<>(sessionWriter));
+
+        linkSession(sessionId, sessionWriter, sessions);
+        linkSession(sessionId, sessionWriter, pendingInitiatorSessions);
+
+        return sessionWriter;
+    }
+
+    private void linkSession(final long sessionId, final SessionWriter sessionWriter, final InternalSession[] sessions)
+    {
+        for (final InternalSession session : sessions)
+        {
+            if (session.id() == sessionId)
+            {
+                session.linkTo(sessionWriter);
+                break;
+            }
+        }
     }
 
     public Action onReplayMessagesReply(final int libraryId, final long replyToId, final ReplayMessagesStatus status)
@@ -2129,6 +2164,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     session.close();
                 }
             }
+
+            for (final WeakReference<SessionWriter> ref : sessionIdToFollowerSessionWriter.values())
+            {
+                final SessionWriter sessionWriter = ref.get();
+                if (sessionWriter != null)
+                {
+                    InternalSession.closeWriter(sessionWriter);
+                }
+            }
+
             if (configuration.gracefulShutdown())
             {
                 connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());

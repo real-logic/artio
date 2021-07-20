@@ -237,7 +237,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         this.heartbeatIntervalInS = heartbeatIntervalInS;
         if (session != null)
         {
-            session.setupSession(sessionId, sessionKey);
+            session.setupSession(sessionId, sessionKey, null);
             sessionParser.sessionKey(sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());

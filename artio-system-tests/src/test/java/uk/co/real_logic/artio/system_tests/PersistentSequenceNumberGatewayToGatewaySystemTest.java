@@ -21,14 +21,17 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
@@ -499,8 +502,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         // check that after release it can be re-acquired and logon.
         acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
-        onAcquireSession = this::nothing;
-        connectPersistingSessions();
+        connectPersistingSessionsWithoutAcquiring();
         assertConnected(acceptingSession);
     }
 
@@ -520,6 +522,69 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         receivedReplayFromReconnectedSession();
 
         logoutInitiatingSession();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSynchroniseOfflineSequenceNumbersWithFollowerSession()
+    {
+        launch(this::nothing);
+
+        final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
+
+        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
+        final long sessionId = sessionWriter.id();
+
+        // we rely on this API handing out the same object for the same session id
+        final SessionWriter sameSessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
+        assertSame(sessionWriter, sameSessionWriter);
+
+        int sequenceNumber = 2;
+        final long position = sendReportOnFollowerSession(testSystem, sessionWriter, sequenceNumber, PossDupOption.NO);
+        testSystem.awaitPosition(positionCounter, position);
+
+        // acquired sessions should know the sequence number from the follower session.
+        acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+        assertEquals(sequenceNumber, acceptingSession.lastSentMsgSeqNum());
+
+        // acquired sessions should be informed of sequence number changes.
+        sequenceNumber++;
+        sendReportOnFollowerSession(testSystem, sessionWriter, sequenceNumber, PossDupOption.NO);
+        assertEquals(sequenceNumber, acceptingSession.lastSentMsgSeqNum());
+        connectPersistingSessionsWithoutAcquiring();
+
+        logoutAcceptingSession();
+        assertSessionDisconnected(initiatingSession);
+        assertSessionDisconnected(acceptingSession);
+        sequenceNumber = acceptingSession.lastSentMsgSeqNum();
+
+        // Cover the other ordering of session first acquired before session writer.
+        closeAcceptingLibrary();
+
+        // Check that the old session writer can't be used.
+        assertClosed(() -> sessionWriter.send(new NewOrderSingleEncoder(), 1));
+        assertClosed(() -> sessionWriter.sequenceIndex(5));
+        assertClosed(() -> sessionWriter.send(null, 1, 1, 1, 1));
+        assertClosed(() -> sessionWriter.requestDisconnect(DisconnectReason.EXCEPTION));
+
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
+
+        acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+        assertEquals(sequenceNumber, acceptingSession.lastSentMsgSeqNum());
+
+        final SessionWriter newSessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
+        assertEquals(sessionId, newSessionWriter.id());
+        assertNotSame(sessionWriter, newSessionWriter);
+
+        sequenceNumber++;
+        sendReportOnFollowerSession(testSystem, newSessionWriter, sequenceNumber, PossDupOption.NO);
+        assertEquals(sequenceNumber, acceptingSession.lastSentMsgSeqNum());
+    }
+
+    private void assertClosed(final ThrowingRunnable throwingRunnable)
+    {
+        assertThrows(IllegalStateException.class, throwingRunnable);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -821,13 +886,18 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void receivedReplayFromReconnectedSession()
     {
-        onAcquireSession = this::nothing;
-        connectPersistingSessions();
+        connectPersistingSessionsWithoutAcquiring();
 
         for (final int resendMsgSeqNum : resendMsgSeqNums)
         {
             assertReceivedReplayedReport(resendMsgSeqNum);
         }
+    }
+
+    private void connectPersistingSessionsWithoutAcquiring()
+    {
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
     }
 
     void sendReportsOnFollowerSession(

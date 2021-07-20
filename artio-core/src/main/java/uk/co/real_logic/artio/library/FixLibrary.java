@@ -364,11 +364,12 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
-     *
      * Creates a new SessionWriter for a specified session. This can be used in a clustered system to write messages
      * outbound for a system on its primary node. In a clustered system the <code>SessionProxy</code> would be hooked so
      * writing messages outbound on a normal Session object won't work.
+     *
+     * Messages written using this writer won't update the sent sequence number of any corresponding Session object.
+     * This is designed to support the intended use-case of hooking the session proxy.
      *
      * @param sessionId the id of the session to use.
      * @param connectionId the id of the connection to use.
@@ -378,15 +379,17 @@ public class FixLibrary extends GatewayProcess
     public SessionWriter sessionWriter(
         final long sessionId, final long connectionId, final int sequenceIndex)
     {
-        return poller.followerSession(sessionId, connectionId, sequenceIndex);
+        return poller.sessionWriter(sessionId, connectionId, sequenceIndex);
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
-     *
      * Create a SessionWriter for a Session from a different Artio instance. This SessionWriter can be used in a
      * clustered system to fill the archive on a follower node with FIX messages that have been replicated by a
      * leader node.
+     *
+     * Messages written using this writer will update the sent sequence number of any corresponding Session object.
+     * This allows offline sessions to be created using this method and messages sent via either the SessionWriter
+     * or the Session itself.
      *
      * @param headerEncoder the message header that contains fields that identify the Session. You could set the
      *                      senderCompId and targetCompId on this header for example if those are the fields used to
@@ -397,7 +400,7 @@ public class FixLibrary extends GatewayProcess
     public Reply<SessionWriter> followerSession(
         final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
-        return poller.followerSession(headerEncoder, timeoutInMs);
+        return poller.sessionWriter(headerEncoder, timeoutInMs);
     }
 
     /**

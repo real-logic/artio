@@ -34,31 +34,49 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 public class SessionWriter
 {
     private final int libraryId;
-    private final long id;
+    private final long sessionId;
     private final long connectionId;
     private final MutableAsciiBuffer asciiBuffer;
     private final GatewayPublication publication;
     private int sequenceIndex;
+    private Session session;
+    private boolean closed = false;
 
     public SessionWriter(
         final int libraryId,
-        final long id,
+        final long sessionId,
         final long connectionId,
         final MutableAsciiBuffer asciiBuffer,
         final GatewayPublication publication,
         final int sequenceIndex)
     {
         this.libraryId = libraryId;
-        this.id = id;
+        this.sessionId = sessionId;
         this.connectionId = connectionId;
         this.asciiBuffer = asciiBuffer;
         this.publication = publication;
         this.sequenceIndex = sequenceIndex;
     }
 
+    // ---------- PUBLIC API ----------
+
+    /**
+     * Sets the sequence index to be used by this SessionWriter
+     *
+     * @param sequenceIndex the sequence index to be used by this SessionWriter
+     * @throws IllegalStateException if the owning FixLibrary object has been closed.
+     */
     public void sequenceIndex(final int sequenceIndex)
     {
+        checkState();
+
         this.sequenceIndex = sequenceIndex;
+
+        final Session session = this.session;
+        if (session != null)
+        {
+            session.sequenceIndex(sequenceIndex);
+        }
     }
 
     /**
@@ -70,9 +88,12 @@ public class SessionWriter
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @throws IllegalStateException if the owning FixLibrary object has been closed.
      */
     public long send(final Encoder encoder, final int seqNum)
     {
+        checkState();
+
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
@@ -90,12 +111,26 @@ public class SessionWriter
      * @param messageType the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @throws IllegalStateException if the owning FixLibrary object has been closed.
      */
     public long send(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
-        return publication.saveMessage(
-            messageBuffer, offset, length, libraryId, messageType, id, sequenceIndex, connectionId, OK, seqNum);
+        checkState();
+
+        final long position = publication.saveMessage(
+            messageBuffer, offset, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK, seqNum);
+
+        if (position > 0)
+        {
+            final Session session = this.session;
+            if (session != null)
+            {
+                session.lastSentMsgSeqNum(seqNum);
+            }
+        }
+
+        return position;
     }
 
     /**
@@ -104,9 +139,12 @@ public class SessionWriter
      * @param reason the reason to log for the disconnect.
      * @return the position in the stream that corresponds to the end of this message or a negative
      *         number indicating an error status.
+     * @throws IllegalStateException if the owning FixLibrary object has been closed.
      */
     public long requestDisconnect(final DisconnectReason reason)
     {
+        checkState();
+
         return publication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
@@ -117,6 +155,31 @@ public class SessionWriter
      */
     public long id()
     {
-        return id;
+        return sessionId;
+    }
+
+    // ---------- END OF PUBLIC API ----------
+
+    // ---------- Internal API ----------
+
+    void linkTo(final Session session)
+    {
+        this.session = session;
+    }
+
+    void checkState()
+    {
+        if (closed)
+        {
+            throw new IllegalStateException("Library has been closed");
+        }
+    }
+
+    /**
+     * Session Writer objects closed when owning library is closed, no need for API users to close the object.
+     */
+    void close()
+    {
+        closed = true;
     }
 }

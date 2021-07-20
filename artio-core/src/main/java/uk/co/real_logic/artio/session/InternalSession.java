@@ -30,6 +30,8 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Exposes Session methods to internal APIs that we don't want to expose to the outside world
  */
@@ -220,9 +222,22 @@ public class InternalSession extends Session implements AutoCloseable
         super.fixDictionary(fixDictionary);
     }
 
-    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    public void setupSession(
+        final long sessionId,
+        final CompositeKey sessionKey,
+        final WeakReference<SessionWriter> sessionWriterRef)
     {
-        super.setupSession(sessionId, sessionKey);
+        super.setupSession(sessionId, sessionKey, sessionWriterRef);
+    }
+
+    public void linkTo(final SessionWriter sessionWriter)
+    {
+        sessionWriter.linkTo(this);
+    }
+
+    public static void closeWriter(final SessionWriter writer)
+    {
+        writer.close();
     }
 
     public void close()

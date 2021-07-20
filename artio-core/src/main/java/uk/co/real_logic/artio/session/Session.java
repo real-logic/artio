@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.lang.ref.WeakReference;
 import java.util.function.BooleanSupplier;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -1623,11 +1624,23 @@ public class Session
         }
     }
 
-    void setupSession(final long sessionId, final CompositeKey sessionKey)
+    void setupSession(
+        final long sessionId,
+        final CompositeKey sessionKey,
+        final WeakReference<SessionWriter> sessionWriterRef)
     {
         id(sessionId);
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
+
+        if (sessionWriterRef != null)
+        {
+            final SessionWriter sessionWriter = sessionWriterRef.get();
+            if (sessionWriter != null)
+            {
+                sessionWriter.linkTo(this);
+            }
+        }
     }
 
     private Action replyToLogon(final int heartbeatInterval)
