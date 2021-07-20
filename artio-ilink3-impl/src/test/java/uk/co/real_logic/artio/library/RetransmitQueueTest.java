@@ -23,6 +23,7 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
@@ -231,6 +232,7 @@ public class RetransmitQueueTest
         assertSeqNos(2512, NOT_AWAITING_RETRANSMIT);
     }
 
+    @Ignore
     @Test
     public void shouldNotifyWhenTimeoutBreached()
     {

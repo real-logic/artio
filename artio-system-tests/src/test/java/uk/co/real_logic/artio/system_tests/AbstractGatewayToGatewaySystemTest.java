@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.*;
@@ -25,16 +26,15 @@ import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.CompositeKey;
@@ -45,19 +45,21 @@ import uk.co.real_logic.artio.session.SessionWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static junit.framework.TestCase.assertTrue;
 import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
-import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.unusedPort;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -93,6 +95,35 @@ public class AbstractGatewayToGatewaySystemTest
     TimeRange connectTimeRange;
 
     AgentRunner logger;
+
+    CapturingAuthenticationStrategy auth;
+    MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
+
+    void launchGatewayToGateway()
+    {
+        final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH, true);
+        context.publicationLingerTimeoutNs(SECONDS.toNanos(1));
+        mediaDriver = launchMediaDriver(context);
+
+//        logger = FixMessageLogger.start();
+
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
+                .deleteLogFileDirOnStart(true);
+        auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
+        acceptingConfig.authenticationStrategy(auth);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        acceptingConfig.messageTimingHandler(messageTimingHandler);
+        acceptingEngine = FixEngine.launch(acceptingConfig);
+
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
+        acceptingLibrary = connect(acceptingLibraryConfig);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
+
+        connectSessions();
+    }
 
     @After
     public void close()
@@ -710,5 +741,28 @@ public class AbstractGatewayToGatewaySystemTest
         final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
             acceptingLibrary.followerSession(headerEncoder, timeoutInMs));
         return followerSession.resultIfPresent();
+    }
+
+    void assertAllSessionsOnlyContains(final FixEngine engine, final Session session)
+    {
+        final List<SessionInfo> allSessions = engine.allSessions();
+        assertThat(allSessions, hasSize(1));
+
+        final SessionInfo sessionInfo = allSessions.get(0);
+        assertThat(sessionInfo.sessionId(), is(session.id()));
+        assertThat(sessionInfo.sessionKey(), is(session.compositeKey()));
+    }
+
+    void assertReplayReceivedMessages()
+    {
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+                1, 0, 2, 0, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        final FixMessage testRequest = acceptingOtfAcceptor
+                .receivedMessage(TEST_REQUEST_MESSAGE_AS_STR)
+                .findFirst()
+                .get();
+        assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 }
