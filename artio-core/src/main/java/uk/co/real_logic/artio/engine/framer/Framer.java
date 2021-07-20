@@ -86,8 +86,7 @@ import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_L
 import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
-import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
-import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
+import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
 
 /**
@@ -1942,23 +1941,27 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         else
         {
-            ((FixGatewaySessions)gatewaySessions).acquire(
-                session,
-                state,
-                awaitingResend,
-                (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
-                lastSentSequenceNumber,
-                lastReceivedSequenceNumber,
-                username,
-                password,
-                engineBlockablePosition);
+            // Gateway doesn't need to acquire offline session.
+            if (state != DISCONNECTED)
+            {
+                ((FixGatewaySessions)gatewaySessions).acquire(
+                    session,
+                    state,
+                    awaitingResend,
+                    (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
+                    lastSentSequenceNumber,
+                    lastReceivedSequenceNumber,
+                    username,
+                    password,
+                    engineBlockablePosition);
 
-            schedule(() -> saveManageSession(
-                ENGINE_LIBRARY_ID,
-                session,
-                lastSentSequenceNumber,
-                lastReceivedSequenceNumber,
-                SessionStatus.LIBRARY_NOTIFICATION));
+                schedule(() -> saveManageSession(
+                    ENGINE_LIBRARY_ID,
+                    session,
+                    lastSentSequenceNumber,
+                    lastReceivedSequenceNumber,
+                    SessionStatus.LIBRARY_NOTIFICATION));
+            }
         }
 
         return action;

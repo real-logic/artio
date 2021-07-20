@@ -44,6 +44,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     private final EngineConfiguration configuration;
 
     private FixDictionary fixDictionary;
+    // receiverEndPoint & senderEndPoint null iff session is offline.
     private FixReceiverEndPoint receiverEndPoint;
     private FixSenderEndPoint senderEndPoint;
 
@@ -124,8 +125,11 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         this.session = session;
         this.proxy = proxy;
         this.session.sessionProcessHandler(this);
-        receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
-        senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
+        if (receiverEndPoint != null)
+        {
+            receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
+            senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
+        }
     }
 
     // sets management to a library and also cleans up locally associated session.
@@ -146,9 +150,12 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
     {
         libraryId(libraryId);
-        receiverEndPoint.libraryId(libraryId);
-        receiverEndPoint.pause();
-        senderEndPoint.libraryId(libraryId, blockablePosition);
+        if (receiverEndPoint != null)
+        {
+            receiverEndPoint.libraryId(libraryId);
+            receiverEndPoint.pause();
+            senderEndPoint.libraryId(libraryId, blockablePosition);
+        }
     }
 
     void play()
@@ -235,7 +242,10 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
             sessionParser.sequenceIndex(context.sequenceIndex());
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());
         }
-        senderEndPoint.sessionId(sessionId);
+        if (senderEndPoint != null)
+        {
+            senderEndPoint.sessionId(sessionId);
+        }
     }
 
     public void onLogon(
@@ -322,7 +332,12 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
 
     SlowStatus slowStatus()
     {
-        return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
+        if (isOffline())
+        {
+            return SlowStatus.NOT_SLOW;
+        }
+
+        return senderEndPoint.isSlowConsumer() ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 
     public boolean closedResendInterval()

@@ -108,7 +108,7 @@ public class AbstractGatewayToGatewaySystemTest
 //        logger = FixMessageLogger.start();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
-                .deleteLogFileDirOnStart(true);
+            .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
         acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
@@ -756,13 +756,13 @@ public class AbstractGatewayToGatewaySystemTest
     void assertReplayReceivedMessages()
     {
         final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
-                1, 0, 2, 0, 5_000L);
+            1, 0, 2, 0, 5_000L);
         testSystem.awaitCompletedReplies(reply);
 
         final FixMessage testRequest = acceptingOtfAcceptor
-                .receivedMessage(TEST_REQUEST_MESSAGE_AS_STR)
-                .findFirst()
-                .get();
+            .receivedMessage(TEST_REQUEST_MESSAGE_AS_STR)
+            .findFirst()
+            .get();
         assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 }

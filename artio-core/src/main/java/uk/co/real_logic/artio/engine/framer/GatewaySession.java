@@ -24,6 +24,8 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
 
     protected final ConnectionType connectionType;
     protected final long authenticationTimeoutInMs;
+
+    // null iff session is offline.
     private final ReceiverEndPoint receiverEndPoint;
 
     protected long sessionId;
@@ -82,7 +84,7 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
 
     boolean hasDisconnected()
     {
-        return receiverEndPoint.hasDisconnected();
+        return receiverEndPoint == null || receiverEndPoint.hasDisconnected();
     }
 
     int checkNoLogonDisconnect(final long timeInMs)
@@ -92,7 +94,7 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
             return 0;
         }
 
-        if (disconnectTimeInMs <= timeInMs && !receiverEndPoint.hasDisconnected())
+        if (disconnectTimeInMs <= timeInMs && !hasDisconnected())
         {
             if (hasStartedAuthentication)
             {

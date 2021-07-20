@@ -36,6 +36,10 @@ import static uk.co.real_logic.artio.Timing.withTimeout;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
+
+/**
+ * Offline session tests that don't require persistent sequence numbers.
+ */
 public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
 {
 
@@ -95,7 +99,7 @@ public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.remove(acceptingLibrary);
 
         final List<LibraryInfo> libraries = withTimeout("Library failed to timeout", () ->
-                Optional.of(libraries(acceptingEngine, testSystem)).filter(infos -> infos.size() == 1), 5_000);
+            Optional.of(libraries(acceptingEngine, testSystem)).filter(infos -> infos.size() == 1), 5_000);
         assertThat(libraries.get(0).sessions(), hasSize(0));
     }
 
@@ -109,7 +113,7 @@ public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
         acceptingHandler.clearSessionExistsInfos();
 
         try (FixLibrary initiatingLibrary2 = testSystem.connect(
-                initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock)))
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock)))
         {
             assertTrue(initiatingLibrary.isConnected());
 

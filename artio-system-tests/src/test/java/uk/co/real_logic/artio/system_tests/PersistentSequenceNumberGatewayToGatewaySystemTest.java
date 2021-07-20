@@ -472,7 +472,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldStoreAndForwardMessagesSentWithNewSession()
+    public void shouldStoreAndForwardMessagesSentWithNewOfflineSession()
     {
         launch(this::nothing);
 
@@ -481,6 +481,27 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
         receiveReplayFromOfflineSession(sessionId);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldReleaseNewOfflineSession()
+    {
+        launch(this::nothing);
+
+        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
+        final long sessionId = sessionWriter.id();
+
+        acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+
+        final Reply<SessionReplyStatus> reply = acceptingLibrary.releaseToGateway(
+            acceptingSession, TEST_TIMEOUT_IN_MS);
+        testSystem.awaitCompletedReply(reply);
+
+        // check that after release it can be re-acquired and logon.
+        acceptingSession = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
+        assertConnected(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -784,17 +805,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         receivedReplayFromReconnectedSession();
     }
 
-    private void receivedReplayFromReconnectedSession()
-    {
-        onAcquireSession = this::nothing;
-        connectPersistingSessions();
-
-        for (final int resendMsgSeqNum : resendMsgSeqNums)
-        {
-            assertReceivedReplayedReport(resendMsgSeqNum);
-        }
-    }
-
     private void assertReceivedReplayedReport(final int msgSeqNum)
     {
         final FixMessage executionReport = testSystem.awaitMessageOf(
@@ -807,6 +817,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final LocalDateTime sendingTime = LocalDateTime.parse(executionReport.get(SENDING_TIME), FORMATTER);
         final LocalDateTime origSendingTime = LocalDateTime.parse(executionReport.get(ORIG_SENDING_TIME), FORMATTER);
         assertThat(origSendingTime, Matchers.lessThan(sendingTime));
+    }
+
+    private void receivedReplayFromReconnectedSession()
+    {
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
+
+        for (final int resendMsgSeqNum : resendMsgSeqNums)
+        {
+            assertReceivedReplayedReport(resendMsgSeqNum);
+        }
     }
 
     void sendReportsOnFollowerSession(

@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.Aeron;
-import io.aeron.driver.MediaDriver;
 import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.CountersReader;
@@ -28,24 +27,22 @@ import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.builder.UserRequestEncoder;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
-import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.IntSupplier;
 
 import static java.util.Arrays.asList;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
@@ -55,9 +52,8 @@ import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID;
 import static uk.co.real_logic.artio.FixCounters.lookupCounterIds;
 import static uk.co.real_logic.artio.FixMatchers.*;
-import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.Timing.withTimeout;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
