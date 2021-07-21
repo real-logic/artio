@@ -101,7 +101,7 @@ public class FramerContext
             null);
 
         final FixEndPointFactory endPointFactory;
-        if (configuration.acceptsBinaryEntryPoint())
+        if (configuration.acceptsFixP())
         {
             gatewaySessions = new FixPGatewaySessions(
                 epochClock,
@@ -224,7 +224,7 @@ public class FramerContext
         final ResetSequenceNumberCommand reply = new ResetSequenceNumberCommand(
             sessionId,
             gatewaySessions,
-            configuration.acceptsBinaryEntryPoint() ? fixPContexts : fixContexts,
+            configuration.acceptsFixP() ? fixPContexts : fixContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
             inboundPublication,

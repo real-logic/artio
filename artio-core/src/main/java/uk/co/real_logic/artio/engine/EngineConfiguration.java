@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
+import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
@@ -57,7 +58,6 @@ import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBO
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
-import static uk.co.real_logic.artio.messages.FixPProtocolType.BINARY_ENTRYPOINT;
 import static uk.co.real_logic.artio.messages.FixPProtocolType.ILINK_3;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
@@ -270,7 +270,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean errorIfDuplicateEngineDetected = true;
     private int inboundAdminStream = DEFAULT_INBOUND_ADMIN_STREAM_ID;
     private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
-    private boolean acceptsBinaryEntryPoint = false;
+    private FixPProtocolType acceptorFixPProtocol = null;
     private CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler = null;
     private FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler = null;
     private int throttleWindowInMs = NO_THROTTLE_WINDOW;
@@ -311,15 +311,25 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Configures the engine to accept binary entrypoint connections. The Engine no longer accepts
-     * regular FIX protocol connections and only accepts this binary protocol. Automatically sets
+     * Configures the engine to accept the provided FIXP connections. The Engine no longer accepts
+     * regular FIX protocol connections and only accepts this binary protocol. Protocol must be a valid acceptor
+     * protocol.
+     *
+     * Automatically sets
      * <code>lookupDefaultAcceptorfixDictionary(false)</code>
      *
+     * @param acceptorFixPProtocol the protocol to accept
      * @return this
+     * @throws IllegalArgumentException if acceptorFixPProtocol isn't a valid protocol
      */
-    public EngineConfiguration acceptBinaryEntryPoint()
+    public EngineConfiguration acceptFixPProtocol(final FixPProtocolType acceptorFixPProtocol)
     {
-        this.acceptsBinaryEntryPoint = true;
+        if (!FixPProtocolFactory.isAcceptorImplemented(acceptorFixPProtocol))
+        {
+            throw new IllegalArgumentException(acceptorFixPProtocol + " isn't a valid acceptor protocol");
+        }
+
+        this.acceptorFixPProtocol = acceptorFixPProtocol;
         lookupDefaultAcceptorfixDictionary = false;
         return this;
     }
@@ -1277,14 +1287,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return errorIfDuplicateEngineDetected;
     }
 
-    public boolean acceptsBinaryEntryPoint()
+    public boolean acceptsFixP()
     {
-        return acceptsBinaryEntryPoint;
+        return acceptorFixPProtocol != null;
     }
 
     public FixPProtocolType supportedFixPProtocolType()
     {
-        return acceptsBinaryEntryPoint ? BINARY_ENTRYPOINT : ILINK_3;
+        return acceptsFixP() ? acceptorFixPProtocol : ILINK_3;
     }
 
     /**
@@ -1526,7 +1536,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                 sessionBufferSize()));
         }
 
-        if (acceptsBinaryEntryPoint() && !logAllMessages())
+        if (acceptsFixP() && !logAllMessages())
         {
             throw new IllegalArgumentException("FIXP acceptor is not supported without logging messages");
         }

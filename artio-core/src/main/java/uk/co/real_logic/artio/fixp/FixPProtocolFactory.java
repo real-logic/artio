@@ -22,6 +22,11 @@ import java.lang.reflect.InvocationTargetException;
 
 public final class FixPProtocolFactory
 {
+    public static boolean isAcceptorImplemented(final FixPProtocolType fixPProtocolType)
+    {
+        return fixPProtocolType == FixPProtocolType.BINARY_ENTRYPOINT;
+    }
+
     public static FixPProtocol make(
         final FixPProtocolType protocol, final ErrorHandler errorHandler)
     {

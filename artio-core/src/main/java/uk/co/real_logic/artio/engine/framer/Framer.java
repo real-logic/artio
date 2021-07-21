@@ -261,7 +261,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.finalImagePositions = finalImagePositions;
         this.initialAcceptedSessionOwner = configuration.initialAcceptedSessionOwner();
         this.soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
-        this.acceptsFixP = configuration.acceptsBinaryEntryPoint();
+        this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(

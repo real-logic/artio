@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.io.IOException;
@@ -127,7 +128,7 @@ public class AbstractBinaryEntryPointSystemTest
             .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
             .fixPRetransmitHandler(retransmitHandler)
             .fixPCancelOnDisconnectTimeoutHandler(cancelOnDisconnectTimeoutHandler)
-            .acceptBinaryEntryPoint()
+            .acceptFixPProtocol(FixPProtocolType.BINARY_ENTRYPOINT)
             .bindTo("localhost", port)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart)
             .epochNanoClock(nanoClock);
