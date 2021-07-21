@@ -22,6 +22,7 @@ import org.agrona.IoUtil;
 import org.agrona.Verify;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.errors.ErrorConsumer;
@@ -1419,6 +1420,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
     {
         super.defaultHeartbeatIntervalInS(value);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        super.epochNanoClock(epochNanoClock);
         return this;
     }
 

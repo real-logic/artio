@@ -17,8 +17,6 @@ package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.DeltaInMillisEncoder;
-import org.agrona.concurrent.EpochNanoClock;
-import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -29,12 +27,12 @@ import uk.co.real_logic.artio.fixp.FixPContext;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.*;
 import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 
@@ -42,7 +40,6 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
 {
     public static final int COD_TEST_TIMEOUT_IN_MS = 500;
 
-    private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private final FakeTimeoutHandler timeoutHandler = new FakeTimeoutHandler();
     private BinaryEntryPointClient client;
 
@@ -102,8 +99,6 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
             DeltaInMillisEncoder.timeNullValue(),
             DeltaInMillisEncoder.timeNullValue());
     }
-
-    // TODO: null value used with timeout option - don't enable.
 
     private void setup(
         final CancelOnDisconnectType cancelOnDisconnectType, final long codTestTimeoutInMs) throws IOException

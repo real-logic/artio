@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
@@ -56,6 +58,7 @@ public class AbstractBinaryEntryPointSystemTest
     static final int TIMEOUT_EPSILON_IN_MS = 10;
     static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
 
+    final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     final int port = unusedPort();
 
     ArchivingMediaDriver mediaDriver;
@@ -126,7 +129,8 @@ public class AbstractBinaryEntryPointSystemTest
             .fixPCancelOnDisconnectTimeoutHandler(cancelOnDisconnectTimeoutHandler)
             .acceptBinaryEntryPoint()
             .bindTo("localhost", port)
-            .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
+            .deleteLogFileDirOnStart(deleteLogFileDirOnStart)
+            .epochNanoClock(nanoClock);
 
         if (!printErrors)
         {
@@ -154,10 +158,10 @@ public class AbstractBinaryEntryPointSystemTest
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .fixPConnectionExistsHandler(connectionExistsHandler)
-            .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
-        libraryConfig
+            .fixPConnectionAcquiredHandler(connectionAcquiredHandler)
             .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs)
-            .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
+            .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange)
+            .epochNanoClock(nanoClock);
 
         if (!printErrors)
         {

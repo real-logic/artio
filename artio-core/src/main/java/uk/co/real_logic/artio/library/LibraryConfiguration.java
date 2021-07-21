@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.session.DirectSessionProxy;
@@ -249,6 +250,34 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration noEstablishFixPTimeoutInMs(final long noEstablishFixPTimeoutInMs)
+    {
+        super.noEstablishFixPTimeoutInMs(noEstablishFixPTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration fixPAcceptedSessionMaxRetransmissionRange(
+        final int fixPAcceptedSessionMaxRetransmissionRange)
+    {
+        super.fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        super.epochNanoClock(epochNanoClock);
         return this;
     }
 
