@@ -13,35 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.session;
+package uk.co.real_logic.artio.fixp;
+
+import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
 
 /**
  * Handler interface that is invoked after a cancel on disconnect timeout for an acceptor session.
  *
  * In order for this handler to be invoked:
  * <ul>
- *  <li>Your FIX session dictionary must contain a cancel on disconnect type field associated with a logon
- *  message</li>
- *  <li>A session must specify a CancelOnDisconnectType field in it's logon message that requires
+ *  <li>Your FIX session dictionary must contain a cancel on disconnect type field associated with a establish
+ *  message.</li>
+ *  <li>A session must specify a CancelOnDisconnectType field in it's establish message that requires
  * a cancel on either logout, disconnect or both</li>
- *  <li>the CODTimeoutWindow also specified in the logon message must have expired without a reconnect</li>
+ *  <li>the CODTimeoutWindow also specified in the establish message must have expired without a reconnect</li>
  * </ul>.
  *
  * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
  * for more details around Cancel on disconnect support.
  *
- * Initiator implementations using cancel on disconnect can set the requisite logon fields using a
- * {@link SessionCustomisationStrategy}.
- *
- * The FIXP equivalent to this interface is {@link uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler}.
+ * The FIX equivalent to this interface is {@link CancelOnDisconnectTimeoutHandler}.
  */
-public interface CancelOnDisconnectTimeoutHandler
+public interface FixPCancelOnDisconnectTimeoutHandler
 {
     /**
      * Method invoked when a cancel on disconnect is triggered. This handler is invoked on the Framer thread.
      *
      * @param sessionId the surrogate session id of the cod session.
-     * @param fixSessionKey the full session id of the cod session.
+     * @param context the FIXP context of the cod session.
      */
-    void onCancelOnDisconnectTimeout(long sessionId, CompositeKey fixSessionKey);
+    void onCancelOnDisconnectTimeout(long sessionId, FixPContext context);
 }

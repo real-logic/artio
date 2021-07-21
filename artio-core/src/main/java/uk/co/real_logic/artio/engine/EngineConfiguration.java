@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
@@ -172,6 +173,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final long DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS = SECONDS.toMillis(10);
     public static final int NO_THROTTLE_WINDOW = MISSING_INT;
 
+    public static final long MAX_COD_TIMEOUT_IN_NS = 60_000_000_000L;
+    public static final long MAX_COD_TIMEOUT_IN_MS = 60_000L;
+
     static
     {
         final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
@@ -267,6 +271,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int outboundAdminStream = DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
     private boolean acceptsBinaryEntryPoint = false;
     private CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler = null;
+    private FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler = null;
     private int throttleWindowInMs = NO_THROTTLE_WINDOW;
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
 
@@ -980,13 +985,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the cancel on disconnect timeout handler. This is invoked when a cancel on disconnect event occurs.
+     * Sets the cancel on disconnect timeout handler for FIX sessions. This is invoked when a cancel on disconnect
+     * event occurs.
      *
      * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
      * for more details around Cancel on disconnect support.
      *
      * @param cancelOnDisconnectTimeoutHandler the handler to be invoked when a cancel on disconnect event occurs.
      * @return this
+     * @see #fixPCancelOnDisconnectTimeoutHandler(FixPCancelOnDisconnectTimeoutHandler)
      */
     public EngineConfiguration cancelOnDisconnectTimeoutHandler(
         final CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler)
@@ -995,9 +1002,34 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+
+
+    /**
+     * Sets the cancel on disconnect timeout handler for FIXP connections. This is invoked when a cancel on disconnect
+     * event occurs.
+     *
+     * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+     * for more details around Cancel on disconnect support.
+     *
+     * @param fixPCancelOnDisconnectTimeoutHandler the handler to be invoked when a cancel on disconnect event occurs.
+     * @return this
+     * @see #cancelOnDisconnectTimeoutHandler(CancelOnDisconnectTimeoutHandler)
+     */
+    public EngineConfiguration fixPCancelOnDisconnectTimeoutHandler(
+        final FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler)
+    {
+        this.fixPCancelOnDisconnectTimeoutHandler = fixPCancelOnDisconnectTimeoutHandler;
+        return this;
+    }
+
     public CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler()
     {
         return cancelOnDisconnectTimeoutHandler;
+    }
+
+    public FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler()
+    {
+        return fixPCancelOnDisconnectTimeoutHandler;
     }
 
     public int receiverBufferSize()

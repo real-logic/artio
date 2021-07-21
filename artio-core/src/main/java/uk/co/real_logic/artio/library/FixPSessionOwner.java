@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.artio.library;
 
+import java.util.function.BooleanSupplier;
+
 public interface FixPSessionOwner
 {
+    void enqueueTask(BooleanSupplier task);
+
     void remove(InternalFixPConnection connection);
 }

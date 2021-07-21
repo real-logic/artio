@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 
@@ -41,4 +42,8 @@ public interface BinaryEntrypointConnection extends FixPConnection
     void finishSending();
 
     BinaryEntryPointKey key();
+
+    CancelOnDisconnectType cancelOnDisconnectType();
+
+    long codTimeoutWindow();
 }

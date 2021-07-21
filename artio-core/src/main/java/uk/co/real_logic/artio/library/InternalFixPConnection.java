@@ -322,5 +322,4 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected abstract void onReplayComplete();
 
     protected abstract void onOfflineReconnect(long connectionId, FixPContext context);
-
 }

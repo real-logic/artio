@@ -16,30 +16,25 @@
 package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
-import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
-import org.agrona.CloseHelper;
-import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Test;
-import org.mockito.Mockito;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.FixPSessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 
@@ -47,140 +42,23 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.LogBufferDescriptor.TERM_MIN_LENGTH;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
-import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.ArchivePruneSystemTest.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntryPointClient.*;
 import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
 import static uk.co.real_logic.artio.system_tests.FakeFixPConnectionExistsHandler.requestSession;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiate;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.libraries;
 
-public class BinaryEntryPointSystemTest
+public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTest
 {
-    private static final int AWAIT_TIMEOUT_IN_MS = 10_000;
-    private static final int TIMEOUT_EPSILON_IN_MS = 10;
-    private static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
-
-    private final int port = unusedPort();
-
-    private ArchivingMediaDriver mediaDriver;
-    private TestSystem testSystem;
-    private FixEngine engine;
-    private FixLibrary library;
-
-    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private final ILink3RetransmitHandler retransmitHandler = mock(ILink3RetransmitHandler.class);
-    private final FakeFixPConnectionExistsHandler connectionExistsHandler = new FakeFixPConnectionExistsHandler();
-    private final FakeBinaryEntrypointConnectionHandler connectionHandler = new FakeBinaryEntrypointConnectionHandler();
-    private final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler = new FakeFixPConnectionAcquiredHandler(
-        connectionHandler);
-    private final FakeFixPAuthenticationStrategy fixPAuthenticationStrategy = new FakeFixPAuthenticationStrategy();
-
-    private BinaryEntrypointConnection connection;
-
-    private boolean printErrors = true;
-
-    private void setupArtio()
-    {
-        setup();
-        setupJustArtio(true);
-    }
-
-    private void setup()
-    {
-        mediaDriver = launchMediaDriver();
-        newTestSystem();
-    }
-
-    private void newTestSystem()
-    {
-        testSystem = new TestSystem().awaitTimeoutInMs(AWAIT_TIMEOUT_IN_MS);
-    }
-
-    private void setupArtio(
-        final int logonTimeoutInMs,
-        final int fixPAcceptedSessionMaxRetransmissionRange)
-    {
-        setup();
-        setupJustArtio(true, logonTimeoutInMs, fixPAcceptedSessionMaxRetransmissionRange);
-    }
-
-    private void setupJustArtio(final boolean deleteLogFileDirOnStart)
-    {
-        setupJustArtio(
-            deleteLogFileDirOnStart,
-            DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
-            NO_FIXP_MAX_RETRANSMISSION_RANGE);
-    }
-
-    private void setupJustArtio(
-        final boolean deleteLogFileDirOnStart,
-        final int shortLogonTimeoutInMs,
-        final int fixPAcceptedSessionMaxRetransmissionRange)
-    {
-        final EngineConfiguration engineConfig = new EngineConfiguration()
-            .logFileDir(ACCEPTOR_LOGS)
-            .scheduler(new LowResourceEngineScheduler())
-            .libraryAeronChannel(IPC_CHANNEL)
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .noLogonDisconnectTimeoutInMs(shortLogonTimeoutInMs)
-            .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
-            .fixPRetransmitHandler(retransmitHandler)
-            .acceptBinaryEntryPoint()
-            .bindTo("localhost", port)
-            .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
-
-        if (!printErrors)
-        {
-            engineConfig
-                .errorHandlerFactory(errorBuffer -> errorHandler)
-                .monitoringAgentFactory(MonitoringAgentFactory.none());
-        }
-
-        engine = FixEngine.launch(engineConfig);
-
-        library = launchLibrary(
-            shortLogonTimeoutInMs,
-            fixPAcceptedSessionMaxRetransmissionRange,
-            connectionExistsHandler,
-            connectionAcquiredHandler);
-    }
-
-    private FixLibrary launchLibrary(
-        final int shortLogonTimeoutInMs,
-        final int fixPAcceptedSessionMaxRetransmissionRange,
-        final FakeFixPConnectionExistsHandler connectionExistsHandler,
-        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
-    {
-        final LibraryConfiguration libraryConfig = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .fixPConnectionExistsHandler(connectionExistsHandler)
-            .fixPConnectionAcquiredHandler(connectionAcquiredHandler);
-        libraryConfig
-            .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs)
-            .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
-
-        if (!printErrors)
-        {
-            libraryConfig
-                .errorHandlerFactory(errorBuffer -> errorHandler)
-                .monitoringAgentFactory(MonitoringAgentFactory.none());
-        }
-
-        return testSystem.connect(libraryConfig);
-    }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldEstablishConnectionAtBeginningOfWeek() throws IOException
@@ -1520,20 +1398,6 @@ public class BinaryEntryPointSystemTest
         }
     }
 
-    private void resetHandlers()
-    {
-        connectionHandler.replyToOrder(true);
-        connectionHandler.reset();
-        connectionExistsHandler.reset();
-        connectionAcquiredHandler.reset();
-        connection = null;
-    }
-
-    private BinaryEntryPointClient newClient() throws IOException
-    {
-        return new BinaryEntryPointClient(port, testSystem);
-    }
-
     private void connectionRejected(final NegotiationRejectCode negotiationRejectCode) throws IOException
     {
         try (BinaryEntryPointClient client = newClient())
@@ -1570,127 +1434,8 @@ public class BinaryEntryPointSystemTest
             () -> connectionHandler.templateIds().containsInt(NewOrderSingleDecoder.TEMPLATE_ID));
     }
 
-    private void clientTerminatesSession(final BinaryEntryPointClient client)
-    {
-        client.writeTerminate();
-        client.readTerminate();
-
-        client.close();
-
-        assertConnectionDisconnected();
-    }
-
-    private void acceptorTerminatesSession(final BinaryEntryPointClient client)
-    {
-        client.readTerminate();
-        client.writeTerminate();
-
-        client.assertDisconnected();
-        assertConnectionDisconnected();
-    }
-
-    private void assertConnectionDisconnected()
-    {
-        testSystem.await("onDisconnect not called", () -> connectionHandler.disconnectReason() != null);
-        assertEquals(FixPConnection.State.UNBOUND, connection.state());
-    }
-
-    private BinaryEntryPointClient establishNewConnection() throws IOException
-    {
-        final BinaryEntryPointClient client = newClient();
-        establishNewConnection(client);
-        return client;
-    }
-
-    private void establishNewConnection(final BinaryEntryPointClient client)
-    {
-        establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler);
-    }
-
-    private void establishNewConnection(
-        final BinaryEntryPointClient client,
-        final FakeFixPConnectionExistsHandler connectionExistsHandler,
-        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
-    {
-        client.writeNegotiate();
-
-        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
-
-        client.readNegotiateResponse();
-
-        client.writeEstablish();
-        client.readFirstEstablishAck();
-
-        assertConnectionMatches(client, connectionAcquiredHandler);
-    }
-
-    private void assertConnectionMatches(final BinaryEntryPointClient client)
-    {
-        assertConnectionMatches(client, connectionAcquiredHandler);
-    }
-
-    private void assertConnectionMatches(
-        final BinaryEntryPointClient client, final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
-    {
-        acquireConnection(connectionAcquiredHandler);
-        assertEquals(client.sessionId(), connection.sessionId());
-        assertEquals(client.sessionVerID(), connection.sessionVerId());
-        assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
-    }
-
-    private void acquireConnection(final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
-    {
-        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
-    }
-
     private void libraryAcquiresConnection(final BinaryEntryPointClient client)
     {
         libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
-    }
-
-    private void libraryAcquiresConnection(
-        final BinaryEntryPointClient client,
-        final FakeFixPConnectionExistsHandler connectionExistsHandler,
-        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
-    {
-        testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
-
-        final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
-        assertNotNull(context);
-        assertEquals(client.sessionId(), context.sessionID());
-        assertEquals(client.sessionVerID(), context.sessionVerID());
-//        assertEquals(FIRM_ID, context.enteringFirm());
-
-        assertEquals(client.sessionId(), connectionExistsHandler.lastSurrogateSessionId());
-        final BinaryEntryPointContext id =
-            (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
-        assertEquals(client.sessionId(), id.sessionID());
-        assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
-        final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
-
-        testSystem.awaitCompletedReply(reply);
-        assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
-
-        testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
-    }
-
-    @After
-    public void close()
-    {
-        closeArtio();
-        cleanupMediaDriver(mediaDriver);
-
-        if (printErrors)
-        {
-            verifyNoInteractions(errorHandler);
-        }
-
-        Mockito.framework().clearInlineMocks();
-    }
-
-    private void closeArtio()
-    {
-        testSystem.awaitBlocking(() -> CloseHelper.close(engine));
-        testSystem.close(library);
     }
 }

@@ -15,22 +15,25 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
-import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
-import b3.entrypoint.fixp.sbe.EstablishRejectCode;
-import b3.entrypoint.fixp.sbe.RetransmitRejectCode;
-import b3.entrypoint.fixp.sbe.TerminationCode;
+import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.library.CancelOnDisconnect;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.MAX_COD_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
@@ -47,6 +50,7 @@ class InternalBinaryEntrypointConnection
     private final BinaryEntryPointContext context;
     private final long maxFixPKeepaliveTimeoutInMs;
     private final int maxRetransmissionRange;
+    private final CancelOnDisconnect cancelOnDisconnect;
 
     private TerminationCode resendTerminationCode;
 
@@ -120,6 +124,12 @@ class InternalBinaryEntrypointConnection
 
         nextRecvSeqNo(adjustSeqNo(lastReceivedSequenceNumber));
         nextSentSeqNo(adjustSeqNo(lastSentSequenceNumber));
+        cancelOnDisconnect = new CancelOnDisconnect(
+            configuration.epochNanoClock(),
+            true,
+            deadlineInNs -> !Pressure.isBackPressured(outboundPublication.saveCancelOnDisconnectTrigger(
+                context.sessionID(), deadlineInNs)));
+        cancelOnDisconnect.enqueueTask(owner::enqueueTask);
     }
 
     private void initialState(final BinaryEntryPointContext context)
@@ -150,6 +160,16 @@ class InternalBinaryEntrypointConnection
     public BinaryEntryPointKey key()
     {
         return context.key();
+    }
+
+    public CancelOnDisconnectType cancelOnDisconnectType()
+    {
+        return cancelOnDisconnectType;
+    }
+
+    public long codTimeoutWindow()
+    {
+        return codTimeoutWindow;
     }
 
     protected void keepAliveExpiredTerminate()
@@ -380,8 +400,7 @@ class InternalBinaryEntrypointConnection
 
         if (position > 0)
         {
-            this.cancelOnDisconnectType = cancelOnDisconnectType;
-            this.codTimeoutWindow = codTimeoutWindow;
+            setupCancelOnDisconnect(cancelOnDisconnectType, codTimeoutWindow);
             this.nextRecvSeqNo = nextSeqNo;
             this.suppressRedactResend = false;
 
@@ -391,9 +410,52 @@ class InternalBinaryEntrypointConnection
         return position;
     }
 
+    private void setupCancelOnDisconnect(
+        final CancelOnDisconnectType type, final long codTimeoutWindow)
+    {
+        // If they're using a null time value then we won't cod them.
+        if (type != DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE &&
+            codTimeoutWindow == DeltaInMillisDecoder.timeNullValue())
+        {
+            setupCancelOnDisconnect(DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE, DeltaInMillisDecoder.timeNullValue());
+        }
+        else
+        {
+            this.cancelOnDisconnectType = type;
+            final CancelOnDisconnectOption option;
+            switch (type)
+            {
+                case CANCEL_ON_DISCONNECT_ONLY:
+                    option = CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY;
+                    break;
+
+                case CANCEL_ON_TERMINATE_ONLY:
+                    option = CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY;
+                    break;
+
+                case CANCEL_ON_DISCONNECT_OR_TERMINATE:
+                    option = CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_OR_LOGOUT;
+                    break;
+
+                case DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE:
+                case NULL_VAL:
+                default:
+                    option = CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
+                    break;
+            }
+
+            cancelOnDisconnect.cancelOnDisconnectOption(option);
+
+            this.codTimeoutWindow = Math.min(MAX_COD_TIMEOUT_IN_MS, codTimeoutWindow);
+            cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(MILLISECONDS.toNanos(this.codTimeoutWindow));
+        }
+    }
+
     public long onTerminate(
         final long sessionID, final long sessionVerID, final TerminationCode terminationCode)
     {
+        cancelOnDisconnect.checkCancelOnDisconnectLogout(clock.nanoTime());
+
         // We initiated termination
         if (state == State.UNBINDING)
         {
@@ -410,6 +472,13 @@ class InternalBinaryEntrypointConnection
         checkSession(sessionID, sessionVerID);
 
         return 1;
+    }
+
+    protected void unbindState(final DisconnectReason reason)
+    {
+        cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
+
+        super.unbindState(reason);
     }
 
     private void checkSession(final long sessionID, final long sessionVerID)

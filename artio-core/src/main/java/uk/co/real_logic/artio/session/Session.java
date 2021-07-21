@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.engine.logger.Replayer;
 import uk.co.real_logic.artio.fields.CalendricalUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.library.CancelOnDisconnect;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -53,6 +54,7 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.MAX_COD_TIMEOUT_IN_NS;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.validateMessageThrottleOptions;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNKNOWN_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
@@ -83,7 +85,6 @@ public class Session
     static final short DISCONNECTED_VALUE = 9;
     static final short DISABLED_VALUE = 10;
 
-    private static final long MAX_COD_TIMEOUT_IN_NS = 60_000_000_000L;
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     private static final int INITIAL_SEQUENCE_NUMBER = 1;
@@ -112,7 +113,7 @@ public class Session
     private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
-    private final ConnectionType connectionType;
+    private final CancelOnDisconnect cancelOnDisconnect;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
@@ -197,7 +198,6 @@ public class Session
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType)
     {
-        this.connectionType = connectionType;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -238,6 +238,10 @@ public class Session
         lastMsgSeqNumProcessed = this.enableLastMsgSeqNumProcessed ? 0 : NO_LAST_MSG_SEQ_NUM_PROCESSED;
         timestampEncoder = new UtcTimestampEncoder(epochFractionClock.epochFractionPrecision());
         this.epochFractionClock = epochFractionClock;
+        cancelOnDisconnect = new CancelOnDisconnect(
+            clock,
+            connectionType == ConnectionType.ACCEPTOR,
+            deadlineInNs -> !Pressure.isBackPressured(proxy.sendCancelOnDisconnectTrigger(id(), deadlineInNs)));
     }
 
     // ---------- PUBLIC API ----------
@@ -984,7 +988,7 @@ public class Session
         address("", Session.UNKNOWN);
         connectionId(NO_CONNECTION_ID);
 
-        checkCancelOnDisconnectDisconnect();
+        cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
     }
 
     /**
@@ -1456,7 +1460,7 @@ public class Session
 
         final long logonTimeInNs = clock.nanoTime();
 
-        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+        cancelOnDisconnectOption(cancelOnDisconnectOption);
         cancelOnDisconnectTimeoutWindowInNs(MILLISECONDS.toNanos(cancelOnDisconnectTimeoutWindowInMs));
 
         if (resetSeqNumFlag)
@@ -1533,6 +1537,12 @@ public class Session
                 msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTimeInMs, origSendingTimeInMs, isPossDupOrResend, possDup,
                 position);
         }
+    }
+
+    void cancelOnDisconnectOption(final CancelOnDisconnectOption cancelOnDisconnectOption)
+    {
+        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+        cancelOnDisconnect.cancelOnDisconnectOption(cancelOnDisconnectOption);
     }
 
     protected Action respondToLogon(final int heartbeatInterval)
@@ -1739,7 +1749,7 @@ public class Session
 
         lastReceivedMsgSeqNum(msgSeqNo);
 
-        checkCancelOnDisconnectLogout(timeInNs);
+        cancelOnDisconnect.checkCancelOnDisconnectLogout(timeInNs);
 
         if (state() == AWAITING_LOGOUT)
         {
@@ -2171,36 +2181,6 @@ public class Session
             position);
     }
 
-    void checkCancelOnDisconnectLogout(final long timeInNs)
-    {
-        if (!notifyCancelOnDisconnect(timeInNs, CANCEL_ON_LOGOUT_ONLY))
-        {
-            sessionProcessHandler.enqueueTask(() -> notifyCancelOnDisconnect(timeInNs, CANCEL_ON_LOGOUT_ONLY));
-        }
-    }
-
-    void checkCancelOnDisconnectDisconnect()
-    {
-        final long timeInNs = clock.nanoTime();
-        if (!notifyCancelOnDisconnect(timeInNs, CANCEL_ON_DISCONNECT_ONLY))
-        {
-            sessionProcessHandler.enqueueTask(() -> notifyCancelOnDisconnect(timeInNs, CANCEL_ON_DISCONNECT_ONLY));
-        }
-    }
-
-    private boolean notifyCancelOnDisconnect(final long timeInNs, final CancelOnDisconnectOption option)
-    {
-        if (connectionType == ConnectionType.ACCEPTOR &&
-            (cancelOnDisconnectOption == option ||
-            cancelOnDisconnectOption == CANCEL_ON_DISCONNECT_OR_LOGOUT))
-        {
-            final long deadlineInNs = timeInNs + cancelOnDisconnectTimeoutWindowInNs;
-            return !Pressure.isBackPressured(proxy.sendCancelOnDisconnectTrigger(id(), deadlineInNs));
-        }
-
-        return true;
-    }
-
     void disable()
     {
         state(SessionState.DISABLED);
@@ -2332,6 +2312,7 @@ public class Session
     void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
     {
         this.sessionProcessHandler = sessionProcessHandler;
+        cancelOnDisconnect.enqueueTask(sessionProcessHandler::enqueueTask);
     }
 
     void logoutRejectReason(final int logoutRejectReason)
@@ -2438,6 +2419,7 @@ public class Session
     {
         this.cancelOnDisconnectTimeoutWindowInNs = Math.min(
             MAX_COD_TIMEOUT_IN_NS, cancelOnDisconnectTimeoutWindowInNs);
+        cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(cancelOnDisconnectTimeoutWindowInNs);
     }
 
     void fixDictionary(final FixDictionary fixDictionary)

@@ -58,7 +58,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock);
         acceptorSession.fixDictionary(makeDictionary());
-        acceptorSession.sessionProcessHandler(mockLogonListener);
+        acceptorSession.sessionProcessHandler(sessionProcessHandler);
         return acceptorSession;
     }
 

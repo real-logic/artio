@@ -93,7 +93,7 @@ public abstract class AbstractSessionTest
     ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
     TestRequestEncoder testRequest = new TestRequestEncoder();
-    SessionProcessHandler mockLogonListener = mock(SessionProcessHandler.class);
+    SessionProcessHandler sessionProcessHandler = mock(SessionProcessHandler.class);
 
     AbstractSessionTest()
     {
@@ -1318,6 +1318,6 @@ public abstract class AbstractSessionTest
 
     private void verifyNotifiesLoginListener(final VerificationMode verificationMode)
     {
-        verify(mockLogonListener, verificationMode).onLogon(any());
+        verify(sessionProcessHandler, verificationMode).onLogon(any());
     }
 }

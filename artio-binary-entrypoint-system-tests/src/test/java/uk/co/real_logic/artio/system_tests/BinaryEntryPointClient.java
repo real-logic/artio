@@ -32,6 +32,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -77,6 +78,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private long retransmitRequestTimestampInNs;
 
     private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
+    private CancelOnDisconnectType cancelOnDisconnectType = DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
+    private long codTimeoutWindow = DeltaInMillisEncoder.timeNullValue();
 
     public BinaryEntryPointClient(final int port, final TestSystem testSystem) throws IOException
     {
@@ -99,6 +102,12 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public void skipTemplateId(final int skipTemplateId)
     {
         this.skipTemplateId = skipTemplateId;
+    }
+
+    public void codTimeout(final CancelOnDisconnectType cancelOnDisconnectType, final long codTimeoutWindow)
+    {
+        this.cancelOnDisconnectType = cancelOnDisconnectType;
+        this.codTimeoutWindow = codTimeoutWindow;
     }
 
     public InetSocketAddress remoteAddress()
@@ -339,8 +348,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
         establish.keepAliveInterval().time(keepAliveIntervalInMs);
         establish
             .nextSeqNo(nextSeqNo)
-            .cancelOnDisconnectType(CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE)
-            .codTimeoutWindow().time(DeltaInMillisEncoder.timeNullValue());
+            .cancelOnDisconnectType(cancelOnDisconnectType)
+            .codTimeoutWindow().time(codTimeoutWindow);
 
         write();
     }

@@ -74,7 +74,7 @@ import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_L
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
-final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable, FixPSessionOwner
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
     /**
      * Has connected to an engine instance
@@ -195,6 +195,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser commonFixPParser;
+    private FixPSessionOwner fixPSessionOwner = new FixPSessionOwner()
+    {
+        public void enqueueTask(final BooleanSupplier task)
+        {
+            enqueueTask(task);
+        }
+
+        public void remove(final InternalFixPConnection connection)
+        {
+            fixPConnections = ArrayUtil.remove(fixPConnections, connection);
+            connectionIdToFixPSubscription.remove(connection.connectionId());
+        }
+    };
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -1235,7 +1248,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (subscription != null)
         {
             subscription.onDisconnect(reason);
-            remove(subscription.session());
+            fixPSessionOwner.remove(subscription.session());
         }
     }
 
@@ -1405,7 +1418,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
                 final ILink3ConnectionConfiguration configuration = reply.configuration();
                 final InternalFixPConnection connection = makeILink3Connection(
-                    configuration, connectionId, reply, libraryId, this,
+                    configuration, connectionId, reply, libraryId, fixPSessionOwner,
                     uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid);
                 final FixPProtocol protocol = FixPProtocolFactory.make(FixPProtocolType.ILINK_3, errorHandler);
                 final FixPSubscription subscription = new FixPSubscription(
@@ -1423,7 +1436,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final InitiateILink3ConnectionReply initiateReply,
         final int libraryId,
-        final LibraryPoller owner,
+        final FixPSessionOwner owner,
         final long uuid,
         final long lastReceivedSequenceNumber,
         final long lastSentSequenceNumber,
@@ -1857,7 +1870,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     outboundPublication,
                     inboundPublication,
                     libraryId,
-                    this,
+                    fixPSessionOwner,
                     lastReceivedSequenceNumber,
                     lastSentSequenceNumber,
                     lastConnectPayload,
@@ -2207,11 +2220,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return (List<FixPConnection>)(List<?>)unmodifiableFixPConnections;
     }
 
-    public void remove(final InternalFixPConnection connection)
-    {
-        fixPConnections = ArrayUtil.remove(fixPConnections, connection);
-        connectionIdToFixPSubscription.remove(connection.connectionId());
-    }
 }
 
 class UnmodifiableWrapper<T> extends AbstractList<T>

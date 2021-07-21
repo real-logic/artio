@@ -857,23 +857,113 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
     {
+        if (acceptsFixP)
+        {
+            onFixPCancelOnDisconnectTrigger(sessionId, timeInNs);
+        }
+        else
+        {
+            onFixCancelOnDisconnectTrigger(sessionId, timeInNs);
+        }
+    }
+
+    private void onFixPCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
+    {
+        final FixPCancelOnDisconnectTimeoutHandler handler = configuration.fixPCancelOnDisconnectTimeoutHandler();
+        if (handler != null)
+        {
+            final FixPContext context = fixPContexts.lookupContext(sessionId);
+            if (context == null)
+            {
+                cancelOnDisconnectError(sessionId);
+                return;
+            }
+
+            if (runFixPCancelOnDisconnect(sessionId, timeInNs, handler, context) == BACK_PRESSURED)
+            {
+                schedule(() -> runFixPCancelOnDisconnect(sessionId, timeInNs, handler, context));
+            }
+        }
+    }
+
+    private long runFixPCancelOnDisconnect(
+        final long sessionId,
+        final long timeInNs,
+        final FixPCancelOnDisconnectTimeoutHandler handler,
+        final FixPContext sessionKey)
+    {
+        if (clock.nanoTime() > timeInNs)
+        {
+            try
+            {
+                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
+            }
+            catch (final Throwable t)
+            {
+                cancelOnDisconnectException(t);
+            }
+            return COMPLETE;
+        }
+        else
+        {
+            return BACK_PRESSURED;
+        }
+    }
+
+    private void cancelOnDisconnectException(final Throwable t)
+    {
+        errorHandler.onError(new FixGatewayException(
+            "Error executing cancel on disconnect timeout handler", t));
+    }
+
+    private void onFixCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
+    {
         final CancelOnDisconnectTimeoutHandler handler = configuration.cancelOnDisconnectTimeoutHandler();
         if (handler != null)
         {
             final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
             if (entry == null)
             {
-                errorHandler.onError(new IllegalStateException("Unknown session id when performing cancel on" +
-                    " disconnect timeout: " + sessionId));
+                cancelOnDisconnectError(sessionId);
                 return;
             }
 
             final CompositeKey sessionKey = entry.getKey();
-            if (runCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey) == BACK_PRESSURED)
+            if (runFixCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey) == BACK_PRESSURED)
             {
-                schedule(() -> runCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey));
+                schedule(() -> runFixCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey));
             }
         }
+    }
+
+    private long runFixCancelOnDisconnect(
+        final long sessionId,
+        final long timeInNs,
+        final CancelOnDisconnectTimeoutHandler handler,
+        final CompositeKey sessionKey)
+    {
+        if (clock.nanoTime() > timeInNs)
+        {
+            try
+            {
+                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
+            }
+            catch (final Throwable t)
+            {
+                cancelOnDisconnectException(t);
+            }
+            return COMPLETE;
+        }
+        else
+        {
+            return BACK_PRESSURED;
+        }
+    }
+
+    private void cancelOnDisconnectError(final long sessionId)
+    {
+        errorHandler.onError(new IllegalStateException("Unknown session id when performing cancel on" +
+            " disconnect timeout: " + sessionId));
     }
 
     public Action onThrottleReject(
@@ -933,31 +1023,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId, final long correlationId, final ThrottleConfigurationStatus ok)
     {
         return Pressure.apply(inboundPublication.saveThrottleConfigurationReply(libraryId, correlationId, ok));
-    }
-
-    private long runCancelOnDisconnect(
-        final long sessionId,
-        final long timeInNs,
-        final CancelOnDisconnectTimeoutHandler handler,
-        final CompositeKey sessionKey)
-    {
-        if (clock.nanoTime() > timeInNs)
-        {
-            try
-            {
-                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
-            }
-            catch (final Throwable t)
-            {
-                errorHandler.onError(new FixGatewayException(
-                    "Error executing cancel on disconnect timeout handler", t));
-            }
-            return COMPLETE;
-        }
-        else
-        {
-            return BACK_PRESSURED;
-        }
     }
 
     private boolean checkDuplicateILinkConnection(

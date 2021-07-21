@@ -140,7 +140,6 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         setManagementTo(libraryId, blockablePosition);
 
         sessionParser = null;
-        session.sessionProcessHandler(null);
         context.updateAndSaveFrom(session);
         session.close();
         session = null;

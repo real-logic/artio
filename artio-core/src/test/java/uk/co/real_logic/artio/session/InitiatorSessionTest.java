@@ -57,7 +57,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock);
         session.fixDictionary(makeDictionary());
-        session.sessionProcessHandler(mockLogonListener);
+        session.sessionProcessHandler(sessionProcessHandler);
     }
 
     @Test
