@@ -1433,9 +1433,4 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         testSystem.await("does not receive new order single",
             () -> connectionHandler.templateIds().containsInt(NewOrderSingleDecoder.TEMPLATE_ID));
     }
-
-    private void libraryAcquiresConnection(final BinaryEntryPointClient client)
-    {
-        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
-    }
 }

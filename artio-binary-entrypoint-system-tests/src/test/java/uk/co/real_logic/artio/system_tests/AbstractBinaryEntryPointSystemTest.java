@@ -307,4 +307,9 @@ public class AbstractBinaryEntryPointSystemTest
         testSystem.await("onDisconnect not called", () -> connectionHandler.disconnectReason() != null);
         assertEquals(FixPConnection.State.UNBOUND, connection.state());
     }
+
+    void libraryAcquiresConnection(final BinaryEntryPointClient client)
+    {
+        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
+    }
 }

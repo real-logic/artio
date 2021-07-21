@@ -77,7 +77,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         setup(DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE, DeltaInMillisEncoder.timeNullValue());
 
         disconnect();
-        assertHandlerNotInvoked();
+        assertDisconnectWithHandlerNotInvoked();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -98,6 +98,28 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
             DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE,
             DeltaInMillisEncoder.timeNullValue(),
             DeltaInMillisEncoder.timeNullValue());
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotTriggerCancelOnDisconnectTimeoutIfReconnectOccurs() throws IOException
+    {
+        setup(CANCEL_ON_DISCONNECT_OR_TERMINATE, COD_TEST_TIMEOUT_IN_MS);
+
+        disconnect();
+
+        client.assertDisconnected();
+
+        reEstablishClient();
+
+        assertHandlerNotInvoked();
+    }
+
+    private void reEstablishClient() throws IOException
+    {
+        client = newClient();
+        client.writeEstablish(1);
+        libraryAcquiresConnection(client);
+        client.readEstablishAck(1, 0);
     }
 
     private void setup(
@@ -132,10 +154,15 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         client.close();
     }
 
-    private void assertHandlerNotInvoked()
+    private void assertDisconnectWithHandlerNotInvoked()
     {
         client.assertDisconnected();
 
+        assertHandlerNotInvoked();
+    }
+
+    private void assertHandlerNotInvoked()
+    {
         testSystem.awaitBlocking(() ->
         {
             try

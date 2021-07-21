@@ -177,6 +177,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final LongHashSet requestAllSessionSeenSessions = new LongHashSet();
+    private final CancelOnDisconnectFinder cancelOnDisconnectFinder = new CancelOnDisconnectFinder();
     private final Image outboundEngineImage;
     private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
@@ -879,41 +880,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return;
             }
 
-            if (runFixPCancelOnDisconnect(sessionId, timeInNs, handler, context) == BACK_PRESSURED)
+            schedule(new CancelOnDisconnectTimeoutOperation(sessionId, timeInNs, clock, errorHandler)
             {
-                schedule(() -> runFixPCancelOnDisconnect(sessionId, timeInNs, handler, context));
-            }
+                protected void onCancelOnDisconnectTimeout()
+                {
+                    handler.onCancelOnDisconnectTimeout(sessionId, context);
+                }
+            });
         }
-    }
-
-    private long runFixPCancelOnDisconnect(
-        final long sessionId,
-        final long timeInNs,
-        final FixPCancelOnDisconnectTimeoutHandler handler,
-        final FixPContext sessionKey)
-    {
-        if (clock.nanoTime() > timeInNs)
-        {
-            try
-            {
-                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
-            }
-            catch (final Throwable t)
-            {
-                cancelOnDisconnectException(t);
-            }
-            return COMPLETE;
-        }
-        else
-        {
-            return BACK_PRESSURED;
-        }
-    }
-
-    private void cancelOnDisconnectException(final Throwable t)
-    {
-        errorHandler.onError(new FixGatewayException(
-            "Error executing cancel on disconnect timeout handler", t));
     }
 
     private void onFixCancelOnDisconnectTrigger(final long sessionId, final long timeInNs)
@@ -929,34 +903,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             final CompositeKey sessionKey = entry.getKey();
-            if (runFixCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey) == BACK_PRESSURED)
+            schedule(new CancelOnDisconnectTimeoutOperation(sessionId, timeInNs, clock, errorHandler)
             {
-                schedule(() -> runFixCancelOnDisconnect(sessionId, timeInNs, handler, sessionKey));
-            }
-        }
-    }
-
-    private long runFixCancelOnDisconnect(
-        final long sessionId,
-        final long timeInNs,
-        final CancelOnDisconnectTimeoutHandler handler,
-        final CompositeKey sessionKey)
-    {
-        if (clock.nanoTime() > timeInNs)
-        {
-            try
-            {
-                handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
-            }
-            catch (final Throwable t)
-            {
-                cancelOnDisconnectException(t);
-            }
-            return COMPLETE;
-        }
-        else
-        {
-            return BACK_PRESSURED;
+                protected void onCancelOnDisconnectTimeout()
+                {
+                    handler.onCancelOnDisconnectTimeout(sessionId, sessionKey);
+                }
+            });
         }
     }
 
@@ -2835,6 +2788,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     boolean onFixLogonMessageReceived(final FixGatewaySession gatewaySession, final long sessionId)
     {
+        stopCancelOnDisconnect(sessionId);
+
         if (checkOfflineSession(gatewaySession, sessionId))
         {
             return true;
@@ -2857,8 +2812,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return false;
     }
 
+    private void stopCancelOnDisconnect(final long sessionId)
+    {
+        cancelOnDisconnectFinder.sessionId = sessionId;
+        retryManager.removeIf(cancelOnDisconnectFinder);
+    }
+
     public boolean onFixPLogonMessageReceived(final FixPGatewaySession session, final long sessionId)
     {
+        stopCancelOnDisconnect(sessionId);
+
         final LiveLibraryInfo library = lookupOfflineLibrary(session, sessionId);
         if (library == null)
         {
@@ -3596,5 +3559,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public AcceptorFixDictionaryLookup acceptorFixDictionaryLookup()
     {
         return acceptorFixDictionaryLookup;
+    }
+
+    static class CancelOnDisconnectFinder implements Predicate<Continuation>
+    {
+        long sessionId;
+
+        public boolean test(final Continuation continuation)
+        {
+            return continuation instanceof CancelOnDisconnectTimeoutOperation &&
+                ((CancelOnDisconnectTimeoutOperation)continuation).sessionId() == sessionId;
+        }
     }
 }

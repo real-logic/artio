@@ -127,7 +127,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         setup(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), 0);
 
         testSystem.awaitRequestDisconnect(initiatingSession);
-        assertHandlerNotInvoked();
+        assertDisconnectWithHandlerNotInvoked();
 
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
@@ -138,7 +138,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         setup(SessionCustomisationStrategy.none());
 
         testSystem.awaitRequestDisconnect(initiatingSession);
-        assertHandlerNotInvoked();
+        assertDisconnectWithHandlerNotInvoked();
 
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
@@ -155,15 +155,34 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals(maxTimeoutInNs, initiatingSession.cancelOnDisconnectTimeoutWindowInNs());
     }
 
-    private void assertHandlerNotInvoked()
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotTriggerCancelOnDisconnectTimeoutIfReconnectOccurs()
+    {
+        setup(CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), COD_TEST_TIMEOUT_IN_MS);
+
+        testSystem.awaitRequestDisconnect(initiatingSession);
+
+        assertSessionDisconnected(initiatingSession);
+
+        connectSessions();
+
+        assertHandlerNotInvoked(COD_TEST_TIMEOUT_IN_MS);
+    }
+
+    private void assertDisconnectWithHandlerNotInvoked()
     {
         assertSessionDisconnected(initiatingSession);
 
+        assertHandlerNotInvoked(COD_TEST_TIMEOUT_IN_MS);
+    }
+
+    private void assertHandlerNotInvoked(final int codTestTimeoutInMs)
+    {
         testSystem.awaitBlocking(() ->
         {
             try
             {
-                Thread.sleep(COD_TEST_TIMEOUT_IN_MS);
+                Thread.sleep(codTestTimeoutInMs);
             }
             catch (final InterruptedException e)
             {
