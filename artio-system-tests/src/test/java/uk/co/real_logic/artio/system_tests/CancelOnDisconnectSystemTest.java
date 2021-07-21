@@ -38,6 +38,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static uk.co.real_logic.artio.CancelOnDisconnectType.*;
+import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -45,6 +46,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     public static final int COD_TEST_TIMEOUT_IN_MS = 500;
+    public static final int LONG_COD_TEST_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? COD_TEST_TIMEOUT_IN_MS : 3_000;
 
     private final FakeTimeoutHandler timeoutHandler = new FakeTimeoutHandler();
 
@@ -158,7 +160,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotTriggerCancelOnDisconnectTimeoutIfReconnectOccurs()
     {
-        setup(CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), COD_TEST_TIMEOUT_IN_MS);
+        setup(CANCEL_ON_DISCONNECT_OR_LOGOUT.representation(), LONG_COD_TEST_TIMEOUT_IN_MS);
 
         testSystem.awaitRequestDisconnect(initiatingSession);
 
@@ -166,7 +168,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         connectSessions();
 
-        assertHandlerNotInvoked(COD_TEST_TIMEOUT_IN_MS);
+        assertHandlerNotInvoked(LONG_COD_TEST_TIMEOUT_IN_MS);
     }
 
     private void assertDisconnectWithHandlerNotInvoked()

@@ -35,10 +35,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.CancelOnDisconnectSystemTest.COD_TEST_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.CancelOnDisconnectSystemTest.LONG_COD_TEST_TIMEOUT_IN_MS;
 
 public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinaryEntryPointSystemTest
 {
-    public static final int COD_TEST_TIMEOUT_IN_MS = 500;
 
     private final FakeTimeoutHandler timeoutHandler = new FakeTimeoutHandler();
     private BinaryEntryPointClient client;
@@ -103,7 +104,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotTriggerCancelOnDisconnectTimeoutIfReconnectOccurs() throws IOException
     {
-        setup(CANCEL_ON_DISCONNECT_OR_TERMINATE, COD_TEST_TIMEOUT_IN_MS);
+        setup(CANCEL_ON_DISCONNECT_OR_TERMINATE, LONG_COD_TEST_TIMEOUT_IN_MS);
 
         disconnect();
 
@@ -111,7 +112,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
 
         reEstablishClient();
 
-        assertHandlerNotInvoked();
+        assertHandlerNotInvoked(LONG_COD_TEST_TIMEOUT_IN_MS);
     }
 
     private void reEstablishClient() throws IOException
@@ -158,16 +159,16 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
     {
         client.assertDisconnected();
 
-        assertHandlerNotInvoked();
+        assertHandlerNotInvoked(COD_TEST_TIMEOUT_IN_MS);
     }
 
-    private void assertHandlerNotInvoked()
+    private void assertHandlerNotInvoked(final int codTestTimeoutInMs)
     {
         testSystem.awaitBlocking(() ->
         {
             try
             {
-                Thread.sleep(COD_TEST_TIMEOUT_IN_MS);
+                Thread.sleep(codTestTimeoutInMs);
             }
             catch (final InterruptedException e)
             {
