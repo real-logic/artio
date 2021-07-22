@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
@@ -391,6 +392,8 @@ public class FixLibrary extends GatewayProcess
      * This allows offline sessions to be created using this method and messages sent via either the SessionWriter
      * or the Session itself.
      *
+     * For the FIX version see {@link #followerFixPSession(FixPContext, long)}.
+     *
      * @param headerEncoder the message header that contains fields that identify the Session. You could set the
      *                      senderCompId and targetCompId on this header for example if those are the fields used to
      *                      identify your session.
@@ -400,7 +403,29 @@ public class FixLibrary extends GatewayProcess
     public Reply<SessionWriter> followerSession(
         final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
-        return poller.sessionWriter(headerEncoder, timeoutInMs);
+        return poller.followerSession(headerEncoder, timeoutInMs);
+    }
+
+    /**
+     * Create a FixPConnection for a FIXP Session from a different Artio instance. This FixPConnection can be used in a
+     * clustered system to fill the archive on a follower node with FIX messages that have been replicated by a
+     * leader node. This allows offline sessions to be created using this method.
+     *
+     * When a connection is re-established with the correct logon credentials then the messages written via this
+     * offline session can be retransmitted.
+     *
+     * For the FIX version see {@link #followerSession(SessionHeaderEncoder, long)}.
+     *
+     * @param context the context that uniquely identifies the connection
+     * @param testTimeoutInMs the timeout required for this operation.
+     * @return the sessionId that can be used to request the offline sesion object using {@link #requestSession(long, int, int, long)}.
+     * @throws IllegalArgumentException if the {@link uk.co.real_logic.artio.fixp.FixPProtocol} of the context is
+     * different to the established protocol within the library.
+     */
+    public Reply<Long> followerFixPSession(
+        final FixPContext context, final long testTimeoutInMs)
+    {
+        return poller.followerFixPSession(context, testTimeoutInMs);
     }
 
     /**
@@ -501,4 +526,5 @@ public class FixLibrary extends GatewayProcess
     {
         return RETHROW_EXCEPTION.get();
     }
+
 }

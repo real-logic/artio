@@ -357,6 +357,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         return handler.onFollowerSessionRequest(
             libraryId,
             followerSessionRequest.correlationId(),
+            followerSessionRequest.protocolType(),
             buffer,
             offset + FOLLOWER_SESSION_REQUEST_LENGTH,
             messageLength,

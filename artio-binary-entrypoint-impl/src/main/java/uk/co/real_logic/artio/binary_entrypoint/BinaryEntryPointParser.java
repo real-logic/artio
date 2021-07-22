@@ -17,9 +17,13 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
+import java.util.function.Consumer;
+
+import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class BinaryEntryPointParser extends AbstractFixPParser
@@ -32,6 +36,14 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private final FinishedSendingDecoder finishedSending = new FinishedSendingDecoder();
     private final FinishedReceivingDecoder finishedReceiving = new FinishedReceivingDecoder();
     private final RetransmitRequestDecoder retransmitRequest = new RetransmitRequestDecoder();
+
+    private final Consumer<StringBuilder> negotiateAppendTo = negotiate::appendTo;
+    private final Consumer<StringBuilder> establishAppendTo = establish::appendTo;
+    private final Consumer<StringBuilder> terminateAppendTo = terminate::appendTo;
+    private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
+    private final Consumer<StringBuilder> finishedSendingAppendTo = finishedSending::appendTo;
+    private final Consumer<StringBuilder> finishedReceivingAppendTo = finishedReceiving::appendTo;
+    private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
 
     private final InternalBinaryEntrypointConnection handler;
 
@@ -106,6 +118,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         final RetransmitRequestDecoder retransmitRequest = this.retransmitRequest;
         retransmitRequest.wrap(buffer, offset, blockLength, version);
 
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", retransmitRequestAppendTo);
+
         return handler.onRetransmitRequest(
             retransmitRequest.sessionID(),
             retransmitRequest.timestamp().time(),
@@ -119,6 +133,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         final FinishedSendingDecoder finishedSending = this.finishedSending;
         finishedSending.wrap(buffer, offset, blockLength, version);
 
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", finishedSendingAppendTo);
+
         return handler.onFinishedSending(
             finishedSending.sessionID(),
             finishedSending.sessionVerID(),
@@ -131,6 +147,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         final FinishedReceivingDecoder finishedReceiving = this.finishedReceiving;
         finishedReceiving.wrap(buffer, offset, blockLength, version);
 
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", finishedReceivingAppendTo);
+
         return handler.onFinishedReceiving(
             finishedReceiving.sessionID(),
             finishedReceiving.sessionVerID());
@@ -140,12 +158,16 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     {
         sequence.wrap(buffer, offset, blockLength, version);
 
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", sequenceAppendTo);
+
         return handler.onSequence(sequence.nextSeqNo());
     }
 
     private long onTerminate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         terminate.wrap(buffer, offset, blockLength, version);
+
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", terminateAppendTo);
 
         return handler.onTerminate(
             terminate.sessionID(),
@@ -156,6 +178,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private long onEstablish(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establish.wrap(buffer, offset, blockLength, version);
+
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", establishAppendTo);
 
         return handler.onEstablish(
             establish.sessionID(),
@@ -170,6 +194,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private long onNegotiate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiate.wrap(buffer, offset, blockLength, version);
+
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", negotiateAppendTo);
 
         return handler.onNegotiate(
             negotiate.sessionID(),

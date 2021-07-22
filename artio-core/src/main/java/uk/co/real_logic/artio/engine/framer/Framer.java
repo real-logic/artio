@@ -2541,10 +2541,60 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public Action onFollowerSessionRequest(
         final int libraryId,
         final long correlationId,
+        final FixPProtocolType fixPProtocolType,
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
         final Header header)
+    {
+        if (acceptsFixP)
+        {
+            if (fixPProtocolType == FixPProtocolType.NULL_VAL ||
+                fixPProtocolType != configuration.supportedFixPProtocolType())
+            {
+                saveError(INVALID_CONFIGURATION, libraryId, correlationId,
+                    "Engine is not configured to accept FIXP protocol: " + fixPProtocolType);
+            }
+            else
+            {
+                initFixPProtocol();
+
+                final long sessionId = fixPParser.sessionId(srcBuffer, srcOffset);
+                final FixPContext context = fixPParser.lookupContext(srcBuffer, srcOffset, srcLength);
+                final FixPFirstMessageResponse resp = fixPContexts.onAcceptorLogon(
+                    sessionId, context, NO_CONNECTION_ID);
+                if (resp != FixPFirstMessageResponse.OK)
+                {
+                    saveError(INVALID_CONFIGURATION, libraryId, correlationId,
+                        "Engine is not configured to accept FIXP protocol: " + fixPProtocolType);
+                }
+                else
+                {
+                    saveFollowerSessionReply(libraryId, correlationId, sessionId);
+                }
+            }
+        }
+        else
+        {
+            if (fixPProtocolType != FixPProtocolType.NULL_VAL)
+            {
+                saveError(INVALID_CONFIGURATION, libraryId, correlationId,
+                    "Engine is not configured to accept FIXP, but FIXP (" + fixPProtocolType +
+                    ") request made");
+            }
+            else
+            {
+                onFixFollowerSessionRequest(libraryId, correlationId, srcBuffer, srcOffset, srcLength);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    private void onFixFollowerSessionRequest(
+        final int libraryId,
+        final long correlationId,
+        final DirectBuffer srcBuffer, final int srcOffset, final int srcLength)
     {
         asciiBuffer.wrap(srcBuffer);
         final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(asciiBuffer, srcOffset, srcLength);
@@ -2561,12 +2611,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         catch (final IllegalArgumentException e)
         {
             saveError(EXCEPTION, libraryId, correlationId, e.getMessage());
-            return CONTINUE;
+            return;
         }
 
         final SessionContext sessionContext = fixContexts.newSessionContext(compositeKey, fixDictionary);
         final long sessionId = sessionContext.sessionId();
 
+        saveFollowerSessionReply(libraryId, correlationId, sessionId);
+    }
+
+    private void saveFollowerSessionReply(
+        final int libraryId, final long correlationId, final long sessionId)
+    {
         schedule(new UnitOfWork(
             () -> inboundPublication.saveFollowerSessionReply(
             libraryId,
@@ -2576,8 +2632,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryId,
             correlationId,
             sessionId)));
-
-        return CONTINUE;
     }
 
     private long saveManageSession(

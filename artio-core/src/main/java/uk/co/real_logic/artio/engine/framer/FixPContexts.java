@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.storage.messages.FixPContextWrapperEncoder;
 import java.util.*;
 import java.util.function.Function;
 
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 
@@ -192,7 +193,7 @@ public class FixPContexts implements SessionContexts
         final long sessionId, final FixPContext context, final long connectionId)
     {
         final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
-        if (duplicateConnection == MISSING_LONG)
+        if (duplicateConnection == MISSING_LONG || duplicateConnection == NO_CONNECTION_ID)
         {
             authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
 

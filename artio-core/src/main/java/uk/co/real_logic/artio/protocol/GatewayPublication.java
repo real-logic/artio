@@ -1027,9 +1027,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveFollowerSessionRequest(
         final int libraryId,
         final long correlationId,
+        final FixPProtocolType protocolType,
         final DirectBuffer srcBuffer,
-        final int srcOffset,
-        final int srcLength)
+        final int srcLength,
+        final int srcOffset)
     {
         final long position = claim(FOLLOWER_SESSION_REQUEST_LENGTH + srcLength);
         if (position < 0)
@@ -1044,6 +1045,7 @@ public class GatewayPublication extends ClaimablePublication
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .correlationId(correlationId)
+            .protocolType(protocolType)
             .putHeader(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();

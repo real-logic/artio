@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,23 @@
  */
 package uk.co.real_logic.artio.library;
 
-import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
-import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE_STR;
-
-class FollowerSessionReply extends LibraryReply<SessionWriter>
+class FixPFollowerSessionReply extends LibraryReply<Long>
 {
-    private static final int INITIAL_BUFFER_SIZE = 4096;
+    private final FixPProtocolType protocolType;
+    private final MutableAsciiBuffer buffer;
 
-    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[INITIAL_BUFFER_SIZE]);
-    private final int offset;
-    private final int length;
-
-    FollowerSessionReply(
+    FixPFollowerSessionReply(
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTimeInMs,
-        final SessionHeaderEncoder headerEncoder)
+        final byte[] firstMessage,
+        final FixPProtocolType protocolType)
     {
         super(libraryPoller, latestReplyArrivalTimeInMs);
-        headerEncoder
-            .msgType(LOGON_MESSAGE_TYPE_STR)
-            .sendingTime(new byte[1]);
-        final long result = headerEncoder.startMessage(buffer, 0);
-        length = Encoder.length(result);
-        offset = Encoder.offset(result);
+        this.buffer = new MutableAsciiBuffer(firstMessage);
+        this.protocolType = protocolType;
 
         if (libraryPoller.isConnected())
         {
@@ -53,7 +42,7 @@ class FollowerSessionReply extends LibraryReply<SessionWriter>
     protected void sendMessage()
     {
         final long position = libraryPoller.saveFollowerSessionRequest(
-            correlationId, FixPProtocolType.NULL_VAL, buffer, offset, length);
+            correlationId, protocolType, buffer, 0, buffer.capacity());
 
         requiresResend = position < 0;
     }

@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.messages.SessionState;
 
@@ -86,6 +87,7 @@ public interface EngineEndPointHandler
     Action onFollowerSessionRequest(
         int libraryId,
         long correlationId,
+        FixPProtocolType fixPProtocolType,
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength,

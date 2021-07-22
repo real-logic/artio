@@ -103,6 +103,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final LongHashSet fixPConnectionIds = new LongHashSet();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
+    private final ManageFixPConnectionDecoder manageFixPConnection = new ManageFixPConnectionDecoder();
     private final FixPMessageEncoder fixPMessageEncoder = new FixPMessageEncoder();
     private final ReplayTimestamper timestamper;
 
@@ -219,57 +220,38 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
             case ILinkConnectDecoder.TEMPLATE_ID:
             {
-                iLinkConnect.wrap(
-                    buffer,
-                    offset,
-                    blockLength,
-                    version);
-
+                iLinkConnect.wrap(buffer, offset, blockLength, version);
                 fixPConnectionIds.add(iLinkConnect.connection());
-
                 return CONTINUE;
             }
 
             case InboundFixPConnectDecoder.TEMPLATE_ID:
             {
-                inboundFixPConnect.wrap(
-                    buffer,
-                    offset,
-                    blockLength,
-                    version);
-
+                inboundFixPConnect.wrap(buffer, offset, blockLength, version);
                 fixPConnectionIds.add(inboundFixPConnect.connection());
+                return CONTINUE;
+            }
 
+            case ManageFixPConnectionDecoder.TEMPLATE_ID:
+            {
+                manageFixPConnection.wrap(buffer, offset, blockLength, version);
+                fixPConnectionIds.add(manageFixPConnection.connection());
                 return CONTINUE;
             }
 
             case RequestDisconnectDecoder.TEMPLATE_ID:
             {
-                requestDisconnect.wrap(
-                    buffer,
-                    offset,
-                    blockLength,
-                    version);
-
+                requestDisconnect.wrap(buffer, offset, blockLength, version);
                 final long connectionId = requestDisconnect.connection();
-
                 onDisconnect(connectionId);
-
                 return CONTINUE;
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrap(
-                    buffer,
-                    offset,
-                    blockLength,
-                    version);
-
+                disconnect.wrap(buffer, offset, blockLength, version);
                 final long connectionId = disconnect.connection();
-
                 onDisconnect(connectionId);
-
                 return CONTINUE;
             }
 

@@ -195,7 +195,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser commonFixPParser;
-    private FixPSessionOwner fixPSessionOwner = new FixPSessionOwner()
+    private AbstractFixPProxy commonFixPProxy;
+
+    private final FixPSessionOwner fixPSessionOwner = new FixPSessionOwner()
     {
         public void enqueueTask(final BooleanSupplier task)
         {
@@ -322,12 +324,26 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sequenceIndex);
     }
 
-    Reply<SessionWriter> sessionWriter(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
+    Reply<SessionWriter> followerSession(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         validateEndOfDay();
 
         return new FollowerSessionReply(
             this, timeInMs() + timeoutInMs, headerEncoder);
+    }
+
+    public Reply<Long> followerFixPSession(final FixPContext context, final long testTimeoutInMs)
+    {
+        validateEndOfDay();
+
+        final FixPProtocolType protocolType = context.protocolType();
+        validateFixP(protocolType);
+        initFixP(protocolType);
+
+        final byte[] firstMessage = commonFixPProxy.encodeFirstMessage(context);
+
+        return new FixPFollowerSessionReply(
+            this, timeInMs() + testTimeoutInMs, firstMessage, protocolType);
     }
 
     Reply<MetaDataStatus> writeMetaData(
@@ -535,16 +551,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     long saveFollowerSessionRequest(
-        final long correlationId, final MutableAsciiBuffer buffer, final int offset, final int length)
+        final long correlationId,
+        final FixPProtocolType protocolType,
+        final MutableAsciiBuffer buffer, final int offset, final int length)
     {
         checkState();
 
         return outboundPublication.saveFollowerSessionRequest(
             libraryId,
             correlationId,
+            protocolType,
             buffer,
-            offset,
-            length);
+            length, offset
+        );
     }
 
     int poll(final int fragmentLimit)
@@ -1328,10 +1347,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onFollowerSessionReply(final int libraryId, final long replyToId, final long sessionId)
     {
-        final FollowerSessionReply reply = (FollowerSessionReply)correlationIdToReply.remove(replyToId);
+        final LibraryReply<?> reply = correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
-            reply.onComplete(followerSession(sessionId));
+            if (reply instanceof FollowerSessionReply)
+            {
+                ((FollowerSessionReply)reply).onComplete(followerSession(sessionId));
+            }
+            else if (reply instanceof FixPFollowerSessionReply)
+            {
+                ((FixPFollowerSessionReply)reply).onComplete(sessionId);
+            }
         }
 
         return CONTINUE;
@@ -1971,12 +1997,26 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    private void validateFixP(final FixPProtocolType protocolType)
+    {
+        if (fixPProtocol != null)
+        {
+            final FixPProtocolType existingType = fixPProtocol.protocolType();
+            if (existingType != protocolType)
+            {
+                throw new IllegalArgumentException("Provided protocol (" + protocolType +
+                    ") clashes with existing configured protocol: " + fixPProtocol);
+            }
+        }
+    }
+
     private void initFixP(final FixPProtocolType protocolType)
     {
         if (fixPProtocol == null)
         {
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
             commonFixPParser = fixPProtocol.makeParser(null);
+            commonFixPProxy = fixPProtocol.makeProxy(outboundPublication.dataPublication(), epochNanoClock);
         }
     }
 
@@ -2219,7 +2259,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         return (List<FixPConnection>)(List<?>)unmodifiableFixPConnections;
     }
-
 }
 
 class UnmodifiableWrapper<T> extends AbstractList<T>

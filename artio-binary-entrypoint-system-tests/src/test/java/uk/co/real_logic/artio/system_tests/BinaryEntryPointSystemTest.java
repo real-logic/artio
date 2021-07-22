@@ -1183,6 +1183,61 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportCreatedOfflineSession() throws IOException
+    {
+        setupArtio();
+
+        // create session and acquire it
+        final int sessionVerID = 2;
+        final BinaryEntryPointContext context = new BinaryEntryPointContext(
+            SESSION_ID,
+            sessionVerID,
+            System.nanoTime(),
+            FIRM_ID,
+            true);
+
+        final Reply<Long> reply = library.followerFixPSession(context, TEST_TIMEOUT_IN_MS);
+        testSystem.awaitCompletedReply(reply);
+        assertEquals(SESSION_ID, reply.resultIfPresent().longValue());
+
+        final Reply<SessionReplyStatus> sessionReply = requestSession(library, SESSION_ID);
+        testSystem.awaitCompletedReply(sessionReply);
+        assertEquals(SessionReplyStatus.OK, sessionReply.resultIfPresent());
+        acquireConnection(connectionAcquiredHandler);
+        assertEquals(FixPConnection.State.UNBOUND, connection.state());
+        assertNextSequenceNumbers(1, 1);
+        assertEquals(SESSION_ID, connection.sessionId());
+        assertEquals(sessionVerID, connection.sessionVerId());
+
+        // re-establish and check sequence number, retransmit messages.
+        final int clOrderID = 2;
+        final long msgPos = sendExecutionReportNew(connection, clOrderID, SECURITY_ID, false);
+        final ReadablePosition pos = testSystem.awaitCompletedReply(
+            engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
+        testSystem.awaitPosition(pos, msgPos);
+        assertNextSequenceNumbers(1, 2);
+
+        resetHandlers();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.sessionVerID(sessionVerID);
+            client.writeEstablish(1);
+
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+
+            assertConnectionMatches(client);
+            assertNextSequenceNumbers(1, 2);
+            client.readEstablishAck(1, 0);
+            client.writeRetransmitRequest(1, 1);
+            client.readRetransmission(1, 1);
+            client.readExecutionReportNew(clOrderID);
+
+            clientTerminatesSession(client);
+        }
+    }
+
     // ----------------------------------
     // END OFFLINE TESTS
     // ----------------------------------
