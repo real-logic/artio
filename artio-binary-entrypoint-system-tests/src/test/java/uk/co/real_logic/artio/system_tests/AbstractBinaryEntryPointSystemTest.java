@@ -205,17 +205,17 @@ public class AbstractBinaryEntryPointSystemTest
 
     void establishNewConnection(final BinaryEntryPointClient client)
     {
-        establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler);
+        establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler, false);
     }
 
     void establishNewConnection(
         final BinaryEntryPointClient client,
         final FakeFixPConnectionExistsHandler connectionExistsHandler,
-        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
+        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler, final boolean offlineOwned)
     {
         client.writeNegotiate();
 
-        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
+        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, offlineOwned);
 
         client.readNegotiateResponse();
 
@@ -261,27 +261,41 @@ public class AbstractBinaryEntryPointSystemTest
     void libraryAcquiresConnection(
         final BinaryEntryPointClient client,
         final FakeFixPConnectionExistsHandler connectionExistsHandler,
-        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
+        final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler,
+        final boolean offlineOwned)
     {
-        testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
+        if (offlineOwned)
+        {
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
 
+            lastAuthStrategySessionIs(client);
+        }
+        else
+        {
+            testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
+
+            lastAuthStrategySessionIs(client);
+
+            assertEquals(client.sessionId(), connectionExistsHandler.lastSurrogateSessionId());
+            final BinaryEntryPointContext id =
+                (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
+            assertEquals(client.sessionId(), id.sessionID());
+            assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
+            final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
+
+            testSystem.awaitCompletedReply(reply);
+            assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
+
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+        }
+    }
+
+    private void lastAuthStrategySessionIs(final BinaryEntryPointClient client)
+    {
         final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
         assertNotNull(context);
         assertEquals(client.sessionId(), context.sessionID());
         assertEquals(client.sessionVerID(), context.sessionVerID());
-//        assertEquals(FIRM_ID, context.enteringFirm());
-
-        assertEquals(client.sessionId(), connectionExistsHandler.lastSurrogateSessionId());
-        final BinaryEntryPointContext id =
-            (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
-        assertEquals(client.sessionId(), id.sessionID());
-        assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
-        final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
-
-        testSystem.awaitCompletedReply(reply);
-        assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
-
-        testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
     }
 
     void clientTerminatesSession(final BinaryEntryPointClient client)
@@ -311,6 +325,6 @@ public class AbstractBinaryEntryPointSystemTest
 
     void libraryAcquiresConnection(final BinaryEntryPointClient client)
     {
-        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler);
+        libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, false);
     }
 }

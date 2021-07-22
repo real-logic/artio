@@ -675,11 +675,11 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
                 client.writeNewOrderSingle(2));
         }
 
-        reNegotiateWithVerId(3, client ->
+        reNegotiateWithVerId(3, false, client ->
             terminatedBySendingMessageAfterFinishedSending(client, () ->
             client.writeSequence(1)));
 
-        reNegotiateWithVerId(4, client ->
+        reNegotiateWithVerId(4, false, client ->
             terminatedBySendingMessageAfterFinishedSending(client, client::writeNegotiate));
     }
 
@@ -1114,7 +1114,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             try (BinaryEntryPointClient client = newClient())
             {
                 client.sessionVerID(2);
-                establishNewConnection(client, connectionExistsHandler2, connectionAcquiredHandler2);
+                establishNewConnection(client, connectionExistsHandler2, connectionAcquiredHandler2, false);
 
                 assertFalse(connectionAcquiredHandler.invoked());
 
@@ -1186,6 +1186,46 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportCreatedOfflineSession() throws IOException
     {
+        final int sessionVerID = offlineSessionWithRetransmittableMessage();
+
+        // re-establish and check sequence number, retransmit messages.
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.sessionVerID(sessionVerID);
+            client.writeEstablish(1);
+
+            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+
+            assertConnectionMatches(client);
+            assertNextSequenceNumbers(1, 2);
+            client.readEstablishAck(1, 0);
+            client.writeRetransmitRequest(1, 1);
+            client.readRetransmission(1, 1);
+            client.readExecutionReportNew();
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportRenegotiateOfCreatedOfflineSession() throws IOException
+    {
+        int sessionVerID = offlineSessionWithRetransmittableMessage();
+
+        // re-negotiate and check sequence number, retransmit messages.
+        sessionVerID++;
+        reNegotiateWithVerId(sessionVerID, true, client ->
+        {
+            assertNextSequenceNumbers(1, 1);
+
+            exchangeOrderAndReportNew(client);
+            assertNextSequenceNumbers(2, 2);
+            clientTerminatesSession(client);
+        });
+    }
+
+    private int offlineSessionWithRetransmittableMessage()
+    {
         setupArtio();
 
         // create session and acquire it
@@ -1210,9 +1250,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(sessionVerID, connection.sessionVerId());
 
-        // re-establish and check sequence number, retransmit messages.
-        final int clOrderID = 2;
-        final long msgPos = sendExecutionReportNew(connection, clOrderID, SECURITY_ID, false);
+        final long msgPos = sendExecutionReportNew(connection, CL_ORD_ID, SECURITY_ID, false);
         final ReadablePosition pos = testSystem.awaitCompletedReply(
             engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
         testSystem.awaitPosition(pos, msgPos);
@@ -1220,22 +1258,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         resetHandlers();
 
-        try (BinaryEntryPointClient client = newClient())
-        {
-            client.sessionVerID(sessionVerID);
-            client.writeEstablish(1);
-
-            testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
-
-            assertConnectionMatches(client);
-            assertNextSequenceNumbers(1, 2);
-            client.readEstablishAck(1, 0);
-            client.writeRetransmitRequest(1, 1);
-            client.readRetransmission(1, 1);
-            client.readExecutionReportNew(clOrderID);
-
-            clientTerminatesSession(client);
-        }
+        return sessionVerID;
     }
 
     // ----------------------------------
@@ -1405,7 +1428,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
-        reNegotiateWithVerId(sessionVerID, client ->
+        reNegotiateWithVerId(sessionVerID, false, client ->
         {
             exchangeOrderAndReportNew(client);
 
@@ -1418,7 +1441,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     private void reNegotiateWithVerId(
-        final int sessionVerID, final Consumer<BinaryEntryPointClient> handler)
+        final int sessionVerID, final boolean offlineOwned, final Consumer<BinaryEntryPointClient> handler)
         throws IOException
     {
         resetHandlers();
@@ -1426,7 +1449,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         try (BinaryEntryPointClient client = newClient())
         {
             client.sessionVerID(sessionVerID);
-            establishNewConnection(client);
+            establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler, offlineOwned);
 
             handler.accept(client);
         }
