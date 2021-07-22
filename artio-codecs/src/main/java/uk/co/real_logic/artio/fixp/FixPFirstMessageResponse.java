@@ -37,6 +37,13 @@ public enum FixPFirstMessageResponse
     NEGOTIATE_DUPLICATE_ID,
 
     /**
+     * A Negotiate message has been rejected due to a duplicate session id, with a bad session version.
+     *
+     * This is used when comparing session versions of follower created sessions.
+     */
+    NEGOTIATE_DUPLICATE_ID_BAD_VER,
+
+    /**
      * A Negotiate message has been rejected with an unspecified reason.
      */
     NEGOTIATE_UNSPECIFIED,

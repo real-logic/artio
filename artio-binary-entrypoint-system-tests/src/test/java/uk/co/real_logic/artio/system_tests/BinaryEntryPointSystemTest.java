@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointKey;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
@@ -1188,6 +1189,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     {
         final int sessionVerID = offlineSessionWithRetransmittableMessage();
 
+        assertOnlyOneFixPSession();
+
         // re-establish and check sequence number, retransmit messages.
         try (BinaryEntryPointClient client = newClient())
         {
@@ -1224,6 +1227,56 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         });
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldCreateFollowerSessionsWhenSessionAlreadyExists() throws IOException
+    {
+        setupArtio();
+
+        // when logged in
+        final BinaryEntryPointContext contextHigherVersion;
+        final BinaryEntryPointContext context;
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            context = new BinaryEntryPointContext(
+                client.sessionId(),
+                client.sessionVerID(),
+                System.nanoTime(),
+                client.sessionVerID(),
+                true);
+
+            createFollowerSession(context);
+
+            // cannot use a different session ver id when logged in
+            contextHigherVersion = new BinaryEntryPointContext(
+                client.sessionId(),
+                client.sessionVerID() + 1,
+                System.nanoTime(),
+                client.sessionVerID(),
+                true);
+            final Reply<Long> reply = library.followerFixPSession(contextHigherVersion, TEST_TIMEOUT_IN_MS);
+            testSystem.awaitErroredReply(reply, containsString(
+                "currently connected with a different session version"));
+
+            clientTerminatesSession(client);
+        }
+        assertOnlyOneFixPSession();
+
+        // When not logged in
+        createFollowerSession(context);
+        assertOnlyOneFixPSession();
+
+        createFollowerSession(contextHigherVersion);
+        assertOnlyOneFixPSession();
+    }
+
+    private void assertOnlyOneFixPSession()
+    {
+        final List<FixPSessionInfo> fixPSessions = engine.allFixPSessions();
+        assertThat(fixPSessions, hasSize(1));
+        final FixPSessionInfo sessionInfo = fixPSessions.get(0);
+        assertEquals(new BinaryEntryPointKey(SESSION_ID), sessionInfo.key());
+    }
+
     private int offlineSessionWithRetransmittableMessage()
     {
         setupArtio();
@@ -1237,9 +1290,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             FIRM_ID,
             true);
 
-        final Reply<Long> reply = library.followerFixPSession(context, TEST_TIMEOUT_IN_MS);
-        testSystem.awaitCompletedReply(reply);
-        assertEquals(SESSION_ID, reply.resultIfPresent().longValue());
+        createFollowerSession(context);
 
         final Reply<SessionReplyStatus> sessionReply = requestSession(library, SESSION_ID);
         testSystem.awaitCompletedReply(sessionReply);
@@ -1259,6 +1310,13 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         resetHandlers();
 
         return sessionVerID;
+    }
+
+    private void createFollowerSession(final BinaryEntryPointContext context)
+    {
+        final Reply<Long> reply = library.followerFixPSession(context, TEST_TIMEOUT_IN_MS);
+        testSystem.awaitCompletedReply(reply);
+        assertEquals(context.sessionID(), reply.resultIfPresent().longValue());
     }
 
     // ----------------------------------

@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 class FixPFollowerSessionReply extends LibraryReply<Long>
@@ -45,5 +46,10 @@ class FixPFollowerSessionReply extends LibraryReply<Long>
             correlationId, protocolType, buffer, 0, buffer.capacity());
 
         requiresResend = position < 0;
+    }
+
+    void onError(final GatewayError errorType, final String errorMessage)
+    {
+        this.onError(new IllegalArgumentException(errorMessage));
     }
 }

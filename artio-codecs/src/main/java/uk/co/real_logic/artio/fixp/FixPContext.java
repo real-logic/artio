@@ -39,6 +39,8 @@ public interface FixPContext
      */
     FixPFirstMessageResponse checkAccept(FixPContext oldContext);
 
+    int compareVersion(FixPContext oldContext);
+
     /**
      * Gets the protocol type for this key.
      *

@@ -412,7 +412,10 @@ public class FixLibrary extends GatewayProcess
      * leader node. This allows offline sessions to be created using this method.
      *
      * When a connection is re-established with the correct logon credentials then the messages written via this
-     * offline session can be retransmitted.
+     * offline session can be retransmitted. If a session already exists within the engine with the same identity then
+     * no duplicate session will be created and the session id of the original session will be returned. In the case
+     * that the session is currently connected, care must be taken to ensure that the version of the FIXP connection
+     * is the same as the connected session id or an error will be returned.
      *
      * For the FIX version see {@link #followerSession(SessionHeaderEncoder, long)}.
      *

@@ -36,6 +36,8 @@ import java.util.function.Function;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID_BAD_VER;
 
 
 public class FixPContexts implements SessionContexts
@@ -193,12 +195,12 @@ public class FixPContexts implements SessionContexts
         final long sessionId, final FixPContext context, final long connectionId)
     {
         final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
+        final FixPKey key = context.key();
+        final FixPContext oldContext = keyToContext.get(key);
         if (duplicateConnection == MISSING_LONG || duplicateConnection == NO_CONNECTION_ID)
         {
             authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
 
-            final FixPKey key = context.key();
-            final FixPContext oldContext = keyToContext.get(key);
             final FixPFirstMessageResponse rejectReason = context.checkAccept(oldContext);
             if (rejectReason == FixPFirstMessageResponse.OK)
             {
@@ -216,7 +218,8 @@ public class FixPContexts implements SessionContexts
         }
         else
         {
-            return FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
+            return context.compareVersion(oldContext) == 0 ?
+                NEGOTIATE_DUPLICATE_ID : NEGOTIATE_DUPLICATE_ID_BAD_VER;
         }
     }
 

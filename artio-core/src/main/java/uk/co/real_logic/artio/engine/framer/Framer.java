@@ -28,7 +28,10 @@ import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.CountersReader;
 import org.agrona.concurrent.status.UnsafeBufferPosition;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LivenessDetector;
+import uk.co.real_logic.artio.LogTag;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -75,8 +78,10 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
-import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.FixContexts.UNKNOWN_SESSION;
+import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID_BAD_VER;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
@@ -2563,14 +2568,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final FixPContext context = fixPParser.lookupContext(srcBuffer, srcOffset, srcLength);
                 final FixPFirstMessageResponse resp = fixPContexts.onAcceptorLogon(
                     sessionId, context, NO_CONNECTION_ID);
-                if (resp != FixPFirstMessageResponse.OK)
+
+                // Duplicate negotiate here means we've already got this session so we just return it.
+                if (resp == FixPFirstMessageResponse.OK || resp == NEGOTIATE_DUPLICATE_ID)
+                {
+                    saveFollowerSessionReply(libraryId, correlationId, sessionId);
+                }
+                else if (resp == NEGOTIATE_DUPLICATE_ID_BAD_VER)
                 {
                     saveError(INVALID_CONFIGURATION, libraryId, correlationId,
-                        "Engine is not configured to accept FIXP protocol: " + fixPProtocolType);
+                        "The session already exists and is currently connected with a different session version" +
+                        ", cannot modify session version whilst connected");
                 }
                 else
                 {
-                    saveFollowerSessionReply(libraryId, correlationId, sessionId);
+                    saveError(INVALID_CONFIGURATION, libraryId, correlationId,
+                        "Engine is not configured to accept FIXP protocol: " + fixPProtocolType);
                 }
             }
         }

@@ -372,6 +372,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 establishRejectCode = EstablishRejectCode.CREDENTIALS;
                 break;
 
+            case NEGOTIATE_DUPLICATE_ID_BAD_VER:
             case NEGOTIATE_DUPLICATE_ID:
                 isNegotiate = true;
                 negotiationRejectCode = NegotiationRejectCode.DUPLICATE_ID;

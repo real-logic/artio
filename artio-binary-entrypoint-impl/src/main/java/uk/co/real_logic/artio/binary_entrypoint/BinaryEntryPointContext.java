@@ -92,11 +92,7 @@ public class BinaryEntryPointContext implements FixPContext
             return checkFirstConnect();
         }
 
-        // Sanity checks
-        if (!(fixPContext instanceof BinaryEntryPointContext))
-        {
-            throw new IllegalArgumentException("Unable to compare protocol: " + this + " to " + fixPContext);
-        }
+        validateType(fixPContext);
 
         final BinaryEntryPointContext oldContext = (BinaryEntryPointContext)fixPContext;
         if (sessionID != oldContext.sessionID)
@@ -123,6 +119,22 @@ public class BinaryEntryPointContext implements FixPContext
 
             return ESTABLISH_UNNEGOTIATED;
         }
+    }
+
+    private void validateType(final FixPContext fixPContext)
+    {
+        if (!(fixPContext instanceof BinaryEntryPointContext))
+        {
+            throw new IllegalArgumentException("Unable to compare protocol: " + this + " to " + fixPContext);
+        }
+    }
+
+    public int compareVersion(final FixPContext fixPContext)
+    {
+        validateType(fixPContext);
+
+        final BinaryEntryPointContext oldContext = (BinaryEntryPointContext)fixPContext;
+        return Long.compare(sessionVerID, oldContext.sessionVerID);
     }
 
     public void initiatorReconnect(final boolean reestablishConnection)

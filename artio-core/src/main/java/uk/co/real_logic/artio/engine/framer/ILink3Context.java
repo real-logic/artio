@@ -156,6 +156,11 @@ public final class ILink3Context implements FixPContext
         throw new UnsupportedOperationException();
     }
 
+    public int compareVersion(final FixPContext oldContext)
+    {
+        throw new UnsupportedOperationException();
+    }
+
     public void initiatorReconnect(final boolean reestablishConnection)
     {
         final long connectLastUuid = uuid();
