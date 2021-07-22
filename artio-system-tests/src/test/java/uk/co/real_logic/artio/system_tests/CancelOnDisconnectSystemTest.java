@@ -46,7 +46,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     public static final int COD_TEST_TIMEOUT_IN_MS = 500;
-    public static final int LONG_COD_TEST_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? COD_TEST_TIMEOUT_IN_MS : 3_000;
+    public static final int LONG_COD_TEST_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : COD_TEST_TIMEOUT_IN_MS;
 
     private final FakeTimeoutHandler timeoutHandler = new FakeTimeoutHandler();
 
