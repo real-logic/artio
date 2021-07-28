@@ -276,6 +276,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int throttleWindowInMs = NO_THROTTLE_WINDOW;
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
 
+    // ---------------------
+    // BEGIN SETTERS
+    // ---------------------
+
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
      * <p>
@@ -1013,8 +1017,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-
-
     /**
      * Sets the cancel on disconnect timeout handler for FIXP connections. This is invoked when a cancel on disconnect
      * event occurs.
@@ -1033,21 +1035,202 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Set the stream id from an admin API to a FIX Engine.
+     *
+     * @param inboundAdminStream the stream id from an admin API to a FIX Engine.
+     * @return this
+     */
+    public EngineConfiguration inboundAdminStream(final int inboundAdminStream)
+    {
+        this.inboundAdminStream = inboundAdminStream;
+        return this;
+    }
+
+    /**
+     * Set the stream id from a FIX Engine to an admin API.
+     *
+     * @param outboundAdminStream the stream id from a FIX Engine to an admin API.
+     * @return this
+     */
+    public EngineConfiguration outboundAdminStream(final int outboundAdminStream)
+    {
+        this.outboundAdminStream = outboundAdminStream;
+        return this;
+    }
+
+    // ---------------------
+    // END SETTERS
+    // ---------------------
+
+    // ------------------------
+    // BEGIN INHERITED SETTERS
+    // ------------------------
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
+    {
+        super.monitoringBuffersLength(monitoringBuffersLength);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration monitoringFile(final String monitoringFile)
+    {
+        super.monitoringFile(monitoringFile);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
+    {
+        super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration agentNamePrefix(final String agentNamePrefix)
+    {
+        super.agentNamePrefix(agentNamePrefix);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    {
+        super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration inboundLibraryStream(final int inboundLibraryStream)
+    {
+        super.inboundLibraryStream(inboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
+    {
+        super.outboundLibraryStream(outboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressWarnings("Deprecated")
+    @Deprecated
+    public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
+    {
+        super.printErrorMessages(printErrorMessages);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressWarnings("Deprecated")
+    @Deprecated
+    public EngineConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
+    {
+        super.customErrorConsumer(customErrorConsumer);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration errorHandlerFactory(final ErrorHandlerFactory errorHandlerFactory)
+    {
+        super.errorHandlerFactory(errorHandlerFactory);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration monitoringAgentFactory(final MonitoringAgentFactory monitoringAgentFactory)
+    {
+        super.monitoringAgentFactory(monitoringAgentFactory);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
+    {
+        super.defaultHeartbeatIntervalInS(value);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
+    {
+        super.epochNanoClock(epochNanoClock);
+        return this;
+    }
+
+    // ------------------------
+    // END INHERITED SETTERS
+    // ------------------------
+
+    // ---------------------
+    // BEGIN GETTERS
+    // ---------------------
+
+    /**
+     * See {@link #cancelOnDisconnectTimeoutHandler(CancelOnDisconnectTimeoutHandler)} for details.
+     * 
+     * @return the cancel on disconnect timeout handler
+     */
     public CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler()
     {
         return cancelOnDisconnectTimeoutHandler;
     }
 
+    /**
+     * See {@link #fixPCancelOnDisconnectTimeoutHandler(FixPCancelOnDisconnectTimeoutHandler)} for details.
+     *
+     * @return the FIXP cancel on disconnect timeout handler
+     */
     public FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler()
     {
         return fixPCancelOnDisconnectTimeoutHandler;
     }
 
+    /**
+     * See {@link #fixPCancelOnDisconnectTimeoutHandler(FixPCancelOnDisconnectTimeoutHandler)} for details.
+     *
+     * @return the FIXP cancel on disconnect timeout handler
+     */
     public int receiverBufferSize()
     {
         return receiverBufferSize;
     }
 
+    /**
+     * See {@link #receiverSocketBufferSize(int)} for details.
+     *
+     * @return the receiver socket buffer size
+     */
     public int receiverSocketBufferSize()
     {
         return receiverSocketBufferSize;
@@ -1297,151 +1480,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return acceptsFixP() ? acceptorFixPProtocol : ILINK_3;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
-    {
-        super.monitoringBuffersLength(monitoringBuffersLength);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration monitoringFile(final String monitoringFile)
-    {
-        super.monitoringFile(monitoringFile);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
-    {
-        super.replyTimeoutInMs(replyTimeoutInMs);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration agentNamePrefix(final String agentNamePrefix)
-    {
-        super.agentNamePrefix(agentNamePrefix);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
-    {
-        super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration inboundLibraryStream(final int inboundLibraryStream)
-    {
-        super.inboundLibraryStream(inboundLibraryStream);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
-    {
-        super.outboundLibraryStream(outboundLibraryStream);
-        return this;
-    }
-
-    /**
-     * Set the stream id from an admin API to a FIX Engine.
-     *
-     * @param inboundAdminStream the stream id from an admin API to a FIX Engine.
-     * @return this
-     */
-    public EngineConfiguration inboundAdminStream(final int inboundAdminStream)
-    {
-        this.inboundAdminStream = inboundAdminStream;
-        return this;
-    }
-
-    /**
-     * Set the stream id from a FIX Engine to an admin API.
-     *
-     * @param outboundAdminStream the stream id from a FIX Engine to an admin API.
-     * @return this
-     */
-    public EngineConfiguration outboundAdminStream(final int outboundAdminStream)
-    {
-        this.outboundAdminStream = outboundAdminStream;
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("Deprecated")
-    @Deprecated
-    public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
-    {
-        super.printErrorMessages(printErrorMessages);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("Deprecated")
-    @Deprecated
-    public EngineConfiguration customErrorConsumer(final ErrorConsumer customErrorConsumer)
-    {
-        super.customErrorConsumer(customErrorConsumer);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration errorHandlerFactory(final ErrorHandlerFactory errorHandlerFactory)
-    {
-        super.errorHandlerFactory(errorHandlerFactory);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration monitoringAgentFactory(final MonitoringAgentFactory monitoringAgentFactory)
-    {
-        super.monitoringAgentFactory(monitoringAgentFactory);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
-    {
-        super.defaultHeartbeatIntervalInS(value);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
-    {
-        super.epochNanoClock(epochNanoClock);
-        return this;
-    }
-
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;
@@ -1511,6 +1549,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         return throttleLimitOfMessages;
     }
+
+    // ---------------------
+    // END GETTERS
+    // ---------------------
 
     public EngineConfiguration conclude()
     {
