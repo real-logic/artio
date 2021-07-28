@@ -62,12 +62,29 @@ public class CodecConfiguration
     {
     }
 
+    /**
+     * Sets the output path where codecs are generated. This should be a valid path on your local filesystem where the
+     * codec generator has the ability to write files. Required.
+     *
+     * If this doesn't already exist it will be created.
+     *
+     * @param outputPath the output path where codecs are generated
+     * @return this
+     */
     public CodecConfiguration outputPath(final String outputPath)
     {
         this.outputPath = outputPath;
         return this;
     }
 
+    /**
+     * Sets the parent package where classes are generated. Optional, defaults to {@link #DEFAULT_PARENT_PACKAGE}.
+     * Different parent packages can be used to use multiple different fix dictionary versions, see the
+     * <a href="https://github.com/real-logic/artio/wiki/Multiple-FIX-Versions">wiki</a> for details.
+     *
+     * @param parentPackage the parent package where classes are generated.
+     * @return this
+     */
     public CodecConfiguration parentPackage(final String parentPackage)
     {
         this.parentPackage = parentPackage;
