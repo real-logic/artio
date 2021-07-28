@@ -730,7 +730,7 @@ public class Session
         {
             lastSentMsgSeqNum(seqNum, position);
 
-            DebugLogger.log(FIX_MESSAGE, "Sent ", messageBuffer, offset, length);
+            DebugLogger.logFixMessage(FIX_MESSAGE, messageType, "Sent ", messageBuffer, offset, length);
         }
 
         return position;

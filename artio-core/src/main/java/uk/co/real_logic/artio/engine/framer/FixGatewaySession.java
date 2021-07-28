@@ -218,7 +218,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE, "Gateway Received ", buffer, offset, length);
+            DebugLogger.logFixMessage(FIX_MESSAGE, messageType, "Gateway Received ", buffer, offset, length);
 
             session.messageInfo().isValid(true);
 

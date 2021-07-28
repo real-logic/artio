@@ -23,7 +23,6 @@ import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -41,6 +40,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.engine.PossDupFinder.NO_ENTRY;
 import static uk.co.real_logic.artio.engine.framer.CatchupReplayer.FRAME_LENGTH;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR_LENGTH;
@@ -68,7 +68,6 @@ public class PossDupEnabler
     private final ErrorHandler errorHandler;
     private final EpochNanoClock clock;
     private final int maxPayloadLength;
-    private final LogTag logTag;
 
     private int fragmentedMessageLength;
 
@@ -85,8 +84,7 @@ public class PossDupEnabler
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
         final EpochNanoClock clock,
-        final int maxPayloadLength,
-        final LogTag logTag)
+        final int maxPayloadLength)
     {
         this.utcTimestampEncoder = utcTimestampEncoder;
         this.bufferClaim = bufferClaim;
@@ -96,7 +94,6 @@ public class PossDupEnabler
         this.errorHandler = errorHandler;
         this.clock = clock;
         this.maxPayloadLength = maxPayloadLength;
-        this.logTag = logTag;
     }
 
     // Only return abort if genuinely back pressured
@@ -106,7 +103,8 @@ public class PossDupEnabler
         final int messageLength,
         final int srcOffset,
         final int srcLength,
-        final int metaDataAdjustment)
+        final int metaDataAdjustment,
+        final long messageType)
     {
         parser.onMessage(srcBuffer, messageOffset, messageLength);
         final boolean missingPossDup = possDupFinder.possDupOffset() == NO_ENTRY;
@@ -142,7 +140,7 @@ public class PossDupEnabler
                     newLength,
                     metaDataAdjustment))
                 {
-                    return commit();
+                    return commit(messageType);
                 }
                 else
                 {
@@ -158,8 +156,9 @@ public class PossDupEnabler
         }
         else
         {
+            final int possDupSrcOffset = possDupFinder.possDupOffset();
             return enablePossDupFlagSameLength(
-                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, possDupFinder.possDupOffset());
+                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, possDupSrcOffset, messageType);
         }
 
         return CONTINUE;
@@ -178,7 +177,8 @@ public class PossDupEnabler
         final int messageLength,
         final int srcOffset,
         final int srcLength,
-        final int possDupSrcOffset)
+        final int possDupSrcOffset,
+        final long messageType)
     {
         // Poss Dup flag is already set in the src message and orig sending time is present.
         if (!claim(srcLength))
@@ -204,7 +204,7 @@ public class PossDupEnabler
             final int beforeChecksum = srcToClaim(possDupFinder.checkSumOffset(), srcOffset, writeOffset) - 4;
             updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
 
-            return commit();
+            return commit(messageType);
         }
         catch (final Exception ex)
         {
@@ -242,15 +242,16 @@ public class PossDupEnabler
         }
     }
 
-    private Action commit()
+    private Action commit(final long messageType)
     {
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
             onPreCommit.onPreCommit(fragmentedMessageBuffer, fragmentOffset);
 
-            DebugLogger.log(
-                logTag,
+            DebugLogger.logFixMessage(
+                FIX_MESSAGE,
+                messageType,
                 "Resending: ",
                 fragmentedMessageBuffer,
                 fragmentOffset + FRAME_LENGTH,
@@ -296,8 +297,9 @@ public class PossDupEnabler
             final MutableDirectBuffer buffer = bufferClaim.buffer();
             final int offset = bufferClaim.offset();
 
-            DebugLogger.log(
-                logTag,
+            DebugLogger.logFixMessage(
+                FIX_MESSAGE,
+                messageType,
                 "Resending: ",
                 buffer,
                 offset + FRAME_LENGTH,

@@ -1184,7 +1184,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            DebugLogger.log(FIX_MESSAGE, receivedFormatter, libraryId, buffer, offset, length);
+            DebugLogger.logFixMessage(FIX_MESSAGE, messageType, receivedFormatter, libraryId, buffer, offset, length);
 
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)

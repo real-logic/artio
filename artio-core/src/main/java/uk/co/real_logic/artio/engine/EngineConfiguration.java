@@ -1198,7 +1198,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * See {@link #cancelOnDisconnectTimeoutHandler(CancelOnDisconnectTimeoutHandler)} for details.
-     * 
+     *
      * @return the cancel on disconnect timeout handler
      */
     public CancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler()

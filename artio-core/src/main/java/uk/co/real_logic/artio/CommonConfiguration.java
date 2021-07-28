@@ -20,6 +20,7 @@ import io.aeron.archive.client.AeronArchive;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
@@ -31,6 +32,7 @@ import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
@@ -39,6 +41,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.getInteger;
@@ -76,6 +79,11 @@ public class CommonConfiguration
      */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
     /**
+     * Property name for the flag to specify a subset of message types to debug print, this can be used in
+     * conjunction with the FIX_MESSAGE logtag. Note: this message type filter only applies to valid fix messages.
+     */
+    public static final String DEBUG_PRINT_MESSAGE_TYPES_PROPERTY = "fix.core.debug.msg_types";
+    /**
      * Property name for the flag to specify a thread to print
      */
     public static final String DEBUG_PRINT_THREAD_PROPERTY = "fix.core.debug.thread";
@@ -101,11 +109,6 @@ public class CommonConfiguration
      * Property name for the file to log debug messages to, default is standard output
      */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
-    /**
-     * Property name for the implementation of {@link AbstractDebugAppender} to use in order
-     * print debug logging. If none set then defaults to {@link PrintingDebugAppender}
-     */
-    public static final String APPENDER_CLASS_PROPERTY = "fix.core.debug.appender";
     /**
      * Property name for the period at which histogram intervals are polled and logged
      */
@@ -141,6 +144,7 @@ public class CommonConfiguration
      * These are static final fields in order to give the optimiser more scope
      */
     public static final boolean DEBUG_PRINT_MESSAGES;
+    public static final LongHashSet DEBUG_PRINT_MESSAGE_TYPES;
     public static final Set<LogTag> DEBUG_TAGS;
     public static final String DEBUG_PRINT_THREAD;
     public static final byte DEFAULT_DEBUG_LOGGING_SEPARATOR = '\001';
@@ -184,6 +188,19 @@ public class CommonConfiguration
         final String loggingSeparator = getProperty(LOGGING_SEPARATOR_PROPERTY);
         DEBUG_LOGGING_SEPARATOR =
             loggingSeparator == null ? DEFAULT_DEBUG_LOGGING_SEPARATOR : (byte)loggingSeparator.charAt(0);
+
+        final String debugPrintMessageTypes = getProperty(DEBUG_PRINT_MESSAGE_TYPES_PROPERTY);
+        if (debugPrintMessageTypes == null)
+        {
+            DEBUG_PRINT_MESSAGE_TYPES = null;
+        }
+        else
+        {
+            DEBUG_PRINT_MESSAGE_TYPES = Stream
+                .of(debugPrintMessageTypes.split(","))
+                .map(MessageTypeEncoding::packMessageType)
+                .collect(Collectors.toCollection(LongHashSet::new));
+        }
     }
 
     private static LogTag lookupLogTag(final String name)
@@ -197,7 +214,6 @@ public class CommonConfiguration
     }
 
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
-    public static final String APPENDER_CLASS = System.getProperty(APPENDER_CLASS_PROPERTY);
     public static final boolean TIME_MESSAGES = Boolean.getBoolean(TIME_MESSAGES_PROPERTY);
     public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);
 

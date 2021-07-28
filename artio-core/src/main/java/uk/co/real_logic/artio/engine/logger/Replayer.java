@@ -52,7 +52,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
-import static uk.co.real_logic.artio.util.MessageTypeEncoding.packMessageType;
+import static uk.co.real_logic.artio.util.MessageTypeEncoding.packAllMessageTypes;
 
 /**
  * The replayer responds to resend requests with data from the log of sent messages.
@@ -176,9 +176,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.clock = clock;
         this.configuration = configuration;
 
-        gapFillMessageTypes = new LongHashSet();
-        gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
-            gapFillMessageTypes.add(packMessageType(messageTypeAsString)));
+        gapFillMessageTypes = packAllMessageTypes(gapfillOnReplayMessageTypes);
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         binaryFixPProtocol = new Lazy<>(() -> FixPProtocolFactory.make(fixPProtocolType, errorHandler));

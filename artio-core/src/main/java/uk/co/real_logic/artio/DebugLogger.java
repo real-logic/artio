@@ -78,6 +78,22 @@ public final class DebugLogger
         }
     }
 
+    public static void logFixMessage(
+        final LogTag tag,
+        final long messageType,
+        final CharFormatter formatter,
+        final int value,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag) && isEnabled(messageType))
+        {
+            formatter.clear().with(value);
+            THREAD_LOCAL.get().log(tag, formatter, buffer, offset, length);
+        }
+    }
+
     public static void log(
         final LogTag tag,
         final CharFormatter formatter,
@@ -474,9 +490,10 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final long messageType,
         final ThrottleNotificationEncoder encoder)
     {
-        if (isEnabled(tag))
+        if (isEnabled(tag) && isEnabled(messageType))
         {
             THREAD_LOCAL.get().logSbeMessage(tag, encoder);
         }
@@ -484,9 +501,10 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final long messageType,
         final ThrottleRejectEncoder encoder)
     {
-        if (isEnabled(tag))
+        if (isEnabled(tag) && isEnabled(messageType))
         {
             THREAD_LOCAL.get().logSbeMessage(tag, encoder);
         }
@@ -500,6 +518,20 @@ public final class DebugLogger
         final int length)
     {
         if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().log(tag, prefixString, buffer, offset, length);
+        }
+    }
+
+    public static void logFixMessage(
+        final LogTag tag,
+        final long messageType,
+        final String prefixString,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag) && isEnabled(messageType))
         {
             THREAD_LOCAL.get().log(tag, prefixString, buffer, offset, length);
         }
@@ -702,6 +734,11 @@ public final class DebugLogger
     public static boolean isEnabled(final LogTag tag)
     {
         return DEBUG_PRINT_MESSAGES && DEBUG_TAGS.contains(tag);
+    }
+
+    private static boolean isEnabled(final long messageType)
+    {
+        return DEBUG_PRINT_MESSAGE_TYPES == null || DEBUG_PRINT_MESSAGE_TYPES.contains(messageType);
     }
 
     static class ThreadLocalLogger

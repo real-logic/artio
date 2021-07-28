@@ -132,8 +132,7 @@ class FixReplayerSession extends ReplayerSession
             this::onIllegalState,
             this::onException,
             clock,
-            publication.maxPayloadLength(),
-            LogTag.FIX_MESSAGE);
+            publication.maxPayloadLength());
 
         state = State.REPLAYING;
     }
@@ -246,7 +245,7 @@ class FixReplayerSession extends ReplayerSession
                 }
 
                 final Action action = possDupEnabler.enablePossDupFlag(
-                    srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
+                    srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment, messageType);
                 if (action != ABORT)
                 {
                     lastSeqNo = msgSeqNum;
@@ -352,7 +351,8 @@ class FixReplayerSession extends ReplayerSession
 
             bufferClaim.commit();
 
-            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: ", fixBuffer, fixOffset, fixLength);
+            DebugLogger.logFixMessage(
+                LogTag.FIX_MESSAGE, messageType, "Replayed: ", fixBuffer, fixOffset, fixLength);
 
             return CONTINUE;
         }

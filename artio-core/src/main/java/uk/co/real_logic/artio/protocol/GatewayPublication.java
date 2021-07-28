@@ -375,7 +375,7 @@ public class GatewayPublication extends ClaimablePublication
                 bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : (byte)END_FLAG).commit();
             }
         }
-        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued ", srcBuffer, srcOffset, srcLength);
+        DebugLogger.logFixMessage(FIX_MESSAGE_FLOW, messageType, "Enqueued ", srcBuffer, srcOffset, srcLength);
         return position;
     }
 
@@ -1551,7 +1551,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(FIX_MESSAGE, throttleNotification);
+        logSbeMessage(FIX_MESSAGE, refMsgType, throttleNotification);
 
         return position;
     }
@@ -1590,7 +1590,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(FIX_MESSAGE, throttleReject);
+        logSbeMessage(FIX_MESSAGE, refMsgType, throttleReject);
 
         return position;
     }

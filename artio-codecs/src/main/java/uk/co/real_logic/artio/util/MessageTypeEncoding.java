@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.artio.util;
 
+import org.agrona.collections.LongHashSet;
+
+import java.util.Set;
+
 import static org.agrona.BufferUtil.ARRAY_BASE_OFFSET;
 import static org.agrona.UnsafeAccess.UNSAFE;
 
@@ -49,6 +53,14 @@ public final class MessageTypeEncoding
         }
 
         return packed;
+    }
+
+    public static LongHashSet packAllMessageTypes(final Set<String> messageTypes)
+    {
+        final LongHashSet packedMessageTypes = new LongHashSet();
+        messageTypes.forEach(messageTypeAsString ->
+            packedMessageTypes.add(packMessageType(messageTypeAsString)));
+        return packedMessageTypes;
     }
 
     /**

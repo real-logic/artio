@@ -360,7 +360,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     return 1;
                 }
 
-                DebugLogger.log(FIX_MESSAGE, "Auth Reject ", buffer, offset, length);
+                DebugLogger.logFixMessage(FIX_MESSAGE, LOGON_MESSAGE_TYPE, "Auth Reject ", buffer, offset, length);
 
                 completeDisconnect(pendingAcceptorLogon.reason());
             }
@@ -469,7 +469,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
-                    DebugLogger.log(FIX_MESSAGE, "Invalidated (checksum): ", buffer, offset, length);
+                    DebugLogger.logFixMessage(
+                        FIX_MESSAGE, messageType, "Invalidated (checksum): ", buffer, offset, length);
                     if (saveInvalidChecksumMessage(offset, messageType, length, readTimestampInNs))
                     {
                         return false;
