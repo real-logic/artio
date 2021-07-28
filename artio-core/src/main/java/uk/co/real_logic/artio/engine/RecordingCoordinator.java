@@ -465,14 +465,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     // Must be called after the framer has shutdown, uses shutdown order
     public void close()
     {
-        if (configuration.gracefulShutdown())
+        if (!closed)
         {
-            if (!closed)
-            {
-                awaitRecordingsCompletion();
-                shutdownArchiver();
-                closed = true;
-            }
+            awaitRecordingsCompletion();
+            shutdownArchiver();
+            closed = true;
         }
     }
 

@@ -2227,11 +2227,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 }
             }
 
-            if (configuration.gracefulShutdown())
-            {
-                connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
-                state = CLOSED;
-            }
+            connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
+            state = CLOSED;
         }
     }
 

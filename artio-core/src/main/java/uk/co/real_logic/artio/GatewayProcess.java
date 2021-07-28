@@ -71,34 +71,7 @@ public abstract class GatewayProcess implements AutoCloseable
             return null;
         }
 
-        final Agent invokerAgent = invoker.agent();
-        if (configuration.gracefulShutdown())
-        {
-            return invokerAgent;
-        }
-
-        return new Agent()
-        {
-            public void onStart()
-            {
-                invokerAgent.onStart();
-            }
-
-            public int doWork() throws Exception
-            {
-                return invokerAgent.doWork();
-            }
-
-            public String roleName()
-            {
-                return invokerAgent.roleName();
-            }
-
-            public void onClose()
-            {
-                // Deliberately blank to stop the agent from gracefully closing
-            }
-        };
+        return invoker.agent();
     }
 
     protected void initAeron(final CommonConfiguration configuration)
@@ -170,23 +143,14 @@ public abstract class GatewayProcess implements AutoCloseable
 
     public void close()
     {
-        if (configuration.gracefulShutdown())
-        {
-            closeAll(
-                fixCounters,
-                () ->
-                {
-                    aeron.close();
-                    // Only record this as closed if the aeron.close() succeeded.
-                    CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
-                },
-                monitoringFile);
-        }
-        else
-        {
-            aeron.close();
-            CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
-            closeAll(monitoringFile);
-        }
+        closeAll(
+            fixCounters,
+            () ->
+            {
+                aeron.close();
+                // Only record this as closed if the aeron.close() succeeded.
+                CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
+            },
+            monitoringFile);
     }
 }

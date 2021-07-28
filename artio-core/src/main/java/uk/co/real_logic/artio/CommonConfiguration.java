@@ -280,7 +280,6 @@ public class CommonConfiguration
     private String agentNamePrefix = DEFAULT_NAME_PREFIX;
     private int inboundLibraryStream = DEFAULT_INBOUND_LIBRARY_STREAM;
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
-    private boolean gracefulShutdown = true;
     private boolean validateCompIdsOnEveryMessage = true;
     private boolean validateTimeStrictly = true;
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
@@ -288,6 +287,10 @@ public class CommonConfiguration
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
+
+    // ------------------------
+    // BEGIN SETTERS
+    // ------------------------
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -304,11 +307,6 @@ public class CommonConfiguration
         return this;
     }
 
-    public long sendingTimeWindowInMs()
-    {
-        return sendingTimeWindowInMs;
-    }
-
     /**
      * Set the default interval for heartbeats if not exchanged upon logon. Specified in seconds.
      *
@@ -319,11 +317,6 @@ public class CommonConfiguration
     {
         defaultHeartbeatIntervalInS = value;
         return this;
-    }
-
-    public int defaultHeartbeatIntervalInS()
-    {
-        return defaultHeartbeatIntervalInS;
     }
 
     /**
@@ -372,11 +365,6 @@ public class CommonConfiguration
     {
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         return this;
-    }
-
-    public long reasonableTransmissionTimeInMs()
-    {
-        return reasonableTransmissionTimeInMs;
     }
 
     /**
@@ -567,12 +555,29 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the prefix to be used on agent names. This can be used to distinguish two different Artio instances
+     * running in the same process, for example in tests.
+     *
+     * @param agentNamePrefix the prefix to be used on agent names.
+     * @return this
+     */
     public CommonConfiguration agentNamePrefix(final String agentNamePrefix)
     {
         this.agentNamePrefix = agentNamePrefix;
         return this;
     }
 
+    /**
+     * Set to true to print out the mapping between aeron stream identifiers (sessionIds) and the usage of given
+     * Aeron publication and subscription objects within Artio. See {@link StreamInformation} for details.
+     *
+     * This can be helpful when debugging issues related to back-pressure and trying to correlate Artio internal
+     * concepts to Aeron Counters. Defaults to false.
+     *
+     * @param printAeronStreamIdentifiers true to print, false otherwise.
+     * @return this
+     */
     public CommonConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
     {
         this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
@@ -591,12 +596,25 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Set the Aeron stream id to be used for the inbound stream, aka coming from counter-parties to the library.
+     *
+     * @param inboundLibraryStream the aeron stream id
+     * @return this
+     */
     public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
     {
         this.inboundLibraryStream = inboundLibraryStream;
         return this;
     }
 
+    /**
+     * Set the Aeron stream id to be used for the outbound stream, aka coming from the library and going out to
+     * counter-parties.
+     *
+     * @param outboundLibraryStream the aeron stream id
+     * @return this
+     */
     public CommonConfiguration outboundLibraryStream(final int outboundLibraryStream)
     {
         this.outboundLibraryStream = outboundLibraryStream;
@@ -611,18 +629,6 @@ public class CommonConfiguration
     public CommonConfiguration threadFactory(final ThreadFactory threadFactory)
     {
         this.threadFactory = threadFactory;
-        return this;
-    }
-
-    /**
-     * Set to false to enable simulation of a non-graceful shutdown. Should only be used for testing.
-     *
-     * @param gracefulShutdown false to enable simulation of a non-graceful shutdown.
-     * @return this
-     */
-    public CommonConfiguration gracefulShutdown(final boolean gracefulShutdown)
-    {
-        this.gracefulShutdown = gracefulShutdown;
         return this;
     }
 
@@ -691,6 +697,29 @@ public class CommonConfiguration
         return this;
     }
 
+    // ------------------------
+    // END SETTERS
+    // ------------------------
+
+    // ------------------------
+    // BEGIN GETTERS
+    // ------------------------
+
+    public long sendingTimeWindowInMs()
+    {
+        return sendingTimeWindowInMs;
+    }
+
+    public int defaultHeartbeatIntervalInS()
+    {
+        return defaultHeartbeatIntervalInS;
+    }
+
+    public long reasonableTransmissionTimeInMs()
+    {
+        return reasonableTransmissionTimeInMs;
+    }
+
     public long noEstablishFixPTimeoutInMs()
     {
         return noEstablishFixPTimeoutInMs;
@@ -699,11 +728,6 @@ public class CommonConfiguration
     public long maxFixPKeepaliveTimeoutInMs()
     {
         return maxFixPKeepaliveTimeoutInMs;
-    }
-
-    public boolean gracefulShutdown()
-    {
-        return gracefulShutdown;
     }
 
     public Aeron.Context aeronContext()
@@ -820,6 +844,10 @@ public class CommonConfiguration
     {
         return fixPAcceptedSessionMaxRetransmissionRange;
     }
+
+    // ------------------------
+    // END GETTERS
+    // ------------------------
 
     protected void conclude(final String fixSuffix)
     {

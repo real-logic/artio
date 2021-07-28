@@ -261,8 +261,7 @@ public class EngineContext implements AutoCloseable
                 inboundLibraryStreams.subscription("inboundIndexer"),
                 configuration.agentNamePrefix(),
                 inboundCompletionPosition,
-                configuration.archiveReplayStream(),
-                configuration.gracefulShutdown());
+                configuration.archiveReplayStream());
 
             final List<Index> outboundIndices = new ArrayList<>();
             outboundReplayIndex = newReplayIndex(
@@ -284,8 +283,7 @@ public class EngineContext implements AutoCloseable
                 outboundIndexSubscription,
                 configuration.agentNamePrefix(),
                 outboundLibraryCompletionPosition,
-                configuration.archiveReplayStream(),
-                configuration.gracefulShutdown());
+                configuration.archiveReplayStream());
         }
         catch (final Exception e)
         {
@@ -451,10 +449,7 @@ public class EngineContext implements AutoCloseable
 
     public void close()
     {
-        if (configuration.gracefulShutdown())
-        {
-            Exceptions.closeAll(
-                sentSequenceNumberIndex, receivedSequenceNumberIndex, pruneInboundReplayQuery);
-        }
+        Exceptions.closeAll(
+            sentSequenceNumberIndex, receivedSequenceNumberIndex, pruneInboundReplayQuery);
     }
 }

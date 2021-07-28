@@ -34,20 +34,22 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
-import uk.co.real_logic.artio.validation.AuthenticationProxy;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
-import uk.co.real_logic.artio.validation.FixPAuthenticationStrategy;
-import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
+import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
+import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.timing.HistogramHandler;
+import uk.co.real_logic.artio.validation.*;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
@@ -1070,6 +1072,61 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
+    public EngineConfiguration sendingTimeWindowInMs(final long sendingTimeWindowInMs)
+    {
+        super.sendingTimeWindowInMs(sendingTimeWindowInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
+    {
+        super.defaultHeartbeatIntervalInS(value);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
+    {
+        super.sessionIdStrategy(sessionIdStrategy);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration sessionCustomisationStrategy(
+        final SessionCustomisationStrategy sessionCustomisationStrategy)
+    {
+        super.sessionCustomisationStrategy(sessionCustomisationStrategy);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
+    {
+        super.messageValidationStrategy(messageValidationStrategy);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration reasonableTransmissionTimeInMs(final long reasonableTransmissionTimeInMs)
+    {
+        super.reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
     {
         super.monitoringBuffersLength(monitoringBuffersLength);
@@ -1082,51 +1139,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration monitoringFile(final String monitoringFile)
     {
         super.monitoringFile(monitoringFile);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
-    {
-        super.replyTimeoutInMs(replyTimeoutInMs);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration agentNamePrefix(final String agentNamePrefix)
-    {
-        super.agentNamePrefix(agentNamePrefix);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
-    {
-        super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration inboundLibraryStream(final int inboundLibraryStream)
-    {
-        super.inboundLibraryStream(inboundLibraryStream);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
-    {
-        super.outboundLibraryStream(outboundLibraryStream);
         return this;
     }
 
@@ -1173,9 +1185,90 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public EngineConfiguration defaultHeartbeatIntervalInS(final int value)
+    public EngineConfiguration monitoringThreadIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
     {
-        super.defaultHeartbeatIntervalInS(value);
+        super.monitoringThreadIdleStrategy(errorPrinterIdleStrategy);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
+    {
+        super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration inboundMaxClaimAttempts(final int inboundMaxClaimAttempts)
+    {
+        super.inboundMaxClaimAttempts(inboundMaxClaimAttempts);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration outboundMaxClaimAttempts(final int outboundMaxClaimAttempts)
+    {
+        super.outboundMaxClaimAttempts(outboundMaxClaimAttempts);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration sessionBufferSize(final int bufferSize)
+    {
+        super.sessionBufferSize(bufferSize);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration histogramPollPeriodInMs(final long histogramPollPeriodInMs)
+    {
+        super.histogramPollPeriodInMs(histogramPollPeriodInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration histogramLoggingFile(final String histogramLoggingFile)
+    {
+        super.histogramLoggingFile(histogramLoggingFile);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration histogramHandler(final HistogramHandler histogramHandler)
+    {
+        super.histogramHandler(histogramHandler);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration agentNamePrefix(final String agentNamePrefix)
+    {
+        super.agentNamePrefix(agentNamePrefix);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    {
+        super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
         return this;
     }
 
@@ -1185,6 +1278,88 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration epochNanoClock(final EpochNanoClock epochNanoClock)
     {
         super.epochNanoClock(epochNanoClock);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration inboundLibraryStream(final int inboundLibraryStream)
+    {
+        super.inboundLibraryStream(inboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
+    {
+        super.outboundLibraryStream(outboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration threadFactory(final ThreadFactory threadFactory)
+    {
+        super.threadFactory(threadFactory);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration validateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
+    {
+        super.validateCompIdsOnEveryMessage(validateCompIdsOnEveryMessage);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration validateTimeStrictly(final boolean validateTimeStrictly)
+    {
+        super.validateTimeStrictly(validateTimeStrictly);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration sessionEpochFractionFormat(final EpochFractionFormat sessionEpochFractionFormat)
+    {
+        super.sessionEpochFractionFormat(sessionEpochFractionFormat);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration maxFixPKeepaliveTimeoutInMs(final long maxFixpKeepaliveTimeoutInMs)
+    {
+        super.maxFixPKeepaliveTimeoutInMs(maxFixpKeepaliveTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration noEstablishFixPTimeoutInMs(final long noEstablishFixPTimeoutInMs)
+    {
+        super.noEstablishFixPTimeoutInMs(noEstablishFixPTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration fixPAcceptedSessionMaxRetransmissionRange(
+        final int fixPAcceptedSessionMaxRetransmissionRange)
+    {
+        super.fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange);
         return this;
     }
 

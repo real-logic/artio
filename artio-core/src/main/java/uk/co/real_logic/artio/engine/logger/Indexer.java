@@ -58,22 +58,19 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
     private final int archiveReplayStream;
-    private final boolean gracefulShutdown;
 
     public Indexer(
         final List<Index> indices,
         final Subscription subscription,
         final String agentNamePrefix,
         final CompletionPosition completionPosition,
-        final int archiveReplayStream,
-        final boolean gracefulShutdown)
+        final int archiveReplayStream)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
         this.archiveReplayStream = archiveReplayStream;
-        this.gracefulShutdown = gracefulShutdown;
     }
 
     public int doWork()
@@ -173,12 +170,9 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public void onClose()
     {
-        if (gracefulShutdown)
-        {
-            quiesce();
+        quiesce();
 
-            Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
-        }
+        Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
     }
 
     private void quiesce()

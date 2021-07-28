@@ -21,10 +21,21 @@ package uk.co.real_logic.artio;
  */
 public abstract class AbstractDebugAppender
 {
+    /**
+     * An instane of this thread local appender is created for each thread within the system.
+     *
+     * You can rely on calls to its log() method only being on a given thread and allocate and use state in an
+     * uncontended and unsynchronized manner.
+     */
     public abstract static class ThreadLocalAppender
     {
         public abstract void log(LogTag logTag, StringBuilder stringBuilder);
     }
 
+    /**
+     * Create an instance of {@link ThreadLocalAppender}
+     *
+     * @return the new thread local appender.
+     */
     public abstract ThreadLocalAppender makeLocalAppender();
 }

@@ -3147,26 +3147,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onClose()
     {
-        if (configuration.gracefulShutdown())
-        {
-            closeAll(
-                this::quiesce,
-                retryManager,
-                inboundMessages,
-                receiverEndPoints,
-                fixSenderEndPoints,
-                channelSupplier,
-                sentSequenceNumberIndex,
-                receivedSequenceNumberIndex);
-        }
-        else
-        {
-            closeAll(
-                inboundMessages,
-                channelSupplier,
-                sentSequenceNumberIndex,
-                receivedSequenceNumberIndex);
-        }
+        closeAll(
+            this::quiesce,
+            retryManager,
+            inboundMessages,
+            receiverEndPoints,
+            fixSenderEndPoints,
+            channelSupplier,
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex);
     }
 
     private void quiesce()

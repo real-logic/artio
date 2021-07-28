@@ -244,14 +244,11 @@ public class FixLibrary extends GatewayProcess
 
     private void deleteFiles()
     {
-        if (configuration.gracefulShutdown())
-        {
-            final boolean deletedHistogramFile = removeParentDirectory(configuration.histogramLoggingFile());
-            final boolean deletedMonitoringFile = removeParentDirectory(configuration.monitoringFile());
+        final boolean deletedHistogramFile = removeParentDirectory(configuration.histogramLoggingFile());
+        final boolean deletedMonitoringFile = removeParentDirectory(configuration.monitoringFile());
 
-            checkFileDeletion(deletedHistogramFile, configuration.histogramLoggingFile());
-            checkFileDeletion(deletedMonitoringFile, configuration.monitoringFile());
-        }
+        checkFileDeletion(deletedHistogramFile, configuration.histogramLoggingFile());
+        checkFileDeletion(deletedMonitoringFile, configuration.monitoringFile());
     }
 
     private void checkFileDeletion(final boolean deletedFile, final String path)
