@@ -15,7 +15,7 @@ import java.nio.ByteBuffer;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class ThrottleRejectBuilder
+public class FixThrottleRejectBuilder
 {
     private static final int BUFFER_CAPACITY = 512;
 
@@ -28,7 +28,7 @@ public class ThrottleRejectBuilder
     private final AbstractBusinessMessageRejectEncoder businessMessageReject;
     private final byte[] refMsgTypeBuffer = new byte[2];
 
-    public ThrottleRejectBuilder(
+    public FixThrottleRejectBuilder(
         final FixDictionary fixDictionary,
         final ErrorHandler errorHandler,
         final long sessionId,

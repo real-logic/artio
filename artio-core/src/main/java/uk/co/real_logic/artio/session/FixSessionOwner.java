@@ -25,7 +25,7 @@ import java.util.function.BooleanSupplier;
  * Decouples Session logic from either the Library or Engine process, used
  * to boostrap callbacks into either the Engine or the Library.
  */
-public interface SessionProcessHandler
+public interface FixSessionOwner
 {
     void onLogon(Session session);
 

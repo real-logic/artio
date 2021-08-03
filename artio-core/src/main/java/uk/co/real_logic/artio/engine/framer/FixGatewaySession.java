@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 
-class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, SessionProcessHandler
+class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, FixSessionOwner
 {
     private final boolean closedResendInterval;
     private final int resendRequestChunkSize;
@@ -445,16 +445,12 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         }
     }
 
-    public boolean isOffline()
-    {
-        return receiverEndPoint == null;
-    }
-
     public void goOffline()
     {
         // Library retains ownership of a disconnected session, reset state to that of an offline GatewaySession object
         connectionId = NO_CONNECTION_ID;
         address = ":" + NO_CONNECTION_ID;
+        super.receiverEndPoint = null;
         receiverEndPoint = null;
         senderEndPoint = null;
         onGatewaySessionLogon = null;

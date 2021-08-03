@@ -46,6 +46,8 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         NegotiateEncoder.BLOCK_LENGTH;
     private static final int ESTABLISH_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
         EstablishEncoder.BLOCK_LENGTH;
+    private static final int BUSINESS_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        BusinessMessageRejectEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
     private final NegotiateEncoder negotiate = new NegotiateEncoder();
@@ -61,6 +63,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final NotAppliedEncoder notApplied = new NotAppliedEncoder();
     private final RetransmissionEncoder retransmission = new RetransmissionEncoder();
     private final RetransmitRejectEncoder retransmitReject = new RetransmitRejectEncoder();
+    private final BusinessMessageRejectEncoder businessMessageReject = new BusinessMessageRejectEncoder();
 
     private final Consumer<StringBuilder> negotiateResponseAppendTo = negotiateResponse::appendTo;
     private final Consumer<StringBuilder> negotiateRejectAppendTo = negotiateReject::appendTo;
@@ -73,6 +76,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final Consumer<StringBuilder> notAppliedAppendTo = notApplied::appendTo;
     private final Consumer<StringBuilder> retransmissionAppendTo = retransmission::appendTo;
     private final Consumer<StringBuilder> retransmitRejectAppendTo = retransmitReject::appendTo;
+    private final Consumer<StringBuilder> businessMessageRejectAppendTo = businessMessageReject::appendTo;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer();
     private final EpochNanoClock clock;
@@ -323,6 +327,31 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         retransmitReject.retransmitRejectCode(retransmitRejectCode);
 
         DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", retransmitRejectAppendTo);
+
+        commit();
+
+        return position;
+    }
+
+    public long sendBusinessReject(
+        final long refSeqNum, final MessageType refMsgType, final long rejectRefID, final long businessRejectReason)
+    {
+        final BusinessMessageRejectEncoder businessMessageReject = this.businessMessageReject;
+
+        final long position = claimMessage(
+            BusinessMessageRejectEncoder.BLOCK_LENGTH, businessMessageReject, clock.nanoTime());
+        if (position < 0)
+        {
+            return position;
+        }
+
+        businessMessageReject
+            .refSeqNum(refSeqNum)
+            .refMsgType(refMsgType)
+            .businessRejectRefID(rejectRefID)
+            .businessRejectReason(businessRejectReason);
+
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", businessMessageRejectAppendTo);
 
         commit();
 

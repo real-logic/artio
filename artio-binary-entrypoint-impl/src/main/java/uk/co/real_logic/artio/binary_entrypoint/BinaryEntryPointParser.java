@@ -45,9 +45,9 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     private final Consumer<StringBuilder> finishedReceivingAppendTo = finishedReceiving::appendTo;
     private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
 
-    private final InternalBinaryEntrypointConnection handler;
+    private final InternalBinaryEntryPointConnection handler;
 
-    public BinaryEntryPointParser(final InternalBinaryEntrypointConnection handler)
+    public BinaryEntryPointParser(final InternalBinaryEntryPointConnection handler)
     {
         this.handler = handler;
     }

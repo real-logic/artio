@@ -60,7 +60,6 @@ import static uk.co.real_logic.artio.engine.SessionInfo.UNKNOWN_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
-import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -166,7 +165,7 @@ public class Session
 
     private boolean incorrectBeginString = false;
 
-    private SessionProcessHandler sessionProcessHandler;
+    private FixSessionOwner fixSessionOwner;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
     private FixDictionary fixDictionary;
@@ -512,7 +511,7 @@ public class Session
     {
         validateMessageThrottleOptions(throttleWindowInMs, throttleLimitOfMessages);
 
-        return sessionProcessHandler.messageThrottle(
+        return fixSessionOwner.messageThrottle(
             id, throttleWindowInMs, throttleLimitOfMessages);
     }
 
@@ -837,7 +836,7 @@ public class Session
             lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
             if (redact(NO_REQUIRED_POSITION))
             {
-                sessionProcessHandler.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+                fixSessionOwner.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
             }
         }
         return position;
@@ -861,7 +860,7 @@ public class Session
             {
                 if (!saveSeqIndexSync())
                 {
-                    sessionProcessHandler.enqueueTask(saveSeqIndexSyncFunc);
+                    fixSessionOwner.enqueueTask(saveSeqIndexSyncFunc);
                 }
             }
             lastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
@@ -1074,7 +1073,7 @@ public class Session
         final int replayToSequenceIndex,
         final long timeout)
     {
-        return sessionProcessHandler.replayReceivedMessages(
+        return fixSessionOwner.replayReceivedMessages(
             id,
             replayFromSequenceNumber,
             replayFromSequenceIndex,
@@ -1628,9 +1627,9 @@ public class Session
         username(username);
         password(password);
 
-        if (sessionProcessHandler != null)
+        if (fixSessionOwner != null)
         {
-            sessionProcessHandler.onLogon(this);
+            fixSessionOwner.onLogon(this);
         }
     }
 
@@ -2309,10 +2308,10 @@ public class Session
         return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }
 
-    void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
+    void sessionProcessHandler(final FixSessionOwner fixSessionOwner)
     {
-        this.sessionProcessHandler = sessionProcessHandler;
-        cancelOnDisconnect.enqueueTask(sessionProcessHandler::enqueueTask);
+        this.fixSessionOwner = fixSessionOwner;
+        cancelOnDisconnect.enqueueTask(fixSessionOwner::enqueueTask);
     }
 
     void logoutRejectReason(final int logoutRejectReason)

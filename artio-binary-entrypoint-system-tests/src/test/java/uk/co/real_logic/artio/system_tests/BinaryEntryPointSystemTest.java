@@ -27,7 +27,7 @@ import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointKey;
-import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.FixPSessionInfo;
@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
@@ -51,6 +52,8 @@ import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
+import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
+import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.*;
 import static uk.co.real_logic.artio.system_tests.ArchivePruneSystemTest.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntryPointClient.*;
 import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
@@ -1048,7 +1051,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            final BinaryEntrypointConnection firstConnection = this.connection;
+            final BinaryEntryPointConnection firstConnection = this.connection;
             resetHandlers();
 
             try (BinaryEntryPointClient client2 = newClient())
@@ -1170,7 +1173,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.writeEstablish(2);
 
             testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
-            final BinaryEntrypointConnection offlineConnection = this.connection;
+            final BinaryEntryPointConnection offlineConnection = this.connection;
             acquireConnection(connectionAcquiredHandler);
             assertFalse(connectionExistsHandler.invoked());
             assertSame(offlineConnection, connection);
@@ -1323,12 +1326,85 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     // END OFFLINE TESTS
     // ----------------------------------
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectMessagesOverThrottle() throws IOException
+    {
+        setup();
+        setupJustArtio(
+            true,
+            DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE,
+            null,
+            true);
+
+        connectionHandler.replyToOrder(false);
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            awaitedSleepThrottleWindow();
+
+            assertMessagesRejectedAboveThrottleRate(client, THROTTLE_MSG_LIMIT, 1);
+
+            // After throttle timeout we can exchange messages
+            awaitedSleepThrottleWindow();
+            connectionHandler.replyToOrder(true);
+            exchangeOrderAndReportNew(client);
+            connectionHandler.replyToOrder(false);
+
+            // Test that resend requests work with throttle rejection
+            client.writeRetransmitRequest(1, 2);
+            client.readRetransmission(1, 2);
+            client.readBusinessReject(4, 4);
+            client.readBusinessReject(5, 5);
+
+            // Reset the throttle rate
+            final Reply<ThrottleConfigurationStatus> reply = testSystem.awaitCompletedReply(
+                connection.throttleMessagesAt(TEST_THROTTLE_WINDOW_IN_MS, RESET_THROTTLE_MSG_LIMIT));
+            assertEquals(reply.toString(), OK, reply.resultIfPresent());
+
+            awaitedSleepThrottleWindow();
+
+            assertMessagesRejectedAboveThrottleRate(client, RESET_THROTTLE_MSG_LIMIT, 12);
+
+            awaitedSleepThrottleWindow();
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    private void awaitedSleepThrottleWindow()
+    {
+        testSystem.awaitBlocking(MessageBasedAcceptorSystemTest::sleepThrottleWindow);
+    }
+
+    private void assertMessagesRejectedAboveThrottleRate(
+        final BinaryEntryPointClient connection,
+        final int limitOfMessages,
+        final int seqNumOffset)
+    {
+        // use the same number for clOrdId as sequence numbers
+        final int reportCount = 10;
+        for (int i = 0; i < reportCount; i++)
+        {
+            connection.writeNewOrderSingle(i + seqNumOffset);
+
+            sleep(1);
+        }
+
+        // messagesWithinThrottleWindow - could be login message at the start
+        for (int i = 0; i < (reportCount - limitOfMessages); i++)
+        {
+            final int refSeqNum = i + seqNumOffset + limitOfMessages;
+            connection.readBusinessReject(refSeqNum, refSeqNum);
+        }
+    }
+
     private void resetSequenceNumber()
     {
         testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
     }
 
-    private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntrypointConnection connection)
+    private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntryPointConnection connection)
     {
         final List<FixPSessionInfo> allSessions = engine.allFixPSessions();
         assertThat(allSessions, hasSize(1));

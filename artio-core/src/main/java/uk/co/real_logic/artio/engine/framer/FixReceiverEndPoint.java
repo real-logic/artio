@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
@@ -41,12 +40,9 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.BitUtil.SIZE_OF_CHAR;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
@@ -157,12 +153,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
-    private long throttleWindowInNs;
-    private int throttleLimitOfMessages;
-    private long[] lastMessageTimestampsInNs;
-    private int lastMessageTimestampsInNsMask;
-    private int throttlePosition;
-
     private FixGatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
@@ -193,7 +183,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final int throttleWindowInMs,
         final int throttleLimitOfMessages)
     {
-        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId,
+            throttleWindowInMs, throttleLimitOfMessages);
         Objects.requireNonNull(fixContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
         Objects.requireNonNull(clock, "clock");
@@ -207,51 +198,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
 
-        configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
-
         address = channel.remoteAddress();
-    }
-
-    void configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
-    {
-        if (this.throttleWindowInNs == throttleWindowInMs && this.throttleLimitOfMessages == throttleLimitOfMessages)
-        {
-            return;
-        }
-
-        final long[] oldLastMessageTimestampsInNs = this.lastMessageTimestampsInNs;
-        final int oldThrottleLimitOfMessages = this.throttleLimitOfMessages;
-        final int oldLastMessageTimestampsInNsMask = this.lastMessageTimestampsInNsMask;
-        final int oldThrottlePosition = this.throttlePosition;
-
-        if (throttleWindowInMs == MISSING_INT)
-        {
-            this.throttleWindowInNs = MISSING_LONG;
-            lastMessageTimestampsInNs = null;
-            lastMessageTimestampsInNsMask = 0;
-        }
-        else
-        {
-            this.throttleWindowInNs = MILLISECONDS.toNanos(throttleWindowInMs);
-            final int lastMessageTimestampsInNsCapacity = BitUtil.findNextPositivePowerOfTwo(throttleLimitOfMessages);
-            lastMessageTimestampsInNs = new long[lastMessageTimestampsInNsCapacity];
-            lastMessageTimestampsInNsMask = lastMessageTimestampsInNsCapacity - 1;
-        }
-        this.throttleLimitOfMessages = throttleLimitOfMessages;
-        throttlePosition = 0;
-
-        if (oldLastMessageTimestampsInNs != null && lastMessageTimestampsInNs != null)
-        {
-            final int minLimitOfMessages = Math.min(oldThrottleLimitOfMessages, throttleLimitOfMessages);
-            int srcPosition = Math.max(0, oldThrottlePosition - minLimitOfMessages);
-            while (srcPosition < oldThrottlePosition)
-            {
-                lastMessageTimestampsInNs[throttlePosition & lastMessageTimestampsInNsMask] =
-                    oldLastMessageTimestampsInNs[srcPosition & oldLastMessageTimestampsInNsMask];
-                srcPosition++;
-                throttlePosition++;
-            }
-        }
     }
 
     private int readData() throws IOException
@@ -924,30 +871,6 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             moveRemainingDataToBufferStart(messageOffset);
             return false;
         }
-    }
-
-    private boolean shouldThrottle(final long readTimestampInNs)
-    {
-        final long throttleWindowInNs = this.throttleWindowInNs;
-        if (throttleWindowInNs == MISSING_LONG)
-        {
-            return false;
-        }
-
-        final long[] lastMessageTimestampsInNs = this.lastMessageTimestampsInNs;
-        final int lastMessageTimestampsMask = this.lastMessageTimestampsInNsMask;
-        final int throttlePosition = this.throttlePosition;
-
-        final int oldestMessagePosition = throttlePosition - throttleLimitOfMessages;
-        final int oldestMessageIndex = oldestMessagePosition & lastMessageTimestampsMask;
-        final long oldestMessageTimestampInNs = lastMessageTimestampsInNs[oldestMessageIndex];
-
-        final int currentIndex = throttlePosition & lastMessageTimestampsMask;
-        lastMessageTimestampsInNs[currentIndex] = readTimestampInNs;
-        this.throttlePosition = throttlePosition + 1;
-
-        final long timeAgoOfOldestMessageInNs = readTimestampInNs - oldestMessageTimestampInNs;
-        return timeAgoOfOldestMessageInNs < throttleWindowInNs;
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)

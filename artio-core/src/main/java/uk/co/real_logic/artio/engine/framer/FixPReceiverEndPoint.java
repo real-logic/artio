@@ -16,16 +16,19 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixPMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -50,8 +53,10 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
     private final EpochNanoClock epochNanoClock;
     private final long correlationId;
     private final short encodingType;
+    private final FixPRejectRefIdExtractor fixPRejectRefIdExtractor;
 
     protected FixPGatewaySession fixPGatewaySession;
+    private long sessionId;
 
     FixPReceiverEndPoint(
         final long connectionId,
@@ -63,13 +68,18 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
         final int libraryId,
         final EpochNanoClock epochNanoClock,
         final long correlationId,
-        final short encodingType)
+        final short encodingType,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages,
+        final FixPRejectRefIdExtractor fixPRejectRefIdExtractor)
     {
-        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId);
+        super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId,
+            throttleWindowInMs, throttleLimitOfMessages);
         inboundPublication = publication.dataPublication();
         this.epochNanoClock = epochNanoClock;
         this.correlationId = correlationId;
         this.encodingType = encodingType;
+        this.fixPRejectRefIdExtractor = fixPRejectRefIdExtractor;
 
         makeHeader();
     }
@@ -85,6 +95,7 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
 
     public void sessionId(final long sessionId)
     {
+        this.sessionId = sessionId;
         fixPMessage.sessionId(sessionId);
     }
 
@@ -205,21 +216,32 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
             }
 
             checkMessage(buffer, offset, messageSize);
-
-            fixPMessage.enqueueTime(epochNanoClock.nanoTime());
-
-            final long position = inboundPublication.offer(
-                headerBuffer,
-                0,
-                ARTIO_HEADER_LENGTH,
-                buffer,
-                offset,
-                messageSize);
-
-            if (position < 0)
+            final long nanoTime = epochNanoClock.nanoTime();
+            if (shouldThrottle(nanoTime))
             {
-                moveRemainingDataToBufferStart(offset);
-                return false;
+                if (!throttleMessage(buffer, offset, messageSize))
+                {
+                    moveRemainingDataToBufferStart(offset);
+                    return false;
+                }
+            }
+            else
+            {
+                fixPMessage.enqueueTime(nanoTime);
+
+                final long position = inboundPublication.offer(
+                    headerBuffer,
+                    0,
+                    ARTIO_HEADER_LENGTH,
+                    buffer,
+                    offset,
+                    messageSize);
+
+                if (position < 0)
+                {
+                    moveRemainingDataToBufferStart(offset);
+                    return false;
+                }
             }
 
             usedBufferData -= messageSize;
@@ -228,6 +250,28 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
 
         moveRemainingDataToBufferStart(offset);
         return true;
+    }
+
+    private boolean throttleMessage(
+        final DirectBuffer buffer, final int offset, final int messageSize)
+    {
+        final FixPRejectRefIdExtractor fixPRejectRefIdExtractor = this.fixPRejectRefIdExtractor;
+        fixPRejectRefIdExtractor.search(buffer, offset, messageSize);
+
+        final long refMsgType = fixPRejectRefIdExtractor.messageType();
+        final int refIdOffset = fixPRejectRefIdExtractor.offset();
+        final int refIdLength = fixPRejectRefIdExtractor.length();
+
+        final long position = publication.saveThrottleNotification(
+            libraryId,
+            connectionId,
+            refMsgType,
+            Session.UNKNOWN,
+            sessionId,
+            Session.UNKNOWN,
+            buffer, refIdOffset, refIdLength);
+
+        return position > 0;
     }
 
     abstract void checkMessage(MutableAsciiBuffer buffer, int offset, int messageSize);

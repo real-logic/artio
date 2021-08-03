@@ -209,6 +209,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             fixPConnections = ArrayUtil.remove(fixPConnections, connection);
             connectionIdToFixPSubscription.remove(connection.connectionId());
         }
+
+        public Reply<ThrottleConfigurationStatus> messageThrottle(
+            final long sessionId, final int throttleWindowInMs, final int throttleLimitOfMessages)
+        {
+            return new ThrottleConfigurationReply(
+                LibraryPoller.this,
+                timeInMs() + configuration.replyTimeoutInMs(),
+                sessionId,
+                throttleWindowInMs,
+                throttleLimitOfMessages);
+        }
     };
 
     LibraryPoller(
@@ -1979,18 +1990,38 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final SessionSubscriber sessionSubscriber = connectionIdToSession.get(connectionId);
-            if (sessionSubscriber != null)
+            if (refSeqNum == Session.UNKNOWN)
             {
-                final boolean replied = sessionSubscriber.onThrottleNotification(
-                    refMsgType,
-                    refSeqNum,
-                    businessRejectRefIDBuffer,
-                    businessRejectRefIDOffset,
-                    businessRejectRefIDLength
-                );
+                // FIXP
+                final FixPSubscription fixPSubscription = connectionIdToFixPSubscription.get(connectionId);
+                if (fixPSubscription != null)
+                {
+                    final boolean replied = fixPSubscription.onThrottleNotification(
+                        refMsgType,
+                        businessRejectRefIDBuffer,
+                        businessRejectRefIDOffset,
+                        businessRejectRefIDLength
+                    );
 
-                return replied ? CONTINUE : ABORT;
+                    return replied ? CONTINUE : ABORT;
+                }
+            }
+            else
+            {
+                // FIX
+                final SessionSubscriber sessionSubscriber = connectionIdToSession.get(connectionId);
+                if (sessionSubscriber != null)
+                {
+                    final boolean replied = sessionSubscriber.onThrottleNotification(
+                        refMsgType,
+                        refSeqNum,
+                        businessRejectRefIDBuffer,
+                        businessRejectRefIDOffset,
+                        businessRejectRefIDLength
+                    );
+
+                    return replied ? CONTINUE : ABORT;
+                }
             }
         }
 

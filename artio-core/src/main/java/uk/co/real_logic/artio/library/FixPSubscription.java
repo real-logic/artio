@@ -54,4 +54,14 @@ class FixPSubscription
     {
         return connection;
     }
+
+    public boolean onThrottleNotification(
+        final long refMsgType,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        return connection.onThrottleNotification(
+            refMsgType, businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength);
+    }
 }

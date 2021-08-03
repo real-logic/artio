@@ -32,7 +32,7 @@ import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
-import uk.co.real_logic.artio.engine.framer.ThrottleRejectBuilder;
+import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -78,7 +78,7 @@ class FixReplayerSession extends ReplayerSession
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private final AtomicCounter bytesInBuffer;
     private final int maxBytesInBuffer;
-    private final ThrottleRejectBuilder throttleRejectBuilder;
+    private final FixThrottleRejectBuilder throttleRejectBuilder;
 
     private int lastSeqNo;
 
@@ -107,7 +107,7 @@ class FixReplayerSession extends ReplayerSession
         final int maxBytesInBuffer,
         final UtcTimestampEncoder utcTimestampEncoder,
         final Replayer replayer,
-        final ThrottleRejectBuilder throttleRejectBuilder)
+        final FixThrottleRejectBuilder throttleRejectBuilder)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
             sessionId, sequenceIndex, replayer);

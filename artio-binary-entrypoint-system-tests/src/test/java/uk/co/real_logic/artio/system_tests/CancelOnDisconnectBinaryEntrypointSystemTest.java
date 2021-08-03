@@ -140,7 +140,8 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
             true,
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE,
-            timeoutHandler);
+            timeoutHandler,
+            false);
         client = newClient();
         client.codTimeout(cancelOnDisconnectType, codTestTimeoutInMs);
         establishNewConnection(client);

@@ -192,6 +192,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
     private AbstractFixPProxy fixPProxy;
+    private FixPRejectRefIdExtractor fixPRejectRefIdExtractor;
 
     private boolean performingDisconnectOperation = false;
     private UnbindCommand pendingUnbind = null;
@@ -678,7 +679,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             ENGINE_LIBRARY_ID,
             configuration.epochNanoClock(),
             connectionId,
-            fixPProtocol);
+            fixPProtocol,
+            configuration.throttleWindowInMs(),
+            configuration.throttleLimitOfMessages(),
+            fixPRejectRefIdExtractor);
         receiverEndPoints.add(receiverEndPoint);
 
         final FixPGatewaySession gatewaySession = new FixPGatewaySession(
@@ -708,6 +712,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
             fixPParser = fixPProtocol.makeParser(null);
             fixPProxy = fixPProtocol.makeProxy(null, null);
+            try
+            {
+                fixPRejectRefIdExtractor = fixPProtocol.makeRefIdExtractor();
+            }
+            catch (final Throwable e)
+            {
+                errorHandler.onError(e);
+            }
         }
         return protocolType;
     }
@@ -842,7 +854,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         context,
                         configuration.epochNanoClock(),
                         correlationId,
-                        fixPContexts, fixPProtocol));
+                        fixPContexts, fixPProtocol,
+                        configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
+                        fixPRejectRefIdExtractor));
                 });
         }
         catch (final Exception ex)
@@ -960,7 +974,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return saveThrottleConfReply(libraryId, correlationId, ThrottleConfigurationStatus.UNKNOWN_LIBRARY);
         }
 
-        final FixGatewaySession gatewaySession = (FixGatewaySession)libraryInfo.lookupSessionById(sessionId);
+        final GatewaySession gatewaySession = libraryInfo.lookupSessionById(sessionId);
         if (gatewaySession == null)
         {
             return saveThrottleConfReply(libraryId, correlationId, ThrottleConfigurationStatus.SESSION_NOT_OWNED);

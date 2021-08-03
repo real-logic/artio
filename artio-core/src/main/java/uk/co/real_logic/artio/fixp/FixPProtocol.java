@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.sbe.ir.Ir;
 
 // Implementation classes should be stateless
 public abstract class FixPProtocol
@@ -35,13 +36,17 @@ public abstract class FixPProtocol
     private final int finishedSendingTemplateId;
     private final int finishedReceivingTemplateId;
     private final int negotiateResponseTemplateId;
+    private final int rejectRefIdLength;
 
     protected FixPProtocol(
-        final FixPProtocolType protocolType, final short encodingType, final int negotiateResponseTemplateId)
+        final FixPProtocolType protocolType,
+        final short encodingType,
+        final int negotiateResponseTemplateId,
+        final int rejectRefIdLength)
     {
         this(protocolType, encodingType,
             DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID, DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
-            negotiateResponseTemplateId);
+            negotiateResponseTemplateId, rejectRefIdLength);
     }
 
     protected FixPProtocol(
@@ -49,13 +54,15 @@ public abstract class FixPProtocol
         final short encodingType,
         final int finishedSendingTemplateId,
         final int finishedReceivingTemplateId,
-        final int negotiateResponseTemplateId)
+        final int negotiateResponseTemplateId,
+        final int rejectRefIdLength)
     {
         this.protocolType = protocolType;
         this.encodingType = encodingType;
         this.finishedSendingTemplateId = finishedSendingTemplateId;
         this.finishedReceivingTemplateId = finishedReceivingTemplateId;
         this.negotiateResponseTemplateId = negotiateResponseTemplateId;
+        this.rejectRefIdLength = rejectRefIdLength;
     }
 
     public FixPProtocolType protocolType()
@@ -108,4 +115,11 @@ public abstract class FixPProtocol
     public abstract AbstractFixPSequenceExtractor makeSequenceExtractor(
         FixPSequenceNumberHandler handler,
         SequenceNumberIndexReader sequenceNumberIndex);
+
+    protected abstract Ir loadIr();
+
+    public FixPRejectRefIdExtractor makeRefIdExtractor()
+    {
+        return new FixPRejectRefIdExtractor(loadIr(), rejectRefIdLength);
+    }
 }

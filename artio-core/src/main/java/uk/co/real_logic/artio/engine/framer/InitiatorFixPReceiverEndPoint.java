@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -40,7 +41,10 @@ class InitiatorFixPReceiverEndPoint extends FixPReceiverEndPoint
         final EpochNanoClock epochNanoClock,
         final long correlationId,
         final FixPContexts fixPContexts,
-        final FixPProtocol fixPProtocol)
+        final FixPProtocol fixPProtocol,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages,
+        final FixPRejectRefIdExtractor fixPRejectRefIdExtractor)
     {
         super(
             connectionId,
@@ -52,7 +56,10 @@ class InitiatorFixPReceiverEndPoint extends FixPReceiverEndPoint
             libraryId,
             epochNanoClock,
             correlationId,
-            fixPProtocol.encodingType());
+            fixPProtocol.encodingType(),
+            throttleWindowInMs,
+            throttleLimitOfMessages,
+            fixPRejectRefIdExtractor);
         this.context = context;
         this.fixPContexts = fixPContexts;
         this.negotiationResponse = fixPProtocol.negotiateResponseTemplateId();

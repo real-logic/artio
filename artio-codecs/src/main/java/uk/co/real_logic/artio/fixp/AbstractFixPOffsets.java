@@ -20,9 +20,12 @@ import org.agrona.LangUtil;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.sbe.ir.Ir;
 import uk.co.real_logic.sbe.ir.IrDecoder;
+import uk.co.real_logic.sbe.ir.Token;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
@@ -97,8 +100,10 @@ public abstract class AbstractFixPOffsets
             final InputStream stream = encoder.getResourceAsStream(fileName);
             if (stream == null)
             {
+                final URL resource = encoder.getResource(".");
+                final String encoderDir = resource == null ? "unknown" : resource.toURI().getPath();
                 throw new IllegalStateException("Unable to find SBE IR: " + fileName +
-                    " associated with resource: " + encoder);
+                    " associated with resource: " + encoder + " @ " + encoderDir);
             }
             final int length = stream.available();
             final byte[] bytes = new byte[length];
@@ -117,5 +122,11 @@ public abstract class AbstractFixPOffsets
             LangUtil.rethrowUnchecked(e);
             return null;
         }
+    }
+
+    public static int templateId(final List<Token> messageTokens)
+    {
+        final Token beginMessage = messageTokens.get(0);
+        return beginMessage.id();
     }
 }

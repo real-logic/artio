@@ -17,8 +17,10 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.FinishedReceivingDecoder;
 import b3.entrypoint.fixp.sbe.FinishedSendingDecoder;
+import b3.entrypoint.fixp.sbe.NegotiateEncoder;
 import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import io.aeron.ExclusivePublication;
+import org.agrona.BitUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
@@ -28,11 +30,30 @@ import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.sbe.ir.Ir;
 
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
 
 public class BinaryEntryPointProtocol extends FixPProtocol
 {
+    private static final String SBE_IR_FILE = "binary_entrypoint.sbeir";
+    static final int REJECT_REF_ID_LENGTH = BitUtil.SIZE_OF_LONG;
+
+    private static final class LazyLoader
+    {
+        static final Ir IR = AbstractFixPOffsets.loadSbeIr(NegotiateEncoder.class, SBE_IR_FILE);
+    }
+
+    public static Ir loadSbeIr()
+    {
+        return LazyLoader.IR;
+    }
+
+    protected Ir loadIr()
+    {
+        return loadSbeIr();
+    }
+
     public static <T> T unsupported()
     {
         throw new UnsupportedOperationException("Binary Entrypoint is only implemented as an acceptor");
@@ -45,12 +66,13 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             BINARY_ENTRYPOINT_TYPE,
             FinishedSendingDecoder.TEMPLATE_ID,
             FinishedReceivingDecoder.TEMPLATE_ID,
-            NegotiateResponseDecoder.TEMPLATE_ID);
+            NegotiateResponseDecoder.TEMPLATE_ID,
+            REJECT_REF_ID_LENGTH);
     }
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)
     {
-        return new BinaryEntryPointParser((InternalBinaryEntrypointConnection)connection);
+        return new BinaryEntryPointParser((InternalBinaryEntryPointConnection)connection);
     }
 
     public BinaryEntryPointProxy makeProxy(
@@ -76,7 +98,7 @@ public class BinaryEntryPointProtocol extends FixPProtocol
         final FixPContext context,
         final CommonConfiguration configuration)
     {
-        return new InternalBinaryEntrypointConnection(
+        return new InternalBinaryEntryPointConnection(
             connectionId,
             outboundPublication,
             inboundPublication,

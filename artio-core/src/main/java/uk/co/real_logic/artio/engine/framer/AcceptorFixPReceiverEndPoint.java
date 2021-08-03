@@ -18,10 +18,11 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
+class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
 {
     private final int finishedSendingTemplateId;
     private final int finishedReceivingTemplateId;
@@ -38,7 +39,10 @@ public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
         final int libraryId,
         final EpochNanoClock epochNanoClock,
         final long correlationId,
-        final FixPProtocol protocol)
+        final FixPProtocol protocol,
+        final int throttleWindowInMs,
+        final int throttleLimitOfMessages,
+        final FixPRejectRefIdExtractor fixPRejectRefIdExtractor)
     {
         super(
             connectionId,
@@ -50,7 +54,10 @@ public class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
             libraryId,
             epochNanoClock,
             correlationId,
-            protocol.encodingType());
+            protocol.encodingType(),
+            throttleWindowInMs,
+            throttleLimitOfMessages,
+            fixPRejectRefIdExtractor);
         finishedSendingTemplateId = protocol.finishedSendingTemplateId();
         finishedReceivingTemplateId = protocol.finishedReceivingTemplateId();
     }

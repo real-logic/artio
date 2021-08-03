@@ -34,7 +34,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
-import uk.co.real_logic.artio.engine.framer.ThrottleRejectBuilder;
+import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.fixp.*;
@@ -405,7 +405,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
         encoder.setupMessage(resendRequest.header());
 
-        final ThrottleRejectBuilder throttleRejectBuilder;
+        final FixThrottleRejectBuilder throttleRejectBuilder;
 
         if (configuration.throttleWindowInMs() == MISSING_INT)
         {
@@ -413,7 +413,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
         }
         else
         {
-            throttleRejectBuilder = new ThrottleRejectBuilder(
+            throttleRejectBuilder = new FixThrottleRejectBuilder(
                 sessionCodecs.dictionary(),
                 errorHandler,
                 sessionId,

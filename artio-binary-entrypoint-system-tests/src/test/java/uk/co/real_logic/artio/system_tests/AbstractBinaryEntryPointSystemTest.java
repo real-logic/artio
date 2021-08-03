@@ -25,7 +25,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
-import uk.co.real_logic.artio.binary_entrypoint.BinaryEntrypointConnection;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
@@ -48,6 +48,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
+import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.TEST_THROTTLE_WINDOW_IN_MS;
+import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.THROTTLE_MSG_LIMIT;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
@@ -75,7 +77,7 @@ public class AbstractBinaryEntryPointSystemTest
         connectionHandler);
     final FakeFixPAuthenticationStrategy fixPAuthenticationStrategy = new FakeFixPAuthenticationStrategy();
 
-    BinaryEntrypointConnection connection;
+    BinaryEntryPointConnection connection;
 
     boolean printErrors = true;
 
@@ -101,7 +103,12 @@ public class AbstractBinaryEntryPointSystemTest
         final int fixPAcceptedSessionMaxRetransmissionRange)
     {
         setup();
-        setupJustArtio(true, logonTimeoutInMs, fixPAcceptedSessionMaxRetransmissionRange, null);
+        setupJustArtio(
+            true,
+            logonTimeoutInMs,
+            fixPAcceptedSessionMaxRetransmissionRange,
+            null,
+            false);
     }
 
     void setupJustArtio(final boolean deleteLogFileDirOnStart)
@@ -110,14 +117,16 @@ public class AbstractBinaryEntryPointSystemTest
             deleteLogFileDirOnStart,
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE,
-            null);
+            null,
+            false);
     }
 
     void setupJustArtio(
         final boolean deleteLogFileDirOnStart,
         final int shortLogonTimeoutInMs,
         final int fixPAcceptedSessionMaxRetransmissionRange,
-        final FixPCancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler)
+        final FixPCancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler,
+        final boolean enableThrottle)
     {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(ACCEPTOR_LOGS)
@@ -138,6 +147,11 @@ public class AbstractBinaryEntryPointSystemTest
             engineConfig
                 .errorHandlerFactory(errorBuffer -> errorHandler)
                 .monitoringAgentFactory(MonitoringAgentFactory.none());
+        }
+
+        if (enableThrottle)
+        {
+            engineConfig.enableMessageThrottle(TEST_THROTTLE_WINDOW_IN_MS, THROTTLE_MSG_LIMIT);
         }
 
         engine = FixEngine.launch(engineConfig);
@@ -255,7 +269,7 @@ public class AbstractBinaryEntryPointSystemTest
 
     void acquireConnection(final FakeFixPConnectionAcquiredHandler connectionAcquiredHandler)
     {
-        connection = (BinaryEntrypointConnection)connectionAcquiredHandler.connection();
+        connection = (BinaryEntryPointConnection)connectionAcquiredHandler.connection();
     }
 
     void libraryAcquiresConnection(

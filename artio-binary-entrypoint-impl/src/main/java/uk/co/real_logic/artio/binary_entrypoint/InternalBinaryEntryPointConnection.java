@@ -21,13 +21,18 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.library.CancelOnDisconnect;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+
+import java.nio.ByteOrder;
 
 import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,8 +46,8 @@ import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 /**
  * External users should never rely on this API.
  */
-class InternalBinaryEntrypointConnection
-    extends InternalFixPConnection implements BinaryEntrypointConnection
+class InternalBinaryEntryPointConnection
+    extends InternalFixPConnection implements BinaryEntryPointConnection
 {
     private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
 
@@ -63,7 +68,7 @@ class InternalBinaryEntrypointConnection
     private boolean suppressRetransmissionResend = false;
     private boolean replaying = false;
 
-    InternalBinaryEntrypointConnection(
+    InternalBinaryEntryPointConnection(
         final long connectionId,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
@@ -90,7 +95,7 @@ class InternalBinaryEntrypointConnection
             connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()));
     }
 
-    InternalBinaryEntrypointConnection(
+    InternalBinaryEntryPointConnection(
         final long connectionId,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
@@ -565,7 +570,7 @@ class InternalBinaryEntrypointConnection
         onReceivedMessage();
 
         final State state = state();
-        if (state == ESTABLISHED || state == RETRANSMITTING || state == AWAITING_KEEPALIVE)
+        if (canReceiveMessage(state))
         {
             nextRecvSeqNo++;
 
@@ -584,6 +589,11 @@ class InternalBinaryEntrypointConnection
         }
 
         return 1;
+    }
+
+    private boolean canReceiveMessage(final State state)
+    {
+        return state == ESTABLISHED || state == RETRANSMITTING || state == AWAITING_KEEPALIVE;
     }
 
     private boolean checkFinishedSending(final State state)
@@ -749,5 +759,43 @@ class InternalBinaryEntrypointConnection
     private long sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)
     {
         return proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs);
+    }
+
+    public Reply<ThrottleConfigurationStatus> throttleMessagesAt(
+        final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        EngineConfiguration.validateMessageThrottleOptions(throttleWindowInMs, throttleLimitOfMessages);
+
+        return owner.messageThrottle(sessionId, throttleWindowInMs, throttleLimitOfMessages);
+    }
+
+    protected boolean onThrottleNotification(
+        final long refMsgTypeValue,
+        final DirectBuffer rejectRefIDBuffer,
+        final int rejectRefIDOffset,
+        final int rejectRefIDLength)
+    {
+        final State state = state();
+        if (canReceiveMessage(state))
+        {
+            final long refSeqNum = nextRecvSeqNo++;
+
+            if (rejectRefIDLength != BinaryEntryPointProtocol.REJECT_REF_ID_LENGTH)
+            {
+                // TODO: error
+            }
+
+            final MessageType refMsgType = MessageType.get((short)refMsgTypeValue);
+            final long rejectRefID = rejectRefIDBuffer.getLong(rejectRefIDOffset, ByteOrder.LITTLE_ENDIAN);
+            final boolean sent = proxy.sendBusinessReject(refSeqNum, refMsgType, rejectRefID, 1) > 0;
+            if (sent)
+            {
+                nextSentSeqNo++;
+                onAttemptedToSendMessage();
+            }
+            return sent;
+        }
+
+        return true;
     }
 }

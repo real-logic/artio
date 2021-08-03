@@ -31,7 +31,7 @@ import java.util.function.BooleanSupplier;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
-class SessionSubscriber implements AutoCloseable, SessionProcessHandler
+class SessionSubscriber implements AutoCloseable, FixSessionOwner
 {
     private final OnMessageInfo info;
     private final SessionParser parser;

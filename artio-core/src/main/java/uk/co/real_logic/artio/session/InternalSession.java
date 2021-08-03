@@ -106,9 +106,9 @@ public class InternalSession extends Session implements AutoCloseable
         super.libraryConnected(libraryConnected);
     }
 
-    public void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
+    public void sessionProcessHandler(final FixSessionOwner fixSessionOwner)
     {
-        super.sessionProcessHandler(sessionProcessHandler);
+        super.sessionProcessHandler(fixSessionOwner);
     }
 
     public void address(final String address)

@@ -29,7 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
-public class InternalBinaryEntrypointConnectionTest
+public class InternalBinaryEntryPointConnectionTest
 {
     private static final long CONNECTION_ID = 1;
     private static final int LIBRARY_ID = 2;
@@ -46,7 +46,7 @@ public class InternalBinaryEntrypointConnectionTest
             SESSION_ID, SESSION_VER_ID, clock.nanoTime(), ENTERING_FIRM, false);
         final GatewayPublication inboundPublication = mock(GatewayPublication.class);
 
-        final InternalBinaryEntrypointConnection connection = new InternalBinaryEntrypointConnection(
+        final InternalBinaryEntryPointConnection connection = new InternalBinaryEntryPointConnection(
             CONNECTION_ID,
             mock(GatewayPublication.class),
             inboundPublication,
@@ -100,7 +100,7 @@ public class InternalBinaryEntrypointConnectionTest
     }
 
     private void onRetransmitRequest(
-        final InternalBinaryEntrypointConnection connection, final long requestTimestampInNs, final int fromSeqNo)
+        final InternalBinaryEntryPointConnection connection, final long requestTimestampInNs, final int fromSeqNo)
     {
         connection.onRetransmitRequest(SESSION_ID, requestTimestampInNs, fromSeqNo, 1);
     }

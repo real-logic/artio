@@ -461,7 +461,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             assertMessagesRejectedAboveThrottleRate(connection, THROTTLE_MSG_LIMIT, 2, 4, 1);
 
-            testSystem.awaitBlocking(this::sleepThrottleWindow);
+            testSystem.awaitBlocking(MessageBasedAcceptorSystemTest::sleepThrottleWindow);
 
             final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
             assertEquals(10, abc.header().msgSeqNum());
@@ -626,7 +626,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
-    private void sleepThrottleWindow()
+    public static void sleepThrottleWindow()
     {
         sleep(TEST_THROTTLE_WINDOW_IN_MS);
     }
@@ -675,7 +675,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             reject.textAsString());
     }
 
-    private void sleep(final int timeInMs)
+    private static void sleep(final int timeInMs)
     {
         try
         {

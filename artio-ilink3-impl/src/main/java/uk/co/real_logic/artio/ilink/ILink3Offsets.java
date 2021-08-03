@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import iLinkBinary.Negotiate500Encoder;
 import iLinkBinary.NewOrderSingle514Decoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2IntHashMap;
@@ -35,8 +34,6 @@ public class ILink3Offsets extends AbstractFixPOffsets
     private final Int2IntHashMap templateIdToPossRetransOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToSendingTimeEpochOffset = new Int2IntHashMap(MISSING_OFFSET);
 
-    public static final String SBE_IR_FILE = "ilinkbinary.sbeir";
-
     public static final int SEQ_NUM_ID = 9726;
     public static final int UUID_ID = 39001;
     public static final int POSS_RETRANS_ID = 9765;
@@ -44,7 +41,7 @@ public class ILink3Offsets extends AbstractFixPOffsets
 
     public ILink3Offsets()
     {
-        final Ir ir = loadSbeIr();
+        final Ir ir = Ilink3Protocol.loadSbeIr();
         ir.messages().forEach(messageTokens ->
         {
             final int templateId = templateId(messageTokens);
@@ -74,17 +71,6 @@ public class ILink3Offsets extends AbstractFixPOffsets
     private boolean ispartyDetailsOffset(final int templateId, final int seqNumOffset)
     {
         return templateId == PARTY_DETAILS_LIST_REQUEST_ID && seqNumOffset == PARTY_DETAILS_LIST_REQUEST_SEQ_NUM_OFFSET;
-    }
-
-    private int templateId(final List<Token> messageTokens)
-    {
-        final Token beginMessage = messageTokens.get(0);
-        return beginMessage.id();
-    }
-
-    public static Ir loadSbeIr()
-    {
-        return AbstractFixPOffsets.loadSbeIr(Negotiate500Encoder.class, SBE_IR_FILE);
     }
 
     private static void findOffset(

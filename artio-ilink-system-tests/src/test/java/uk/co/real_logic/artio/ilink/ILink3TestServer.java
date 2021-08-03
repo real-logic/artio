@@ -60,7 +60,7 @@ public class ILink3TestServer
     public static final int RETRANSMIT_REJECT_ERROR_CODES = 1;
 
     private final EpochNanoClock epochNanoClock = new SystemEpochNanoClock();
-    private final JsonPrinter jsonPrinter = new JsonPrinter(ILink3Offsets.loadSbeIr());
+    private final JsonPrinter jsonPrinter = new JsonPrinter(Ilink3Protocol.loadSbeIr());
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final UnsafeBuffer unsafeWriteBuffer = new UnsafeBuffer(writeBuffer);
     private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);

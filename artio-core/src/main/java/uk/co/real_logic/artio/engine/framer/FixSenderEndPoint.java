@@ -67,7 +67,7 @@ class FixSenderEndPoint
     private long sendingTimeoutTimeInMs;
     private boolean replayPaused;
 
-    private ThrottleRejectBuilder throttleRejectBuilder;
+    private FixThrottleRejectBuilder throttleRejectBuilder;
     private FixDictionary fixDictionary;
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
@@ -153,7 +153,7 @@ class FixSenderEndPoint
             return;
         }
 
-        final ThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
+        final FixThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
         if (!throttleRejectBuilder.build(
             refMsgType,
             refSeqNum,
@@ -208,7 +208,7 @@ class FixSenderEndPoint
             return CONTINUE;
         }
 
-        final ThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
+        final FixThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
         if (!throttleRejectBuilder.build(
             refMsgType,
             refSeqNum,
@@ -236,11 +236,11 @@ class FixSenderEndPoint
             sequenceNumber);
     }
 
-    private ThrottleRejectBuilder throttleRejectBuilder()
+    private FixThrottleRejectBuilder throttleRejectBuilder()
     {
         if (throttleRejectBuilder == null)
         {
-            throttleRejectBuilder = new ThrottleRejectBuilder(
+            throttleRejectBuilder = new FixThrottleRejectBuilder(
                 fixDictionary,
                 errorHandler,
                 sessionId,

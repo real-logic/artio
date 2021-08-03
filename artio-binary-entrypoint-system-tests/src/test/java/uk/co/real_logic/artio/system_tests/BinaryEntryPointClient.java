@@ -24,7 +24,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointOffsets;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.IOException;
@@ -54,7 +54,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
     public static final long SECURITY_ID = 2;
 
-    private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointOffsets.loadSbeIr());
+    private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointProtocol.loadSbeIr());
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
@@ -582,5 +582,14 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public long timeInNs()
     {
         return epochNanoClock.nanoTime();
+    }
+
+    public void readBusinessReject(final long refSeqNum, final long rejectRefID)
+    {
+        final BusinessMessageRejectDecoder businessReject = read(new BusinessMessageRejectDecoder(), 0);
+        assertEquals(refSeqNum, businessReject.refSeqNum());
+        assertEquals(MessageType.NewOrderSingle, businessReject.refMsgType());
+        assertEquals(rejectRefID, businessReject.businessRejectRefID());
+        assertEquals(1, businessReject.businessRejectReason()); // TODO
     }
 }

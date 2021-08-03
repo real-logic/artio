@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.exceptions.TimeoutException;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
@@ -322,4 +323,13 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected abstract void onReplayComplete();
 
     protected abstract void onOfflineReconnect(long connectionId, FixPContext context);
+
+    protected boolean onThrottleNotification(
+        final long refMsgType,
+        final DirectBuffer businessRejectRefIDBuffer,
+        final int businessRejectRefIDOffset,
+        final int businessRejectRefIDLength)
+    {
+        throw new UnsupportedOperationException("throttling isn't supported for this Protocol type");
+    }
 }

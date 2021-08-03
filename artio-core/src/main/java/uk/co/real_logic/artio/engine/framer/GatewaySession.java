@@ -26,8 +26,7 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
     protected final long authenticationTimeoutInMs;
 
     // null iff session is offline.
-    private final ReceiverEndPoint receiverEndPoint;
-
+    protected ReceiverEndPoint receiverEndPoint;
     protected long sessionId;
     protected long connectionId;
     protected String address;
@@ -110,6 +109,11 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
         return 0;
     }
 
+    public boolean isOffline()
+    {
+        return receiverEndPoint == null;
+    }
+
     ConnectionType connectionType()
     {
         return connectionType;
@@ -138,4 +142,6 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
     abstract void onDisconnectReleasedByOwner();
 
     abstract void close();
+
+    public abstract boolean configureThrottle(int throttleWindowInMs, int throttleLimitOfMessages);
 }

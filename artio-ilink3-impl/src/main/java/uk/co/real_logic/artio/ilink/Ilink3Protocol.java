@@ -16,11 +16,13 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.NegotiationResponse501Decoder;
+import iLinkBinary.Negotiate500Encoder;
 import io.aeron.ExclusivePublication;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
@@ -28,11 +30,24 @@ import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.sbe.ir.Ir;
 
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.CME_ENCODING_TYPE;
 
 public class Ilink3Protocol extends FixPProtocol
 {
+    private static final int REJECT_REF_ID_LENGTH = 20;
+    private static final String SBE_IR_FILE = "ilinkbinary.sbeir";
+    private static final class LazyLoader
+    {
+        static final Ir IR = AbstractFixPOffsets.loadSbeIr(Negotiate500Encoder.class, SBE_IR_FILE);
+    }
+
+    public static Ir loadSbeIr()
+    {
+        return LazyLoader.IR;
+    }
+
     public static <T> T unsupported()
     {
         throw new UnsupportedOperationException("iLink3 is only implemented as an initiator");
@@ -40,7 +55,8 @@ public class Ilink3Protocol extends FixPProtocol
 
     public Ilink3Protocol()
     {
-        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID);
+        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID,
+            REJECT_REF_ID_LENGTH);
     }
 
     public ILink3Parser makeParser(final FixPConnection connection)
@@ -87,5 +103,10 @@ public class Ilink3Protocol extends FixPProtocol
             handler,
             makeOffsets(),
             makeParser(null));
+    }
+
+    protected Ir loadIr()
+    {
+        return loadSbeIr();
     }
 }

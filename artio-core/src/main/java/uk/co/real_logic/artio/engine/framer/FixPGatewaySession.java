@@ -161,4 +161,10 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
     {
         return context.key();
     }
+
+    public boolean configureThrottle(final int throttleWindowInMs, final int throttleLimitOfMessages)
+    {
+        receiverEndPoint.configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
+        return true;
+    }
 }
