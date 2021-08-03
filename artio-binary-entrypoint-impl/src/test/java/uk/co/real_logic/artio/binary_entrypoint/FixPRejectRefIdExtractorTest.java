@@ -43,7 +43,7 @@ public class FixPRejectRefIdExtractorTest
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
         writeNewOrderSingle(buffer);
 
-        assertTrue(rejectRefIdExtractor.search(buffer, OFFSET, MESSAGE_SIZE));
+        assertTrue(rejectRefIdExtractor.search(buffer, OFFSET));
         assertEquals(NewOrderSingleEncoder.TEMPLATE_ID, rejectRefIdExtractor.templateId());
         assertEquals(MessageType.NewOrderSingle.value(), (short)rejectRefIdExtractor.messageType());
         assertEquals(CL_ORD_ID, buffer.getLong(rejectRefIdExtractor.offset()));

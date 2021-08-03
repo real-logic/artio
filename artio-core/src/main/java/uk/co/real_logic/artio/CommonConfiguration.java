@@ -301,6 +301,7 @@ public class CommonConfiguration
      * @param sendingTimeWindowInMs the current sending time in milliseconds
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration sendingTimeWindowInMs(final long sendingTimeWindowInMs)
     {
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
@@ -313,6 +314,7 @@ public class CommonConfiguration
      * @param value the default interval for heartbeats if not exchanged upon logon. Specified in seconds.
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration defaultHeartbeatIntervalInS(final int value)
     {
         defaultHeartbeatIntervalInS = value;
@@ -374,6 +376,7 @@ public class CommonConfiguration
      * @return this
      * @see CommonConfiguration#MONITORING_BUFFERS_LENGTH_PROPERTY
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
     {
         this.monitoringBuffersLength = monitoringBuffersLength;
@@ -475,6 +478,7 @@ public class CommonConfiguration
      * @param errorPrinterIdleStrategy the idle strategy for the Error Printer thread.
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration monitoringThreadIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
     {
         this.monitoringThreadIdleStrategy = errorPrinterIdleStrategy;
@@ -502,6 +506,7 @@ public class CommonConfiguration
      * @return this
      * @see CommonConfiguration#INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration inboundMaxClaimAttempts(final int inboundMaxClaimAttempts)
     {
         this.inboundMaxClaimAttempts = inboundMaxClaimAttempts;
@@ -515,6 +520,7 @@ public class CommonConfiguration
      * @return this
      * @see CommonConfiguration#OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration outboundMaxClaimAttempts(final int outboundMaxClaimAttempts)
     {
         this.outboundMaxClaimAttempts = outboundMaxClaimAttempts;
@@ -537,18 +543,21 @@ public class CommonConfiguration
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration histogramPollPeriodInMs(final long histogramPollPeriodInMs)
     {
         this.histogramPollPeriodInMs = histogramPollPeriodInMs;
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration histogramLoggingFile(final String histogramLoggingFile)
     {
         this.histogramLoggingFile = histogramLoggingFile;
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration histogramHandler(final HistogramHandler histogramHandler)
     {
         this.histogramHandler = histogramHandler;
@@ -578,6 +587,7 @@ public class CommonConfiguration
      * @param printAeronStreamIdentifiers true to print, false otherwise.
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
     {
         this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
@@ -626,6 +636,7 @@ public class CommonConfiguration
      * @param threadFactory factory for custom thread creating
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration threadFactory(final ThreadFactory threadFactory)
     {
         this.threadFactory = threadFactory;
@@ -639,6 +650,7 @@ public class CommonConfiguration
      * @param validateCompIdsOnEveryMessage true to validate comp ids
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration validateCompIdsOnEveryMessage(final boolean validateCompIdsOnEveryMessage)
     {
         this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
@@ -652,6 +664,7 @@ public class CommonConfiguration
      * @param validateTimeStrictly true to validate time matches format
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration validateTimeStrictly(final boolean validateTimeStrictly)
     {
         this.validateTimeStrictly = validateTimeStrictly;
@@ -664,6 +677,7 @@ public class CommonConfiguration
      * @param sessionEpochFractionFormat the format to use.
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration sessionEpochFractionFormat(final EpochFractionFormat sessionEpochFractionFormat)
     {
         Verify.notNull(sessionEpochFractionFormat, "sessionEpochFractionFormat");
@@ -671,12 +685,26 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the maximum keep alive timeout in milliseconds that can be agreed by a FIXP connection's logon exchange.
+     *
+     * @param maxFixpKeepaliveTimeoutInMs the maximum keep alive timeout.
+     * @return this
+     */
+    @SuppressWarnings("UnusedReturnValue")
     public CommonConfiguration maxFixPKeepaliveTimeoutInMs(final long maxFixpKeepaliveTimeoutInMs)
     {
         this.maxFixPKeepaliveTimeoutInMs = maxFixpKeepaliveTimeoutInMs;
         return this;
     }
 
+    /**
+     * Sets the timeout in milliseconds before a FIXP TCP connection is closed if no establish message is sent.
+     * This is analogous to {@link EngineConfiguration#noLogonDisconnectTimeoutInMs(int)} for FIX.
+     *
+     * @param noEstablishFixPTimeoutInMs the time before a FIXP connection is closed if no establish message is sent.
+     * @return this
+     */
     public CommonConfiguration noEstablishFixPTimeoutInMs(final long noEstablishFixPTimeoutInMs)
     {
         this.noEstablishFixPTimeoutInMs = noEstablishFixPTimeoutInMs;

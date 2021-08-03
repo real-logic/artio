@@ -219,7 +219,7 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
             final long nanoTime = epochNanoClock.nanoTime();
             if (shouldThrottle(nanoTime))
             {
-                if (!throttleMessage(buffer, offset, messageSize))
+                if (!throttleMessage(buffer, offset))
                 {
                     moveRemainingDataToBufferStart(offset);
                     return false;
@@ -253,10 +253,10 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
     }
 
     private boolean throttleMessage(
-        final DirectBuffer buffer, final int offset, final int messageSize)
+        final DirectBuffer buffer, final int offset)
     {
         final FixPRejectRefIdExtractor fixPRejectRefIdExtractor = this.fixPRejectRefIdExtractor;
-        fixPRejectRefIdExtractor.search(buffer, offset, messageSize);
+        fixPRejectRefIdExtractor.search(buffer, offset);
 
         final long refMsgType = fixPRejectRefIdExtractor.messageType();
         final int refIdOffset = fixPRejectRefIdExtractor.offset();

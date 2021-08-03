@@ -29,7 +29,11 @@ import static uk.co.real_logic.sbe.ir.Signal.VALID_VALUE;
 import static uk.co.real_logic.sbe.ir.Token.VARIABLE_LENGTH;
 
 /**
- * Generic way to lookup client order id fields that are used for business reject ref ids for FIXP protocols.
+ * Generic way to lookup client order id fields that are used for business reject ref ids for FIXP protocols. It needs
+ * to take the Ir object in order to be initiated. This can be looked up using
+ * {@link AbstractFixPOffsets#loadSbeIr(Class, String)} or {@link IrDecoder#decode()};
+ *
+ * Call the <code>search</code> method with a buffer in order to find the reject ref id for a given FIXP message.
  *
  * Single threaded.
  */
@@ -119,7 +123,16 @@ public class FixPRejectRefIdExtractor
         return token.signal() == Signal.ENCODING;
     }
 
-    public boolean search(final DirectBuffer buffer, final int offset, final int messageSize)
+    /**
+     * Call to search a buffer for a given client order id if the message in question exists. The accessor
+     * fields below are populated and can be used to retrieve the reject ref id, template id and message type of the
+     * message in question.
+     *
+     * @param buffer a buffer containing a message
+     * @param offset an offset into the buffer at the start of the SOFH.
+     * @return true if a reject ref id could be found, false otherwise.
+     */
+    public boolean search(final DirectBuffer buffer, final int offset)
     {
         final int headerOffset = offset + SimpleOpenFramingHeader.SOFH_LENGTH;
 
@@ -145,21 +158,47 @@ public class FixPRejectRefIdExtractor
         return (buffer.getShort(headerOffset + templateIdOffset, java.nio.ByteOrder.LITTLE_ENDIAN) & 0xFFFF);
     }
 
+    /**
+     * Get the template id of the message in question. If it doesn't exist then returns {@link #MISSING_OFFSET}.
+     * You need to call search in order for this field to be populated.
+     *
+     * @return the template id of the message in question.
+     */
     public int templateId()
     {
         return templateId;
     }
 
+    /**
+     * Get the offset of the client order id within the buffer passed to {@link #search(DirectBuffer, int)}.
+     * If it doesn't exist then returns {@link #MISSING_OFFSET}.
+     * You need to call search in order for this field to be populated.
+     *
+     * @return the offset of the client order id.
+     */
     public int offset()
     {
         return offset;
     }
 
+    /**
+     * Get the length of the client order id within the buffer passed to {@link #search(DirectBuffer, int)}.
+     * If it doesn't exist then returns {@link #MISSING_OFFSET}.
+     * You need to call search in order for this field to be populated.
+     *
+     * @return the length of the client order id.
+     */
     public int length()
     {
         return length;
     }
 
+    /**
+     * Get the message type of the message in question. If it doesn't exist then returns {@link #MISSING_OFFSET}.
+     * You need to call search in order for this field to be populated.
+     *
+     * @return the message type of the message in question.
+     */
     public long messageType()
     {
         return messageType;

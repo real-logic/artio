@@ -57,7 +57,7 @@ public interface FixPContext
      *     upon receipt of either of those methods.</li>
      * </ul>
      *
-     * Implementations should be idempotent.
+     * Artio users should never need to call this method. Implementations should be idempotent.
      */
     void onEndSequence();
 

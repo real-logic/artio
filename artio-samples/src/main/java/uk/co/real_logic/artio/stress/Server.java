@@ -51,9 +51,7 @@ public class Server implements Agent
             .bindTo("localhost", StressConfiguration.PORT)
             .logFileDir("stress-server-logs")
             .libraryAeronChannel(aeronChannel)
-            .sessionPersistenceStrategy(alwaysPersistent());
-
-        configuration
+            .sessionPersistenceStrategy(alwaysPersistent())
             .authenticationStrategy(authenticationStrategy)
             .agentNamePrefix("server-");
 

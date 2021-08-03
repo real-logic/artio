@@ -63,7 +63,7 @@ class InternalBinaryEntryPointConnection
     private long sessionId;
     private long sessionVerId;
     private CancelOnDisconnectType cancelOnDisconnectType;
-    private long codTimeoutWindow;
+    private long codTimeoutWindowInMs;
     // true iff we've sent a redact then got back-pressured sending a message after
     private boolean suppressRedactResend = false;
     private boolean suppressRetransmissionResend = false;
@@ -175,7 +175,7 @@ class InternalBinaryEntryPointConnection
 
     public long codTimeoutWindow()
     {
-        return codTimeoutWindow;
+        return codTimeoutWindowInMs;
     }
 
     protected void keepAliveExpiredTerminate()
@@ -183,11 +183,11 @@ class InternalBinaryEntryPointConnection
         terminate(TerminationCode.UNSPECIFIED);
     }
 
-    public long terminate(final TerminationCode terminationCode)
+    public void terminate(final TerminationCode terminationCode)
     {
         validateCanSend();
 
-        return internalTerminateInclResend(terminationCode);
+        internalTerminateInclResend(terminationCode);
     }
 
     // Handles resends
@@ -452,8 +452,8 @@ class InternalBinaryEntryPointConnection
 
             cancelOnDisconnect.cancelOnDisconnectOption(option);
 
-            this.codTimeoutWindow = Math.min(MAX_COD_TIMEOUT_IN_MS, codTimeoutWindow);
-            cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(MILLISECONDS.toNanos(this.codTimeoutWindow));
+            this.codTimeoutWindowInMs = Math.min(MAX_COD_TIMEOUT_IN_MS, codTimeoutWindow);
+            cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(MILLISECONDS.toNanos(this.codTimeoutWindowInMs));
         }
     }
 
@@ -615,11 +615,6 @@ class InternalBinaryEntryPointConnection
     {
         final State state = state();
         final boolean weInitiatedFinishedSending = state == ESTABLISHED;
-        final boolean theyInitiatedFinishedSending = state == RECV_FINISHED_SENDING;
-        if (!weInitiatedFinishedSending && !theyInitiatedFinishedSending)
-        {
-            // TODO: error
-        }
 
         final long position = proxy.sendFinishedSending(
             sessionId,

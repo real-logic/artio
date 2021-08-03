@@ -80,11 +80,17 @@ public class BinaryEntryPointContext implements FixPContext
         return fromNegotiate;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public BinaryEntryPointKey key()
     {
         return key;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public FixPFirstMessageResponse checkAccept(final FixPContext fixPContext)
     {
         if (fixPContext == null)
@@ -137,6 +143,9 @@ public class BinaryEntryPointContext implements FixPContext
         return Long.compare(sessionVerID, oldContext.sessionVerID);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void initiatorReconnect(final boolean reestablishConnection)
     {
         unsupported();
@@ -152,11 +161,17 @@ public class BinaryEntryPointContext implements FixPContext
         unsupported();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public FixPProtocolType protocolType()
     {
         return FixPProtocolType.BINARY_ENTRYPOINT;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void onEndSequence()
     {
         ended = true;

@@ -51,6 +51,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
 import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.*;
@@ -83,7 +84,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         try (BinaryEntryPointClient client = establishNewConnection())
         {
             connection.terminate(TerminationCode.FINISHED);
-            assertEquals(FixPConnection.State.UNBINDING, connection.state());
+            assertEquals(UNBINDING, connection.state());
 
             acceptorTerminatesSession(client);
         }
@@ -1068,8 +1069,14 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             exchangeOrderAndReportNew(client);
 
-            testSystem.awaitSend("Failed to send",
-                () -> connection.terminate(TerminationCode.FINISHED));
+            connection.terminate(TerminationCode.FINISHED);
+
+            testSystem.await("Failed to send termiante", () ->
+            {
+                final FixPConnection.State state = connection.state();
+                return state == SENT_TERMINATE || state == UNBINDING || state == UNBOUND;
+            });
+
             acceptorTerminatesSession(client);
         }
 

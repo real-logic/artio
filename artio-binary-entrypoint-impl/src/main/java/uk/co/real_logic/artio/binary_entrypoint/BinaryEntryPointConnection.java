@@ -17,7 +17,9 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.TerminationCode;
+import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 
@@ -31,22 +33,71 @@ public interface BinaryEntryPointConnection extends FixPConnection
     // Operations
     // -----------------------------------------------
 
-    long terminate(TerminationCode terminationCode);
+    /**
+     * Terminate the connection. This method sends a terminate message. Note that the terminate message isn't
+     * guaranteed to be sent at the point that the message returns but the connection will retry on it's library's
+     * duty-cycle if it hasn't been sent. The session won't be fully terminated until the connection has received a
+     * reply from its counter-party or timed out.
+     *
+     * @param terminationCode the terminate code to use when sending the terminate message.
+     */
+    void terminate(TerminationCode terminationCode);
 
     // -----------------------------------------------
     // Accessors
     // -----------------------------------------------
 
+    /**
+     * Gets the session id. This corresponds to the session id within the Negotiate or Establish message used in the
+     * logon process.
+     *
+     * @return the session id.
+     */
     long sessionId();
 
+    /**
+     * Gets the session version id. This corresponds to the session version id within the Negotiate or Establish
+     * message used in the logon process.
+     *
+     * @return the session id.
+     */
     long sessionVerId();
 
+    /**
+     * Initiate the finish sending process within BinaryEntryPoint. This methods sends a FinishedSending message
+     * to its counter-party and awaits the receipt of the finished sending message from the counter-party. This
+     * messages agree the end of the sequence of messages of the current session version id. See the Binary EntryPoint
+     * specification for more details on the finished sending protocol.
+     *
+     * Once this method has been invoked then you cannot send any messages via the
+     * {@link #tryClaim(MessageEncoderFlyweight)} method. For this method to be successful you need to have an
+     * established session or one that has received a finished sending message from its counterparty.
+     */
     void finishSending();
 
+    /**
+     * {@inheritDoc}
+     */
     BinaryEntryPointKey key();
 
+    /**
+     * Gets the cancel on disconnect configuration for this session. This is the same field value that has been sent in
+     * the Establish message.
+     *
+     * @return the cancel on disconnect configuration for this session.
+     * @see #codTimeoutWindow()
+     * @see FixPCancelOnDisconnectTimeoutHandler
+     */
     CancelOnDisconnectType cancelOnDisconnectType();
 
+    /**
+     * Gets the cancel on disconnect timeout window in milliseconds. This is the field value taken from the establish
+     * message, it cannot be over 60 seconds.
+     *
+     * @return the cancel on disconnect timeout window in milliseconds.
+     * @see #cancelOnDisconnectType()
+     * @see FixPCancelOnDisconnectTimeoutHandler
+     */
     long codTimeoutWindow();
 
     /**
