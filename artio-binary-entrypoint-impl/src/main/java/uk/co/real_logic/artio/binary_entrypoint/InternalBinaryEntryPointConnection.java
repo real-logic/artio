@@ -50,6 +50,7 @@ class InternalBinaryEntryPointConnection
     extends InternalFixPConnection implements BinaryEntryPointConnection
 {
     private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
+    private static final int THROTTLE_REASON = 32022;
 
     private final BinaryEntryPointProxy proxy;
     private final BinaryEntryPointContext context;
@@ -781,7 +782,7 @@ class InternalBinaryEntryPointConnection
             final long refSeqNum = nextRecvSeqNo++;
             final MessageType refMsgType = MessageType.get((short)refMsgTypeValue);
             final long rejectRefID = rejectRefIDBuffer.getLong(rejectRefIDOffset, ByteOrder.LITTLE_ENDIAN);
-            final boolean sent = proxy.sendBusinessReject(refSeqNum, refMsgType, rejectRefID, 1) > 0;
+            final boolean sent = proxy.sendBusinessReject(refSeqNum, refMsgType, rejectRefID, THROTTLE_REASON) > 0;
             if (sent)
             {
                 nextSentSeqNo++;

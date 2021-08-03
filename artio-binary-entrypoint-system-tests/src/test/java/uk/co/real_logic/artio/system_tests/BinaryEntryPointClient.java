@@ -590,6 +590,6 @@ public final class BinaryEntryPointClient implements AutoCloseable
         assertEquals(refSeqNum, businessReject.refSeqNum());
         assertEquals(MessageType.NewOrderSingle, businessReject.refMsgType());
         assertEquals(rejectRefID, businessReject.businessRejectRefID());
-        assertEquals(1, businessReject.businessRejectReason()); // TODO
+        assertEquals(32022, businessReject.businessRejectReason());
     }
 }
