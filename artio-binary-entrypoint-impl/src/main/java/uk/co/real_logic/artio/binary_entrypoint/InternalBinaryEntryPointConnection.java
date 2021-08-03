@@ -779,12 +779,6 @@ class InternalBinaryEntryPointConnection
         if (canReceiveMessage(state))
         {
             final long refSeqNum = nextRecvSeqNo++;
-
-            if (rejectRefIDLength != BinaryEntryPointProtocol.REJECT_REF_ID_LENGTH)
-            {
-                // TODO: error
-            }
-
             final MessageType refMsgType = MessageType.get((short)refMsgTypeValue);
             final long rejectRefID = rejectRefIDBuffer.getLong(rejectRefIDOffset, ByteOrder.LITTLE_ENDIAN);
             final boolean sent = proxy.sendBusinessReject(refSeqNum, refMsgType, rejectRefID, 1) > 0;

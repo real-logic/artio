@@ -37,21 +37,21 @@ public class FixPRejectRefIdExtractor
 {
     public static final int MISSING_OFFSET = -1;
     public static final String MESSAGE_TYPE = "MessageType";
+    public static final String CLORDID = "clordid";
 
-    private final int rejectRefIdLength;
     private final int templateIdOffset;
     private final int headerLength;
+    private final Int2IntHashMap templateIdToLength = new Int2IntHashMap(MISSING_OFFSET);
     private final Int2IntHashMap templateIdToOffset = new Int2IntHashMap(MISSING_OFFSET);
     private final Long2LongHashMap templateIdToMessageType = new Long2LongHashMap(MISSING_OFFSET);
 
+    private int length;
     private int templateId;
     private int offset;
     private long messageType;
 
-    public FixPRejectRefIdExtractor(final Ir ir, final int rejectRefIdLength)
+    public FixPRejectRefIdExtractor(final Ir ir)
     {
-        this.rejectRefIdLength = rejectRefIdLength;
-
         final Map<String, Long> messageTypeToValue = new HashMap<>();
         final List<Token> messageType = ir.getType(MESSAGE_TYPE);
         if (messageType != null)
@@ -71,14 +71,16 @@ public class FixPRejectRefIdExtractor
         {
             final int templateId = AbstractFixPOffsets.templateId(messageTokens);
 
-            messageTokens
-                .stream()
-                .filter(token -> nameIgnoreCase(token, "clordid"))
+            messageTokens.stream()
+                .filter(token -> nameIgnoreCase(token, CLORDID))
                 .findFirst()
-                .ifPresent(token -> templateIdToOffset.put(templateId, token.offset()));
+                .ifPresent(token ->
+                {
+                    templateIdToLength.put(templateId, token.encodedLength());
+                    templateIdToOffset.put(templateId, token.offset());
+                });
 
-            messageTokens
-                .stream()
+            messageTokens.stream()
                 .filter(token -> nameIgnoreCase(token, MESSAGE_TYPE) && token.signal() == BEGIN_FIELD)
                 .mapToLong(token -> messageTypeToValue.get(token.encoding().constValue().toString()))
                 .filter(id -> id != MISSING_OFFSET)
@@ -123,6 +125,7 @@ public class FixPRejectRefIdExtractor
 
         templateId = templateId(buffer, headerOffset);
         messageType = templateIdToMessageType.get(templateId);
+        length = templateIdToLength.get(templateId);
         final int fieldOffset = templateIdToOffset.get(templateId);
 
         if (fieldOffset == MISSING_OFFSET)
@@ -154,7 +157,7 @@ public class FixPRejectRefIdExtractor
 
     public int length()
     {
-        return rejectRefIdLength;
+        return length;
     }
 
     public long messageType()

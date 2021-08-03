@@ -36,17 +36,15 @@ public abstract class FixPProtocol
     private final int finishedSendingTemplateId;
     private final int finishedReceivingTemplateId;
     private final int negotiateResponseTemplateId;
-    private final int rejectRefIdLength;
 
     protected FixPProtocol(
         final FixPProtocolType protocolType,
         final short encodingType,
-        final int negotiateResponseTemplateId,
-        final int rejectRefIdLength)
+        final int negotiateResponseTemplateId)
     {
         this(protocolType, encodingType,
             DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID, DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
-            negotiateResponseTemplateId, rejectRefIdLength);
+            negotiateResponseTemplateId);
     }
 
     protected FixPProtocol(
@@ -54,15 +52,13 @@ public abstract class FixPProtocol
         final short encodingType,
         final int finishedSendingTemplateId,
         final int finishedReceivingTemplateId,
-        final int negotiateResponseTemplateId,
-        final int rejectRefIdLength)
+        final int negotiateResponseTemplateId)
     {
         this.protocolType = protocolType;
         this.encodingType = encodingType;
         this.finishedSendingTemplateId = finishedSendingTemplateId;
         this.finishedReceivingTemplateId = finishedReceivingTemplateId;
         this.negotiateResponseTemplateId = negotiateResponseTemplateId;
-        this.rejectRefIdLength = rejectRefIdLength;
     }
 
     public FixPProtocolType protocolType()
@@ -120,6 +116,6 @@ public abstract class FixPProtocol
 
     public FixPRejectRefIdExtractor makeRefIdExtractor()
     {
-        return new FixPRejectRefIdExtractor(loadIr(), rejectRefIdLength);
+        return new FixPRejectRefIdExtractor(loadIr());
     }
 }

@@ -20,7 +20,6 @@ import b3.entrypoint.fixp.sbe.FinishedSendingDecoder;
 import b3.entrypoint.fixp.sbe.NegotiateEncoder;
 import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import io.aeron.ExclusivePublication;
-import org.agrona.BitUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
@@ -37,7 +36,6 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPO
 public class BinaryEntryPointProtocol extends FixPProtocol
 {
     private static final String SBE_IR_FILE = "binary_entrypoint.sbeir";
-    static final int REJECT_REF_ID_LENGTH = BitUtil.SIZE_OF_LONG;
 
     private static final class LazyLoader
     {
@@ -66,8 +64,8 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             BINARY_ENTRYPOINT_TYPE,
             FinishedSendingDecoder.TEMPLATE_ID,
             FinishedReceivingDecoder.TEMPLATE_ID,
-            NegotiateResponseDecoder.TEMPLATE_ID,
-            REJECT_REF_ID_LENGTH);
+            NegotiateResponseDecoder.TEMPLATE_ID
+        );
     }
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)

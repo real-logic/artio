@@ -36,7 +36,6 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.CME_ENCODING_T
 
 public class Ilink3Protocol extends FixPProtocol
 {
-    private static final int REJECT_REF_ID_LENGTH = 20;
     private static final String SBE_IR_FILE = "ilinkbinary.sbeir";
     private static final class LazyLoader
     {
@@ -55,8 +54,8 @@ public class Ilink3Protocol extends FixPProtocol
 
     public Ilink3Protocol()
     {
-        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID,
-            REJECT_REF_ID_LENGTH);
+        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID
+        );
     }
 
     public ILink3Parser makeParser(final FixPConnection connection)

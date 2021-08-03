@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
+import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
@@ -37,8 +38,7 @@ public class FixPRejectRefIdExtractorTest
     public void shouldExtractClOrdId()
     {
         final Ir ir = BinaryEntryPointProtocol.loadSbeIr();
-        final FixPRejectRefIdExtractor rejectRefIdExtractor = new FixPRejectRefIdExtractor(
-            ir, BinaryEntryPointProtocol.REJECT_REF_ID_LENGTH);
+        final FixPRejectRefIdExtractor rejectRefIdExtractor = new FixPRejectRefIdExtractor(ir);
 
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
         writeNewOrderSingle(buffer);
@@ -47,6 +47,7 @@ public class FixPRejectRefIdExtractorTest
         assertEquals(NewOrderSingleEncoder.TEMPLATE_ID, rejectRefIdExtractor.templateId());
         assertEquals(MessageType.NewOrderSingle.value(), (short)rejectRefIdExtractor.messageType());
         assertEquals(CL_ORD_ID, buffer.getLong(rejectRefIdExtractor.offset()));
+        assertEquals(BitUtil.SIZE_OF_LONG, rejectRefIdExtractor.length());
     }
 
     private void writeNewOrderSingle(final UnsafeBuffer buffer)
