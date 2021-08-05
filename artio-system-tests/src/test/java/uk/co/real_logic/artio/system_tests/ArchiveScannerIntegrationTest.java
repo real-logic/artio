@@ -76,7 +76,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
 
         final String testReqID = largeTestReqId();
 
-        sendTestRequest(acceptingSession, testReqID);
+        sendTestRequest(testSystem, acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
 

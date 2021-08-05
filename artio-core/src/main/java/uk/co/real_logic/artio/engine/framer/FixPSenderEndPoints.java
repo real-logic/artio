@@ -50,7 +50,7 @@ public class FixPSenderEndPoints
         final FixPSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
         {
-            return senderEndPoint.onReplayComplete(connectionId);
+            return senderEndPoint.onReplayComplete();
         }
         return CONTINUE;
     }

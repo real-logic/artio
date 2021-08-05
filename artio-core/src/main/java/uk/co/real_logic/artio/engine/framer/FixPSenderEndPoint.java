@@ -16,17 +16,13 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,22 +34,13 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.MISSING_OFFSET;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.clientSeqNum;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-class FixPSenderEndPoint
+class FixPSenderEndPoint extends SenderEndPoint
 {
     private static final int NO_REATTEMPT = 0;
 
-    private static final int REPLAY_COMPLETE_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
-
-    private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
-    private final ReplayCompleteEncoder replayComplete = new ReplayCompleteEncoder();
-    private final BufferClaim bufferClaim = new BufferClaim();
-
-    private final long connectionId;
     private final TcpChannel channel;
     private final ErrorHandler errorHandler;
-    private final ExclusivePublication inboundPublication;
-    private int libraryId;
+
     private final MessageTimingHandler messageTimingHandler;
 
     private int reattemptBytesWritten = NO_REATTEMPT;
@@ -66,11 +53,9 @@ class FixPSenderEndPoint
         final int libraryId,
         final MessageTimingHandler messageTimingHandler)
     {
-        this.connectionId = connectionId;
+        super(connectionId, inboundPublication, libraryId);
         this.channel = channel;
         this.errorHandler = errorHandler;
-        this.inboundPublication = inboundPublication;
-        this.libraryId = libraryId;
         this.messageTimingHandler = messageTimingHandler;
     }
 
@@ -127,33 +112,4 @@ class FixPSenderEndPoint
         return CONTINUE;
     }
 
-    public long connectionId()
-    {
-        return connectionId;
-    }
-
-    public Action onReplayComplete(final long connectionId)
-    {
-        final BufferClaim bufferClaim = this.bufferClaim;
-        final long position = inboundPublication.tryClaim(REPLAY_COMPLETE_LENGTH, bufferClaim);
-
-        if (Pressure.isBackPressured(position))
-        {
-            return ABORT;
-        }
-
-        replayComplete
-            .wrapAndApplyHeader(bufferClaim.buffer(), bufferClaim.offset(), messageHeader)
-            .connection(connectionId)
-            .libraryId(libraryId);
-
-        bufferClaim.commit();
-
-        return CONTINUE;
-    }
-
-    void libraryId(final int libraryId)
-    {
-        this.libraryId = libraryId;
-    }
 }

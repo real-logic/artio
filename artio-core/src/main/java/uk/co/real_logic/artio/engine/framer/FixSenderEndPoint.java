@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
@@ -43,7 +44,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-class FixSenderEndPoint
+class FixSenderEndPoint extends SenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
@@ -62,7 +63,6 @@ class FixSenderEndPoint
     private final SenderSequenceNumber senderSequenceNumber;
     private final MessageTimingHandler messageTimingHandler;
 
-    private int libraryId;
     private long sessionId;
     private long sendingTimeoutTimeInMs;
     private boolean replayPaused;
@@ -76,6 +76,7 @@ class FixSenderEndPoint
         final long connectionId,
         final int libraryId,
         final BlockablePosition outboundBlockablePosition,
+        final ExclusivePublication inboundPublication,
         final BlockablePosition replayBlockablePosition,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
@@ -88,8 +89,8 @@ class FixSenderEndPoint
         final SenderSequenceNumber senderSequenceNumber,
         final MessageTimingHandler messageTimingHandler)
     {
+        super(connectionId, inboundPublication, libraryId);
         this.connectionId = connectionId;
-        this.libraryId = libraryId;
         this.channel = channel;
         this.bytesInBuffer = bytesInBuffer;
         this.invalidLibraryAttempts = invalidLibraryAttempts;
@@ -418,20 +419,10 @@ class FixSenderEndPoint
         framer.onDisconnect(libraryId, connectionId, reason);
     }
 
-    public long connectionId()
-    {
-        return connectionId;
-    }
-
     public void libraryId(final int libraryId, final BlockablePosition blockablePosition)
     {
-        this.libraryId = libraryId;
+        libraryId(libraryId);
         this.outboundTracker.blockablePosition = blockablePosition;
-    }
-
-    public int libraryId()
-    {
-        return libraryId;
     }
 
     public void close()
@@ -630,14 +621,14 @@ class FixSenderEndPoint
         return false;
     }
 
-    Action onReplayComplete()
+    public Action onReplayComplete()
     {
         if (!replayTracker.partiallySentMessage)
         {
             replayPaused = false;
         }
 
-        return CONTINUE;
+        return super.onReplayComplete();
     }
 
     void fixDictionary(final FixDictionary fixDictionary)

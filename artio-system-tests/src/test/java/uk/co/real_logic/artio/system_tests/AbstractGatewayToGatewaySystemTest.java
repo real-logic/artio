@@ -372,7 +372,7 @@ public class AbstractGatewayToGatewaySystemTest
     long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)
     {
         final String testReqID = testReqId();
-        final long position = sendTestRequest(sendingSession, testReqID);
+        final long position = sendTestRequest(testSystem, sendingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, receivingAcceptor, testReqID);
 

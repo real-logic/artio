@@ -15,11 +15,15 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
@@ -51,6 +55,7 @@ public class FixSenderEndPointTest
     private static final int FRAGMENT_LENGTH = alignTerm(HEADER_LENGTH + FRAME_SIZE + BODY_LENGTH);
     private static final long BEGIN_POSITION = 8000;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
+    public static final int INBOUND_BUFFER_LEN = 128;
 
     private final TcpChannel tcpChannel = mock(TcpChannel.class);
     private final AtomicCounter bytesInBuffer = fakeCounter();
@@ -63,11 +68,14 @@ public class FixSenderEndPointTest
     private final BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
     private final SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
     private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
+    private final ExclusivePublication inboundPublication = mock(ExclusivePublication.class);
+    private final UnsafeBuffer inboundBuffer = new UnsafeBuffer(new byte[INBOUND_BUFFER_LEN]);
 
     private final FixSenderEndPoint endPoint = new FixSenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
         libraryBlockablePosition,
+        inboundPublication,
         replayBlockablePosition,
         tcpChannel,
         bytesInBuffer,
@@ -79,6 +87,18 @@ public class FixSenderEndPointTest
         0,
         senderSequenceNumber,
         messageTimingHandler);
+
+    @Before
+    public void setup()
+    {
+        when(inboundPublication.tryClaim(anyInt(), any())).then(invocation ->
+        {
+            final BufferClaim claim = invocation.getArgument(1);
+            final int length = invocation.getArgument(0);
+            claim.wrap(inboundBuffer, 0, length + DataHeaderFlyweight.HEADER_LENGTH);
+            return 1L;
+        });
+    }
 
     @Test
     public void shouldRetrySlowConsumerMessage()

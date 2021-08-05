@@ -294,4 +294,9 @@ class SessionSubscriber implements AutoCloseable, FixSessionOwner
             refMsgType, refSeqNum, businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength
         );
     }
+
+    void onReplayComplete()
+    {
+        session.onReplayComplete();
+    }
 }

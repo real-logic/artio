@@ -218,7 +218,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             // During this loop the logout message for the disconnected connection is sent,
             // But not received by the new connection.
             // Send a test request here to increase likelihood of triggering the race
-            SystemTestUtil.sendTestRequest(session, "badTestRequest");
+            SystemTestUtil.sendTestRequest(testSystem, session, "badTestRequest");
             Timing.assertEventuallyTrue("Library has disconnected old session", () ->
             {
                 testSystem.poll();
