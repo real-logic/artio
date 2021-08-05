@@ -398,7 +398,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the size of index files. This is the size in bytes for the replay index file that is used for each session.
+     * Sets the size of index files. It is recommended that you use {@link #replayIndexFileCapacityToBytes(int)}.
+     *
+     * This is the size in bytes for the replay index file that is used for each session.
      * If you want to size in terms of the last N Fix message fragments that you have received then
      * use the formula: INITIAL_RECORD_OFFSET + N * ReplayIndexDescriptor.RECORD_LENGTH.
      *
@@ -406,10 +408,25 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @return this
      * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
      * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
+     * @see #replayIndexFileCapacityToBytes(int)
      */
     public EngineConfiguration replayIndexFileSize(final int indexFileSizeInBytes)
     {
         this.replayIndexFileSizeInBytes = indexFileSizeInBytes;
+        return this;
+    }
+
+    /**
+     * Sets the size of index files. as calculated by the number of records that can be stored. This is maximum number
+     * of messages back in history that Artio can respond to resend requests from.
+     *
+     * @param indexFileCapacityInRecords the number of fix messages to keep track of the replay index.
+     * @return this
+     * @see #replayIndexFileSize(int)
+     */
+    public EngineConfiguration replayIndexFileRecordCapacity(final int indexFileCapacityInRecords)
+    {
+        this.replayIndexFileSizeInBytes = replayIndexFileCapacityToBytes(indexFileCapacityInRecords);
         return this;
     }
 
