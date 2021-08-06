@@ -100,6 +100,7 @@ class FixEndPointFactory
             connectionId,
             libraryId,
             libraryBlockablePosition,
+            inboundLibraryPublication.dataPublication(),
             replaySlowPeeker,
             channel,
             bytesInBuffer,

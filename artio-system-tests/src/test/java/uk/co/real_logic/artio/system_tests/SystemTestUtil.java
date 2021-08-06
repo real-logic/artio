@@ -104,35 +104,33 @@ public final class SystemTestUtil
         final FakeOtfAcceptor receivingHandler)
     {
         final String testReqID = testReqId();
-        final long position = sendTestRequest(sendingSession, testReqID);
+        final long position = sendTestRequest(testSystem, sendingSession, testReqID);
 
         assertReceivedTestRequest(testSystem, receivingHandler, testReqID);
 
         return position;
     }
 
-    public static long sendTestRequest(final Session session, final String testReqID)
+    public static long sendTestRequest(final TestSystem testSystem, final Session session, final String testReqID)
     {
-        return sendTestRequest(session, testReqID, new FixDictionaryImpl());
+        return sendTestRequest(testSystem, session, testReqID, new FixDictionaryImpl());
     }
 
     static long sendTestRequest(
-        final Session session, final String testReqID, final FixDictionary fixDictionary)
+        final TestSystem testSystem, final Session session, final String testReqID, final FixDictionary fixDictionary)
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
-        return alwaysSendTestRequest(session, testReqID, fixDictionary);
+        return alwaysSendTestRequest(testSystem, session, testReqID, fixDictionary);
     }
 
     static long alwaysSendTestRequest(
-        final Session session, final String testReqID, final FixDictionary fixDictionary)
+        final TestSystem testSystem, final Session session, final String testReqID, final FixDictionary fixDictionary)
     {
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
         testRequest.testReqID(testReqID);
 
-        final long position = session.trySend(testRequest);
-        assertThat(position, greaterThan(0L));
-        return position;
+        return testSystem.awaitSend(() -> session.trySend(testRequest));
     }
 
     static void assertReceivedTestRequest(

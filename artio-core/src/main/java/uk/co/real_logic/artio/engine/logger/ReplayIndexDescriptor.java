@@ -32,7 +32,7 @@ public final class ReplayIndexDescriptor
 
     public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
-    static final int RECORD_LENGTH = 32;
+    public static final int RECORD_LENGTH = 32;
     static
     {
         // Safety check against making the ReplayIndexRecord big without modifying this

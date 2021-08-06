@@ -217,7 +217,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
     {
         final FixDictionaryImpl fixtDictionary = new FixDictionaryImpl();
         final String testReqID = testReqId();
-        sendTestRequest(fixtInitiatingSession, testReqID, fixtDictionary);
+        sendTestRequest(testSystem, fixtInitiatingSession, testReqID, fixtDictionary);
         final FixMessage reject = testSystem.awaitMessageOf(initiatingOtfAcceptor, Constants.REJECT_MESSAGE_AS_STR);
         final String rejectStr = reject.toString();
         assertTrue(rejectStr, reject.isValid());
@@ -265,7 +265,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
     {
         final FixDictionaryImpl fixtDictionary = new FixDictionaryImpl();
         final String testReqID = testReqId();
-        sendTestRequest(fixtInitiatingSession, testReqID, fixtDictionary);
+        sendTestRequest(testSystem, fixtInitiatingSession, testReqID, fixtDictionary);
         assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
     }
 

@@ -207,18 +207,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private FixMessage exchangeExampleMessage(
         final String testReqID, final Session fromSession, final FakeOtfAcceptor toAcceptor)
     {
-        sendExampleMessage(testReqID, fromSession);
+        sendExampleMessage(testSystem, testReqID, fromSession);
 
         return testSystem.awaitMessageOf(
             toAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR, msg -> msg.testReqId().equals(testReqID));
     }
 
-    private void sendExampleMessage(final String testReqID, final Session fromSession)
+    private void sendExampleMessage(final TestSystem testSystem, final String testReqID, final Session fromSession)
     {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         exampleMessage.testReqID(testReqID);
-        final long position = fromSession.trySend(exampleMessage);
-        assertThat(position, greaterThan(0L));
+        testSystem.awaitSend("Failed to send message", () -> fromSession.trySend(exampleMessage));
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -246,7 +245,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         awaitLibraryDisconnect(acceptingEngine, testSystem);
 
         // Test that Trigger the invalid l
-        sendExampleMessage("FAIL", acceptingSession);
+        sendExampleMessage(testSystem, "FAIL", acceptingSession);
 
         // Wait for the library to detect the timeout internally.
         testSystem.add(acceptingLibrary);
@@ -261,7 +260,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThrows(
             "Failed to block the sending of a message after timing out",
             IllegalStateException.class,
-            () -> sendExampleMessage("FAIL", acceptingSession));
+            () -> sendExampleMessage(testSystem, "FAIL", acceptingSession));
 
         testSystem.awaitReply(reply);
         assertEquals(reply.toString(), Reply.State.COMPLETED, reply.state());
@@ -793,7 +792,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final String testReqID = largeTestReqId();
 
-        sendTestRequest(acceptingSession, testReqID);
+        sendTestRequest(testSystem, acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
     }

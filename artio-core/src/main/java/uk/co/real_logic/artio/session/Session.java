@@ -43,6 +43,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.lang.ref.WeakReference;
 import java.util.function.BooleanSupplier;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
@@ -173,6 +174,8 @@ public class Session
     private long cancelOnDisconnectTimeoutWindowInNs = MISSING_LONG;
     private boolean isSlowConsumer;
     CancelOnDisconnectOption cancelOnDisconnectOption;
+
+    private boolean replaying = false;
 
     Session(
         final int heartbeatIntervalInS,
@@ -631,6 +634,11 @@ public class Session
     {
         validateCanSendMessage();
 
+        if (replaying)
+        {
+            return BACK_PRESSURED;
+        }
+
         final int sentSeqNum = prepare(encoder.header());
 
         final long result = encoder.encode(asciiBuffer, 0);
@@ -720,6 +728,11 @@ public class Session
         final int metaDataUpdateOffset)
     {
         validateCanSendMessage();
+
+        if (replaying)
+        {
+            return BACK_PRESSURED;
+        }
 
         final long position = outboundPublication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
@@ -1994,7 +2007,8 @@ public class Session
 
         // Min: end too high - replay the valid range and ignore the invalid chunk.
         final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : Math.min(lastSentMsgSeqNum, endSeqNum);
-        return Pressure.apply(inboundPublication.saveValidResendRequest(
+
+        if (Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
             id,
             connectionId,
             beginSeqNum,
@@ -2002,7 +2016,13 @@ public class Session
             sequenceIndex,
             messageBuffer,
             messageOffset,
-            messageLength));
+            messageLength)))
+        {
+            return ABORT;
+        }
+
+        replaying = true;
+        return CONTINUE;
     }
 
     Action onReject(
@@ -2480,5 +2500,10 @@ public class Session
     void isSlowConsumer(final boolean hasBecomeSlow)
     {
         this.isSlowConsumer = hasBecomeSlow;
+    }
+
+    void onReplayComplete()
+    {
+        replaying = false;
     }
 }

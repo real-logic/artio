@@ -1820,10 +1820,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final FixPSubscription subscription = connectionIdToFixPSubscription.get(connection);
-            if (subscription != null)
+            final SessionSubscriber sessionSubscriber = connectionIdToSession.get(connection);
+            if (sessionSubscriber != null)
             {
-                subscription.onReplayComplete();
+                sessionSubscriber.onReplayComplete();
+            }
+            else
+            {
+                final FixPSubscription subscription = connectionIdToFixPSubscription.get(connection);
+                if (subscription != null)
+                {
+                    subscription.onReplayComplete();
+                }
             }
 
             return CONTINUE;

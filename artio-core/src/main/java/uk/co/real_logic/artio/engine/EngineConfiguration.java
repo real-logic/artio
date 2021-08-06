@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
@@ -139,7 +140,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     // ------------------------------------------------
 
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
-    public static final int DEFAULT_REPLAY_INDEX_FILE_SIZE = 2 * 1024 * 1024 + INITIAL_RECORD_OFFSET;
+    public static final int DEFAULT_REPLAY_INDEX_RECORD_CAPACITY = 65536;
+    public static final int DEFAULT_REPLAY_INDEX_FILE_SIZE =
+        replayIndexFileCapacityToBytes(DEFAULT_REPLAY_INDEX_RECORD_CAPACITY);
     public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
     public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
@@ -199,7 +202,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String host = null;
     private int port;
-    private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
+    private int replayIndexFileSizeInBytes = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
     private int loggerCacheNumSets = DEFAULT_LOGGER_CACHE_NUM_SETS;
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
@@ -395,19 +398,48 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the size of index files. This is the size in bytes for the replay index file that is used for each session.
+     * Sets the size of index files. It is recommended that you use {@link #replayIndexFileCapacityToBytes(int)}.
+     *
+     * This is the size in bytes for the replay index file that is used for each session.
      * If you want to size in terms of the last N Fix message fragments that you have received then
      * use the formula: INITIAL_RECORD_OFFSET + N * ReplayIndexDescriptor.RECORD_LENGTH.
      *
-     * @param indexFileSize the size of index files.
+     * @param indexFileSizeInBytes the size of index files.
      * @return this
      * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
      * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
+     * @see #replayIndexFileCapacityToBytes(int)
      */
-    public EngineConfiguration replayIndexFileSize(final int indexFileSize)
+    public EngineConfiguration replayIndexFileSize(final int indexFileSizeInBytes)
     {
-        this.replayIndexFileSize = indexFileSize;
+        this.replayIndexFileSizeInBytes = indexFileSizeInBytes;
         return this;
+    }
+
+    /**
+     * Sets the size of index files. as calculated by the number of records that can be stored. This is maximum number
+     * of messages back in history that Artio can respond to resend requests from.
+     *
+     * @param indexFileCapacityInRecords the number of fix messages to keep track of the replay index.
+     * @return this
+     * @see #replayIndexFileSize(int)
+     */
+    public EngineConfiguration replayIndexFileRecordCapacity(final int indexFileCapacityInRecords)
+    {
+        this.replayIndexFileSizeInBytes = replayIndexFileCapacityToBytes(indexFileCapacityInRecords);
+        return this;
+    }
+
+    /**
+     * Convert the number of records in a replay index file to a file size. Note: because replay index file sizes must
+     * be a power of two this method can return a file size greater than the requested number of methods but never less.
+     *
+     * @param requestedNumberOfRecordsToStore the number of records to store in the replay index.
+     * @return the replay index file size in bytes
+     */
+    public static int replayIndexFileCapacityToBytes(final int requestedNumberOfRecordsToStore)
+    {
+        return INITIAL_RECORD_OFFSET + ReplayIndexDescriptor.RECORD_LENGTH * requestedNumberOfRecordsToStore;
     }
 
     /**
@@ -1438,7 +1470,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public int replayIndexFileSize()
     {
-        return replayIndexFileSize;
+        return replayIndexFileSizeInBytes;
     }
 
     public int loggerCacheSetSize()
