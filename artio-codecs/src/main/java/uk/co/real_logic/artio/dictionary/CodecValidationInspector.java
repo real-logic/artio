@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,15 +44,30 @@ public class CodecValidationInspector
         final String dictionaryFile = args[0];
         String message = args[1];
         final String codecName = args[2];
-        if (args.length > 3)
+
+        final byte[] messageBytes;
+
+        final File messageFile = new File(message);
+        if (messageFile.exists())
         {
-            final char replacementChar = args[3].charAt(0);
-            message = message.replace(replacementChar, '\001');
+            System.out.println("Using message parameter as a path");
+            messageBytes = Files.readAllBytes(messageFile.toPath());
+            System.out.println("message = " + new String(messageBytes, US_ASCII));
+        }
+        else
+        {
+            if (args.length > 3)
+            {
+                final char replacementChar = args[3].charAt(0);
+                message = message.replace(replacementChar, '\001');
+            }
+
+            System.out.println("message = " + message);
+
+            messageBytes = message.getBytes(US_ASCII);
         }
 
         final String outputDirPath = "/tmp/fix-codecs";
-
-        System.out.println("message = " + message);
 
         CodecGenerationTool.main(new String[]{ outputDirPath, dictionaryFile });
 
@@ -67,7 +83,7 @@ public class CodecValidationInspector
         final URLClassLoader classLoader = new URLClassLoader(new URL[]{outputDir.toURI().toURL()});
         final Class<?> decoderClass = classLoader.loadClass(codecName);
         final Decoder decoder = (Decoder)decoderClass.getConstructor().newInstance();
-        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(message.getBytes(US_ASCII));
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(messageBytes);
         final int length = buffer.capacity();
         final int decodedLength;
         try
