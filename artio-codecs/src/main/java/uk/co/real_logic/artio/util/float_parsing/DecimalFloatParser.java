@@ -8,6 +8,7 @@ import static uk.co.real_logic.artio.util.PowerOf10.pow10;
 public final class DecimalFloatParser
 {
     private static final char LOWER_CASE_E = 'e';
+    private static final char UPPER_CASE_E = 'E';
     private static final char PLUS = '+';
     private static final char MINUS = '-';
     private static final byte DOT = '.';
@@ -72,7 +73,7 @@ public final class DecimalFloatParser
                 workingScale = end - (index + 1);
                 scaleDecrementValue = 1;
             }
-            else if (charValue == LOWER_CASE_E)
+            else if (charValue == LOWER_CASE_E || charValue == UPPER_CASE_E)
             {
                 isScientificNotation = true;
 
