@@ -76,8 +76,6 @@ class FixReplayerSession extends ReplayerSession
     private final LongHashSet gapFillMessageTypes;
     private final ErrorHandler errorHandler;
     private final SequenceNumberExtractor sequenceNumberExtractor;
-    private final AtomicCounter bytesInBuffer;
-    private final int maxBytesInBuffer;
     private final FixThrottleRejectBuilder throttleRejectBuilder;
 
     private int lastSeqNo;
@@ -110,14 +108,12 @@ class FixReplayerSession extends ReplayerSession
         final FixThrottleRejectBuilder throttleRejectBuilder)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
-            sessionId, sequenceIndex, replayer);
+            sessionId, sequenceIndex, replayer, bytesInBuffer, maxBytesInBuffer);
         this.replayHandler = replayHandler;
         this.gapFillMessageTypes = gapFillMessageTypes;
         this.message = message;
         this.errorHandler = errorHandler;
         this.gapFillEncoder = gapFillEncoder;
-        this.maxBytesInBuffer = maxBytesInBuffer;
-        this.bytesInBuffer = bytesInBuffer;
 
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
@@ -127,7 +123,7 @@ class FixReplayerSession extends ReplayerSession
         possDupEnabler = new PossDupEnabler(
             utcTimestampEncoder,
             bufferClaim,
-            this::claimMessageBuffer,
+            this::claimBuffer,
             this::onPreCommit,
             this::onIllegalState,
             this::onException,
@@ -331,7 +327,7 @@ class FixReplayerSession extends ReplayerSession
     private Action sendFixMessage(
         final MutableAsciiBuffer fixBuffer, final int fixOffset, final int fixLength, final long messageType)
     {
-        if (claimMessageBuffer(
+        if (claimBuffer(
             MESSAGE_FRAME_BLOCK_LENGTH + fixLength + metaDataHeaderLength(), fixLength))
         {
             final int destOffset = bufferClaim.offset();
@@ -362,16 +358,6 @@ class FixReplayerSession extends ReplayerSession
 
             return ABORT;
         }
-    }
-
-    private boolean claimMessageBuffer(final int newLength, final int messageLength)
-    {
-        if (maxBytesInBuffer > (bytesInBuffer.get() + messageLength))
-        {
-            return claimBuffer(newLength);
-        }
-
-        return false;
     }
 
     boolean attemptReplay()

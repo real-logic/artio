@@ -20,6 +20,7 @@ import b3.entrypoint.fixp.sbe.DeltaInMillisEncoder;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixPSessionInfo;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPContext;
@@ -141,7 +142,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE,
             timeoutHandler,
-            false);
+            false, EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
         client = newClient();
         client.codTimeout(cancelOnDisconnectType, codTestTimeoutInMs);
         establishNewConnection(client);

@@ -19,6 +19,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
@@ -27,6 +28,8 @@ import static uk.co.real_logic.artio.LogTag.REPLAY;
 
 abstract class ReplayerSession implements ControlledFragmentHandler
 {
+    private static final int REPLAY_COMPLETE_LEN =
+        MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
     private final int maxClaimAttempts;
     private final IdleStrategy idleStrategy;
 
@@ -40,6 +43,8 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     final long sessionId;
     final int sequenceIndex;
     final Replayer replayer;
+    final AtomicCounter bytesInBuffer;
+    final int maxBytesInBuffer;
 
     ReplayOperation replayOperation;
 
@@ -54,7 +59,9 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         final int endSeqNo,
         final long sessionId,
         final int sequenceIndex,
-        final Replayer replayer)
+        final Replayer replayer,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer)
     {
         this.connectionId = connectionId;
         this.bufferClaim = bufferClaim;
@@ -67,6 +74,8 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.replayer = replayer;
+        this.maxBytesInBuffer = maxBytesInBuffer;
+        this.bytesInBuffer = bytesInBuffer;
     }
 
     void query()
@@ -83,8 +92,13 @@ abstract class ReplayerSession implements ControlledFragmentHandler
 
     abstract MessageTracker messageTracker();
 
-    boolean claimBuffer(final int newLength)
+    boolean claimBuffer(final int newLength, final int messageLength)
     {
+        if (isBackpressured(messageLength))
+        {
+            return false;
+        }
+
         for (int i = 0; i < maxClaimAttempts; i++)
         {
             final long position = publication.tryClaim(newLength, bufferClaim);
@@ -106,9 +120,14 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         return false;
     }
 
+    boolean isBackpressured(final int messageLength)
+    {
+        return maxBytesInBuffer < (bytesInBuffer.get() + messageLength);
+    }
+
     boolean sendCompleteMessage()
     {
-        if (claimBuffer(MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH))
+        if (claimBuffer(REPLAY_COMPLETE_LEN, 0))
         {
             replayer.replayCompleteEncoder.wrapAndApplyHeader(
                 bufferClaim.buffer(),

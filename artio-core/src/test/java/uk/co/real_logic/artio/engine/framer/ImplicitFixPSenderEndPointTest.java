@@ -21,11 +21,13 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 
 import java.io.IOException;
@@ -40,6 +42,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.STANDARD_TEMPLATE_ID_OFFSET;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.writeBinaryEntryPointSofh;
+import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 
 public class ImplicitFixPSenderEndPointTest
 {
@@ -62,6 +65,8 @@ public class ImplicitFixPSenderEndPointTest
     private final MessageTimingHandler timingHandler = mock(MessageTimingHandler.class);
     private final FixPSenderEndPoints fixPSenderEndPoints = mock(FixPSenderEndPoints.class);
     private final UnsafeBuffer buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(CAPACITY));
+    private final AtomicCounter bytesInBuffer = new AtomicCounter(new UnsafeBuffer(new byte[128]), 0);
+    private final Framer framer = mock(Framer.class);
 
     private final FixPSenderEndPoint endPoint = FixPSenderEndPoint.of(
         CONNECTION_ID,
@@ -73,7 +78,10 @@ public class ImplicitFixPSenderEndPointTest
         false,
         STANDARD_TEMPLATE_ID_OFFSET,
         RETRANSMISSION_ID,
-        fixPSenderEndPoints);
+        fixPSenderEndPoints,
+        bytesInBuffer,
+        CAPACITY,
+        framer);
 
     @Before
     public void setup()
@@ -100,6 +108,7 @@ public class ImplicitFixPSenderEndPointTest
         onBackpressuredMessage(1, false);
 
         verifyRegistered();
+        assertBytesInBuffer(MSG_SIZE);
 
         onWrite().then(inv -> checkBackpressuredResent(1, inv));
         reattempt();
@@ -119,6 +128,8 @@ public class ImplicitFixPSenderEndPointTest
         incompleteReattempt();
         verifyWritten(1);
 
+        assertBytesInBuffer(MSG_SIZE);
+
         onWrite().then(inv -> checkBackpressuredResent(1, inv));
         reattempt();
         verifyWritten(1);
@@ -134,6 +145,8 @@ public class ImplicitFixPSenderEndPointTest
 
         onNotSentMessage(2, false);
 
+        assertBytesInBuffer(2 * MSG_SIZE);
+
         onWrite()
             .then(inv -> checkBackpressuredResent(1, inv))
             .then(inv -> checkMessageFullySent(2, inv));
@@ -144,17 +157,43 @@ public class ImplicitFixPSenderEndPointTest
     }
 
     @Test
+    public void shouldDisconnectStreamWhenOverMaxBytesInBuffer() throws IOException
+    {
+        onBackpressuredMessage(1, false);
+        verifyRegistered();
+
+        onNotSentMessage(2, false);
+        onNotSentMessage(3, false);
+        onNotSentMessage(4, false);
+        verifySlowDisconnect(never());
+
+        onNotSentMessage(5, false);
+
+        verifySlowDisconnect(times(1));
+        bytesInBuffer.set(0);
+    }
+
+    private void verifySlowDisconnect(final VerificationMode mode)
+    {
+        verify(framer, mode).onDisconnect(LIBRARY_ID, CONNECTION_ID, SLOW_CONSUMER);
+    }
+
+    @Test
     public void shouldReattemptBackpressuredWritesRepeatedly() throws IOException
     {
         onBackpressuredMessage(1, false);
         verifyRegistered();
         onNotSentMessage(2, false);
 
+        assertBytesInBuffer(2 * MSG_SIZE);
+
         onWrite()
             .then(inv -> checkBackpressuredResent(1, inv))
             .thenReturn(0);
         incompleteReattempt();
         verifyWritten(2);
+
+        assertBytesInBuffer(MSG_SIZE);
 
         onWrite().then(inv -> checkMessageFullySent(2, inv));
         reattempt();
@@ -190,6 +229,8 @@ public class ImplicitFixPSenderEndPointTest
         verifyRegistered();
 
         onNotSentMessage(2, true);
+
+        assertBytesInBuffer(2 * MSG_SIZE);
 
         onWrite()
             .then(inv -> checkBackpressuredResent(1, inv))
@@ -227,6 +268,9 @@ public class ImplicitFixPSenderEndPointTest
         // receive retransmit message earlier than the retransmission (the streams aren't sync'd)
         onNotSentMessage(1, true);
 
+        // because we're not reading from that stream they don't count as bytes in buffer
+        assertBytesInBuffer(0);
+
         onWrite()
             .then(inv -> checkMessageSent(3, RETRANSMISSION_ID, MSG_SIZE, MSG_SIZE, inv))
             .then(inv -> checkMessageFullySent(1, inv));
@@ -251,6 +295,7 @@ public class ImplicitFixPSenderEndPointTest
         onNotSentMessage(2, true);
         assertEquals(ABORT, endPoint.onReplayComplete());
         verifyWritten(0);
+        assertBytesInBuffer(0);
 
         onWrite()
             .then(inv -> checkMessageSent(3, RETRANSMISSION_ID, MSG_SIZE, MSG_SIZE, inv))
@@ -298,8 +343,6 @@ public class ImplicitFixPSenderEndPointTest
         onSentMessage(6, false);
     }
 
-    // TODO: implement timeout and max buffer sizing based disconnect
-
     private void verifyRegistered()
     {
         verify(fixPSenderEndPoints).backPressured(endPoint);
@@ -307,9 +350,15 @@ public class ImplicitFixPSenderEndPointTest
     }
 
     @After
-    public void verifyNotRegistered()
+    public void safeAtEnd()
     {
         verify(fixPSenderEndPoints, never()).backPressured(endPoint);
+        assertBytesInBuffer(0);
+    }
+
+    private void assertBytesInBuffer(final int expected)
+    {
+        assertEquals(expected, bytesInBuffer.get());
     }
 
     private void reattempt()

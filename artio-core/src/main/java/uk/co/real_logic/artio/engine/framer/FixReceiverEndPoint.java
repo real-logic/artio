@@ -198,7 +198,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
 
-        address = channel.remoteAddress();
+        address = channel.remoteAddr();
     }
 
     private int readData() throws IOException

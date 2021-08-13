@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
-import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.FIXP_MESSAGE_HEADER_LENGTH;
 
 class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
 {
@@ -48,7 +48,7 @@ class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
     {
         final long uuid = fixPMessage.sessionId();
         final int templateId = parser.templateId(buffer, headerOffset);
-        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
+        final int messageOffset = headerOffset + FIXP_MESSAGE_HEADER_LENGTH;
         final boolean possRetrans = offsets.possRetrans(templateId, buffer, messageOffset) == BOOLEAN_FLAG_TRUE;
 
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);

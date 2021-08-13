@@ -364,11 +364,17 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 beginSeqNo,
                 endSeqNo);
 
+            final AtomicCounter bytesInBuffer = senderSequenceNumbers.bytesInBufferCounter(connectionId);
+            if (bytesInBuffer == null)
+            {
+                return null;
+            }
+
             final FixPReplayerSession session = new FixPReplayerSession(
                 connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 fixPMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
-                fixPRetransmitHandler);
+                fixPRetransmitHandler, bytesInBuffer, configuration.senderMaxBytesInBuffer());
 
             session.query();
 

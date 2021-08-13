@@ -35,7 +35,7 @@ public class TcpChannel implements AutoCloseable
         remoteAddress = socketChannel.getRemoteAddress().toString();
     }
 
-    public String remoteAddress()
+    public String remoteAddr()
     {
         return remoteAddress;
     }

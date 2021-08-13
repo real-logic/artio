@@ -22,6 +22,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.FixPRetransmitHandler;
@@ -34,7 +35,7 @@ import uk.co.real_logic.artio.messages.FixPMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
-import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.FIXP_MESSAGE_HEADER_LENGTH;
 
 /**
  * In ILink cases the UUID is used as a sessionId.
@@ -47,7 +48,7 @@ public class FixPReplayerSession extends ReplayerSession
     private final FixPMessageEncoder fixPMessageEncoder;
     private final AbstractFixPParser binaryParser;
     private final AbstractFixPProxy binaryProxy;
-    private final AbstractFixPOffsets iLink3Offsets;
+    private final AbstractFixPOffsets fixPOffsets;
     private final FixPRetransmitHandler fixPRetransmitHandler;
 
     private boolean mustSendSequenceMessage = false;
@@ -76,17 +77,19 @@ public class FixPReplayerSession extends ReplayerSession
         final FixPMessageEncoder fixPMessageEncoder,
         final AbstractFixPParser binaryParser,
         final AbstractFixPProxy binaryProxy,
-        final AbstractFixPOffsets iLink3Offsets,
-        final FixPRetransmitHandler fixPRetransmitHandler)
+        final AbstractFixPOffsets fixPOffsets,
+        final FixPRetransmitHandler fixPRetransmitHandler,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer)
     {
         super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
-            sessionId, 0, replayer);
+            sessionId, 0, replayer, bytesInBuffer, maxBytesInBuffer);
 
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.fixPMessageEncoder = fixPMessageEncoder;
         this.binaryParser = binaryParser;
         this.binaryProxy = binaryProxy;
-        this.iLink3Offsets = iLink3Offsets;
+        this.fixPOffsets = fixPOffsets;
         this.fixPRetransmitHandler = fixPRetransmitHandler;
 
         state = State.REPLAYING;
@@ -142,13 +145,19 @@ public class FixPReplayerSession extends ReplayerSession
     public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
+        final int messageLength = length - (MessageHeaderEncoder.ENCODED_LENGTH + FixPMessageDecoder.BLOCK_LENGTH);
+        if (isBackpressured(messageLength))
+        {
+            return Action.ABORT;
+        }
+
         final int encoderOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
             FixPMessageDecoder.BLOCK_LENGTH;
         final int templateId = binaryParser.templateId(buffer, headerOffset);
         final int blockLength = binaryParser.blockLength(buffer, headerOffset);
         final int version = binaryParser.version(buffer, headerOffset);
-        final int messageOffset = headerOffset + ILINK_MESSAGE_HEADER_LENGTH;
+        final int messageOffset = headerOffset + FIXP_MESSAGE_HEADER_LENGTH;
 
         fixPRetransmitHandler.onReplayedBusinessMessage(
             templateId,
@@ -166,7 +175,7 @@ public class FixPReplayerSession extends ReplayerSession
         {
             if (mustSendSequenceMessage)
             {
-                final int seqNum = iLink3Offsets.seqNum(templateId, buffer, messageOffset);
+                final int seqNum = fixPOffsets.seqNum(templateId, buffer, messageOffset);
                 if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
                 {
                     if (sendSequence(seqNum))

@@ -19,6 +19,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 
 import java.io.IOException;
@@ -44,9 +45,13 @@ class ExplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
         final int libraryId,
-        final MessageTimingHandler messageTimingHandler)
+        final MessageTimingHandler messageTimingHandler,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer,
+        final Framer framer)
     {
-        super(connectionId, channel, errorHandler, inboundPublication, libraryId);
+        super(connectionId, channel, errorHandler, inboundPublication, libraryId, bytesInBuffer, maxBytesInBuffer,
+            framer);
         this.messageTimingHandler = messageTimingHandler;
     }
 

@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointKey;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.FixPSessionInfo;
@@ -516,18 +517,26 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotInterleaveRetransmitRequestAndMessageSending() throws IOException
     {
-        setupArtio();
+        setup();
+        final int senderMaxBytesInBuffer = 128;
+        setupJustArtio(
+            true,
+            DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE,
+            null,
+            false,
+            senderMaxBytesInBuffer);
 
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            final int retransmitCount = 20;
+            final int retransmitCount = 1_000;
             exchangeNOrdersAndReports(client, retransmitCount);
 
             client.writeRetransmitRequest(1, retransmitCount);
             client.readRetransmission(1, retransmitCount);
             client.readExecutionReportNew(1);
 
-            final int newClOrdId = 21;
+            final int newClOrdId = retransmitCount + 1;
             sendExecutionReportNew(connection, newClOrdId, SECURITY_ID, false);
 
             for (int i = 2; i < retransmitCount + 1; i++)
@@ -539,7 +548,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readSequence(newClOrdId);
             client.readExecutionReportNew(newClOrdId);
 
-//            clientTerminatesSession(client);
+            clientTerminatesSession(client);
         }
     }
 
@@ -1380,7 +1389,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE,
             null,
-            true);
+            true, EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
 
         connectionHandler.replyToOrder(false);
 

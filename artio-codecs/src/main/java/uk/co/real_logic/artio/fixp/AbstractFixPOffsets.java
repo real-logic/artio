@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static uk.co.real_logic.artio.fixp.AbstractFixPParser.ILINK_MESSAGE_HEADER_LENGTH;
+import static uk.co.real_logic.artio.fixp.AbstractFixPParser.FIXP_MESSAGE_HEADER_LENGTH;
 
 public abstract class AbstractFixPOffsets
 {
@@ -50,7 +50,7 @@ public abstract class AbstractFixPOffsets
             return MISSING_OFFSET;
         }
 
-        final int messageOffset = sbeHeaderOffset + ILINK_MESSAGE_HEADER_LENGTH;
+        final int messageOffset = sbeHeaderOffset + FIXP_MESSAGE_HEADER_LENGTH;
         final int fieldOffset = clientSeqNumOffset(templateId);
         return seqNum(buffer, messageOffset + fieldOffset);
     }

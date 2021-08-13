@@ -47,6 +47,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.TEST_THROTTLE_WINDOW_IN_MS;
 import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.THROTTLE_MSG_LIMIT;
@@ -108,7 +109,8 @@ public class AbstractBinaryEntryPointSystemTest
             logonTimeoutInMs,
             fixPAcceptedSessionMaxRetransmissionRange,
             null,
-            false);
+            false,
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     }
 
     void setupJustArtio(final boolean deleteLogFileDirOnStart)
@@ -118,7 +120,8 @@ public class AbstractBinaryEntryPointSystemTest
             DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS,
             NO_FIXP_MAX_RETRANSMISSION_RANGE,
             null,
-            false);
+            false,
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     }
 
     void setupJustArtio(
@@ -126,7 +129,7 @@ public class AbstractBinaryEntryPointSystemTest
         final int shortLogonTimeoutInMs,
         final int fixPAcceptedSessionMaxRetransmissionRange,
         final FixPCancelOnDisconnectTimeoutHandler cancelOnDisconnectTimeoutHandler,
-        final boolean enableThrottle)
+        final boolean enableThrottle, final int senderMaxBytesInBuffer)
     {
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(ACCEPTOR_LOGS)
@@ -140,7 +143,8 @@ public class AbstractBinaryEntryPointSystemTest
             .acceptFixPProtocol(FixPProtocolType.BINARY_ENTRYPOINT)
             .bindTo("localhost", port)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart)
-            .epochNanoClock(nanoClock);
+            .epochNanoClock(nanoClock)
+            .senderMaxBytesInBuffer(senderMaxBytesInBuffer);
 
         if (!printErrors)
         {

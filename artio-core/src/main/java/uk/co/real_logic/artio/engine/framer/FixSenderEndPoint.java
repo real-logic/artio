@@ -29,7 +29,6 @@ import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 import uk.co.real_logic.artio.session.CompositeKey;
@@ -51,12 +50,7 @@ class FixSenderEndPoint extends SenderEndPoint
     public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
     private final long connectionId;
-    private final TcpChannel channel;
-    private final AtomicCounter bytesInBuffer;
     private final AtomicCounter invalidLibraryAttempts;
-    private final ErrorHandler errorHandler;
-    private final Framer framer;
-    private final int maxBytesInBuffer;
     private final long slowConsumerTimeoutInMs;
     private final StreamTracker outboundTracker;
     private final StreamTracker replayTracker;
@@ -89,14 +83,11 @@ class FixSenderEndPoint extends SenderEndPoint
         final SenderSequenceNumber senderSequenceNumber,
         final MessageTimingHandler messageTimingHandler)
     {
-        super(connectionId, inboundPublication, libraryId);
+        super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
+            framer);
         this.connectionId = connectionId;
-        this.channel = channel;
-        this.bytesInBuffer = bytesInBuffer;
         this.invalidLibraryAttempts = invalidLibraryAttempts;
-        this.errorHandler = errorHandler;
-        this.framer = framer;
-        this.maxBytesInBuffer = maxBytesInBuffer;
+
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
         this.senderSequenceNumber = senderSequenceNumber;
 
@@ -404,21 +395,6 @@ class FixSenderEndPoint extends SenderEndPoint
         tracker.partiallySentMessage = true;
     }
 
-    private void becomeNormalConsumer()
-    {
-        sendSlowStatus(false);
-    }
-
-    private void sendSlowStatus(final boolean hasBecomeSlow)
-    {
-        framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
-    }
-
-    private void removeEndpoint(final DisconnectReason reason)
-    {
-        framer.onDisconnect(libraryId, connectionId, reason);
-    }
-
     public void libraryId(final int libraryId, final BlockablePosition blockablePosition)
     {
         libraryId(libraryId);
@@ -428,8 +404,8 @@ class FixSenderEndPoint extends SenderEndPoint
     public void close()
     {
         senderSequenceNumber.close();
-        bytesInBuffer.close();
         invalidLibraryAttempts.close();
+        super.close();
     }
 
     Action onSlowOutboundMessage(

@@ -18,14 +18,17 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class SenderEndPoint
+public class SenderEndPoint implements AutoCloseable
 {
     private static final int REPLAY_COMPLETE_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
@@ -36,14 +39,32 @@ public class SenderEndPoint
 
     private final ExclusivePublication inboundPublication;
 
+    protected final TcpChannel channel;
+    protected final AtomicCounter bytesInBuffer;
+    protected final int maxBytesInBuffer;
     protected final long connectionId;
     protected int libraryId;
+    protected final ErrorHandler errorHandler;
+    protected final Framer framer;
 
-    public SenderEndPoint(final long connectionId, final ExclusivePublication inboundPublication, final int libraryId)
+    public SenderEndPoint(
+        final long connectionId,
+        final ExclusivePublication inboundPublication,
+        final int libraryId,
+        final TcpChannel channel,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer,
+        final ErrorHandler errorHandler,
+        final Framer framer)
     {
         this.connectionId = connectionId;
         this.inboundPublication = inboundPublication;
         this.libraryId = libraryId;
+        this.channel = channel;
+        this.bytesInBuffer = bytesInBuffer;
+        this.maxBytesInBuffer = maxBytesInBuffer;
+        this.errorHandler = errorHandler;
+        this.framer = framer;
     }
 
     public ControlledFragmentHandler.Action onReplayComplete()
@@ -79,5 +100,25 @@ public class SenderEndPoint
     public long connectionId()
     {
         return connectionId;
+    }
+
+    protected void becomeNormalConsumer()
+    {
+        sendSlowStatus(false);
+    }
+
+    protected void sendSlowStatus(final boolean hasBecomeSlow)
+    {
+        framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
+    }
+
+    protected void removeEndpoint(final DisconnectReason reason)
+    {
+        framer.onDisconnect(libraryId, connectionId, reason);
+    }
+
+    public void close()
+    {
+        bytesInBuffer.close();
     }
 }

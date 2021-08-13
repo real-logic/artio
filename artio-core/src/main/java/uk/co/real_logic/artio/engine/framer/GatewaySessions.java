@@ -391,7 +391,7 @@ abstract class GatewaySessions
 
         public String remoteAddress()
         {
-            return channel.remoteAddress();
+            return channel.remoteAddr();
         }
 
         protected void reject(final DisconnectReason reason)

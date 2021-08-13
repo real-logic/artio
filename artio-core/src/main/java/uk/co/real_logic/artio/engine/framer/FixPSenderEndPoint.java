@@ -19,6 +19,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
@@ -32,9 +33,6 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
 {
     protected static final int NO_REATTEMPT = 0;
 
-    protected final TcpChannel channel;
-    protected final ErrorHandler errorHandler;
-
     protected int reattemptBytesWritten = NO_REATTEMPT;
 
     static FixPSenderEndPoint of(
@@ -47,18 +45,23 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final boolean explicitSequenceNumbers,
         final int templateIdOffset,
         final int retransmissionTemplateId,
-        final FixPSenderEndPoints fixPSenderEndPoints)
+        final FixPSenderEndPoints fixPSenderEndPoints,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer,
+        final Framer framer)
     {
         if (explicitSequenceNumbers)
         {
             return new ExplicitFixPSenderEndPoint(
-                connectionId, channel, errorHandler, inboundPublication, libraryId, messageTimingHandler);
+                connectionId, channel, errorHandler, inboundPublication, libraryId, messageTimingHandler,
+                bytesInBuffer, maxBytesInBuffer, framer);
         }
         else
         {
             return new ImplicitFixPSenderEndPoint(
                 connectionId, channel, errorHandler, inboundPublication, libraryId,
-                templateIdOffset, retransmissionTemplateId, fixPSenderEndPoints);
+                templateIdOffset, retransmissionTemplateId, fixPSenderEndPoints,
+                bytesInBuffer, maxBytesInBuffer, framer);
         }
     }
 
@@ -67,11 +70,13 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
-        final int libraryId)
+        final int libraryId,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer,
+        final Framer framer)
     {
-        super(connectionId, inboundPublication, libraryId);
-        this.channel = channel;
-        this.errorHandler = errorHandler;
+        super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
+            framer);
     }
 
     public abstract Action onMessage(DirectBuffer directBuffer, int offset, boolean retransmit);

@@ -176,7 +176,9 @@ public class FramerContext
             recordingCoordinator,
             fixPContexts,
             aeron.countersReader(),
-            engineContext.outboundIndexRegistrationId());
+            engineContext.outboundIndexRegistrationId(),
+            fixCounters,
+            engineContext.senderSequenceNumbers());
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)

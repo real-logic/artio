@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
@@ -199,7 +200,9 @@ public class FramerTest
             mock(RecordingCoordinator.class),
             mock(FixPContexts.class),
             mock(CountersReader.class),
-            1);
+            1,
+            mock(FixCounters.class),
+            mock(SenderSequenceNumbers.class));
 
         when(fixContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,

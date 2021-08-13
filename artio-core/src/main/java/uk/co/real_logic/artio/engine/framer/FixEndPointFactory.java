@@ -75,7 +75,7 @@ class FixEndPointFactory
             sessionId,
             sequenceIndex,
             fixContexts,
-            fixCounters.messagesRead(connectionId, channel.remoteAddress()),
+            fixCounters.messagesRead(connectionId, channel.remoteAddr()),
             framer,
             errorHandler,
             libraryId,
@@ -94,7 +94,7 @@ class FixEndPointFactory
         final BlockablePosition libraryBlockablePosition,
         final Framer framer)
     {
-        final String remoteAddress = channel.remoteAddress();
+        final String remoteAddress = channel.remoteAddr();
         final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, remoteAddress);
         return new FixSenderEndPoint(
             connectionId,

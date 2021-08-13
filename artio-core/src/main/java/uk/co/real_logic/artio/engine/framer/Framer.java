@@ -26,19 +26,14 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersReader;
 import org.agrona.concurrent.status.UnsafeBufferPosition;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LivenessDetector;
-import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -146,6 +141,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final FixSenderEndPoints fixSenderEndPoints;
     private final CountersReader countersReader;
     private final long outboundIndexRegistrationId;
+    private SenderSequenceNumbers senderSequenceNumbers;
+    private FixCounters fixCounters;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
     private final EngineConfiguration configuration;
@@ -231,7 +228,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final RecordingCoordinator recordingCoordinator,
         final FixPContexts fixPContexts,
         final CountersReader countersReader,
-        final long outboundIndexRegistrationId)
+        final long outboundIndexRegistrationId,
+        final FixCounters fixCounters,
+        final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.epochClock = epochClock;
         this.clock = configuration.epochNanoClock();
@@ -254,6 +253,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.fixSenderEndPoints = new FixSenderEndPoints(errorHandler);
         this.countersReader = countersReader;
         this.outboundIndexRegistrationId = outboundIndexRegistrationId;
+        this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixPSenderEndPoints = new FixPSenderEndPoints();
         this.removeILink3SenderEndPoints = fixPSenderEndPoints::removeConnection;
         this.conductorAgentInvoker = conductorAgentInvoker;
@@ -269,6 +269,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
         this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
+        this.fixCounters = fixCounters;
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
             configuration.acceptorfixDictionary(),
@@ -665,10 +666,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final long connectionId = newConnectionId();
 
+        final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
+        senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
         final FixPSenderEndPoint senderEndPoint = FixPSenderEndPoint.of(
             connectionId, channel, errorHandler, inboundPublication.dataPublication(), ENGINE_LIBRARY_ID,
             configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
-            fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints);
+            fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
+            bytesInBuffer, configuration.senderMaxBytesInBuffer(), this);
         fixPSenderEndPoints.add(senderEndPoint);
 
         final AcceptorFixPReceiverEndPoint receiverEndPoint = new AcceptorFixPReceiverEndPoint(
@@ -690,7 +694,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixPGatewaySession gatewaySession = new FixPGatewaySession(
             connectionId,
             UNK_SESSION,
-            channel.remoteAddress(),
+            channel.remoteAddr(),
             ACCEPTOR,
             configuration.authenticationTimeoutInMs(),
             protocolType,
@@ -750,7 +754,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void saveConnect(final TcpChannel channel, final long connectionId)
     {
-        final String address = channel.remoteAddress();
+        final String address = channel.remoteAddr();
         // In this case the save connect is simply logged for posterities sake
         // So in the back-pressure we should just drop it
         final long position = inboundPublication.saveConnect(connectionId, address);
@@ -842,22 +846,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         context.primaryConnected(true);
                     }
 
+                    final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
+                    senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
                     fixPSenderEndPoints.add(FixPSenderEndPoint.of(
                         connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId,
                         configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
-                        fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints));
+                        fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
+                        bytesInBuffer,
+                        configuration.senderMaxBytesInBuffer(), this));
                     receiverEndPoints.add(new InitiatorFixPReceiverEndPoint(
-                        connectionId,
-                        channel,
-                        configuration.receiverBufferSize(),
+                        connectionId, channel, configuration.receiverBufferSize(),
                         errorHandler,
                         this,
-                        inboundPublication,
-                        libraryId,
-                        context,
+                        inboundPublication, libraryId, context,
                         configuration.epochNanoClock(),
-                        correlationId,
-                        fixPContexts, fixPProtocol,
+                        correlationId, fixPContexts, fixPProtocol,
                         configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
                         fixPRejectRefIdExtractor));
                 });
@@ -1730,7 +1733,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final FixGatewaySession gatewaySession = new FixGatewaySession(
             connectionId,
             context,
-            channel.remoteAddress(),
+            channel.remoteAddr(),
             connectionType,
             sessionKey,
             receiverEndPoint,

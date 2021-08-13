@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.ExpandableDirectByteBuffer;
+import org.agrona.concurrent.status.AtomicCounter;
 
 import java.io.IOException;
 
@@ -28,6 +29,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.templateId;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
+import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 
 /**
  * FIXP protocols with implicit sequence numbers. Don't currently support full interleaving and needs to send
@@ -52,9 +54,13 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final int libraryId,
         final int templateIdOffset,
         final int retransmissionTemplateId,
-        final FixPSenderEndPoints fixPSenderEndPoints)
+        final FixPSenderEndPoints fixPSenderEndPoints,
+        final AtomicCounter bytesInBuffer,
+        final int maxBytesInBuffer,
+        final Framer framer)
     {
-        super(connectionId, channel, errorHandler, inboundPublication, libraryId);
+        super(connectionId, channel, errorHandler, inboundPublication, libraryId, bytesInBuffer, maxBytesInBuffer,
+            framer);
         this.templateIdOffset = templateIdOffset;
         this.retransmissionTemplateId = retransmissionTemplateId;
         this.fixPSenderEndPoints = fixPSenderEndPoints;
@@ -129,7 +135,8 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
     void enqueue(final DirectBuffer srcBuffer, final int srcOffst, final int messageSize, final boolean retransmit)
     {
         // we only need re-attempting when we've got messages buffered for the current state
-        if (!requiresReattempting && retransmit == retransmitting)
+        final boolean currentStream = retransmit == retransmitting;
+        if (!requiresReattempting && currentStream)
         {
             requiresReattempting = true;
             fixPSenderEndPoints.backPressured(this);
@@ -139,7 +146,17 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final int reattemptOffset = reattemptState.usage;
         final ExpandableDirectByteBuffer buffer = reattemptState.buffer();
 
-        reattemptState.usage = reattemptOffset + messageSize;
+        final int bufferUsage = reattemptOffset + messageSize;
+        reattemptState.usage = bufferUsage;
+        if (currentStream)
+        {
+            if (bufferUsage > maxBytesInBuffer)
+            {
+                removeEndpoint(SLOW_CONSUMER);
+            }
+
+            bytesInBuffer.setOrdered(bufferUsage);
+        }
         buffer.putBytes(reattemptOffset, srcBuffer, srcOffst, messageSize);
     }
 
@@ -180,8 +197,9 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             }
         }
 
-        reattemptState.shuffleWritten(offset);
-        return reattemptState.usage == 0;
+        final int usage = reattemptState.shuffleWritten(offset);
+        bytesInBuffer.setOrdered(usage);
+        return usage == 0;
     }
 
     public boolean reattempt()
@@ -212,13 +230,16 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             return buffer;
         }
 
-        void shuffleWritten(final int written)
+        int shuffleWritten(final int written)
         {
-            if (written != 0)
+            int usage = this.usage;
+            if (written > 0)
             {
                 usage -= written;
                 buffer.putBytes(0, buffer, written, usage);
+                this.usage = usage;
             }
+            return usage;
         }
     }
 
