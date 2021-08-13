@@ -281,4 +281,8 @@ public class ILink3Parser extends AbstractFixPParser
 //            notApplied.splitMsg()
     }
 
+    public int retransmissionTemplateId()
+    {
+        return Retransmission509Decoder.TEMPLATE_ID;
+    }
 }

@@ -325,7 +325,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
                 {
-                    return fixPSenderEndPoints.onMessage(connectionId, buffer, offset);
+                    return fixPSenderEndPoints.onMessage(connectionId, buffer, offset, true);
                 }
             },
             new ReplayProtocolSubscription((connectionId) ->
@@ -454,7 +454,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendOutboundMessages()
     {
-        return librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit) +
+        return fixPSenderEndPoints.reattempt() +
+            librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit) +
             librarySlowPeeker.peek(senderEndPointAssembler) +
             adminEngineSubscription.poll(adminEngineProtocolSubscription, outboundLibraryFragmentLimit);
     }
@@ -664,9 +665,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final long connectionId = newConnectionId();
 
-        final FixPSenderEndPoint senderEndPoint = new FixPSenderEndPoint(
+        final FixPSenderEndPoint senderEndPoint = FixPSenderEndPoint.of(
             connectionId, channel, errorHandler, inboundPublication.dataPublication(), ENGINE_LIBRARY_ID,
-            configuration.messageTimingHandler());
+            configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
+            fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints);
         fixPSenderEndPoints.add(senderEndPoint);
 
         final AcceptorFixPReceiverEndPoint receiverEndPoint = new AcceptorFixPReceiverEndPoint(
@@ -840,9 +842,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         context.primaryConnected(true);
                     }
 
-                    fixPSenderEndPoints.add(new FixPSenderEndPoint(
+                    fixPSenderEndPoints.add(FixPSenderEndPoint.of(
                         connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId,
-                        configuration.messageTimingHandler()));
+                        configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
+                        fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints));
                     receiverEndPoints.add(new InitiatorFixPReceiverEndPoint(
                         connectionId,
                         channel,
@@ -1694,7 +1697,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
     {
-        return fixPSenderEndPoints.onMessage(connectionId, buffer, offset);
+        return fixPSenderEndPoints.onMessage(connectionId, buffer, offset, false);
     }
 
     private FixGatewaySession setupFixConnection(

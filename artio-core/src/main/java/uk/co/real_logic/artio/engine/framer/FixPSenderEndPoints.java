@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -24,15 +25,34 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 public class FixPSenderEndPoints
 {
     private final Long2ObjectHashMap<FixPSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
+    private FixPSenderEndPoint[] backPressuredEndpoints = new FixPSenderEndPoint[0];
 
-    public Action onMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    public Action onMessage(
+        final long connectionId, final DirectBuffer buffer, final int offset, final boolean retransmit)
     {
         final FixPSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
         {
-            return senderEndPoint.onMessage(buffer, offset);
+            return senderEndPoint.onMessage(buffer, offset, retransmit);
         }
         return CONTINUE;
+    }
+
+    public int reattempt()
+    {
+        FixPSenderEndPoint[] backpressuredEndpoints = this.backPressuredEndpoints;
+        int size = backpressuredEndpoints.length;
+        for (int i = 0; i < size; i++)
+        {
+            final FixPSenderEndPoint endpoint = backpressuredEndpoints[i];
+            if (endpoint.reattempt())
+            {
+                backpressuredEndpoints = ArrayUtil.remove(backpressuredEndpoints, i);
+                size--;
+            }
+        }
+        this.backPressuredEndpoints = backpressuredEndpoints;
+        return size;
     }
 
     public void add(final FixPSenderEndPoint senderEndPoint)
@@ -60,5 +80,10 @@ public class FixPSenderEndPoints
         return "ILink3SenderEndPoints{" +
             "connectionIdToSenderEndpoint=" + connectionIdToSenderEndpoint +
             '}';
+    }
+
+    void backPressured(final FixPSenderEndPoint endPoint)
+    {
+        backPressuredEndpoints = ArrayUtil.add(backPressuredEndpoints, endPoint);
     }
 }

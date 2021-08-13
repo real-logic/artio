@@ -21,6 +21,7 @@ public abstract class AbstractFixPParser
 {
     public static final int ILINK_MESSAGE_HEADER_LENGTH = 8;
     public static final int BOOLEAN_FLAG_TRUE = 1;
+    public static final int STANDARD_TEMPLATE_ID_OFFSET = 2;
 
     public abstract long onMessage(DirectBuffer buffer, int offset);
 
@@ -36,4 +37,12 @@ public abstract class AbstractFixPParser
         int messageLength);
 
     public abstract long sessionId(DirectBuffer buffer, int offset);
+
+    public int templateIdOffset()
+    {
+        return STANDARD_TEMPLATE_ID_OFFSET;
+    }
+
+    public abstract int retransmissionTemplateId();
+
 }

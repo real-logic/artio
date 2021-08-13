@@ -108,4 +108,9 @@ public class Ilink3Protocol extends FixPProtocol
     {
         return loadSbeIr();
     }
+
+    public boolean explicitSequenceNumbers()
+    {
+        return true;
+    }
 }

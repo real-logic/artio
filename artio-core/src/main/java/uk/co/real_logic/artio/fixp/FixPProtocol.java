@@ -118,4 +118,12 @@ public abstract class FixPProtocol
     {
         return new FixPRejectRefIdExtractor(loadIr());
     }
+
+    /**
+     * Gets whether the protocol puts an explicit sequence number in every message or not.
+     *
+     * @return true iff the protocol puts an explicit sequence number in every message.
+     */
+    public abstract boolean explicitSequenceNumbers();
+
 }

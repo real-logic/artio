@@ -269,4 +269,9 @@ public class BinaryEntryPointParser extends AbstractFixPParser
 
         throw new IllegalArgumentException("Template id: " + templateId + " isn't a negotiate or establish");
     }
+
+    public int retransmissionTemplateId()
+    {
+        return RetransmissionDecoder.TEMPLATE_ID;
+    }
 }

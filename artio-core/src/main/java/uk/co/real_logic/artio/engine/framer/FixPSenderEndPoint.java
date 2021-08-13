@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Monotonic Ltd.
+ * Copyright 2020-2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,46 +22,63 @@ import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
-import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.MISSING_OFFSET;
-import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.clientSeqNum;
-import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
-class FixPSenderEndPoint extends SenderEndPoint
+abstract class FixPSenderEndPoint extends SenderEndPoint
 {
-    private static final int NO_REATTEMPT = 0;
+    protected static final int NO_REATTEMPT = 0;
 
-    private final TcpChannel channel;
-    private final ErrorHandler errorHandler;
+    protected final TcpChannel channel;
+    protected final ErrorHandler errorHandler;
 
-    private final MessageTimingHandler messageTimingHandler;
+    protected int reattemptBytesWritten = NO_REATTEMPT;
 
-    private int reattemptBytesWritten = NO_REATTEMPT;
+    static FixPSenderEndPoint of(
+        final long connectionId,
+        final TcpChannel channel,
+        final ErrorHandler errorHandler,
+        final ExclusivePublication inboundPublication,
+        final int libraryId,
+        final MessageTimingHandler messageTimingHandler,
+        final boolean explicitSequenceNumbers,
+        final int templateIdOffset,
+        final int retransmissionTemplateId,
+        final FixPSenderEndPoints fixPSenderEndPoints)
+    {
+        if (explicitSequenceNumbers)
+        {
+            return new ExplicitFixPSenderEndPoint(
+                connectionId, channel, errorHandler, inboundPublication, libraryId, messageTimingHandler);
+        }
+        else
+        {
+            return new ImplicitFixPSenderEndPoint(
+                connectionId, channel, errorHandler, inboundPublication, libraryId,
+                templateIdOffset, retransmissionTemplateId, fixPSenderEndPoints);
+        }
+    }
 
     FixPSenderEndPoint(
         final long connectionId,
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
-        final int libraryId,
-        final MessageTimingHandler messageTimingHandler)
+        final int libraryId)
     {
         super(connectionId, inboundPublication, libraryId);
         this.channel = channel;
         this.errorHandler = errorHandler;
-        this.messageTimingHandler = messageTimingHandler;
     }
 
-    public Action onMessage(final DirectBuffer directBuffer, final int offset)
+    public abstract Action onMessage(DirectBuffer directBuffer, int offset, boolean retransmit);
+
+    protected int writeBuffer(
+        final DirectBuffer directBuffer, final int offset, final int messageSize) throws IOException
     {
-        final int messageSize = SimpleOpenFramingHeader.readSofhMessageSize(directBuffer, offset);
         final int reattemptBytesWritten = this.reattemptBytesWritten;
 
         final ByteBuffer buffer = directBuffer.byteBuffer();
@@ -71,45 +88,18 @@ class FixPSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.limit(buffer, offset + messageSize);
         ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
 
-        try
+        final int written = channel.write(buffer);
+        if (written > 0)
         {
-            final int written = channel.write(buffer);
-            if (written > 0)
-            {
-                ByteBufferUtil.position(buffer, offset);
-                DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
+            ByteBufferUtil.position(buffer, offset);
+            DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
-                buffer.limit(startLimit).position(startPosition);
-            }
-
-            final int totalWritten = reattemptBytesWritten + written;
-            if (totalWritten < messageSize)
-            {
-                this.reattemptBytesWritten = totalWritten;
-
-                return ABORT;
-            }
-            else
-            {
-                if (messageTimingHandler != null)
-                {
-                    final int sbeHeaderOffset = offset + SOFH_LENGTH;
-                    final long sequenceNumber = clientSeqNum(directBuffer, sbeHeaderOffset);
-                    if (sequenceNumber != MISSING_OFFSET)
-                    {
-                        messageTimingHandler.onMessage(sequenceNumber, connectionId);
-                    }
-                }
-
-                this.reattemptBytesWritten = NO_REATTEMPT;
-            }
-        }
-        catch (final IOException e)
-        {
-            errorHandler.onError(e);
+            buffer.limit(startLimit).position(startPosition);
         }
 
-        return CONTINUE;
+        return reattemptBytesWritten + written;
     }
+
+    abstract boolean reattempt();
 
 }

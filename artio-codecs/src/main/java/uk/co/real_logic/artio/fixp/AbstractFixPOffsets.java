@@ -44,7 +44,7 @@ public abstract class AbstractFixPOffsets
     // Optimised path for sequence numbers based upon common patterns.
     public static long clientSeqNum(final DirectBuffer buffer, final int sbeHeaderOffset)
     {
-        final int templateId = buffer.getShort(sbeHeaderOffset + TEMPLATE_ID_OFFSET, LITTLE_ENDIAN) & 0xFFFF;
+        final int templateId = templateId(buffer, sbeHeaderOffset, TEMPLATE_ID_OFFSET);
         if (templateId < MINIMUM_BUSINESS_MSG_TEMPLATE_ID)
         {
             return MISSING_OFFSET;
@@ -53,6 +53,11 @@ public abstract class AbstractFixPOffsets
         final int messageOffset = sbeHeaderOffset + ILINK_MESSAGE_HEADER_LENGTH;
         final int fieldOffset = clientSeqNumOffset(templateId);
         return seqNum(buffer, messageOffset + fieldOffset);
+    }
+
+    public static int templateId(final DirectBuffer buffer, final int sbeHeaderOffset, final int templateIdOffset)
+    {
+        return buffer.getShort(sbeHeaderOffset + templateIdOffset, LITTLE_ENDIAN) & 0xFFFF;
     }
 
     public static void clientSeqNum(

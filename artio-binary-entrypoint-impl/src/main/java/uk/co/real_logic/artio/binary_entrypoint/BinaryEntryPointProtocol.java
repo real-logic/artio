@@ -122,4 +122,9 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             handler,
             sequenceNumberReader);
     }
+
+    public boolean explicitSequenceNumbers()
+    {
+        return false;
+    }
 }

@@ -80,7 +80,8 @@ public class InternalBinaryEntryPointConnectionTest
 
         requestTimestampInNs++;
         onRetransmitRequest(connection, requestTimestampInNs, 3);
-        verify(proxy, never()).sendRetransmission(eq(3L), eq(1L), anyLong(), anyLong());
+        verify(proxy, never()).sendRetransmissionWithSequence(
+            eq(3L), eq(1L), anyLong(), anyLong(), anyLong());
         verify(proxy).sendRetransmitReject(eq(REQUEST_LIMIT_EXCEEDED), anyLong(), eq(requestTimestampInNs));
         reset(proxy);
 
@@ -94,7 +95,8 @@ public class InternalBinaryEntryPointConnectionTest
     private void successfulRetransmit(
         final BinaryEntryPointProxy proxy, final long requestTimestampInNs, final long fromSeqNo)
     {
-        verify(proxy).sendRetransmission(eq(fromSeqNo), eq(1L), anyLong(), eq(requestTimestampInNs));
+        verify(proxy).sendRetransmissionWithSequence(
+            eq(fromSeqNo), eq(1L), anyLong(), eq(requestTimestampInNs), anyLong());
         verify(proxy, never()).sendRetransmitReject(any(), anyLong(), anyLong());
         reset(proxy);
     }

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -38,6 +39,13 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
 {
     public static final int BINARY_ENTRYPOINT_HEADER_LENGTH = SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int BINARY_ENTRYPOINT_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + BINARY_ENTRYPOINT_HEADER_LENGTH;
+
+    private static final int RETRANSMISSION_LEN = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        RetransmissionEncoder.BLOCK_LENGTH;
+    private static final int SEQUENCE_LEN = BINARY_ENTRYPOINT_HEADER_LENGTH +
+        SequenceEncoder.BLOCK_LENGTH;
+    private static final int RETRANSMISSION_AND_SEQUENCE_LEN = ARTIO_HEADER_LENGTH + RETRANSMISSION_LEN + SEQUENCE_LEN;
+
     private static final int NEGOTIATE_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
         NegotiateRejectEncoder.BLOCK_LENGTH;
     private static final int ESTABLISH_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
@@ -285,25 +293,59 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         return position;
     }
 
-    public long sendRetransmission(
-        final long nextSeqNo, final long count, final long internalTimestampInNs, final long requestTimestampInNs)
+    public long sendRetransmissionWithSequence(
+        final long nextSeqNo,
+        final long count,
+        final long internalTimestampInNs,
+        final long requestTimestampInNs,
+        final long nextSentSeqNo)
     {
         final RetransmissionEncoder retransmission = this.retransmission;
+        final SequenceEncoder sequence = this.sequence;
+        final BufferClaim bufferClaim = this.bufferClaim;
 
-        final long position = claimMessage(RetransmissionEncoder.BLOCK_LENGTH, retransmission, internalTimestampInNs);
+        final long position = publication.tryClaim(RETRANSMISSION_AND_SEQUENCE_LEN, bufferClaim);
         if (position < 0)
         {
             return position;
         }
 
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        fixPMessage
+            .wrapAndApplyHeader(buffer, offset, messageHeader)
+            .connection(connectionId)
+            .sessionId(sessionId)
+            .enqueueTime(internalTimestampInNs);
+
+        offset += ARTIO_HEADER_LENGTH;
+
+        SimpleOpenFramingHeader.writeSofh(buffer, offset, RETRANSMISSION_LEN, BINARY_ENTRYPOINT_TYPE);
+        offset += SOFH_LENGTH;
+
+        offset = applyHeader(retransmission, buffer, offset);
+
         retransmission
+            .wrap(buffer, offset)
             .sessionID(sessionId)
             .requestTimestamp().time(requestTimestampInNs);
         retransmission
             .nextSeqNo(nextSeqNo)
             .count(count);
 
+        offset += RetransmissionEncoder.BLOCK_LENGTH;
+
+        SimpleOpenFramingHeader.writeSofh(buffer, offset, SEQUENCE_LEN, BINARY_ENTRYPOINT_TYPE);
+        offset += SOFH_LENGTH;
+        offset = applyHeader(sequence, buffer, offset);
+
+        sequence
+            .wrap(buffer, offset)
+            .nextSeqNo(nextSentSeqNo);
+
         DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", retransmissionAppendTo);
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", sequenceAppendTo);
 
         commit();
 

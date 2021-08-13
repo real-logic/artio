@@ -394,7 +394,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             exchange4OrdersAndReports(client);
 
-            assertMessagesRetransmitted(client);
+            assertMessagesRetransmitted(client, 5);
 
             clientTerminatesSession(client);
 
@@ -417,27 +417,33 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             assertNextSequenceNumbers(5, 5);
 
-            assertMessagesRetransmitted(client);
+            assertMessagesRetransmitted(client, 5);
 
             clientTerminatesSession(client);
         });
     }
 
-    private void assertMessagesRetransmitted(final BinaryEntryPointClient client)
+    private void assertMessagesRetransmitted(final BinaryEntryPointClient client, final long nextSeqNo)
     {
         client.writeRetransmitRequest(2, 2);
         client.readRetransmission(2, 2);
         client.readExecutionReportNew(2);
         client.readExecutionReportNew(3);
+        client.readSequence(nextSeqNo);
     }
 
     private void exchange4OrdersAndReports(final BinaryEntryPointClient client)
     {
-        exchangeOrderAndReportNew(client, 1);
-        exchangeOrderAndReportNew(client, 2);
-        exchangeOrderAndReportNew(client, 3);
-        exchangeOrderAndReportNew(client, 4);
+        exchangeNOrdersAndReports(client, 4);
         assertNextSequenceNumbers(5, 5);
+    }
+
+    private void exchangeNOrdersAndReports(final BinaryEntryPointClient client, final int n)
+    {
+        for (int i = 0; i < n; i++)
+        {
+            exchangeOrderAndReportNew(client, i + 1);
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -504,6 +510,36 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
 
             clientTerminatesSession(client);
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotInterleaveRetransmitRequestAndMessageSending() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            final int retransmitCount = 20;
+            exchangeNOrdersAndReports(client, retransmitCount);
+
+            client.writeRetransmitRequest(1, retransmitCount);
+            client.readRetransmission(1, retransmitCount);
+            client.readExecutionReportNew(1);
+
+            final int newClOrdId = 21;
+            sendExecutionReportNew(connection, newClOrdId, SECURITY_ID, false);
+
+            for (int i = 2; i < retransmitCount + 1; i++)
+            {
+                client.readExecutionReportNew(i);
+            }
+
+            // receive new execution report after
+            client.readSequence(newClOrdId);
+            client.readExecutionReportNew(newClOrdId);
+
+//            clientTerminatesSession(client);
         }
     }
 
@@ -712,6 +748,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         client.readRetransmission(1, 1);
         client.readExecutionReportNew();
         client.writeFinishedReceiving();
+        client.readSequence(2);
     }
 
     // ----------------------------------
@@ -1215,6 +1252,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.writeRetransmitRequest(1, 1);
             client.readRetransmission(1, 1);
             client.readExecutionReportNew();
+            client.readSequence(2);
 
             clientTerminatesSession(client);
         }
@@ -1363,6 +1401,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readRetransmission(1, 2);
             client.readBusinessReject(4, 4);
             client.readBusinessReject(5, 5);
+            client.readSequence(9);
 
             // Reset the throttle rate
             final Reply<ThrottleConfigurationStatus> reply = testSystem.awaitCompletedReply(

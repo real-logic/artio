@@ -258,6 +258,11 @@ class InternalBinaryEntryPointConnection
         replaying = false;
     }
 
+    public boolean isReplaying()
+    {
+        return replaying;
+    }
+
     protected void onOfflineReconnect(final long connectionId, final FixPContext context)
     {
         initialState((BinaryEntryPointContext)context);
@@ -724,7 +729,8 @@ class InternalBinaryEntryPointConnection
 
         if (!suppressRetransmissionResend)
         {
-            final long position = proxy.sendRetransmission(fromSeqNo, count, requestTimestampInNs(), timestampInNs);
+            final long position = proxy.sendRetransmissionWithSequence(
+                fromSeqNo, count, requestTimestampInNs(), timestampInNs, nextSentSeqNo);
             if (position < 0)
             {
                 return position;
