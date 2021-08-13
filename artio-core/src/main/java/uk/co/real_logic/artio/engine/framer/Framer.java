@@ -3173,6 +3173,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             inboundMessages,
             receiverEndPoints,
             fixSenderEndPoints,
+            fixPSenderEndPoints,
             channelSupplier,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex);

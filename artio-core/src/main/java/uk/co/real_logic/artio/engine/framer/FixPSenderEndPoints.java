@@ -22,7 +22,7 @@ import org.agrona.collections.Long2ObjectHashMap;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class FixPSenderEndPoints
+public class FixPSenderEndPoints implements AutoCloseable
 {
     private final Long2ObjectHashMap<FixPSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private FixPSenderEndPoint[] backPressuredEndpoints = new FixPSenderEndPoint[0];
@@ -62,7 +62,11 @@ public class FixPSenderEndPoints
 
     void removeConnection(final long connectionId)
     {
-        connectionIdToSenderEndpoint.remove(connectionId);
+        final FixPSenderEndPoint endPoint = connectionIdToSenderEndpoint.remove(connectionId);
+        if (endPoint != null)
+        {
+            endPoint.close();
+        }
     }
 
     public Action onReplayComplete(final long connectionId)
@@ -85,5 +89,12 @@ public class FixPSenderEndPoints
     void backPressured(final FixPSenderEndPoint endPoint)
     {
         backPressuredEndpoints = ArrayUtil.add(backPressuredEndpoints, endPoint);
+    }
+
+    public void close()
+    {
+        connectionIdToSenderEndpoint
+            .values()
+            .forEach(FixPSenderEndPoint::close);
     }
 }
