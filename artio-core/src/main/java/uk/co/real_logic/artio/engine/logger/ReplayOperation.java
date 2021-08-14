@@ -60,14 +60,14 @@ public class ReplayOperation
         "Finished with messageTrackerCount=%s, recordingRangeCount=%s"));
 
     // Closing state formatters:
-    private static final ThreadLocal<CharFormatter> INIT_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
-        new CharFormatter("ReplayOperation:INIT_CLOSING - stopReplay id=%s"));
-    private static final ThreadLocal<CharFormatter> FIND_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
-        new CharFormatter("ReplayOperation:FIND_IMAGE_CLOSING: - id=%s,image=%s"));
-    private static final ThreadLocal<CharFormatter> POLL_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(() ->
-        new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s"));
-    private static final ThreadLocal<CharFormatter> CLOSED_FORMATTER = ThreadLocal.withInitial(() ->
-        new CharFormatter("ReplayOperation:CLOSED - id=%s"));
+    private static final ThreadLocal<CharFormatter> INIT_CLOSING_FORMATTER = ThreadLocal.withInitial(
+        () -> new CharFormatter("ReplayOperation:INIT_CLOSING - stopReplay id=%s"));
+    private static final ThreadLocal<CharFormatter> FIND_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(
+        () -> new CharFormatter("ReplayOperation:FIND_IMAGE_CLOSING: - id=%s,image=%s"));
+    private static final ThreadLocal<CharFormatter> POLL_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(
+        () -> new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s"));
+    private static final ThreadLocal<CharFormatter> CLOSED_FORMATTER = ThreadLocal.withInitial(
+        () -> new CharFormatter("ReplayOperation:CLOSED - id=%s"));
 
     private final MessageTracker messageTracker;
     private final ControlledFragmentAssembler assembler;

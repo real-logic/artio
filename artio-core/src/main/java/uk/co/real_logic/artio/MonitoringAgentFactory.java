@@ -49,14 +49,13 @@ public interface MonitoringAgentFactory
     static MonitoringAgentFactory consumeDistinctErrors(
         final ErrorConsumer errorConsumer)
     {
-        return (errorBuffer, agentNamePrefix, aeronArchive) ->
-            new ErrorPrinter(
-                errorBuffer,
-                agentNamePrefix,
-                System.currentTimeMillis(),
-                aeronArchive,
-                errorConsumer,
-                new SystemEpochClock());
+        return (errorBuffer, agentNamePrefix, aeronArchive) -> new ErrorPrinter(
+            errorBuffer,
+            agentNamePrefix,
+            System.currentTimeMillis(),
+            aeronArchive,
+            errorConsumer,
+            new SystemEpochClock());
     }
 
     /**
