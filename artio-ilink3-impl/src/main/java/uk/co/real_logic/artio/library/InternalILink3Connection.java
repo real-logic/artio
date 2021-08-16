@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICATION;
 
 /**
@@ -1614,5 +1615,10 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             ", nextReceiveMessageTimeInMs=" + nextReceiveMessageTimeInMs +
             ", nextSendMessageTimeInMs=" + nextSendMessageTimeInMs +
             '}';
+    }
+
+    public long startEndOfDay()
+    {
+        return requestDisconnect(ENGINE_SHUTDOWN);
     }
 }

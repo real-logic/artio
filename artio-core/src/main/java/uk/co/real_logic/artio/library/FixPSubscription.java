@@ -64,4 +64,9 @@ class FixPSubscription
         return connection.onThrottleNotification(
             refMsgType, businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength);
     }
+
+    public long startEndOfDay()
+    {
+        return connection.startEndOfDay();
+    }
 }

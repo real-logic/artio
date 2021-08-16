@@ -794,4 +794,18 @@ class InternalBinaryEntryPointConnection
 
         return true;
     }
+
+    public long startEndOfDay()
+    {
+        final State state = this.state;
+        if (state == ESTABLISHED)
+        {
+            terminate(TerminationCode.FINISHED);
+            return 1;
+        }
+        else
+        {
+            return requestDisconnect(DisconnectReason.ENGINE_SHUTDOWN);
+        }
+    }
 }

@@ -89,6 +89,7 @@ class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
     void authenticated()
     {
         requiresAuthentication = false;
+        framer.receiverEndPointPollingOptional(connectionId);
     }
 
     void trackDisconnect()

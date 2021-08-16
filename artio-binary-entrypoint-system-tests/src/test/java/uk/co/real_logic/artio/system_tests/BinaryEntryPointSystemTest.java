@@ -43,6 +43,7 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import static io.aeron.logbuffer.LogBufferDescriptor.TERM_MIN_LENGTH;
@@ -1425,6 +1426,53 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             clientTerminatesSession(client);
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldLogoutSessionsOnEngineClose() throws Exception
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            closeEngine(() -> acceptorTerminatesSession(client));
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectedNotYetEstablishedSessionsOnEngineClose() throws Exception
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeNegotiate();
+            closeEngine(client::assertDisconnected);
+        }
+    }
+
+    private void closeEngine(final Runnable duringClose) throws InterruptedException
+    {
+        final AtomicBoolean closeException = new AtomicBoolean(false);
+        final Thread closeThread = new Thread(() ->
+        {
+            try
+            {
+                engine.close();
+            }
+            catch (final Throwable t)
+            {
+                t.printStackTrace();
+                closeException.set(true);
+            }
+        });
+        closeThread.setName("closeThread");
+        closeThread.start();
+
+        duringClose.run();
+
+        closeThread.join(AWAIT_TIMEOUT_IN_MS);
+        assertFalse(closeException.get());
     }
 
     private void awaitedSleepThrottleWindow()

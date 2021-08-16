@@ -332,4 +332,11 @@ public abstract class InternalFixPConnection implements FixPConnection
     {
         throw new UnsupportedOperationException("throttling isn't supported for this Protocol type");
     }
+
+    /**
+     * Start the end of day operation for a given connection. Invoked when the engine closes.
+     *
+     * @return position of sent message in order to enable back-pressure handling
+     */
+    public abstract long startEndOfDay();
 }

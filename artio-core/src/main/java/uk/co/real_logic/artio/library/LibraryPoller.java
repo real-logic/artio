@@ -69,7 +69,6 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
@@ -191,7 +190,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // State changed during end of day operation
     private int sessionLogoutIndex = 0;
-    private Iterator<FixPSubscription> iLink3LogoutIterator = null;
+    private Iterator<FixPSubscription> fixpLogoutIterator = null;
 
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser commonFixPParser;
@@ -1611,14 +1610,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         // Continue from previous position on backpressured re-attempts
-        if (iLink3LogoutIterator == null)
+        if (fixpLogoutIterator == null)
         {
-            iLink3LogoutIterator = connectionIdToFixPSubscription.values().iterator();
+            fixpLogoutIterator = connectionIdToFixPSubscription.values().iterator();
         }
-        while (iLink3LogoutIterator.hasNext())
+        while (fixpLogoutIterator.hasNext())
         {
-            final FixPSubscription fixPSubscription = iLink3LogoutIterator.next();
-            if (Pressure.isBackPressured(fixPSubscription.requestDisconnect(ENGINE_SHUTDOWN)))
+            final FixPSubscription fixPSubscription = fixpLogoutIterator.next();
+            if (Pressure.isBackPressured(fixPSubscription.startEndOfDay()))
             {
                 return;
             }
@@ -1626,7 +1625,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         if (!connectionIdToFixPSubscription.isEmpty())
         {
-            DebugLogger.log(CLOSE, "Completed logging out ILink 3 Sessions");
+            DebugLogger.log(CLOSE, "Completed logging out FIXP Sessions");
         }
 
         // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.
