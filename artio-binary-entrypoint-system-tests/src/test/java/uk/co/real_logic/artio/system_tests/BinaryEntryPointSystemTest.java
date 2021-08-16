@@ -1440,7 +1440,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldDisconnectedNotYetEstablishedSessionsOnEngineClose() throws Exception
+    public void shouldDisconnectNotYetEstablishedSessionsOnEngineClose() throws Exception
     {
         setupArtio();
 

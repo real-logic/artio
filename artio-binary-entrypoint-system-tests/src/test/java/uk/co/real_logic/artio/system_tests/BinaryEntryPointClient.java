@@ -23,6 +23,7 @@ import org.agrona.concurrent.SystemEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageDecoderFlyweight;
 import org.agrona.sbe.MessageEncoderFlyweight;
+import org.junit.Assert;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol;
 import uk.co.real_logic.sbe.json.JsonPrinter;
@@ -448,27 +449,42 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void assertDisconnected()
     {
-        final boolean disconnected = testSystem.awaitBlocking(() ->
+        try
+        {
+            testSystem.awaitBlocking(() ->
+            {
+                try
+                {
+                    final int read = socket.read(readBuffer);
+                    if (read == -1)
+                    {
+                        return;
+                    }
+
+                    final int totalLength = readSofh(unsafeReadBuffer, 0, BINARY_ENTRYPOINT_TYPE);
+                    final int templateId = headerDecoder.templateId();
+                    final int blockLength = headerDecoder.blockLength();
+                    final int version = headerDecoder.version();
+
+                    Assert.fail("read = " + read + ", totalLength = " + totalLength + ", templateId = " + templateId +
+                        ", blockLength = " + blockLength + ", version = " + version);
+                }
+                catch (final IOException e)
+                {
+                    // Deliberately blank - if it throws an exception due to being disconnected that's ok
+                }
+            });
+        }
+        finally
         {
             try
             {
-                return socket.read(readBuffer) == -1;
+                socket.close();
             }
             catch (final IOException e)
             {
-                return true;
+                LangUtil.rethrowUnchecked(e);
             }
-        });
-
-        assertTrue(disconnected);
-
-        try
-        {
-            socket.close();
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
         }
     }
 
