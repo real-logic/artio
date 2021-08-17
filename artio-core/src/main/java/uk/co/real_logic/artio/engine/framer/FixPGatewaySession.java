@@ -24,6 +24,8 @@ import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
+
 public class FixPGatewaySession extends GatewaySession implements FixPConnectedSessionInfo
 {
     private final FixPProtocolType protocolType;
@@ -166,5 +168,14 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
     {
         receiverEndPoint.configureThrottle(throttleWindowInMs, throttleLimitOfMessages);
         return true;
+    }
+
+    public long startEndOfDay()
+    {
+        if (receiverEndPoint != null)
+        {
+            receiverEndPoint.completeDisconnect(ENGINE_SHUTDOWN);
+        }
+        return 1;
     }
 }

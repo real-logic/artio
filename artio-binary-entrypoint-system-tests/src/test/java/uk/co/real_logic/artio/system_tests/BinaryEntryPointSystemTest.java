@@ -1430,6 +1430,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     {
         setupArtio();
 
+        connectionExistsHandler.request(false);
+
         try (BinaryEntryPointClient client = newClient())
         {
             client.writeNegotiate();

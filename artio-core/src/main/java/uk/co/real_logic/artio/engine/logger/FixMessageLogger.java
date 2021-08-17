@@ -26,7 +26,6 @@ import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
@@ -80,7 +79,8 @@ public class FixMessageLogger implements Agent
          * @return this
          */
         @Deprecated
-        public Configuration iLinkMessageConsumer(final ILinkMessageConsumer iLinkMessageConsumer)
+        public Configuration iLinkMessageConsumer(
+            final uk.co.real_logic.artio.ilink.ILinkMessageConsumer iLinkMessageConsumer)
         {
             return fixPMessageConsumer(iLinkMessageConsumer);
         }

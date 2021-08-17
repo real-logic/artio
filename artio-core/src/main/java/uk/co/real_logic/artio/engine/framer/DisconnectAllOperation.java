@@ -17,9 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.session.InternalSession;
 
 import java.util.List;
 
@@ -117,49 +115,10 @@ class DisconnectAllOperation implements Continuation
         while (gatewaySessionIndex < gatewaySessionCount)
         {
             final GatewaySession gatewaySession = gatewaySessions.get(gatewaySessionIndex);
-            if (gatewaySession instanceof FixGatewaySession)
+            final long position = gatewaySession.startEndOfDay();
+            if (position < 0)
             {
-                final InternalSession session = ((FixGatewaySession)gatewaySession).session();
-                if (session != null)
-                {
-                    final SessionState state = session.state();
-                    switch (state)
-                    {
-                        case SENT_LOGON:
-                        case ACTIVE:
-                        case AWAITING_LOGOUT:
-                        case LOGGING_OUT_AND_DISCONNECTING:
-                        case LOGGING_OUT:
-                        {
-                            final long position = session.logoutAndDisconnect();
-                            if (position < 0)
-                            {
-                                return position;
-                            }
-
-                            break;
-                        }
-
-                        case CONNECTED:
-                        case CONNECTING:
-                        case DISCONNECTING:
-                        {
-                            final long position = session.requestDisconnect();
-                            if (position < 0)
-                            {
-                                return position;
-                            }
-
-                            break;
-                        }
-
-                        case DISCONNECTED:
-                        case DISABLED:
-                        default:
-                            // deliberately blank
-                            break;
-                    }
-                }
+                return position;
             }
             gatewaySessionIndex++;
         }

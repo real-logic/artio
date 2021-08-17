@@ -144,4 +144,6 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
     abstract void close();
 
     public abstract boolean configureThrottle(int throttleWindowInMs, int throttleLimitOfMessages);
+
+    public abstract long startEndOfDay();
 }

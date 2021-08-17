@@ -342,6 +342,11 @@ public class InternalSession extends Session implements AutoCloseable
         return super.logoutAndDisconnect(reason);
     }
 
+    public long requestDisconnect(final DisconnectReason reason)
+    {
+        return super.requestDisconnect(reason);
+    }
+
     public void onReplayComplete()
     {
         super.onReplayComplete();

@@ -34,6 +34,7 @@ import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, FixSessionOwner
 {
@@ -503,5 +504,52 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     public void onSequenceReset(final long resetTimeInNs)
     {
         context.onSequenceReset(resetTimeInNs);
+    }
+
+    public long startEndOfDay()
+    {
+        final InternalSession session = this.session;
+        if (session != null)
+        {
+            final SessionState state = session.state();
+            switch (state)
+            {
+                case SENT_LOGON:
+                case ACTIVE:
+                case AWAITING_LOGOUT:
+                case LOGGING_OUT_AND_DISCONNECTING:
+                case LOGGING_OUT:
+                {
+                    final long position = session.logoutAndDisconnect(ENGINE_SHUTDOWN);
+                    if (position < 0)
+                    {
+                        return position;
+                    }
+
+                    break;
+                }
+
+                case CONNECTED:
+                case CONNECTING:
+                case DISCONNECTING:
+                {
+                    final long position = session.requestDisconnect(ENGINE_SHUTDOWN);
+                    if (position < 0)
+                    {
+                        return position;
+                    }
+
+                    break;
+                }
+
+                case DISCONNECTED:
+                case DISABLED:
+                default:
+                    // deliberately blank
+                    break;
+            }
+        }
+
+        return 1;
     }
 }

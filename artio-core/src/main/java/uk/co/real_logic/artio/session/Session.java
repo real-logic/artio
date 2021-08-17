@@ -488,7 +488,7 @@ public class Session
         return requestDisconnect(APPLICATION_DISCONNECT);
     }
 
-    private long requestDisconnect(final DisconnectReason reason)
+    long requestDisconnect(final DisconnectReason reason)
     {
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
