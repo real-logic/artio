@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
+import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import org.agrona.collections.LongArrayList;
@@ -99,7 +100,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
 
         while (true)
         {
-            position = connection.tryClaim(executionReport);
+            position = connection.tryClaim(executionReport, NoMetricsEncoder.sbeBlockLength());
             if (position >= 0)
             {
                 break;
@@ -124,6 +125,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
             .putTradeDate(1, 2)
             .protectionPrice().mantissa(1234);
         executionReport.receivedTime().time(System.nanoTime());
+        executionReport.noMetricsCount(0);
 
         if (abortReport)
         {

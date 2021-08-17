@@ -19,7 +19,10 @@ import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.concurrent.OffsetEpochNanoClock;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
@@ -28,7 +31,6 @@ import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
-import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -57,7 +59,6 @@ import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -588,20 +589,8 @@ public class AbstractGatewayToGatewaySystemTest
         final FixMessageConsumer fixMessageConsumer =
             (message, buffer, offset, length, header) -> messages.add(message.body());
 
-        final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
-            .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
-            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+        SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds, fixMessageConsumer, null);
 
-        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
-        {
-            scanner.scan(
-                configuration.libraryAeronChannel(),
-                queryStreamIds,
-                fixMessageConsumer,
-                null,
-                false,
-                DEFAULT_ARCHIVE_SCANNER_STREAM);
-        }
         return messages;
     }
 

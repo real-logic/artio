@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.IoUtil;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -30,7 +31,10 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
+import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
+import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.engine.logger.ReplayIndexExtractor;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -55,6 +59,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
@@ -563,5 +568,27 @@ public final class SystemTestUtil
         final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
         ReplayIndexExtractor.extract(config, sessionId, inbound, validator);
         assertThat(validator.errors(), hasSize(0));
+    }
+
+    public static void getMessagesFromArchive(
+        final EngineConfiguration configuration,
+        final IntHashSet queryStreamIds,
+        final FixMessageConsumer fixMessageConsumer,
+        final FixPMessageConsumer fixPConsumer)
+    {
+        final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
+            .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
+        {
+            scanner.scan(
+                configuration.libraryAeronChannel(),
+                queryStreamIds,
+                fixMessageConsumer,
+                fixPConsumer,
+                false,
+                DEFAULT_ARCHIVE_SCANNER_STREAM);
+        }
     }
 }

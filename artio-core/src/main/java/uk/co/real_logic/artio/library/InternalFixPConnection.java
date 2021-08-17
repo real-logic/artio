@@ -19,10 +19,7 @@ import io.aeron.exceptions.TimeoutException;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.sbe.MessageEncoderFlyweight;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPConnection;
-import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
-import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
@@ -38,6 +35,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected final EpochNanoClock clock;
     protected final FixPSessionOwner owner;
     protected final AbstractFixPProxy proxy;
+    protected final FixPMessageDissector dissector;
 
     protected State state;
     protected FixPConnectionHandler handler;
@@ -59,7 +57,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         final int libraryId,
         final EpochNanoClock clock,
         final FixPSessionOwner owner,
-        final AbstractFixPProxy proxy)
+        final AbstractFixPProxy proxy,
+        final FixPMessageDissector dissector)
     {
         this.connectionId = connectionId;
         this.outboundPublication = outboundPublication;
@@ -68,6 +67,7 @@ public abstract class InternalFixPConnection implements FixPConnection
         this.clock = clock;
         this.owner = owner;
         this.proxy = proxy;
+        this.dissector = dissector;
     }
 
     // -----------------------------------------------

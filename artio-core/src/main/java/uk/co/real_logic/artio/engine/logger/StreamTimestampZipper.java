@@ -21,7 +21,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import uk.co.real_logic.artio.ArtioLogHeader;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -52,7 +52,7 @@ public class StreamTimestampZipper
 
     public StreamTimestampZipper(
         final FixMessageConsumer fixMessageConsumer,
-        final ILinkMessageConsumer iLinkMessageConsumer,
+        final FixPMessageConsumer fixPMessageConsumer,
         final int compactionSize,
         final Poller... pollers)
     {
@@ -62,7 +62,7 @@ public class StreamTimestampZipper
         {
             this.pollers[i] = new StreamPoller(pollers[i]);
         }
-        logEntryHandler = new LogEntryHandler(fixMessageConsumer, iLinkMessageConsumer);
+        logEntryHandler = new LogEntryHandler(fixMessageConsumer, fixPMessageConsumer);
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
 
@@ -314,15 +314,15 @@ public class StreamTimestampZipper
         private final ReplayerTimestampDecoder replayerTimestamp = new ReplayerTimestampDecoder();
 
         private final FixMessageConsumer fixHandler;
-        private final ILinkMessageConsumer iLinkHandler;
+        private final FixPMessageConsumer fixPHandler;
 
         StreamPoller owner;
         long maxTimestampToHandle;
 
-        LogEntryHandler(final FixMessageConsumer fixHandler, final ILinkMessageConsumer iLinkHandler)
+        LogEntryHandler(final FixMessageConsumer fixHandler, final FixPMessageConsumer fixPHandler)
         {
             this.fixHandler = fixHandler;
-            this.iLinkHandler = iLinkHandler;
+            this.fixPHandler = fixPHandler;
         }
 
         public void onFragment(
@@ -380,7 +380,7 @@ public class StreamTimestampZipper
                 if (timestamp <= maxTimestampToHandle)
                 {
                     owner.handledTimestamp(timestamp);
-                    iLinkHandler.onBusinessMessage(iLinkMessage, buffer, offset, owner.header);
+                    fixPHandler.onMessage(iLinkMessage, buffer, offset, owner.header);
                 }
                 else
                 {
@@ -437,7 +437,7 @@ public class StreamTimestampZipper
 
                 offset += FixPMessageDecoder.BLOCK_LENGTH;
 
-                iLinkHandler.onBusinessMessage(iLinkMessage, buffer, offset, owner.header);
+                fixPHandler.onMessage(iLinkMessage, buffer, offset, owner.header);
             }
         }
     }

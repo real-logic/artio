@@ -23,10 +23,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.fixp.*;
 
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
@@ -90,11 +87,13 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     private final EpochNanoClock clock;
 
     public BinaryEntryPointProxy(
+        final BinaryEntryPointProtocol protocol,
+        final FixPMessageDissector dissector,
         final long connectionId,
         final ExclusivePublication publication,
         final EpochNanoClock clock)
     {
-        super(connectionId, publication);
+        super(protocol, dissector, connectionId, publication);
         this.clock = clock;
     }
 

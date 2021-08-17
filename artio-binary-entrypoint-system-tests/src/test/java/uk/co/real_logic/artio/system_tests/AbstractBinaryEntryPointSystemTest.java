@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import b3.entrypoint.fixp.sbe.NewOrderSingleDecoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
@@ -51,6 +52,7 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_M
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.TEST_THROTTLE_WINDOW_IN_MS;
 import static uk.co.real_logic.artio.system_tests.AbstractMessageBasedAcceptorSystemTest.THROTTLE_MSG_LIMIT;
+import static uk.co.real_logic.artio.system_tests.BinaryEntryPointClient.CL_ORD_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
 
@@ -212,8 +214,6 @@ public class AbstractBinaryEntryPointSystemTest
         testSystem.close(library);
     }
 
-
-
     BinaryEntryPointClient establishNewConnection() throws IOException
     {
         final BinaryEntryPointClient client = newClient();
@@ -344,5 +344,56 @@ public class AbstractBinaryEntryPointSystemTest
     void libraryAcquiresConnection(final BinaryEntryPointClient client)
     {
         libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, false);
+    }
+
+    void connectAndExchangeBusinessMessage() throws IOException
+    {
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            assertNextSequenceNumbers(1, 1);
+
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            clientTerminatesSession(client);
+        }
+    }
+
+    void exchangeOrderAndReportNew(final BinaryEntryPointClient client)
+    {
+        exchangeOrderAndReportNew(client, CL_ORD_ID);
+    }
+
+    void exchangeOrderAndReportNew(final BinaryEntryPointClient client, final int clOrdId)
+    {
+        exchangeOrderAndReportNew(client, clOrdId, connectionHandler);
+    }
+
+    void exchangeOrderAndReportNew(
+        final BinaryEntryPointClient client,
+        final int clOrdId,
+        final FakeBinaryEntrypointConnectionHandler connectionHandler)
+    {
+        client.writeNewOrderSingle(clOrdId);
+        assertReceivesOrder(connectionHandler);
+        client.readExecutionReportNew(clOrdId);
+    }
+
+    void assertReceivesOrder()
+    {
+        assertReceivesOrder(connectionHandler);
+    }
+
+    void assertReceivesOrder(final FakeBinaryEntrypointConnectionHandler connectionHandler)
+    {
+        testSystem.await("does not receive new order single",
+            () -> connectionHandler.templateIds().containsInt(NewOrderSingleDecoder.TEMPLATE_ID));
+    }
+
+    void assertNextSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
+    {
+        assertEquals("wrong nextSentSeqNo", nextSentSeqNo, connection.nextSentSeqNo());
+        assertEquals("wrong nextRecvSeqNo", nextRecvSeqNo, connection.nextRecvSeqNo());
     }
 }

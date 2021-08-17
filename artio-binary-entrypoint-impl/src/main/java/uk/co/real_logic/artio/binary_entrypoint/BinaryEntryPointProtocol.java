@@ -64,8 +64,8 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             BINARY_ENTRYPOINT_TYPE,
             FinishedSendingDecoder.TEMPLATE_ID,
             FinishedReceivingDecoder.TEMPLATE_ID,
-            NegotiateResponseDecoder.TEMPLATE_ID
-        );
+            NegotiateResponseDecoder.TEMPLATE_ID,
+            "b3.entrypoint.fixp.sbe");
     }
 
     public BinaryEntryPointParser makeParser(final FixPConnection connection)
@@ -74,9 +74,11 @@ public class BinaryEntryPointProtocol extends FixPProtocol
     }
 
     public BinaryEntryPointProxy makeProxy(
-        final ExclusivePublication publication, final EpochNanoClock epochNanoClock)
+        final FixPMessageDissector fixPDissector,
+        final ExclusivePublication publication,
+        final EpochNanoClock epochNanoClock)
     {
-        return new BinaryEntryPointProxy(0, publication, epochNanoClock);
+        return new BinaryEntryPointProxy(this, fixPDissector, 0, publication, epochNanoClock);
     }
 
     public BinaryEntryPointOffsets makeOffsets()
@@ -94,9 +96,11 @@ public class BinaryEntryPointProtocol extends FixPProtocol
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
         final FixPContext context,
-        final CommonConfiguration configuration)
+        final CommonConfiguration configuration,
+        final FixPMessageDissector dissector)
     {
         return new InternalBinaryEntryPointConnection(
+            this,
             connectionId,
             outboundPublication,
             inboundPublication,
@@ -106,7 +110,8 @@ public class BinaryEntryPointProtocol extends FixPProtocol
             lastSentSequenceNumber,
             lastConnectPayload,
             configuration,
-            (BinaryEntryPointContext)context);
+            (BinaryEntryPointContext)context,
+            dissector);
     }
 
     public AbstractFixPStorage makeStorage(final EpochNanoClock clock)

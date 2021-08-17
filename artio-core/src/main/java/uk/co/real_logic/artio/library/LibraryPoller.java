@@ -193,6 +193,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private Iterator<FixPSubscription> fixpLogoutIterator = null;
 
     private FixPProtocol fixPProtocol;
+    private FixPMessageDissector commonFixPDissector;
     private AbstractFixPParser commonFixPParser;
     private AbstractFixPProxy commonFixPProxy;
 
@@ -1479,10 +1480,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean newlyAllocated,
         final long lastUuid)
     {
+        initFixP(FixPProtocolType.ILINK_3);
+
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.library.InternalILink3Connection");
             final Constructor<?> constructor = cls.getConstructor(
+                FixPProtocol.class,
                 ILink3ConnectionConfiguration.class,
                 long.class,
                 InitiateILink3ConnectionReply.class,
@@ -1495,9 +1499,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 long.class,
                 boolean.class,
                 long.class,
-                EpochNanoClock.class);
+                EpochNanoClock.class,
+                FixPMessageDissector.class);
 
             return (InternalFixPConnection)constructor.newInstance(
+                fixPProtocol,
                 configuration,
                 connectionId,
                 initiateReply,
@@ -1510,7 +1516,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 lastSentSequenceNumber,
                 newlyAllocated,
                 lastUuid,
-                this.configuration.epochNanoClock());
+                this.configuration.epochNanoClock(),
+                commonFixPDissector);
         }
         catch (final InvocationTargetException e)
         {
@@ -1909,6 +1916,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 reply = (RequestSessionReply)correlationIdToReply.get(correlationId);
 
+                final FixPMessageDissector dissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
                 final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
                     connectionId,
                     outboundPublication,
@@ -1919,7 +1927,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     lastSentSequenceNumber,
                     lastConnectPayload,
                     context,
-                    configuration);
+                    configuration,
+                    dissector);
 
                 if (offline)
                 {
@@ -1943,7 +1952,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 reply.onError(e);
             }
-            LangUtil.rethrowUnchecked(e);
+            errorHandler.onError(e);
         }
 
         return CONTINUE;
@@ -2053,8 +2062,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (fixPProtocol == null)
         {
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
+            commonFixPDissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
             commonFixPParser = fixPProtocol.makeParser(null);
-            commonFixPProxy = fixPProtocol.makeProxy(outboundPublication.dataPublication(), epochNanoClock);
+            commonFixPProxy = fixPProtocol.makeProxy(
+                commonFixPDissector, outboundPublication.dataPublication(), epochNanoClock);
         }
     }
 

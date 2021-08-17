@@ -24,11 +24,12 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.framer.ILink3Key;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.FixPMessageDissector;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -50,6 +51,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.*;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
+import static uk.co.real_logic.artio.fixp.FixPProtocol.BUSINESS_MESSAGE_LOGGING_ENABLED;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -61,8 +63,6 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.FAILED_AUTHENTICA
  */
 public final class InternalILink3Connection extends InternalFixPConnection implements ILink3Connection
 {
-    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.FIXP_BUSINESS);
-
     private static final int KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE = 20;
     private static final int INVALID_UUID_ERROR_CODE = 13;
 
@@ -154,7 +154,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         new CharFormatter("RetransmitFilled retransmitFillSeqNo=%s%n");
     private final CharFormatter retransmitFilledNext = new CharFormatter(
         "RetransmitFilledNext uuid=%s,lastUuid=%s,retransmitFillSeqNo=%s,fromSeqNo=%s,msgCount=%s%n");
-    private final ILink3BusinessMessageDissector businessMessageLogger;
 
     private final BusinessReject521Decoder businessReject = new BusinessReject521Decoder();
     private final Consumer<StringBuilder> businessRejectAppendTo = businessReject::appendTo;
@@ -190,6 +189,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     private long lastEstablishRequestTimestamp;
 
     public InternalILink3Connection(
+        final FixPProtocol protocol,
         final ILink3ConnectionConfiguration configuration,
         final long connectionId,
         final InitiateILink3ConnectionReply initiateReply,
@@ -202,12 +202,13 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final long lastSentSequenceNumber,
         final boolean newlyAllocated,
         final long lastUuid,
-        final EpochNanoClock epochNanoClock)
+        final EpochNanoClock epochNanoClock,
+        final FixPMessageDissector dissector)
     {
         this(configuration, connectionId, initiateReply, outboundPublication, inboundPublication, libraryId,
             owner, uuid, lastReceivedSequenceNumber, lastSentSequenceNumber, newlyAllocated, lastUuid, epochNanoClock,
-            new ILink3Proxy(connectionId, outboundPublication.dataPublication(), new ILink3BusinessMessageDissector(),
-            epochNanoClock));
+            new ILink3Proxy((Ilink3Protocol)protocol, connectionId, outboundPublication.dataPublication(), dissector,
+            epochNanoClock), dissector);
         proxy.ids(connectionId, uuid);
     }
 
@@ -225,9 +226,10 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final boolean newlyAllocated,
         final long lastUuid,
         final EpochNanoClock clock,
-        final ILink3Proxy proxy)
+        final ILink3Proxy proxy,
+        final FixPMessageDissector dissector)
     {
-        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy);
+        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy, dissector);
         initiateReply(initiateReply);
         handler(configuration.handler());
         this.requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
@@ -236,9 +238,6 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
         this.newlyAllocated = newlyAllocated;
         this.proxy = proxy;
-
-        businessMessageLogger = proxy.businessMessageLogger() == null ?
-            new ILink3BusinessMessageDissector() : proxy.businessMessageLogger();
 
         offsets = new ILink3Offsets();
         nextSentSeqNo(calculateInitialSequenceNumber(
@@ -1236,7 +1235,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     {
         if (BUSINESS_MESSAGE_LOGGING_ENABLED)
         {
-            businessMessageLogger.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
+            dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
         }
 
         handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);

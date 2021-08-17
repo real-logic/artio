@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 import java.util.function.Predicate;
 
@@ -50,6 +51,7 @@ public final class FixArchivePrinter
         new FixArchivePrinter().scan(args);
     }
 
+    private FixPProtocolType fixPProtocolType = FixPProtocolType.ILINK_3;
     private final IntHashSet queryStreamIds = new IntHashSet();
     private String aeronDirectoryName = null;
     private String aeronChannel = null;
@@ -70,7 +72,7 @@ public final class FixArchivePrinter
         try
         {
             scanArchive(aeronDirectoryName, aeronChannel, queryStreamIds, predicate, follow, headerPredicate,
-                archiveScannerStreamId, fixDictionaryType);
+                archiveScannerStreamId, fixDictionaryType, fixPProtocolType);
         }
         finally
         {
@@ -181,6 +183,10 @@ public final class FixArchivePrinter
                 case "fix-dictionary":
                     fixDictionaryType = FixDictionary.find(optionValue);
                     break;
+
+                case "fixp-protocol":
+                    fixPProtocolType = FixPProtocolType.valueOf(optionValue.toUpperCase());
+                    break;
             }
         }
     }
@@ -219,7 +225,8 @@ public final class FixArchivePrinter
         final boolean follow,
         final Predicate<SessionHeaderDecoder> headerPredicate,
         final int archiveScannerStreamId,
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final Class<? extends FixDictionary> fixDictionaryType,
+        final FixPProtocolType fixPProtocolType)
     {
         final FixDictionary fixDictionary = fixDictionaryType == null ? null : FixDictionary.of(fixDictionaryType);
         FixMessagePredicate predicate = otherPredicate;
@@ -238,7 +245,7 @@ public final class FixArchivePrinter
                 aeronChannel,
                 queryStreamIds,
                 filterBy(FixArchivePrinter::print, predicate),
-                new LazyILinkMessagePrinter(DEFAULT_INBOUND_LIBRARY_STREAM),
+                new LazyFixPMessagePrinter(DEFAULT_INBOUND_LIBRARY_STREAM, fixPProtocolType),
                 follow,
                 archiveScannerStreamId);
         }
@@ -283,6 +290,10 @@ public final class FixArchivePrinter
             "ilink",
             "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
             " only ilink3 messages will be printed out",
+            false);
+        printOption(
+            "fixp-protocol",
+            "Specifies the FIXP protocol type to be used to interpret protocol messages, defaults to iLink3",
             false);
         printOption(
             "from",

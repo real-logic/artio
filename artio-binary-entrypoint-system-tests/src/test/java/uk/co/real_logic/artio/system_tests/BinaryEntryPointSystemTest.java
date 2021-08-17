@@ -25,9 +25,9 @@ import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointKey;
-import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
@@ -98,20 +98,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         setupArtio();
 
         connectAndExchangeBusinessMessage();
-    }
-
-    private void connectAndExchangeBusinessMessage() throws IOException
-    {
-        try (BinaryEntryPointClient client = establishNewConnection())
-        {
-            assertNextSequenceNumbers(1, 1);
-
-            exchangeOrderAndReportNew(client);
-
-            assertNextSequenceNumbers(2, 2);
-
-            clientTerminatesSession(client);
-        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -1637,32 +1623,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
-    private void exchangeOrderAndReportNew(final BinaryEntryPointClient client)
-    {
-        exchangeOrderAndReportNew(client, CL_ORD_ID);
-    }
-
-    private void exchangeOrderAndReportNew(final BinaryEntryPointClient client, final int clOrdId)
-    {
-        exchangeOrderAndReportNew(client, clOrdId, connectionHandler);
-    }
-
-    private void exchangeOrderAndReportNew(
-        final BinaryEntryPointClient client,
-        final int clOrdId,
-        final FakeBinaryEntrypointConnectionHandler connectionHandler)
-    {
-        client.writeNewOrderSingle(clOrdId);
-        assertReceivesOrder(connectionHandler);
-        client.readExecutionReportNew(clOrdId);
-    }
-
-    private void assertNextSequenceNumbers(final int nextRecvSeqNo, final int nextSentSeqNo)
-    {
-        assertEquals("wrong nextSentSeqNo", nextSentSeqNo, connection.nextSentSeqNo());
-        assertEquals("wrong nextRecvSeqNo", nextRecvSeqNo, connection.nextRecvSeqNo());
-    }
-
     private void connectWithSessionVerId(final int sessionVerID) throws IOException
     {
         reNegotiateWithVerId(sessionVerID, false, client ->
@@ -1736,16 +1696,5 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         assertFalse(connectionExistsHandler.invoked());
         assertFalse(connectionAcquiredHandler.invoked());
-    }
-
-    private void assertReceivesOrder()
-    {
-        assertReceivesOrder(connectionHandler);
-    }
-
-    private void assertReceivesOrder(final FakeBinaryEntrypointConnectionHandler connectionHandler)
-    {
-        testSystem.await("does not receive new order single",
-            () -> connectionHandler.templateIds().containsInt(NewOrderSingleDecoder.TEMPLATE_ID));
     }
 }

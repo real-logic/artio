@@ -25,6 +25,7 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
@@ -58,7 +59,7 @@ public class FixMessageLogger implements Agent
         private int outboundStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
         private int outboundReplayStreamId = DEFAULT_OUTBOUND_REPLAY_STREAM;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
-        private ILinkMessageConsumer iLinkMessageConsumer;
+        private FixPMessageConsumer fixPMessageConsumer;
 
         /**
          * Provide a consumer for FIX messages that are logger by the stream.
@@ -72,9 +73,27 @@ public class FixMessageLogger implements Agent
             return this;
         }
 
+        /**
+         * Deprecated: please use {@link #fixPMessageConsumer(FixPMessageConsumer)}.
+         *
+         * @param iLinkMessageConsumer the handler to provide to receive ILink messages
+         * @return this
+         */
+        @Deprecated
         public Configuration iLinkMessageConsumer(final ILinkMessageConsumer iLinkMessageConsumer)
         {
-            this.iLinkMessageConsumer = iLinkMessageConsumer;
+            return fixPMessageConsumer(iLinkMessageConsumer);
+        }
+
+        /**
+         * Set the callback handler to receive FIXP messages.
+         *
+         * @param fixPMessageConsumer the handler to provide to receive FIXP messages
+         * @return this
+         */
+        public Configuration fixPMessageConsumer(final FixPMessageConsumer fixPMessageConsumer)
+        {
+            this.fixPMessageConsumer = fixPMessageConsumer;
             return this;
         }
 
@@ -303,7 +322,7 @@ public class FixMessageLogger implements Agent
 
         zipper = new StreamTimestampZipper(
             configuration.fixMessageConsumer,
-            configuration.iLinkMessageConsumer,
+            configuration.fixPMessageConsumer,
             configuration.compactionSize,
             pollers);
     }

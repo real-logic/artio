@@ -29,7 +29,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayerTimestampDecoder;
 import uk.co.real_logic.artio.messages.ReplayerTimestampEncoder;
@@ -83,7 +83,7 @@ public abstract class AbstractFixMessageLoggerTest
     private GatewayPublication outboundPublication;
     private ExclusivePublication replayPublication;
 
-    void setup(final ILinkMessageConsumer iLinkMessageConsumer)
+    void setup(final FixPMessageConsumer fixPMessageConsumer)
     {
         libraryChannel = "aeron:udp?endpoint=localhost:" + TestFixtures.unusedPort();
         mediaDriver = TestFixtures.launchJustMediaDriver();
@@ -91,7 +91,7 @@ public abstract class AbstractFixMessageLoggerTest
 
         final FixMessageLogger.Configuration config = new FixMessageLogger.Configuration()
             .fixMessageConsumer(fixConsumer)
-            .iLinkMessageConsumer(iLinkMessageConsumer)
+            .fixPMessageConsumer(fixPMessageConsumer)
             .compactionSize(compactionSize)
             .libraryAeronChannel(libraryChannel);
         logger = new FixMessageLogger(config);

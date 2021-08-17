@@ -19,7 +19,7 @@ import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -115,20 +115,20 @@ public class FixArchiveScanner implements AutoCloseable
         final String aeronChannel,
         final int queryStreamId,
         final FixMessageConsumer fixHandler,
-        final ILinkMessageConsumer iLinkHandler,
+        final FixPMessageConsumer fixPHandler,
         final boolean follow,
         final int archiveScannerStreamId)
     {
         final IntHashSet queryStreamIds = new IntHashSet();
         queryStreamIds.add(queryStreamId);
-        scan(aeronChannel, queryStreamIds, fixHandler, iLinkHandler, follow, archiveScannerStreamId);
+        scan(aeronChannel, queryStreamIds, fixHandler, fixPHandler, follow, archiveScannerStreamId);
     }
 
     public void scan(
         final String aeronChannel,
         final IntHashSet queryStreamIds,
         final FixMessageConsumer fixHandler,
-        final ILinkMessageConsumer iLinkHandler,
+        final FixPMessageConsumer fixPHandler,
         final boolean follow,
         final int archiveScannerStreamId)
     {
@@ -140,7 +140,7 @@ public class FixArchiveScanner implements AutoCloseable
                 .toArray(RecordingPoller[]::new);
 
             final StreamTimestampZipper timestampZipper = new StreamTimestampZipper(
-                fixHandler, iLinkHandler, compactionSize, pollers);
+                fixHandler, fixPHandler, compactionSize, pollers);
 
             while (true)
             {

@@ -97,6 +97,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
     private final Lazy<FixPProtocol> binaryFixPProtocol;
+    private final Lazy<FixPMessageDissector> binaryFixPDissector;
     private final Lazy<AbstractFixPParser> binaryFixPParser;
     private final Lazy<AbstractFixPProxy> binaryFixPProxy;
     private final Lazy<AbstractFixPOffsets> abstractBinaryFixPOffsets;
@@ -180,8 +181,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
         utcTimestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
 
         binaryFixPProtocol = new Lazy<>(() -> FixPProtocolFactory.make(fixPProtocolType, errorHandler));
+        binaryFixPDissector = new Lazy<>(() -> new FixPMessageDissector(binaryFixPProtocol.get().messageDecoders()));
         binaryFixPParser = new Lazy<>(() -> binaryFixPProtocol.get().makeParser(null));
-        binaryFixPProxy = new Lazy<>(() -> binaryFixPProtocol.get().makeProxy(publication, clock));
+        binaryFixPProxy = new Lazy<>(() -> binaryFixPProtocol.get().makeProxy(
+            binaryFixPDissector.get(), publication, clock));
         abstractBinaryFixPOffsets = new Lazy<>(() -> binaryFixPProtocol.get().makeOffsets());
 
         timestamper = new ReplayTimestamper(publication, clock);

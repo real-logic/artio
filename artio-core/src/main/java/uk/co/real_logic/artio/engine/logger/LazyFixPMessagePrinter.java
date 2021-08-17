@@ -17,29 +17,36 @@ package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ArtioLogHeader;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
+import uk.co.real_logic.artio.fixp.PrintingFixPMessageConsumer;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.util.Lazy;
 
-final class LazyILinkMessagePrinter implements ILinkMessageConsumer
+final class LazyFixPMessagePrinter implements FixPMessageConsumer
 {
     private final int inboundStreamId;
+    private final FixPProtocolType protocolType;
 
-    private final Lazy<ILinkMessageConsumer> lazyDelegate = new Lazy<>(this::makePrinter);
+    private final Lazy<FixPMessageConsumer> lazyDelegate = new Lazy<>(this::makePrinter);
 
-    private ILinkMessageConsumer makePrinter()
+    private PrintingFixPMessageConsumer makePrinter()
     {
-        return ILinkMessageConsumer.makePrinter(inboundStreamId);
+        final FixPProtocol protocol = FixPProtocolFactory.make(protocolType, Throwable::printStackTrace);
+        return new PrintingFixPMessageConsumer(inboundStreamId, protocol);
     }
 
-    LazyILinkMessagePrinter(final int inboundStreamId)
+    LazyFixPMessagePrinter(final int inboundStreamId, final FixPProtocolType protocolType)
     {
         this.inboundStreamId = inboundStreamId;
+        this.protocolType = protocolType;
     }
 
-    public void onBusinessMessage(
+    public void onMessage(
         final FixPMessageDecoder iLinkMessage, final DirectBuffer buffer, final int offset, final ArtioLogHeader header)
     {
-        lazyDelegate.get().onBusinessMessage(iLinkMessage, buffer, offset, header);
+        lazyDelegate.get().onMessage(iLinkMessage, buffer, offset, header);
     }
 }

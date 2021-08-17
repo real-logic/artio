@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.FixPMessageDissector;
 import uk.co.real_logic.artio.library.CancelOnDisconnect;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -70,6 +71,7 @@ class InternalBinaryEntryPointConnection
     private boolean replaying = false;
 
     InternalBinaryEntryPointConnection(
+        final BinaryEntryPointProtocol protocol,
         final long connectionId,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
@@ -79,7 +81,8 @@ class InternalBinaryEntryPointConnection
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
         final CommonConfiguration configuration,
-        final BinaryEntryPointContext context)
+        final BinaryEntryPointContext context,
+        final FixPMessageDissector dissector)
     {
         this(
             connectionId,
@@ -93,7 +96,9 @@ class InternalBinaryEntryPointConnection
             configuration,
             context,
             new BinaryEntryPointProxy(
-            connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()));
+            protocol, dissector,
+            connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()),
+            dissector);
     }
 
     InternalBinaryEntryPointConnection(
@@ -107,7 +112,8 @@ class InternalBinaryEntryPointConnection
         final long lastConnectPayload,
         final CommonConfiguration configuration,
         final BinaryEntryPointContext context,
-        final BinaryEntryPointProxy proxy)
+        final BinaryEntryPointProxy proxy,
+        final FixPMessageDissector dissector)
     {
         super(
             connectionId,
@@ -116,7 +122,9 @@ class InternalBinaryEntryPointConnection
             libraryId,
             configuration.epochNanoClock(),
             owner,
-            proxy);
+            proxy,
+            dissector);
+
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
@@ -579,6 +587,8 @@ class InternalBinaryEntryPointConnection
         if (canReceiveMessage(state))
         {
             nextRecvSeqNo++;
+
+            dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
             handler.onBusinessMessage(
                 this,

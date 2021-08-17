@@ -16,8 +16,13 @@
 package uk.co.real_logic.artio.fixp;
 
 import io.aeron.ExclusivePublication;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
+import org.agrona.sbe.CompositeDecoderFlyweight;
+import org.agrona.sbe.MessageDecoderFlyweight;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
@@ -25,12 +30,19 @@ import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.sbe.ir.Ir;
+import uk.co.real_logic.sbe.ir.Token;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 // Implementation classes should be stateless
 public abstract class FixPProtocol
 {
+    public static final boolean BUSINESS_MESSAGE_LOGGING_ENABLED = DebugLogger.isEnabled(LogTag.FIXP_BUSINESS);
+
     public static final int DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID = -1;
 
+    private final String packageName;
     private final FixPProtocolType protocolType;
     private final short encodingType;
     private final int finishedSendingTemplateId;
@@ -40,11 +52,16 @@ public abstract class FixPProtocol
     protected FixPProtocol(
         final FixPProtocolType protocolType,
         final short encodingType,
-        final int negotiateResponseTemplateId)
+        final int negotiateResponseTemplateId,
+        final String packageName)
     {
-        this(protocolType, encodingType,
-            DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID, DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
-            negotiateResponseTemplateId);
+        this(
+            protocolType,
+            encodingType,
+            DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
+            DOES_NOT_SUPPORT_SEQUENCE_FINISHING_TEMPLATE_ID,
+            negotiateResponseTemplateId,
+            packageName);
     }
 
     protected FixPProtocol(
@@ -52,8 +69,10 @@ public abstract class FixPProtocol
         final short encodingType,
         final int finishedSendingTemplateId,
         final int finishedReceivingTemplateId,
-        final int negotiateResponseTemplateId)
+        final int negotiateResponseTemplateId,
+        final String packageName)
     {
+        this.packageName = packageName;
         this.protocolType = protocolType;
         this.encodingType = encodingType;
         this.finishedSendingTemplateId = finishedSendingTemplateId;
@@ -89,7 +108,7 @@ public abstract class FixPProtocol
     public abstract AbstractFixPParser makeParser(FixPConnection session);
 
     public abstract AbstractFixPProxy makeProxy(
-        ExclusivePublication publication, EpochNanoClock epochNanoClock);
+        FixPMessageDissector fixPDissector, ExclusivePublication publication, EpochNanoClock epochNanoClock);
 
     public abstract AbstractFixPOffsets makeOffsets();
 
@@ -103,7 +122,8 @@ public abstract class FixPProtocol
         long lastSentSequenceNumber,
         long lastConnectPayload,
         FixPContext context,
-        CommonConfiguration configuration);
+        CommonConfiguration configuration,
+        FixPMessageDissector dissector);
 
     public abstract AbstractFixPStorage makeStorage(
         EpochNanoClock epochNanoClock);
@@ -126,4 +146,35 @@ public abstract class FixPProtocol
      */
     public abstract boolean explicitSequenceNumbers();
 
+    public List<? extends MessageDecoderFlyweight> messageDecoders()
+    {
+        return loadIr()
+            .messages()
+            .stream()
+            .map(tokens ->
+            {
+                final Token beginMessage = tokens.get(0);
+                final String decoderName = packageName + "." + beginMessage.name() + "Decoder";
+                return (MessageDecoderFlyweight)newInstance(decoderName);
+            })
+            .collect(Collectors.toList());
+    }
+
+    public CompositeDecoderFlyweight makeHeader()
+    {
+        return (CompositeDecoderFlyweight)newInstance(packageName + ".MessageHeaderDecoder");
+    }
+
+    private Object newInstance(final String decoderName)
+    {
+        try
+        {
+            return Class.forName(decoderName).newInstance();
+        }
+        catch (final InstantiationException | IllegalAccessException | ClassNotFoundException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
+    }
 }

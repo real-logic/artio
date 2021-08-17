@@ -24,6 +24,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
+import uk.co.real_logic.artio.fixp.FixPMessageDissector;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
@@ -102,9 +103,8 @@ public class RetransmitQueueTest
             false,
             LAST_UUID,
             clock,
-            proxy);
-
-        verify(proxy).businessMessageLogger();
+            proxy,
+            mock(FixPMessageDissector.class));
     }
 
     @After

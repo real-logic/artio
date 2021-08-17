@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.nio.ByteBuffer;
 
+import static uk.co.real_logic.artio.fixp.FixPProtocol.BUSINESS_MESSAGE_LOGGING_ENABLED;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public abstract class AbstractFixPProxy
@@ -34,14 +35,19 @@ public abstract class AbstractFixPProxy
     protected final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
     protected final FixPMessageEncoder fixPMessage = new FixPMessageEncoder();
     protected final BufferClaim bufferClaim = new BufferClaim();
-
+    protected final PrintingFixPMessageConsumer fixPMessageConsumer;
     protected final ExclusivePublication publication;
 
     protected long connectionId;
     protected long sessionId;
 
-    protected AbstractFixPProxy(final long connectionId, final ExclusivePublication publication)
+    protected AbstractFixPProxy(
+        final FixPProtocol protocol,
+        final FixPMessageDissector dissector,
+        final long connectionId,
+        final ExclusivePublication publication)
     {
+        this.fixPMessageConsumer = new PrintingFixPMessageConsumer(-1, protocol, dissector);
         this.connectionId = connectionId;
         this.publication = publication;
     }
@@ -62,7 +68,14 @@ public abstract class AbstractFixPProxy
 
     public void commit()
     {
-        this.bufferClaim.commit();
+        final BufferClaim bufferClaim = this.bufferClaim;
+
+        if (BUSINESS_MESSAGE_LOGGING_ENABLED)
+        {
+            fixPMessageConsumer.onMessage(null, bufferClaim.buffer(), bufferClaim.offset(), null);
+        }
+
+        bufferClaim.commit();
     }
 
     public void abort()

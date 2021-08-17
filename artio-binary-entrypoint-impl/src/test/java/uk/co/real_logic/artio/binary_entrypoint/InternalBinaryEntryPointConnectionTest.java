@@ -20,6 +20,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.Test;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.fixp.FixPMessageDissector;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
@@ -57,7 +58,8 @@ public class InternalBinaryEntryPointConnectionTest
             0,
             new CommonConfiguration(),
             context,
-            proxy);
+            proxy,
+            mock(FixPMessageDissector.class));
 
         connection.onEstablish(
             SESSION_ID, SESSION_VER_ID, clock.nanoTime(), 3_000, 1, CancelOnDisconnectType.NULL_VAL, 0);

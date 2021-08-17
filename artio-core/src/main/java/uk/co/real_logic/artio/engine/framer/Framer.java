@@ -189,6 +189,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
     private AbstractFixPProxy fixPProxy;
+    private FixPMessageDissector fixPDissector;
     private FixPRejectRefIdExtractor fixPRejectRefIdExtractor;
 
     private boolean performingDisconnectOperation = false;
@@ -716,10 +717,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (fixPProtocol == null)
         {
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
+            fixPDissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
             fixPParser = fixPProtocol.makeParser(null);
-            fixPProxy = fixPProtocol.makeProxy(null, null);
             try
             {
+                fixPProxy = fixPProtocol.makeProxy(fixPDissector, null, null);
                 fixPRejectRefIdExtractor = fixPProtocol.makeRefIdExtractor();
             }
             catch (final Throwable e)

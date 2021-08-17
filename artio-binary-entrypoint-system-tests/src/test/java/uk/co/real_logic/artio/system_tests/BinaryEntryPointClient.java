@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
+import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
@@ -37,7 +38,6 @@ import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.DO_NOT_CANCEL_ON_DIS
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProxy.BINARY_ENTRYPOINT_HEADER_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.*;
@@ -391,7 +391,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void readExecutionReportNew(final int clOrdId)
     {
-        final ExecutionReport_NewDecoder report = read(new ExecutionReport_NewDecoder(), 0);
+        final ExecutionReport_NewDecoder report = read(
+            new ExecutionReport_NewDecoder(), NoMetricsEncoder.sbeBlockLength());
         assertEquals(clOrdId, report.clOrdID());
     }
 

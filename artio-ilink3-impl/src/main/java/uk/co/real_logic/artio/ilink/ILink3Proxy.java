@@ -17,23 +17,18 @@ package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
 import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.BufferClaim;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
+import uk.co.real_logic.artio.fixp.*;
 
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
-import static uk.co.real_logic.artio.library.InternalILink3Connection.BUSINESS_MESSAGE_LOGGING_ENABLED;
 
 public class ILink3Proxy extends AbstractFixPProxy
 {
@@ -63,24 +58,18 @@ public class ILink3Proxy extends AbstractFixPProxy
     private final Consumer<StringBuilder> sequenceAppendTo = sequence::appendTo;
     private final Consumer<StringBuilder> retransmitRequestAppendTo = retransmitRequest::appendTo;
 
-    private final ILink3BusinessMessageDissector businessMessageLogger;
     private final EpochNanoClock epochNanoClock;
 
     public ILink3Proxy(
+        final Ilink3Protocol protocol,
         final long connectionId,
         final ExclusivePublication publication,
-        final ILink3BusinessMessageDissector businessMessageLogger,
+        final FixPMessageDissector dissector,
         final EpochNanoClock epochNanoClock)
     {
-        super(connectionId, publication);
+        super(protocol, dissector, connectionId, publication);
         this.connectionId = connectionId;
-        this.businessMessageLogger = businessMessageLogger;
         this.epochNanoClock = epochNanoClock;
-    }
-
-    public ILink3BusinessMessageDissector businessMessageLogger()
-    {
-        return businessMessageLogger;
     }
 
     public long sendNegotiate(
@@ -256,7 +245,8 @@ public class ILink3Proxy extends AbstractFixPProxy
             SimpleOpenFramingHeader.CME_ENCODING_TYPE);
     }
 
-    protected int applyHeader(final MessageEncoderFlyweight message, final MutableDirectBuffer buffer, final int offset)
+    protected int applyHeader(
+        final MessageEncoderFlyweight message, final MutableDirectBuffer buffer, final int offset)
     {
         iLinkMessageHeader
             .wrap(buffer, offset)
@@ -266,29 +256,6 @@ public class ILink3Proxy extends AbstractFixPProxy
             .version(message.sbeSchemaVersion());
 
         return offset + iLinkMessageHeader.encodedLength();
-    }
-
-    public void commit()
-    {
-        final BufferClaim bufferClaim = this.bufferClaim;
-
-        if (BUSINESS_MESSAGE_LOGGING_ENABLED && businessMessageLogger != null)
-        {
-            final MessageHeaderDecoder iLinkMessageHeaderDecoder = this.iLinkMessageHeaderDecoder;
-            final MutableDirectBuffer buffer = bufferClaim.buffer();
-            final int iLinkHeaderOffset = bufferClaim.offset() + ARTIO_HEADER_LENGTH + SOFH_LENGTH;
-            iLinkMessageHeaderDecoder.wrap(buffer, iLinkHeaderOffset);
-            final int iLinkMessageOffset = iLinkHeaderOffset + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
-            businessMessageLogger.onBusinessMessage(
-                iLinkMessageHeaderDecoder.templateId(),
-                buffer,
-                iLinkMessageOffset,
-                iLinkMessageHeaderDecoder.blockLength(),
-                iLinkMessageHeaderDecoder.version(),
-                false);
-        }
-
-        bufferClaim.commit();
     }
 
     public ByteBuffer encodeReject(

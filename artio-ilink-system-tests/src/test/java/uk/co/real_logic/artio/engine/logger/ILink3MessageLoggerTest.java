@@ -17,8 +17,9 @@ package uk.co.real_logic.artio.engine.logger;
 
 import iLinkBinary.*;
 import org.junit.Before;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.ilink.ILinkMessageConsumer;
+import uk.co.real_logic.artio.ilink.Ilink3Protocol;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
@@ -27,7 +28,7 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
         compactionSize = 2000;
     }
 
-    private final ILinkMessageConsumer iLinkMessageConsumer = (iLinkMessage, buffer, offset, header) ->
+    private final FixPMessageConsumer iLinkMessageConsumer = (iLinkMessage, buffer, offset, header) ->
     {
         timestamps.add(iLinkMessage.enqueueTime());
         streamIds.add(header.streamId());
@@ -41,7 +42,9 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
 
     void onMessage(final GatewayPublication publication, final long timestamp)
     {
-        final ILink3Proxy proxy = new ILink3Proxy(1, publication.dataPublication(), null, null);
+        final Ilink3Protocol protocol = new Ilink3Protocol();
+        final ILink3Proxy proxy = new ILink3Proxy(
+            protocol, 1, publication.dataPublication(), null, null);
         final ExecutionReportStatus532Encoder executionReportStatus = new ExecutionReportStatus532Encoder();
         untilComplete(() -> proxy.claimMessage(
             ExecutionReportStatus532Encoder.BLOCK_LENGTH,

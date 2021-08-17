@@ -22,10 +22,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
-import uk.co.real_logic.artio.fixp.FixPConnection;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
@@ -54,8 +51,8 @@ public class Ilink3Protocol extends FixPProtocol
 
     public Ilink3Protocol()
     {
-        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID
-        );
+        super(FixPProtocolType.ILINK_3, CME_ENCODING_TYPE, NegotiationResponse501Decoder.TEMPLATE_ID,
+            "iLinkBinary");
     }
 
     public ILink3Parser makeParser(final FixPConnection connection)
@@ -64,9 +61,11 @@ public class Ilink3Protocol extends FixPProtocol
     }
 
     public ILink3Proxy makeProxy(
-        final ExclusivePublication publication, final EpochNanoClock epochNanoClock)
+        final FixPMessageDissector fixPDissector,
+        final ExclusivePublication publication,
+        final EpochNanoClock epochNanoClock)
     {
-        return new ILink3Proxy(0, publication, null, epochNanoClock);
+        return new ILink3Proxy(this, 0, publication, null, epochNanoClock);
     }
 
     public ILink3Offsets makeOffsets()
@@ -84,7 +83,7 @@ public class Ilink3Protocol extends FixPProtocol
         final long lastSentSequenceNumber,
         final long lastConnectPayload,
         final FixPContext context,
-        final CommonConfiguration configuration)
+        final CommonConfiguration configuration, final FixPMessageDissector dissector)
     {
         return unsupported();
     }

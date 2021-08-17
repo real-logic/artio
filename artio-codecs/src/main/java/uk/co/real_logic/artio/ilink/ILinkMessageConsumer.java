@@ -16,17 +16,18 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.DirectBuffer;
-import org.agrona.LangUtil;
 import uk.co.real_logic.artio.ArtioLogHeader;
+import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
-
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * Consumer to read iLink3 messages from the archive.
+ *
+ * Deprecated: replaced with {@link FixPMessageConsumer}.
  */
+@Deprecated
 @FunctionalInterface
-public interface ILinkMessageConsumer
+public interface ILinkMessageConsumer extends FixPMessageConsumer
 {
     /**
      * Callback for receiving iLink3 business messages. Details of business messages can be found in the
@@ -40,18 +41,8 @@ public interface ILinkMessageConsumer
      */
     void onBusinessMessage(FixPMessageDecoder iLinkMessage, DirectBuffer buffer, int offset, ArtioLogHeader header);
 
-    static ILinkMessageConsumer makePrinter(final int inboundStreamId)
+    default void onMessage(FixPMessageDecoder fixPMessage, DirectBuffer buffer, int offset, ArtioLogHeader header)
     {
-        try
-        {
-            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.PrintingILinkMessageConsumer");
-            return (ILinkMessageConsumer)cls.getConstructor(int.class).newInstance(inboundStreamId);
-        }
-        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
+        onBusinessMessage(fixPMessage, buffer, offset, header);
     }
 }
