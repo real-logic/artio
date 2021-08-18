@@ -185,6 +185,7 @@ subprojects {
         if (JavaVersion.current().isJava10Compatible()) {
             options.addBooleanOption 'html5', true
         }
+        options.addStringOption('Xdoclint:all,-missing', '-quiet')
     }
 
     jar {
