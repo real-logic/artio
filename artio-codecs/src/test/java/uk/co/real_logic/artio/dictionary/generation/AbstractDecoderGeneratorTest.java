@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.util.Reflection;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -66,6 +67,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static final String CHAR_ENUM_OPT = "charEnumOpt";
     private static final String INT_ENUM_OPT = "intEnumOpt";
     private static final String STRING_ENUM_OPT = "stringEnumOpt";
+    public static final int CAPACITY = 8 * 1024;
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeatWithoutEnumValueValidation;
@@ -77,7 +79,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static Class<?> allReqFieldTypesMessage;
     private static Class<?> enumTestMessage;
 
-    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[CAPACITY]);
 
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
@@ -546,6 +548,24 @@ public abstract class AbstractDecoderGeneratorTest
         decode(REPEATING_GROUP_MESSAGE, decoder);
 
         assertValidRepeatingGroupDecoded(decoder);
+    }
+
+    // Reproduction for a reported bug
+    @Test
+    public void shouldNotThrowInAResetOfARepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        assertValidRepeatingGroupDecoded(decoder);
+
+        buffer.wrap("nonsense".getBytes(StandardCharsets.US_ASCII));
+
+        decoder.reset();
+
+        buffer.wrap(new byte[CAPACITY]);
+        decode(SINGLE_REPEATING_GROUP_MESSAGE, decoder);
+
+        assertSingleRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -1652,7 +1672,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertFalse("hasNext() when it shouldn't", iterator.hasNext());
     }
 
-    private void assertValidRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    void assertValidRepeatingGroupDecoded(final Decoder decoder) throws Exception
     {
         assertRepeatingGroupDecoded(decoder);
 
@@ -1674,7 +1694,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertNull(next(group));
     }
 
-    private void assertSingleRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    void assertSingleRepeatingGroupDecoded(final Decoder decoder) throws Exception
     {
         assertEquals(1, getNoEgGroupGroupCounter(decoder));
 

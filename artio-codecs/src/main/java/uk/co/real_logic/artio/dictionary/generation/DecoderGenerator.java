@@ -354,13 +354,12 @@ class DecoderGenerator extends Generator
                 "        for (final %2$s %6$s : %5$s.iterator())\n" +
                 "        {\n" +
                 "            %6$s.reset();\n" +
-
                 "            if (%6$s.next() == null)\n" +
                 "            {\n" +
                 "                break;\n" +
                 "            }\n" +
                 "        }\n" +
-                "        %3$s = 0;\n" +
+                "        %3$s = MISSING_INT;\n" +
                 "        has%4$s = false;\n" +
                 "    }\n\n",
                 nameOfResetMethod(name),
@@ -1008,7 +1007,7 @@ class DecoderGenerator extends Generator
         final String numberFieldReset =
             group.numberField().required() ?
             String.format("parent.%1$s()", formattedNumberFieldName) :
-            String.format("parent.has%1$s() ? parent.%2$s() : 0", numberFieldName, formattedNumberFieldName);
+            String.format("parent.has%1$s() ? parent.%2$s() : MISSING_INT", numberFieldName, formattedNumberFieldName);
 
         out.append(String.format(
             "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
@@ -1172,18 +1171,23 @@ class DecoderGenerator extends Generator
     private static String fieldLazyInstantialisation(final Field field, final String fieldName)
     {
         final int tag = field.number();
-        final String decodeMethod;
         switch (field.type())
         {
+            // We read and cache the number in group field so that it doesn't get re-read during a reset.
+            case NUMINGROUP:
+                return String.format(
+                    "%1$s = groupNoField(buffer, %1$s, has%2$s, %1$sOffset, %1$sLength, %3$d, " +
+                        CODEC_VALIDATION_ENABLED + ");\n",
+                    fieldName,
+                    field.name(),
+                    field.number());
+
             case INT:
             case LENGTH:
             case SEQNUM:
-            case NUMINGROUP:
             case DAYOFMONTH:
-                decodeMethod = String.format(
-                    "getIntFlyweight(buffer, %1$sOffset, %1$sLength, %2$d, " + CODEC_VALIDATION_ENABLED + ")",
-                    fieldName, tag);
-                break;
+                return lengthBasedFieldLazyInitialization(fieldName, "getIntFlyweight(buffer",
+                    ", " + tag + ", " + CODEC_VALIDATION_ENABLED);
 
             case FLOAT:
             case PRICE:
@@ -1191,10 +1195,8 @@ class DecoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                decodeMethod = String.format(
-                    "getFloatFlyweight(buffer, %1$s, %1$sOffset, %1$sLength, %2$d, " + CODEC_VALIDATION_ENABLED + ")",
-                    fieldName, tag);
-                break;
+                return lengthBasedFieldLazyInitialization(fieldName, "getFloatFlyweight(buffer, " +
+                    fieldName, ", " + tag + ", " + CODEC_VALIDATION_ENABLED);
 
             case STRING:
             case MULTIPLEVALUESTRING:
@@ -1204,8 +1206,7 @@ class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                decodeMethod = String.format("buffer.getChars(%1$s, %1$sOffset, %1$sLength);\n", fieldName);
-                break;
+                return lengthBasedFieldLazyInitialization(fieldName, "buffer.getChars(" + fieldName, "");
 
             case DATA:
             case XMLDATA:
@@ -1231,22 +1232,26 @@ class DecoderGenerator extends Generator
             case TZTIMEONLY:
             case TZTIMESTAMP:
             case MONTHYEAR:
-                decodeMethod = String.format("buffer.getBytes(%1$s, %1$sOffset, %1$sLength)", fieldName);
-                break;
+                return lengthBasedFieldLazyInitialization(fieldName, "buffer.getBytes(" + fieldName, "");
 
             case BOOLEAN:
             case CHAR:
             default:
                 return "";
         }
+    }
 
+    private static String lengthBasedFieldLazyInitialization(
+        final String fieldName, final String decodeMethod, final String endArgs)
+    {
         return String.format(
             "        if (buffer != null && %1$sLength > 0)\n" +
             "        {\n" +
-            "            %1$s = %2$s;\n" +
+            "            %1$s = %2$s, %1$sOffset, %1$sLength%3$s);\n" +
             "        }\n",
             fieldName,
-            decodeMethod);
+            decodeMethod,
+            endArgs);
     }
 
     private String fieldInitialisation(final Type type)
@@ -1603,7 +1608,24 @@ class DecoderGenerator extends Generator
     {
         final Group group = (Group)entry.element();
 
-        final String groupNumberField = formatPropertyName(group.numberField().name());
+        final Entry numberField = group.numberField();
+        final String groupNumberField = formatPropertyName(numberField.name());
+        final String getNumberField;
+        if (flyweightsEnabled)
+        {
+            // Pass missing int here to force re-read as we're in the decode method and don't want a stale cached value
+            getNumberField = String.format(
+                "this.%1$s = groupNoField(buffer, MISSING_INT, has%2$s, %1$sOffset, %1$sLength, %3$d, " +
+                CODEC_VALIDATION_ENABLED + ")",
+                groupNumberField,
+                numberField.name(),
+                numberField.number());
+        }
+        else
+        {
+            getNumberField = "this." + groupNumberField;
+        }
+
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
@@ -1638,7 +1660,7 @@ class DecoderGenerator extends Generator
             decoderClassName(group),
             groupNumberField,
             // Have to make a call to initialise the group number at this point when flyweighting.
-            flyweightsEnabled ? groupNumberField + "()" : "this." + groupNumberField,
+            getNumberField,
             MESSAGE_FIELDS,
             INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP);
 

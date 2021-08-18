@@ -103,6 +103,24 @@ public abstract class CommonDecoderImpl
         }
     }
 
+    public int groupNoField(
+        final AsciiBuffer buffer, final int oldValue,
+        final boolean hasField, final int offset, final int length, final int tag,
+        final boolean validation)
+    {
+        if (!hasField || buffer == null)
+        {
+            return 0;
+        }
+
+        if (oldValue != MISSING_INT)
+        {
+            return oldValue;
+        }
+
+        return getIntFlyweight(buffer, offset, length, tag, validation);
+    }
+
     public DecimalFloat getFloatFlyweight(
         final AsciiBuffer buffer,
         final DecimalFloat number,
