@@ -359,7 +359,7 @@ public abstract class Generator
         }
 
         return String.format(
-            "        %1$s();\n",
+            "        this.%1$s();\n",
             nameOfResetMethod(entry.name()));
     }
 
@@ -594,7 +594,7 @@ public abstract class Generator
             case AMT:
                 if (flyweightsEnabled)
                 {
-                    return String.format("%1$s().appendTo(builder)", fieldName);
+                    return String.format("this.%1$s().appendTo(builder)", fieldName);
                 }
 
                 return String.format("%1$s.appendTo(builder)", fieldName);
@@ -606,7 +606,7 @@ public abstract class Generator
             default:
                 if (flyweightsEnabled)
                 {
-                    return String.format("builder.append(%1$s())", fieldName);
+                    return String.format("builder.append(this.%1$s())", fieldName);
                 }
 
                 return String.format("builder.append(%1$s)", fieldName);

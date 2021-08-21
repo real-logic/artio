@@ -585,14 +585,14 @@ class DecoderGenerator extends Generator
                     "          int %1$sOffset = 0;\n" +
                     "          for (int i = 0; i < %1$sLength; i++)\n" +
                     "          {\n" +
-                    "              if (%1$s()[i] == ' ')\n" +
+                    "              if (this.%1$s()[i] == ' ')\n" +
                     "              {\n" +
-                    "                  %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
+                    "                  %1$sWrapper.wrap(this.%1$s(), %1$sOffset, i - %1$sOffset);\n" +
                     "%2$s" +
                     "                  %1$sOffset = i + 1;\n" +
                     "              }\n" +
                     "          }\n" +
-                    "          %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
+                    "          %1$sWrapper.wrap(this.%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
                     "%2$s",
                     propertyName,
                     enumValidation
@@ -602,7 +602,7 @@ class DecoderGenerator extends Generator
         {
             enumValidationMethod =
                 String.format(
-                    (isPrimitive ? "" : "        %1$sWrapper.wrap(%1$s(), %1$sLength);\n") +
+                    (isPrimitive ? "" : "        %1$sWrapper.wrap(this.%1$s(), %1$sLength);\n") +
                     "%2$s",
                     propertyName,
                     enumValidation
@@ -1097,7 +1097,7 @@ class DecoderGenerator extends Generator
             "%1$s.decode(%2$sWrapper)" :
             // Need to ensure that decode the field
             (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
-            "%1$s.decode(%2$s())" :
+            "%1$s.decode(this.%2$s())" :
             "%1$s.decode(%2$s)",
             enumName(name),
             fieldName);
@@ -1109,7 +1109,7 @@ class DecoderGenerator extends Generator
             "    public %6$s %2$sAsEnum()\n" +
             "    {\n" +
             (!entry.required() ? "        if (!has%1$s)\n return %6$s.%5$s;\n" : "") +
-            (type.isStringBased() ? "        %2$sWrapper.wrap(%2$s(), %2$sLength);\n" : "") +
+            (type.isStringBased() ? "        %2$sWrapper.wrap(this.%2$s(), %2$sLength);\n" : "") +
             "        return %3$s;\n" +
             "    }\n\n",
             name,
@@ -1774,7 +1774,7 @@ class DecoderGenerator extends Generator
                 if (flyweightsEnabled)
                 {
                     return String.format(
-                        "                endOfField = valueOffset + %1$s();\n", associatedFieldName);
+                        "                endOfField = valueOffset + this.%1$s();\n", associatedFieldName);
                 }
                 return String.format(
                     "                %1$s = buffer.getBytes(%1$s, valueOffset, %2$s);\n" +
@@ -1803,7 +1803,7 @@ class DecoderGenerator extends Generator
 
     protected String stringAppendTo(final String fieldName)
     {
-        return String.format("builder.append(%1$s(), 0, %1$sLength())", fieldName);
+        return String.format("builder.append(this.%1$s(), 0, %1$sLength())", fieldName);
     }
 
     protected String dataAppendTo(final Field field, final String fieldName)
@@ -1812,7 +1812,7 @@ class DecoderGenerator extends Generator
 
         if (flyweightsEnabled)
         {
-            return String.format("appendData(builder, %1$s(), %2$s())", fieldName, lengthName);
+            return String.format("appendData(builder, this.%1$s(), this.%2$s())", fieldName, lengthName);
         }
 
         return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
@@ -1822,7 +1822,7 @@ class DecoderGenerator extends Generator
     {
         if (flyweightsEnabled)
         {
-            return String.format("appendData(builder, %1$s(), %1$sLength())", fieldName);
+            return String.format("appendData(builder, this.%1$s(), %1$sLength())", fieldName);
         }
 
         return String.format("appendData(builder, %1$s, %1$sLength)", fieldName);
@@ -2030,7 +2030,7 @@ class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return String.format("%2$s.%1$s(%1$s(), 0, %1$sLength());", fieldName, encoderName);
+                return String.format("%2$s.%1$s(this.%1$s(), 0, %1$sLength());", fieldName, encoderName);
 
             case UTCTIMEONLY:
             case UTCDATEONLY:
@@ -2039,7 +2039,7 @@ class DecoderGenerator extends Generator
             case MONTHYEAR:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return String.format("%2$s.%1$sAsCopy(%1$s(), 0, %1$sLength());", fieldName, encoderName);
+                return String.format("%2$s.%1$sAsCopy(this.%1$s(), 0, %1$sLength());", fieldName, encoderName);
 
             case FLOAT:
             case PRICE:
@@ -2054,14 +2054,15 @@ class DecoderGenerator extends Generator
             case CHAR:
             case SEQNUM:
             case DAYOFMONTH:
-                return String.format("%2$s.%1$s(%1$s());", fieldName, encoderName);
+                return String.format("%2$s.%1$s(this.%1$s());", fieldName, encoderName);
 
             case DATA:
             case XMLDATA:
                 final String lengthName = formatPropertyName(field.associatedLengthField().name());
 
                 return String.format(
-                    "%3$s.%1$sAsCopy(%1$s(), 0, %2$s());%n%3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
+                    "%3$s.%1$sAsCopy(this.%1$s(), 0, %2$s());%n%3$s.%2$s(this.%2$s());",
+                    fieldName, lengthName, encoderName);
 
             case NUMINGROUP:
                 // Deliberately blank since it gets set by the group ToEncoder logic.
