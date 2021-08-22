@@ -1410,14 +1410,14 @@ class EncoderGenerator extends Generator
             case CHAR:
             case SEQNUM:
             case DAYOFMONTH:
-                return String.format("%2$s.%1$s(%1$s());", fieldName, encoderName);
+                return String.format("%2$s.%1$s(this.%1$s());", fieldName, encoderName);
 
             case DATA:
             case XMLDATA:
                 final String lengthName = formatPropertyName(field.associatedLengthField().name());
 
                 return String.format(
-                    "%3$s.%1$sAsCopy(%1$s(), 0, %2$s());%n%3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
+                    "%3$s.%1$sAsCopy(this.%1$s(), 0, %2$s());%n%3$s.%2$s(%2$s());", fieldName, lengthName, encoderName);
 
             case NUMINGROUP:
                 // Deliberately blank since it gets set by the group CopyTo logic.
