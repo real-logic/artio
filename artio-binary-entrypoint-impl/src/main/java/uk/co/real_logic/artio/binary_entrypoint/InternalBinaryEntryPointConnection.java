@@ -634,7 +634,7 @@ class InternalBinaryEntryPointConnection
         final long position = proxy.sendFinishedSending(
             sessionId,
             sessionVerId,
-            nextSentSeqNo - 1,
+            nextRecvSeqNo - 1,
             requestTimestampInNs());
 
         onAttemptedToSendMessage();

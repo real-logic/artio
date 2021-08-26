@@ -566,7 +566,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertNextSequenceNumbers(2, 3);
 
-            acceptorInitiatedFinishSending(client, 2);
+            acceptorInitiatedFinishSending(client, 1);
 
             clientTerminatesSession(client);
         }
