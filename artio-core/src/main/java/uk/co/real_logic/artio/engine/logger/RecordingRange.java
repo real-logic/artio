@@ -29,7 +29,7 @@ public final class RecordingRange
     final long recordingId;
     final long sessionId;
     long position = MISSING_LONG;
-    int length;
+    long length;
     int count;
 
     RecordingRange(final long recordingId, final long sessionId)
@@ -57,13 +57,13 @@ public final class RecordingRange
         if (currentPosition < addPosition)
         {
             // Add to the end
-            this.length = (int)(newEnd - currentPosition);
+            this.length = newEnd - currentPosition;
         }
         else if (addPosition < currentPosition)
         {
             // Add to the start
             this.position = addPosition;
-            this.length = (int)(newEnd - addPosition);
+            this.length = newEnd - addPosition;
         }
         else
         {
