@@ -1492,7 +1492,10 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
     private void resetSequenceNumber()
     {
-        testSystem.awaitCompletedReply(engine.resetSequenceNumber(connection.sessionId()));
+        final Reply<?> reply = testSystem.awaitNotNull(
+            "Timed out whilst attempting resetSequenceNumber",
+            () -> engine.resetSequenceNumber(connection.sessionId()));
+        testSystem.awaitCompletedReply(reply);
     }
 
     private void assertAllSessionsOnlyContains(final FixEngine engine, final BinaryEntryPointConnection connection)

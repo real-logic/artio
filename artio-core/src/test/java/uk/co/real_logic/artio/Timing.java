@@ -16,6 +16,8 @@
 
 package uk.co.real_logic.artio;
 
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -69,7 +71,7 @@ public final class Timing
             () -> message,
             condition,
             timeoutInMs,
-            () -> {});
+            Exceptions::printStackTracesForAllThreads);
     }
 
     public static void assertEventuallyTrue(final String message, final Block runnable)

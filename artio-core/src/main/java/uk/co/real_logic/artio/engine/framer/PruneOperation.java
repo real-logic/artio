@@ -115,15 +115,22 @@ public class PruneOperation
     // On Framer thread
     public void execute(final Framer framer)
     {
+        DebugLogger.log(STATE_CLEANUP, "PruneOperation: starting on Framer Thread");
+
         recordingCoordinator.forEachRecording(allRecordingIds::add);
 
         // move over to the replayer thread
-        framer.schedule(() -> replayerCommandQueue.offer(this) ? Continuation.COMPLETE : BACK_PRESSURED);
+        if (!replayerCommandQueue.offer(this))
+        {
+            framer.schedule(() -> replayerCommandQueue.offer(this) ? Continuation.COMPLETE : BACK_PRESSURED);
+        }
     }
 
     // On Replayer Thread
     public void execute()
     {
+        DebugLogger.log(STATE_CLEANUP, "PruneOperation: starting on Replayer Thread");
+
         inboundReplayQuery.queryStartPositions(recordingIdToNewStartPosition);
         outboundReplayQuery.queryStartPositions(recordingIdToNewStartPosition);
 

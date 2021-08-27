@@ -39,6 +39,7 @@ import java.util.concurrent.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -169,9 +170,7 @@ public class TestSystem
                 return !reply.isExecuting();
             },
             DEFAULT_TIMEOUT_IN_MS,
-            () ->
-            {
-            });
+            Exceptions::printStackTracesForAllThreads);
 
         return reply;
     }
@@ -259,6 +258,14 @@ public class TestSystem
         final long[] position = new long[1];
         await(message, () -> (position[0] = operation.getAsLong()) > 0);
         return position[0];
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T awaitNotNull(final String message, final Supplier<T> operation)
+    {
+        final Object[] value = new Object[1];
+        await(message, () -> (value[0] = operation.get()) != null);
+        return (T)value[0];
     }
 
     public void await(final String message, final BooleanSupplier predicate)

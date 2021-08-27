@@ -47,7 +47,6 @@ public class FramerContext
     private static final int ADMIN_COMMAND_CAPACITY = 64;
 
     private final QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(ADMIN_COMMAND_CAPACITY);
-    private final SystemEpochClock epochClock = new SystemEpochClock();
 
     private final Framer framer;
 
@@ -101,6 +100,7 @@ public class FramerContext
             null);
 
         final FixEndPointFactory endPointFactory;
+        final SystemEpochClock epochClock = new SystemEpochClock();
         if (configuration.acceptsFixP())
         {
             gatewaySessions = new FixPGatewaySessions(
