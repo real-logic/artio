@@ -812,6 +812,8 @@ project(':artio-samples') {
     dependencies {
         api project(':artio-core')
         api project(':artio-session-codecs')
+        api project(':artio-binary-entrypoint-codecs')
+        api project(':artio-binary-entrypoint-impl')
     }
 
     shadowJar {
