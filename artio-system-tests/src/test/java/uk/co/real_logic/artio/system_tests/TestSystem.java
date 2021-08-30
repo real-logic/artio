@@ -191,6 +191,11 @@ public class TestSystem
             reply.error().printStackTrace();
         }
 
+        if (reply.hasTimedOut())
+        {
+            Exceptions.printStackTracesForAllThreads();
+        }
+
         assertEquals(reply.toString(), COMPLETED, reply.state());
         return reply;
     }
