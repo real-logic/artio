@@ -1007,7 +1007,7 @@ class DecoderGenerator extends Generator
         final String numberFieldReset =
             group.numberField().required() ?
             String.format("parent.%1$s()", formattedNumberFieldName) :
-            String.format("parent.has%1$s() ? parent.%2$s() : MISSING_INT", numberFieldName, formattedNumberFieldName);
+            String.format("parent.has%1$s() ? parent.%2$s() : 0", numberFieldName, formattedNumberFieldName);
 
         out.append(String.format(
             "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +

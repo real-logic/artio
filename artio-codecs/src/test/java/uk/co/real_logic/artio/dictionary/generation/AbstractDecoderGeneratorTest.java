@@ -569,6 +569,23 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
+    public void shouldNotThrowInAResetOfARepeatingGroupWithLengthZero() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ZERO_REPEATING_GROUP_MESSAGE);
+
+        assertNotHasNext(decoder);
+
+        buffer.wrap("nonsense".getBytes(StandardCharsets.US_ASCII));
+
+        decoder.reset();
+
+        buffer.wrap(new byte[CAPACITY]);
+        decode(SINGLE_REPEATING_GROUP_MESSAGE, decoder);
+
+        assertSingleRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
     public void shouldDecodeShorterRepeatingGroups() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
