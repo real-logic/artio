@@ -1,5 +1,6 @@
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -16,11 +17,16 @@ class GapFillEncoder
     private final AbstractSequenceResetEncoder sequenceResetEncoder;
     private final UtcTimestampEncoder timestampEncoder;
     private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+    private final EpochNanoClock nanoClock;
 
-    GapFillEncoder(final AbstractSequenceResetEncoder sequenceResetEncoder, final UtcTimestampEncoder timestampEncoder)
+    GapFillEncoder(
+        final AbstractSequenceResetEncoder sequenceResetEncoder,
+        final UtcTimestampEncoder timestampEncoder,
+        final EpochNanoClock nanoClock)
     {
         this.sequenceResetEncoder = sequenceResetEncoder;
         this.timestampEncoder = timestampEncoder;
+        this.nanoClock = nanoClock;
         this.sequenceResetEncoder.header().possDupFlag(true);
         this.sequenceResetEncoder.gapFillFlag(true);
     }
@@ -29,7 +35,7 @@ class GapFillEncoder
     {
         final SessionHeaderEncoder respHeader = sequenceResetEncoder.header();
         respHeader.sendingTime(timestampEncoder.buffer(),
-            timestampEncoder.encodeFrom(System.currentTimeMillis(), TimeUnit.MILLISECONDS));
+            timestampEncoder.encodeFrom(nanoClock.nanoTime(), TimeUnit.NANOSECONDS));
         respHeader.msgSeqNum(msgSeqNum);
         sequenceResetEncoder.newSeqNo(newSeqNo);
 

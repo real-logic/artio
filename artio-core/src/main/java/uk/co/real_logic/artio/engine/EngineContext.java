@@ -224,13 +224,13 @@ public class EngineContext implements AutoCloseable
             configuration.replayHandler(),
             configuration.fixPRetransmitHandler(),
             senderSequenceNumbers,
-            new FixSessionCodecsFactory(epochFractionFormat),
+            new FixSessionCodecsFactory(clock, epochFractionFormat),
             configuration.senderMaxBytesInBuffer(),
             replayerCommandQueue,
             epochFractionFormat,
             fixCounters.currentReplayCount(),
             configuration.maxConcurrentSessionReplays(),
-            configuration.epochNanoClock(),
+            clock,
             configuration.supportedFixPProtocolType(),
             configuration);
     }
@@ -330,7 +330,7 @@ public class EngineContext implements AutoCloseable
                 configuration.agentNamePrefix(),
                 senderSequenceNumbers,
                 replayerCommandQueue,
-                new FixSessionCodecsFactory(configuration.sessionEpochFractionFormat()),
+                new FixSessionCodecsFactory(clock, configuration.sessionEpochFractionFormat()),
                 clock);
         }
     }

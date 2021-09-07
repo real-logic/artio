@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
@@ -176,6 +177,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final ReplayFor replayFor;
     private final Formatters formatters;
     private final EpochFractionFormat epochFractionFormat;
+    private final EpochNanoClock nanoClock;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -206,7 +208,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long catchupEndTimeInMs,
         final ReplayFor replayFor,
         final Formatters formatters,
-        final EpochFractionFormat epochFractionFormat)
+        final EpochFractionFormat epochFractionFormat,
+        final EpochNanoClock nanoClock)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -226,6 +229,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.replayFor = replayFor;
         this.formatters = formatters;
         this.epochFractionFormat = epochFractionFormat;
+        this.nanoClock = nanoClock;
     }
 
     private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)
@@ -325,7 +329,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         sequenceResetEncoder.header().msgSeqNum(heartbeatRangeSequenceNumberStart);
         sequenceResetEncoder.newSeqNo(heartbeatRangeSequenceNumberEnd);
         sequenceResetEncoder.header().sendingTime(
-            timestampEncoder.buffer(), timestampEncoder.encodeFrom(System.currentTimeMillis(), TimeUnit.MILLISECONDS));
+            timestampEncoder.buffer(), timestampEncoder.encodeFrom(nanoClock.nanoTime(), TimeUnit.NANOSECONDS));
 
         final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
         final int encodedLength = Encoder.length(result);

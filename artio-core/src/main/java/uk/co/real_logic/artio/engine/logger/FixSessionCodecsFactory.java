@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -40,11 +41,13 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
     private final Map<String, FixReplayerCodecs> fixDictionaryClassToIndex = new HashMap<>();
     private final Long2ObjectHashMap<FixReplayerCodecs> sessionIdToFixDictionaryIndex = new Long2ObjectHashMap<>();
     private final Function<String, FixReplayerCodecs> makeFixReplayerCodecs = this::makeFixReplayerCodecs;
+    private final EpochNanoClock nanoClock;
 
     final UtcTimestampEncoder timestampEncoder;
 
-    public FixSessionCodecsFactory(final EpochFractionFormat epochFractionFormat)
+    public FixSessionCodecsFactory(final EpochNanoClock nanoClock, final EpochFractionFormat epochFractionFormat)
     {
+        this.nanoClock = nanoClock;
         timestampEncoder = new UtcTimestampEncoder(epochFractionFormat);
     }
 
@@ -91,7 +94,7 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
 
     private FixReplayerCodecs makeFixReplayerCodecs(final String fixDictionaryName)
     {
-        return new FixReplayerCodecs(FixDictionary.find(fixDictionaryName), timestampEncoder);
+        return new FixReplayerCodecs(FixDictionary.find(fixDictionaryName), timestampEncoder, nanoClock);
     }
 
     FixReplayerCodecs get(final long sessionId)

@@ -71,6 +71,7 @@ class FixReplayerSession extends ReplayerSession
     private final GapFillEncoder gapFillEncoder;
 
     private final PossDupEnabler possDupEnabler;
+    private final EpochNanoClock clock;
     private final String message;
     private final ReplayHandler replayHandler;
     private final LongHashSet gapFillMessageTypes;
@@ -111,6 +112,7 @@ class FixReplayerSession extends ReplayerSession
             sessionId, sequenceIndex, replayer, bytesInBuffer, maxBytesInBuffer);
         this.replayHandler = replayHandler;
         this.gapFillMessageTypes = gapFillMessageTypes;
+        this.clock = clock;
         this.message = message;
         this.errorHandler = errorHandler;
         this.gapFillEncoder = gapFillEncoder;
@@ -340,7 +342,7 @@ class FixReplayerSession extends ReplayerSession
                 .session(this.sessionId)
                 .sequenceIndex(this.sequenceIndex)
                 .connection(this.connectionId)
-                .timestamp(0)
+                .timestamp(clock.nanoTime())
                 .status(MessageStatus.OK)
                 .putMetaData(NO_BYTES, 0, 0)
                 .putBody(fixBuffer, fixOffset, fixLength);

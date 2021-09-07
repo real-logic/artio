@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.concurrent.SystemEpochNanoClock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 
@@ -22,11 +23,11 @@ public class FakeFixSessionCodecsFactory extends FixSessionCodecsFactory
 {
     public FakeFixSessionCodecsFactory()
     {
-        super(EpochFractionFormat.MILLISECONDS);
+        super(new SystemEpochNanoClock(), EpochFractionFormat.NANOSECONDS);
     }
 
     FixReplayerCodecs get(final long sessionId)
     {
-        return new FixReplayerCodecs(FixDictionary.findDefault(), timestampEncoder);
+        return new FixReplayerCodecs(FixDictionary.findDefault(), timestampEncoder, new SystemEpochNanoClock());
     }
 }
