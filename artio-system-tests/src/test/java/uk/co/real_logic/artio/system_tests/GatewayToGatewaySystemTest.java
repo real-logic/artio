@@ -21,7 +21,6 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.CountersReader;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
@@ -42,12 +41,9 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.function.IntSupplier;
 
-import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.INVALID_LIBRARY_ATTEMPTS_TYPE_ID;
 import static uk.co.real_logic.artio.FixCounters.lookupCounterIds;
@@ -97,11 +93,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceIndicesAre(0);
 
-        final long connectionId = acceptingSession.connectionId();
-        final ArgumentCaptor<Long> sequenceNumberCaptor = ArgumentCaptor.forClass(long.class);
-        verify(messageTimingHandler, times(2))
-            .onMessage(sequenceNumberCaptor.capture(), eq(connectionId));
-        assertEquals(asList(1L, 2L), sequenceNumberCaptor.getAllValues());
+        messageTimingHandler.verifyConsecutiveSequenceNumbers(2);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

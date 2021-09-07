@@ -29,7 +29,10 @@ import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -53,7 +56,6 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
@@ -98,7 +100,7 @@ public class AbstractGatewayToGatewaySystemTest
     AgentRunner logger;
 
     CapturingAuthenticationStrategy auth;
-    MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
+    MessageTimingCaptor messageTimingHandler = new MessageTimingCaptor();
 
     void launchGatewayToGateway()
     {
