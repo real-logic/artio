@@ -41,7 +41,9 @@ public final class ExampleDictionary
     public static final String NO_NESTED_COMPONENT_GROUP = "NoNestedComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
     public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
+    public static final String EG_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP = "EgOptionalComponentOfRequiredGroup";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
+    public static final String OPTIONAL_COMPONENT_REQUIRED_GROUP_MESSAGE = "OptionalComponentOfRequiredGroupMessage";
     public static final String LOWERCASE_MESSAGE = "lowerCaseMessage";
 
     public static final String EG_ENUM = DEFAULT_PARENT_PACKAGE + "." + "EgEnum";
@@ -59,6 +61,8 @@ public final class ExampleDictionary
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String ALL_REQ_FIELD_TYPES_MESSAGE_DECODER = TEST_PACKAGE + ".AllReqFieldTypesMessageDecoder";
     public static final String FIELDS_MESSAGE_DECODER = TEST_PACKAGE + "." + FIELDS_MESSAGE + "Decoder";
+    public static final String PHONE_BOOK_MESSAGE_DECODER =
+        TEST_PACKAGE + "." + OPTIONAL_COMPONENT_REQUIRED_GROUP_MESSAGE + "Decoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
     public static final String NESTED_COMPONENT_DECODER = TEST_PACKAGE + "." + EG_NESTED_COMPONENT + "Decoder";
@@ -450,6 +454,12 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001120=3\001121=1\001121=2\00110=053\001";
 
+    public static final String NON_EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP =
+        "8=FIX.4.4\0019=81\00135=OCRG\0012001=1\0012002=555-100-1234\00110=246\001";
+
+    public static final String EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP =
+        "8=FIX.4.4\0019=81\00135=OCRG\00110=246\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
@@ -623,6 +633,15 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(groupForAdmin);
         fieldsMessage.optionalEntry(nestedComponent);
 
+        final Group entries = Group.of(registerField(messageEgFields, 2001, "NoEntries", INT));
+        entries.requiredEntry(registerField(messageEgFields, 2002, "Entry", STRING));
+
+        final Component componentOfRequiredGroup = new Component(EG_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP);
+        componentOfRequiredGroup.requiredEntry(entries);
+
+        final Message phoneBookMessage = new Message(OPTIONAL_COMPONENT_REQUIRED_GROUP_MESSAGE, "OCRG", "app");
+        phoneBookMessage.optionalEntry(componentOfRequiredGroup);
+
         final Message lowerCaseMessage = new Message(LOWERCASE_MESSAGE, "LC", "admin");
         lowerCaseMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));
 
@@ -662,11 +681,12 @@ public final class ExampleDictionary
             .addValue("USD", "US_Dollar").addValue("GBP", "Pound"));
 
         final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, lowerCaseMessage,
-            allReqFieldTypesMessage, enumTestMessage);
+            allReqFieldTypesMessage, enumTestMessage, phoneBookMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
         components.put(EG_NESTED_COMPONENT, nestedComponent);
+        components.put(EG_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP, componentOfRequiredGroup);
 
         return new Dictionary(messages, messageEgFields, components, header, trailer, "FIX", 4, 4);
     }
