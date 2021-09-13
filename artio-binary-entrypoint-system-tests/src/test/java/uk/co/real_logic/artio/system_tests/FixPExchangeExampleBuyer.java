@@ -41,7 +41,7 @@ public final class FixPExchangeExampleBuyer
             {
                 System.out.println("Sending order: " + clOrdId);
                 client.writeNewOrderSingle(clOrdId);
-                System.out.println("response = " + client.readExecutionReportNew(clOrdId));
+                client.readExecutionReportNew(clOrdId);
 
                 clOrdId++;
 
