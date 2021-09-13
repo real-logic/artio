@@ -15,8 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import b3.entrypoint.fixp.sbe.ExecutionReport_NewDecoder;
-
 import java.io.IOException;
 
 public final class FixPExchangeExampleBuyer
