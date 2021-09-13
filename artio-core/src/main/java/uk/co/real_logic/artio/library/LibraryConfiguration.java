@@ -92,13 +92,14 @@ public final class LibraryConfiguration extends CommonConfiguration
     private FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler;
 
     /**
-     * When a new session connects to the gateway you register a callback handler to find
+     * When a new FIX session connects to the gateway you register a callback handler to find
      * out about the event. This method sets the handler for this library instance.
      *
      * Only needed if this is the accepting library instance.
      *
      * @param sessionAcquireHandler the new session handler
      * @return this
+     * @see #fixPConnectionAcquiredHandler(FixPConnectionAcquiredHandler) for the FIXP equivalent
      */
     public LibraryConfiguration sessionAcquireHandler(final SessionAcquireHandler sessionAcquireHandler)
     {
@@ -106,6 +107,16 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * When a new FIXP session connects to the gateway you register a callback handler to find
+     * out about the event. This method sets the handler for this library instance.
+     *
+     * Only needed if this is the accepting library instance.
+     *
+     * @param fixPConnectionAcquiredHandler the new session handler
+     * @return this
+     * @see #sessionAcquireHandler(SessionAcquireHandler) for the FIX equivalent
+     */
     public LibraryConfiguration fixPConnectionAcquiredHandler(
         final FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler)
     {

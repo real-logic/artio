@@ -389,11 +389,12 @@ public final class BinaryEntryPointClient implements AutoCloseable
         readExecutionReportNew(CL_ORD_ID);
     }
 
-    public void readExecutionReportNew(final int clOrdId)
+    public ExecutionReport_NewDecoder readExecutionReportNew(final int clOrdId)
     {
         final ExecutionReport_NewDecoder report = read(
             new ExecutionReport_NewDecoder(), NoMetricsEncoder.sbeBlockLength());
         assertEquals(clOrdId, report.clOrdID());
+        return report;
     }
 
     public void writeTerminate()

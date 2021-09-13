@@ -23,7 +23,7 @@ import uk.co.real_logic.artio.fixp.FixPContext;
  * Authentication Strategy for a FIXP Session. Implement this interface in order to add customisable checks to for
  * negotiate and establish messages. Unlike FIX Artio doesn't support a synchronous authentication method.
  *
- * When Artio receives a negotiate message or an establish message in an attempt to re-establish the connection then
+ * When Artio receives a "Negotiate" message or an "Establish" message in an attempt to re-establish the connection then
  * the {@link #authenticate(FixPContext, FixPAuthenticationProxy)} method is invoked.
  *
  * Your implementation can be configured using the
@@ -52,7 +52,7 @@ public interface FixPAuthenticationStrategy
      * In order to accept or reject the connection invoke the appropriate methods on the
      * {@link FixPAuthenticationProxy}.
      *
-     * @param context the session identification for the FIXP session, this can be casted to the the session
+     * @param context the session identification for the FIXP session, this can be cast-ed to the session
      *                  identification type for your specific FIXP session, for example
      *                  <code>BinaryEntryPointIdentification</code> for the Binary Entrypoint protocol.
      * @param authProxy the proxy to notify when you're ready to authenticate.

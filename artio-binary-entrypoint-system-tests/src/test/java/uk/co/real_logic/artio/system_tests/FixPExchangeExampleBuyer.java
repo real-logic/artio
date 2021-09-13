@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import b3.entrypoint.fixp.sbe.ExecutionReport_NewDecoder;
+
 import java.io.IOException;
 
 public final class FixPExchangeExampleBuyer
@@ -39,7 +41,7 @@ public final class FixPExchangeExampleBuyer
             {
                 System.out.println("Sending order: " + clOrdId);
                 client.writeNewOrderSingle(clOrdId);
-                client.readExecutionReportNew(clOrdId);
+                System.out.println("response = " + client.readExecutionReportNew(clOrdId));
 
                 clOrdId++;
 
