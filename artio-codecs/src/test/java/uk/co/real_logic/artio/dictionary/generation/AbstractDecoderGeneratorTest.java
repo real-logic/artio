@@ -76,6 +76,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static Class<?> component;
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
+    private static Class<?> phoneBookMessage;
     private static Class<?> allReqFieldTypesMessage;
     private static Class<?> enumTestMessage;
 
@@ -98,6 +99,7 @@ public abstract class AbstractDecoderGeneratorTest
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
+        phoneBookMessage = heartbeat.getClassLoader().loadClass(PHONE_BOOK_MESSAGE_DECODER);
         compileInMemory(HEADER_DECODER, sourcesWithValidation);
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
         enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
@@ -1217,6 +1219,24 @@ public abstract class AbstractDecoderGeneratorTest
         decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
         assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
         assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void messageWithNoRepeatingGroupsIsValidWhereRequiredRepeatingGroupIsInOptionalComponent() throws Exception
+    {
+        final Decoder decoder = (Decoder)phoneBookMessage.getConstructor().newInstance();
+        decode(EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP, decoder);
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void messageWithRepeatingGroupsIsValidWhereRequiredRepeatingGroupIsInOptionalComponent() throws Exception
+    {
+        final Decoder decoder = (Decoder)phoneBookMessage.getConstructor().newInstance();
+        decode(NON_EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP, decoder);
 
         assertValid(decoder);
     }
