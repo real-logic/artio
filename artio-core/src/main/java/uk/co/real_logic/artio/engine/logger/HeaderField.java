@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited., Monotonic Ltd.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-
-/**
- * A criteria for filtering fix messages.
- *
- * @see FixMessagePredicates for different useful implementations
- */
-@FunctionalInterface
-public interface FixMessagePredicate
+enum HeaderField
 {
-    boolean test(FixMessageDecoder message);
-
-    default FixMessagePredicate and(final FixMessagePredicate other)
-    {
-        return new FixMessageAnd(this, other);
-    }
-
-    default FixMessagePredicate or(final FixMessagePredicate other)
-    {
-        return new FixMessageOr(this, other);
-    }
+    SENDER_COMP_ID,
+    TARGET_COMP_ID,
+    NOT_OPTIMISED
 }

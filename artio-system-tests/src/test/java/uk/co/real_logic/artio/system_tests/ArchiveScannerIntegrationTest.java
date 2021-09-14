@@ -19,15 +19,24 @@ import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
+import uk.co.real_logic.artio.engine.logger.FixMessagePredicate;
+import uk.co.real_logic.artio.engine.logger.FixMessagePredicates;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Predicate;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySystemTest
@@ -103,6 +112,62 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         closeLibrariesAndEngines();
 
         assertArchiveContainsBothMessages("hi");
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void canIndexScanArchiveClosed()
+    {
+        canIndexScanArchive(true);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void canIndexScanArchiveNotClosed()
+    {
+        canIndexScanArchive(false);
+    }
+
+    private void canIndexScanArchive(final boolean close)
+    {
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor, testReqId());
+
+        LockSupport.parkNanos(1);
+
+        final long start = nanoClock.nanoTime();
+
+        final String testReqID = testReqId();
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor, testReqID);
+
+        final long end = nanoClock.nanoTime();
+
+        LockSupport.parkNanos(2);
+
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor, testReqId());
+
+        if (close)
+        {
+            closeLibrariesAndEngines();
+        }
+
+        final EngineConfiguration configuration = acceptingEngine.configuration();
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(configuration.outboundLibraryStream());
+
+        final List<String> messages = new ArrayList<>();
+        final FixMessageConsumer fixMessageConsumer =
+            (message, buffer, offset, length, header) -> messages.add(message.body());
+
+        final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
+        final FixMessagePredicate timeFilter = FixMessagePredicates.between(start, end + 1);
+        final Predicate<SessionHeaderDecoder> sessionFilter = targetCompIdOf(INITIATOR_ID)
+            .or(senderCompIdOf(ACCEPTOR_ID));
+        final FixMessagePredicate predicate = whereHeader(fixDictionary, sessionFilter)
+            .and(timeFilter);
+
+        SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds,
+            FixMessagePredicates.filterBy(fixMessageConsumer, predicate),
+            null);
+
+        assertThat(messages, hasSize(1));
     }
 
     private void closeLibrariesAndEngines()

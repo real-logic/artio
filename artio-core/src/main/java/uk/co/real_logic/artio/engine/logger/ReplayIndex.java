@@ -24,6 +24,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
@@ -31,6 +32,7 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
@@ -80,6 +82,7 @@ public class ReplayIndex implements Index
     private final AtomicBuffer positionBuffer;
     private final ErrorHandler errorHandler;
     private final RecordingIdLookup recordingIdLookup;
+    private final TimeIndexWriter timeIndex;
 
     public ReplayIndex(
         final String logFileDir,
@@ -114,6 +117,8 @@ public class ReplayIndex implements Index
         positionWriter = new IndexedPositionWriter(
             positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup);
         positionReader = new IndexedPositionReader(positionBuffer);
+        timeIndex = new TimeIndexWriter(
+            logFileDir, requiredStreamId, TimeUnit.SECONDS.toNanos(1), errorHandler);
     }
 
     private void onFixPSequenceUpdate(
@@ -130,13 +135,14 @@ public class ReplayIndex implements Index
         else
         {
             sessionIndex(sessionId)
-                .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID);
+                .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID, 0);
         }
     }
 
     private long continuedFixSessionId;
     private int continuedSequenceNumber;
     private int continuedSequenceIndex;
+    private long continuedTimestamp;
 
     public void onCatchup(
         final DirectBuffer buffer,
@@ -199,7 +205,7 @@ public class ReplayIndex implements Index
                     final int sequenceIndex = throttleNotification.sequenceIndex();
 
                     sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, 0);
                     break;
                 }
 
@@ -211,7 +217,7 @@ public class ReplayIndex implements Index
                     final int sequenceIndex = throttleReject.sequenceIndex();
 
                     sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, 0);
                     break;
                 }
 
@@ -239,7 +245,8 @@ public class ReplayIndex implements Index
         else
         {
             sessionIndex(continuedFixSessionId).onRecord(
-                endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header.sessionId(), recordingId);
+                endPosition, length,
+                continuedSequenceNumber, continuedSequenceIndex, header.sessionId(), recordingId, continuedTimestamp);
         }
 
         positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
@@ -285,6 +292,7 @@ public class ReplayIndex implements Index
             final int sequenceNumber = sequenceNumberExtractor.extract(
                 srcBuffer, offset, messageFrame.bodyLength());
             final int sequenceIndex = messageFrame.sequenceIndex();
+            final long timestamp = messageFrame.timestamp();
 
             if (sequenceNumber != NO_SEQUENCE_NUMBER)
             {
@@ -293,10 +301,11 @@ public class ReplayIndex implements Index
                     continuedFixSessionId = fixSessionId;
                     continuedSequenceNumber = sequenceNumber;
                     continuedSequenceIndex = sequenceIndex;
+                    continuedTimestamp = timestamp;
                 }
 
                 sessionIndex(fixSessionId).onRecord(
-                    endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId);
+                    endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, timestamp);
             }
         }
     }
@@ -328,12 +337,14 @@ public class ReplayIndex implements Index
 
     public int doWork()
     {
-        return positionWriter.checkRecordings();
+        return positionWriter.checkRecordings() + timeIndex.doWork();
     }
 
     public void close()
     {
-        positionWriter.close();
+        Exceptions.closeAll(
+            timeIndex,
+            positionWriter);
         fixSessionIdToIndex.clear();
         IoUtil.unmap(positionBuffer.byteBuffer());
     }
@@ -381,7 +392,8 @@ public class ReplayIndex implements Index
             final int sequenceNumber,
             final int sequenceIndex,
             final int aeronSessionId,
-            final long knownRecordingId)
+            final long knownRecordingId,
+            final long timestamp)
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
@@ -403,6 +415,8 @@ public class ReplayIndex implements Index
                 .length(length);
 
             endChangeOrdered(buffer, changePosition);
+
+            timeIndex.onRecord(recordingId, endPosition, timestamp);
         }
 
         void reset()

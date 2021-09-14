@@ -17,16 +17,18 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
-import org.agrona.collections.IntHashSet;
+import org.agrona.collections.*;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.FilterBy;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
+import static uk.co.real_logic.artio.LogTag.ARCHIVE_SCAN;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
 
 /**
@@ -42,16 +44,25 @@ public class FixArchiveScanner implements AutoCloseable
 
     private static final ReversePositionComparator BY_REVERSE_POSITION = new ReversePositionComparator();
 
+    static final boolean DEBUG_LOG_ARCHIVE_SCAN = DebugLogger.isEnabled(ARCHIVE_SCAN);
+
     private final Aeron aeron;
     private final AeronArchive aeronArchive;
     private final IdleStrategy idleStrategy;
     private final int compactionSize;
+
+    private final String logFileDir;
+
+    private final ArchiveScanPredicateOptimizer predicateOptimizer;
+    private final Long2ObjectHashMap<TimeIndexReader> streamIdToInboundTimeIndex = new Long2ObjectHashMap<>();
 
     public static class Configuration
     {
         private String aeronDirectoryName;
         private IdleStrategy idleStrategy;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
+        private String logFileDir;
+        private boolean enableIndexScan = false;
 
         public Configuration()
         {
@@ -89,6 +100,28 @@ public class FixArchiveScanner implements AutoCloseable
         {
             return compactionSize;
         }
+
+        public Configuration logFileDir(final String logFileDir)
+        {
+            this.logFileDir = logFileDir;
+            return this;
+        }
+
+        public String logFileDir()
+        {
+            return logFileDir;
+        }
+
+        public Configuration enableIndexScan(final boolean enableIndexScan)
+        {
+            this.enableIndexScan = enableIndexScan;
+            return this;
+        }
+
+        public boolean enableIndexScan()
+        {
+            return enableIndexScan;
+        }
     }
 
     public FixArchiveScanner(final Configuration configuration)
@@ -99,6 +132,32 @@ public class FixArchiveScanner implements AutoCloseable
         final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(configuration.aeronDirectoryName());
         aeron = Aeron.connect(aeronContext);
         aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron).ownsAeronClient(true));
+
+        final String logFileDir = configuration.logFileDir();
+        if (logFileDir != null && configuration.enableIndexScan())
+        {
+            this.logFileDir = logFileDir;
+            this.predicateOptimizer = new ArchiveScanPredicateOptimizer(logFileDir);
+        }
+        else
+        {
+            this.logFileDir = null;
+            this.predicateOptimizer = null;
+        }
+    }
+
+    private ReplayQuery newReplayQuery(final int defaultOutboundLibraryStream)
+    {
+        return new ReplayQuery(
+            logFileDir,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            LoggerUtil::mapExistingFile,
+            defaultOutboundLibraryStream,
+            idleStrategy,
+            aeronArchive,
+            Throwable::printStackTrace,
+            -1);
     }
 
     public void scan(
@@ -132,12 +191,26 @@ public class FixArchiveScanner implements AutoCloseable
         final boolean follow,
         final int archiveScannerStreamId)
     {
+        final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange =
+            scanIndexIfPossible(fixHandler, follow, queryStreamIds);
+
         try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
         {
-            final RecordingPoller[] pollers = queryStreamIds
-                .stream()
-                .map(id -> makePoller(id, replaySubscription, follow, aeronChannel))
-                .toArray(RecordingPoller[]::new);
+            final RecordingPoller[] pollers = new RecordingPoller[queryStreamIds.size()];
+            int i = 0;
+
+            final IntHashSet.IntIterator iterator = queryStreamIds.iterator();
+            while (iterator.hasNext())
+            {
+                final int id = iterator.next();
+                pollers[i] = makePoller(id, replaySubscription, follow, aeronChannel, recordingIdToPositionRange);
+                i++;
+            }
+
+            if (DEBUG_LOG_ARCHIVE_SCAN)
+            {
+                DebugLogger.log(ARCHIVE_SCAN, "Pollers: %s", pollers);
+            }
 
             final StreamTimestampZipper timestampZipper = new StreamTimestampZipper(
                 fixHandler, fixPHandler, compactionSize, pollers);
@@ -162,6 +235,89 @@ public class FixArchiveScanner implements AutoCloseable
         }
     }
 
+    private Long2ObjectHashMap<PositionRange> scanIndexIfPossible(
+        final FixMessageConsumer fixHandler, final boolean follow, final IntHashSet queryStreamIds)
+    {
+        // Don't support scan + continuous update query for now
+        if (follow)
+        {
+            return null;
+        }
+
+        // need to know index location to do a scan
+        if (logFileDir == null)
+        {
+            return null;
+        }
+
+        // need a filter in order to optimise the scan
+        if (!(fixHandler instanceof FilterBy))
+        {
+            return null;
+        }
+
+        final FixMessagePredicate queryPredicate = ((FilterBy)fixHandler).predicate;
+        try
+        {
+            predicateOptimizer.optimizeSessionIds(queryPredicate);
+
+            final IndexQuery indexQuery = ArchiveScanPlanner.extractIndexQuery(queryPredicate);
+            if (DEBUG_LOG_ARCHIVE_SCAN)
+            {
+                DebugLogger.log(ARCHIVE_SCAN, "indexQuery = " + indexQuery);
+            }
+
+            if (indexQuery == null)
+            {
+                return null;
+            }
+
+            final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange = new Long2ObjectHashMap<>();
+            for (final int streamId : queryStreamIds)
+            {
+                TimeIndexReader reader = streamIdToInboundTimeIndex.get(streamId);
+                if (reader == null)
+                {
+                    reader = new TimeIndexReader(logFileDir, streamId);
+                    streamIdToInboundTimeIndex.put(streamId, reader);
+                }
+
+                if (!reader.findPositionRange(indexQuery, recordingIdToPositionRange))
+                {
+                    return null;
+                }
+            }
+
+            if (DEBUG_LOG_ARCHIVE_SCAN)
+            {
+                DebugLogger.log(ARCHIVE_SCAN, "recordingIdToPositionRange = " + recordingIdToPositionRange);
+            }
+
+            return recordingIdToPositionRange;
+        }
+        catch (final IllegalArgumentException e)
+        {
+            // Unable to create query plan
+            return null;
+        }
+    }
+
+    private List<ArchiveLocation> recordingRangesToArchiveLocations(final List<RecordingRange> recordingRanges)
+    {
+        final int size = recordingRanges.size();
+        final List<ArchiveLocation> archiveLocations = new ArrayList<>(size);
+        for (int i = 0; i < size; i++)
+        {
+            final RecordingRange range = recordingRanges.get(i);
+            final long startPosition = range.position;
+            archiveLocations.add(new ArchiveLocation(
+                range.recordingId,
+                startPosition,
+                startPosition + range.length));
+        }
+        return archiveLocations;
+    }
+
     private boolean checkCompletion(final RecordingPoller[] pollers)
     {
         for (final RecordingPoller poller : pollers)
@@ -179,7 +335,22 @@ public class FixArchiveScanner implements AutoCloseable
         final int queryStreamId,
         final Subscription replaySubscription,
         final boolean follow,
-        final String aeronChannel)
+        final String aeronChannel,
+        final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange)
+    {
+        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(
+            queryStreamId, follow, aeronChannel, recordingIdToPositionRange);
+
+        archiveLocations.sort(BY_REVERSE_POSITION);
+
+        return new RecordingPoller(replaySubscription, queryStreamId, archiveLocations);
+    }
+
+    private List<ArchiveLocation> lookupArchiveLocations(
+        final int queryStreamId,
+        final boolean follow,
+        final String aeronChannel,
+        final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange)
     {
         final List<ArchiveLocation> archiveLocations = new ArrayList<>();
 
@@ -223,9 +394,38 @@ public class FixArchiveScanner implements AutoCloseable
             }
         }
 
-        archiveLocations.sort(BY_REVERSE_POSITION);
+        // try to narrow down the scan range using the index
+        if (recordingIdToPositionRange != null)
+        {
+            final Iterator<ArchiveLocation> iterator = archiveLocations.iterator();
+            while (iterator.hasNext())
+            {
+                final ArchiveLocation location = iterator.next();
 
-        return new RecordingPoller(replaySubscription, queryStreamId, archiveLocations);
+                final PositionRange positionRange = recordingIdToPositionRange.get(location.recordingId);
+                if (positionRange == null)
+                {
+                    iterator.remove();
+                }
+                else
+                {
+                    final long startPosition = positionRange.startPosition();
+                    final long endPosition = positionRange.endPosition();
+
+                    if (location.stopPosition > endPosition)
+                    {
+                        location.stopPosition = endPosition;
+                    }
+
+                    if (location.startPosition < startPosition)
+                    {
+                        location.startPosition = startPosition;
+                    }
+                }
+            }
+        }
+
+        return archiveLocations;
     }
 
     static class ReversePositionComparator implements Comparator<ArchiveLocation>
@@ -245,8 +445,8 @@ public class FixArchiveScanner implements AutoCloseable
     static class ArchiveLocation
     {
         final long recordingId;
-        final long startPosition;
 
+        long startPosition;
         long stopPosition;
 
         ArchiveLocation(
@@ -269,7 +469,7 @@ public class FixArchiveScanner implements AutoCloseable
 
         public String toString()
         {
-            return "ArchiveReplayInfo{" +
+            return "ArchiveLocation{" +
                 "recordingId=" + recordingId +
                 ", startPosition=" + startPosition +
                 ", stopPosition=" + stopPosition +
@@ -363,6 +563,17 @@ public class FixArchiveScanner implements AutoCloseable
         public void close()
         {
             // don't own replay subscription so no need to close it.
+        }
+
+        public String toString()
+        {
+            return "RecordingPoller{" +
+                "archiveLocations=" + archiveLocations +
+                ", replaySubscription=" + replaySubscription +
+                ", originalStreamId=" + originalStreamId +
+                ", stopPosition=" + stopPosition +
+                ", image=" + image +
+                '}';
         }
     }
 

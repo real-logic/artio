@@ -21,7 +21,9 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
@@ -59,6 +61,9 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
 // For reproducing error scenarios when initiating a connection
 public class MessageBasedInitiatorSystemTest
 {
+    @Rule
+    public Timeout timeout = Timeout.seconds(20);
+
     private static final int LOGON_SEQ_NUM = 2;
 
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);

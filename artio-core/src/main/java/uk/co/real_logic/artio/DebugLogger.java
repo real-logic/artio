@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
@@ -703,6 +704,17 @@ public final class DebugLogger
         if (isEnabled(tag))
         {
             THREAD_LOCAL.get().log(tag, String.format(formatString, first, second));
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final Object[] first)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().log(tag, String.format(formatString, Arrays.toString(first)));
         }
     }
 

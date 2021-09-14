@@ -56,6 +56,7 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
@@ -410,6 +411,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
      * @see #replayIndexFileCapacityToBytes(int)
      */
+    @Deprecated
     public EngineConfiguration replayIndexFileSize(final int indexFileSizeInBytes)
     {
         this.replayIndexFileSizeInBytes = indexFileSizeInBytes;
@@ -439,7 +441,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public static int replayIndexFileCapacityToBytes(final int requestedNumberOfRecordsToStore)
     {
-        return INITIAL_RECORD_OFFSET + ReplayIndexDescriptor.RECORD_LENGTH * requestedNumberOfRecordsToStore;
+        return INITIAL_RECORD_OFFSET +
+            findNextPositivePowerOfTwo(ReplayIndexDescriptor.RECORD_LENGTH * requestedNumberOfRecordsToStore);
     }
 
     /**

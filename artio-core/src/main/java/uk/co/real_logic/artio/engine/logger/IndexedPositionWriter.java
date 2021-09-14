@@ -30,7 +30,7 @@ import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
  * Writes out a log of the stream positions that we have indexed up to.
  * Not thread safe, but writes to a thread safe buffer.
  */
-class IndexedPositionWriter
+class IndexedPositionWriter implements AutoCloseable
 {
     static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     static final int RECORD_LENGTH = IndexedPositionEncoder.BLOCK_LENGTH;
@@ -154,7 +154,7 @@ class IndexedPositionWriter
         }
     }
 
-    void close()
+    public void close()
     {
         updateChecksums();
     }

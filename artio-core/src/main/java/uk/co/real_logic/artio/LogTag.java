@@ -94,8 +94,13 @@ public enum LogTag
     /**
      * Prints out the FIXP business layer messages.
      */
-    FIXP_BUSINESS;
+    FIXP_BUSINESS,
 
+    /**
+     * Prints out debug logging when using the {@link uk.co.real_logic.artio.engine.logger.FixArchiveScanner} and
+     * associated {@link uk.co.real_logic.artio.engine.logger.FixArchivePrinter}
+     */
+    ARCHIVE_SCAN;
 
     private final char[] logStr;
 

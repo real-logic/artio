@@ -310,7 +310,8 @@ public final class SystemTestUtil
         final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
-            .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId, INITIATOR_ID2, INITIATOR_ID3)));
+            .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId,
+            INITIATOR_ID2, INITIATOR_ID3, "initiator4", "initiator5")));
 
         configuration
             .messageValidationStrategy(validationStrategy)

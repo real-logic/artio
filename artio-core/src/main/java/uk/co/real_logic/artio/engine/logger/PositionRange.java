@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited., Monotonic Ltd.
+ * Copyright 2021 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,32 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-
-/**
- * A criteria for filtering fix messages.
- *
- * @see FixMessagePredicates for different useful implementations
- */
-@FunctionalInterface
-public interface FixMessagePredicate
+class PositionRange
 {
-    boolean test(FixMessageDecoder message);
+    private final long startPosition;
+    private final long endPosition;
 
-    default FixMessagePredicate and(final FixMessagePredicate other)
+    PositionRange(final long startPosition, final long endPosition)
     {
-        return new FixMessageAnd(this, other);
+        this.startPosition = startPosition;
+        this.endPosition = endPosition;
     }
 
-    default FixMessagePredicate or(final FixMessagePredicate other)
+    public long startPosition()
     {
-        return new FixMessageOr(this, other);
+        return startPosition;
+    }
+
+    public long endPosition()
+    {
+        return endPosition;
+    }
+
+    public String toString()
+    {
+        return "PositionRange{" +
+            "startPosition=" + startPosition +
+            ", endPosition=" + endPosition +
+            '}';
     }
 }

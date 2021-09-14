@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 Real Logic Limited.
+ * Copyright 2015-2021 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,15 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.collections.LongHashSet;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.BufferAsciiSequence;
 import uk.co.real_logic.artio.util.MessageTypeEncoding;
@@ -52,7 +55,26 @@ public final class FixMessagePredicates
     public static FixMessageConsumer filterBy(
         final FixMessageConsumer consumer, final FixMessagePredicate predicate)
     {
-        return (message, buffer, offset, length, header) ->
+        return new FilterBy(consumer, predicate);
+    }
+
+    static class FilterBy implements FixMessageConsumer
+    {
+        final FixMessageConsumer consumer;
+        final FixMessagePredicate predicate;
+
+        FilterBy(final FixMessageConsumer consumer, final FixMessagePredicate predicate)
+        {
+            this.consumer = consumer;
+            this.predicate = predicate;
+        }
+
+        public void onMessage(
+            final FixMessageDecoder message,
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final ArtioLogHeader header)
         {
             final int actingVersion = message.sbeSchemaVersion();
             final int actingBlockLength = message.sbeBlockLength();
@@ -63,7 +85,15 @@ public final class FixMessagePredicates
                 message.wrap(buffer, offset, actingBlockLength, actingVersion);
                 consumer.onMessage(message, buffer, offset, length, header);
             }
-        };
+        }
+
+        public String toString()
+        {
+            return "FilterBy{" +
+                "consumer=" + consumer +
+                ", predicate=" + predicate +
+                '}';
+        }
     }
 
     /**
@@ -90,7 +120,34 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate from(final long beginTimestampInclusive)
     {
-        return (message) -> message.timestamp() >= beginTimestampInclusive;
+        return new From(beginTimestampInclusive);
+    }
+
+    static class From implements FixMessagePredicate
+    {
+        private final long beginTimestampInclusive;
+
+        From(final long beginTimestampInclusive)
+        {
+            this.beginTimestampInclusive = beginTimestampInclusive;
+        }
+
+        public boolean test(final FixMessageDecoder message)
+        {
+            return message.timestamp() >= beginTimestampInclusive;
+        }
+
+        long beginTimestampInclusive()
+        {
+            return beginTimestampInclusive;
+        }
+
+        public String toString()
+        {
+            return "From{" +
+                "beginTimestampInclusive=" + beginTimestampInclusive +
+                '}';
+        }
     }
 
     /**
@@ -103,7 +160,27 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate to(final long endTimestampExclusive)
     {
-        return (message) -> message.timestamp() < endTimestampExclusive;
+        return new To(endTimestampExclusive);
+    }
+
+    static class To implements FixMessagePredicate
+    {
+        private final long endTimestampExclusive;
+
+        To(final long endTimestampExclusive)
+        {
+            this.endTimestampExclusive = endTimestampExclusive;
+        }
+
+        public boolean test(final FixMessageDecoder message)
+        {
+            return message.timestamp() < endTimestampExclusive;
+        }
+
+        public long endTimestampExclusive()
+        {
+            return endTimestampExclusive;
+        }
     }
 
     /**
@@ -166,13 +243,19 @@ public final class FixMessagePredicates
     public static Predicate<SessionHeaderDecoder> senderCompIdOf(final String senderCompId)
     {
         return headerMatches(
-            senderCompId, SessionHeaderDecoder::senderCompID, SessionHeaderDecoder::senderCompIDLength);
+            senderCompId,
+            HeaderField.SENDER_COMP_ID,
+            SessionHeaderDecoder::senderCompID,
+            SessionHeaderDecoder::senderCompIDLength);
     }
 
     public static Predicate<SessionHeaderDecoder> targetCompIdOf(final String targetCompId)
     {
         return headerMatches(
-            targetCompId, SessionHeaderDecoder::targetCompID, SessionHeaderDecoder::targetCompIDLength);
+            targetCompId,
+            HeaderField.TARGET_COMP_ID,
+            SessionHeaderDecoder::targetCompID,
+            SessionHeaderDecoder::targetCompIDLength);
     }
 
     public static Predicate<SessionHeaderDecoder> senderSubIdOf(final String senderSubId)
@@ -204,23 +287,82 @@ public final class FixMessagePredicates
         final Function<SessionHeaderDecoder, char[]> charExtractor,
         final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
     {
-        final char[] expectedChars = value.toCharArray();
-        return header ->
+        return headerMatches(value, HeaderField.NOT_OPTIMISED, charExtractor, lengthExtractor);
+    }
+
+    static Predicate<SessionHeaderDecoder> headerMatches(
+        final String value,
+        final HeaderField headerField,
+        final Function<SessionHeaderDecoder, char[]> charExtractor,
+        final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
+    {
+        return new HeaderMatches(value, headerField, charExtractor, lengthExtractor);
+    }
+
+    static class HeaderMatches implements Predicate<SessionHeaderDecoder>
+    {
+        final char[] expectedChars;
+        final HeaderField headerField;
+        final String value;
+
+        private final Function<SessionHeaderDecoder, char[]> charExtractor;
+        private final ToIntFunction<SessionHeaderDecoder> lengthExtractor;
+
+        HeaderMatches(
+            final String value,
+            final HeaderField headerField,
+            final Function<SessionHeaderDecoder, char[]> charExtractor,
+            final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
+        {
+            expectedChars = value.toCharArray();
+
+            this.value = value;
+            this.headerField = headerField;
+            this.charExtractor = charExtractor;
+            this.lengthExtractor = lengthExtractor;
+        }
+
+        public boolean test(final SessionHeaderDecoder header)
         {
             final char[] actualChars = charExtractor.apply(header);
             final int length = lengthExtractor.applyAsInt(header);
             return CodecUtil.equals(actualChars, expectedChars, length);
-        };
+        }
+
+        public Predicate<SessionHeaderDecoder> and(final Predicate<? super SessionHeaderDecoder> other)
+        {
+            return new And<>(this, other);
+        }
+
+        public Predicate<SessionHeaderDecoder> or(final Predicate<? super SessionHeaderDecoder> other)
+        {
+            return new Or<>(this, other);
+        }
     }
 
     public static FixMessagePredicate whereHeader(
         final FixDictionary fixDictionary,
         final Predicate<SessionHeaderDecoder> matches)
     {
-        final SessionHeaderDecoder header = fixDictionary.makeHeaderDecoder();
-        final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(1024);
-        final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-        return message ->
+        return new WhereHeader(fixDictionary, matches);
+    }
+
+    static class WhereHeader implements FixMessagePredicate
+    {
+        private final Predicate<SessionHeaderDecoder> matches;
+        private final SessionHeaderDecoder header;
+        private final ExpandableArrayBuffer buffer;
+        private final AsciiBuffer asciiBuffer;
+
+        WhereHeader(final FixDictionary fixDictionary, final Predicate<SessionHeaderDecoder> matches)
+        {
+            header = fixDictionary.makeHeaderDecoder();
+            this.matches = matches;
+            buffer = new ExpandableArrayBuffer(1024);
+            asciiBuffer = new MutableAsciiBuffer();
+        }
+
+        public boolean test(final FixMessageDecoder message)
         {
             final int length = message.bodyLength();
             buffer.checkLimit(length);
@@ -228,7 +370,12 @@ public final class FixMessagePredicates
             asciiBuffer.wrap(buffer);
             header.decode(asciiBuffer, 0, length);
             return matches.test(header);
-        };
+        }
+
+        public Predicate<SessionHeaderDecoder> matches()
+        {
+            return matches;
+        }
     }
 
     /**
