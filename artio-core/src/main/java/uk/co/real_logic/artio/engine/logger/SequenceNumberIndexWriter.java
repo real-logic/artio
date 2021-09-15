@@ -179,7 +179,7 @@ public class SequenceNumberIndexWriter implements Index
         reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, metaDataDir);
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
-            (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
+            (seqNum, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 // When possRetrans=true we should only update if the number is actually higher as
                 // possRetrans=true messages can be interleaved with normal messages /or/ the last message
                 saveRecord(seqNum, uuid, endPosition, NO_REQUIRED_POSITION, possRetrans));

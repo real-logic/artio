@@ -43,8 +43,10 @@ class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
         final FixPMessageDecoder fixPMessage,
         final DirectBuffer buffer,
         final int headerOffset,
-        final int totalLength, final long endPosition,
-        final int aeronSessionId)
+        final int totalLength,
+        final long endPosition,
+        final int aeronSessionId,
+        final long timestamp)
     {
         final long uuid = fixPMessage.sessionId();
         final int templateId = parser.templateId(buffer, headerOffset);
@@ -54,7 +56,7 @@ class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
         if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
         {
-            handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans);
+            handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans, timestamp);
         }
     }
 

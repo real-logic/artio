@@ -42,7 +42,8 @@ public abstract class AbstractFixPSequenceExtractor
         int headerOffset,
         int totalLength,
         long endPosition,
-        int aeronSessionId);
+        int aeronSessionId,
+        long timestamp);
 
     // Only here for implementations to update their internal state, does not need to invoke handler.
     public abstract void onRedactSequenceUpdate(long sessionId, int newSequenceNumber);

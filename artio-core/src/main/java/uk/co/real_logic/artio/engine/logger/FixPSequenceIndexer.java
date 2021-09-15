@@ -122,6 +122,7 @@ class FixPSequenceIndexer
         fixPMessage.wrap(buffer, offset, actingBlockLength, version);
         final int sofhOffset = offset + FixPMessageDecoder.BLOCK_LENGTH;
         final int headerOffset = sofhOffset + SOFH_LENGTH;
+        final long timestamp = fixPMessage.enqueueTime();
 
         sequenceExtractor.onMessage(
             fixPMessage,
@@ -129,7 +130,8 @@ class FixPSequenceIndexer
             headerOffset,
             totalLength,
             endPosition,
-            aeronSessionId);
+            aeronSessionId,
+            timestamp);
     }
 
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)

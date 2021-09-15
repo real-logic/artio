@@ -54,7 +54,8 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
         final int headerOffset,
         final int totalLength,
         final long endPosition,
-        final int aeronSessionId)
+        final int aeronSessionId,
+        final long timestamp)
     {
         final int templateId = beHeader.wrap(buffer, headerOffset).templateId();
         final int msgOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
@@ -62,7 +63,7 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
 
         if (templateId == NegotiateResponseDecoder.TEMPLATE_ID)
         {
-            onSequenceReset(totalLength, endPosition, aeronSessionId, sessionId);
+            onSequenceReset(totalLength, endPosition, aeronSessionId, sessionId, timestamp);
         }
         else if (templateId == SequenceDecoder.TEMPLATE_ID)
         {
@@ -74,16 +75,17 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
         {
             final Info info = lookupInfo(sessionId);
             info.lastSequenceNumber++;
-            onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
+            onSequenceNumber(totalLength, endPosition, aeronSessionId, info, timestamp);
         }
     }
 
     private void onSequenceReset(
-        final int totalLength, final long endPosition, final int aeronSessionId, final long sessionId)
+        final int totalLength, final long endPosition, final int aeronSessionId, final long sessionId,
+        final long timestamp)
     {
         final Info info = lookupInfo(sessionId);
         info.lastSequenceNumber = 0;
-        onSequenceNumber(totalLength, endPosition, aeronSessionId, info);
+        onSequenceNumber(totalLength, endPosition, aeronSessionId, info, timestamp);
     }
 
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
@@ -98,10 +100,10 @@ class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
     }
 
     private void onSequenceNumber(
-        final int totalLength, final long endPosition, final int aeronSessionId, final Info info)
+        final int totalLength, final long endPosition, final int aeronSessionId, final Info info, final long timestamp)
     {
         handler.onSequenceNumber(
-            info.lastSequenceNumber, info.sessionId, totalLength, endPosition, aeronSessionId, false);
+            info.lastSequenceNumber, info.sessionId, totalLength, endPosition, aeronSessionId, false, timestamp);
     }
 
     private Info onNewConnection(final long sessionId)

@@ -57,6 +57,8 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
  */
 public class ReplayIndex implements Index
 {
+    private static final long NO_TIMESTAMP = -1;
+
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -108,7 +110,7 @@ public class ReplayIndex implements Index
 
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
-            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans) ->
+            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
         checkIndexFileSize(indexFileSize);
@@ -186,6 +188,7 @@ public class ReplayIndex implements Index
         offset += frameHeaderDecoder.encodedLength();
 
         final boolean beginMessage = (flags & BEGIN_FRAG_FLAG) == BEGIN_FRAG_FLAG;
+        final int aeronSessionId = header.sessionId();
         if ((flags & UNFRAGMENTED) == UNFRAGMENTED || beginMessage)
         {
             switch (templateId)
@@ -205,7 +208,7 @@ public class ReplayIndex implements Index
                     final int sequenceIndex = throttleNotification.sequenceIndex();
 
                     sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, 0);
+                        endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, NO_TIMESTAMP);
                     break;
                 }
 
@@ -217,7 +220,7 @@ public class ReplayIndex implements Index
                     final int sequenceIndex = throttleReject.sequenceIndex();
 
                     sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, 0);
+                        endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, NO_TIMESTAMP);
                     break;
                 }
 
@@ -246,10 +249,10 @@ public class ReplayIndex implements Index
         {
             sessionIndex(continuedFixSessionId).onRecord(
                 endPosition, length,
-                continuedSequenceNumber, continuedSequenceIndex, header.sessionId(), recordingId, continuedTimestamp);
+                continuedSequenceNumber, continuedSequenceIndex, aeronSessionId, recordingId, continuedTimestamp);
         }
 
-        positionWriter.update(header.sessionId(), templateId, endPosition, recordingId);
+        positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
         positionWriter.updateChecksums();
     }
 
@@ -416,7 +419,10 @@ public class ReplayIndex implements Index
 
             endChangeOrdered(buffer, changePosition);
 
-            timeIndex.onRecord(recordingId, endPosition, timestamp);
+            if (timestamp != NO_TIMESTAMP)
+            {
+                timeIndex.onRecord(recordingId, endPosition, timestamp);
+            }
         }
 
         void reset()
