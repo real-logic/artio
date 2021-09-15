@@ -21,6 +21,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.FilterBy;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
@@ -64,7 +65,7 @@ public class FixArchiveScanner implements AutoCloseable
         private IdleStrategy idleStrategy;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
         private String logFileDir;
-        private boolean enableIndexScan = false;
+        private boolean enableIndexScan;
 
         public Configuration()
         {
@@ -103,9 +104,19 @@ public class FixArchiveScanner implements AutoCloseable
             return compactionSize;
         }
 
+        /**
+         * Sets the logFileDir used by your {@link EngineConfiguration}. This configuration option isn't required, it
+         * allows faster FixArchiveScanner operations for predicates where you're searching by time by using the
+         * {@link FixMessagePredicates#to(long)} or {@link FixMessagePredicates#from(long)} predicates.
+         * Setting this configuration option automatically enables index scanning.
+         *
+         * @param logFileDir the logFileDir configured in your {@link EngineConfiguration}.
+         * @return this
+         */
         public Configuration logFileDir(final String logFileDir)
         {
             this.logFileDir = logFileDir;
+            this.enableIndexScan = true;
             return this;
         }
 
@@ -114,6 +125,12 @@ public class FixArchiveScanner implements AutoCloseable
             return logFileDir;
         }
 
+        /**
+         * Enables or disables index scanning. If set to true, a {@link #logFileDir(String)} is required.
+         *
+         * @param enableIndexScan true to enable time based index scanning, false otherwise.
+         * @return this
+         */
         public Configuration enableIndexScan(final boolean enableIndexScan)
         {
             this.enableIndexScan = enableIndexScan;
@@ -124,10 +141,20 @@ public class FixArchiveScanner implements AutoCloseable
         {
             return enableIndexScan;
         }
+
+        private void conclude()
+        {
+            if (enableIndexScan && logFileDir == null)
+            {
+                throw new IllegalArgumentException("Please configure a logFileDir if you want to enable index scan");
+            }
+        }
     }
 
     public FixArchiveScanner(final Configuration configuration)
     {
+        configuration.conclude();
+
         this.idleStrategy = configuration.idleStrategy();
         compactionSize = configuration.compactionSize;
 
@@ -136,7 +163,8 @@ public class FixArchiveScanner implements AutoCloseable
         aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron).ownsAeronClient(true));
 
         final String logFileDir = configuration.logFileDir();
-        if (logFileDir != null && configuration.enableIndexScan())
+        final boolean enableIndexScan = configuration.enableIndexScan();
+        if (logFileDir != null && enableIndexScan)
         {
             this.logFileDir = logFileDir;
         }
