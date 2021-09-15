@@ -17,18 +17,21 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
-import org.agrona.collections.*;
+import org.agrona.collections.IntHashSet;
+import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.FilterBy;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static uk.co.real_logic.artio.LogTag.ARCHIVE_SCAN;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
 
 /**
@@ -53,7 +56,6 @@ public class FixArchiveScanner implements AutoCloseable
 
     private final String logFileDir;
 
-    private final ArchiveScanPredicateOptimizer predicateOptimizer;
     private final Long2ObjectHashMap<TimeIndexReader> streamIdToInboundTimeIndex = new Long2ObjectHashMap<>();
 
     public static class Configuration
@@ -137,27 +139,11 @@ public class FixArchiveScanner implements AutoCloseable
         if (logFileDir != null && configuration.enableIndexScan())
         {
             this.logFileDir = logFileDir;
-            this.predicateOptimizer = new ArchiveScanPredicateOptimizer(logFileDir);
         }
         else
         {
             this.logFileDir = null;
-            this.predicateOptimizer = null;
         }
-    }
-
-    private ReplayQuery newReplayQuery(final int defaultOutboundLibraryStream)
-    {
-        return new ReplayQuery(
-            logFileDir,
-            DEFAULT_LOGGER_CACHE_NUM_SETS,
-            DEFAULT_LOGGER_CACHE_SET_SIZE,
-            LoggerUtil::mapExistingFile,
-            defaultOutboundLibraryStream,
-            idleStrategy,
-            aeronArchive,
-            Throwable::printStackTrace,
-            -1);
     }
 
     public void scan(
@@ -183,6 +169,7 @@ public class FixArchiveScanner implements AutoCloseable
         scan(aeronChannel, queryStreamIds, fixHandler, fixPHandler, follow, archiveScannerStreamId);
     }
 
+    @SuppressWarnings("WhileLoopReplaceableByForEach")
     public void scan(
         final String aeronChannel,
         final IntHashSet queryStreamIds,
@@ -259,8 +246,6 @@ public class FixArchiveScanner implements AutoCloseable
         final FixMessagePredicate queryPredicate = ((FilterBy)fixHandler).predicate;
         try
         {
-            predicateOptimizer.optimizeSessionIds(queryPredicate);
-
             final IndexQuery indexQuery = ArchiveScanPlanner.extractIndexQuery(queryPredicate);
             if (DEBUG_LOG_ARCHIVE_SCAN)
             {
@@ -300,22 +285,6 @@ public class FixArchiveScanner implements AutoCloseable
             // Unable to create query plan
             return null;
         }
-    }
-
-    private List<ArchiveLocation> recordingRangesToArchiveLocations(final List<RecordingRange> recordingRanges)
-    {
-        final int size = recordingRanges.size();
-        final List<ArchiveLocation> archiveLocations = new ArrayList<>(size);
-        for (int i = 0; i < size; i++)
-        {
-            final RecordingRange range = recordingRanges.get(i);
-            final long startPosition = range.position;
-            archiveLocations.add(new ArchiveLocation(
-                range.recordingId,
-                startPosition,
-                startPosition + range.length));
-        }
-        return archiveLocations;
     }
 
     private boolean checkCompletion(final RecordingPoller[] pollers)

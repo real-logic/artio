@@ -328,16 +328,6 @@ public final class FixMessagePredicates
             final int length = lengthExtractor.applyAsInt(header);
             return CodecUtil.equals(actualChars, expectedChars, length);
         }
-
-        public Predicate<SessionHeaderDecoder> and(final Predicate<? super SessionHeaderDecoder> other)
-        {
-            return new And<>(this, other);
-        }
-
-        public Predicate<SessionHeaderDecoder> or(final Predicate<? super SessionHeaderDecoder> other)
-        {
-            return new Or<>(this, other);
-        }
     }
 
     public static FixMessagePredicate whereHeader(
