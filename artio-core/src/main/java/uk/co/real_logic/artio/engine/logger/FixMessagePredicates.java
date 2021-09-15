@@ -290,7 +290,7 @@ public final class FixMessagePredicates
         return headerMatches(value, HeaderField.NOT_OPTIMISED, charExtractor, lengthExtractor);
     }
 
-    static Predicate<SessionHeaderDecoder> headerMatches(
+    private static Predicate<SessionHeaderDecoder> headerMatches(
         final String value,
         final HeaderField headerField,
         final Function<SessionHeaderDecoder, char[]> charExtractor,
