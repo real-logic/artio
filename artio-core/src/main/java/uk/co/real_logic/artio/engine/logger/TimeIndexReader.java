@@ -99,7 +99,7 @@ class TimeIndexReader
                 {
                     case SCAN_START:
                     {
-                        if (timestampInNs > beginTimestampInclusive)
+                        if (timestampInNs >= beginTimestampInclusive)
                         {
                             state = SCAN_END;
                             // Deliberate fall through

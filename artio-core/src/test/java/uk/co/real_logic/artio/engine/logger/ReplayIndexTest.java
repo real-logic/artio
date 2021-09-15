@@ -109,7 +109,8 @@ public class ReplayIndexTest extends AbstractLogTest
             recordingIdLookup,
             new Long2LongHashMap(Session.UNKNOWN),
             FixPProtocolType.ILINK_3,
-            mock(SequenceNumberIndexReader.class));
+            mock(SequenceNumberIndexReader.class),
+            DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS);
     }
 
     private Aeron aeron()

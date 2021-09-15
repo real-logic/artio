@@ -184,7 +184,8 @@ public class EngineContext implements AutoCloseable
             recordingIdLookup,
             connectionIdToILinkUuid,
             configuration.supportedFixPProtocolType(),
-            reader);
+            reader,
+            configuration.timeIndexReplayFlushIntervalInNs());
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)

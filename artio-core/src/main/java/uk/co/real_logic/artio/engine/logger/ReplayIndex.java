@@ -32,7 +32,6 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
@@ -98,7 +97,8 @@ public class ReplayIndex implements Index
         final RecordingIdLookup recordingIdLookup,
         final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType,
-        final SequenceNumberIndexReader reader)
+        final SequenceNumberIndexReader reader,
+        final long timeIndexReplayFlushIntervalInNs)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -120,7 +120,7 @@ public class ReplayIndex implements Index
             positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup);
         positionReader = new IndexedPositionReader(positionBuffer);
         timeIndex = new TimeIndexWriter(
-            logFileDir, requiredStreamId, TimeUnit.SECONDS.toNanos(1), errorHandler);
+            logFileDir, requiredStreamId, timeIndexReplayFlushIntervalInNs, errorHandler);
     }
 
     private void onFixPSequenceUpdate(

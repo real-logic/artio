@@ -105,12 +105,27 @@ class TimeIndexWriter implements AutoCloseable
             final File file = fileLocation(logFileDir, streamId, recordingId);
             if (file.exists())
             {
-                file.delete();
-                this.file = createFile(file);
+                this.file = loadFile(file);
             }
             else
             {
                 this.file = createFile(file);
+            }
+            recordEncoder.wrap(buffer, 0);
+        }
+
+        private RandomAccessFile loadFile(final File file)
+        {
+            try
+            {
+                final RandomAccessFile raf = new RandomAccessFile(file, "rwd");
+                raf.seek(raf.length());
+                return raf;
+            }
+            catch (final IOException e)
+            {
+                errorHandler.onError(e);
+                return null;
             }
         }
 
@@ -120,7 +135,6 @@ class TimeIndexWriter implements AutoCloseable
             {
                 final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
                 recordEncoder.wrapAndApplyHeader(buffer, 0, headerEncoder);
-                recordEncoder.wrap(buffer, 0);
 
                 final RandomAccessFile raf = new RandomAccessFile(file, "rwd");
                 raf.write(buffer.byteArray(), 0, MessageHeaderEncoder.ENCODED_LENGTH);
@@ -175,6 +189,14 @@ class TimeIndexWriter implements AutoCloseable
         void close()
         {
             update(endPosition, timestampInNs);
+            try
+            {
+                file.getFD().sync();
+            }
+            catch (final IOException e)
+            {
+                errorHandler.onError(e);
+            }
             Exceptions.closeAll(file);
         }
     }

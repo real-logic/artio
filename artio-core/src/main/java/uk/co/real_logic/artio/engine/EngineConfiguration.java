@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
@@ -51,6 +52,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
@@ -183,6 +185,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final long MAX_COD_TIMEOUT_IN_NS = 60_000_000_000L;
     public static final long MAX_COD_TIMEOUT_IN_MS = 60_000L;
 
+    public static final long DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS = TimeUnit.SECONDS.toNanos(1);
+
     static
     {
         final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
@@ -281,6 +285,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private FixPCancelOnDisconnectTimeoutHandler fixPCancelOnDisconnectTimeoutHandler = null;
     private int throttleWindowInMs = NO_THROTTLE_WINDOW;
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
+    private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
 
     // ---------------------
     // BEGIN SETTERS
@@ -1096,6 +1101,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the interval that the time index, used for optimizing the {@link FixArchiveScanner}.
+     *
+     * Larger intervals reduce time index disk space consumption, smaller intervals improve time based archive scans.
+     *
+     * @param timeIndexReplayFlushIntervalInNs the interval before a record is written for the time index.
+     * @return this
+     */
+    public EngineConfiguration timeIndexReplayFlushIntervalInNs(final long timeIndexReplayFlushIntervalInNs)
+    {
+        this.timeIndexReplayFlushIntervalInNs = timeIndexReplayFlushIntervalInNs;
+        return this;
+    }
+
     // ---------------------
     // END SETTERS
     // ---------------------
@@ -1758,6 +1777,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int throttleLimitOfMessages()
     {
         return throttleLimitOfMessages;
+    }
+
+    public long timeIndexReplayFlushIntervalInNs()
+    {
+        return timeIndexReplayFlushIntervalInNs;
     }
 
     // ---------------------
