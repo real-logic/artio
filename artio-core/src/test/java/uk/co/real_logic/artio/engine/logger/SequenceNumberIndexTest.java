@@ -37,6 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.MappedFile;
@@ -123,6 +124,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         cleanupMediaDriver(mediaDriver);
 
         Mockito.framework().clearInlineMocks();
+        CloseChecker.validateAll();
     }
 
     @Test

@@ -26,8 +26,10 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import java.io.File;
 import java.util.stream.LongStream;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 
 public class TimeIndexTest

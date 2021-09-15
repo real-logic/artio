@@ -60,6 +60,14 @@ public final class CloseChecker
         }
     }
 
+    public static synchronized void validateAll()
+    {
+        if (CLOSE_CHECKER_ENABLED)
+        {
+            RESOURCES.keySet().forEach(CloseChecker::validate);
+        }
+    }
+
     public static synchronized void validate(final String resourceId)
     {
         if (CLOSE_CHECKER_ENABLED)

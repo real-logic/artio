@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -225,8 +226,10 @@ public class FramerTest
         {
             client.close();
         }
+        engineConfiguration.close();
 
         Mockito.framework().clearInlineMocks();
+        CloseChecker.validateAll();
     }
 
     @Test

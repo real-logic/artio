@@ -20,6 +20,7 @@ import org.agrona.IoUtil;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.CommonConfiguration;
 
 import java.io.File;
@@ -69,6 +70,7 @@ public class MappedFile implements AutoCloseable
 
     public MappedFile(final File file, final FileChannel fileChannel, final AtomicBuffer buffer)
     {
+        CloseChecker.onOpen(file.getAbsolutePath(), this);
         this.file = file;
         this.fileChannel = fileChannel;
         this.buffer = buffer;
@@ -117,6 +119,7 @@ public class MappedFile implements AutoCloseable
 
     public void close()
     {
+        CloseChecker.onClose(file.getAbsolutePath(), this);
         IoUtil.unmap(buffer.byteBuffer());
         CloseHelper.close(fileChannel);
     }
