@@ -52,6 +52,7 @@ public final class FixArchivePrinter
     }
 
     private FixPProtocolType fixPProtocolType = FixPProtocolType.ILINK_3;
+    private String logFileDir = null;
     private final IntHashSet queryStreamIds = new IntHashSet();
     private String aeronDirectoryName = null;
     private String aeronChannel = null;
@@ -72,7 +73,7 @@ public final class FixArchivePrinter
         try
         {
             scanArchive(aeronDirectoryName, aeronChannel, queryStreamIds, predicate, follow, headerPredicate,
-                archiveScannerStreamId, fixDictionaryType, fixPProtocolType);
+                archiveScannerStreamId, fixDictionaryType, fixPProtocolType, logFileDir);
         }
         finally
         {
@@ -126,66 +127,54 @@ public final class FixArchivePrinter
                 case "from":
                     predicate = from(parseLong(optionValue)).and(predicate);
                     break;
-
                 case "to":
                     predicate = to(parseLong(optionValue)).and(predicate);
                     break;
-
                 case "message-types":
                     final String[] messageTypes = optionValue.split(",");
                     predicate = messageTypeOf(messageTypes).and(predicate);
                     break;
-
                 case "sender-comp-id":
                     headerPredicate = safeAnd(headerPredicate, senderCompIdOf(optionValue));
                     break;
-
                 case "target-comp-id":
                     headerPredicate = safeAnd(headerPredicate, targetCompIdOf(optionValue));
                     break;
-
                 case "sender-sub-id":
                     headerPredicate = safeAnd(headerPredicate, senderSubIdOf(optionValue));
                     break;
-
                 case "target-sub-id":
                     headerPredicate = safeAnd(headerPredicate, targetSubIdOf(optionValue));
                     break;
-
                 case "sender-location-id":
                     headerPredicate = safeAnd(headerPredicate, senderLocationIdOf(optionValue));
                     break;
-
                 case "target-location-id":
                     headerPredicate = safeAnd(headerPredicate, targetLocationIdOf(optionValue));
                     break;
-
                 case "query-stream-id":
                     queryStreamIds.add(Integer.parseInt(optionValue));
                     break;
-
                 case "archive-scanner-stream-id":
                     archiveScannerStreamId = Integer.parseInt(optionValue);
                     break;
-
                 case "aeron-dir-name":
                     aeronDirectoryName = optionValue;
                     break;
-
                 case "aeron-channel":
                     aeronChannel = optionValue;
                     break;
-
                 case "offline-archive-dir":
                     offlineArchiveDirectoryName = optionValue;
                     break;
-
                 case "fix-dictionary":
                     fixDictionaryType = FixDictionary.find(optionValue);
                     break;
-
                 case "fixp-protocol":
                     fixPProtocolType = FixPProtocolType.valueOf(optionValue.toUpperCase());
+                    break;
+                case "log-file-dir":
+                    logFileDir = optionValue;
                     break;
             }
         }
@@ -226,7 +215,8 @@ public final class FixArchivePrinter
         final Predicate<SessionHeaderDecoder> headerPredicate,
         final int archiveScannerStreamId,
         final Class<? extends FixDictionary> fixDictionaryType,
-        final FixPProtocolType fixPProtocolType)
+        final FixPProtocolType fixPProtocolType,
+        final String logFileDir)
     {
         final FixDictionary fixDictionary = fixDictionaryType == null ? null : FixDictionary.of(fixDictionaryType);
         FixMessagePredicate predicate = otherPredicate;
@@ -238,6 +228,11 @@ public final class FixArchivePrinter
         final FixArchiveScanner.Configuration configuration = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(aeronDirectoryName)
             .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        if (logFileDir != null)
+        {
+            configuration.logFileDir(logFileDir);
+        }
 
         try (FixArchiveScanner scanner = new FixArchiveScanner(configuration))
         {
@@ -344,6 +339,11 @@ public final class FixArchivePrinter
         printOption(
             "help",
             "Only prints this help message.",
+            false);
+        printOption(
+            "log-file-dir",
+            "Specifies a logFileDir option, this should be the same as provided to your EngineConfiguration." +
+            "  This can be used to optimize scans that are time based",
             false);
     }
 
