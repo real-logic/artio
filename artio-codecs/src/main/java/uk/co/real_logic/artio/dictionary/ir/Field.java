@@ -122,8 +122,12 @@ public final class Field implements Element
         PRICE(false, false, true, false, false),
         PRICEOFFSET(false, false, true, false, false),
         QTY(false, false, true, false, false),
-        PERCENTAGE(false, false, true, false, false), // Percentage represented as a float
-        AMT(false, false, true, false, false), // Float amount, not to be confused with boolean Y/N AMT
+        // Not standard FIX but was observed in the wild in an IB's FIX 4.2 dictonary
+        QUANTITY(false, false, true, false, false),
+        // Percentage represented as a float
+        PERCENTAGE(false, false, true, false, false),
+        // Float amount, not to be confused with boolean Y/N AMT
+        AMT(false, false, true, false, false),
 
         CHAR(false, false, false, false, true),
 
@@ -227,7 +231,23 @@ public final class Field implements Element
                 return UTCDATEONLY;
             }
 
-            return valueOf(name);
+            // Fix typo in bad dictionary
+            if ("STIRNG".equals(name))
+            {
+                return STRING;
+            }
+
+            // Standardise naming from bad dictionaries
+            if ("MONTH-YEAR".equals(name))
+            {
+                return MONTHYEAR;
+            }
+            if ("RATE".equals(name))
+            {
+                return PRICE;
+            }
+
+            return valueOf(name.trim());
         }
     }
 

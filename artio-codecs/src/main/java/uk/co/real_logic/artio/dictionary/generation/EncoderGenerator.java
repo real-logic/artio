@@ -580,6 +580,7 @@ class EncoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return decimalFloatSetter(fieldName, hasField, className, hasAssign, enumSetter);
@@ -974,6 +975,7 @@ class EncoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return putValue(fieldName, tag, "Float", enablingSuffix, indent);
@@ -1401,6 +1403,7 @@ class EncoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
 

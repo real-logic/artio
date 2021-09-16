@@ -298,6 +298,7 @@ public abstract class Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return resetRequiredFloat(name);
@@ -590,6 +591,7 @@ public abstract class Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 if (flyweightsEnabled)

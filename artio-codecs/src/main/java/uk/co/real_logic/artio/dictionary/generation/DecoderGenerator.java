@@ -1193,6 +1193,7 @@ class DecoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return lengthBasedFieldLazyInitialization(fieldName, "getFloatFlyweight(buffer, " +
@@ -1272,6 +1273,7 @@ class DecoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return " = DecimalFloat.newNaNValue()";
@@ -1354,6 +1356,7 @@ class DecoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 return "DecimalFloat";
@@ -1736,6 +1739,7 @@ class DecoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
                 if (flyweightsEnabled)
@@ -2045,6 +2049,7 @@ class DecoderGenerator extends Generator
             case PRICE:
             case PRICEOFFSET:
             case QTY:
+            case QUANTITY:
             case PERCENTAGE:
             case AMT:
 

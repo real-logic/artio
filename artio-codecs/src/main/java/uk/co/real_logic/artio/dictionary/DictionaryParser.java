@@ -33,6 +33,8 @@ import javax.xml.xpath.XPathFactory;
 import java.io.InputStream;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toMap;
 import static javax.xml.xpath.XPathConstants.NODESET;
@@ -131,10 +133,18 @@ public final class DictionaryParser
 
     private void validateDataFieldsInAggregate(final Aggregate aggregate)
     {
-        final Map<String, Field> nameToField = aggregate
-            .fieldEntries()
-            .map(entry -> (Field)entry.element())
-            .collect(toMap(Field::name, f -> f));
+        final Map<String, Field> nameToField;
+        try
+        {
+            nameToField = aggregate
+                .fieldEntries()
+                .map(entry -> (Field)entry.element())
+                .collect(toMap(Field::name, f -> f));
+        }
+        catch (final IllegalStateException e)
+        {
+            throw new IllegalStateException("Exception when processing: " + aggregate.name(), e);
+        }
 
         for (final Entry entry : aggregate.entries())
         {
@@ -383,14 +393,28 @@ public final class DictionaryParser
 
     private boolean isRequired(final NamedNodeMap attributes)
     {
-        return "Y".equals(getValue(attributes, "required"));
+        // We interpret missing required clauses as being optional.
+        final String required = getOptionalValue(attributes, "required");
+        return "Y".equals(required);
     }
 
     private String getValue(final NamedNodeMap attributes, final String attributeName)
     {
         Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
-        return Objects.requireNonNull(getOptionalValue(attributes, attributeName), "Empty item for:" +
-           attributeName);
+        final String optionalValue = getOptionalValue(attributes, attributeName);
+        return Objects.requireNonNull(optionalValue,
+            "Empty item for: " + attributeName + " in " + toString(attributes));
+    }
+
+    private String toString(final NamedNodeMap attributes)
+    {
+        return IntStream.range(0, attributes.getLength())
+                        .mapToObj(i ->
+                        {
+                            final Node node = attributes.item(i);
+                            return node.getNodeName() + "=" + node.getNodeValue();
+                        })
+                        .collect(Collectors.joining(",", "{", "}"));
     }
 
     private String getOptionalValue(final NamedNodeMap attributes, final String attributeName)
