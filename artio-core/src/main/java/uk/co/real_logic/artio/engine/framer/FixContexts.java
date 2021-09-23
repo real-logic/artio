@@ -152,8 +152,14 @@ public class FixContexts implements SessionContexts
         while (filePosition < lastRecordStart)
         {
             sectorEnd = validateSectorChecksum(filePosition, sectorEnd);
+
             long sessionId = wrap(sessionIdDecoder, filePosition);
-            if (sessionId == 0)
+            // If filePosition is close enough to the end of the sector then sessionId won't be zero'd
+            // even if there's a gap before the next sector because the checksum will be written into
+            // some of the bytes of the session Id.
+            final int startOfNextChecksum = sectorEnd - CHECKSUM_SIZE;
+            final int endOfSessionId = filePosition + SessionIdDecoder.sessionIdEncodingLength();
+            if (sessionId == 0 || (startOfNextChecksum < endOfSessionId && filePosition != sectorEnd))
             {
                 final int nextSectorPeekPosition = sectorEnd;
                 if (nextSectorPeekPosition > lastRecordStart)
@@ -186,6 +192,7 @@ public class FixContexts implements SessionContexts
                 final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
                 final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
                 final String lastFixDictionary = sessionIdDecoder.lastFixDictionary();
+
                 filePosition = sessionIdDecoder.limit();
                 final CompositeKey compositeKey = idStrategy.load(
                     buffer, filePosition, compositeKeyLength);
@@ -194,13 +201,22 @@ public class FixContexts implements SessionContexts
                     return requiresCompaction;
                 }
 
-                final FixDictionary thisDictionary = (dictionary == null) ?
-                    FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
-                final SessionContext sessionContext = new SessionContext(compositeKey,
-                    sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
-                    sessionIdDecoder.initialOffset(),
-                    initialSequenceIndex, thisDictionary);
-                compositeToContext.put(compositeKey, sessionContext);
+                try
+                {
+                    final FixDictionary thisDictionary = (dictionary == null) ?
+                        FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
+                    final SessionContext sessionContext = new SessionContext(compositeKey,
+                        sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
+                        sessionIdDecoder.initialOffset(),
+                        initialSequenceIndex, thisDictionary);
+                    compositeToContext.put(compositeKey, sessionContext);
+                }
+                catch (final Exception e)
+                {
+                    // Don't block the startup / load of the engine if there's an invalid fix dictionary error
+                    // just report it to the user
+                    errorHandler.onError(e);
+                }
 
                 counter = Math.max(counter, sessionId + 1);
 
@@ -336,7 +352,6 @@ public class FixContexts implements SessionContexts
                 sessionId,
                 compositeKey)));
             context.filePosition(OUT_OF_SPACE);
-
         }
         else
         {

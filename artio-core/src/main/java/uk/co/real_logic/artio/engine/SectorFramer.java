@@ -48,6 +48,7 @@ public class SectorFramer
         final int nextSectorStart = nextSectorStart(filePosition);
         checksumOffset = nextSectorStart - CHECKSUM_SIZE;
         final int proposedRecordEnd = filePosition + length;
+
         // If the data would span the end of a sector then
         if (proposedRecordEnd > checksumOffset)
         {
