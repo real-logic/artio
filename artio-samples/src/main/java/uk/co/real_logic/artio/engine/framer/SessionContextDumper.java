@@ -36,7 +36,7 @@ public final class SessionContextDumper
             mappedFile,
             SessionIdStrategy.senderAndTarget(),
             1,
-            Throwable::printStackTrace);
+            throwable -> throwable.printStackTrace(System.out));
 
         contexts
             .allSessions()
