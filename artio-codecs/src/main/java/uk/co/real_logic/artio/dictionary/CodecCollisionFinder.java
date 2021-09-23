@@ -31,9 +31,12 @@ public class CodecCollisionFinder
 {
     private static final boolean PRINT_FIELD_TYPE_COLL = false;
     private static final boolean PRINT_FIELD_TYPE_COLL_IF_FIXABLE = false;
-    private static final boolean PRINT_FIELD_NUMBER_COLL = true;
+
+    // Same number, different name
+    private static final boolean PRINT_FIELD_NUMBER_COLL = false;
+
     private static final boolean PRINT_ENUM_NON_ENUM_COLL = false;
-    private static final boolean PRINT_ENUM_VALUE_COLL = false;
+    private static final boolean PRINT_ENUM_VALUE_COLL = true;
 
     private static PrintStream OUT;
     
@@ -63,7 +66,7 @@ public class CodecCollisionFinder
     private static void findFieldCollisions(final Map<File, Dictionary> fileToDictionary)
     {
         final Map<String, Field> allFields = new HashMap<>();
-        final Int2ObjectHashMap<Field> numberToField = new Int2ObjectHashMap<>();
+        final Int2ObjectHashMap<Map<String, Integer>> numberToField = new Int2ObjectHashMap<>();
 
         for (final Map.Entry<File, Dictionary> pair : fileToDictionary.entrySet())
         {
@@ -141,23 +144,48 @@ public class CodecCollisionFinder
                 }
             }
         }
+
+        printNumberCollisions(numberToField);
     }
 
-    private static void checkNumberCollisions(final Int2ObjectHashMap<Field> numberToField, final Field field)
+    private static void printNumberCollisions(final Int2ObjectHashMap<Map<String, Integer>> numberToField)
     {
-        final int number = field.number();
-        final Field oldField = numberToField.get(number);
-        if (oldField == null)
+        if (PRINT_FIELD_NUMBER_COLL)
         {
-            numberToField.put(number, field);
-        }
-        else
-        {
-            final String name = field.name();
-            final String oldName = oldField.name();
-            if (PRINT_FIELD_NUMBER_COLL && !name.equals(oldName))
+            OUT.println("Field collision - same number, different name:");
+            numberToField.forEach((number, nameToCount) ->
             {
-                // TODO:
+                if (nameToCount.size() > 1)
+                {
+                    OUT.println("number = " + number);
+                    nameToCount.forEach((name, count) ->
+                    {
+                        OUT.println("name = " + name + ", count = " + count);
+                    });
+                }
+            });
+        }
+    }
+
+    private static void checkNumberCollisions(
+        final Int2ObjectHashMap<Map<String, Integer>> numberToField, final Field field)
+    {
+        if (PRINT_FIELD_NUMBER_COLL)
+        {
+            final int number = field.number();
+            final String name = field.name();
+            Map<String, Integer> nameToCount = numberToField.get(number);
+            if (nameToCount == null)
+            {
+                nameToCount = new HashMap<>();
+                nameToCount.put(name, 1);
+                numberToField.put(number, nameToCount);
+            }
+            else
+            {
+                final Integer count = nameToCount.get(name);
+                final int newCount = count == null ? 1 : count + 1;
+                nameToCount.put(name, newCount);
             }
         }
     }
