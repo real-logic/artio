@@ -80,6 +80,7 @@ class CodecSharer
                     Message sharedMessage = nameToMessage.get(name);
                     if (sharedMessage == null)
                     {
+                        msg.isInParent(true);
                         nameToMessage.put(name, copyOf(msg));
                     }
                     else
@@ -103,7 +104,39 @@ class CodecSharer
             });
         }
 
+        identifyMessageEntriesInParent(nameToMessage);
+
         return new ArrayList<>(nameToMessage.values());
+    }
+
+    private void identifyMessageEntriesInParent(final Map<String, Message> nameToMessage)
+    {
+        inputDictionaries.forEach(dictionary ->
+        {
+            dictionary.messages().forEach(msg ->
+            {
+                final String name = msg.name();
+                final Message sharedMessage = nameToMessage.get(name);
+                if (sharedMessage != null)
+                {
+                    identifyAggregateEntriesInParent(msg, sharedMessage);
+                }
+            });
+        });
+    }
+
+    private void identifyAggregateEntriesInParent(final Aggregate agg, final Aggregate sharedAgg)
+    {
+        sharedAgg.entries().forEach(sharedEntry ->
+        {
+            agg.entries().forEach(entry ->
+            {
+                if (entry.name().equals(sharedEntry.name()))
+                {
+                    entry.isInParent(true);
+                }
+            });
+        });
     }
 
     private void connectToSharedDictionary(final Dictionary sharedDictionary, final Dictionary dict)
@@ -142,7 +175,8 @@ class CodecSharer
             if (sharedField == null)
             {
                 return copyOf(field);
-            } else
+            }
+            else
             {
                 // TODO: merge fields and check collissions
                 return sharedField;
@@ -174,11 +208,21 @@ class CodecSharer
             final Component component = getter.apply(dict);
             mergeAggregate(component, sharedComponent);
         });
+
+        inputDictionaries.forEach(dict ->
+        {
+            final Component component = getter.apply(dict);
+            identifyAggregateEntriesInParent(component, sharedComponent);
+        });
+
         return sharedComponent;
     }
 
     private void mergeAggregate(final Aggregate aggregate, final Aggregate sharedAggregate)
     {
+//        System.out.println("aggregate = " + aggregate);
+        aggregate.isInParent(true);
+
         final Map<String, Entry> nameToEntry = nameToEntry(aggregate.entries());
         final Iterator<Entry> it = sharedAggregate.entries().iterator();
         while (it.hasNext())
@@ -191,10 +235,9 @@ class CodecSharer
             }
             else
             {
+                // TODO: check collisions
                 // Only required if all are required
                 sharedEntry.required(sharedEntry.required() && entry.required());
-
-                // TODO: check collisions
             }
         }
     }

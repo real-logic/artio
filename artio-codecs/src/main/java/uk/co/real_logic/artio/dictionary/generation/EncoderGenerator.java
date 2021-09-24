@@ -61,7 +61,6 @@ class EncoderGenerator extends Generator
         "BusinessMessageRejectEncoder"));
 
     private static final String TRAILER_ENCODE_PREFIX =
-        "    // |10=...|\n" +
         "    long finishMessage(final MutableAsciiBuffer buffer, final int messageStart, final int offset)\n" +
         "    {\n" +
         "        int position = offset;\n" +
@@ -77,7 +76,6 @@ class EncoderGenerator extends Generator
         "        return Encoder.result(position - messageStart, messageStart);\n" +
         "    }" +
         "\n" +
-        "    // Optional trailer fields\n" +
         "    int startTrailer(final MutableAsciiBuffer buffer, final int offset)\n" +
         "    {\n" +
         "        final int start = offset;\n" +
@@ -86,7 +84,6 @@ class EncoderGenerator extends Generator
 
     // returns offset where message starts
     private static final String HEADER_ENCODE_PREFIX =
-        "    // 8=...|9=...|\n" +
         "    int finishHeader(final MutableAsciiBuffer buffer, final int bodyStart, final int bodyLength)\n" +
         "    {\n" +
         "        int position = bodyStart - 1;\n" +
@@ -264,7 +261,7 @@ class EncoderGenerator extends Generator
         {
             interfaces = emptyList();
         }
-        out.append(classDeclaration(className, interfaces, type == GROUP));
+        out.append(classDeclaration(className, interfaces, type == GROUP, aggregate.isInParent()));
         out.append(constructor(className, aggregate, type, dictionary));
         if (isMessage && !shared())
         {
@@ -279,9 +276,10 @@ class EncoderGenerator extends Generator
         {
             out.append(
                 String.format("\n" +
-                "    private static final byte[] DEFAULT_BEGIN_STRING=\"%s\".getBytes(StandardCharsets.US_ASCII);" +
+                "    %2$s static final byte[] DEFAULT_BEGIN_STRING=\"%1$s\".getBytes(StandardCharsets.US_ASCII);" +
                 "\n\n",
-                beginString));
+                beginString,
+                scope));
         }
 
         precomputedHeaders(out, aggregate.entries());
@@ -296,17 +294,19 @@ class EncoderGenerator extends Generator
     private String classDeclaration(
         final String className,
         final List<String> interfaces,
-        final boolean isStatic)
+        final boolean isStatic,
+        final boolean inParent)
     {
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\npublic %3$s%4$sclass %1$s%2$s\n" +
+            "\n\npublic %3$s%4$sclass %1$s%5$s%2$s\n" +
             "{\n",
             className,
             interfaceList,
             isStatic ? "static " : "",
-            shared() ? "abstract " : "");
+            shared() ? "abstract " : "",
+            inParent ? " extends " + parentDictPackage() + "." + className : "");
     }
 
     private String completeResetMethod(
@@ -526,7 +526,7 @@ class EncoderGenerator extends Generator
     private void generateSetter(
         final String className, final Entry entry, final Writer out, final Set<String> optionalFields)
     {
-        if (!isBodyLength(entry))
+        if (!isBodyLength(entry) && !entry.isInParent())
         {
             entry.forEach(
                 (field) -> out.append(generateFieldSetter(className, field, optionalFields)),
@@ -539,7 +539,7 @@ class EncoderGenerator extends Generator
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
-        final String hasField = String.format("    private boolean has%1$s;\n\n", name) + hasGetter(name);
+        final String hasField = String.format("    %2$s boolean has%1$s;\n\n", name, scope) + hasGetter(name);
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
@@ -647,9 +647,9 @@ class EncoderGenerator extends Generator
     private String generateBytesSetter(final String className, final String fieldName, final String name)
     {
         return String.format(
-            "    private final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
-            "    private int %1$sOffset = 0;\n\n" +
-            "    private int %1$sLength = 0;\n\n" +
+            "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
+            "    %4$s int %1$sOffset = 0;\n\n" +
+            "    %4$s int %1$sLength = 0;\n\n" +
             "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s.wrap(value);\n" +
@@ -701,7 +701,8 @@ class EncoderGenerator extends Generator
             "    }\n\n",
             fieldName,
             className,
-            name);
+            name,
+            scope);
     }
 
     private String generateStringSetter(
@@ -775,7 +776,7 @@ class EncoderGenerator extends Generator
             "        return %3$s;\n" +
             "    }\n\n" +
             "%7$s",
-            isBodyLength(name) ? "public" : "private",
+            isBodyLength(name) ? "public" : scope,
             type,
             fieldName,
             optionalField,
@@ -792,7 +793,7 @@ class EncoderGenerator extends Generator
         final String enumSetter)
     {
         return String.format(
-            "    private final DecimalFloat %1$s = new DecimalFloat();\n\n" +
+            "    %6$s final DecimalFloat %1$s = new DecimalFloat();\n\n" +
             "%2$s" +
             "    public %3$s %1$s(DecimalFloat value)\n" +
             "    {\n" +
@@ -815,7 +816,8 @@ class EncoderGenerator extends Generator
             optionalField,
             className,
             optionalAssign,
-            enumSetter);
+            enumSetter,
+            scope);
     }
 
     private String enumSetter(
@@ -1144,11 +1146,12 @@ class EncoderGenerator extends Generator
             .collect(joining(", ", "", ", (byte) '='"));
 
         out.append(String.format(
-            "    private static final int %sHeaderLength = %d;\n" +
-            "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+            "    %4$s static final int %sHeaderLength = %d;\n" +
+            "    %4$s static final byte[] %1$sHeader = new byte[] {%s};\n\n",
             fieldName,
             length + 1,
-            bytes));
+            bytes,
+            scope));
     }
 
     protected String stringAppendTo(final String fieldName)

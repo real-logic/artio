@@ -96,6 +96,7 @@ public abstract class Generator
     private final Class<?> rejectUnknownEnumValueClass;
     protected final boolean flyweightsEnabled;
     protected final String codecRejectUnknownEnumValueEnabled;
+    protected final String scope;
 
     protected Generator(
         final Dictionary dictionary,
@@ -117,6 +118,8 @@ public abstract class Generator
         this.rejectUnknownEnumValueClass = rejectUnknownEnumValueClass;
         this.flyweightsEnabled = flyweightsEnabled;
         this.codecRejectUnknownEnumValueEnabled = codecRejectUnknownEnumValueEnabled;
+
+        scope = dictionary.shared() ? "protected" : "private";
     }
 
     public void generate()
@@ -238,7 +241,7 @@ public abstract class Generator
         return resetAllBy(
             entries,
             methods,
-            Entry::isField,
+            entry -> entry.isField() && !entry.isInParent(),
             (entry) -> resetField(entry.required(), (Field)entry.element()),
             this::callResetMethod);
     }
@@ -380,7 +383,7 @@ public abstract class Generator
         final String name = entry.name();
         return entry.required() ?
             "" :
-            String.format("    private boolean has%1$s;\n\n", name);
+            String.format("    %2$s boolean has%1$s;\n\n", name, scope);
     }
 
     protected String resetNothing(final String name)
@@ -671,7 +674,17 @@ public abstract class Generator
 
     boolean shared()
     {
-        return this.dictionary.shared();
+        return dictionary.shared();
+    }
+
+    boolean hasParent()
+    {
+        return dictionary.sharedParent() != null;
+    }
+
+    String parentDictPackage()
+    {
+        return thisPackage.replace("." + dictionary.name(), "");
     }
 
     protected abstract String stringAppendTo(String fieldName);

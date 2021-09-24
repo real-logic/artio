@@ -84,6 +84,7 @@ public class SharedCodecsTest
             System.out.println(sources);
         }
 //        System.out.println(sources);
+//        System.out.println("sources.keySet() = " + sources.keySet());
         System.out.println("sources.toString().length() = " + sources.toString().length());
 
         final String nosEncoderName = executionReportEncoder(config, DICT_1_NORM);
@@ -168,9 +169,11 @@ public class SharedCodecsTest
         assertAbstract(executionReportDecoderShared);
         assertNotAbstract(executionReportDecoder2);
 
-//        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder1));
-//        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder2));
-//        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder3));
+        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder1));
+        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder2));
+        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder3));
+
+        assertTrue(executionReportDecoderShared.isAssignableFrom(executionReportDecoder2));
     }
 
     private void assertAbstract(final Class<?> cls)

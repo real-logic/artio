@@ -27,6 +27,7 @@ public final class Entry
 {
     private boolean required;
     private Element element;
+    private boolean isInParent;
 
     public static Entry required(final Element element)
     {
@@ -153,6 +154,7 @@ public final class Entry
         return "Entry{" +
             "required=" + required +
             ", element=" + element +
+            ", isInParent=" + isInParent +
             '}';
     }
 
@@ -164,6 +166,16 @@ public final class Entry
     public int number()
     {
         return ((Field)element()).number();
+    }
+
+    public boolean isInParent()
+    {
+        return isInParent;
+    }
+
+    public void isInParent(final boolean isInParent)
+    {
+        this.isInParent = isInParent;
     }
 
     public interface Element

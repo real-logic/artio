@@ -28,6 +28,8 @@ public abstract class Aggregate
     private final String name;
     private final List<Entry> entries;
 
+    private boolean isInParent;
+
     protected Aggregate(final String name)
     {
         this.name = name;
@@ -127,6 +129,16 @@ public abstract class Aggregate
                     (ele, group) -> true,
                     (ele, component) -> component.containsGroup()
                 ));
+    }
+
+    public boolean isInParent()
+    {
+        return isInParent;
+    }
+
+    public void isInParent(final boolean isInParent)
+    {
+        this.isInParent = isInParent;
     }
 
 }

@@ -246,7 +246,7 @@ class DecoderGenerator extends Generator
             interfaces.add(SessionHeaderDecoder.class.getSimpleName());
         }
 
-        out.append(classDeclaration(className, interfaces, false));
+        out.append(classDeclaration(className, interfaces, false, aggregate.isInParent()));
         generateValidation(out, aggregate, type);
         if (isMessage)
         {
@@ -274,17 +274,19 @@ class DecoderGenerator extends Generator
     private String classDeclaration(
         final String className,
         final List<String> interfaces,
-        final boolean isStatic)
+        final boolean isStatic,
+        final boolean inParent)
     {
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\npublic %3$s%4$sclass %1$s extends CommonDecoderImpl%2$s\n" +
-                "{\n",
+            "\n\npublic %3$s%4$sclass %1$s extends %5$s%2$s\n" +
+            "{\n",
             className,
             interfaceList,
             isStatic ? "static " : "",
-            shared() ? "abstract " : "");
+            shared() ? "abstract " : "",
+            inParent ? parentDictPackage() + "." + className : "CommonDecoderImpl");
     }
 
     private List<Field> compileAllFieldsFor(final Message message)
@@ -1065,6 +1067,11 @@ class DecoderGenerator extends Generator
 
     private String fieldGetter(final Entry entry, final Field field, final Set<String> missingOptionalFields)
     {
+        if (entry.isInParent())
+        {
+            return "";
+        }
+
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
@@ -1089,7 +1096,7 @@ class DecoderGenerator extends Generator
 
         // Need to keep offset and length split due to the abject fail that is the DATA type.
         final String lengthBasedFields = type.hasLengthField(flyweightsEnabled) ? String.format(
-            "    private int %1$sLength;\n\n" +
+            "    %4$s int %1$sLength;\n\n" +
             "    public int %1$sLength()\n" +
             "    {\n" +
             "%2$s" +
@@ -1098,10 +1105,11 @@ class DecoderGenerator extends Generator
             "%3$s",
             fieldName,
             optionalCheck,
-            extraStringDecode) : "";
+            extraStringDecode,
+            scope) : "";
 
         final String offsetField = type.hasOffsetField(flyweightsEnabled) ?
-            String.format("    private int %1$sOffset;\n\n%2$s", fieldName, lengthBasedFields) : "";
+            String.format("    %3$s int %1$sOffset;\n\n%2$s", fieldName, lengthBasedFields, scope) : "";
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
@@ -1113,7 +1121,7 @@ class DecoderGenerator extends Generator
             enumName(name),
             fieldName);
         final String enumStringBasedWrapperField =
-            String.format("    private final CharArrayWrapper %1$sWrapper = new CharArrayWrapper();\n", fieldName);
+            String.format("    %2$s final CharArrayWrapper %1$sWrapper = new CharArrayWrapper();\n", fieldName, scope);
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
             String.format(
             "%4$s" +
@@ -1134,7 +1142,7 @@ class DecoderGenerator extends Generator
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 
         return String.format(
-            "    private %1$s %2$s%3$s;\n\n" +
+            "    %10$s %1$s %2$s%3$s;\n\n" +
             "%4$s" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
@@ -1153,7 +1161,8 @@ class DecoderGenerator extends Generator
             optionalGetter(entry),
             offsetField,
             enumDecoder,
-            flyweightsEnabled ? lazyInitialisation : "");
+            flyweightsEnabled ? lazyInitialisation : "",
+            scope);
     }
 
     private String generateAsStringBody(final Entry entry, final String name, final String fieldName)
