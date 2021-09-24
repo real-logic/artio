@@ -29,6 +29,10 @@ public final class Dictionary
     private final int majorVersion;
     private final int minorVersion;
 
+    private String name;
+    private boolean shared;
+    private Dictionary sharedParent;
+
     public Dictionary(
         final List<Message> messages,
         final Map<String, Field> fields,
@@ -89,6 +93,36 @@ public final class Dictionary
         return specType;
     }
 
+    public String name()
+    {
+        return name;
+    }
+
+    public void name(final String name)
+    {
+        this.name = name;
+    }
+
+    public Dictionary sharedParent()
+    {
+        return sharedParent;
+    }
+
+    public void sharedParent(final Dictionary sharedParent)
+    {
+        this.sharedParent = sharedParent;
+    }
+
+    public boolean shared()
+    {
+        return shared;
+    }
+
+    public void shared(final boolean shared)
+    {
+        this.shared = shared;
+    }
+
     public String toString()
     {
         return "DataDictionary{" +
@@ -98,6 +132,9 @@ public final class Dictionary
                 ", components=" + components +
                 ", header=" + header +
                 ", trailer=" + trailer +
+                ", name=" + name +
+                ", shared=" + shared +
+                ", sharedParent=" + sharedParent +
                 '}';
     }
 

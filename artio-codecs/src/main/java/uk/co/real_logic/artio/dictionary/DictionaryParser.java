@@ -52,6 +52,10 @@ public final class DictionaryParser
     private static final String HEADER_EXPR = "/fix/header/field";
     private static final String TRAILER_EXPR = "/fix/trailer/field";
 
+    public static final String HEADER = "Header";
+    public static final String TRAILER = "Trailer";
+    public static final String DEFAULT_SPEC_TYPE = "FIX";
+
     private final DocumentBuilder documentBuilder;
     private final XPathExpression findField;
     private final XPathExpression findMessage;
@@ -114,14 +118,14 @@ public final class DictionaryParser
             final int minorVersion = getInt(fixAttributes, "minor");
 
             final Component header = extractComponent(
-                document, fields, findHeader, "Header", components, forwardReferences);
+                document, fields, findHeader, HEADER, components, forwardReferences);
             final Component trailer = extractComponent(
-                document, fields, findTrailer, "Trailer", components, forwardReferences);
+                document, fields, findTrailer, TRAILER, components, forwardReferences);
 
             validateDataFieldsInAggregate(header);
             validateDataFieldsInAggregate(trailer);
 
-            final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
+            final String specType = getValueOrDefault(fixAttributes, "type", DEFAULT_SPEC_TYPE);
             return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
         }
     }

@@ -25,7 +25,7 @@ import java.util.function.Function;
 
 public final class Entry
 {
-    private final boolean required;
+    private boolean required;
     private Element element;
 
     public static Entry required(final Element element)
@@ -36,6 +36,11 @@ public final class Entry
     public static Entry optional(final Element element)
     {
         return new Entry(false, element);
+    }
+
+    public static Entry copyOf(final Entry entry)
+    {
+        return new Entry(entry.required(), entry.element());
     }
 
     public <T> T match(
@@ -112,7 +117,12 @@ public final class Entry
 
     public boolean required()
     {
-        return this.required;
+        return required;
+    }
+
+    public void required(final boolean required)
+    {
+        this.required = required;
     }
 
     public Element element()

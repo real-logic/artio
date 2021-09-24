@@ -19,6 +19,13 @@ import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 
 public final class Component extends Aggregate implements Element
 {
+    public static Component copyOf(final Component component)
+    {
+        final Component newComponent = new Component(component.name());
+        copyOf(component, newComponent);
+        return newComponent;
+    }
+
     public Component(final String name)
     {
         super(name);

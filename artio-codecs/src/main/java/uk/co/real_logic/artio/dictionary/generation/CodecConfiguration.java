@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Adaptive Financial Consulting Ltd.
+ * Copyright 2020-2021 Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,14 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.generation.OutputManager;
+import org.agrona.generation.PackageOutputManager;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.function.BiFunction;
 
 public class CodecConfiguration
 {
@@ -46,17 +50,21 @@ public class CodecConfiguration
     public static final String PARENT_PACKAGE_PROPERTY = "fix.codecs.parent_package";
     public static final String FLYWEIGHTS_ENABLED_PROPERTY = "fix.codecs.flyweight";
     public static final String REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "reject.unknown.enum.value";
+    public static final String FIX_CODECS_SHARED_PROPERTY = "fix.codecs.shared";
 
     public static final String DEFAULT_PARENT_PACKAGE = "uk.co.real_logic.artio";
 
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
     private boolean allowDuplicateFields = Boolean.getBoolean(FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY);
+    private boolean sharedCodecsEnabled = Boolean.getBoolean(FIX_CODECS_SHARED_PROPERTY);
 
     private String codecRejectUnknownEnumValueEnabled;
     private String outputPath;
     private String[] fileNames;
     private InputStream[] fileStreams;
+    private BiFunction<String, String, OutputManager> outputManagerFactory = PackageOutputManager::new;
+    private String[] dictionaryNames;
 
     public CodecConfiguration()
     {
@@ -115,6 +123,13 @@ public class CodecConfiguration
         return this;
     }
 
+    CodecConfiguration outputManagerFactory(
+        final BiFunction<String, String, OutputManager> outputManagerFactory)
+    {
+        this.outputManagerFactory = outputManagerFactory;
+        return this;
+    }
+
     /**
      * String representing a Java expressions that evaluates to a boolean within the codec that states whether
      * an unknown enum value within a codec should be rejected or not. Evaluation to true rejects. This could be
@@ -128,6 +143,13 @@ public class CodecConfiguration
     public CodecConfiguration codecRejectUnknownEnumValueEnabled(final String codecRejectUnknownEnumValueEnabled)
     {
         this.codecRejectUnknownEnumValueEnabled = codecRejectUnknownEnumValueEnabled;
+        return this;
+    }
+
+    public CodecConfiguration sharedCodecsEnabled(final String ... dictionaryNames)
+    {
+        this.dictionaryNames = dictionaryNames;
+        this.sharedCodecsEnabled = true;
         return this;
     }
 
@@ -161,6 +183,21 @@ public class CodecConfiguration
         return codecRejectUnknownEnumValueEnabled;
     }
 
+    public boolean sharedCodecsEnabled()
+    {
+        return sharedCodecsEnabled;
+    }
+
+    public String[] dictionaryNames()
+    {
+        return dictionaryNames;
+    }
+
+    BiFunction<String, String, OutputManager> outputManagerFactory()
+    {
+        return outputManagerFactory;
+    }
+
     void conclude() throws FileNotFoundException
     {
         if (outputPath() == null)
@@ -173,6 +210,12 @@ public class CodecConfiguration
             final String rejectUnknownEnumPropertyValue = System.getProperty(REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
             codecRejectUnknownEnumValueEnabled = rejectUnknownEnumPropertyValue != null ?
                 rejectUnknownEnumPropertyValue : Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
+        }
+
+        if (sharedCodecsEnabled)
+        {
+            validateNamesLength(fileStreams);
+            validateNamesLength(fileNames);
         }
 
         // Create input streams from names if not provided.
@@ -204,6 +247,14 @@ public class CodecConfiguration
                 // Closed by CodecGenerator
                 fileStreams[i] = new FileInputStream(xmlFile); // lgtm [java/input-resource-leak]
             }
+        }
+    }
+
+    private void validateNamesLength(final Object[] inputArray)
+    {
+        if (inputArray != null && inputArray.length != dictionaryNames.length)
+        {
+            throw new IllegalArgumentException("Incorrect number of dictionary names provided");
         }
     }
 }

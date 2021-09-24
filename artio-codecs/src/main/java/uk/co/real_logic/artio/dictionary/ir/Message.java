@@ -23,6 +23,13 @@ public final class Message extends Aggregate
     private final long packedType;
     private final String category;
 
+    public static Message copyOf(final Message message)
+    {
+        final Message newMessage = new Message(message.name(), message.fullType(), message.category());
+        copyOf(message, newMessage);
+        return newMessage;
+    }
+
     public Message(final String name, final String fullType, final String category)
     {
         super(name);
