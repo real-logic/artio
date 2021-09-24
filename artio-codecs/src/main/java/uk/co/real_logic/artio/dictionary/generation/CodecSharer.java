@@ -40,10 +40,36 @@ class CodecSharer
         final Dictionary firstDictionary = inputDictionaries.get(0);
 
         findSharedFields();
-        // TODO: remap fields when copying
+        final List<Message> messages = findSharedMessages();
+        final Map<String, Component> components = new HashMap<>();
+        final Component header = findSharedComponent(Dictionary::header);
+        final Component trailer = findSharedComponent(Dictionary::trailer);
+        final String specType = DictionaryParser.DEFAULT_SPEC_TYPE;
+        final int majorVersion = 0;
+        final int minorVersion = 0;
 
-        final Set<String> commonMessageNames = findCommonMessageNames();
+
+        components.putAll(firstDictionary.components());
+
+        final Dictionary sharedDictionary = new Dictionary(
+            messages,
+            sharedNameToField,
+            components,
+            header,
+            trailer,
+            specType,
+            majorVersion,
+            minorVersion);
+
+        sharedDictionary.shared(true);
+        inputDictionaries.forEach(dict -> connectToSharedDictionary(sharedDictionary, dict));
+        inputDictionaries.add(sharedDictionary);
+    }
+
+    private List<Message> findSharedMessages()
+    {
         final Map<String, Message> nameToMessage = new HashMap<>();
+        final Set<String> commonMessageNames = findCommonMessageNames();
         for (final Dictionary dictionary : inputDictionaries)
         {
             dictionary.messages().forEach(msg ->
@@ -61,7 +87,7 @@ class CodecSharer
                         // merge fields
                         if (msg.packedType() != sharedMessage.packedType())
                         {
-                            // TODO: do we care? Maybe we should put a marker type or something?
+                            // TODO: if it happens then push the message type down into the implementations
                             System.err.println("Invalid types: ");
                             System.err.println(msg);
                             System.err.println(sharedMessage);
@@ -77,29 +103,7 @@ class CodecSharer
             });
         }
 
-        final Map<String, Component> components = new HashMap<>();
-        final Component header = sharedComponent(Dictionary::header);
-        final Component trailer = sharedComponent(Dictionary::trailer);
-        final String specType = DictionaryParser.DEFAULT_SPEC_TYPE;
-        final int majorVersion = 0;
-        final int minorVersion = 0;
-
-        final List<Message> messages = new ArrayList<>(nameToMessage.values());
-        components.putAll(firstDictionary.components());
-
-        final Dictionary sharedDictionary = new Dictionary(
-            messages,
-            sharedNameToField,
-            components,
-            header,
-            trailer,
-            specType,
-            majorVersion,
-            minorVersion);
-
-        sharedDictionary.shared(true);
-        inputDictionaries.forEach(dict -> connectToSharedDictionary(sharedDictionary, dict));
-        inputDictionaries.add(sharedDictionary);
+        return new ArrayList<>(nameToMessage.values());
     }
 
     private void connectToSharedDictionary(final Dictionary sharedDictionary, final Dictionary dict)
@@ -118,6 +122,11 @@ class CodecSharer
             commonNonEnumFieldNames.forEach(fieldName -> mergeField(fields, fieldName));
             allEnumFieldNames.forEach(enumName -> mergeField(fields, enumName));
         }
+
+        sharedNameToField.values().forEach(field ->
+            DictionaryParser.checkAssociatedLengthField(sharedNameToField, field, "CodecSharer"));
+
+        System.out.println("sharedNameToField = " + sharedNameToField);
     }
 
     private void mergeField(final Map<String, Field> fields, final String fieldName)
@@ -156,7 +165,7 @@ class CodecSharer
         return newField;
     }
 
-    private Component sharedComponent(final Function<Dictionary, Component> getter)
+    private Component findSharedComponent(final Function<Dictionary, Component> getter)
     {
         final Dictionary firstDictionary = inputDictionaries.get(0);
         final Component sharedComponent = copyOf(getter.apply(firstDictionary));
@@ -176,7 +185,7 @@ class CodecSharer
         {
             final Entry sharedEntry = it.next();
             final Entry entry = nameToEntry.get(sharedEntry.name());
-            if (entry == null)
+            if (entry == null || !sharedEntry.isField())
             {
                 it.remove();
             }
@@ -237,9 +246,24 @@ class CodecSharer
         return entries.stream().collect(Collectors.toMap(Entry::name, x -> x));
     }
 
+    // pre: shared fields calculated
     private Entry copyOf(final Entry entry)
     {
-        return new Entry(entry.required(), entry.element());
+        Entry.Element element = entry.element();
+
+        // Remap fields to calculated shared values
+        if (element instanceof Field)
+        {
+            final Field field = (Field)element;
+            final String name = field.name();
+            element = sharedNameToField.get(name);
+            if (element == null)
+            {
+                return null;
+            }
+        }
+
+        return new Entry(entry.required(), element);
     }
 
     private Component copyOf(final Component component)
@@ -260,7 +284,11 @@ class CodecSharer
     {
         for (final Entry entry : aggregate.entries())
         {
-            newAggregate.entries().add(copyOf(entry));
+            final Entry newEntry = copyOf(entry);
+            if (newEntry != null)
+            {
+                newAggregate.entries().add(newEntry);
+            }
         }
     }
 

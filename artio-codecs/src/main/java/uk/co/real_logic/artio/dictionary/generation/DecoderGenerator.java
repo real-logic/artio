@@ -252,9 +252,13 @@ class DecoderGenerator extends Generator
         {
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
-            final List<Field> fields = compileAllFieldsFor(message);
-            final String messageFieldsSet = generateFieldDictionary(fields, MESSAGE_FIELDS, false);
-            out.append(commonCompoundImports("Decoder", true, messageFieldsSet));
+
+            if (!shared())
+            {
+                final List<Field> fields = compileAllFieldsFor(message);
+                final String messageFieldsSet = generateFieldDictionary(fields, MESSAGE_FIELDS, false);
+                out.append(commonCompoundImports("Decoder", true, messageFieldsSet));
+            }
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
@@ -275,11 +279,12 @@ class DecoderGenerator extends Generator
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\npublic %3$sclass %1$s extends CommonDecoderImpl%2$s\n" +
+            "\n\npublic %3$s%4$sclass %1$s extends CommonDecoderImpl%2$s\n" +
                 "{\n",
             className,
             interfaceList,
-            isStatic ? "static " : "");
+            isStatic ? "static " : "",
+            shared() ? "abstract " : "");
     }
 
     private List<Field> compileAllFieldsFor(final Message message)
@@ -297,7 +302,7 @@ class DecoderGenerator extends Generator
     private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
-        if (type == HEADER)
+        if (type == HEADER && !shared())
         {
             // Default constructor so that the header decoder can be used independently to parser headers.
             out.append(
@@ -417,6 +422,12 @@ class DecoderGenerator extends Generator
     private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
+        if (shared())
+        {
+            out.append("    public final IntHashSet " + REQUIRED_FIELDS + " = new IntHashSet();\n\n");
+            return;
+        }
+
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS, true));
 
@@ -1395,6 +1406,11 @@ class DecoderGenerator extends Generator
 
     private String decodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
+        if (shared())
+        {
+            return "";
+        }
+
         final boolean hasCommonCompounds = type == MESSAGE;
         final boolean isGroup = type == GROUP;
         final boolean isHeader = type == HEADER;

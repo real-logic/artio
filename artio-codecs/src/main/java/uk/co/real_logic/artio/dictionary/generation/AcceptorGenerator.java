@@ -51,9 +51,12 @@ class AcceptorGenerator
 
     public void generate()
     {
-        generateAcceptor();
-        generateDefaultAcceptor();
-        generateDecoder();
+        if (!dictionary.shared())
+        {
+            generateAcceptor();
+            generateDefaultAcceptor();
+            generateDecoder();
+        }
     }
 
     private void generateAcceptor()

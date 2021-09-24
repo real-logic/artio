@@ -87,6 +87,11 @@ class FixDictionaryGenerator
 
     public void generate()
     {
+        if (dictionary.shared())
+        {
+            return;
+        }
+
         final Set<String> allMessageNames = dictionary.messages()
             .stream().map(Aggregate::name).collect(Collectors.toSet());
 

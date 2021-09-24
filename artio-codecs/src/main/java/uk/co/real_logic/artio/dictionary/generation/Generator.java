@@ -190,21 +190,25 @@ public abstract class Generator
 
         if (isMessage)
         {
-            return String.format(
+            final String reset = shared() ? "" : String.format(
                 "    public void reset()\n" +
                 "    {\n" +
                 "        header.reset();\n" +
                 "        trailer.reset();\n" +
                 "        resetMessage();\n" +
-                "%2$s" +
-                "    }\n\n" +
+                "%1$s" +
+                "    }\n\n",
+                additionalReset);
+
+            return String.format(
+                "%1$s" +
                 "    public void resetMessage()\n" +
                 "    {\n" +
-                "%1$s" +
+                "%2$s" +
                 "    }\n\n" +
                 "%3$s",
+                reset,
                 resetEntries,
-                additionalReset,
                 methods);
         }
         else
@@ -217,7 +221,7 @@ public abstract class Generator
                 "    }\n\n" +
                 "%s",
                 resetEntries,
-                additionalReset,
+                shared() ? "" : additionalReset, // TODO
                 methods);
         }
     }
@@ -453,7 +457,7 @@ public abstract class Generator
             .collect(joining("\n"));
 
         final String prefix;
-        if (hasCommonCompounds)
+        if (hasCommonCompounds && !shared())
         {
             prefix =
                 "        builder.append(\"  \\\"header\\\": \");\n" +
@@ -663,6 +667,11 @@ public abstract class Generator
                     inDictionary));
             }
         }
+    }
+
+    boolean shared()
+    {
+        return this.dictionary.shared();
     }
 
     protected abstract String stringAppendTo(String fieldName);

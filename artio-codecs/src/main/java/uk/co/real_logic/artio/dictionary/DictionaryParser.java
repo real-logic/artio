@@ -155,26 +155,32 @@ public final class DictionaryParser
             entry.forEach(
                 field ->
                 {
-                    if (field.type().isDataBased())
-                    {
-                        final String name = field.name();
-                        if (!(hasLengthField(field, "Length", nameToField) ||
-                            hasLengthField(field, "Len", nameToField)))
-                        {
-                            throw new IllegalStateException(
-                                String.format("Each DATA field must have a corresponding LENGTH field using the " +
-                                "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
-                                name,
-                                aggregate.name()));
-                        }
-                    }
+                    checkAssociatedLengthField(nameToField, field, aggregate.name());
                 },
                 this::validateDataFieldsInAggregate,
                 this::validateDataFieldsInAggregate);
         }
     }
 
-    private boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
+    public static void checkAssociatedLengthField(
+        final Map<String, Field> nameToField, final Field field, final String aggregateName)
+    {
+        if (field.type().isDataBased())
+        {
+            final String name = field.name();
+            if (!(hasLengthField(field, "Length", nameToField) ||
+                hasLengthField(field, "Len", nameToField)))
+            {
+                throw new IllegalStateException(
+                    String.format("Each DATA field must have a corresponding LENGTH field using the " +
+                    "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
+                    name,
+                    aggregateName));
+            }
+        }
+    }
+
+    private static boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
     {
         final String fieldName = field.name() + suffix;
         final Field associatedLengthField = nameToField.get(fieldName);

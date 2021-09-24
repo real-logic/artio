@@ -22,7 +22,6 @@ import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -40,13 +39,18 @@ public class SharedCodecsTest
     private static final String DICT_3_NORM = "shared_dictionary_3";
 
     private static final List<StringWriterOutputManager> OUTPUT_MANAGERS = new ArrayList<>();
+    public static final String EXECUTION_REPORT = "ExecutionReport";
 
     private static CodecConfiguration config;
-    private static Class<?> executionReportEncoderShared;
     private static ClassLoader classLoader;
+
+    private static Class<?> executionReportEncoderShared;
     private static Class<?> executionReportEncoder1;
     private static Class<?> executionReportEncoder2;
     private static Class<?> executionReportEncoder3;
+
+    private static Class<?> executionReportDecoderShared;
+    private static Class<?> executionReportDecoder2;
 
     private static Class<?> headerEncoder1;
     private static Class<?> headerEncoder2;
@@ -77,8 +81,9 @@ public class SharedCodecsTest
 
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
-//            System.out.println(sources);
+            System.out.println(sources);
         }
+//        System.out.println(sources);
         System.out.println("sources.toString().length() = " + sources.toString().length());
 
         final String nosEncoderName = executionReportEncoder(config, DICT_1_NORM);
@@ -88,6 +93,9 @@ public class SharedCodecsTest
         executionReportEncoder3 = loadClass(executionReportEncoder(config, DICT_3_NORM));
         executionReportEncoderShared = loadClass(executionReportEncoder(config, null));
 
+        executionReportDecoder2 = loadClass(executionReportDecoder(config, DICT_2_NORM));
+        executionReportDecoderShared = loadClass(executionReportDecoder(config, null));
+
         headerEncoder1 = loadClass(headerEncoder(config, DICT_1_NORM));
         headerEncoder2 = loadClass(headerEncoder(config, DICT_2_NORM));
         headerEncoderShared = loadClass(headerEncoder(config, null));
@@ -95,7 +103,12 @@ public class SharedCodecsTest
 
     private static String executionReportEncoder(final CodecConfiguration config, final String dictNorm)
     {
-        return encoder(config, dictNorm, "ExecutionReport");
+        return encoder(config, dictNorm, EXECUTION_REPORT);
+    }
+
+    private static String executionReportDecoder(final CodecConfiguration config, final String dictNorm)
+    {
+        return decoder(config, dictNorm, EXECUTION_REPORT);
     }
 
     private static String headerEncoder(final CodecConfiguration config, final String dictNorm)
@@ -116,6 +129,11 @@ public class SharedCodecsTest
     private static String encoder(final CodecConfiguration config, final String dictNorm, final String messageName)
     {
         return className(config, dictNorm, messageName, "Encoder", "builder.");
+    }
+
+    private static String decoder(final CodecConfiguration config, final String dictNorm, final String messageName)
+    {
+        return className(config, dictNorm, messageName, "Decoder", "decoder.");
     }
 
     private static String className(
@@ -141,11 +159,28 @@ public class SharedCodecsTest
         assertNotNull(executionReportEncoder3);
         assertNotNull(executionReportEncoderShared);
 
-        assertTrue("Shared class not abstract", isAbstract(executionReportEncoderShared.getModifiers()));
+        assertNotNull(executionReportDecoder2);
+        assertNotNull(executionReportDecoderShared);
+
+        assertAbstract(executionReportEncoderShared);
+        assertNotAbstract(executionReportEncoder1);
+
+        assertAbstract(executionReportDecoderShared);
+        assertNotAbstract(executionReportDecoder2);
 
 //        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder1));
 //        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder2));
 //        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder3));
+    }
+
+    private void assertAbstract(final Class<?> cls)
+    {
+        assertTrue(cls + " not abstract", isAbstract(cls.getModifiers()));
+    }
+
+    private void assertNotAbstract(final Class<?> cls)
+    {
+        assertFalse(cls + " abstract", isAbstract(cls.getModifiers()));
     }
 
     @Test

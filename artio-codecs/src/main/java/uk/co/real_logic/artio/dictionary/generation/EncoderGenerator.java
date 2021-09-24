@@ -23,16 +23,14 @@ import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -268,7 +266,7 @@ class EncoderGenerator extends Generator
         }
         out.append(classDeclaration(className, interfaces, type == GROUP));
         out.append(constructor(className, aggregate, type, dictionary));
-        if (isMessage)
+        if (isMessage && !shared())
         {
             out.append(commonCompoundImports("Encoder", false, ""));
         }
@@ -303,11 +301,12 @@ class EncoderGenerator extends Generator
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\npublic %3$sclass %1$s%2$s\n" +
-                "{\n",
+            "\n\npublic %3$s%4$sclass %1$s%2$s\n" +
+            "{\n",
             className,
             interfaceList,
-            isStatic ? "static " : "");
+            isStatic ? "static " : "",
+            shared() ? "abstract " : "");
     }
 
     private String completeResetMethod(
@@ -359,9 +358,9 @@ class EncoderGenerator extends Generator
             final Message message = (Message)aggregate;
             final long packedType = message.packedType();
             final String fullType = message.fullType();
-            final String msgType = header.hasField(MSG_TYPE) ?
-                String.format("        header.msgType(\"%s\");\n", fullType) : "";
 
+            final String msgType = header.hasField(MSG_TYPE) && !shared() ?
+                String.format("        header.msgType(\"%s\");\n", fullType) : "";
             return String.format(
                 "    public long messageType()\n" +
                 "    {\n" +
@@ -847,6 +846,11 @@ class EncoderGenerator extends Generator
 
     private String encodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {
+        if (shared())
+        {
+            return "";
+        }
+
         final String prefix;
         switch (aggregateType)
         {
@@ -1159,7 +1163,9 @@ class EncoderGenerator extends Generator
 
     protected String dataAppendTo(final Field field, final String fieldName)
     {
-        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+        final Field associatedLengthField = field.associatedLengthField();
+        Objects.requireNonNull(associatedLengthField, "Length field for: " + fieldName);
+        final String lengthName = formatPropertyName(associatedLengthField.name());
         return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
     }
 
