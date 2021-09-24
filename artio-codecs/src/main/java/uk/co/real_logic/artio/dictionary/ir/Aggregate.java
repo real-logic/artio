@@ -28,14 +28,6 @@ public abstract class Aggregate
     private final String name;
     private final List<Entry> entries;
 
-    protected static void copyOf(final Aggregate aggregate, final Aggregate newAggregate)
-    {
-        for (final Entry entry : aggregate.entries())
-        {
-            newAggregate.entries().add(Entry.copyOf(entry));
-        }
-    }
-
     protected Aggregate(final String name)
     {
         this.name = name;

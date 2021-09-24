@@ -38,11 +38,6 @@ public final class Entry
         return new Entry(false, element);
     }
 
-    public static Entry copyOf(final Entry entry)
-    {
-        return new Entry(entry.required(), entry.element());
-    }
-
     public <T> T match(
         final BiFunction<Entry, Field, ? extends T> withField,
         final BiFunction<Entry, Group, ? extends T> withGroup,

@@ -77,7 +77,6 @@
         <message name="ExecutionReport" msgtype="8" msgcat="app">
             <field name="OrderID" required="Y"/>
             <field name="ExecID" required="Y"/>
-            <field name="ExecType" required="Y"/>
             <field name="OrdStatus" required="N"/>
             <component name="Instrument" required="Y"/>
             <field name="Side" required="Y"/>
@@ -201,11 +200,6 @@
         <field number="40" name="OrdType" type="CHAR">
             <value enum="1" description="MARKET"/>
             <value enum="2" description="LIMIT"/>
-        </field>
-        <field number="150" name="ExecType" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="2" description="FILL"/>
-            <value enum="4" description="CANCELED"/>
         </field>
     </fields>
 </fix>

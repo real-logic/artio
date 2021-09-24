@@ -22,11 +22,12 @@ import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
+import static java.lang.reflect.Modifier.isAbstract;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class SharedCodecsTest
 {
@@ -77,8 +78,8 @@ public class SharedCodecsTest
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
 //            System.out.println(sources);
-            System.out.println("sources.toString().length() = " + sources.toString().length());
         }
+        System.out.println("sources.toString().length() = " + sources.toString().length());
 
         final String nosEncoderName = executionReportEncoder(config, DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, sources);
@@ -107,10 +108,25 @@ public class SharedCodecsTest
         return encoder(config, dictNorm, "NewOrderSingle");
     }
 
+    private static String execType(final CodecConfiguration config, final String dictNorm)
+    {
+        return className(config, dictNorm, "ExecType", "", "");
+    }
+
     private static String encoder(final CodecConfiguration config, final String dictNorm, final String messageName)
     {
+        return className(config, dictNorm, messageName, "Encoder", "builder.");
+    }
+
+    private static String className(
+        final CodecConfiguration config,
+        final String dictNorm,
+        final String messageName,
+        final String suffix,
+        final String prefix)
+    {
         final String packagePrefix = dictNorm == null ? "" : "." + dictNorm;
-        return config.parentPackage() + packagePrefix + ".builder." + messageName + "Encoder";
+        return config.parentPackage() + packagePrefix + "." + prefix + messageName + suffix;
     }
 
     private static InputStream dictionaryStream(final String dict)
@@ -119,11 +135,13 @@ public class SharedCodecsTest
     }
 
     @Test
-    public void shouldGenerateClassStructure() throws ClassNotFoundException
+    public void shouldGenerateClassStructure()
     {
         assertNotNull(executionReportEncoder2);
         assertNotNull(executionReportEncoder3);
         assertNotNull(executionReportEncoderShared);
+
+        assertTrue("Shared class not abstract", isAbstract(executionReportEncoderShared.getModifiers()));
 
 //        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder1));
 //        assertTrue(executionReportEncoderShared.isAssignableFrom(executionReportEncoder2));
@@ -136,6 +154,16 @@ public class SharedCodecsTest
         // OrdStatus optional in dict 2
 
         // TODO: better test, need to encode and not throw an exception
+    }
+
+    @Test
+    public void shouldSupportMissingEnumsInSomeDictionaries() throws Exception
+    {
+        // No exectype in dict 2, Enum still generated in shared dict
+
+        loadClass(execType(config, DICT_1_NORM));
+        noClass(execType(config, DICT_2_NORM));
+        loadClass(execType(config, null));
     }
 
     @Test
@@ -165,7 +193,14 @@ public class SharedCodecsTest
 
     private static Class<?> loadClass(final String name) throws ClassNotFoundException
     {
-        return classLoader.loadClass(name);
+        try
+        {
+            return classLoader.loadClass(name);
+        }
+        catch (final NullPointerException e)
+        {
+            throw new ClassNotFoundException("Class not found: " + name, e);
+        }
     }
 
     private void noClass(final String name)
@@ -175,7 +210,7 @@ public class SharedCodecsTest
             loadClass(name);
             fail("Managed to load " + name + " which shouldn't exist");
         }
-        catch (final ClassNotFoundException | NullPointerException e)
+        catch (final ClassNotFoundException e)
         {
             // Deliberately blank
         }
