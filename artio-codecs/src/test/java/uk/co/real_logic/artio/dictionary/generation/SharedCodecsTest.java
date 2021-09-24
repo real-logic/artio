@@ -199,7 +199,7 @@ public class SharedCodecsTest
     {
         // No exectype in dict 2, Enum still generated in shared dict
 
-        loadClass(execType(config, DICT_1_NORM));
+        noClass(execType(config, DICT_1_NORM));
         noClass(execType(config, DICT_2_NORM));
         loadClass(execType(config, null));
     }

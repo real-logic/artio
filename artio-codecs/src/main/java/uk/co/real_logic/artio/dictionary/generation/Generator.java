@@ -180,6 +180,11 @@ public abstract class Generator
         {
             out.append(importFor(commonPackage + ".*"));
         }
+
+        if (hasParent())
+        {
+            out.append(importFor(parentDictCommonPackage() + ".*"));
+        }
     }
 
     protected String completeResetMethod(
@@ -684,7 +689,17 @@ public abstract class Generator
 
     String parentDictPackage()
     {
-        return thisPackage.replace("." + dictionary.name(), "");
+        return toParentDictPackage(thisPackage);
+    }
+
+    String parentDictCommonPackage()
+    {
+        return toParentDictPackage(commonPackage);
+    }
+
+    private String toParentDictPackage(final String whichPackage)
+    {
+        return whichPackage.replace("." + dictionary.name(), "");
     }
 
     protected abstract String stringAppendTo(String fieldName);

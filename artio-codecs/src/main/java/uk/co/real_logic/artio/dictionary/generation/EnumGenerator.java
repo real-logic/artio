@@ -73,6 +73,11 @@ final class EnumGenerator
 
     public void generate()
     {
+        if (dictionary.sharedParent() != null)
+        {
+            return;
+        }
+
         dictionary
             .fields()
             .values()
