@@ -30,6 +30,10 @@ public final class Field implements Element
     private Type type;
     private final List<Value> values;
 
+    // true iff you've got a shared dictionary and this field represents a type which is sometimes an enum and
+    // sometimes not.
+    private boolean hasSharedSometimesEnumClash;
+
     private Field associatedLengthField;
 
     public static Field registerField(
@@ -96,6 +100,16 @@ public final class Field implements Element
     public boolean isEnum()
     {
         return !values.isEmpty();
+    }
+
+    public boolean hasSharedSometimesEnumClash()
+    {
+        return hasSharedSometimesEnumClash;
+    }
+
+    public void hasSharedSometimesEnumClash(final boolean hasSharedSometimesEnumClash)
+    {
+        this.hasSharedSometimesEnumClash = hasSharedSometimesEnumClash;
     }
 
     public String toString()

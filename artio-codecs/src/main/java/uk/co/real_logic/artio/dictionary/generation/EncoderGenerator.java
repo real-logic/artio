@@ -39,7 +39,6 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.enumName;
-import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.ENCODER_OPTIONAL_SESSION_FIELDS;
@@ -543,7 +542,7 @@ class EncoderGenerator extends Generator
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
-        final String enumSetter = hasEnumGenerated(field) && !field.type().isMultiValue() ?
+        final String enumSetter = shouldGenerateClassEnumMethods(field) ?
             enumSetter(className, fieldName, enumName(field.name())) : "";
 
         final Function<String, String> generateSetter =

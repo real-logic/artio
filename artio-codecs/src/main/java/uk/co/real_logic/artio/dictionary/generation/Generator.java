@@ -712,4 +712,10 @@ public abstract class Generator
 
         return sb.toString();
     }
+
+    boolean shouldGenerateClassEnumMethods(final Field field)
+    {
+        return EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() &&
+            !field.hasSharedSometimesEnumClash();
+    }
 }

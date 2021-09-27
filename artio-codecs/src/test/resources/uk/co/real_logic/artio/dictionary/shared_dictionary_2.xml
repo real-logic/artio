@@ -81,6 +81,8 @@
             <component name="Instrument" required="Y"/>
             <field name="Side" required="Y"/>
             <field name="TransactTime" required="N"/>
+            <field name="CollisionEnum" required="N"/>
+            <field name="MissingEnum" required="N"/>
         </message>
     </messages>
     <components>
@@ -206,6 +208,8 @@
             <value enum="N" description="NEW"/>
             <value enum="F" description="FILL"/>
             <value enum="C" description="CANCELED"/>
+        </field>
+        <field number="152" name="MissingEnum" type="CHAR">
         </field>
     </fields>
 </fix>

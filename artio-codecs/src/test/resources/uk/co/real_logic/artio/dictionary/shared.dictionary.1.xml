@@ -93,6 +93,8 @@
             <component name="Instrument" required="Y"/>
             <field name="Side" required="Y"/>
             <field name="TransactTime" required="N"/>
+            <field name="CollisionEnum" required="N"/>
+            <field name="MissingEnum" required="N"/>
         </message>
     </messages>
     <components>
@@ -220,6 +222,11 @@
             <value enum="4" description="CANCELED"/>
         </field>
         <field number="151" name="CollisionEnum" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="FILL"/>
+            <value enum="2" description="CANCELED"/>
+        </field>
+        <field number="152" name="MissingEnum" type="CHAR">
             <value enum="0" description="NEW"/>
             <value enum="1" description="FILL"/>
             <value enum="2" description="CANCELED"/>

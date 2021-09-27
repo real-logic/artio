@@ -253,9 +253,21 @@ class CodecSharer
             }
             else
             {
-                // TODO: check collisions
+                // TODO: check field type collisions
+
+                final List<Value> sharedValues = sharedField.values();
+                final List<Value> values = field.values();
+
+                final boolean sharedIsEnum = sharedValues.isEmpty();
+                final boolean isEnum = values.isEmpty();
+
+                if (sharedIsEnum != isEnum)
+                {
+                    sharedField.hasSharedSometimesEnumClash(true);
+                }
+
                 // merge enum values
-                sharedField.values().addAll(field.values());
+                sharedValues.addAll(values);
                 return sharedField;
             }
         });

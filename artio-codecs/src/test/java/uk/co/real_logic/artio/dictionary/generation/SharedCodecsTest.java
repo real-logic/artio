@@ -136,6 +136,11 @@ public class SharedCodecsTest
         return enumOf(config, dictNorm, "CollisionEnum");
     }
 
+    private static String missingEnum(final CodecConfiguration config, final String dictNorm)
+    {
+        return enumOf(config, dictNorm, "MissingEnum");
+    }
+
     private static String enumOf(final CodecConfiguration config, final String dictNorm, final String messageName)
     {
         return className(config, dictNorm, messageName, "", "");
@@ -245,6 +250,25 @@ public class SharedCodecsTest
         assertRepresentation('N', enumValue(collisionEnum, "NEW_N"));
         assertRepresentation('F', enumValue(collisionEnum, "FILL_F"));
         assertRepresentation('C', enumValue(collisionEnum, "CANCELED_C"));
+    }
+
+    @Test
+    public void shouldSupportFieldsSometimesBeingEnums() throws Exception
+    {
+        // Missing enum isn't an enum in dict 2 but is in other dictionaries
+        // Generate the enum type but don't generate the AsEnum method so people can optionally use it
+
+        final Class<?> missingEnum = loadClass(missingEnum(config, null));
+        assertTrue(missingEnum.isEnum());
+
+        assertEquals("[NEW, FILL, CANCELED, NULL_VAL, ARTIO_UNKNOWN]",
+            Arrays.toString(missingEnum.getEnumConstants()));
+
+        executionReportEncoderShared.getDeclaredMethod("missingEnum", char.class);
+        // noMethod(executionReportEncoderShared, "missingEnum", missingEnum);
+
+        executionReportDecoderShared.getDeclaredMethod("missingEnum");
+        noMethod(executionReportDecoderShared, "missingEnumAsEnum");
     }
 
     private <T extends Enum<T>> T enumValue(final Class<T> collisionEnum, final String name)

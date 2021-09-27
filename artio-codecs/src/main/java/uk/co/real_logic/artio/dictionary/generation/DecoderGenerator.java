@@ -813,7 +813,7 @@ class DecoderGenerator extends Generator
         final String optional = !entry.required() ?
             String.format("    public boolean has%1$s();\n", name) : "";
 
-        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
+        final String enumDecoder = shouldGenerateClassEnumMethods(field) ?
             String.format("    public %s %sAsEnum();\n", name, fieldName) : "";
 
         return String.format(
@@ -1122,7 +1122,7 @@ class DecoderGenerator extends Generator
             fieldName);
         final String enumStringBasedWrapperField =
             String.format("    %2$s final CharArrayWrapper %1$sWrapper = new CharArrayWrapper();\n", fieldName, scope);
-        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
+        final String enumDecoder = shouldGenerateClassEnumMethods(field) ?
             String.format(
             "%4$s" +
             "    public %6$s %2$sAsEnum()\n" +
