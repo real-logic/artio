@@ -250,6 +250,7 @@ public final class Field implements Element
             return valueOf(name.trim());
         }
     }
+
     public enum BaseType
     {
         INT,
@@ -321,6 +322,8 @@ public final class Field implements Element
         private final String representation;
         private final String description;
 
+        private List<String> alternativeNames;
+
         public Value(final String representation, final String description)
         {
             this.representation = representation;
@@ -356,11 +359,22 @@ public final class Field implements Element
             return result;
         }
 
+        public List<String> alternativeNames()
+        {
+            return alternativeNames;
+        }
+
+        public void alternativeNames(final List<String> alternativeNames)
+        {
+            this.alternativeNames = alternativeNames;
+        }
+
         public String toString()
         {
             return "Value{" +
                 "representation=" + representation +
                 ", description='" + description + '\'' +
+                ", alternativeNames='" + alternativeNames + '\'' +
                 '}';
         }
     }

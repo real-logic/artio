@@ -38,11 +38,11 @@ public class CodecCollisionFinder
     private static final boolean PRINT_ENUM_NON_ENUM_COLL = false;
     private static final boolean PRINT_ENUM_VALUE_COLL = true;
 
-    private static PrintStream OUT;
-    
+    private static PrintStream out;
+
     public static void main(final String[] args) throws Exception
     {
-        OUT = new PrintStream(new FileOutputStream("out.txt"));
+        out = new PrintStream(new FileOutputStream("out.txt"));
 
         final File dir = new File(args[0]);
         final File[] dictionaryFiles = dir.listFiles((ignore, name) -> name.endsWith(".xml"));
@@ -50,7 +50,7 @@ public class CodecCollisionFinder
         final Map<File, Dictionary> fileToDictionary = new HashMap<>();
         for (final File dictionaryXmlFile : dictionaryFiles)
         {
-            OUT.println("Parsing " + dictionaryXmlFile.getName());
+            out.println("Parsing " + dictionaryXmlFile.getName());
             try (FileInputStream in = new FileInputStream(dictionaryXmlFile))
             {
                 final Dictionary dictionary = parser.parse(in, null);
@@ -58,7 +58,7 @@ public class CodecCollisionFinder
             }
         }
 
-        OUT.println("Analyzing Dictionaries ... ");
+        out.println("Analyzing Dictionaries ... ");
 
         findFieldCollisions(fileToDictionary);
     }
@@ -73,7 +73,7 @@ public class CodecCollisionFinder
             final File file = pair.getKey();
             final Dictionary dictionary = pair.getValue();
             final Map<String, Field> fields = dictionary.fields();
-            for (Field field : fields.values())
+            for (final Field field : fields.values())
             {
                 checkNumberCollisions(numberToField, field);
 
@@ -101,19 +101,19 @@ public class CodecCollisionFinder
                         if (PRINT_FIELD_TYPE_COLL_IF_FIXABLE ||
                             (!canCombine(baseType, oldBaseType) && number == oldField.number()))
                         {
-                            OUT.println("Field - type collision for " + name);
-                            OUT.println(field);
-                            OUT.println(oldField);
-                            OUT.println("In: " + file + "\n\n");
+                            out.println("Field - type collision for " + name);
+                            out.println(field);
+                            out.println(oldField);
+                            out.println("In: " + file + "\n\n");
                         }
                     }
 
                     if (PRINT_ENUM_NON_ENUM_COLL && isEnum != oldEnum)
                     {
-                        OUT.println("Enum - Non-enum collision for " + name);
-                        OUT.println(field);
-                        OUT.println(oldField);
-                        OUT.println("In: " + file + "\n\n");
+                        out.println("Enum - Non-enum collision for " + name);
+                        out.println(field);
+                        out.println(oldField);
+                        out.println("In: " + file + "\n\n");
                     }
                     else if (PRINT_ENUM_VALUE_COLL && isEnum)
                     {
@@ -133,10 +133,10 @@ public class CodecCollisionFinder
                                 if (representation.equals(oldRepresentation) !=
                                     description.equals(oldDescription))
                                 {
-                                    OUT.println("Enum - Enum Value collision for " + name);
-                                    OUT.println(value);
-                                    OUT.println(oldValue);
-                                    OUT.println("In: " + file + "\n\n");
+                                    out.println("Enum - Enum Value collision for " + name);
+                                    out.println(value);
+                                    out.println(oldValue);
+                                    out.println("In: " + file + "\n\n");
                                 }
                             }
                         }
@@ -152,15 +152,15 @@ public class CodecCollisionFinder
     {
         if (PRINT_FIELD_NUMBER_COLL)
         {
-            OUT.println("Field collision - same number, different name:");
+            out.println("Field collision - same number, different name:");
             numberToField.forEach((number, nameToCount) ->
             {
                 if (nameToCount.size() > 1)
                 {
-                    OUT.println("number = " + number);
+                    out.println("number = " + number);
                     nameToCount.forEach((name, count) ->
                     {
-                        OUT.println("name = " + name + ", count = " + count);
+                        out.println("name = " + name + ", count = " + count);
                     });
                 }
             });
@@ -201,11 +201,11 @@ public class CodecCollisionFinder
         final boolean int1 = baseType == Field.BaseType.INT;
         final boolean char1 = baseType == Field.BaseType.CHAR;
 
-        return char1 && string2
-            || int1 && string2
-            || baseType == Field.BaseType.TIMESTAMP && string2
-            || baseType == Field.BaseType.FLOAT && string2
-            || int1 && baseType2 == Field.BaseType.CHAR
-            || char1 && baseType2 == Field.BaseType.BOOLEAN;
+        return char1 && string2 ||
+            int1 && string2 ||
+            baseType == Field.BaseType.TIMESTAMP && string2 ||
+            baseType == Field.BaseType.FLOAT && string2 ||
+            int1 && baseType2 == Field.BaseType.CHAR ||
+            char1 && baseType2 == Field.BaseType.BOOLEAN;
     }
 }

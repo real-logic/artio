@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.generation.StringWriterOutputManager;
+import org.hamcrest.MatcherAssert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
@@ -26,8 +27,11 @@ import java.util.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGeneratorTest.assertRepresentation;
 
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class SharedCodecsTest
 {
     private static final String DICT_1 = "shared.dictionary.1";
@@ -38,8 +42,9 @@ public class SharedCodecsTest
     private static final String DICT_2_NORM = "shared_dictionary_2";
     private static final String DICT_3_NORM = "shared_dictionary_3";
 
+    private static final Map<String, CharSequence> SOURCES = new HashMap<>();
     private static final List<StringWriterOutputManager> OUTPUT_MANAGERS = new ArrayList<>();
-    public static final String EXECUTION_REPORT = "ExecutionReport";
+    private static final String EXECUTION_REPORT = "ExecutionReport";
 
     private static CodecConfiguration config;
     private static ClassLoader classLoader;
@@ -73,22 +78,21 @@ public class SharedCodecsTest
 
         CodecGenerator.generate(config);
 
-        final Map<String, CharSequence> sources = new HashMap<>();
-        for (StringWriterOutputManager outputManager : OUTPUT_MANAGERS)
+        for (final StringWriterOutputManager outputManager : OUTPUT_MANAGERS)
         {
-            sources.putAll(outputManager.getSources());
+            SOURCES.putAll(outputManager.getSources());
         }
 
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
-            System.out.println(sources);
+            System.out.println(SOURCES);
         }
 //        System.out.println(sources);
 //        System.out.println("sources.keySet() = " + sources.keySet());
-        System.out.println("sources.toString().length() = " + sources.toString().length());
+        System.out.println("sources.toString().length() = " + SOURCES.toString().length());
 
         final String nosEncoderName = executionReportEncoder(config, DICT_1_NORM);
-        executionReportEncoder1 = compileInMemory(nosEncoderName, sources);
+        executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
         classLoader = executionReportEncoder1.getClassLoader();
         executionReportEncoder2 = loadClass(executionReportEncoder(config, DICT_2_NORM));
         executionReportEncoder3 = loadClass(executionReportEncoder(config, DICT_3_NORM));
@@ -124,7 +128,17 @@ public class SharedCodecsTest
 
     private static String execType(final CodecConfiguration config, final String dictNorm)
     {
-        return className(config, dictNorm, "ExecType", "", "");
+        return enumOf(config, dictNorm, "ExecType");
+    }
+
+    private static String collisionEnum(final CodecConfiguration config, final String dictNorm)
+    {
+        return enumOf(config, dictNorm, "CollisionEnum");
+    }
+
+    private static String enumOf(final CodecConfiguration config, final String dictNorm, final String messageName)
+    {
+        return className(config, dictNorm, messageName, "", "");
     }
 
     private static String encoder(final CodecConfiguration config, final String dictNorm, final String messageName)
@@ -204,6 +218,122 @@ public class SharedCodecsTest
         loadClass(execType(config, null));
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    public <T extends Enum<T>> void shouldBuildEnumUnions() throws Exception
+    {
+        final String collisionEnumName = collisionEnum(config, null);
+        final Class<T> collisionEnum = (Class<T>)loadClass(collisionEnumName);
+        assertTrue(collisionEnum.isEnum());
+
+        final T newValue = enumValue(collisionEnum, "NEW");
+        final T fillValue = enumValue(collisionEnum, "FILL");
+        final T canceledValue = enumValue(collisionEnum, "CANCELED");
+
+        // Clash for names and representations results in most common pair being used for name / representation
+        assertRepresentation('0', newValue);
+        assertRepresentation('1', fillValue);
+        assertRepresentation('2', canceledValue);
+
+        // Collision based upon a name not generated, name put in javadoc
+        noEnum(collisionEnum, "VALUE_CLASH");
+        final CharSequence enumSource = SOURCES.get(collisionEnumName);
+        MatcherAssert.assertThat(enumSource.toString(),
+            containsString("/** Altnames: VALUE_CLASH */ NEW('0')"));
+
+        // Overloads generated for other name collision combinations
+        assertRepresentation('N', enumValue(collisionEnum, "NEW_N"));
+        assertRepresentation('F', enumValue(collisionEnum, "FILL_F"));
+        assertRepresentation('C', enumValue(collisionEnum, "CANCELED_C"));
+    }
+
+    private <T extends Enum<T>> T enumValue(final Class<T> collisionEnum, final String name)
+    {
+        try
+        {
+            return Enum.valueOf(collisionEnum, name);
+        }
+        catch (final IllegalArgumentException e)
+        {
+            System.err.println(Arrays.toString(collisionEnum.getEnumConstants()));
+            throw e;
+        }
+    }
+
+    private <T extends Enum<T>> void noEnum(final Class<T> enumClass, final String name)
+    {
+        try
+        {
+            final T value = Enum.valueOf(enumClass, name);
+            fail("Found enum value " + value + " for " + name + " in " + enumClass);
+        }
+        catch (final IllegalArgumentException e)
+        {
+            // Deliberately blank
+        }
+    }
+
+    @Test
+    public void shouldShareMethods() throws Exception
+    {
+        // No exectype in dict 2, Enum still generated in shared dict
+
+        final String orderID = "orderID";
+        final String resetOrderID = "resetOrderID";
+        final String orderIDLength = "orderIDLength";
+
+        assertEncoderShared(orderID, CharSequence.class);
+        assertEncoderShared(resetOrderID);
+
+        assertDecoderShared(orderID);
+        assertDecoderShared(orderIDLength);
+        assertDecoderShared(resetOrderID);
+
+        final String resetMessage = "resetMessage";
+        executionReportDecoderShared.getDeclaredMethod(resetMessage);
+        executionReportDecoder2.getDeclaredMethod(resetMessage);
+        executionReportEncoderShared.getDeclaredMethod(resetMessage);
+        executionReportEncoder1.getDeclaredMethod(resetMessage);
+
+        final String reset = "reset";
+        assertEncoderNotShared(reset);
+        assertDecoderNotShared(reset);
+
+        // TODO: better test that all fields get reset, add in the super.resetMessage() call.
+    }
+
+    private void assertEncoderShared(final String methodName, final Class<?>... parameterTypes)
+        throws NoSuchMethodException
+    {
+        executionReportEncoderShared.getDeclaredMethod(methodName, parameterTypes);
+        noMethod(executionReportEncoder1, methodName, parameterTypes);
+        noMethod(executionReportEncoder2, methodName, parameterTypes);
+        noMethod(executionReportEncoder3, methodName, parameterTypes);
+    }
+
+    private void assertDecoderShared(final String methodName, final Class<?>... parameterTypes)
+        throws NoSuchMethodException
+    {
+        executionReportDecoderShared.getDeclaredMethod(methodName, parameterTypes);
+        noMethod(executionReportDecoder2, methodName, parameterTypes);
+    }
+
+    private void assertEncoderNotShared(final String methodName, final Class<?>... parameterTypes)
+        throws NoSuchMethodException
+    {
+        noMethod(executionReportEncoderShared, methodName, parameterTypes);
+        executionReportEncoder1.getDeclaredMethod(methodName, parameterTypes);
+        executionReportEncoder2.getDeclaredMethod(methodName, parameterTypes);
+        executionReportEncoder3.getDeclaredMethod(methodName, parameterTypes);
+    }
+
+    private void assertDecoderNotShared(final String methodName, final Class<?>... parameterTypes)
+        throws NoSuchMethodException
+    {
+        noMethod(executionReportDecoderShared, methodName, parameterTypes);
+        executionReportDecoder2.getDeclaredMethod(methodName, parameterTypes);
+    }
+
     @Test
     public void shouldSupportFieldMissingInSomeDictionaries() throws Exception
     {
@@ -254,7 +384,7 @@ public class SharedCodecsTest
         }
     }
 
-    private void noMethod(final Class<?> cls, final String name, final Class<?> ... paramTypes)
+    private void noMethod(final Class<?> cls, final String name, final Class<?>... paramTypes)
     {
         try
         {

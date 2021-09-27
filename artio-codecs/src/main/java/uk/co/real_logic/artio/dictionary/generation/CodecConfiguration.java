@@ -146,7 +146,7 @@ public class CodecConfiguration
         return this;
     }
 
-    public CodecConfiguration sharedCodecsEnabled(final String ... dictionaryNames)
+    public CodecConfiguration sharedCodecsEnabled(final String... dictionaryNames)
     {
         this.dictionaryNames = dictionaryNames;
         this.sharedCodecsEnabled = true;

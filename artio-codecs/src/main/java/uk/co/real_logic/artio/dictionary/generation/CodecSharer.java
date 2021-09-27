@@ -18,11 +18,15 @@ package uk.co.real_logic.artio.dictionary.generation;
 import uk.co.real_logic.artio.dictionary.DictionaryParser;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.groupingBy;
 
 class CodecSharer
 {
@@ -77,7 +81,7 @@ class CodecSharer
                 final String name = msg.name();
                 if (commonMessageNames.contains(name))
                 {
-                    Message sharedMessage = nameToMessage.get(name);
+                    final Message sharedMessage = nameToMessage.get(name);
                     if (sharedMessage == null)
                     {
                         msg.isInParent(true);
@@ -156,10 +160,81 @@ class CodecSharer
             allEnumFieldNames.forEach(enumName -> mergeField(fields, enumName));
         }
 
+        formUnionEnums();
+
         sharedNameToField.values().forEach(field ->
             DictionaryParser.checkAssociatedLengthField(sharedNameToField, field, "CodecSharer"));
+    }
 
-        System.out.println("sharedNameToField = " + sharedNameToField);
+    private void formUnionEnums()
+    {
+        sharedNameToField.values().forEach(field ->
+        {
+            if (field.isEnum())
+            {
+                final List<Value> fieldValues = field.values();
+
+                // Rename collisions by name
+                final Map<String, Map<String, Long>> nameToReprToCount = fieldValues.stream().collect(
+                    groupingBy(Value::description,
+                    groupingBy(Value::representation, Collectors.counting())));
+
+                // Make a new unique Value for every input with the name collisions fixed
+                final List<Value> values = nameToReprToCount
+                    .entrySet().stream().flatMap(e ->
+                    {
+                        final String name = e.getKey();
+                        final Map<String, Long> reprToCount = e.getValue();
+                        final String commonRepr = findCommonName(reprToCount);
+                        final Stream<Value> commonValues =
+                            LongStream.range(0, reprToCount.get(commonRepr)).mapToObj(i ->
+                            new Value(commonRepr, name));
+
+                        final HashSet<String> otherReprs = new HashSet<>(reprToCount.keySet());
+                        otherReprs.remove(commonRepr);
+
+                        final Stream<Value> otherValues = otherReprs.stream().flatMap(repr ->
+                        {
+                            final String newName = name + "_" + repr;
+                            return LongStream.range(0, reprToCount.get(repr))
+                                .mapToObj(i -> new Value(repr, newName));
+                        });
+
+                        return Stream.concat(commonValues, otherValues);
+                    })
+                    .collect(Collectors.toList());
+
+                // Add name collisions by representation to Javadoc
+                final Map<String, Map<String, Long>> reprToNameToCount = values.stream().collect(
+                    groupingBy(Value::representation,
+                    groupingBy(Value::description, Collectors.counting())));
+
+                final List<Value> finalValues = reprToNameToCount
+                    .entrySet().stream().map(e ->
+                    {
+                        final String repr = e.getKey();
+                        final Map<String, Long> nameToCount = e.getValue();
+                        final String commonName = findCommonName(nameToCount);
+                        final Value value = new Value(repr, commonName);
+                        if (nameToCount.size() > 1)
+                        {
+                            final Set<String> otherNames = nameToCount.keySet();
+                            otherNames.remove(commonName);
+                            value.alternativeNames(new ArrayList<>(otherNames));
+                        }
+                        return value;
+                    })
+                    .collect(Collectors.toList());
+
+                fieldValues.clear();
+                fieldValues.addAll(finalValues);
+            }
+        });
+    }
+
+    private String findCommonName(final Map<String, Long> nameToCount)
+    {
+        return nameToCount.keySet().stream().max(Comparator.comparingLong(name -> nameToCount.get(name))).get();
     }
 
     private void mergeField(final Map<String, Field> fields, final String fieldName)
@@ -178,7 +253,9 @@ class CodecSharer
             }
             else
             {
-                // TODO: merge fields and check collissions
+                // TODO: check collisions
+                // merge enum values
+                sharedField.values().addAll(field.values());
                 return sharedField;
             }
         });

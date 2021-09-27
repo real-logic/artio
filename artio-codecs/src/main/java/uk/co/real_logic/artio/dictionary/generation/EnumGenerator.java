@@ -181,7 +181,17 @@ final class EnumGenerator
     {
         return allValues
             .stream()
-            .map((value) -> format("%s%s(%s)", INDENT, value.description(), literal(value, type)))
+            .map((value) ->
+            {
+                String javadoc = "";
+                final List<String> alternativeNames = value.alternativeNames();
+                if (alternativeNames != null)
+                {
+                    javadoc = alternativeNames.stream().collect(
+                        joining(", ", "/** Altnames: ", " */ "));
+                }
+                return format("%1$s%4$s%2$s(%3$s)", INDENT, value.description(), literal(value, type), javadoc);
+            })
             .collect(joining(",\n"));
     }
 

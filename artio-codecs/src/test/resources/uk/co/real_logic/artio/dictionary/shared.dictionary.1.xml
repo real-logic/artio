@@ -219,6 +219,11 @@
             <value enum="2" description="FILL"/>
             <value enum="4" description="CANCELED"/>
         </field>
+        <field number="151" name="CollisionEnum" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="FILL"/>
+            <value enum="2" description="CANCELED"/>
+        </field>
         <field number='198' name="SecondaryOrderID" type="STRING" />
     </fields>
 </fix>

@@ -201,5 +201,11 @@
             <value enum="1" description="MARKET"/>
             <value enum="2" description="LIMIT"/>
         </field>
+        <field number="151" name="CollisionEnum" type="CHAR">
+            <value enum="0" description="VALUE_CLASH"/>
+            <value enum="N" description="NEW"/>
+            <value enum="F" description="FILL"/>
+            <value enum="C" description="CANCELED"/>
+        </field>
     </fields>
 </fix>
