@@ -30,6 +30,9 @@ import static java.util.stream.Collectors.groupingBy;
 
 class CodecSharer
 {
+    // Used in sharedNameToField in order to denote a name that has a clash
+    private static final Field CLASH_SENTINEL = new Field(-1, "SHARING_CLASH", Field.Type.INT);
+
     private final List<Dictionary> inputDictionaries;
 
     private final Map<String, Field> sharedNameToField = new HashMap<>();
@@ -164,6 +167,7 @@ class CodecSharer
 
         sharedNameToField.values().forEach(field ->
             DictionaryParser.checkAssociatedLengthField(sharedNameToField, field, "CodecSharer"));
+        sharedNameToField.values().removeIf(field -> field == CLASH_SENTINEL);
     }
 
     private void formUnionEnums()
@@ -253,24 +257,34 @@ class CodecSharer
             }
             else
             {
-                // TODO: check field type collisions
-
-                final List<Value> sharedValues = sharedField.values();
-                final List<Value> values = field.values();
-
-                final boolean sharedIsEnum = sharedValues.isEmpty();
-                final boolean isEnum = values.isEmpty();
-
-                if (sharedIsEnum != isEnum)
+                final Field.Type sharedType = sharedField.type();
+                final Field.Type type = field.type();
+                if (sharedType != type && BaseType.from(sharedType) != BaseType.from(type))
                 {
-                    sharedField.hasSharedSometimesEnumClash(true);
+                    return CLASH_SENTINEL;
                 }
 
-                // merge enum values
-                sharedValues.addAll(values);
+                mergeEnumValues(sharedField, field);
+
                 return sharedField;
             }
         });
+    }
+
+    private void mergeEnumValues(final Field sharedField, final Field field)
+    {
+        final List<Value> sharedValues = sharedField.values();
+        final List<Value> values = field.values();
+
+        final boolean sharedIsEnum = sharedValues.isEmpty();
+        final boolean isEnum = values.isEmpty();
+
+        if (sharedIsEnum != isEnum)
+        {
+            sharedField.hasSharedSometimesEnumClash(true);
+        }
+
+        sharedValues.addAll(values);
     }
 
     private Set<String> allEnumFieldNames()

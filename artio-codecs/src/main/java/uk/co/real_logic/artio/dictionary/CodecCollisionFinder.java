@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.artio.dictionary.ir.BaseType;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 
@@ -92,8 +93,8 @@ public class CodecCollisionFinder
                     final Field.Type type = field.type();
                     final Field.Type oldType = oldField.type();
 
-                    final Field.BaseType baseType = Field.BaseType.from(type);
-                    final Field.BaseType oldBaseType = Field.BaseType.from(oldType);
+                    final BaseType baseType = BaseType.from(type);
+                    final BaseType oldBaseType = BaseType.from(oldType);
 
                     if (PRINT_FIELD_TYPE_COLL && !baseType.equals(oldBaseType))
                     {
@@ -190,22 +191,22 @@ public class CodecCollisionFinder
         }
     }
 
-    private static boolean canCombine(final Field.BaseType baseType, final Field.BaseType baseType2)
+    private static boolean canCombine(final BaseType baseType, final BaseType baseType2)
     {
         return canCombineOrdered(baseType, baseType2) || canCombineOrdered(baseType2, baseType);
     }
 
-    private static boolean canCombineOrdered(final Field.BaseType baseType, final Field.BaseType baseType2)
+    private static boolean canCombineOrdered(final BaseType baseType, final BaseType baseType2)
     {
-        final boolean string2 = baseType2 == Field.BaseType.STRING;
-        final boolean int1 = baseType == Field.BaseType.INT;
-        final boolean char1 = baseType == Field.BaseType.CHAR;
+        final boolean string2 = baseType2 == BaseType.STRING;
+        final boolean int1 = baseType == BaseType.INT;
+        final boolean char1 = baseType == BaseType.CHAR;
 
         return char1 && string2 ||
             int1 && string2 ||
-            baseType == Field.BaseType.TIMESTAMP && string2 ||
-            baseType == Field.BaseType.FLOAT && string2 ||
-            int1 && baseType2 == Field.BaseType.CHAR ||
-            char1 && baseType2 == Field.BaseType.BOOLEAN;
+            baseType == BaseType.TIMESTAMP && string2 ||
+            baseType == BaseType.FLOAT && string2 ||
+            int1 && baseType2 == BaseType.CHAR ||
+            char1 && baseType2 == BaseType.BOOLEAN;
     }
 }

@@ -83,6 +83,8 @@
             <field name="TransactTime" required="N"/>
             <field name="CollisionEnum" required="N"/>
             <field name="MissingEnum" required="N"/>
+            <field name="ClashingType" required="N"/>
+            <field name="CombinableType" required="N"/>
         </message>
     </messages>
     <components>
@@ -210,6 +212,10 @@
             <value enum="C" description="CANCELED"/>
         </field>
         <field number="152" name="MissingEnum" type="CHAR">
+        </field>
+        <field number="153" name="CombinableType" type="FLOAT">
+        </field>
+        <field number="154" name="ClashingType" type="FLOAT">
         </field>
     </fields>
 </fix>

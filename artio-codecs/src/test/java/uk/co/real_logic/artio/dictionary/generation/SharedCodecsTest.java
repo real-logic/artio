@@ -223,6 +223,22 @@ public class SharedCodecsTest
         loadClass(execType(config, null));
     }
 
+    @Test
+    public void shouldNotShareFieldsWhenTheyHaveClashingTypes() throws Exception
+    {
+        final String clashingType = "clashingType";
+        assertDecoderNotShared(clashingType);
+        assertEncoderNotShared(clashingType);
+    }
+
+    @Test
+    public void shouldShareFieldsWhenTheyHaveSameBaseType() throws Exception
+    {
+        final String combinableType = "combinableType";
+        assertDecoderShared(combinableType);
+        assertEncoderShared(combinableType);
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public <T extends Enum<T>> void shouldBuildEnumUnions() throws Exception
@@ -265,7 +281,7 @@ public class SharedCodecsTest
             Arrays.toString(missingEnum.getEnumConstants()));
 
         executionReportEncoderShared.getDeclaredMethod("missingEnum", char.class);
-        // noMethod(executionReportEncoderShared, "missingEnum", missingEnum);
+        noMethod(executionReportEncoderShared, "missingEnum", missingEnum);
 
         executionReportDecoderShared.getDeclaredMethod("missingEnum");
         noMethod(executionReportDecoderShared, "missingEnumAsEnum");
