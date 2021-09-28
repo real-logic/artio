@@ -76,6 +76,7 @@ public class CodecCollisionFinder
         final Set<String> groupNames = new HashSet<>();
         final Set<String> messageNames = new HashSet<>();
         final Set<String> componentNames = new HashSet<>();
+        final Set<String> fieldNames = new HashSet<>();
 
         for (final Map.Entry<File, Dictionary> pair : fileToDictionary.entrySet())
         {
@@ -85,14 +86,19 @@ public class CodecCollisionFinder
             {
                 messageNames.add(msg.name());
 
-                msg.entriesWith(e -> e instanceof Group).forEach(group -> groupNames.add(group.name()));
+                msg.allGroupsIncludingComponents().forEach(group -> groupNames.add(group.name()));
             });
+            fieldNames.addAll(dictionary.fields().keySet());
             dictionary.components().values().forEach(msg -> componentNames.add(msg.name()));
         }
 
-        out.println("Component & Group: " + intersection(componentNames, groupNames));
-        out.println("Component & Message: " + intersection(componentNames, messageNames));
-        out.println("Message & Group: " + intersection(messageNames, groupNames));
+        out.println("Components & Groups: " + intersection(componentNames, groupNames));
+        out.println("Components & Messages: " + intersection(componentNames, messageNames));
+        out.println("Messages & Groups: " + intersection(messageNames, groupNames));
+
+        // Field names can clash with message names but not group or component names
+        out.println("Fields & Groups: " + intersection(fieldNames, groupNames));
+        out.println("Fields & Components: " + intersection(fieldNames, componentNames));
     }
 
     private static Set<String> intersection(final Set<String> left, final Set<String> right)
