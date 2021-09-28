@@ -91,6 +91,7 @@
             <field name="ExecType" required="Y"/>
             <field name="OrdStatus" required="Y"/>
             <component name="Instrument" required="Y"/>
+            <component name="NonSharedComponent" required="N"/>
             <field name="Side" required="Y"/>
             <field name="TransactTime" required="N"/>
             <field name="CollisionEnum" required="N"/>
@@ -103,6 +104,9 @@
         </message>
     </messages>
     <components>
+        <component name="NonSharedComponent">
+            <field name="NewPassword" required="Y"/>
+        </component>
         <component name="Instrument">
             <field name="Symbol" required="Y"/>
         </component>

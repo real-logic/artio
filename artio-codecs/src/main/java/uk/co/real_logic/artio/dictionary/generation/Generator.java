@@ -198,7 +198,7 @@ public abstract class Generator
 
         if (isMessage)
         {
-            final String reset = shared() ? "" : String.format(
+            final String reset = isSharedParent() ? "" : String.format(
                 "    public void reset()\n" +
                 "    {\n" +
                 "        header.reset();\n" +
@@ -229,7 +229,7 @@ public abstract class Generator
                 "    }\n\n" +
                 "%s",
                 resetEntries,
-                shared() ? "" : additionalReset, // TODO
+                isSharedParent() ? "" : additionalReset, // TODO
                 methods);
         }
     }
@@ -376,13 +376,6 @@ public abstract class Generator
             nameOfResetMethod(entry.name()));
     }
 
-    protected String callComponentReset(final Entry entry)
-    {
-        return String.format(
-            "        %1$s.reset();\n",
-            formatPropertyName(entry.name()));
-    }
-
     protected String hasField(final Entry entry)
     {
         final String name = entry.name();
@@ -465,7 +458,7 @@ public abstract class Generator
             .collect(joining("\n"));
 
         final String prefix;
-        if (hasCommonCompounds && !shared())
+        if (hasCommonCompounds && !isSharedParent())
         {
             prefix =
                 "        builder.append(\"  \\\"header\\\": \");\n" +
@@ -677,7 +670,7 @@ public abstract class Generator
         }
     }
 
-    boolean shared()
+    boolean isSharedParent()
     {
         return dictionary.shared();
     }

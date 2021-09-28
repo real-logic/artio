@@ -21,7 +21,9 @@ import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -44,19 +46,17 @@ class CodecSharer
 
     public void share()
     {
-        final Dictionary firstDictionary = inputDictionaries.get(0);
-
         findSharedFields();
         final List<Message> messages = findSharedMessages();
-        final Map<String, Component> components = new HashMap<>();
+        final Map<String, Component> components = findSharedComponents();
         final Component header = findSharedComponent(Dictionary::header);
         final Component trailer = findSharedComponent(Dictionary::trailer);
         final String specType = DictionaryParser.DEFAULT_SPEC_TYPE;
         final int majorVersion = 0;
         final int minorVersion = 0;
 
-
-        components.putAll(firstDictionary.components());
+        System.out.println("components = " + components);
+        System.out.println("messages = " + messages);
 
         final Dictionary sharedDictionary = new Dictionary(
             messages,
@@ -73,60 +73,84 @@ class CodecSharer
         inputDictionaries.add(sharedDictionary);
     }
 
+    private Map<String, Component> findSharedComponents()
+    {
+        return findSharedAggregates(
+            dict -> dict.components().values(),
+            (comp, sharedComp) -> true,
+            this::copyOf);
+    }
+
     private List<Message> findSharedMessages()
     {
-        final Map<String, Message> nameToMessage = new HashMap<>();
-        final Set<String> commonMessageNames = findCommonMessageNames();
+        final Map<String, Message> nameToMessage = findSharedAggregates(
+            Dictionary::messages,
+            (msg, sharedMessage) -> msg.packedType() == sharedMessage.packedType(),
+            this::copyOf);
+
+        return new ArrayList<>(nameToMessage.values());
+    }
+
+    private <T extends Aggregate> Map<String, T> findSharedAggregates(
+        final Function<Dictionary, Collection<T>> dictToAgg,
+        final BiPredicate<T, T> check,
+        final UnaryOperator<T> copyOf)
+    {
+        final Map<String, T> nameToAggregate = new HashMap<>();
+        final Set<String> commonAggregateNames = findCommonNames(dict ->
+            aggregateNames(dictToAgg.apply(dict)));
         for (final Dictionary dictionary : inputDictionaries)
         {
-            dictionary.messages().forEach(msg ->
+            dictToAgg.apply(dictionary).forEach(agg ->
             {
-                final String name = msg.name();
-                if (commonMessageNames.contains(name))
+                final String name = agg.name();
+                if (commonAggregateNames.contains(name))
                 {
-                    final Message sharedMessage = nameToMessage.get(name);
-                    if (sharedMessage == null)
+                    final T sharedAggregate = nameToAggregate.get(name);
+                    if (sharedAggregate == null)
                     {
-                        msg.isInParent(true);
-                        nameToMessage.put(name, copyOf(msg));
+                        nameToAggregate.put(name, copyOf.apply(agg));
+                        agg.isInParent(true);
                     }
                     else
                     {
-                        // merge fields
-                        if (msg.packedType() != sharedMessage.packedType())
+                        // merge fields within aggregate
+                        if (!check.test(agg, sharedAggregate))
                         {
-                            // TODO: if it happens then push the message type down into the implementations
+                            // TODO: if it happens then push the type down into the implementations
                             System.err.println("Invalid types: ");
-                            System.err.println(msg);
-                            System.err.println(sharedMessage);
+                            System.err.println(agg);
+                            System.err.println(sharedAggregate);
                         }
                         else
                         {
                             // Still need to merge aggregates even though we have merged fields
                             // As some fields may be common to different dictionaries but not messages
-                            mergeAggregate(msg, sharedMessage);
+                            mergeAggregate(agg, sharedAggregate);
                         }
                     }
                 }
             });
         }
 
-        identifyMessageEntriesInParent(nameToMessage);
+        identifyAggregateEntriesInParent(nameToAggregate, dictToAgg);
 
-        return new ArrayList<>(nameToMessage.values());
+        return nameToAggregate;
     }
 
-    private void identifyMessageEntriesInParent(final Map<String, Message> nameToMessage)
+    private <T extends Aggregate> void identifyAggregateEntriesInParent(
+        final Map<String, T> nameToAggregate,
+        final Function<Dictionary, Collection<T>> dictToAgg)
     {
         inputDictionaries.forEach(dictionary ->
         {
-            dictionary.messages().forEach(msg ->
+            dictToAgg.apply(dictionary).forEach(msg ->
             {
                 final String name = msg.name();
-                final Message sharedMessage = nameToMessage.get(name);
-                if (sharedMessage != null)
+                final Aggregate sharedAggregate = nameToAggregate.get(name);
+                if (sharedAggregate != null)
                 {
-                    identifyAggregateEntriesInParent(msg, sharedMessage);
+                    identifyAggregateEntriesInParent(msg, sharedAggregate);
                 }
             });
         });
@@ -332,22 +356,16 @@ class CodecSharer
         {
             final Entry sharedEntry = it.next();
             final Entry entry = nameToEntry.get(sharedEntry.name());
-            if (entry == null || !sharedEntry.isField())
+            if (entry == null || sharedEntry.isGroup())
             {
                 it.remove();
             }
             else
             {
-                // TODO: check collisions
                 // Only required if all are required
                 sharedEntry.required(sharedEntry.required() && entry.required());
             }
         }
-    }
-
-    private Set<String> findCommonMessageNames()
-    {
-        return findCommonNames(this::messageNames);
     }
 
     private Set<String> findCommonNonEnumFieldNames()
@@ -374,9 +392,9 @@ class CodecSharer
         return messageNames;
     }
 
-    private Set<String> messageNames(final Dictionary dictionary)
+    private Set<String> aggregateNames(final Collection<? extends Aggregate> aggregates)
     {
-        return dictionary.messages().stream().map(Message::name).collect(Collectors.toSet());
+        return aggregates.stream().map(Aggregate::name).collect(Collectors.toSet());
     }
 
     private Stream<String> fieldNames(final Dictionary dictionary, final boolean isEnum)
@@ -407,6 +425,10 @@ class CodecSharer
             {
                 return null;
             }
+        }
+        else if (element instanceof Component)
+        {
+            element = copyOf((Component)element);
         }
 
         return new Entry(entry.required(), element);

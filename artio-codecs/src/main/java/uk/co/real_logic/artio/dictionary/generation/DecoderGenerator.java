@@ -253,7 +253,7 @@ class DecoderGenerator extends Generator
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
 
-            if (!shared())
+            if (!isSharedParent())
             {
                 final List<Field> fields = compileAllFieldsFor(message);
                 final String messageFieldsSet = generateFieldDictionary(fields, MESSAGE_FIELDS, false);
@@ -262,7 +262,7 @@ class DecoderGenerator extends Generator
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
-        generateGetters(out, className, aggregate.entries());
+        generateGetters(out, className, aggregate.entries(), aggregate.isInParent());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
         out.append(generateAppendTo(aggregate, isMessage));
@@ -285,7 +285,7 @@ class DecoderGenerator extends Generator
             className,
             interfaceList,
             isStatic ? "static " : "",
-            shared() ? "abstract " : "",
+            isSharedParent() ? "abstract " : "",
             inParent ? parentDictPackage() + "." + className : "CommonDecoderImpl");
     }
 
@@ -304,7 +304,7 @@ class DecoderGenerator extends Generator
     private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
-        if (type == HEADER && !shared())
+        if (type == HEADER && !isSharedParent())
         {
             // Default constructor so that the header decoder can be used independently to parser headers.
             out.append(
@@ -424,7 +424,7 @@ class DecoderGenerator extends Generator
     private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
-        if (shared())
+        if (isSharedParent())
         {
             out.append("    public final IntHashSet " + REQUIRED_FIELDS + " = new IntHashSet();\n\n");
             return;
@@ -727,6 +727,11 @@ class DecoderGenerator extends Generator
                     .map((comp) -> decoderClassName((Aggregate)comp.element()))
                     .collect(toList());
 
+                if (component.isInParent())
+                {
+                    interfaces.add(parentDictPackage() + "." + className);
+                }
+
                 final String interfaceExtension = interfaces.isEmpty() ? "" : " extends " +
                     String.join(", ", interfaces);
 
@@ -742,7 +747,10 @@ class DecoderGenerator extends Generator
 
                 for (final Entry entry : component.entries())
                 {
-                    interfaceGetter(component, entry, out);
+                    if (!entry.isInParent())
+                    {
+                        interfaceGetter(component, entry, out);
+                    }
                 }
                 out.append("\n}\n");
             });
@@ -831,12 +839,13 @@ class DecoderGenerator extends Generator
     }
 
     private void generateGetter(
-        final Entry entry, final Writer out, final Set<String> missingOptionalFields)
+        final Entry entry, final Writer out, final Set<String> missingOptionalFields,
+        final boolean aggregateIsInParent)
     {
         entry.forEach(
-            (field) -> out.append(fieldGetter(entry, field, missingOptionalFields)),
-            (group) -> groupGetter(group, out, missingOptionalFields),
-            (component) -> componentGetter(component, out, missingOptionalFields));
+            (field) -> out.append(fieldGetter(entry, field, missingOptionalFields, aggregateIsInParent)),
+            (group) -> groupGetter(group, out, missingOptionalFields, aggregateIsInParent),
+            (component) -> componentGetter(component, out, missingOptionalFields, aggregateIsInParent));
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -894,7 +903,8 @@ class DecoderGenerator extends Generator
             fullType);
     }
 
-    private void generateGetters(final Writer out, final String className, final List<Entry> entries)
+    private void generateGetters(
+        final Writer out, final String className, final List<Entry> entries, final boolean aggregateIsInParent)
         throws IOException
     {
         final List<String> optionalFields = DECODER_OPTIONAL_SESSION_FIELDS.get(className);
@@ -903,7 +913,7 @@ class DecoderGenerator extends Generator
 
         for (final Entry entry : entries)
         {
-            generateGetter(entry, out, missingOptionalFields);
+            generateGetter(entry, out, missingOptionalFields, aggregateIsInParent);
         }
 
         generateMissingOptionalSessionFields(out, missingOptionalFields);
@@ -971,16 +981,24 @@ class DecoderGenerator extends Generator
     }
 
     private void componentGetter(
-        final Component component, final Writer out, final Set<String> missingOptionalFields)
+        final Component component,
+        final Writer out,
+        final Set<String> missingOptionalFields,
+        final boolean aggregateIsInParent)
         throws IOException
     {
         final Aggregate parentAggregate = currentAggregate;
         currentAggregate = component;
-        wrappedForEachEntry(component, out, (entry) -> generateGetter(entry, out, missingOptionalFields));
+        wrappedForEachEntry(component, out,
+            (entry) -> generateGetter(entry, out, missingOptionalFields, aggregateIsInParent));
         currentAggregate = parentAggregate;
     }
 
-    private void groupGetter(final Group group, final Writer out, final Set<String> missingOptionalFields)
+    private void groupGetter(
+        final Group group,
+        final Writer out,
+        final Set<String> missingOptionalFields,
+        final boolean aggregateIsInParent)
         throws IOException
     {
         // The component interface will generate the group class
@@ -991,7 +1009,8 @@ class DecoderGenerator extends Generator
         }
 
         final Entry numberField = group.numberField();
-        final String prefix = fieldGetter(numberField, (Field)numberField.element(), missingOptionalFields);
+        final String prefix = fieldGetter(
+            numberField, (Field)numberField.element(), missingOptionalFields, aggregateIsInParent);
 
         out.append(String.format(
             "\n" +
@@ -1065,9 +1084,14 @@ class DecoderGenerator extends Generator
             formatPropertyName(group.name())));
     }
 
-    private String fieldGetter(final Entry entry, final Field field, final Set<String> missingOptionalFields)
+    private String fieldGetter(
+        final Entry entry,
+        final Field field,
+        final Set<String> missingOptionalFields,
+        final boolean aggregateIsInParent)
     {
-        if (entry.isInParent())
+        // Entry may exist in common parent component interface but there may not be a common parent message
+        if (entry.isInParent() && aggregateIsInParent)
         {
             return "";
         }
@@ -1415,7 +1439,7 @@ class DecoderGenerator extends Generator
 
     private String decodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
-        if (shared())
+        if (isSharedParent())
         {
             return "";
         }

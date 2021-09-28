@@ -262,7 +262,7 @@ class EncoderGenerator extends Generator
         }
         out.append(classDeclaration(className, interfaces, type == GROUP, aggregate.isInParent()));
         out.append(constructor(className, aggregate, type, dictionary));
-        if (isMessage && !shared())
+        if (isMessage && !isSharedParent())
         {
             out.append(commonCompoundImports("Encoder", false, ""));
         }
@@ -304,7 +304,7 @@ class EncoderGenerator extends Generator
             className,
             interfaceList,
             isStatic ? "static " : "",
-            shared() ? "abstract " : "",
+            isSharedParent() ? "abstract " : "",
             inParent ? " extends " + parentDictPackage() + "." + className : "");
     }
 
@@ -358,7 +358,7 @@ class EncoderGenerator extends Generator
             final long packedType = message.packedType();
             final String fullType = message.fullType();
 
-            final String msgType = header.hasField(MSG_TYPE) && !shared() ?
+            final String msgType = header.hasField(MSG_TYPE) && !isSharedParent() ?
                 String.format("        header.msgType(\"%s\");\n", fullType) : "";
             return String.format(
                 "    public long messageType()\n" +
@@ -525,10 +525,16 @@ class EncoderGenerator extends Generator
     private void generateSetter(
         final String className, final Entry entry, final Writer out, final Set<String> optionalFields)
     {
-        if (!isBodyLength(entry) && !entry.isInParent())
+        if (!isBodyLength(entry))
         {
             entry.forEach(
-                (field) -> out.append(generateFieldSetter(className, field, optionalFields)),
+                (field) ->
+                {
+                    if (!entry.isInParent())
+                    {
+                        out.append(generateFieldSetter(className, field, optionalFields));
+                    }
+                },
                 (group) -> generateGroup(className, group, out, optionalFields),
                 (component) -> generateComponentField(encoderClassName(entry.name()), component, out));
         }
@@ -847,7 +853,7 @@ class EncoderGenerator extends Generator
 
     private String encodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {
-        if (shared())
+        if (isSharedParent())
         {
             return "";
         }
@@ -1074,7 +1080,6 @@ class EncoderGenerator extends Generator
 
     private String encodeComponent(final Entry entry)
     {
-        // TODO: make component return int, split encode prefix
         return String.format(
             "            position += %1$s.encode(buffer, position);\n",
             formatPropertyName(entry.name()));
@@ -1173,28 +1178,46 @@ class EncoderGenerator extends Generator
 
     protected String componentAppendTo(final Component component)
     {
-        final String name = component.name();
-        return String.format(
-            "    indent(builder, level);\n" +
-            "    builder.append(\"\\\"%1$s\\\": \");\n" +
-            "    %2$s.appendTo(builder, level + 1);\n" +
-            "    builder.append(\"\\n\");\n",
-            name,
-            formatPropertyName(name));
+        // appendTo shared components in children
+        if (isSharedParent())
+        {
+            return "";
+        }
+        else
+        {
+            final String name = component.name();
+            return String.format(
+                "    indent(builder, level);\n" +
+                "    builder.append(\"\\\"%1$s\\\": \");\n" +
+                "    %2$s.appendTo(builder, level + 1);\n" +
+                "    builder.append(\"\\n\");\n",
+                name,
+                formatPropertyName(name));
+        }
     }
 
     private void generateComponentField(
         final String className, final Component element, final Writer out)
         throws IOException
     {
-        out.append(String.format(
-            "    private final %1$s %2$s = new %1$s();\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;\n" +
-            "    }\n\n",
-            className,
-            formatPropertyName(element.name())));
+        if (isSharedParent())
+        {
+            out.append(String.format(
+                "    public abstract %1$s %2$s();\n\n",
+                className,
+                formatPropertyName(element.name())));
+        }
+        else
+        {
+            out.append(String.format(
+                "    private final %1$s %2$s = new %1$s();\n" +
+                "    public %1$s %2$s()\n" +
+                "    {\n" +
+                "        return %2$s;\n" +
+                "    }\n\n",
+                className,
+                formatPropertyName(element.name())));
+        }
     }
 
     protected String resetRequiredFloat(final String name)
@@ -1221,11 +1244,26 @@ class EncoderGenerator extends Generator
 
     protected String resetComponents(final List<Entry> entries, final StringBuilder methods)
     {
-        return entries
-            .stream()
-            .filter(Entry::isComponent)
-            .map(this::callComponentReset)
-            .collect(joining());
+        // reset shared components in children
+        if (isSharedParent())
+        {
+            return "";
+        }
+        else
+        {
+            return entries
+                .stream()
+                .filter(Entry::isComponent)
+                .map(this::callComponentReset)
+                .collect(joining());
+        }
+    }
+
+    private String callComponentReset(final Entry entry)
+    {
+        return String.format(
+            "        %1$s.reset();\n",
+            formatPropertyName(entry.name()));
     }
 
     protected String resetStringBasedData(final String name)
@@ -1376,13 +1414,21 @@ class EncoderGenerator extends Generator
 
     protected String componentCopyTo(final Component component, final String encoderName)
     {
-        final String name = component.name();
-        final String varName = formatPropertyName(name);
+        // copyTo shared components in children
+        if (isSharedParent())
+        {
+            return "";
+        }
+        else
+        {
+            final String name = component.name();
+            final String varName = formatPropertyName(name);
 
-        return String.format(
-            "\n        %1$s.copyTo(%2$s.%1$s());",
-            varName,
-            encoderName);
+            return String.format(
+                "\n        %1$s.copyTo(%2$s.%1$s());",
+                varName,
+                encoderName);
+        }
     }
 
     private String fieldCopyTo(final Field field, final String encoderName)

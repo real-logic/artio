@@ -85,79 +85,104 @@ public class SharedCodecsTest
 
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
-            System.out.println(SOURCES);
+//            System.out.println(SOURCES);
         }
-//        System.out.println(sources);
-//        System.out.println("sources.keySet() = " + sources.keySet());
+//        System.out.println("SOURCES.get(\"uk.co.real_logic.artio.decoder.ExecutionReportDecoder\") = " + SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
+//        System.out.println(SOURCES.entrySet().stream().filter(e -> e.getKey().contains("InstrumentDecoder")).map(Map.Entry::getValue).collect(Collectors.toList()));
+        System.out.println("sources.keySet() = " + SOURCES.keySet());
         System.out.println("sources.toString().length() = " + SOURCES.toString().length());
 
-        final String nosEncoderName = executionReportEncoder(config, DICT_1_NORM);
+        final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
         classLoader = executionReportEncoder1.getClassLoader();
-        executionReportEncoder2 = loadClass(executionReportEncoder(config, DICT_2_NORM));
-        executionReportEncoder3 = loadClass(executionReportEncoder(config, DICT_3_NORM));
-        executionReportEncoderShared = loadClass(executionReportEncoder(config, null));
+        executionReportEncoder2 = loadClass(executionReportEncoder(DICT_2_NORM));
+        executionReportEncoder3 = loadClass(executionReportEncoder(DICT_3_NORM));
+        executionReportEncoderShared = loadClass(executionReportEncoder(null));
 
-        executionReportDecoder2 = loadClass(executionReportDecoder(config, DICT_2_NORM));
-        executionReportDecoderShared = loadClass(executionReportDecoder(config, null));
+        executionReportDecoder2 = loadClass(executionReportDecoder(DICT_2_NORM));
+        executionReportDecoderShared = loadClass(executionReportDecoder(null));
 
-        headerEncoder1 = loadClass(headerEncoder(config, DICT_1_NORM));
-        headerEncoder2 = loadClass(headerEncoder(config, DICT_2_NORM));
-        headerEncoderShared = loadClass(headerEncoder(config, null));
+        headerEncoder1 = loadClass(headerEncoder(DICT_1_NORM));
+        headerEncoder2 = loadClass(headerEncoder(DICT_2_NORM));
+        headerEncoderShared = loadClass(headerEncoder(null));
     }
 
-    private static String executionReportEncoder(final CodecConfiguration config, final String dictNorm)
+    private static String executionReportEncoder(final String dictNorm)
     {
-        return encoder(config, dictNorm, EXECUTION_REPORT);
+        return encoder(dictNorm, EXECUTION_REPORT);
     }
 
-    private static String executionReportDecoder(final CodecConfiguration config, final String dictNorm)
+    private static String executionReportDecoder(final String dictNorm)
     {
-        return decoder(config, dictNorm, EXECUTION_REPORT);
+        return decoder(dictNorm, EXECUTION_REPORT);
     }
 
-    private static String headerEncoder(final CodecConfiguration config, final String dictNorm)
+    private static String headerEncoder(final String dictNorm)
     {
-        return encoder(config, dictNorm, "Header");
+        return encoder(dictNorm, "Header");
     }
 
-    private static String newOrderSingleEncoder(final CodecConfiguration config, final String dictNorm)
+    private static String newOrderSingleEncoder(final String dictNorm)
     {
-        return encoder(config, dictNorm, "NewOrderSingle");
+        return encoder(dictNorm, "NewOrderSingle");
     }
 
-    private static String execType(final CodecConfiguration config, final String dictNorm)
+    private static String newOrderSingleDecoder(final String dictNorm)
     {
-        return enumOf(config, dictNorm, "ExecType");
+        return decoder(dictNorm, "NewOrderSingle");
     }
 
-    private static String collisionEnum(final CodecConfiguration config, final String dictNorm)
+    private static String instrumentEncoder(final String dictNorm)
     {
-        return enumOf(config, dictNorm, "CollisionEnum");
+        return encoder(dictNorm, "Instrument");
     }
 
-    private static String missingEnum(final CodecConfiguration config, final String dictNorm)
+    private static String instrumentDecoder(final String dictNorm)
     {
-        return enumOf(config, dictNorm, "MissingEnum");
+        return decoder(dictNorm, "Instrument");
     }
 
-    private static String enumOf(final CodecConfiguration config, final String dictNorm, final String messageName)
+    private static String nonSharedComponentEncoder(final String dictNorm)
     {
-        return className(config, dictNorm, messageName, "", "");
+        return encoder(dictNorm, "NonSharedComponent");
     }
 
-    private static String encoder(final CodecConfiguration config, final String dictNorm, final String messageName)
+    private static String nonSharedComponentDecoder(final String dictNorm)
     {
-        return className(config, dictNorm, messageName, "Encoder", "builder.");
+        return decoder(dictNorm, "NonSharedComponent");
     }
 
-    private static String decoder(final CodecConfiguration config, final String dictNorm, final String messageName)
+    private static String execType(final String dictNorm)
     {
-        return className(config, dictNorm, messageName, "Decoder", "decoder.");
+        return enumOf(dictNorm, "ExecType");
+    }
+
+    private static String collisionEnum(final String dictNorm)
+    {
+        return enumOf(dictNorm, "CollisionEnum");
+    }
+
+    private static String missingEnum(final String dictNorm)
+    {
+        return enumOf(dictNorm, "MissingEnum");
+    }
+
+    private static String enumOf(final String dictNorm, final String messageName)
+    {
+        return className(dictNorm, messageName, "", "");
+    }
+
+    private static String encoder(final String dictNorm, final String messageName)
+    {
+        return className(dictNorm, messageName, "Encoder", "builder.");
+    }
+
+    private static String decoder(final String dictNorm, final String messageName)
+    {
+        return className(dictNorm, messageName, "Decoder", "decoder.");
     }
 
     private static String className(
-        final CodecConfiguration config,
         final String dictNorm,
         final String messageName,
         final String suffix,
@@ -218,9 +243,9 @@ public class SharedCodecsTest
     {
         // No exectype in dict 2, Enum still generated in shared dict
 
-        noClass(execType(config, DICT_1_NORM));
-        noClass(execType(config, DICT_2_NORM));
-        loadClass(execType(config, null));
+        noClass(execType(DICT_1_NORM));
+        noClass(execType(DICT_2_NORM));
+        loadClass(execType(null));
     }
 
     @Test
@@ -245,11 +270,36 @@ public class SharedCodecsTest
         assertEncoderShared(combinableType);
     }
 
+    @Test
+    public void shouldShareComponents() throws Exception
+    {
+        // Instrument is common to all and should be shared
+        final Class<?> sharedInstrumentEncoder = loadClass(instrumentEncoder(null));
+        final Class<?> sharedInstrumentDecoder = loadClass(instrumentDecoder(null));
+        loadClass(instrumentEncoder(DICT_1_NORM));
+        loadClass(instrumentDecoder(DICT_1_NORM));
+        loadClass(instrumentEncoder(DICT_2_NORM));
+        loadClass(instrumentDecoder(DICT_2_NORM));
+
+        // Fields on shared decoder
+        sharedInstrumentEncoder.getDeclaredMethod("symbol");
+        sharedInstrumentDecoder.getDeclaredMethod("symbol");
+        sharedInstrumentDecoder.getDeclaredMethod("symbolLength");
+
+        // Component that is unique to 1 dictionary
+        noClass(nonSharedComponentEncoder(null));
+        noClass(nonSharedComponentDecoder(null));
+        loadClass(nonSharedComponentEncoder(DICT_1_NORM));
+        loadClass(nonSharedComponentDecoder(DICT_1_NORM));
+        noClass(nonSharedComponentEncoder(DICT_2_NORM));
+        noClass(nonSharedComponentDecoder(DICT_2_NORM));
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public <T extends Enum<T>> void shouldBuildEnumUnions() throws Exception
     {
-        final String collisionEnumName = collisionEnum(config, null);
+        final String collisionEnumName = collisionEnum(null);
         final Class<T> collisionEnum = (Class<T>)loadClass(collisionEnumName);
         assertTrue(collisionEnum.isEnum());
 
@@ -280,7 +330,7 @@ public class SharedCodecsTest
         // Missing enum isn't an enum in dict 2 but is in other dictionaries
         // Generate the enum type but don't generate the AsEnum method so people can optionally use it
 
-        final Class<?> missingEnum = loadClass(missingEnum(config, null));
+        final Class<?> missingEnum = loadClass(missingEnum(null));
         assertTrue(missingEnum.isEnum());
 
         assertEquals("[NEW, FILL, CANCELED, NULL_VAL, ARTIO_UNKNOWN]",
@@ -399,10 +449,14 @@ public class SharedCodecsTest
     @Test
     public void shouldSupportMessagesMissingInSomeDictionaries() throws ClassNotFoundException
     {
-        // dict 2 doesn't have NOS but shared does
-        noClass(newOrderSingleEncoder(config, null));
-        loadClass(newOrderSingleEncoder(config, DICT_1_NORM));
-        noClass(newOrderSingleEncoder(config, DICT_2_NORM));
+        // dict 2 doesn't have NOS so shared doesn't
+        noClass(newOrderSingleEncoder(null));
+        loadClass(newOrderSingleEncoder(DICT_1_NORM));
+        noClass(newOrderSingleEncoder(DICT_2_NORM));
+
+        noClass(newOrderSingleDecoder(null));
+        loadClass(newOrderSingleDecoder(DICT_1_NORM));
+        noClass(newOrderSingleDecoder(DICT_2_NORM));
     }
 
     private static Class<?> loadClass(final String name) throws ClassNotFoundException
