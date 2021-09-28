@@ -19,14 +19,13 @@ import org.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.artio.dictionary.ir.BaseType;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.Group;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CodecCollisionFinder
 {
@@ -37,7 +36,9 @@ public class CodecCollisionFinder
     private static final boolean PRINT_FIELD_NUMBER_COLL = false;
 
     private static final boolean PRINT_ENUM_NON_ENUM_COLL = false;
-    private static final boolean PRINT_ENUM_VALUE_COLL = true;
+    private static final boolean PRINT_ENUM_VALUE_COLL = false;
+
+    private static final boolean PRINT_COMPONENT_GROUP_COLL = true;
 
     private static PrintStream out;
 
@@ -62,6 +63,43 @@ public class CodecCollisionFinder
         out.println("Analyzing Dictionaries ... ");
 
         findFieldCollisions(fileToDictionary);
+        findComponentGroupCollisions(fileToDictionary);
+    }
+
+    private static void findComponentGroupCollisions(final Map<File, Dictionary> fileToDictionary)
+    {
+        if (!PRINT_COMPONENT_GROUP_COLL)
+        {
+            return;
+        }
+
+        final Set<String> groupNames = new HashSet<>();
+        final Set<String> messageNames = new HashSet<>();
+        final Set<String> componentNames = new HashSet<>();
+
+        for (final Map.Entry<File, Dictionary> pair : fileToDictionary.entrySet())
+        {
+            final Dictionary dictionary = pair.getValue();
+
+            dictionary.messages().forEach(msg ->
+            {
+                messageNames.add(msg.name());
+
+                msg.entriesWith(e -> e instanceof Group).forEach(group -> groupNames.add(group.name()));
+            });
+            dictionary.components().values().forEach(msg -> componentNames.add(msg.name()));
+        }
+
+        out.println("Component & Group: " + intersection(componentNames, groupNames));
+        out.println("Component & Message: " + intersection(componentNames, messageNames));
+        out.println("Message & Group: " + intersection(messageNames, groupNames));
+    }
+
+    private static Set<String> intersection(final Set<String> left, final Set<String> right)
+    {
+        final Set<String> commonNames = new HashSet<>(left);
+        commonNames.retainAll(right);
+        return commonNames;
     }
 
     private static void findFieldCollisions(final Map<File, Dictionary> fileToDictionary)

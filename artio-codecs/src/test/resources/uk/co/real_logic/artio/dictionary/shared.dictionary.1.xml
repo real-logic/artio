@@ -97,6 +97,9 @@
             <field name="MissingEnum" required="N"/>
             <field name="ClashingType" required="N"/>
             <field name="CombinableType" required="N"/>
+            <group name="NoContraBrokers" required="N">
+                <field name="ContraBroker" required="N" />
+            </group>
         </message>
     </messages>
     <components>
@@ -137,7 +140,7 @@
         <field number="122" name="OrigSendingTime" type="UTCTIMESTAMP"/>
         <field number="369" name="LastMsgSeqNumProcessed" type="SEQNUM"/>
         <field number="112" name="TestReqID" type="STRING"/>
-        <field number='115' name="OnBehalfOfCompID" type="STRING" />
+        <field number="115" name="OnBehalfOfCompID" type="STRING" />
         <field number="7" name="BeginSeqNo" type="SEQNUM"/>
         <field number="16" name="EndSeqNo" type="SEQNUM"/>
         <field number="45" name="RefSeqNum" type="SEQNUM"/>
@@ -237,6 +240,8 @@
         </field>
         <field number="154" name="ClashingType" type="BOOLEAN">
         </field>
-        <field number='198' name="SecondaryOrderID" type="STRING" />
+        <field number="198" name="SecondaryOrderID" type="STRING" />
+        <field number="375" name="ContraBroker" type="STRING" />
+        <field number="382" name="NoContraBrokers" type="INT" />
     </fields>
 </fix>

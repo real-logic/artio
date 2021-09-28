@@ -226,6 +226,12 @@ public class SharedCodecsTest
     @Test
     public void shouldNotShareFieldsWhenTheyHaveClashingTypes() throws Exception
     {
+        System.out.println("executionReportEncoderShared.getDeclaredMethods() = " + Arrays.toString(executionReportEncoderShared.getDeclaredMethods()));
+        System.out.println("executionReportDecoderShared.getDeclaredMethods() = " + Arrays.toString(executionReportDecoderShared.getDeclaredMethods()));
+
+        System.out.println("executionReportEncoder1.getDeclaredMethods() = " + Arrays.toString(executionReportEncoder1.getDeclaredMethods()));
+        System.out.println("executionReportDecoder2.getDeclaredMethods() = " + Arrays.toString(executionReportDecoder2.getDeclaredMethods()));
+
         final String clashingType = "clashingType";
         assertDecoderNotShared(clashingType);
         assertEncoderNotShared(clashingType);
