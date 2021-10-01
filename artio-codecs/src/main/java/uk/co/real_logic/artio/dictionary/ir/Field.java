@@ -114,7 +114,7 @@ public final class Field implements Element
 
     public String toString()
     {
-        return "EnumField{" +
+        return "Field{" +
             "number=" + number +
             ", name='" + name + '\'' +
             ", type=" + type +

@@ -246,7 +246,7 @@ class DecoderGenerator extends Generator
             interfaces.add(SessionHeaderDecoder.class.getSimpleName());
         }
 
-        out.append(classDeclaration(className, interfaces, false, aggregate.isInParent()));
+        out.append(classDeclaration(className, interfaces, false, aggregate.isInParent(), isGroup, parentAggregate));
         generateValidation(out, aggregate, type);
         if (isMessage)
         {
@@ -275,10 +275,27 @@ class DecoderGenerator extends Generator
         final String className,
         final List<String> interfaces,
         final boolean isStatic,
-        final boolean inParent)
+        final boolean inParent,
+        final boolean isGroup,
+        final Aggregate parentAggregate)
     {
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
+        final String extendsClause;
+        if (inParent)
+        {
+            String dictPackage = parentDictPackage();
+            // Groups are inner classes in their parent
+            if (isGroup)
+            {
+                dictPackage = dictPackage + "." + decoderClassName(parentAggregate);
+            }
+            extendsClause = dictPackage + "." + className;
+        }
+        else
+        {
+            extendsClause = "CommonDecoderImpl";
+        }
         return String.format(
             "\n\npublic %3$s%4$sclass %1$s extends %5$s%2$s\n" +
             "{\n",
@@ -286,7 +303,7 @@ class DecoderGenerator extends Generator
             interfaceList,
             isStatic ? "static " : "",
             isSharedParent() ? "abstract " : "",
-            inParent ? parentDictPackage() + "." + className : "CommonDecoderImpl");
+            extendsClause);
     }
 
     private List<Field> compileAllFieldsFor(final Message message)
@@ -353,9 +370,16 @@ class DecoderGenerator extends Generator
     {
         final Group group = (Group)entry.element();
         final String name = group.name();
+        final String resetMethod = nameOfResetMethod(name);
 
-        final Entry numberField = group.numberField();
-        return String.format(
+        if (isSharedParent())
+        {
+            return String.format("    public abstract void %1$s();\n", resetMethod);
+        }
+        else
+        {
+            final Entry numberField = group.numberField();
+            return String.format(
                 "    public void %1$s()\n" +
                 "    {\n" +
                 "        for (final %2$s %6$s : %5$s.iterator())\n" +
@@ -369,12 +393,13 @@ class DecoderGenerator extends Generator
                 "        %3$s = MISSING_INT;\n" +
                 "        has%4$s = false;\n" +
                 "    }\n\n",
-                nameOfResetMethod(name),
+                resetMethod,
                 decoderClassName(name),
                 formatPropertyName(numberField.name()),
                 numberField.name(),
                 iteratorFieldName(group),
                 formatPropertyName(decoderClassName(name)));
+        }
     }
 
     private static String iteratorClassName(final Group group)
@@ -852,7 +877,7 @@ class DecoderGenerator extends Generator
     {
         if (aggregate instanceof Group)
         {
-            wrapTrailerAndMessageFieldsInConstructor(out, aggregate);
+            wrapTrailerAndMessageFieldsInGroupConstructor(out, aggregate);
 
             out.append(String.format(
                 "    private %1$s next = null;\n\n" +
@@ -866,9 +891,14 @@ class DecoderGenerator extends Generator
         }
     }
 
-    private void wrapTrailerAndMessageFieldsInConstructor(final Writer out, final Aggregate aggregate)
+    private void wrapTrailerAndMessageFieldsInGroupConstructor(final Writer out, final Aggregate aggregate)
         throws IOException
     {
+        if (isSharedParent())
+        {
+            return;
+        }
+
         out.append(String.format(
             "    private final TrailerDecoder trailer;\n" +
             "    private final IntHashSet %1$s;\n" +
@@ -1009,30 +1039,47 @@ class DecoderGenerator extends Generator
         }
 
         final Entry numberField = group.numberField();
-        final String prefix = fieldGetter(
+        final String prefix = group.isInParent() ? "" : fieldGetter(
             numberField, (Field)numberField.element(), missingOptionalFields, aggregateIsInParent);
 
-        out.append(String.format(
-            "\n" +
-            "    private %1$s %2$s = null;\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;\n" +
-            "    }\n\n" +
-            "%3$s\n" +
-            "    private %4$s %5$s = new %4$s(this);\n" +
-            "    public %4$s %5$s()\n" +
-            "    {\n" +
-            "        return %5$s.iterator();\n" +
-            "    }\n\n",
-            decoderClassName(group),
-            formatPropertyName(group.name()),
-            prefix,
-            iteratorClassName(group),
-            iteratorFieldName(group)));
+        if (isSharedParent())
+        {
+            out.append(String.format(
+                "\n" +
+                "    public abstract %1$s %2$s();\n\n" +
+                "%3$s\n" +
+                "    public abstract %4$s %5$s();\n\n",
+                decoderClassName(group),
+                formatPropertyName(group.name()),
+                prefix,
+                iteratorClassName(group),
+                iteratorFieldName(group)));
+        }
+        else
+        {
+            out.append(String.format(
+                "\n" +
+                "    private %1$s %2$s = null;\n" +
+                "    public %1$s %2$s()\n" +
+                "    {\n" +
+                "        return %2$s;\n" +
+                "    }\n\n" +
+                "%3$s\n" +
+                "    private %4$s %5$s = new %4$s(this);\n" +
+                "    public %4$s %5$s()\n" +
+                "    {\n" +
+                "        return %5$s.iterator();\n" +
+                "    }\n\n",
+                decoderClassName(group),
+                formatPropertyName(group.name()),
+                prefix,
+                iteratorClassName(group),
+                iteratorFieldName(group)));
+        }
     }
 
-    private void generateGroupIterator(final Aggregate parent, final Writer out, final Group group) throws IOException
+    private void generateGroupIterator(
+        final Aggregate parent, final Writer out, final Group group) throws IOException
     {
         final String numberFieldName = group.numberField().name();
         final String formattedNumberFieldName = formatPropertyName(numberFieldName);
@@ -1041,6 +1088,87 @@ class DecoderGenerator extends Generator
             String.format("parent.%1$s()", formattedNumberFieldName) :
             String.format("parent.has%1$s() ? parent.%2$s() : 0", numberFieldName, formattedNumberFieldName);
 
+        final String iteratorClassName = iteratorClassName(group);
+        final String groupDecoderName = decoderClassName(group);
+        final String parentDecoderName = decoderClassName(parent);
+        final String groupPropertyName = formatPropertyName(group.name());
+
+        if (isSharedParent())
+        {
+            out.append(String.format(
+                "    public abstract class %1$s<T extends %2$s> implements Iterable<T>, java.util.Iterator<T>\n" +
+                "    {\n" +
+                "        private final %3$s parent;\n" +
+                "        private int remainder;\n" +
+                "        private T current;\n\n" +
+                "        public %1$s(final %3$s parent)\n" +
+                "        {\n" +
+                "            this.parent = parent;\n" +
+                "        }\n\n" +
+                "        public boolean hasNext()\n" +
+                "        {\n" +
+                "            return remainder > 0 && current != null;\n" +
+                "        }\n" +
+                "        public T next()\n" +
+                "        {\n" +
+                "            remainder--;\n" +
+                "            final T value = current;\n" +
+                "            current = (T)current.next();\n" +
+                "            return value;\n" +
+                "        }\n" +
+                "        public int numberFieldValue()\n" +
+                "        {\n" +
+                "            return %4$s;\n" +
+                "        }\n" +
+                "        public void reset()\n" +
+                "        {\n" +
+                "            remainder = numberFieldValue();\n" +
+                "            current = (T)parent.%5$s();\n" +
+                "        }\n" +
+                "    }\n\n",
+                iteratorClassName,
+                groupDecoderName,
+                parentDecoderName,
+                numberFieldReset,
+                groupPropertyName));
+        }
+        else if (group.isInParent())
+        {
+            final String parentLocation = parentDictPackage() + "." + parentDecoderName;
+            out.append(String.format(
+                "    public class %1$s extends %4$s.%1$s<%2$s>\n" +
+                "    {\n" +
+                "        public %1$s(final %3$s parent)\n" +
+                "        {\n" +
+                "            super(parent);\n" +
+                "        }\n" +
+                "        public %1$s iterator()\n" +
+                "        {\n" +
+                "            reset();\n" +
+                "            return this;\n" +
+                "        }\n" +
+                "    }\n\n",
+                iteratorClassName,
+                groupDecoderName,
+                parentDecoderName,
+                parentLocation));
+        }
+        else
+        {
+            generateNormalGroupIterator(
+                out, numberFieldReset, iteratorClassName, groupDecoderName, parentDecoderName, groupPropertyName);
+        }
+    }
+
+    private void generateNormalGroupIterator(
+        final Writer out,
+        final String numberFieldReset,
+        final String iteratorClassName,
+        final String groupDecoderName,
+        final String parentDecoderName,
+        final String groupPropertyName)
+        throws IOException
+    {
         out.append(String.format(
             "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
             "    {\n" +
@@ -1077,11 +1205,11 @@ class DecoderGenerator extends Generator
             "            return this;\n" +
             "        }\n" +
             "    }\n\n",
-            iteratorClassName(group),
-            decoderClassName(group),
-            decoderClassName(parent),
+            iteratorClassName,
+            groupDecoderName,
+            parentDecoderName,
             numberFieldReset,
-            formatPropertyName(group.name())));
+            groupPropertyName));
     }
 
     private String fieldGetter(
@@ -1914,27 +2042,32 @@ class DecoderGenerator extends Generator
 
     protected String groupEntryAppendTo(final Group group, final String name)
     {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
         final String numberField = group.numberField().name();
         return String.format(
-            "    if (has%2$s)\n" +
-            "    {\n" +
-            "        indent(builder, level);\n" +
-            "        builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
-            "        %3$s %4$s = this.%4$s;\n" +
-            "        for (int i = 0, size = this.%5$s; i < size; i++)\n" +
+            "        if (has%2$s)\n" +
             "        {\n" +
             "            indent(builder, level);\n" +
-            "            %4$s.appendTo(builder, level + 1);" +
-            "            if (%4$s.next() != null)\n" +
+            "            builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
+            "            %3$s %4$s = this.%4$s;\n" +
+            "            for (int i = 0, size = this.%5$s; i < size; i++)\n" +
             "            {\n" +
-            "                builder.append(',');\n" +
+            "                indent(builder, level);\n" +
+            "                %4$s.appendTo(builder, level + 1);\n" +
+            "                if (%4$s.next() != null)\n" +
+            "                {\n" +
+            "                    builder.append(',');\n" +
+            "                }\n" +
+            "                builder.append('\\n');\n" +
+            "                %4$s = %4$s.next();" +
             "            }\n" +
-            "            builder.append('\\n');\n" +
-            "            %4$s = %4$s.next();" +
-            "        }\n" +
-            "        indent(builder, level);\n" +
-            "        builder.append(\"],\\n\");\n" +
-            "    }\n",
+            "            indent(builder, level);\n" +
+            "            builder.append(\"],\\n\");\n" +
+            "        }\n",
             name,
             numberField,
             decoderClassName(name),
@@ -2024,6 +2157,11 @@ class DecoderGenerator extends Generator
 
     protected String groupEntryToEncoder(final Group group, final String name, final String encoderName)
     {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
         final String numberField = group.numberField().name();
 
         return String.format(

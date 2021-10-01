@@ -20,6 +20,7 @@ import org.agrona.Verify;
 import org.agrona.generation.ResourceConsumer;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -107,6 +108,7 @@ public final class Entry
      */
     public Entry(final boolean required, final Element element)
     {
+        Objects.requireNonNull(element);
         this.required = required;
         this.element = element;
     }

@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -38,6 +39,7 @@ class CodecSharer
     private final List<Dictionary> inputDictionaries;
 
     private final Map<String, Field> sharedNameToField = new HashMap<>();
+    private Map<String, Group> sharedIdToGroup;
 
     CodecSharer(final List<Dictionary> inputDictionaries)
     {
@@ -47,6 +49,10 @@ class CodecSharer
     public void share()
     {
         findSharedFields();
+
+        System.out.println("sharedNameToField = " + sharedNameToField);
+
+        findSharedGroups();
         final List<Message> messages = findSharedMessages();
         final Map<String, Component> components = findSharedComponents();
         final Component header = findSharedComponent(Dictionary::header);
@@ -55,6 +61,7 @@ class CodecSharer
         final int majorVersion = 0;
         final int minorVersion = 0;
 
+        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
         System.out.println("components = " + components);
         System.out.println("messages = " + messages);
 
@@ -73,37 +80,100 @@ class CodecSharer
         inputDictionaries.add(sharedDictionary);
     }
 
+    private void findSharedGroups()
+    {
+        sharedIdToGroup = findSharedAggregates(
+            dict -> Stream.concat(
+                    makeGroupPairs(dict.messages()),
+                    makeGroupPairs(dict.components().values()))
+                .collect(Collectors.toList()),
+            (comp, sharedGroup) -> true,
+            this::copyOf,
+            this::sharedGroupId);
+    }
+
+    private String sharedGroupId(final Aggregate parent, final Group group)
+    {
+        return parent.name() + "." + group.name();
+    }
+
+    private Stream<AggPair<Group>> makeGroupPairs(
+        final Collection<? extends Aggregate> aggregates)
+    {
+        return aggregates.stream().flatMap(msg ->
+            msg.directGroups().map(grp -> new AggPair<>(msg, grp)));
+    }
+
     private Map<String, Component> findSharedComponents()
     {
         return findSharedAggregates(
-            dict -> dict.components().values(),
+            dict -> addFakeParents(dict.components().values()),
             (comp, sharedComp) -> true,
-            this::copyOf);
+            this::copyOf,
+            (ignore, component) -> component.name());
     }
 
     private List<Message> findSharedMessages()
     {
         final Map<String, Message> nameToMessage = findSharedAggregates(
-            Dictionary::messages,
+            dict -> addFakeParents(dict.messages()),
             (msg, sharedMessage) -> msg.packedType() == sharedMessage.packedType(),
-            this::copyOf);
+            this::copyOf,
+            (ignore, msg) -> msg.name());
 
         return new ArrayList<>(nameToMessage.values());
     }
 
+    private static final class AggPair<T extends Aggregate>
+    {
+        private final Aggregate parent;
+        private final T agg;
+
+        private AggPair(final Aggregate parent, final T agg)
+        {
+            this.parent = parent;
+            this.agg = agg;
+        }
+
+        public Aggregate parent()
+        {
+            return parent;
+        }
+
+        public T agg()
+        {
+            return agg;
+        }
+    }
+
+    private <T extends Aggregate> Collection<AggPair<T>> addFakeParents(
+        final Collection<T> aggregates)
+    {
+        return aggregates
+            .stream()
+            .map(agg -> new AggPair<T>(agg, agg))
+            .collect(Collectors.toList());
+    }
+
+    // Groups existing within a Message or Component, so we put the message or component name into the
+    // name map for the groups, so we can lookup the precise group later on.
+    // Thus all the getName functions that need parent objects
     private <T extends Aggregate> Map<String, T> findSharedAggregates(
-        final Function<Dictionary, Collection<T>> dictToAgg,
+        final Function<Dictionary, Collection<AggPair<T>>> dictToAggParentPair,
         final BiPredicate<T, T> check,
-        final UnaryOperator<T> copyOf)
+        final UnaryOperator<T> copyOf,
+        final BiFunction<Aggregate, T, String> getName)
     {
         final Map<String, T> nameToAggregate = new HashMap<>();
         final Set<String> commonAggregateNames = findCommonNames(dict ->
-            aggregateNames(dictToAgg.apply(dict)));
+            aggregateNames(dictToAggParentPair.apply(dict), getName));
         for (final Dictionary dictionary : inputDictionaries)
         {
-            dictToAgg.apply(dictionary).forEach(agg ->
+            dictToAggParentPair.apply(dictionary).forEach(e ->
             {
-                final String name = agg.name();
+                final Aggregate parent = e.parent();
+                final T agg = e.agg();
+                final String name = getName.apply(parent, agg);
                 if (commonAggregateNames.contains(name))
                 {
                     final T sharedAggregate = nameToAggregate.get(name);
@@ -133,24 +203,27 @@ class CodecSharer
             });
         }
 
-        identifyAggregateEntriesInParent(nameToAggregate, dictToAgg);
+        identifyAggregateEntriesInParent(nameToAggregate, dictToAggParentPair, getName);
 
         return nameToAggregate;
     }
 
     private <T extends Aggregate> void identifyAggregateEntriesInParent(
         final Map<String, T> nameToAggregate,
-        final Function<Dictionary, Collection<T>> dictToAgg)
+        final Function<Dictionary, Collection<AggPair<T>>> dictToAggParentPair,
+        final BiFunction<Aggregate, T, String> getName)
     {
         inputDictionaries.forEach(dictionary ->
         {
-            dictToAgg.apply(dictionary).forEach(msg ->
+            dictToAggParentPair.apply(dictionary).forEach(e ->
             {
-                final String name = msg.name();
+                final Aggregate parent = e.parent();
+                final T agg = e.agg();
+                final String name = getName.apply(parent, agg);
                 final Aggregate sharedAggregate = nameToAggregate.get(name);
                 if (sharedAggregate != null)
                 {
-                    identifyAggregateEntriesInParent(msg, sharedAggregate);
+                    identifyAggregateEntriesInParent(agg, sharedAggregate);
                 }
             });
         });
@@ -356,7 +429,7 @@ class CodecSharer
         {
             final Entry sharedEntry = it.next();
             final Entry entry = nameToEntry.get(sharedEntry.name());
-            if (entry == null || sharedEntry.isGroup())
+            if (entry == null)
             {
                 it.remove();
             }
@@ -392,9 +465,16 @@ class CodecSharer
         return messageNames;
     }
 
-    private Set<String> aggregateNames(final Collection<? extends Aggregate> aggregates)
+    private <T extends Aggregate> Set<String> aggregateNames(
+        final Collection<AggPair<T>> aggregates,
+        final BiFunction<Aggregate, T, String> getName)
     {
-        return aggregates.stream().map(Aggregate::name).collect(Collectors.toSet());
+        return aggregates.stream().map(e ->
+        {
+            final Aggregate parent = e.parent();
+            final T agg = e.agg();
+            return getName.apply(parent, agg);
+        }).collect(Collectors.toSet());
     }
 
     private Stream<String> fieldNames(final Dictionary dictionary, final boolean isEnum)
@@ -411,7 +491,7 @@ class CodecSharer
     }
 
     // pre: shared fields calculated
-    private Entry copyOf(final Entry entry)
+    private Entry copyOf(final Aggregate parent, final Entry entry)
     {
         Entry.Element element = entry.element();
 
@@ -430,6 +510,16 @@ class CodecSharer
         {
             element = copyOf((Component)element);
         }
+        else if (element instanceof Group)
+        {
+            final Group group = (Group)element;
+            final String id = sharedGroupId(parent, group);
+            element = sharedIdToGroup.get(id);
+        }
+        else
+        {
+            throw new IllegalArgumentException("Unknown element type: " + element);
+        }
 
         return new Entry(entry.required(), element);
     }
@@ -437,22 +527,31 @@ class CodecSharer
     private Component copyOf(final Component component)
     {
         final Component newComponent = new Component(component.name());
-        copyOf(component, newComponent);
+        copyTo(component, newComponent);
         return newComponent;
+    }
+
+    private Group copyOf(final Group group)
+    {
+        final Entry numberField = group.numberField();
+        final Entry copiedNumberField = copyOf(group, numberField);
+        final Group newGroup = new Group(group.name(), copiedNumberField);
+        copyTo(group, newGroup);
+        return newGroup;
     }
 
     private Message copyOf(final Message message)
     {
         final Message newMessage = new Message(message.name(), message.fullType(), message.category());
-        copyOf(message, newMessage);
+        copyTo(message, newMessage);
         return newMessage;
     }
 
-    private void copyOf(final Aggregate aggregate, final Aggregate newAggregate)
+    private void copyTo(final Aggregate aggregate, final Aggregate newAggregate)
     {
         for (final Entry entry : aggregate.entries())
         {
-            final Entry newEntry = copyOf(entry);
+            final Entry newEntry = copyOf(aggregate, entry);
             if (newEntry != null)
             {
                 newAggregate.entries().add(newEntry);

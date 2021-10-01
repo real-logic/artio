@@ -205,7 +205,7 @@ class EncoderGenerator extends Generator
                     MutableDirectBuffer.class,
                     UnsafeBuffer.class,
                     AsciiSequenceView.class);
-                generateAggregateClass(aggregate, aggregateType, className, out);
+                generateAggregateClass(aggregate, aggregateType, className, out, null);
             });
     }
 
@@ -219,27 +219,38 @@ class EncoderGenerator extends Generator
         final Group group = (Group)entry.element();
         final String name = group.name();
         final Entry numberField = group.numberField();
-        return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "        if (%2$s != null)\n" +
-            "        {\n" +
-            "            %2$s.reset();\n" +
-            "        }\n" +
-            "        %3$s = 0;\n" +
-            "        has%4$s = false;\n" +
-            "    }\n\n",
-            nameOfResetMethod(name),
-            formatPropertyName(name),
-            formatPropertyName(numberField.name()),
-            numberField.name());
+        final String resetMethod = nameOfResetMethod(name);
+        if (isSharedParent())
+        {
+            return String.format(
+                "    public abstract void %1$s();\n\n",
+                resetMethod);
+        }
+        else
+        {
+            return String.format(
+                "    public void %1$s()\n" +
+                "    {\n" +
+                "        if (%2$s != null)\n" +
+                "        {\n" +
+                "            %2$s.reset();\n" +
+                "        }\n" +
+                "        %3$s = 0;\n" +
+                "        has%4$s = false;\n" +
+                "    }\n\n",
+                resetMethod,
+                formatPropertyName(name),
+                formatPropertyName(numberField.name()),
+                numberField.name());
+        }
     }
 
     private void generateAggregateClass(
         final Aggregate aggregate,
         final AggregateType type,
         final String className,
-        final Writer out) throws IOException
+        final Writer out,
+        final Aggregate parentAggregate) throws IOException
     {
         final boolean isHeader = type == AggregateType.HEADER;
         final boolean isMessage = type == AggregateType.MESSAGE;
@@ -260,7 +271,8 @@ class EncoderGenerator extends Generator
         {
             interfaces = emptyList();
         }
-        out.append(classDeclaration(className, interfaces, type == GROUP, aggregate.isInParent()));
+        out.append(classDeclaration(
+            className, interfaces, type == GROUP, aggregate.isInParent(), parentAggregate));
         out.append(constructor(className, aggregate, type, dictionary));
         if (isMessage && !isSharedParent())
         {
@@ -269,7 +281,16 @@ class EncoderGenerator extends Generator
         else if (type == GROUP)
         {
             final Group group = (Group)aggregate;
-            out.append(nextMethod(group));
+
+            // shared parents are abstract, generate the next() method in the concrete children.
+            if (isSharedParent())
+            {
+                out.append(abstractNextMethod(group));
+            }
+            else
+            {
+                out.append(nextMethod(group));
+            }
         }
         else if (type == HEADER)
         {
@@ -282,7 +303,7 @@ class EncoderGenerator extends Generator
         }
 
         precomputedHeaders(out, aggregate.entries());
-        generateSetters(out, className, aggregate.entries());
+        generateSetters(out, className, aggregate.entries(), aggregate);
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
         out.append(generateAppendTo(aggregate, isMessage));
@@ -293,19 +314,35 @@ class EncoderGenerator extends Generator
     private String classDeclaration(
         final String className,
         final List<String> interfaces,
-        final boolean isStatic,
-        final boolean inParent)
+        final boolean isGroup,
+        final boolean inParent,
+        final Aggregate parentAggregate)
     {
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
+        final String extendsClause;
+        if (inParent)
+        {
+            String dictPackage = parentDictPackage();
+            // Groups are inner classes in their parent
+            if (isGroup)
+            {
+                dictPackage = dictPackage + "." + encoderClassName(parentAggregate.name());
+            }
+            extendsClause = " extends " + dictPackage + "." + className;
+        }
+        else
+        {
+            extendsClause = "";
+        }
         return String.format(
             "\n\npublic %3$s%4$sclass %1$s%5$s%2$s\n" +
             "{\n",
             className,
             interfaceList,
-            isStatic ? "static " : "",
+            isGroup ? "static " : "",
             isSharedParent() ? "abstract " : "",
-            inParent ? " extends " + parentDictPackage() + "." + className : "");
+            extendsClause);
     }
 
     private String completeResetMethod(
@@ -326,10 +363,11 @@ class EncoderGenerator extends Generator
         return super.completeResetMethod(isMessage, aggregate.entries(), additionalReset);
     }
 
-    private void generateGroupClass(final Group group, final Writer out) throws IOException
+    private void generateGroupClass(final Group group, final Writer out, final Aggregate parentAggregate)
+        throws IOException
     {
         final String className = encoderClassName(group.name());
-        generateAggregateClass(group, GROUP, className, out);
+        generateAggregateClass(group, GROUP, className, out, parentAggregate);
     }
 
     private String nextMethod(final Group group)
@@ -346,6 +384,13 @@ class EncoderGenerator extends Generator
             "    }\n\n",
             encoderClassName(group.name())
         );
+    }
+
+    private String abstractNextMethod(final Group group)
+    {
+        return String.format(
+            "    public abstract %1$s next();\n\n",
+            encoderClassName(group.name()));
     }
 
     private String constructor(
@@ -388,7 +433,8 @@ class EncoderGenerator extends Generator
         }
     }
 
-    private void generateSetters(final Writer out, final String className, final List<Entry> entries)
+    private void generateSetters(
+        final Writer out, final String className, final List<Entry> entries, final Aggregate parentAggregate)
         throws IOException
     {
         final List<String> optionalFields = ENCODER_OPTIONAL_SESSION_FIELDS.get(className);
@@ -396,7 +442,7 @@ class EncoderGenerator extends Generator
 
         for (final Entry entry : entries)
         {
-            generateSetter(className, entry, out, missingOptionalFields);
+            generateSetter(className, entry, out, missingOptionalFields, parentAggregate);
         }
 
         generateMissingOptionalSessionFields(out, className, missingOptionalFields);
@@ -523,7 +569,11 @@ class EncoderGenerator extends Generator
     }
 
     private void generateSetter(
-        final String className, final Entry entry, final Writer out, final Set<String> optionalFields)
+        final String className,
+        final Entry entry,
+        final Writer out,
+        final Set<String> optionalFields,
+        final Aggregate parentAggregate)
     {
         if (!isBodyLength(entry))
         {
@@ -535,7 +585,7 @@ class EncoderGenerator extends Generator
                         out.append(generateFieldSetter(className, field, optionalFields));
                     }
                 },
-                (group) -> generateGroup(className, group, out, optionalFields),
+                (group) -> generateGroup(className, group, out, optionalFields, parentAggregate),
                 (component) -> generateComponentField(encoderClassName(entry.name()), component, out));
         }
     }
@@ -622,31 +672,51 @@ class EncoderGenerator extends Generator
     }
 
     private void generateGroup(
-        final String className, final Group group, final Writer out, final Set<String> optionalFields)
+        final String className,
+        final Group group,
+        final Writer out,
+        final Set<String> optionalFields,
+        final Aggregate parentAggregate)
         throws IOException
     {
-        generateGroupClass(group, out);
+        generateGroupClass(group, out, parentAggregate);
 
         final Entry numberField = group.numberField();
-        generateSetter(className, numberField, out, optionalFields);
 
-        out.append(String.format(
-            "\n" +
-            "    private %1$s %2$s = null;\n\n" +
-            "    public %1$s %2$s(final int numberOfElements)\n" +
-            "    {\n" +
-            "        has%3$s = true;\n" +
-            "        %4$s = numberOfElements;\n" +
-            "        if (%2$s == null)\n" +
-            "        {\n" +
-            "            %2$s = new %1$s();\n" +
-            "        }\n" +
-            "        return %2$s;\n" +
-            "    }\n\n",
-            encoderClassName(group.name()),
-            formatPropertyName(group.name()),
-            numberField.name(),
-            formatPropertyName(numberField.name())));
+        final boolean inParent = group.isInParent();
+        if (!inParent)
+        {
+            generateSetter(className, numberField, out, optionalFields, parentAggregate);
+        }
+
+        // Abstraction layer in shared parent, implementation in children
+        if (isSharedParent())
+        {
+            out.append(String.format(
+                "\n    public abstract %1$s %2$s(final int numberOfElements);\n\n",
+                encoderClassName(group.name()),
+                formatPropertyName(group.name())));
+        }
+        else
+        {
+            out.append(String.format(
+                "\n" +
+                "    private %1$s %2$s = null;\n\n" +
+                "    public %1$s %2$s(final int numberOfElements)\n" +
+                "    {\n" +
+                "        has%3$s = true;\n" +
+                "        %4$s = numberOfElements;\n" +
+                "        if (%2$s == null)\n" +
+                "        {\n" +
+                "            %2$s = new %1$s();\n" +
+                "        }\n" +
+                "        return %2$s;\n" +
+                "    }\n\n",
+                encoderClassName(group.name()),
+                formatPropertyName(group.name()),
+                numberField.name(),
+                formatPropertyName(numberField.name())));
+        }
     }
 
     private String generateBytesSetter(final String className, final String fieldName, final String name)
@@ -1134,7 +1204,8 @@ class EncoderGenerator extends Generator
             else if (element instanceof Group)
             {
                 final Group group = (Group)element;
-                precomputedFieldHeader(out, (Field)group.numberField().element());
+                final Entry numberFieldEntry = group.numberField();
+                precomputedFieldHeader(out, (Field)numberFieldEntry.element());
             }
         }
     }
@@ -1273,6 +1344,12 @@ class EncoderGenerator extends Generator
 
     protected String groupEntryAppendTo(final Group group, final String name)
     {
+        // only append groups in the children
+        if (isSharedParent())
+        {
+            return "";
+        }
+
         final Entry numberField = group.numberField();
 
         return String.format(
@@ -1386,6 +1463,12 @@ class EncoderGenerator extends Generator
 
     protected String groupEntryCopyTo(final Group group, final String name, final String encoderName)
     {
+        // only append groups in the children
+        if (isSharedParent())
+        {
+            return "";
+        }
+
         final String numberField = group.numberField().name();
 
         return String.format(

@@ -73,7 +73,15 @@ public final class CodecGenerator
         {
             final InputStream fileStream = fileStreams[i];
             final String name = normalise(dictionaryNames[i]);
-            final Dictionary dictionary = parser.parse(fileStream, null);
+            final Dictionary dictionary;
+            try
+            {
+                dictionary = parser.parse(fileStream, null);
+            }
+            catch (final Exception e)
+            {
+                throw new IllegalArgumentException("Unable to parse: " + name, e);
+            }
             dictionary.name(name);
             inputDictionaries.add(dictionary);
         }

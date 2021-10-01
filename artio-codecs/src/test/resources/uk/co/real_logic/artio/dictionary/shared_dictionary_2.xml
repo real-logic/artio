@@ -85,11 +85,17 @@
             <field name="MissingEnum" required="N"/>
             <field name="ClashingType" required="N"/>
             <field name="CombinableType" required="N"/>
+            <group name="NoContraBrokers" required="N">
+                <field name="ContraBroker" required="N" />
+            </group>
         </message>
     </messages>
     <components>
         <component name="Instrument">
             <field name="Symbol" required="Y"/>
+            <!--<group name="NoGroupInComp" required="N">
+                <field name="GroupInCompField" required="N" />
+            </group>-->
         </component>
         <component name="OrderQtyData">
             <field name="OrderQty" required="N"/>
@@ -217,5 +223,9 @@
         </field>
         <field number="154" name="ClashingType" type="FLOAT">
         </field>
+        <field number="375" name="ContraBroker" type="STRING" />
+        <field number="382" name="NoContraBrokers" type="INT" />
+        <field number="376" name="GroupInCompField" type="STRING" />
+        <field number="383" name="NoGroupInComp" type="INT" />
     </fields>
 </fix>

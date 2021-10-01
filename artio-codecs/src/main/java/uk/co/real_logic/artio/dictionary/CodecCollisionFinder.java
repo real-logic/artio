@@ -19,7 +19,6 @@ import org.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.artio.dictionary.ir.BaseType;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Group;
 
 import java.io.File;
 import java.io.FileInputStream;

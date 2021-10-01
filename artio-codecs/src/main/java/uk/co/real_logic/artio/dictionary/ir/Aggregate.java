@@ -84,6 +84,11 @@ public abstract class Aggregate
                 ));
     }
 
+    public Stream<Group> directGroups()
+    {
+        return entriesWith(ele -> ele instanceof Group).map(e -> (Group)e.element());
+    }
+
     public Stream<Entry> allComponents()
     {
         return entries.stream()

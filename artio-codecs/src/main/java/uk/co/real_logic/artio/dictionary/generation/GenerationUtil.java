@@ -57,8 +57,7 @@ public final class GenerationUtil
 
     public static String constantName(final String name)
     {
-        final String replacedName = name.replace("ID", "Id")
-            .replace("GroupCounter", "");
+        final String replacedName = name.replace("ID", "Id");
         return toUpperCase(replacedName.charAt(0)) + replacedName
             .substring(1)
             .chars()

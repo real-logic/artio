@@ -540,23 +540,26 @@ public final class ExampleDictionary
 
         final Field dayOfMonthField = registerField(messageEgFields, 129, "DayOfMonthField", Type.DAYOFMONTH);
 
-        final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));
+        final Group nestedGroup = Group.of(registerField(
+            messageEgFields, 122, "NoNestedGroup", INT), messageEgFields);
         nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
 
-        final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, INT));
+        final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, INT), messageEgFields);
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", INT));
         egGroup.optionalEntry(nestedGroup);
 
-        final Group groupWithRequiredField = Group.of(registerField(messageEgFields, 136, NO_SECOND_EG_GROUP, INT));
+        final Group groupWithRequiredField = Group.of(registerField(
+            messageEgFields, 136, NO_SECOND_EG_GROUP, INT), messageEgFields);
         groupWithRequiredField.optionalEntry(registerField(messageEgFields, 137, "SecondGroupField", STRING));
         groupWithRequiredField.requiredEntry(registerField(messageEgFields, 138, "ThirdGroupField", INT));
 
-        final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
+        final Group componentGroup = Group.of(registerField(
+            messageEgFields, 130, NO_COMPONENT_GROUP, INT), messageEgFields);
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
         componentGroup.requiredEntry(registerField(messageEgFields, 404, "RequiredComponentGroupField", INT));
 
         final Group nestedComponentGroup = Group.of(registerField(messageEgFields, 142,
-            NO_NESTED_COMPONENT_GROUP, INT));
+            NO_NESTED_COMPONENT_GROUP, INT), messageEgFields);
         nestedComponentGroup.optionalEntry(registerField(messageEgFields, 143, "NestedComponentGroupField", INT));
 
         final Component nestedComponent = new Component(EG_NESTED_COMPONENT);
@@ -568,7 +571,8 @@ public final class ExampleDictionary
         egComponent.optionalEntry(componentGroup);
         egComponent.optionalEntry(nestedComponent);
 
-        final Group groupForAdmin = Group.of(registerField(messageEgFields, 139, NO_ADMIN_EG_GROUP, INT));
+        final Group groupForAdmin = Group.of(registerField(
+            messageEgFields, 139, NO_ADMIN_EG_GROUP, INT), messageEgFields);
         groupForAdmin.optionalEntry(registerField(messageEgFields, 140, "AdminFirstGroupField", STRING));
 
         final Field dataFieldLength = registerField(messageEgFields, 200, DATA_FIELD_LENGTH, Type.LENGTH);
@@ -633,7 +637,8 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(groupForAdmin);
         fieldsMessage.optionalEntry(nestedComponent);
 
-        final Group entries = Group.of(registerField(messageEgFields, 2001, "NoEntries", INT));
+        final Group entries = Group.of(registerField(
+            messageEgFields, 2001, "NoEntries", INT), messageEgFields);
         entries.requiredEntry(registerField(messageEgFields, 2002, "Entry", STRING));
 
         final Component componentOfRequiredGroup = new Component(EG_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP);

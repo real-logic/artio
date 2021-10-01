@@ -85,12 +85,15 @@ public class SharedCodecsTest
 
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
-//            System.out.println(SOURCES);
+            System.out.println(SOURCES);
         }
-//        System.out.println("SOURCES.get(\"uk.co.real_logic.artio.decoder.ExecutionReportDecoder\") = " + SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
 //        System.out.println(SOURCES.entrySet().stream().filter(e -> e.getKey().contains("InstrumentDecoder")).map(Map.Entry::getValue).collect(Collectors.toList()));
-        System.out.println("sources.keySet() = " + SOURCES.keySet());
-        System.out.println("sources.toString().length() = " + SOURCES.toString().length());
+//        System.out.println("sources.toString().length() = " + SOURCES.toString().length());
+//        System.out.println("SOURCES.get(\"uk.co.real_logic.artio.shared_dictionary_3.Constants\") = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_3.Constants"));
+//        System.out.println("shared_dictionary_2.decoder.ExecutionReportDecoder = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));
+//        System.out.println("shared ExecutionReportDecoder = " + SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
+//        System.out.println("ExecutionReportEncoder = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.builder.ExecutionReportEncoder"));
+//        System.out.println("shared ExecutionReportEncoder = " + SOURCES.get("uk.co.real_logic.artio.builder.ExecutionReportEncoder"));
 
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
@@ -140,6 +143,16 @@ public class SharedCodecsTest
     private static String instrumentDecoder(final String dictNorm)
     {
         return decoder(dictNorm, "Instrument");
+    }
+
+    private static String contraBrokersGroupEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "ExecutionReportEncoder$ContraBrokersGroup");
+    }
+
+    private static String contraBrokersGroupDecoder(final String dictNorm)
+    {
+        return decoder(dictNorm, "ExecutionReportDecoder$ContraBrokersGroup");
     }
 
     private static String nonSharedComponentEncoder(final String dictNorm)
@@ -293,6 +306,26 @@ public class SharedCodecsTest
         loadClass(nonSharedComponentDecoder(DICT_1_NORM));
         noClass(nonSharedComponentEncoder(DICT_2_NORM));
         noClass(nonSharedComponentDecoder(DICT_2_NORM));
+
+        // TODO: assert on NOS which has shared component but isn't shared
+    }
+
+    @Test
+    public void shouldShareGroups() throws Exception
+    {
+        // Contra Brokers group is common to all and should be shared
+        loadClass(contraBrokersGroupEncoder(DICT_1_NORM));
+        loadClass(contraBrokersGroupDecoder(DICT_1_NORM));
+        loadClass(contraBrokersGroupEncoder(DICT_2_NORM));
+        loadClass(contraBrokersGroupDecoder(DICT_2_NORM));
+
+        final Class<?> sharedContraBrokersGroupEncoder = loadClass(contraBrokersGroupEncoder(null));
+        final Class<?> sharedContraBrokersGroupDecoder = loadClass(contraBrokersGroupDecoder(null));
+
+        // Fields on shared decoder
+
+        // TODO: group inside component
+        // TODO: Group that is unique to 1 dictionary
     }
 
     @SuppressWarnings("unchecked")
