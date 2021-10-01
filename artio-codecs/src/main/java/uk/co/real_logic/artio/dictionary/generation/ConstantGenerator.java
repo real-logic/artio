@@ -133,7 +133,6 @@ class ConstantGenerator
 
     private Collection<Field> fields()
     {
-        System.out.println("dictionary.fields() = " + dictionary.fields());
         return dictionary
             .fields()
             .values();

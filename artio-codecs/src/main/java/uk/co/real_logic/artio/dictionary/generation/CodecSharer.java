@@ -50,7 +50,7 @@ class CodecSharer
     {
         findSharedFields();
 
-        System.out.println("sharedNameToField = " + sharedNameToField);
+//        System.out.println("sharedNameToField = " + sharedNameToField);
 
         findSharedGroups();
         final List<Message> messages = findSharedMessages();
@@ -61,9 +61,10 @@ class CodecSharer
         final int majorVersion = 0;
         final int minorVersion = 0;
 
-        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
-        System.out.println("components = " + components);
-        System.out.println("messages = " + messages);
+//        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
+//        System.out.println("components = " + components);
+//        System.out.println("inputDictionaries.get(0).components() = " + inputDictionaries.get(0).components());
+//        System.out.println("messages = " + messages);
 
         final Dictionary sharedDictionary = new Dictionary(
             messages,

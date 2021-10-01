@@ -103,9 +103,9 @@
     <components>
         <component name="Instrument">
             <field name="Symbol" required="Y"/>
-            <!--<group name="NoGroupInComp" required="N">
+            <group name="NoGroupInComp" required="N">
                 <field name="GroupInCompField" required="N" />
-            </group>-->
+            </group>
         </component>
         <component name="OrderQtyData">
             <field name="OrderQty" required="N"/>

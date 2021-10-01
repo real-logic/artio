@@ -23,7 +23,9 @@ import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.util.*;
+import java.util.function.UnaryOperator;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
@@ -87,13 +89,6 @@ public class SharedCodecsTest
         {
             System.out.println(SOURCES);
         }
-//        System.out.println(SOURCES.entrySet().stream().filter(e -> e.getKey().contains("InstrumentDecoder")).map(Map.Entry::getValue).collect(Collectors.toList()));
-//        System.out.println("sources.toString().length() = " + SOURCES.toString().length());
-//        System.out.println("SOURCES.get(\"uk.co.real_logic.artio.shared_dictionary_3.Constants\") = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_3.Constants"));
-//        System.out.println("shared_dictionary_2.decoder.ExecutionReportDecoder = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));
-//        System.out.println("shared ExecutionReportDecoder = " + SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
-//        System.out.println("ExecutionReportEncoder = " + SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.builder.ExecutionReportEncoder"));
-//        System.out.println("shared ExecutionReportEncoder = " + SOURCES.get("uk.co.real_logic.artio.builder.ExecutionReportEncoder"));
 
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
@@ -152,7 +147,27 @@ public class SharedCodecsTest
 
     private static String contraBrokersGroupDecoder(final String dictNorm)
     {
-        return decoder(dictNorm, "ExecutionReportDecoder$ContraBrokersGroup");
+        return decoder(dictNorm, "ExecutionReportDecoder$" + groupDecoderPrefix(dictNorm) + "ContraBrokersGroup");
+    }
+
+    private static String groupInCompEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "InstrumentEncoder$GroupInCompGroup");
+    }
+
+    private static String groupInCompDecoder(final String dictNorm)
+    {
+        return decoder(dictNorm, "InstrumentDecoder$" + groupDecoderPrefix(dictNorm) + "GroupInCompGroup");
+    }
+
+    private static String groupDecoderPrefix(final String dictNorm)
+    {
+        return dictNorm == null ? "Abstract" : "";
+    }
+
+    private static String iterator(final String dictNorm, final String groupName)
+    {
+        return className(dictNorm, groupName, "Iterator", "decoder.");
     }
 
     private static String nonSharedComponentEncoder(final String dictNorm)
@@ -264,12 +279,6 @@ public class SharedCodecsTest
     @Test
     public void shouldNotShareFieldsWhenTheyHaveClashingTypes() throws Exception
     {
-        System.out.println("executionReportEncoderShared.getDeclaredMethods() = " + Arrays.toString(executionReportEncoderShared.getDeclaredMethods()));
-        System.out.println("executionReportDecoderShared.getDeclaredMethods() = " + Arrays.toString(executionReportDecoderShared.getDeclaredMethods()));
-
-        System.out.println("executionReportEncoder1.getDeclaredMethods() = " + Arrays.toString(executionReportEncoder1.getDeclaredMethods()));
-        System.out.println("executionReportDecoder2.getDeclaredMethods() = " + Arrays.toString(executionReportDecoder2.getDeclaredMethods()));
-
         final String clashingType = "clashingType";
         assertDecoderNotShared(clashingType);
         assertEncoderNotShared(clashingType);
@@ -307,25 +316,63 @@ public class SharedCodecsTest
         noClass(nonSharedComponentEncoder(DICT_2_NORM));
         noClass(nonSharedComponentDecoder(DICT_2_NORM));
 
-        // TODO: assert on NOS which has shared component but isn't shared
+        // NB: NOS which has shared component but isn't shared
     }
 
     @Test
     public void shouldShareGroups() throws Exception
     {
-        // Contra Brokers group is common to all and should be shared
-        loadClass(contraBrokersGroupEncoder(DICT_1_NORM));
-        loadClass(contraBrokersGroupDecoder(DICT_1_NORM));
-        loadClass(contraBrokersGroupEncoder(DICT_2_NORM));
-        loadClass(contraBrokersGroupDecoder(DICT_2_NORM));
+        assertSharedGroup(
+            "contraBroker",
+            "ExecutionReportDecoder$ContraBrokersGroup",
+            "ExecutionReportDecoder$AbstractContraBrokersGroup",
+            SharedCodecsTest::contraBrokersGroupEncoder,
+            SharedCodecsTest::contraBrokersGroupDecoder);
 
-        final Class<?> sharedContraBrokersGroupEncoder = loadClass(contraBrokersGroupEncoder(null));
-        final Class<?> sharedContraBrokersGroupDecoder = loadClass(contraBrokersGroupDecoder(null));
+        // group inside component
+        assertSharedGroup(
+            "groupInCompField",
+            "InstrumentDecoder$GroupInCompGroup",
+            "InstrumentDecoder$AbstractGroupInCompGroup",
+            SharedCodecsTest::groupInCompEncoder,
+            SharedCodecsTest::groupInCompDecoder);
+
+        // NB: NOS has no parent but inherits from the generic interface
+    }
+
+    private void assertSharedGroup(
+        final String methodName,
+        final String iterator1,
+        final String sharedIterator,
+        final UnaryOperator<String> encoderName,
+        final UnaryOperator<String> decoderName) throws Exception
+    {
+        // Contra Brokers group is common to all and should be shared
+        final Class<?> contraBrokersGroupEncoder1 = loadClass(encoderName.apply(DICT_1_NORM));
+        final Class<?> contraBrokersGroupDecoder1 = loadClass(decoderName.apply(DICT_1_NORM));
+        loadClass(encoderName.apply(DICT_2_NORM));
+        loadClass(decoderName.apply(DICT_2_NORM));
+
+        final Class<?> sharedContraBrokersGroupEncoder = loadClass(encoderName.apply(null));
+        final Class<?> sharedContraBrokersGroupDecoder = loadClass(decoderName.apply(null));
+
+        assertTrue(sharedContraBrokersGroupEncoder.isAssignableFrom(contraBrokersGroupEncoder1));
+        assertTrue(sharedContraBrokersGroupDecoder.isAssignableFrom(contraBrokersGroupDecoder1));
 
         // Fields on shared decoder
+        sharedContraBrokersGroupEncoder.getDeclaredMethod(methodName);
+        sharedContraBrokersGroupDecoder.getDeclaredMethod(methodName);
 
-        // TODO: group inside component
-        // TODO: Group that is unique to 1 dictionary
+        // Iterators
+        final Class<?> contraBrokersGroupIterator1 = loadClass(iterator(DICT_1_NORM, iterator1));
+        final Class<?> sharedContraBrokersGroupIterator = loadClass(iterator(null, sharedIterator));
+        assertTrue(sharedContraBrokersGroupIterator.isAssignableFrom(contraBrokersGroupIterator1));
+        assertTrue(Iterator.class.isAssignableFrom(sharedContraBrokersGroupIterator));
+        assertTrue(Iterable.class.isAssignableFrom(sharedContraBrokersGroupIterator));
+
+        final ParameterizedType parameterizedSharedIterator =
+            (ParameterizedType)contraBrokersGroupIterator1.getGenericSuperclass();
+        assertEquals(contraBrokersGroupDecoder1, parameterizedSharedIterator.getActualTypeArguments()[0]);
     }
 
     @SuppressWarnings("unchecked")
