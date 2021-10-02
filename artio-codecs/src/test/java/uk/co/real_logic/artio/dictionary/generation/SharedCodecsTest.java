@@ -90,6 +90,11 @@ public class SharedCodecsTest
             System.out.println(SOURCES);
         }
 
+        /*System.out.println("shared ExecutionReportDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
+        System.out.println("dictionary_2 ExecutionReportDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));*/
+
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
         classLoader = executionReportEncoder1.getClassLoader();
@@ -148,6 +153,27 @@ public class SharedCodecsTest
     private static String contraBrokersGroupDecoder(final String dictNorm)
     {
         return decoder(dictNorm, "ExecutionReportDecoder$" + groupDecoderPrefix(dictNorm) + "ContraBrokersGroup");
+    }
+
+    private static String outerNestedGroupGroupEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "ExecutionReportEncoder$OuterNestedGroupGroup");
+    }
+
+    private static String outerNestedGroupGroupDecoder(final String dictNorm)
+    {
+        return decoder(dictNorm, "ExecutionReportDecoder$" + groupDecoderPrefix(dictNorm) + "OuterNestedGroupGroup");
+    }
+
+    private static String innerNestedGroupGroupEncoder(final String dictNorm)
+    {
+        return outerNestedGroupGroupEncoder(dictNorm) + "$InnerNestedGroupGroupEncoder";
+    }
+
+    private static String innerNestedGroupGroupDecoder(final String dictNorm)
+    {
+        return outerNestedGroupGroupDecoder(dictNorm) + "$" + groupDecoderPrefix(dictNorm) +
+            "InnerNestedGroupGroupDecoder";
     }
 
     private static String groupInCompEncoder(final String dictNorm)
@@ -338,6 +364,24 @@ public class SharedCodecsTest
             SharedCodecsTest::groupInCompDecoder);
 
         // NB: NOS has no parent but inherits from the generic interface
+    }
+
+    @Test
+    public void shouldShareNestedGroups() throws Exception
+    {
+        assertSharedGroup(
+            "outerNestedGroupField",
+            "ExecutionReportDecoder$OuterNestedGroupGroup",
+            "ExecutionReportDecoder$AbstractOuterNestedGroupGroup",
+            SharedCodecsTest::outerNestedGroupGroupEncoder,
+            SharedCodecsTest::outerNestedGroupGroupDecoder);
+
+        assertSharedGroup(
+            "innerNestedGroupField",
+            "ExecutionReportDecoder$OuterNestedGroupGroupDecoder$InnerNestedGroupGroup",
+            "ExecutionReportDecoder$AbstractOuterNestedGroupGroupDecoder$AbstractInnerNestedGroupGroup",
+            SharedCodecsTest::innerNestedGroupGroupEncoder,
+            SharedCodecsTest::innerNestedGroupGroupDecoder);
     }
 
     private void assertSharedGroup(

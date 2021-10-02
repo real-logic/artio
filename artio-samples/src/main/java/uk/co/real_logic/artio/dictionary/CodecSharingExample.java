@@ -23,7 +23,7 @@ import java.util.Arrays;
 
 public final class CodecSharingExample
 {
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         final String dictionaryDirectory = args[0];
         final String outputPath = args[1];

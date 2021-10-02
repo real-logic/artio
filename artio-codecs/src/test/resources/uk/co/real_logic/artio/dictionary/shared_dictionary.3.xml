@@ -98,6 +98,12 @@
             <group name="NoContraBrokers" required="N">
                 <field name="ContraBroker" required="N" />
             </group>
+            <group name="NoOuterNestedGroup" required="N">
+                <field name="OuterNestedGroupField" required="N" />
+                <group name="NoInnerNestedGroup" required="N">
+                    <field name="InnerNestedGroupField" required="N" />
+                </group>
+            </group>
         </message>
     </messages>
     <components>
@@ -244,5 +250,9 @@
         <field number="382" name="NoContraBrokers" type="INT" />
         <field number="376" name="GroupInCompField" type="STRING" />
         <field number="383" name="NoGroupInComp" type="INT" />
+        <field number="400" name="NoOuterNestedGroup" type="NUMINGROUP" />
+        <field number="401" name="OuterNestedGroupField" type="STRING" />
+        <field number="402" name="NoInnerNestedGroup" type="NUMINGROUP" />
+        <field number="403" name="InnerNestedGroupField" type="STRING" />
     </fields>
 </fix>

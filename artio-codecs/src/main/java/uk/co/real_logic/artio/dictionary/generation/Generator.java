@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.CharArraySet;
 import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.LocalMktDateEncoder;
@@ -34,9 +35,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -97,6 +96,8 @@ public abstract class Generator
     protected final boolean flyweightsEnabled;
     protected final String codecRejectUnknownEnumValueEnabled;
     protected final String scope;
+
+    protected final Deque<Aggregate> aggregateStack = new ArrayDeque<>();
 
     protected Generator(
         final Dictionary dictionary,
@@ -710,5 +711,26 @@ public abstract class Generator
     {
         return EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() &&
             !field.hasSharedSometimesEnumClash();
+    }
+
+    Aggregate currentAggregate()
+    {
+        return aggregateStack.peekLast();
+    }
+
+    void pop()
+    {
+        aggregateStack.removeLast();
+    }
+
+    void push(final Aggregate aggregate)
+    {
+        aggregateStack.addLast(aggregate);
+    }
+
+    String qualifiedAggregateStackNames(final Function<Aggregate, String> toName)
+    {
+
+        return aggregateStack.stream().map(toName).collect(joining("."));
     }
 }
