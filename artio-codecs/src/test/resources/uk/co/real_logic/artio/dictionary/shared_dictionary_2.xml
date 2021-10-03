@@ -85,6 +85,7 @@
             <field name="MissingEnum" required="N"/>
             <field name="ClashingType" required="N"/>
             <field name="CombinableType" required="N"/>
+            <field name="StringAndCharEnum" required="N"/>
             <group name="NoContraBrokers" required="N">
                 <field name="ContraBroker" required="N" />
             </group>
@@ -237,5 +238,7 @@
         <field number="401" name="OuterNestedGroupField" type="STRING" />
         <field number="402" name="NoInnerNestedGroup" type="NUMINGROUP" />
         <field number="403" name="InnerNestedGroupField" type="STRING" />
+        <field number="404" name="StringAndCharEnum" type="STRING">
+        </field>
     </fields>
 </fix>

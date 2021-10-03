@@ -118,6 +118,8 @@ public final class Field implements Element
             "number=" + number +
             ", name='" + name + '\'' +
             ", type=" + type +
+            ", hasSharedSometimesEnumClash=" + hasSharedSometimesEnumClash +
+            ", associatedLengthField=" + associatedLengthField +
             ", values=" + values +
             '}';
     }

@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.DictionaryParser;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,8 @@ import java.util.function.BiFunction;
 
 public final class CodecGenerator
 {
+    public static final String SHARED_DIR_NAME = "shared";
+
     public static void generate(final CodecConfiguration configuration) throws Exception
     {
         configuration.conclude();
@@ -65,7 +68,7 @@ public final class CodecGenerator
         final InputStream[] fileStreams,
         final String outputPath,
         final DictionaryParser parser,
-        final String codecRejectUnknownEnumValueEnabled) throws Exception
+        final String codecRejectUnknownEnumValueEnabled)
     {
         final String[] dictionaryNames = configuration.dictionaryNames();
         final List<Dictionary> inputDictionaries = new ArrayList<>();
@@ -89,7 +92,11 @@ public final class CodecGenerator
         new CodecSharer(inputDictionaries).share();
 
         inputDictionaries.forEach(dictionary ->
-            generateDictionary(configuration, outputPath, codecRejectUnknownEnumValueEnabled, dictionary));
+        {
+            final String suffixDir = dictionary.shared() ? SHARED_DIR_NAME : dictionary.name();
+            final String dictOutputPath = outputPath + File.separatorChar + suffixDir;
+            generateDictionary(configuration, dictOutputPath, codecRejectUnknownEnumValueEnabled, dictionary);
+        });
     }
 
     private static String normalise(final String dictionaryName)

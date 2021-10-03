@@ -1322,7 +1322,7 @@ class DecoderGenerator extends Generator
             enumStringBasedWrapperField,
             NULL_VAL_NAME,
             enumName(name)
-        ) : field.type().isMultiValue() ? enumStringBasedWrapperField : "";
+        ) : (field.type().isMultiValue() || field.type() == Type.STRING) ? enumStringBasedWrapperField : "";
 
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 

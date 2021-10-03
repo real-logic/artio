@@ -74,7 +74,6 @@
             <field name="BusinessRejectReason" required="Y"/>
             <field name="Text" required="N"/>
         </message>
-
         <message name="NewOrderSingle" msgtype="D" msgcat="app">
             <field name="ClOrdID" required="Y"/>
             <component name="Instrument" required="Y"/>
@@ -98,6 +97,7 @@
             <field name="MissingEnum" required="N"/>
             <field name="ClashingType" required="N"/>
             <field name="CombinableType" required="N"/>
+            <field name="StringAndCharEnum" required="N"/>
             <group name="NoContraBrokers" required="N">
                 <field name="ContraBroker" required="N" />
             </group>
@@ -262,5 +262,10 @@
         <field number="401" name="OuterNestedGroupField" type="STRING" />
         <field number="402" name="NoInnerNestedGroup" type="NUMINGROUP" />
         <field number="403" name="InnerNestedGroupField" type="STRING" />
+        <field number="404" name="StringAndCharEnum" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="FILL"/>
+            <value enum="2" description="CANCELED"/>
+        </field>
     </fields>
 </fix>

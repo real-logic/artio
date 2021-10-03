@@ -39,6 +39,7 @@ class CodecSharer
     private final List<Dictionary> inputDictionaries;
 
     private final Map<String, Field> sharedNameToField = new HashMap<>();
+    private final Map<String, Field.Type> widenedFields = new HashMap<>();
     private final Map<String, Group> sharedIdToGroup = new HashMap<>();
     private final Set<String> commonGroupIds = new HashSet<>();
 
@@ -295,11 +296,32 @@ class CodecSharer
             allEnumFieldNames.forEach(enumName -> mergeField(fields, enumName));
         }
 
-        formUnionEnums();
-
         sharedNameToField.values().forEach(field ->
             DictionaryParser.checkAssociatedLengthField(sharedNameToField, field, "CodecSharer"));
+
         sharedNameToField.values().removeIf(field -> field == CLASH_SENTINEL);
+
+        widenedFields.forEach((name, widenedType) ->
+        {
+            inputDictionaries.forEach(dict ->
+            {
+                final Field field = dict.fields().get(name);
+                if (field != null)
+                {
+                    field.type(widenedType);
+                }
+            });
+        });
+
+        sharedNameToField.values().forEach(field ->
+        {
+            if (field.hasSharedSometimesEnumClash())
+            {
+
+            }
+        });
+
+        formUnionEnums();
     }
 
     private void formUnionEnums()
@@ -391,9 +413,29 @@ class CodecSharer
             {
                 final Field.Type sharedType = sharedField.type();
                 final Field.Type type = field.type();
-                if (sharedType != type && BaseType.from(sharedType) != BaseType.from(type))
+
+                final BaseType sharedBaseType = BaseType.from(sharedType);
+                final BaseType baseType = BaseType.from(type);
+
+                if (sharedType != type && sharedBaseType != baseType)
                 {
-                    return CLASH_SENTINEL;
+                    final BaseType widenedBaseType = attemptWidenField(sharedBaseType, baseType);
+                    if (widenedBaseType == null)
+                    {
+                        // No need to widen if we later find a clash.
+                        widenedFields.remove(name);
+                        if (sharedField.isEnum())
+                        {
+                            System.err.println("Clash error for enum: " + sharedField);
+                        }
+                        return CLASH_SENTINEL;
+                    }
+                    else
+                    {
+                        final Field.Type widenedType = BaseType.to(widenedBaseType);
+                        sharedField.type(widenedType);
+                        widenedFields.put(name, widenedType);
+                    }
                 }
 
                 mergeEnumValues(sharedField, field);
@@ -401,6 +443,27 @@ class CodecSharer
                 return sharedField;
             }
         });
+    }
+
+    private BaseType attemptWidenField(final BaseType left, final BaseType right)
+    {
+        final BaseType widenedType = attemptWidenFieldOrdered(left, right);
+        if (widenedType != null)
+        {
+            return widenedType;
+        }
+
+        return attemptWidenFieldOrdered(right, left);
+    }
+
+    private BaseType attemptWidenFieldOrdered(final BaseType left, final BaseType right)
+    {
+        if ((left == BaseType.CHAR || left == BaseType.INT) && right == BaseType.STRING)
+        {
+            return BaseType.STRING;
+        }
+
+        return null;
     }
 
     private void mergeEnumValues(final Field sharedField, final Field field)

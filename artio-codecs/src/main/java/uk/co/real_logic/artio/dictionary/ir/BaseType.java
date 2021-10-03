@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.dictionary.ir;
 
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+
 public enum BaseType
 {
     INT,
@@ -25,7 +27,30 @@ public enum BaseType
     BOOLEAN,
     TIMESTAMP;
 
-    public static BaseType from(final Field.Type type)
+    public static Type to(final BaseType type)
+    {
+        switch (type)
+        {
+            case INT:
+                return Type.INT;
+            case FLOAT:
+                return Type.FLOAT;
+            case CHAR:
+                return Type.CHAR;
+            case STRING:
+                return Type.STRING;
+            case DATA:
+                return Type.DATA;
+            case BOOLEAN:
+                return Type.BOOLEAN;
+            case TIMESTAMP:
+                return Type.UTCTIMESTAMP;
+            default:
+                throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public static BaseType from(final Type type)
     {
         switch (type)
         {

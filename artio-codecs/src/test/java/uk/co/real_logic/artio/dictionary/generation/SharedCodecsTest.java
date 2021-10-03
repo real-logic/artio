@@ -19,6 +19,7 @@ import org.agrona.generation.StringWriterOutputManager;
 import org.hamcrest.MatcherAssert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 
 import java.io.InputStream;
@@ -93,6 +94,8 @@ public class SharedCodecsTest
         /*System.out.println("shared ExecutionReportDecoder = " +
             SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
         System.out.println("dictionary_2 ExecutionReportDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.ExecutionReportDecoder"));*/
+        /*System.out.println("dictionary_2 ExecutionReportDecoder = " +
             SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));*/
 
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
@@ -419,12 +422,11 @@ public class SharedCodecsTest
         assertEquals(contraBrokersGroupDecoder1, parameterizedSharedIterator.getActualTypeArguments()[0]);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public <T extends Enum<T>> void shouldBuildEnumUnions() throws Exception
     {
         final String collisionEnumName = collisionEnum(null);
-        final Class<T> collisionEnum = (Class<T>)loadClass(collisionEnumName);
+        final Class<T> collisionEnum = loadClass(collisionEnumName);
         assertTrue(collisionEnum.isEnum());
 
         final T newValue = enumValue(collisionEnum, "NEW");
@@ -446,6 +448,23 @@ public class SharedCodecsTest
         assertRepresentation('N', enumValue(collisionEnum, "NEW_N"));
         assertRepresentation('F', enumValue(collisionEnum, "FILL_F"));
         assertRepresentation('C', enumValue(collisionEnum, "CANCELED_C"));
+    }
+
+    @Test
+    public <T extends Enum<T>> void shouldBuildEnumsOfMergingCharWithString() throws Exception
+    {
+        // We've merged a char and a String into a String
+
+        final String stringAndCharEnumName = enumOf(null, "StringAndCharEnum");
+        final Class<T> stringAndCharEnum = loadClass(stringAndCharEnumName);
+        assertTrue(stringAndCharEnum.isEnum());
+
+        assertEquals(Arrays.toString(stringAndCharEnum.getEnumConstants()),
+            5, stringAndCharEnum.getEnumConstants().length);
+        enumValue(stringAndCharEnum, "NEW");
+        enumValue(stringAndCharEnum, "FILL");
+        enumValue(stringAndCharEnum, "CANCELED");
+        assertTrue(StringRepresentable.class.isAssignableFrom(stringAndCharEnum));
     }
 
     @Test
@@ -583,11 +602,12 @@ public class SharedCodecsTest
         noClass(newOrderSingleDecoder(DICT_2_NORM));
     }
 
-    private static Class<?> loadClass(final String name) throws ClassNotFoundException
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T> loadClass(final String name) throws ClassNotFoundException
     {
         try
         {
-            return classLoader.loadClass(name);
+            return (Class<T>)classLoader.loadClass(name);
         }
         catch (final NullPointerException e)
         {
