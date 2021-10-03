@@ -49,4 +49,11 @@ public final class Group extends Aggregate implements Element
 
         return new Group(groupName, new Entry(false, numberField));
     }
+
+    @Override
+    public String toString()
+    {
+        return "Group{" +
+            "numberField=" + numberField + super.toString();
+    }
 }

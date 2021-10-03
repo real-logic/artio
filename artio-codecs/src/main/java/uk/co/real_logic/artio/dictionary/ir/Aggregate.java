@@ -112,6 +112,7 @@ public abstract class Aggregate
         return getClass().getSimpleName() + "{" +
             "name='" + name + '\'' +
             ", entries=" + entries +
+            ", isInParent=" + isInParent +
             '}';
     }
 

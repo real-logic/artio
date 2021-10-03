@@ -164,7 +164,10 @@ public interface SessionHeaderEncoder
 
     SessionHeaderEncoder lastMsgSeqNumProcessed(int value);
 
-    boolean hasLastMsgSeqNumProcessed();
+    default boolean hasLastMsgSeqNumProcessed()
+    {
+        return false;
+    }
 
     long startMessage(MutableAsciiBuffer buffer, int offset);
 

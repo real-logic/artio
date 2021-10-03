@@ -64,7 +64,7 @@ class CodecSharer
         final int minorVersion = 0;
 
 //        System.out.println("commonGroupIds = " + commonGroupIds);
-//        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
+        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
 //        System.out.println("components = " + components);
 //        System.out.println("inputDictionaries.get(0).components() = " + inputDictionaries.get(0).components());
 //        System.out.println("messages = " + messages);
@@ -216,8 +216,12 @@ class CodecSharer
                     final T sharedAggregate = nameToAggregate.get(name);
                     if (sharedAggregate == null)
                     {
-                        nameToAggregate.put(name, copyOf.apply(e.parents(), agg));
-                        agg.isInParent(true);
+                        final T copy = copyOf.apply(e.parents(), agg);
+                        if (copy != null)
+                        {
+                            nameToAggregate.put(name, copy);
+                            agg.isInParent(true);
+                        }
                     }
                     else
                     {
@@ -537,6 +541,12 @@ class CodecSharer
         while (it.hasNext())
         {
             final Entry sharedEntry = it.next();
+            if (sharedEntry.element() == null)
+            {
+                it.remove();
+                continue;
+            }
+
             final Entry entry = nameToEntry.get(sharedEntry.name());
             if (entry == null)
             {
@@ -655,6 +665,12 @@ class CodecSharer
 
         final Entry numberField = group.numberField();
         final Entry copiedNumberField = copyOf(parents, numberField);
+        // if number field isn't shared then the group won't be
+        if (copiedNumberField == null)
+        {
+            return null;
+        }
+
         final Group newGroup = new Group(group.name(), copiedNumberField);
         copyTo(prefix, group, newGroup);
         return newGroup;
