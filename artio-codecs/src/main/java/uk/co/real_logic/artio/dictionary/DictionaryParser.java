@@ -567,7 +567,7 @@ public final class DictionaryParser
         }
     }
 
-    private static String enumDescriptionToJavaName(final String enumDescription)
+    public static String enumDescriptionToJavaName(final String enumDescription)
     {
         final StringBuilder enumName = new StringBuilder();
 

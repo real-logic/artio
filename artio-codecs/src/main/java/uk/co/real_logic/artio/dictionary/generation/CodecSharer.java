@@ -353,7 +353,7 @@ class CodecSharer
 
                         final Stream<Value> otherValues = otherReprs.stream().flatMap(repr ->
                         {
-                            final String newName = name + "_" + repr;
+                            final String newName = name + "_" + DictionaryParser.enumDescriptionToJavaName(repr);
                             return LongStream.range(0, reprToCount.get(repr))
                                 .mapToObj(i -> new Value(repr, newName));
                         });
@@ -392,7 +392,7 @@ class CodecSharer
 
     private String findCommonName(final Map<String, Long> nameToCount)
     {
-        return nameToCount.keySet().stream().max(Comparator.comparingLong(name -> nameToCount.get(name))).get();
+        return nameToCount.keySet().stream().max(Comparator.comparingLong(nameToCount::get)).get();
     }
 
     private void mergeField(final Map<String, Field> fields, final String fieldName)
@@ -427,6 +427,7 @@ class CodecSharer
                         if (sharedField.isEnum())
                         {
                             System.err.println("Clash error for enum: " + sharedField);
+                            System.out.println(field);
                         }
                         return CLASH_SENTINEL;
                     }
@@ -458,10 +459,21 @@ class CodecSharer
 
     private BaseType attemptWidenFieldOrdered(final BaseType left, final BaseType right)
     {
-        if ((left == BaseType.CHAR || left == BaseType.INT) && right == BaseType.STRING)
+        // Not super-happy about widening char + int to String
+        final boolean leftChar = left == BaseType.CHAR;
+        final boolean leftInt = left == BaseType.INT;
+        final boolean leftTimestamp = left == BaseType.TIMESTAMP;
+        if (((leftChar || leftInt || leftTimestamp) && right == BaseType.STRING) || leftChar && right == BaseType.INT)
         {
             return BaseType.STRING;
         }
+
+        if (leftInt && right == BaseType.TIMESTAMP)
+        {
+            return BaseType.TIMESTAMP;
+        }
+
+        // widen timestamp + string to string and int + timestamp to String
 
         return null;
     }
