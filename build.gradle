@@ -163,6 +163,9 @@ subprojects {
         systemProperty 'fix.core.close_checker', 'true'
         systemProperty "fix.core.debug", System.getProperty("fix.core.debug")
 
+        def threshold = System.getProperty("org.agrona.transport.iteration.threshold")
+        systemProperty "org.agrona.transport.iteration.threshold", threshold
+
         beforeTest { desc ->
             if (System.properties["printTestNames"] != null) {
                 print "Executing test ${desc.name} [${desc.className}]"
