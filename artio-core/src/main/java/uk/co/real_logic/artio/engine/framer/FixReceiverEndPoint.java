@@ -744,7 +744,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             pendingAcceptorLogonMsgLength = length;
 
             pendingAcceptorLogon = gatewaySessions.authenticate(
-                logonDecoder, connectionId(), gatewaySession, channel, fixDictionary, framer);
+                logonDecoder, connectionId(), gatewaySession, channel, fixDictionary, framer, address);
         }
         else
         {

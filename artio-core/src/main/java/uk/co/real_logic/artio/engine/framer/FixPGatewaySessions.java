@@ -215,5 +215,10 @@ public class FixPGatewaySessions extends GatewaySessions
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
+
+        public String remoteAddress()
+        {
+            return channel.remoteAddr();
+        }
     }
 }

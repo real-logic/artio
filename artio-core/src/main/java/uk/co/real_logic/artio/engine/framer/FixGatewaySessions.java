@@ -222,12 +222,14 @@ public class FixGatewaySessions extends GatewaySessions
         final FixGatewaySession gatewaySession,
         final TcpChannel channel,
         final FixDictionary fixDictionary,
-        final Framer framer)
+        final Framer framer,
+        final String remoteAddress)
     {
         gatewaySession.startAuthentication(epochClock.time());
 
         return new FixPendingAcceptorLogon(
-            sessionIdStrategy, gatewaySession, logon, connectionId, fixContexts, channel, fixDictionary, framer);
+            sessionIdStrategy, gatewaySession, logon, connectionId, fixContexts, channel, fixDictionary, framer,
+            remoteAddress);
     }
 
     void onUserRequest(
@@ -266,6 +268,7 @@ public class FixGatewaySessions extends GatewaySessions
         private final AbstractLogonDecoder logon;
         private final FixContexts fixContexts;
         private FixDictionary fixDictionary;
+        private String remoteAddress;
         private final boolean resetSeqNum;
 
         private Encoder encoder;
@@ -279,7 +282,8 @@ public class FixGatewaySessions extends GatewaySessions
             final FixContexts fixContexts,
             final TcpChannel channel,
             final FixDictionary fixDictionary,
-            final Framer framer)
+            final Framer framer,
+            final String remoteAddress)
         {
             super(gatewaySession, connectionId, channel, framer);
 
@@ -288,6 +292,7 @@ public class FixGatewaySessions extends GatewaySessions
             this.logon = logon;
             this.fixContexts = fixContexts;
             this.fixDictionary = fixDictionary;
+            this.remoteAddress = remoteAddress;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -458,6 +463,11 @@ public class FixGatewaySessions extends GatewaySessions
             validateState();
 
             reject(DisconnectReason.FAILED_AUTHENTICATION);
+        }
+
+        public String remoteAddress()
+        {
+            return remoteAddress;
         }
     }
 }

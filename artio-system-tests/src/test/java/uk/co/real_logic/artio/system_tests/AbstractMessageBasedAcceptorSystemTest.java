@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
@@ -53,6 +54,7 @@ public class AbstractMessageBasedAcceptorSystemTest
 
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
+    AuthenticationStrategy optionalAuthStrategy;
     ArchivingMediaDriver mediaDriver;
     FixEngine engine;
     FakeOtfAcceptor otfAcceptor;
@@ -113,6 +115,11 @@ public class AbstractMessageBasedAcceptorSystemTest
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
+
+        if (optionalAuthStrategy != null)
+        {
+            config.authenticationStrategy(optionalAuthStrategy);
+        }
 
         if (enableThrottle)
         {

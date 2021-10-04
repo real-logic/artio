@@ -389,11 +389,6 @@ abstract class GatewaySessions
 
         public abstract void reject();
 
-        public String remoteAddress()
-        {
-            return channel.remoteAddr();
-        }
-
         protected void reject(final DisconnectReason reason)
         {
             validateState();
