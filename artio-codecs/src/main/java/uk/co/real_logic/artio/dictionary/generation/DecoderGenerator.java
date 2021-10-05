@@ -2122,6 +2122,13 @@ class DecoderGenerator extends Generator
             .collect(joining("\n"));
         final String name = aggregate.name();
 
+        String encoderClassName = encoderClassName(name);
+        // Resolve ambiguous name with inherited parent aggregate
+        if (aggregate instanceof Group)
+        {
+            encoderClassName = encoderClassName(parentAggregate().name()) + "." + encoderClassName;
+        }
+
         return String.format(
             "    /**\n" +
             "     * {@inheritDoc}\n" +
@@ -2136,7 +2143,7 @@ class DecoderGenerator extends Generator
             "%2$s" +
             "        return encoder;\n" +
             "    }\n\n",
-            encoderClassName(name),
+            encoderClassName,
             entriesToEncoder);
     }
 

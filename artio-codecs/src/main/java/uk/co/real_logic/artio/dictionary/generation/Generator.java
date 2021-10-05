@@ -718,6 +718,14 @@ public abstract class Generator
         return aggregateStack.peekLast();
     }
 
+    Aggregate parentAggregate()
+    {
+        final Aggregate current = aggregateStack.removeLast();
+        final Aggregate parent = aggregateStack.peekLast();
+        push(current);
+        return parent;
+    }
+
     void pop()
     {
         aggregateStack.removeLast();

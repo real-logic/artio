@@ -291,6 +291,7 @@ public class SharedCodecsTest
     public void shouldMakeRequiredFieldOptionalIfOptionalInSomeDictionaries() throws Exception
     {
         // OrdStatus optional in dict 2
+        // Symbol in Instrument in dict 2
 
         // TODO: better test, need to encode and not throw an exception
     }

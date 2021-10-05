@@ -99,7 +99,7 @@
     </messages>
     <components>
         <component name="Instrument">
-            <field name="Symbol" required="Y"/>
+            <field name="Symbol" required="N"/>
             <group name="NoGroupInComp" required="N">
                 <field name="GroupInCompField" required="N" />
             </group>

@@ -20,6 +20,7 @@ import org.agrona.Verify;
 import org.agrona.generation.ResourceConsumer;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -28,6 +29,9 @@ public final class Entry
     private boolean required;
     private Element element;
     private boolean isInParent;
+
+    // Only used in shared parent entry in order to store references to child entries
+    private List<Entry> sharedChildEntries;
 
     public static Entry required(final Element element)
     {
@@ -156,6 +160,16 @@ public final class Entry
             ", element=" + element +
             ", isInParent=" + isInParent +
             '}';
+    }
+
+    public void sharedChildEntries(final List<Entry> sharedChildEntries)
+    {
+        this.sharedChildEntries = sharedChildEntries;
+    }
+
+    public List<Entry> sharedChildEntries()
+    {
+        return sharedChildEntries;
     }
 
     public String name()

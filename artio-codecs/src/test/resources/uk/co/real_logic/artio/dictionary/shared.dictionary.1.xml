@@ -120,6 +120,10 @@
                 <field name="GroupInCompField" required="N" />
             </group>
         </component>
+        <!--
+        This is a component that is shared across Dictionaries, but isn't in the ExecutionReport message of all
+        Dictionaries, so requires isInParent to be calculated for the intersection of component and message
+        -->
         <component name="SemiSharedComponent">
             <field name="SemiSharedField" required="N"/>
         </component>

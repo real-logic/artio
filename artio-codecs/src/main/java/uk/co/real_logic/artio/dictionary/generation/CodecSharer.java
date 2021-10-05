@@ -42,6 +42,7 @@ class CodecSharer
     private final Map<String, Field.Type> widenedFields = new HashMap<>();
     private final Map<String, Group> sharedIdToGroup = new HashMap<>();
     private final Set<String> commonGroupIds = new HashSet<>();
+    private final Map<String, Component> sharedNameToComponent = new HashMap<>();
 
     CodecSharer(final List<Dictionary> inputDictionaries)
     {
@@ -55,8 +56,8 @@ class CodecSharer
 //        System.out.println("sharedNameToField = " + sharedNameToField);
 
         findSharedGroups();
+        findSharedComponents();
         final List<Message> messages = findSharedMessages();
-        final Map<String, Component> components = findSharedComponents();
         final Component header = findSharedComponent(Dictionary::header);
         final Component trailer = findSharedComponent(Dictionary::trailer);
         final String specType = DictionaryParser.DEFAULT_SPEC_TYPE;
@@ -72,16 +73,36 @@ class CodecSharer
         final Dictionary sharedDictionary = new Dictionary(
             messages,
             sharedNameToField,
-            components,
+            sharedNameToComponent,
             header,
             trailer,
             specType,
             majorVersion,
             minorVersion);
 
+        updateRequiredEntries(sharedDictionary);
+
         sharedDictionary.shared(true);
         inputDictionaries.forEach(dict -> connectToSharedDictionary(sharedDictionary, dict));
         inputDictionaries.add(sharedDictionary);
+    }
+
+    private void updateRequiredEntries(final Dictionary sharedDictionary)
+    {
+        updateRequiredEntriesInAggregates(sharedDictionary.components().values());
+        updateRequiredEntriesInAggregates(sharedDictionary.messages());
+    }
+
+    private void updateRequiredEntriesInAggregates(final Collection<? extends Aggregate> aggregates)
+    {
+        aggregates.forEach(sharedComponent ->
+        {
+            sharedComponent.allFieldsIncludingComponents().forEach(entry ->
+            {
+                final boolean required = entry.required();
+                entry.sharedChildEntries().forEach(childEntry -> childEntry.required(required));
+            });
+        });
     }
 
     private void findSharedGroups()
@@ -134,10 +155,10 @@ class CodecSharer
         return parents;
     }
 
-    private Map<String, Component> findSharedComponents()
+    private void findSharedComponents()
     {
-        return findSharedAggregates(
-            new HashMap<>(),
+        findSharedAggregates(
+            sharedNameToComponent,
             null,
             dict -> addFakeParents(dict.components().values()),
             (comp, sharedComp) -> true,
@@ -300,9 +321,20 @@ class CodecSharer
             allEnumFieldNames.forEach(enumName -> mergeField(fields, enumName));
         }
 
+        updateAssociatedLengthFields();
+        updateFieldTypeWidening();
+        updateSometimesEnumClashes();
+        formUnionEnums();
+    }
+
+    private void updateAssociatedLengthFields()
+    {
         sharedNameToField.values().forEach(field ->
             DictionaryParser.checkAssociatedLengthField(sharedNameToField, field, "CodecSharer"));
+    }
 
+    private void updateFieldTypeWidening()
+    {
         sharedNameToField.values().removeIf(field -> field == CLASH_SENTINEL);
 
         widenedFields.forEach((name, widenedType) ->
@@ -316,16 +348,24 @@ class CodecSharer
                 }
             });
         });
+    }
 
-        sharedNameToField.values().forEach(field ->
+    private void updateSometimesEnumClashes()
+    {
+        sharedNameToField.values().forEach(sharedField ->
         {
-            if (field.hasSharedSometimesEnumClash())
+            if (sharedField.hasSharedSometimesEnumClash())
             {
-
+                inputDictionaries.forEach(dict ->
+                {
+                    final Field dictField = dict.fields().get(sharedField.name());
+                    if (dictField != null)
+                    {
+                        dictField.hasSharedSometimesEnumClash(true);
+                    }
+                });
             }
         });
-
-        formUnionEnums();
     }
 
     private void formUnionEnums()
@@ -556,6 +596,7 @@ class CodecSharer
             {
                 // Only required if all are required
                 sharedEntry.required(sharedEntry.required() && entry.required());
+                sharedEntry.sharedChildEntries().add(entry);
             }
         }
     }
@@ -622,7 +663,14 @@ class CodecSharer
         }
         else if (element instanceof Component)
         {
-            element = copyOf(parents, (Component)element);
+            final Component component = (Component)element;
+            final String name = component.name();
+            element = sharedNameToComponent.get(name);
+            if (element == null)
+            {
+                // Component in message but not shared
+                element = copyOf(parents, component);
+            }
         }
         else if (element instanceof Group)
         {
@@ -649,7 +697,13 @@ class CodecSharer
             throw new IllegalArgumentException("Unknown element type: " + element);
         }
 
-        return new Entry(entry.required(), element);
+        final Entry newEntry = new Entry(entry.required(), element);
+
+        final ArrayList<Entry> sharedChildEntries = new ArrayList<>();
+        newEntry.sharedChildEntries(sharedChildEntries);
+        sharedChildEntries.add(entry);
+
+        return newEntry;
     }
 
     private Component copyOf(final List<Aggregate> prefix, final Component component)
