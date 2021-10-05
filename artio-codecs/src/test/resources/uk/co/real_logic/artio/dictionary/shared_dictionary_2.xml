@@ -107,6 +107,9 @@
         <component name="OrderQtyData">
             <field name="OrderQty" required="N"/>
         </component>
+        <component name="SemiSharedComponent">
+            <field name="SemiSharedField" required="N"/>
+        </component>
     </components>
     <fields>
         <field number="8" name="BeginString" type="STRING"/>
@@ -239,6 +242,8 @@
         <field number="402" name="NoInnerNestedGroup" type="NUMINGROUP" />
         <field number="403" name="InnerNestedGroupField" type="STRING" />
         <field number="404" name="StringAndCharEnum" type="STRING">
+        </field>
+        <field number="405" name="SemiSharedField" type="STRING">
         </field>
     </fields>
 </fix>

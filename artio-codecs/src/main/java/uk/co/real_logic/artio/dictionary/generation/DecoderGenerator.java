@@ -894,7 +894,12 @@ class DecoderGenerator extends Generator
         entry.forEach(
             (field) -> out.append(fieldGetter(entry, field, missingOptionalFields, aggregateIsInParent)),
             (group) -> groupGetter(group, out, missingOptionalFields, aggregateIsInParent),
-            (component) -> componentGetter(component, out, missingOptionalFields, aggregateIsInParent));
+            (component) ->
+            {
+                // Components can be shared, but without every message of the given type implementing that component
+                final boolean componentIsInParent = aggregateIsInParent && entry.isInParent();
+                componentGetter(component, out, missingOptionalFields, componentIsInParent);
+            });
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException

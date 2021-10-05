@@ -64,7 +64,7 @@ class CodecSharer
         final int minorVersion = 0;
 
 //        System.out.println("commonGroupIds = " + commonGroupIds);
-        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
+//        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
 //        System.out.println("components = " + components);
 //        System.out.println("inputDictionaries.get(0).components() = " + inputDictionaries.get(0).components());
 //        System.out.println("messages = " + messages);
@@ -474,7 +474,7 @@ class CodecSharer
 
         if (leftInt && right == BaseType.TIMESTAMP)
         {
-            return BaseType.TIMESTAMP;
+            return BaseType.STRING;
         }
 
         // widen timestamp + string to string and int + timestamp to String

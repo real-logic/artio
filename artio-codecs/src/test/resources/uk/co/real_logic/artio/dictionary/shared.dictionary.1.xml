@@ -107,6 +107,7 @@
                     <field name="InnerNestedGroupField" required="N" />
                 </group>
             </group>
+            <component name="SemiSharedComponent" required="N" />
         </message>
     </messages>
     <components>
@@ -118,6 +119,9 @@
             <group name="NoGroupInComp" required="N">
                 <field name="GroupInCompField" required="N" />
             </group>
+        </component>
+        <component name="SemiSharedComponent">
+            <field name="SemiSharedField" required="N"/>
         </component>
         <component name="OrderQtyData">
             <field name="OrderQty" required="N"/>
@@ -266,6 +270,8 @@
             <value enum="0" description="NEW"/>
             <value enum="1" description="FILL"/>
             <value enum="2" description="CANCELED"/>
+        </field>
+        <field number="405" name="SemiSharedField" type="STRING">
         </field>
     </fields>
 </fix>
