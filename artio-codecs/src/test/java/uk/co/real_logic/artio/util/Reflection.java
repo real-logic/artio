@@ -38,6 +38,12 @@ public final class Reflection
         set(object, setter, int.class, value);
     }
 
+    public static void setChar(final Object object, final String setter, final char value)
+        throws Exception
+    {
+        set(object, setter, char.class, value);
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void setEnum(final Object object, final String setter, final String enumClassName, final String value)
         throws Exception

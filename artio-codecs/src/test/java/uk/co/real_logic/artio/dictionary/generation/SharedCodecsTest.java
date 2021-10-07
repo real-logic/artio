@@ -19,12 +19,17 @@ import org.agrona.generation.StringWriterOutputManager;
 import org.hamcrest.MatcherAssert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+import uk.co.real_logic.artio.util.Reflection;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.UnaryOperator;
 
@@ -33,6 +38,7 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGeneratorTest.assertRepresentation;
+import static uk.co.real_logic.artio.util.Reflection.*;
 
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class SharedCodecsTest
@@ -45,9 +51,25 @@ public class SharedCodecsTest
     private static final String DICT_2_NORM = "shared_dictionary_2";
     private static final String DICT_3_NORM = "shared_dictionary_3";
 
+    private static final String ORDER_ID = "orderID";
+    private static final String RESET_ORDER_ID = "resetOrderID";
+    private static final String ORDER_ID_LENGTH = "orderIDLength";
+
     private static final Map<String, CharSequence> SOURCES = new HashMap<>();
     private static final List<StringWriterOutputManager> OUTPUT_MANAGERS = new ArrayList<>();
     private static final String EXECUTION_REPORT = "ExecutionReport";
+
+    private static final String ALL_FIELDS_MSG =
+        "8=FIX.4.4\0019=198\00135=8\00149=sender\00156=target\00134=1\00152= \00137=1\001198=2" +
+        "\00117=3\001150=0\00139=2\00155=MSFT\001383=1\001376=GroupInComp\001925=pwd\00154=1\00160= " +
+        "\001151=2\001152=1\001154=Y\001404=2\001382=1\001375=aContraBroker\001400=1\001401=value\001402=1" +
+        "\001403=inner\001405=ABC\00110=123\001";
+
+    private static final String NO_OPTIONAL_SHARED_FIELDS_MSG =
+        "8=FIX.4.4\0019=185\00135=8\00149=sender\00156=target\00134=1\00152= \00137=1\001198=2" +
+        "\00117=3\001150=0\001383=1\001376=GroupInComp\001925=pwd\00154=1\00160= " +
+        "\001151=2\001152=1\001154=Y\001404=2\001382=1\001375=aContraBroker\001400=1\001401=value\001402=1" +
+        "\001403=inner\001405=ABC\00110=185\001";
 
     private static CodecConfiguration config;
     private static ClassLoader classLoader;
@@ -58,6 +80,7 @@ public class SharedCodecsTest
     private static Class<?> executionReportEncoder3;
 
     private static Class<?> executionReportDecoderShared;
+    private static Class<?> executionReportDecoder1;
     private static Class<?> executionReportDecoder2;
 
     private static Class<?> headerEncoder1;
@@ -91,10 +114,14 @@ public class SharedCodecsTest
             System.out.println(SOURCES);
         }
 
+        /*System.out.println("dictionary_1 ExecutionReportDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.ExecutionReportDecoder"));
+        System.out.println("dictionary_1 Header = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.HeaderDecoder"));*/
+
         /*System.out.println("shared ExecutionReportDecoder = " +
             SOURCES.get("uk.co.real_logic.artio.decoder.ExecutionReportDecoder"));
-        System.out.println("dictionary_2 ExecutionReportDecoder = " +
-            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.ExecutionReportDecoder"));*/
+        */
         /*System.out.println("dictionary_2 ExecutionReportDecoder = " +
             SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));*/
 
@@ -105,6 +132,7 @@ public class SharedCodecsTest
         executionReportEncoder3 = loadClass(executionReportEncoder(DICT_3_NORM));
         executionReportEncoderShared = loadClass(executionReportEncoder(null));
 
+        executionReportDecoder1 = loadClass(executionReportDecoder(DICT_1_NORM));
         executionReportDecoder2 = loadClass(executionReportDecoder(DICT_2_NORM));
         executionReportDecoderShared = loadClass(executionReportDecoder(null));
 
@@ -254,6 +282,11 @@ public class SharedCodecsTest
         return ExampleDictionary.class.getResourceAsStream(dict + ".xml");
     }
 
+    private MutableAsciiBuffer buffer;
+    private int length;
+    private int offset;
+    private String encoded;
+
     @Test
     public void shouldGenerateClassStructure()
     {
@@ -288,12 +321,119 @@ public class SharedCodecsTest
     }
 
     @Test
+    public void shouldDecodeEncodedMessage() throws Exception
+    {
+        final Encoder encoder = executionReportEncoder1();
+        setupHeader(encoder);
+        setupEncoder(encoder, true);
+        assertEncodes(encoder, ALL_FIELDS_MSG);
+
+        final Decoder decoder = executionReportDecoder1();
+        decoder.decode(buffer, offset, length);
+
+        final Encoder encoder2 = executionReportEncoder1();
+        decoder.toEncoder(encoder2);
+        setupHeader(encoder2);
+
+        assertEncodes(encoder2, ALL_FIELDS_MSG);
+    }
+
+    private void setupEncoder(final Encoder encoder, final boolean optionalFields) throws Exception
+    {
+        setCharSequence(encoder, ORDER_ID, "1");
+        setCharSequence(encoder, "secondaryOrderID", "2");
+        setCharSequence(encoder, "execID", "3");
+        setChar(encoder, "execType", '0');
+        if (optionalFields)
+        {
+            setChar(encoder, "ordStatus", '2');
+        }
+
+        final Object instrument = Reflection.get(encoder, "instrument");
+        if (optionalFields)
+        {
+            setCharSequence(instrument, "symbol", "MSFT");
+        }
+
+        final Object groupInComp = get(instrument, "groupInCompGroup", 1);
+        setCharSequence(groupInComp, "groupInCompField", "GroupInComp");
+
+        final Object contraBrokers = get(encoder, "contraBrokersGroup", 1);
+        setCharSequence(contraBrokers, "contraBroker", "aContraBroker");
+
+        final Object outerNestedGroup = get(encoder, "outerNestedGroupGroup", 1);
+        setCharSequence(outerNestedGroup, "outerNestedGroupField", "value");
+        final Object innerNestedGroup = get(outerNestedGroup, "innerNestedGroupGroup", 1);
+        setCharSequence(innerNestedGroup, "innerNestedGroupField", "inner");
+
+        final Object nonSharedComponent = Reflection.get(encoder, "nonSharedComponent");
+        setCharSequence(nonSharedComponent, "newPassword", "pwd");
+
+        setChar(encoder, "side", '1');
+        setByteArray(encoder, "transactTime", " ".getBytes(StandardCharsets.US_ASCII));
+        setChar(encoder, "collisionEnum", '2');
+        setChar(encoder, "missingEnum", '1');
+        setBoolean(encoder, "clashingType", true);
+        setCharSequence(encoder, "stringAndCharEnum", "2");
+
+        final Object semiSharedComponent = Reflection.get(encoder, "semiSharedComponent");
+        setCharSequence(semiSharedComponent, "semiSharedField", "ABC");
+    }
+
+    private Decoder executionReportDecoder1() throws InstantiationException, IllegalAccessException
+    {
+        return (Decoder)executionReportDecoder1.newInstance();
+    }
+
+    private void setupHeader(final Encoder encoder)
+    {
+        encoder
+            .header()
+            .senderCompID("sender")
+            .targetCompID("target")
+            .msgSeqNum(1)
+            .sendingTime(" ".getBytes(StandardCharsets.US_ASCII));
+    }
+
+    private Encoder executionReportEncoder1() throws InstantiationException, IllegalAccessException
+    {
+        return (Encoder)executionReportEncoder1.newInstance();
+    }
+
+    private void assertEncodes(final Encoder encoder, final String msg)
+    {
+        buffer = new MutableAsciiBuffer(new byte[1024]);
+        final long result = encoder.encode(buffer, 0);
+        length = Encoder.length(result);
+        offset = Encoder.offset(result);
+        encoded = buffer.getStringWithoutLengthAscii(offset, length);
+
+        assertEquals(encoder.toString(), msg, encoded);
+    }
+
+    @Test
+    public void shouldCopyToOtherEncoders() throws Exception
+    {
+        final Encoder encoder = executionReportEncoder1();
+        setupEncoder(encoder, true);
+
+        final Encoder encoder2 = executionReportEncoder1();
+        encoder.copyTo(encoder2);
+        setupHeader(encoder2);
+
+        assertEncodes(encoder2, ALL_FIELDS_MSG);
+    }
+
+    @Test
     public void shouldMakeRequiredFieldOptionalIfOptionalInSomeDictionaries() throws Exception
     {
         // OrdStatus optional in dict 2
         // Symbol in Instrument in dict 2
 
-        // TODO: better test, need to encode and not throw an exception
+        final Encoder encoder = executionReportEncoder1();
+        setupHeader(encoder);
+        setupEncoder(encoder, false);
+        assertEncodes(encoder, NO_OPTIONAL_SHARED_FIELDS_MSG);
     }
 
     @Test
@@ -518,16 +658,12 @@ public class SharedCodecsTest
     {
         // No exectype in dict 2, Enum still generated in shared dict
 
-        final String orderID = "orderID";
-        final String resetOrderID = "resetOrderID";
-        final String orderIDLength = "orderIDLength";
+        assertEncoderShared(ORDER_ID, CharSequence.class);
+        assertEncoderShared(RESET_ORDER_ID);
 
-        assertEncoderShared(orderID, CharSequence.class);
-        assertEncoderShared(resetOrderID);
-
-        assertDecoderShared(orderID);
-        assertDecoderShared(orderIDLength);
-        assertDecoderShared(resetOrderID);
+        assertDecoderShared(ORDER_ID);
+        assertDecoderShared(ORDER_ID_LENGTH);
+        assertDecoderShared(RESET_ORDER_ID);
 
         final String resetMessage = "resetMessage";
         executionReportDecoderShared.getDeclaredMethod(resetMessage);
@@ -538,8 +674,6 @@ public class SharedCodecsTest
         final String reset = "reset";
         assertEncoderNotShared(reset);
         assertDecoderNotShared(reset);
-
-        // TODO: better test that all fields get reset, add in the super.resetMessage() call.
     }
 
     private void assertEncoderShared(final String methodName, final Class<?>... parameterTypes)
