@@ -84,7 +84,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllFields()
     {
-        assertEquals(44, dictionary.fields().size());
+        assertEquals(49, dictionary.fields().size());
     }
 
     @Test
