@@ -36,49 +36,39 @@ public final class CodecGenerator
     public static void generate(final CodecConfiguration configuration) throws Exception
     {
         configuration.conclude();
-        final InputStream[] fileStreams = configuration.fileStreams();
 
-        try
+        final String outputPath = configuration.outputPath();
+        final boolean allowDuplicates = configuration.allowDuplicateFields();
+        final DictionaryParser parser = new DictionaryParser(allowDuplicates);
+        final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
+
+        final boolean hasSharedCodecs = configuration.sharedCodecConfiguration() != null;
+        if (hasSharedCodecs)
         {
-            final String outputPath = configuration.outputPath();
-            final boolean allowDuplicates = configuration.allowDuplicateFields();
-            final DictionaryParser parser = new DictionaryParser(allowDuplicates);
-            final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
-
-            final boolean sharedCodecs = configuration.sharedCodecsEnabled();
-            if (sharedCodecs && fileStreams.length > 1)
-            {
-                generateSharedDictionaries(
-                    configuration, fileStreams, outputPath, parser, codecRejectUnknownEnumValueEnabled);
-            }
-            else
-            {
-                generateNormalDictionaries(
-                    configuration, fileStreams, outputPath, parser, codecRejectUnknownEnumValueEnabled);
-            }
+            generateSharedDictionaries(
+                configuration, outputPath, parser, codecRejectUnknownEnumValueEnabled);
         }
-        finally
+        else
         {
-            Exceptions.closeAll(fileStreams);
+            generateNormalDictionaries(
+                configuration, outputPath, parser, codecRejectUnknownEnumValueEnabled);
         }
     }
 
     private static void generateSharedDictionaries(
         final CodecConfiguration configuration,
-        final InputStream[] fileStreams,
         final String outputPath,
         final DictionaryParser parser,
         final String codecRejectUnknownEnumValueEnabled)
     {
-        final String[] dictionaryNames = configuration.dictionaryNames();
+        final SharedCodecConfiguration sharedCodecs = configuration.sharedCodecConfiguration();
         final List<Dictionary> inputDictionaries = new ArrayList<>();
-        for (int i = 0, fileStreamsLength = fileStreams.length; i < fileStreamsLength; i++)
+        for (final GeneratorDictionaryConfiguration dictionaryConfig : sharedCodecs.dictionaries())
         {
-            final InputStream fileStream = fileStreams[i];
-            final String name = normalise(dictionaryNames[i]);
+            final String name = normalise(dictionaryConfig.dictionaryName());
             try
             {
-                final Dictionary dictionary = parser.parse(fileStream, null);
+                final Dictionary dictionary = parseStreams(parser, dictionaryConfig.toStreams());
                 dictionary.name(name);
                 inputDictionaries.add(dictionary);
             }
@@ -90,10 +80,11 @@ public final class CodecGenerator
 
         new CodecSharer(inputDictionaries).share();
 
+        final boolean splitDirectories = sharedCodecs.splitDirectories();
         inputDictionaries.forEach(dictionary ->
         {
             final String suffixDir = dictionary.shared() ? SHARED_DIR_NAME : dictionary.name();
-            final String dictOutputPath = outputPath + File.separatorChar + suffixDir;
+            final String dictOutputPath = outputPath + (splitDirectories ? File.separatorChar + suffixDir : "");
             generateDictionary(configuration, dictOutputPath, codecRejectUnknownEnumValueEnabled, dictionary);
         });
     }
@@ -105,10 +96,24 @@ public final class CodecGenerator
 
     private static void generateNormalDictionaries(
         final CodecConfiguration configuration,
-        final InputStream[] fileStreams,
         final String outputPath,
         final DictionaryParser parser,
         final String codecRejectUnknownEnumValueEnabled) throws Exception
+    {
+        final InputStream[] fileStreams = configuration.nonSharedDictionary().toStreams();
+        try
+        {
+            final Dictionary dictionary = parseStreams(parser, fileStreams);
+            generateDictionary(configuration, outputPath, codecRejectUnknownEnumValueEnabled, dictionary);
+        }
+        finally
+        {
+            Exceptions.closeAll(fileStreams);
+        }
+    }
+
+    private static Dictionary parseStreams(final DictionaryParser parser, final InputStream[] fileStreams)
+        throws Exception
     {
         Dictionary dictionary = null;
 
@@ -117,7 +122,7 @@ public final class CodecGenerator
             dictionary = parser.parse(fileStream, dictionary);
         }
 
-        generateDictionary(configuration, outputPath, codecRejectUnknownEnumValueEnabled, dictionary);
+        return dictionary;
     }
 
     private static void generateDictionary(

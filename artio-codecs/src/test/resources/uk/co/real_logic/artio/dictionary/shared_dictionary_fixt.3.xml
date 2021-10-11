@@ -1,55 +1,79 @@
-<fix type="FIX" major="5" minor="0">
-    <header />
-    <trailer />
+<fix type="FIXT" major="1" minor="1">
+    <header>
+        <field name="BeginString" required="Y"/>
+        <field name="BodyLength" required="Y"/>
+        <field name="MsgType" required="Y"/>
+        <field name="SenderCompID" required="Y"/>
+        <field name="TargetCompID" required="Y"/>
+        <field name="MsgSeqNum" required="Y"/>
+        <field name="SenderSubID" required="N"/>
+        <field name="SenderLocationID" required="N"/>
+        <field name="TargetSubID" required="N"/>
+        <field name="TargetLocationID" required="N"/>
+        <field name="PossDupFlag" required="N"/>
+        <field name="PossResend" required="N"/>
+        <field name="SendingTime" required="Y"/>
+        <field name="OrigSendingTime" required="N"/>
+        <field name="LastMsgSeqNumProcessed" required="N"/>
+    </header>
+    <trailer>
+        <field name="CheckSum" required="Y"/>
+    </trailer>
     <messages>
-        <message name="NewOrderSingle" msgtype="D" msgcat="app">
-            <field name="ClOrdID" required="Y"/>
-            <component name="Instrument" required="Y"/>
-            <field name="Side" required="Y"/>
-            <field name="TransactTime" required="Y"/>
-            <component name="OrderQtyData" required="Y"/>
-            <field name="OrdType" required="Y"/>
-            <field name="Price" required="Y"/>
+        <message name="Heartbeat" msgtype="0" msgcat="admin">
+            <field name="TestReqID" required="N"/>
         </message>
-        <message name="ExecutionReport" msgtype="8" msgcat="app">
-            <field name="OrderID" required="Y"/>
-            <field name="ExecID" required="Y"/>
-            <field name="ExecType" required="Y"/>
-            <field name="OrdStatus" required="Y"/>
-            <component name="Instrument" required="Y"/>
-            <field name="Side" required="Y"/>
-            <field name="TransactTime" required="N"/>
-            <field name="CollisionEnum" required="N"/>
-            <field name="MissingEnum" required="N"/>
-            <field name="ClashingType" required="N"/>
-            <field name="CombinableType" required="N"/>
-            <field name="StringAndCharEnum" required="N"/>
-            <group name="NoContraBrokers" required="N">
-                <field name="ContraBroker" required="N" />
-            </group>
-            <group name="NoOuterNestedGroup" required="N">
-                <field name="OuterNestedGroupField" required="N" />
-                <group name="NoInnerNestedGroup" required="N">
-                    <field name="InnerNestedGroupField" required="N" />
-                </group>
-            </group>
-            <component name="SemiSharedComponent" required="N" />
+        <message name="TestRequest" msgtype="1" msgcat="admin">
+            <field name="TestReqID" required="Y"/>
+        </message>
+        <message name="ExampleMessage" msgtype="B" msgcat="app">
+            <field name="TestReqID" required="Y"/>
+        </message>
+        <message name="ResendRequest" msgtype="2" msgcat="admin">
+            <field name="BeginSeqNo" required="Y"/>
+            <field name="EndSeqNo" required="Y"/>
+        </message>
+        <message name="Reject" msgtype="3" msgcat="admin">
+            <field name="RefSeqNum" required="Y"/>
+            <field name="RefTagID" required="N"/>
+            <field name="RefMsgType" required="N"/>
+            <field name="SessionRejectReason" required="N"/>
+            <field name="Text" required="N"/>
+        </message>
+        <message name="SequenceReset" msgtype="4" msgcat="admin">
+            <field name="GapFillFlag" required="N"/>
+            <field name="NewSeqNo" required="Y"/>
+        </message>
+        <message name="Logout" msgtype="5" msgcat="admin">
+            <field name="Text" required="N"/>
+        </message>
+        <message name="Logon" msgtype="A" msgcat="admin">
+            <field name="EncryptMethod" required="Y"/>
+            <field name="HeartBtInt" required="Y"/>
+            <field name="RawDataLength" required="N"/>
+            <field name="RawData" required="N"/>
+            <field name="ResetSeqNumFlag" required="N"/>
+            <field name="NextExpectedMsgSeqNum" required="N"/>
+            <field name="MaxMessageSize" required="N"/>
+            <field name="TestMessageIndicator" required="N"/>
+            <field name="Username" required="N"/>
+            <field name="Password" required="N"/>
+        </message>
+        <message name="UserRequest" msgtype="BE" msgcat="admin">
+            <field name="UserRequestID" required="Y"/>
+            <field name="UserRequestType" required="Y"/>
+            <field name="Username" required="Y"/>
+            <field name="Password" required="N"/>
+            <field name="NewPassword" required="N"/>
+        </message>
+        <message name="BusinessMessageReject" msgtype="j" msgcat="app">
+            <field name="RefSeqNum" required="N"/>
+            <field name="RefMsgType" required="Y"/>
+            <field name="BusinessRejectRefID" required="N"/>
+            <field name="BusinessRejectReason" required="Y"/>
+            <field name="Text" required="N"/>
         </message>
     </messages>
-    <components>
-        <component name="Instrument">
-            <field name="Symbol" required="Y"/>
-            <group name="NoGroupInComp" required="N">
-                <field name="GroupInCompField" required="N" />
-            </group>
-        </component>
-        <component name="OrderQtyData">
-            <field name="OrderQty" required="N"/>
-        </component>
-        <component name="SemiSharedComponent">
-            <field name="SemiSharedField" required="N"/>
-        </component>
-    </components>
     <fields>
         <field number="8" name="BeginString" type="STRING"/>
         <field number="9" name="BodyLength" type="LENGTH"/>
@@ -138,61 +162,5 @@
             <value enum="4" description="RequestIndividualUserStatus"/>
         </field>
         <field number="925" name="NewPassword" type="STRING"/>
-
-        <!-- Fields for Samples -->
-        <field number="11" name="ClOrdID" type="STRING"/>
-        <field number="17" name="ExecID" type="STRING"/>
-        <field number="37" name="OrderID" type="STRING"/>
-        <field number="38" name="OrderQty" type="QTY"/>
-        <field number="39" name="OrdStatus" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="2" description="FILLED"/>
-            <value enum="4" description="CANCELED"/>
-        </field>
-        <field number="44" name="Price" type="PRICE"/>
-        <field number="54" name="Side" type="CHAR">
-            <value enum="1" description="BUY"/>
-            <value enum="2" description="SELL"/>
-        </field>
-        <field number="55" name="Symbol" type="STRING"/>
-        <field number="60" name="TransactTime" type="UTCTIMESTAMP"/>
-        <field number="40" name="OrdType" type="CHAR">
-            <value enum="1" description="MARKET"/>
-            <value enum="2" description="LIMIT"/>
-        </field>
-        <field number="150" name="ExecType" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="2" description="FILL"/>
-            <value enum="4" description="CANCELED"/>
-        </field>
-        <field number="151" name="CollisionEnum" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="1" description="FILL"/>
-            <value enum="2" description="CANCELED"/>
-        </field>
-        <field number="152" name="MissingEnum" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="1" description="FILL"/>
-            <value enum="2" description="CANCELED"/>
-        </field>
-        <field number="153" name="CombinableType" type="PRICE">
-        </field>
-        <field number="154" name="ClashingType" type="BOOLEAN">
-        </field>
-        <field number="375" name="ContraBroker" type="STRING" />
-        <field number="382" name="NoContraBrokers" type="INT" />
-        <field number="376" name="GroupInCompField" type="STRING" />
-        <field number="383" name="NoGroupInComp" type="INT" />
-        <field number="400" name="NoOuterNestedGroup" type="NUMINGROUP" />
-        <field number="401" name="OuterNestedGroupField" type="STRING" />
-        <field number="402" name="NoInnerNestedGroup" type="NUMINGROUP" />
-        <field number="403" name="InnerNestedGroupField" type="STRING" />
-        <field number="404" name="StringAndCharEnum" type="CHAR">
-            <value enum="0" description="NEW"/>
-            <value enum="1" description="FILL"/>
-            <value enum="2" description="CANCELED"/>
-        </field>
-        <field number="405" name="SemiSharedField" type="STRING">
-        </field>
     </fields>
 </fix>

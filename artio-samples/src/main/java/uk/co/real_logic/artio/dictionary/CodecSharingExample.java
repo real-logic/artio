@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.dictionary;
 
 import uk.co.real_logic.artio.dictionary.generation.CodecConfiguration;
 import uk.co.real_logic.artio.dictionary.generation.CodecGenerator;
+import uk.co.real_logic.artio.dictionary.generation.SharedCodecConfiguration;
 
 import java.io.File;
 import java.util.Arrays;
@@ -48,8 +49,15 @@ public final class CodecSharingExample
 
             final CodecConfiguration config = new CodecConfiguration()
                 .outputPath(outputPath)
-                .fileNames(fileNames)
-                .sharedCodecsEnabled(dictNames);
+                .fileNames(fileNames);
+
+            final SharedCodecConfiguration sharedCodecs = config.sharedCodecsEnabled();
+            for (int i = 0; i < dictionaryFiles.length; i++)
+            {
+                final String fileName = fileNames[i];
+                final File dictionaryFile = dictionaryFiles[i];
+                sharedCodecs.withDictionary(fileName, dictionaryFile.getAbsolutePath());
+            }
 
             CodecGenerator.generate(config);
         }

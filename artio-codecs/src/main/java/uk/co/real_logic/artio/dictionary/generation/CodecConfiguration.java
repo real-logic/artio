@@ -18,13 +18,10 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.PackageOutputManager;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.function.BiFunction;
 
-public class CodecConfiguration
+public final class CodecConfiguration
 {
     /**
      * Boolean system property to turn on or off duplicated fields validation. Defaults to false.
@@ -50,21 +47,20 @@ public class CodecConfiguration
     public static final String PARENT_PACKAGE_PROPERTY = "fix.codecs.parent_package";
     public static final String FLYWEIGHTS_ENABLED_PROPERTY = "fix.codecs.flyweight";
     public static final String REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "reject.unknown.enum.value";
-    public static final String FIX_CODECS_SHARED_PROPERTY = "fix.codecs.shared";
 
     public static final String DEFAULT_PARENT_PACKAGE = "uk.co.real_logic.artio";
 
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
     private boolean allowDuplicateFields = Boolean.getBoolean(FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY);
-    private boolean sharedCodecsEnabled = Boolean.getBoolean(FIX_CODECS_SHARED_PROPERTY);
+    private SharedCodecConfiguration sharedCodecConfiguration;
 
     private String codecRejectUnknownEnumValueEnabled;
     private String outputPath;
-    private String[] fileNames;
-    private InputStream[] fileStreams;
+
     private BiFunction<String, String, OutputManager> outputManagerFactory = PackageOutputManager::new;
-    private String[] dictionaryNames;
+    private final GeneratorDictionaryConfiguration nonSharedDictionary =
+        new GeneratorDictionaryConfiguration(null, null, null);
 
     public CodecConfiguration()
     {
@@ -113,13 +109,13 @@ public class CodecConfiguration
 
     public CodecConfiguration fileNames(final String... fileNames)
     {
-        this.fileNames = fileNames;
+        nonSharedDictionary.fileNames(fileNames);
         return this;
     }
 
     public CodecConfiguration fileStreams(final InputStream... fileStreams)
     {
-        this.fileStreams = fileStreams;
+        nonSharedDictionary.fileStreams(fileStreams);
         return this;
     }
 
@@ -146,51 +142,45 @@ public class CodecConfiguration
         return this;
     }
 
-    public CodecConfiguration sharedCodecsEnabled(final String... dictionaryNames)
+    public SharedCodecConfiguration sharedCodecsEnabled()
     {
-        this.dictionaryNames = dictionaryNames;
-        this.sharedCodecsEnabled = true;
-        return this;
+        sharedCodecConfiguration = new SharedCodecConfiguration();
+        return sharedCodecConfiguration;
     }
 
-    public InputStream[] fileStreams()
-    {
-        return fileStreams;
-    }
-
-    public String outputPath()
+    String outputPath()
     {
         return outputPath;
     }
 
-    public String parentPackage()
+    String parentPackage()
     {
         return parentPackage;
     }
 
-    public boolean flyweightsEnabled()
+    boolean flyweightsEnabled()
     {
         return flyweightsEnabled;
     }
 
-    public boolean allowDuplicateFields()
+    boolean allowDuplicateFields()
     {
         return allowDuplicateFields;
     }
 
-    public String codecRejectUnknownEnumValueEnabled()
+    String codecRejectUnknownEnumValueEnabled()
     {
         return codecRejectUnknownEnumValueEnabled;
     }
 
-    public boolean sharedCodecsEnabled()
+    SharedCodecConfiguration sharedCodecConfiguration()
     {
-        return sharedCodecsEnabled;
+        return sharedCodecConfiguration;
     }
 
-    public String[] dictionaryNames()
+    public GeneratorDictionaryConfiguration nonSharedDictionary()
     {
-        return dictionaryNames;
+        return nonSharedDictionary;
     }
 
     BiFunction<String, String, OutputManager> outputManagerFactory()
@@ -198,7 +188,7 @@ public class CodecConfiguration
         return outputManagerFactory;
     }
 
-    void conclude() throws FileNotFoundException
+    void conclude()
     {
         if (outputPath() == null)
         {
@@ -212,49 +202,23 @@ public class CodecConfiguration
                 rejectUnknownEnumPropertyValue : Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
         }
 
-        if (sharedCodecsEnabled)
+        if (sharedCodecConfiguration != null)
         {
-            validateNamesLength(fileStreams);
-            validateNamesLength(fileNames);
-        }
-
-        // Create input streams from names if not provided.
-        if (fileStreams == null)
-        {
-            if (fileNames == null)
+            if (nonSharedDictionary.hasStreams())
             {
                 throw new IllegalArgumentException(
-                    "You must provide either the fileNames or fileStream configuration options");
-            }
-
-            final int n = fileNames.length;
-            fileStreams = new InputStream[n];
-            for (int i = 0; i < n; i++)
-            {
-                final File xmlFile = new File(fileNames[i]);
-                if (!xmlFile.exists())
-                {
-                    throw new IllegalArgumentException("xmlFile does not exist: " + xmlFile.getAbsolutePath());
-                }
-
-                if (!xmlFile.isFile())
-                {
-                    throw new IllegalArgumentException(String.format(
-                        "xmlFile [%s] isn't a file, are the arguments the correct way around?",
-                        xmlFile));
-                }
-
-                // Closed by CodecGenerator
-                fileStreams[i] = new FileInputStream(xmlFile); // lgtm [java/input-resource-leak]
+                    "Cannot mix shared codec configuration with providing file streams or names via the non-shared " +
+                        "configuration option. If you want to provide dictionaries for sharing then use " +
+                        "SharedCodecConfiguration.withDictionary().");
             }
         }
-    }
-
-    private void validateNamesLength(final Object[] inputArray)
-    {
-        if (inputArray != null && inputArray.length != dictionaryNames.length)
+        else
         {
-            throw new IllegalArgumentException("Incorrect number of dictionary names provided");
+            if (!nonSharedDictionary.hasStreams())
+            {
+                throw new IllegalArgumentException(
+                    "Please provide a path to the XML files either through the fileNames() or fileStreams() option.");
+            }
         }
     }
 }

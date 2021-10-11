@@ -511,25 +511,25 @@ public final class DictionaryParser
                 (field) -> addField(messageName, field, allFields, path, errorCollector),
                 (group) ->
                 {
-                    path.push(group.name());
+                    path.addLast(group.name());
                     identifyDuplicateFieldDefinitionsForMessage(
                         messageName,
                         group,
                         allFields,
                         path,
                         errorCollector);
-                    path.pop();
+                    path.removeLast();
                 },
                 (component) ->
                 {
-                    path.push(component.name());
+                    path.addLast(component.name());
                     identifyDuplicateFieldDefinitionsForMessage(
                         messageName,
                         component,
                         allFields,
                         path,
                         errorCollector);
-                    path.pop();
+                    path.removeLast();
                 }
             );
         }

@@ -46,6 +46,7 @@ public class SharedCodecsTest
     private static final String DICT_1 = "shared.dictionary.1";
     private static final String DICT_2 = "shared_dictionary_2";
     private static final String DICT_3 = "shared_dictionary.3";
+    private static final String DICT_3_FIXT = "shared_dictionary_fixt.3";
 
     private static final String DICT_1_NORM = "shared_dictionary_1";
     private static final String DICT_2_NORM = "shared_dictionary_2";
@@ -98,9 +99,12 @@ public class SharedCodecsTest
                 outputManager.setPackageName(parentPackage);
                 OUTPUT_MANAGERS.add(outputManager);
                 return outputManager;
-            })
-            .sharedCodecsEnabled(DICT_1, DICT_2, DICT_3)
-            .fileStreams(dictionaryStream(DICT_1), dictionaryStream(DICT_2), dictionaryStream(DICT_3));
+            });
+
+        config.sharedCodecsEnabled()
+            .withDictionary(DICT_1, dictionaryStream(DICT_1))
+            .withDictionary(DICT_2, dictionaryStream(DICT_2))
+            .withDictionary(DICT_3, dictionaryStream(DICT_3_FIXT), dictionaryStream(DICT_3));
 
         CodecGenerator.generate(config);
 
