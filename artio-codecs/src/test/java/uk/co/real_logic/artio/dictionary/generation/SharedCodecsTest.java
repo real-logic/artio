@@ -384,9 +384,9 @@ public class SharedCodecsTest
         setCharSequence(semiSharedComponent, "semiSharedField", "ABC");
     }
 
-    private Decoder executionReportDecoder1() throws InstantiationException, IllegalAccessException
+    private Decoder executionReportDecoder1() throws Exception
     {
-        return (Decoder)executionReportDecoder1.newInstance();
+        return (Decoder)executionReportDecoder1.getConstructor().newInstance();
     }
 
     private void setupHeader(final Encoder encoder)
@@ -399,9 +399,9 @@ public class SharedCodecsTest
             .sendingTime(" ".getBytes(StandardCharsets.US_ASCII));
     }
 
-    private Encoder executionReportEncoder1() throws InstantiationException, IllegalAccessException
+    private Encoder executionReportEncoder1() throws Exception
     {
-        return (Encoder)executionReportEncoder1.newInstance();
+        return (Encoder)executionReportEncoder1.getConstructor().newInstance();
     }
 
     private void assertEncodes(final Encoder encoder, final String msg)
