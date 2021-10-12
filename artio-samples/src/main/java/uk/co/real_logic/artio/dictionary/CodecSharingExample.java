@@ -47,9 +47,7 @@ public final class CodecSharingExample
         {
             final String[] fileNames = Arrays.stream(dictionaryFiles).map(File::getAbsolutePath).toArray(String[]::new);
 
-            final CodecConfiguration config = new CodecConfiguration()
-                .outputPath(outputPath)
-                .fileNames(fileNames);
+            final CodecConfiguration config = new CodecConfiguration().outputPath(outputPath);
 
             final SharedCodecConfiguration sharedCodecs = config.sharedCodecsEnabled();
             for (int i = 0; i < dictionaryFiles.length; i++)
