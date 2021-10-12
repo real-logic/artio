@@ -378,6 +378,7 @@ public class ILink3SystemTest
         rejectNegotiate();
     }
 
+    // Operation deprecated as of 17th October 2021
     private void rejectNegotiate()
     {
         readNegotiate();
@@ -388,6 +389,44 @@ public class ILink3SystemTest
         assertDisconnected();
     }
 
+    // New Behaviour from October 2021
+    private void rejectNegotiateWithTerminate()
+    {
+        readNegotiate();
+
+        testServer.writeTerminate();
+
+        testServer.readTerminate();
+
+        assertConnectError(containsString("Connection Terminated"));
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldSupportNegotiationRejectionWithTerminate() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        rejectNegotiateWithTerminate();
+    }
+
+    @Test
+    public void shouldSupportReestablishingConnectionsAfterNegotiateRejectWithTerminate() throws IOException
+    {
+        // Reject Negotiate
+        launch(true);
+        connectToTestServer(connectionConfiguration());
+        rejectNegotiateWithTerminate();
+
+        connectToTestServer(connectionConfiguration().reEstablishLastConnection(true));
+
+        establishConnection();
+
+        acquireSession();
+    }
+
     @Test
     public void shouldSupportEstablishmentReject() throws IOException
     {
@@ -396,10 +435,33 @@ public class ILink3SystemTest
         connectToTestServer(connectionConfiguration());
 
         readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
 
         testServer.writeEstablishmentReject();
 
         assertConnectError(containsString("Establishment rejected"));
+        assertDisconnected();
+    }
+
+    @Test
+    public void shouldSupportEstablishmentRejectWithTerminate() throws IOException
+    {
+        launch(true);
+
+        connectToTestServer(connectionConfiguration());
+
+        readNegotiate();
+        testServer.writeNegotiateResponse();
+
+        readEstablish();
+
+        testServer.writeTerminate();
+
+        testServer.readTerminate();
+
+        assertConnectError(containsString("Connection Terminated"));
         assertDisconnected();
     }
 

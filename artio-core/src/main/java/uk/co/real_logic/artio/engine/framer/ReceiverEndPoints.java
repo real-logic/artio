@@ -213,10 +213,17 @@ class ReceiverEndPoints extends TransportPoller
                 bytesReceived += polledBytes;
             }
 
-            // check we need to reset
             if (i != 0)
             {
-                selectedKeySet.reset(i);
+                if (i == size)
+                {
+                    selectedKeySet.reset();
+                }
+                else
+                {
+                    final int skipCount = Math.min(i, selectedKeySet.size());
+                    selectedKeySet.reset(skipCount);
+                }
             }
         }
         return bytesReceived;

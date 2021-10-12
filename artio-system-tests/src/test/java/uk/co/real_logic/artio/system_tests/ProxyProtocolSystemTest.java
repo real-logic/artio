@@ -1,17 +1,38 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.validation.AuthenticationProxy;
+import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
 import java.io.IOException;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.system_tests.FixConnection.*;
-import static uk.co.real_logic.artio.system_tests.FixConnection.PROXY_V2_IPV6_SOURCE_PORT;
 
 public class ProxyProtocolSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
+    private String remoteAuthAddress;
+
+    {
+        optionalAuthStrategy = new AuthenticationStrategy()
+        {
+            public void authenticateAsync(
+                final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
+            {
+                remoteAuthAddress = authProxy.remoteAddress();
+                authProxy.accept();
+            }
+
+            public boolean authenticate(final AbstractLogonDecoder logon)
+            {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
     @Test
     public void shouldSupportProxyV1Protocol() throws IOException
     {
@@ -62,6 +83,7 @@ public class ProxyProtocolSystemTest extends AbstractMessageBasedAcceptorSystemT
 
             assertEquals(proxySourceIp, session.connectedHost());
             assertEquals(proxySourcePort, session.connectedPort());
+            assertEquals(proxySourceIp + ":" + proxySourcePort, remoteAuthAddress);
         }
     }
 }

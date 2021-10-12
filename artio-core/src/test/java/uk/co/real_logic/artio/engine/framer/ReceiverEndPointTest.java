@@ -128,7 +128,8 @@ public class ReceiverEndPointTest
             eq(gatewaySession),
             any(),
             any(),
-            eq(framer)))
+            eq(framer),
+            any()))
             .thenReturn(logonResult);
     }
 
