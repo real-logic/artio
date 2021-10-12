@@ -306,7 +306,8 @@ class EncoderGenerator extends Generator
         precomputedHeaders(out, aggregate.entries());
         generateSetters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
-        out.append(completeResetMethod(aggregate, isMessage, type));
+        final String resetMethod = completeResetMethod(aggregate, isMessage, type);
+        out.append(resetMethod);
         out.append(generateAppendTo(aggregate, isMessage));
         out.append(generateCopyTo(aggregate));
         out.append("}\n");
@@ -362,7 +363,7 @@ class EncoderGenerator extends Generator
             default:
                 additionalReset = "";
         }
-        return super.completeResetMethod(isMessage, aggregate.entries(), additionalReset);
+        return super.completeResetMethod(isMessage, aggregate.entries(), additionalReset, aggregate.isInParent());
     }
 
     private void generateGroupClass(final Group group, final Writer out)

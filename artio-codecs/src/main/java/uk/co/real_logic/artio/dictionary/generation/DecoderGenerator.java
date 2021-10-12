@@ -261,7 +261,8 @@ class DecoderGenerator extends Generator
         headerMethods(out, aggregate, type);
         generateGetters(out, className, aggregate.entries(), aggregate.isInParent());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
-        out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
+        out.append(completeResetMethod(
+            isMessage, aggregate.entries(), additionalReset(isGroup), aggregate.isInParent()));
         out.append(generateAppendTo(aggregate, isMessage));
         out.append(generateToEncoder(aggregate));
         out.append("}\n");

@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Configuration object for setting shared dictionary generation configuration on.
+ */
 public final class SharedCodecConfiguration
 {
     private boolean splitDirectories = true;
@@ -29,12 +32,28 @@ public final class SharedCodecConfiguration
     {
     }
 
+    /**
+     * Sets whether to split the directory structure or not. If true then each dictionary's Java source code will be
+     * generated into a separate directory, using the name of the dictionary as a suffix to the
+     * {@link CodecConfiguration#outputPath(String)}. If false they will all be generated in
+     * {@link CodecConfiguration#outputPath(String)}. Defaults to true.
+     *
+     * @param splitDirectories true to split the structure, false otherwise.
+     * @return this
+     */
     public SharedCodecConfiguration splitDirectories(final boolean splitDirectories)
     {
         this.splitDirectories = splitDirectories;
         return this;
     }
 
+    /**
+     * Add a dictionary, using file names, to the shared dictionaries.
+     *
+     * @param dictionaryName the name to use for this dictionary.
+     * @param fileNames see {@link CodecConfiguration#fileNames(String...)} for details.
+     * @return this
+     */
     public SharedCodecConfiguration withDictionary(final String dictionaryName, final String... fileNames)
     {
         if (fileNames.length == 0)
@@ -45,6 +64,13 @@ public final class SharedCodecConfiguration
         return withDictionary(dictionaryName, null, fileNames);
     }
 
+    /**
+     * Add a dictionary, using input streams, to the shared dictionaries.
+     *
+     * @param dictionaryName the name to use for this dictionary.
+     * @param fileStreams see {@link CodecConfiguration#fileStreams(InputStream...)} for details.
+     * @return this
+     */
     public SharedCodecConfiguration withDictionary(final String dictionaryName, final InputStream... fileStreams)
     {
         if (fileStreams.length == 0)

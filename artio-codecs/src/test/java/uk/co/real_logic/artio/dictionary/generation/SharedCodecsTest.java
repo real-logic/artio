@@ -21,7 +21,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.builder.StringRepresentable;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
@@ -37,6 +39,8 @@ import static java.lang.reflect.Modifier.isAbstract;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_CHAR;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGeneratorTest.assertRepresentation;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -342,79 +346,6 @@ public class SharedCodecsTest
         assertEncodes(encoder2, ALL_FIELDS_MSG);
     }
 
-    private void setupEncoder(final Encoder encoder, final boolean optionalFields) throws Exception
-    {
-        setCharSequence(encoder, ORDER_ID, "1");
-        setCharSequence(encoder, "secondaryOrderID", "2");
-        setCharSequence(encoder, "execID", "3");
-        setChar(encoder, "execType", '0');
-        if (optionalFields)
-        {
-            setChar(encoder, "ordStatus", '2');
-        }
-
-        final Object instrument = Reflection.get(encoder, "instrument");
-        if (optionalFields)
-        {
-            setCharSequence(instrument, "symbol", "MSFT");
-        }
-
-        final Object groupInComp = get(instrument, "groupInCompGroup", 1);
-        setCharSequence(groupInComp, "groupInCompField", "GroupInComp");
-
-        final Object contraBrokers = get(encoder, "contraBrokersGroup", 1);
-        setCharSequence(contraBrokers, "contraBroker", "aContraBroker");
-
-        final Object outerNestedGroup = get(encoder, "outerNestedGroupGroup", 1);
-        setCharSequence(outerNestedGroup, "outerNestedGroupField", "value");
-        final Object innerNestedGroup = get(outerNestedGroup, "innerNestedGroupGroup", 1);
-        setCharSequence(innerNestedGroup, "innerNestedGroupField", "inner");
-
-        final Object nonSharedComponent = Reflection.get(encoder, "nonSharedComponent");
-        setCharSequence(nonSharedComponent, "newPassword", "pwd");
-
-        setChar(encoder, "side", '1');
-        setByteArray(encoder, "transactTime", " ".getBytes(StandardCharsets.US_ASCII));
-        setChar(encoder, "collisionEnum", '2');
-        setChar(encoder, "missingEnum", '1');
-        setBoolean(encoder, "clashingType", true);
-        setCharSequence(encoder, "stringAndCharEnum", "2");
-
-        final Object semiSharedComponent = Reflection.get(encoder, "semiSharedComponent");
-        setCharSequence(semiSharedComponent, "semiSharedField", "ABC");
-    }
-
-    private Decoder executionReportDecoder1() throws Exception
-    {
-        return (Decoder)executionReportDecoder1.getConstructor().newInstance();
-    }
-
-    private void setupHeader(final Encoder encoder)
-    {
-        encoder
-            .header()
-            .senderCompID("sender")
-            .targetCompID("target")
-            .msgSeqNum(1)
-            .sendingTime(" ".getBytes(StandardCharsets.US_ASCII));
-    }
-
-    private Encoder executionReportEncoder1() throws Exception
-    {
-        return (Encoder)executionReportEncoder1.getConstructor().newInstance();
-    }
-
-    private void assertEncodes(final Encoder encoder, final String msg)
-    {
-        buffer = new MutableAsciiBuffer(new byte[1024]);
-        final long result = encoder.encode(buffer, 0);
-        length = Encoder.length(result);
-        offset = Encoder.offset(result);
-        encoded = buffer.getStringWithoutLengthAscii(offset, length);
-
-        assertEquals(encoder.toString(), msg, encoded);
-    }
-
     @Test
     public void shouldCopyToOtherEncoders() throws Exception
     {
@@ -426,6 +357,41 @@ public class SharedCodecsTest
         setupHeader(encoder2);
 
         assertEncodes(encoder2, ALL_FIELDS_MSG);
+    }
+
+    @Test
+    public void shouldResetEncoders() throws Exception
+    {
+        final Encoder encoder = executionReportEncoder1();
+        setupHeader(encoder);
+        setupEncoder(encoder, true);
+
+        encoder.reset();
+
+        assertFalse(encoder.toString(), getBoolean(encoder, "hasOrderID"));
+        assertEquals(encoder.toString(), MISSING_CHAR, getChar(encoder, "side"));
+
+        final SessionHeaderEncoder header = encoder.header();
+        assertFalse(header.toString(), header.hasMsgSeqNum());
+        assertFalse(header.toString(), header.hasSenderCompID());
+    }
+
+    @Test
+    public void shouldResetDecoders() throws Exception
+    {
+        final Decoder decoder = executionReportDecoder1();
+        newBuffer();
+        final int length = buffer.putStringWithoutLengthAscii(0, ALL_FIELDS_MSG);
+        decoder.decode(buffer, 0, length);
+
+        decoder.reset();
+
+        assertEquals(decoder.toString(), 0, getInt(decoder, ORDER_ID_LENGTH));
+        assertEquals(decoder.toString(), MISSING_CHAR, getChar(decoder, "side"));
+
+        final SessionHeaderDecoder header = decoder.header();
+        assertEquals(header.toString(), MISSING_INT, header.msgSeqNum());
+        assertEquals(header.toString(), 0, header.senderCompIDLength());
     }
 
     @Test
@@ -778,5 +744,85 @@ public class SharedCodecsTest
         {
             // Deliberately blank
         }
+    }
+
+
+
+    private void setupEncoder(final Encoder encoder, final boolean optionalFields) throws Exception
+    {
+        setCharSequence(encoder, ORDER_ID, "1");
+        setCharSequence(encoder, "secondaryOrderID", "2");
+        setCharSequence(encoder, "execID", "3");
+        setChar(encoder, "execType", '0');
+        if (optionalFields)
+        {
+            setChar(encoder, "ordStatus", '2');
+        }
+
+        final Object instrument = Reflection.get(encoder, "instrument");
+        if (optionalFields)
+        {
+            setCharSequence(instrument, "symbol", "MSFT");
+        }
+
+        final Object groupInComp = get(instrument, "groupInCompGroup", 1);
+        setCharSequence(groupInComp, "groupInCompField", "GroupInComp");
+
+        final Object contraBrokers = get(encoder, "contraBrokersGroup", 1);
+        setCharSequence(contraBrokers, "contraBroker", "aContraBroker");
+
+        final Object outerNestedGroup = get(encoder, "outerNestedGroupGroup", 1);
+        setCharSequence(outerNestedGroup, "outerNestedGroupField", "value");
+        final Object innerNestedGroup = get(outerNestedGroup, "innerNestedGroupGroup", 1);
+        setCharSequence(innerNestedGroup, "innerNestedGroupField", "inner");
+
+        final Object nonSharedComponent = Reflection.get(encoder, "nonSharedComponent");
+        setCharSequence(nonSharedComponent, "newPassword", "pwd");
+
+        setChar(encoder, "side", '1');
+        setByteArray(encoder, "transactTime", " ".getBytes(StandardCharsets.US_ASCII));
+        setChar(encoder, "collisionEnum", '2');
+        setChar(encoder, "missingEnum", '1');
+        setBoolean(encoder, "clashingType", true);
+        setCharSequence(encoder, "stringAndCharEnum", "2");
+
+        final Object semiSharedComponent = Reflection.get(encoder, "semiSharedComponent");
+        setCharSequence(semiSharedComponent, "semiSharedField", "ABC");
+    }
+
+    private Decoder executionReportDecoder1() throws Exception
+    {
+        return (Decoder)executionReportDecoder1.getConstructor().newInstance();
+    }
+
+    private void setupHeader(final Encoder encoder)
+    {
+        encoder
+            .header()
+            .senderCompID("sender")
+            .targetCompID("target")
+            .msgSeqNum(1)
+            .sendingTime(" ".getBytes(StandardCharsets.US_ASCII));
+    }
+
+    private Encoder executionReportEncoder1() throws Exception
+    {
+        return (Encoder)executionReportEncoder1.getConstructor().newInstance();
+    }
+
+    private void assertEncodes(final Encoder encoder, final String msg)
+    {
+        newBuffer();
+        final long result = encoder.encode(buffer, 0);
+        length = Encoder.length(result);
+        offset = Encoder.offset(result);
+        encoded = buffer.getStringWithoutLengthAscii(offset, length);
+
+        assertEquals(encoder.toString(), msg, encoded);
+    }
+
+    private void newBuffer()
+    {
+        buffer = new MutableAsciiBuffer(new byte[1024]);
     }
 }

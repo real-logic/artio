@@ -221,9 +221,19 @@ public final class Reflection
         return (char[])get(decoder, field);
     }
 
-    public static int getInt(final Decoder decoder, final String field) throws Exception
+    public static char getChar(final Object object, final String field) throws Exception
     {
-        return (int)get(decoder, field);
+        return (char)get(object, field);
+    }
+
+    public static int getInt(final Object object, final String field) throws Exception
+    {
+        return (int)get(object, field);
+    }
+
+    public static boolean getBoolean(final Object object, final String field) throws Exception
+    {
+        return (boolean)get(object, field);
     }
 
     public static String getString(final Decoder decoder, final String field) throws Exception

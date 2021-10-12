@@ -191,7 +191,8 @@ public abstract class Generator
     protected String completeResetMethod(
         final boolean isMessage,
         final List<Entry> entries,
-        final String additionalReset)
+        final String additionalReset,
+        final boolean isInParent)
     {
         final StringBuilder methods = new StringBuilder();
 
@@ -209,29 +210,35 @@ public abstract class Generator
                 "    }\n\n",
                 additionalReset);
 
+            final String resetParent = isInParent ? "        super.resetMessage();\n" : "";
             return String.format(
                 "%1$s" +
                 "    public void resetMessage()\n" +
                 "    {\n" +
+                "%4$s" +
                 "%2$s" +
                 "    }\n\n" +
                 "%3$s",
                 reset,
                 resetEntries,
-                methods);
+                methods,
+                resetParent);
         }
         else
         {
+            final String resetParent = isInParent ? "        super.reset();\n" : "";
             return String.format(
                 "    public void reset()\n" +
                 "    {\n" +
-                "%s" +
-                "%s" +
+                "%4$s" +
+                "%1$s" +
+                "%2$s" +
                 "    }\n\n" +
-                "%s",
+                "%3$s",
                 resetEntries,
-                isSharedParent() ? "" : additionalReset, // TODO
-                methods);
+                isSharedParent() ? "" : additionalReset,
+                methods,
+                resetParent);
         }
     }
 

@@ -107,12 +107,33 @@ public final class CodecConfiguration
         return this;
     }
 
+    /**
+     * Provide the XML file, or files, that are used to generate the Dictionaries. Multiple dictionary files can be
+     * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, String...)} method and not
+     * this one. {@link #fileStreams(InputStream...)} is an alternative configuration option that lets you provide
+     * inputstreams as the source of your XML files.
+     *
+     * @param fileNames the file names to use as sources of XML documents
+     * @return this
+     */
     public CodecConfiguration fileNames(final String... fileNames)
     {
         nonSharedDictionary.fileNames(fileNames);
         return this;
     }
 
+    /**
+     * Provide the XML document, or documents, that are used to generate the Dictionaries as instance of
+     * {@link InputStream}. Multiple dictionary files can be
+     * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, InputStream...)} method and not
+     * this one. {@link #fileNames(String...)} is an alternative configuration option that lets you provide
+     * file names as the source of your XML files.
+     *
+     * @param fileStreams the file streams to use as sources of XML documents
+     * @return this
+     */
     public CodecConfiguration fileStreams(final InputStream... fileStreams)
     {
         nonSharedDictionary.fileStreams(fileStreams);
@@ -142,6 +163,11 @@ public final class CodecConfiguration
         return this;
     }
 
+    /**
+     * Enable the generation of shared codecs. This returns an object upon which configuration options can be set.
+     *
+     * @return the shared codec configuration object
+     */
     public SharedCodecConfiguration sharedCodecsEnabled()
     {
         sharedCodecConfiguration = new SharedCodecConfiguration();
