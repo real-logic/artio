@@ -15,12 +15,25 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.FilterBy;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.From;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.To;
 
-class ArchiveScanPlanner
+final class ArchiveScanPlanner
 {
-    public static IndexQuery extractIndexQuery(final FixMessagePredicate queryPredicate)
+    static IndexQuery extractIndexQuery(final FixMessageConsumer fixHandler)
+    {
+        // need a filter in order to optimise the scan
+        if (!(fixHandler instanceof FilterBy))
+        {
+            return null;
+        }
+
+        final FixMessagePredicate queryPredicate = ((FilterBy)fixHandler).predicate;
+        return extractIndexQuery(queryPredicate);
+    }
+
+    private static IndexQuery extractIndexQuery(final FixMessagePredicate queryPredicate)
     {
         final IndexQuery indexQuery = new IndexQuery();
         extractIndexQuery(queryPredicate, indexQuery);

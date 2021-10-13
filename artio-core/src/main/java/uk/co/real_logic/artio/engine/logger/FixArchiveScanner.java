@@ -22,7 +22,6 @@ import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.logger.FixMessagePredicates.FilterBy;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
 import java.util.ArrayList;
@@ -253,6 +252,11 @@ public class FixArchiveScanner implements AutoCloseable
     private Long2ObjectHashMap<PositionRange> scanIndexIfPossible(
         final FixMessageConsumer fixHandler, final boolean follow, final IntHashSet queryStreamIds)
     {
+        if (DEBUG_LOG_ARCHIVE_SCAN)
+        {
+            DebugLogger.log(ARCHIVE_SCAN, "checking index,follow=" + follow + ",logFileDir=" + logFileDir);
+        }
+
         // Don't support scan + continuous update query for now
         if (follow)
         {
@@ -265,16 +269,9 @@ public class FixArchiveScanner implements AutoCloseable
             return null;
         }
 
-        // need a filter in order to optimise the scan
-        if (!(fixHandler instanceof FilterBy))
-        {
-            return null;
-        }
-
-        final FixMessagePredicate queryPredicate = ((FilterBy)fixHandler).predicate;
         try
         {
-            final IndexQuery indexQuery = ArchiveScanPlanner.extractIndexQuery(queryPredicate);
+            final IndexQuery indexQuery = ArchiveScanPlanner.extractIndexQuery(fixHandler);
             if (DEBUG_LOG_ARCHIVE_SCAN)
             {
                 DebugLogger.log(ARCHIVE_SCAN, "indexQuery = " + indexQuery);
