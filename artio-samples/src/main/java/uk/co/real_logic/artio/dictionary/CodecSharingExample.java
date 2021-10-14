@@ -52,7 +52,7 @@ public final class CodecSharingExample
             final SharedCodecConfiguration sharedCodecs = config.sharedCodecsEnabled();
             for (int i = 0; i < dictionaryFiles.length; i++)
             {
-                final String fileName = fileNames[i];
+                final String fileName = new File(fileNames[i]).getName();
                 final File dictionaryFile = dictionaryFiles[i];
                 sharedCodecs.withDictionary(fileName, dictionaryFile.getAbsolutePath());
             }
