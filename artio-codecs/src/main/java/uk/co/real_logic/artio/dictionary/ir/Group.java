@@ -17,13 +17,18 @@ package uk.co.real_logic.artio.dictionary.ir;
 
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 
+import java.util.Map;
+import java.util.Objects;
+
 public final class Group extends Aggregate implements Element
 {
     private final Entry numberField;
 
-    private Group(final String name, final Entry numberField)
+    public Group(final String name, final Entry numberField)
     {
         super(name);
+
+        Objects.requireNonNull(numberField);
         this.numberField = numberField;
     }
 
@@ -32,7 +37,7 @@ public final class Group extends Aggregate implements Element
         return numberField;
     }
 
-    public static Group of(final Field field)
+    public static Group of(final Field field, final Map<String, Field> fields)
     {
         final String name = field.name();
         final String normalisedName = name.startsWith("No") ? name.substring(2) : name;
@@ -40,6 +45,15 @@ public final class Group extends Aggregate implements Element
         final String groupName = normalisedName + "Group";
         final Field numberField = new Field(field.number(), fieldName, Field.Type.NUMINGROUP);
 
+        fields.put(numberField.name(), numberField);
+
         return new Group(groupName, new Entry(false, numberField));
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Group{" +
+            "numberField=" + numberField + super.toString();
     }
 }

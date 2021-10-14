@@ -27,10 +27,4 @@ public class GenerationUtilTest
     {
         assertEquals("DEFAULT_APPL_VER_ID", constantName("DefaultApplVerID"));
     }
-
-    @Test
-    public void shouldDropGroupCounterForNumberOfElementsInReaptingGroupConstant()
-    {
-        assertEquals("NO_MSG_TYPES", constantName("NoMsgTypesGroupCounter"));
-    }
 }

@@ -66,13 +66,9 @@ public class EncoderGeneratorTest
         {
             System.out.println(sources);
         }
-        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_ENCODER, sources);
-        if (enumTestMessage == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
-        {
-            System.out.println(sources);
-        }
-
-        otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
+        final ClassLoader classLoader = heartbeat.getClassLoader();
+        enumTestMessage = classLoader.loadClass(ENUM_TEST_MESSAGE_ENCODER);
+        otherMessage = classLoader.loadClass(OTHER_MESSAGE_ENCODER);
 
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_ENCODER, sourcesWithoutValidation);

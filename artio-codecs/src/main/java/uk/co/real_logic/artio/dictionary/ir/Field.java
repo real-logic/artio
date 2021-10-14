@@ -30,6 +30,10 @@ public final class Field implements Element
     private Type type;
     private final List<Value> values;
 
+    // true iff you've got a shared dictionary and this field represents a type which is sometimes an enum and
+    // sometimes not.
+    private boolean hasSharedSometimesEnumClash;
+
     private Field associatedLengthField;
 
     public static Field registerField(
@@ -98,12 +102,24 @@ public final class Field implements Element
         return !values.isEmpty();
     }
 
+    public boolean hasSharedSometimesEnumClash()
+    {
+        return hasSharedSometimesEnumClash;
+    }
+
+    public void hasSharedSometimesEnumClash(final boolean hasSharedSometimesEnumClash)
+    {
+        this.hasSharedSometimesEnumClash = hasSharedSometimesEnumClash;
+    }
+
     public String toString()
     {
-        return "EnumField{" +
+        return "Field{" +
             "number=" + number +
             ", name='" + name + '\'' +
             ", type=" + type +
+            ", hasSharedSometimesEnumClash=" + hasSharedSometimesEnumClash +
+            ", associatedLengthField=" + associatedLengthField +
             ", values=" + values +
             '}';
     }
@@ -251,15 +267,12 @@ public final class Field implements Element
         }
     }
 
-    // TODO: provide lookup table support for:
-    // CURRENCY
-    // EXCHANGE
-    // COUNTRY
-
     public static class Value
     {
         private final String representation;
         private final String description;
+
+        private List<String> alternativeNames;
 
         public Value(final String representation, final String description)
         {
@@ -296,11 +309,22 @@ public final class Field implements Element
             return result;
         }
 
+        public List<String> alternativeNames()
+        {
+            return alternativeNames;
+        }
+
+        public void alternativeNames(final List<String> alternativeNames)
+        {
+            this.alternativeNames = alternativeNames;
+        }
+
         public String toString()
         {
             return "Value{" +
                 "representation=" + representation +
                 ", description='" + description + '\'' +
+                ", alternativeNames='" + alternativeNames + '\'' +
                 '}';
         }
     }

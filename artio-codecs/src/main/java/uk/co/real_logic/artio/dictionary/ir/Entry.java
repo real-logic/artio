@@ -20,13 +20,18 @@ import org.agrona.Verify;
 import org.agrona.generation.ResourceConsumer;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public final class Entry
 {
-    private final boolean required;
+    private boolean required;
     private Element element;
+    private boolean isInParent;
+
+    // Only used in shared parent entry in order to store references to child entries
+    private List<Entry> sharedChildEntries;
 
     public static Entry required(final Element element)
     {
@@ -112,7 +117,12 @@ public final class Entry
 
     public boolean required()
     {
-        return this.required;
+        return required;
+    }
+
+    public void required(final boolean required)
+    {
+        this.required = required;
     }
 
     public Element element()
@@ -148,7 +158,18 @@ public final class Entry
         return "Entry{" +
             "required=" + required +
             ", element=" + element +
+            ", isInParent=" + isInParent +
             '}';
+    }
+
+    public void sharedChildEntries(final List<Entry> sharedChildEntries)
+    {
+        this.sharedChildEntries = sharedChildEntries;
+    }
+
+    public List<Entry> sharedChildEntries()
+    {
+        return sharedChildEntries;
     }
 
     public String name()
@@ -159,6 +180,16 @@ public final class Entry
     public int number()
     {
         return ((Field)element()).number();
+    }
+
+    public boolean isInParent()
+    {
+        return isInParent;
+    }
+
+    public void isInParent(final boolean isInParent)
+    {
+        this.isInParent = isInParent;
     }
 
     public interface Element

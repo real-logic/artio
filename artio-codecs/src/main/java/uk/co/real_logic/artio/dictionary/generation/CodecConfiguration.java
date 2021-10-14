@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Adaptive Financial Consulting Ltd.
+ * Copyright 2020-2021 Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import org.agrona.generation.OutputManager;
+import org.agrona.generation.PackageOutputManager;
 
-public class CodecConfiguration
+import java.io.InputStream;
+import java.util.function.BiFunction;
+
+public final class CodecConfiguration
 {
     /**
      * Boolean system property to turn on or off duplicated fields validation. Defaults to false.
@@ -52,11 +53,14 @@ public class CodecConfiguration
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
     private boolean allowDuplicateFields = Boolean.getBoolean(FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY);
+    private SharedCodecConfiguration sharedCodecConfiguration;
 
     private String codecRejectUnknownEnumValueEnabled;
     private String outputPath;
-    private String[] fileNames;
-    private InputStream[] fileStreams;
+
+    private BiFunction<String, String, OutputManager> outputManagerFactory = PackageOutputManager::new;
+    private final GeneratorDictionaryConfiguration nonSharedDictionary =
+        new GeneratorDictionaryConfiguration(null, null, null);
 
     public CodecConfiguration()
     {
@@ -103,15 +107,43 @@ public class CodecConfiguration
         return this;
     }
 
+    /**
+     * Provide the XML file, or files, that are used to generate the Dictionaries. Multiple dictionary files can be
+     * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, String...)} method and not
+     * this one. {@link #fileStreams(InputStream...)} is an alternative configuration option that lets you provide
+     * inputstreams as the source of your XML files.
+     *
+     * @param fileNames the file names to use as sources of XML documents
+     * @return this
+     */
     public CodecConfiguration fileNames(final String... fileNames)
     {
-        this.fileNames = fileNames;
+        nonSharedDictionary.fileNames(fileNames);
         return this;
     }
 
+    /**
+     * Provide the XML document, or documents, that are used to generate the Dictionaries as instance of
+     * {@link InputStream}. Multiple dictionary files can be
+     * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, InputStream...)} method and not
+     * this one. {@link #fileNames(String...)} is an alternative configuration option that lets you provide
+     * file names as the source of your XML files.
+     *
+     * @param fileStreams the file streams to use as sources of XML documents
+     * @return this
+     */
     public CodecConfiguration fileStreams(final InputStream... fileStreams)
     {
-        this.fileStreams = fileStreams;
+        nonSharedDictionary.fileStreams(fileStreams);
+        return this;
+    }
+
+    CodecConfiguration outputManagerFactory(
+        final BiFunction<String, String, OutputManager> outputManagerFactory)
+    {
+        this.outputManagerFactory = outputManagerFactory;
         return this;
     }
 
@@ -131,37 +163,58 @@ public class CodecConfiguration
         return this;
     }
 
-    public InputStream[] fileStreams()
+    /**
+     * Enable the generation of shared codecs. This returns an object upon which configuration options can be set.
+     *
+     * @return the shared codec configuration object
+     */
+    public SharedCodecConfiguration sharedCodecsEnabled()
     {
-        return fileStreams;
+        sharedCodecConfiguration = new SharedCodecConfiguration();
+        return sharedCodecConfiguration;
     }
 
-    public String outputPath()
+    String outputPath()
     {
         return outputPath;
     }
 
-    public String parentPackage()
+    String parentPackage()
     {
         return parentPackage;
     }
 
-    public boolean flyweightsEnabled()
+    boolean flyweightsEnabled()
     {
         return flyweightsEnabled;
     }
 
-    public boolean allowDuplicateFields()
+    boolean allowDuplicateFields()
     {
         return allowDuplicateFields;
     }
 
-    public String codecRejectUnknownEnumValueEnabled()
+    String codecRejectUnknownEnumValueEnabled()
     {
         return codecRejectUnknownEnumValueEnabled;
     }
 
-    void conclude() throws FileNotFoundException
+    SharedCodecConfiguration sharedCodecConfiguration()
+    {
+        return sharedCodecConfiguration;
+    }
+
+    public GeneratorDictionaryConfiguration nonSharedDictionary()
+    {
+        return nonSharedDictionary;
+    }
+
+    BiFunction<String, String, OutputManager> outputManagerFactory()
+    {
+        return outputManagerFactory;
+    }
+
+    void conclude()
     {
         if (outputPath() == null)
         {
@@ -175,34 +228,22 @@ public class CodecConfiguration
                 rejectUnknownEnumPropertyValue : Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY;
         }
 
-        // Create input streams from names if not provided.
-        if (fileStreams == null)
+        if (sharedCodecConfiguration != null)
         {
-            if (fileNames == null)
+            if (nonSharedDictionary.hasStreams())
             {
                 throw new IllegalArgumentException(
-                    "You must provide either the fileNames or fileStream configuration options");
+                    "Cannot mix shared codec configuration with providing file streams or names via the non-shared " +
+                        "configuration option. If you want to provide dictionaries for sharing then use " +
+                        "SharedCodecConfiguration.withDictionary().");
             }
-
-            final int n = fileNames.length;
-            fileStreams = new InputStream[n];
-            for (int i = 0; i < n; i++)
+        }
+        else
+        {
+            if (!nonSharedDictionary.hasStreams())
             {
-                final File xmlFile = new File(fileNames[i]);
-                if (!xmlFile.exists())
-                {
-                    throw new IllegalArgumentException("xmlFile does not exist: " + xmlFile.getAbsolutePath());
-                }
-
-                if (!xmlFile.isFile())
-                {
-                    throw new IllegalArgumentException(String.format(
-                        "xmlFile [%s] isn't a file, are the arguments the correct way around?",
-                        xmlFile));
-                }
-
-                // Closed by CodecGenerator
-                fileStreams[i] = new FileInputStream(xmlFile); // lgtm [java/input-resource-leak]
+                throw new IllegalArgumentException(
+                    "Please provide a path to the XML files either through the fileNames() or fileStreams() option.");
             }
         }
     }

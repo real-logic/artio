@@ -35,7 +35,7 @@ import java.util.List;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
-public class CodecValidationInspector
+public final class CodecValidationInspector
 {
     private static final String TEMP_DIR_NAME = SystemUtil.tmpDirName();
 

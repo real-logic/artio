@@ -49,6 +49,11 @@ class ConstantGenerator
 
     public void generate()
     {
+        if (dictionary.shared())
+        {
+            return;
+        }
+
         outputManager.withOutput(CLASS_NAME, (out) ->
         {
             out.append(fileHeader(builderPackage));

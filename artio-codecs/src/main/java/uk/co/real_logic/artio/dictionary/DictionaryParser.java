@@ -52,6 +52,10 @@ public final class DictionaryParser
     private static final String HEADER_EXPR = "/fix/header/field";
     private static final String TRAILER_EXPR = "/fix/trailer/field";
 
+    public static final String HEADER = "Header";
+    public static final String TRAILER = "Trailer";
+    public static final String DEFAULT_SPEC_TYPE = "FIX";
+
     private final DocumentBuilder documentBuilder;
     private final XPathExpression findField;
     private final XPathExpression findMessage;
@@ -114,14 +118,14 @@ public final class DictionaryParser
             final int minorVersion = getInt(fixAttributes, "minor");
 
             final Component header = extractComponent(
-                document, fields, findHeader, "Header", components, forwardReferences);
+                document, fields, findHeader, HEADER, components, forwardReferences);
             final Component trailer = extractComponent(
-                document, fields, findTrailer, "Trailer", components, forwardReferences);
+                document, fields, findTrailer, TRAILER, components, forwardReferences);
 
             validateDataFieldsInAggregate(header);
             validateDataFieldsInAggregate(trailer);
 
-            final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
+            final String specType = getValueOrDefault(fixAttributes, "type", DEFAULT_SPEC_TYPE);
             return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
         }
     }
@@ -151,26 +155,32 @@ public final class DictionaryParser
             entry.forEach(
                 field ->
                 {
-                    if (field.type().isDataBased())
-                    {
-                        final String name = field.name();
-                        if (!(hasLengthField(field, "Length", nameToField) ||
-                            hasLengthField(field, "Len", nameToField)))
-                        {
-                            throw new IllegalStateException(
-                                String.format("Each DATA field must have a corresponding LENGTH field using the " +
-                                "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
-                                name,
-                                aggregate.name()));
-                        }
-                    }
+                    checkAssociatedLengthField(nameToField, field, aggregate.name());
                 },
                 this::validateDataFieldsInAggregate,
                 this::validateDataFieldsInAggregate);
         }
     }
 
-    private boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
+    public static void checkAssociatedLengthField(
+        final Map<String, Field> nameToField, final Field field, final String aggregateName)
+    {
+        if (field.type().isDataBased())
+        {
+            final String name = field.name();
+            if (!(hasLengthField(field, "Length", nameToField) ||
+                hasLengthField(field, "Len", nameToField)))
+            {
+                throw new IllegalStateException(
+                    String.format("Each DATA field must have a corresponding LENGTH field using the " +
+                    "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
+                    name,
+                    aggregateName));
+            }
+        }
+    }
+
+    private static boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
     {
         final String fieldName = field.name() + suffix;
         final Field associatedLengthField = nameToField.get(fieldName);
@@ -352,7 +362,7 @@ public final class DictionaryParser
                         break;
 
                     case "group":
-                        final Group group = Group.of(fields.get(name));
+                        final Group group = Group.of(fields.get(name), fields);
                         extractEntries(node.getChildNodes(), fields, group.entries(), components, forwardReferences);
                         newEntry.accept(group);
                         break;
@@ -501,25 +511,25 @@ public final class DictionaryParser
                 (field) -> addField(messageName, field, allFields, path, errorCollector),
                 (group) ->
                 {
-                    path.push(group.name());
+                    path.addLast(group.name());
                     identifyDuplicateFieldDefinitionsForMessage(
                         messageName,
                         group,
                         allFields,
                         path,
                         errorCollector);
-                    path.pop();
+                    path.removeLast();
                 },
                 (component) ->
                 {
-                    path.push(component.name());
+                    path.addLast(component.name());
                     identifyDuplicateFieldDefinitionsForMessage(
                         messageName,
                         component,
                         allFields,
                         path,
                         errorCollector);
-                    path.pop();
+                    path.removeLast();
                 }
             );
         }
@@ -557,7 +567,7 @@ public final class DictionaryParser
         }
     }
 
-    private static String enumDescriptionToJavaName(final String enumDescription)
+    public static String enumDescriptionToJavaName(final String enumDescription)
     {
         final StringBuilder enumName = new StringBuilder();
 

@@ -184,7 +184,7 @@ public class EnumGeneratorTest
         return CompilerUtil.compileInMemory(className, sources);
     }
 
-    private void assertRepresentation(final char expected, final Enum<?> enumElement) throws Exception
+    public static void assertRepresentation(final char expected, final Enum<?> enumElement) throws Exception
     {
         final char representation = (char)enumElement
             .getDeclaringClass()
