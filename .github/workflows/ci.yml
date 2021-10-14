@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11', '16' ]
+        java: [ '8', '11', '17' ]
         os: [ 'ubuntu-20.04', 'windows-latest' ]
     steps:
       - name: Checkout code
@@ -65,4 +65,3 @@ jobs:
         with:
           name: crash-logs-${{ matrix.os }}-java-${{ matrix.java }}
           path: ${{ steps.copy_test_logs.outputs.dir }}
-
