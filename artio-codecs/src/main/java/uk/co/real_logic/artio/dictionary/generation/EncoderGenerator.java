@@ -491,6 +491,10 @@ class EncoderGenerator extends Generator
         final Writer out, final String className, final String optionalField, final String propertyName)
         throws IOException
     {
+        if (optionalField.equals("Username"))
+        {
+            System.out.println("fail");
+        }
         out.append(String.format(
             "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
@@ -582,9 +586,10 @@ class EncoderGenerator extends Generator
             entry.forEach(
                 (field) ->
                 {
+                    optionalFields.remove(field.name());
                     if (!entry.isInParent())
                     {
-                        out.append(generateFieldSetter(className, field, optionalFields));
+                        out.append(generateFieldSetter(className, field));
                     }
                 },
                 (group) -> generateGroup(className, group, out, optionalFields),
@@ -592,7 +597,7 @@ class EncoderGenerator extends Generator
         }
     }
 
-    private String generateFieldSetter(final String className, final Field field, final Set<String> optionalFields)
+    private String generateFieldSetter(final String className, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -605,8 +610,6 @@ class EncoderGenerator extends Generator
 
         final Function<String, String> generateSetter =
             (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
-
-        optionalFields.remove(name);
 
         switch (field.type())
         {

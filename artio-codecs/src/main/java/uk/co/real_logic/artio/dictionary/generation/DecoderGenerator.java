@@ -893,8 +893,12 @@ class DecoderGenerator extends Generator
         final boolean aggregateIsInParent)
     {
         entry.forEach(
-            (field) -> out.append(fieldGetter(entry, field, missingOptionalFields, aggregateIsInParent)),
-            (group) -> groupGetter(group, out, missingOptionalFields, aggregateIsInParent),
+            (field) ->
+            {
+                missingOptionalFields.remove(field.name());
+                out.append(fieldGetter(entry, field, aggregateIsInParent));
+            },
+            (group) -> groupGetter(group, out, aggregateIsInParent),
             (component) ->
             {
                 // Components can be shared, but without every message of the given type implementing that component
@@ -1058,7 +1062,6 @@ class DecoderGenerator extends Generator
     private void groupGetter(
         final Group group,
         final Writer out,
-        final Set<String> missingOptionalFields,
         final boolean aggregateIsShared)
         throws IOException
     {
@@ -1076,7 +1079,7 @@ class DecoderGenerator extends Generator
         // In the parent class if it's there, if it's a component then that's an interface so it can't be generated
         // there
         final String prefix = group.isInParent() && (aggregateIsShared && !inComponent) ? "" : fieldGetter(
-            numberField, (Field)numberField.element(), missingOptionalFields, aggregateIsShared);
+            numberField, (Field)numberField.element(), aggregateIsShared);
 
         final String groupClassName = groupClassName(group);
 
@@ -1254,7 +1257,6 @@ class DecoderGenerator extends Generator
     private String fieldGetter(
         final Entry entry,
         final Field field,
-        final Set<String> missingOptionalFields,
         final boolean aggregateIsInParent)
     {
         // Entry may exist in common parent component interface but there may not be a common parent message
@@ -1268,8 +1270,6 @@ class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
         final String asStringBody = generateAsStringBody(entry, name, fieldName);
-
-        missingOptionalFields.remove(name);
 
         final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +

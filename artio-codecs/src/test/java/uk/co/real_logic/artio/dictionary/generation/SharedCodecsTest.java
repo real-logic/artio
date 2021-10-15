@@ -80,6 +80,10 @@ public class SharedCodecsTest
     private static ClassLoader classLoader;
 
     private static Class<?> executionReportEncoderShared;
+
+    private static Class<?> logonEncoder1;
+    private static Class<?> logonDecoder1;
+
     private static Class<?> executionReportEncoder1;
     private static Class<?> executionReportEncoder2;
     private static Class<?> executionReportEncoder3;
@@ -133,6 +137,16 @@ public class SharedCodecsTest
         /*System.out.println("dictionary_2 ExecutionReportDecoder = " +
             SOURCES.get("uk.co.real_logic.artio.shared_dictionary_2.decoder.ExecutionReportDecoder"));*/
 
+        /*System.out.println("shared LogonEncoder = " +
+            SOURCES.get("uk.co.real_logic.artio.builder.LogonEncoder"));
+        System.out.println("dict 1 LogonEncoder = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.builder.LogonEncoder"));*/
+
+        /*System.out.println("shared LogonDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.decoder.LogonDecoder"));
+        System.out.println("dict 1 LogonDecoder = " +
+            SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.LogonDecoder"));*/
+
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
         executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
         classLoader = executionReportEncoder1.getClassLoader();
@@ -147,6 +161,9 @@ public class SharedCodecsTest
         headerEncoder1 = loadClass(headerEncoder(DICT_1_NORM));
         headerEncoder2 = loadClass(headerEncoder(DICT_2_NORM));
         headerEncoderShared = loadClass(headerEncoder(null));
+
+        logonEncoder1 = loadClass(logonEncoder(DICT_1_NORM));
+        logonDecoder1 = loadClass(logonDecoder(DICT_1_NORM));
     }
 
     private static String executionReportEncoder(final String dictNorm)
@@ -162,6 +179,16 @@ public class SharedCodecsTest
     private static String headerEncoder(final String dictNorm)
     {
         return encoder(dictNorm, "Header");
+    }
+
+    private static String logonEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "Logon");
+    }
+
+    private static String logonDecoder(final String dictNorm)
+    {
+        return decoder(dictNorm, "Logon");
     }
 
     private static String newOrderSingleEncoder(final String dictNorm)
@@ -374,6 +401,10 @@ public class SharedCodecsTest
         final SessionHeaderEncoder header = encoder.header();
         assertFalse(header.toString(), header.hasMsgSeqNum());
         assertFalse(header.toString(), header.hasSenderCompID());
+
+        // Also test that we don't hit UOE issues with required fields
+        final Encoder logonEncoder = (Encoder)newInstance(logonEncoder1);
+        logonEncoder.reset();
     }
 
     @Test
@@ -392,6 +423,11 @@ public class SharedCodecsTest
         final SessionHeaderDecoder header = decoder.header();
         assertEquals(header.toString(), MISSING_INT, header.msgSeqNum());
         assertEquals(header.toString(), 0, header.senderCompIDLength());
+
+        // Also test that we don't hit UOE issues with required fields
+        final Decoder logonDecoder = (Decoder)newInstance(logonDecoder1);
+        logonDecoder.reset();
+        assertFalse(getBoolean(logonDecoder, "hasUsername"));
     }
 
     @Test
@@ -792,7 +828,12 @@ public class SharedCodecsTest
 
     private Decoder executionReportDecoder1() throws Exception
     {
-        return (Decoder)executionReportDecoder1.getConstructor().newInstance();
+        return (Decoder)newInstance(executionReportDecoder1);
+    }
+
+    private Object newInstance(final Class<?> cls) throws Exception
+    {
+        return cls.getConstructor().newInstance();
     }
 
     private void setupHeader(final Encoder encoder)
@@ -807,7 +848,7 @@ public class SharedCodecsTest
 
     private Encoder executionReportEncoder1() throws Exception
     {
-        return (Encoder)executionReportEncoder1.getConstructor().newInstance();
+        return (Encoder)newInstance(executionReportEncoder1);
     }
 
     private void assertEncodes(final Encoder encoder, final String msg)
