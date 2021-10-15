@@ -491,10 +491,6 @@ class EncoderGenerator extends Generator
         final Writer out, final String className, final String optionalField, final String propertyName)
         throws IOException
     {
-        if (optionalField.equals("Username"))
-        {
-            System.out.println("fail");
-        }
         out.append(String.format(
             "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
