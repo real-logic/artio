@@ -23,10 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -525,6 +522,53 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSessionWithSequenceReset()
+    {
+        printErrorMessages = false;
+
+        launch(this::nothing);
+
+        final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
+
+        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
+
+        final LogonEncoder logonEncoder = new LogonEncoder();
+        logonEncoder.encryptMethod(EncryptMethod.NONE_OTHER);
+        logonEncoder.heartBtInt(30);
+        setupAndSend(sessionWriter, logonEncoder, 1);
+
+        final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
+        heartbeatEncoder.testReqID("test");
+        setupAndSend(sessionWriter, heartbeatEncoder, 2);
+
+        final LogoutEncoder logoutEncoder = new LogoutEncoder();
+        setupAndSend(sessionWriter, logoutEncoder, 3);
+
+        final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
+        sequenceResetEncoder.newSeqNo(2);
+        sessionWriter.sequenceIndex(sessionWriter.sequenceIndex() + 1);
+        setupAndSend(sessionWriter, sequenceResetEncoder, 3);
+
+        final long position = sendReportOnFollowerSession(
+            testSystem, sessionWriter, 2, PossDupOption.MISSING_FIELD);
+
+        testSystem.awaitPosition(positionCounter, position);
+
+        connectPersistingSessionsWithoutAcquiring();
+
+        assertReceivedReplayedReport(2);
+
+        logoutInitiatingSession();
+        assertSessionDisconnected(initiatingSession);
+    }
+
+    private void setupAndSend(final SessionWriter sessionWriter, final Encoder encoder, final int seqNum)
+    {
+        setupHeader(seqNum, encoder.header());
+        testSystem.awaitSend("failed to send", () -> sessionWriter.send(encoder, seqNum));
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSynchroniseOfflineSequenceNumbersWithFollowerSession()
     {
         launch(this::nothing);
@@ -926,12 +970,18 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         reportFactory.possDupFlag(possDupFlag);
         final ExecutionReportEncoder report = reportFactory.setupReport(Side.BUY, msgSeqNum);
 
-        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        final long timeInThePast = System.currentTimeMillis() - 100;
-        report.header().senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(timeInThePast))
-            .msgSeqNum(msgSeqNum);
+        final HeaderEncoder header = report.header();
+        setupHeader(msgSeqNum, header);
 
         return testSystem.awaitSend("failed to send", () -> sessionWriter.send(report, msgSeqNum));
+    }
+
+    private void setupHeader(final int msgSeqNum, final SessionHeaderEncoder header)
+    {
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        final long timeInThePast = System.currentTimeMillis() - 100;
+        header.senderCompID(ACCEPTOR_ID).targetCompID(INITIATOR_ID)
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(timeInThePast))
+            .msgSeqNum(msgSeqNum);
     }
 }

@@ -80,6 +80,16 @@ public class SessionWriter
     }
 
     /**
+     * Sets the current sequence index.
+     *
+     * @return the current sequence index
+     */
+    public int sequenceIndex()
+    {
+        return sequenceIndex;
+    }
+
+    /**
      * Send a message on this session.
      *
      * @param encoder the encoder of the message to be sent
