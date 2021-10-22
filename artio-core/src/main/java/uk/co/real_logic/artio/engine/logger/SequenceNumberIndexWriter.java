@@ -142,7 +142,7 @@ public class SequenceNumberIndexWriter implements Index
         writablePath = writeableFile.toPath();
         passingPlacePath = passingFile(indexFilePath).toPath();
         writableFile = MappedFile.map(writeableFile, fileCapacity);
-        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
+        sequenceNumberExtractor = new SequenceNumberExtractor();
 
         // TODO: Fsync parent directory
         indexedPositionsOffset = positionTableOffset(fileCapacity);

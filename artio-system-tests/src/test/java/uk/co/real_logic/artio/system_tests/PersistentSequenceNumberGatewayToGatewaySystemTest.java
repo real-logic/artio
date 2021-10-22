@@ -522,10 +522,21 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldStoreAndForwardMessagesSentWhilstOfflineWithFollowerSessionWithSequenceReset()
+    public void shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset()
     {
-        printErrorMessages = false;
+        shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset(2, 1);
+    }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceResetHighInitiator()
+    {
+        shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset(10, 10);
+    }
+
+    private void shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset(
+        final int resetSequenceNumber,
+        final int initiatorInitialReceivedSequenceNumber)
+    {
         launch(this::nothing);
 
         final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
@@ -545,18 +556,21 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         setupAndSend(sessionWriter, logoutEncoder, 3);
 
         final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
-        sequenceResetEncoder.newSeqNo(2);
-        sessionWriter.sequenceIndex(sessionWriter.sequenceIndex() + 1);
+        sequenceResetEncoder.newSeqNo(resetSequenceNumber);
+        final int sequenceIndex = sessionWriter.sequenceIndex() + 1;
+        sessionWriter.sequenceIndex(sequenceIndex);
         setupAndSend(sessionWriter, sequenceResetEncoder, 3);
 
         final long position = sendReportOnFollowerSession(
-            testSystem, sessionWriter, 2, PossDupOption.MISSING_FIELD);
+            testSystem, sessionWriter, resetSequenceNumber, PossDupOption.MISSING_FIELD);
 
         testSystem.awaitPosition(positionCounter, position);
 
-        connectPersistingSessionsWithoutAcquiring();
+        // connectPersistingSessionsWithoutAcquiring
+        onAcquireSession = this::nothing;
+        connectPersistingSessions(1, initiatorInitialReceivedSequenceNumber, false);
 
-        assertReceivedReplayedReport(2);
+        assertReceivedReplayedReport(resetSequenceNumber);
 
         logoutInitiatingSession();
         assertSessionDisconnected(initiatingSession);

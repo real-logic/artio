@@ -112,7 +112,7 @@ public class ReplayIndex implements Index
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
-        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
+        sequenceNumberExtractor = new SequenceNumberExtractor();
         checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
@@ -292,8 +292,10 @@ public class ReplayIndex implements Index
             offset += bodyHeaderLength();
 
             final long fixSessionId = messageFrame.session();
-            final int sequenceNumber = sequenceNumberExtractor.extract(
+            sequenceNumberExtractor.extract(
                 srcBuffer, offset, messageFrame.bodyLength());
+            int sequenceNumber = sequenceNumberExtractor.sequenceNumber();
+            final int newSequenceNumber = sequenceNumberExtractor.newSequenceNumber();
             final int sequenceIndex = messageFrame.sequenceIndex();
             final long timestamp = messageFrame.timestamp();
 
@@ -307,8 +309,24 @@ public class ReplayIndex implements Index
                     continuedTimestamp = timestamp;
                 }
 
-                sessionIndex(fixSessionId).onRecord(
-                    endPosition, length, sequenceNumber, sequenceIndex, header.sessionId(), recordingId, timestamp);
+                final SessionIndex sessionIndex = sessionIndex(fixSessionId);
+                final int aeronSessionId = header.sessionId();
+
+                if (newSequenceNumber > sequenceNumber)
+                {
+                    // implies newSequenceNumber != NO_SEQUENCE_NUMBER
+                    while (sequenceNumber < newSequenceNumber)
+                    {
+                        sessionIndex.onRecord(
+                            endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, timestamp);
+                        sequenceNumber++;
+                    }
+                }
+                else
+                {
+                    sessionIndex.onRecord(
+                        endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, timestamp);
+                }
             }
         }
     }

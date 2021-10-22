@@ -117,7 +117,7 @@ class FixReplayerSession extends ReplayerSession
         this.errorHandler = errorHandler;
         this.gapFillEncoder = gapFillEncoder;
 
-        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
+        sequenceNumberExtractor = new SequenceNumberExtractor();
 
         lastSeqNo = beginSeqNo - 1;
         this.throttleRejectBuilder = throttleRejectBuilder;

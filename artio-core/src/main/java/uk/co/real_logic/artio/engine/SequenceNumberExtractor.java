@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
@@ -33,25 +32,34 @@ public class SequenceNumberExtractor
 {
     public static final int NO_SEQUENCE_NUMBER = -1;
 
-    private final ErrorHandler errorHandler;
-
     private boolean isSequenceReset;
     private int sequenceNumber;
+    private int newSequenceNumber;
 
-    public SequenceNumberExtractor(final ErrorHandler errorHandler)
+    public SequenceNumberExtractor()
     {
-        this.errorHandler = errorHandler;
     }
 
     public int extract(
         final DirectBuffer buffer, final int offset, final int length)
     {
         sequenceNumber = NO_SEQUENCE_NUMBER;
+        newSequenceNumber = NO_SEQUENCE_NUMBER;
         isSequenceReset = false;
 
         parser.onMessage(buffer, offset, length);
 
+        return newSequenceNumber != NO_SEQUENCE_NUMBER ? newSequenceNumber : sequenceNumber;
+    }
+
+    public int sequenceNumber()
+    {
         return sequenceNumber;
+    }
+
+    public int newSequenceNumber()
+    {
+        return newSequenceNumber;
     }
 
     private final OtfMessageAcceptor extractor = new OtfMessageAcceptor()
@@ -73,14 +81,17 @@ public class SequenceNumberExtractor
             {
                 isSequenceReset = length == 1 && buffer.getByte(offset) == SEQUENCE_RESET_TYPE_BYTE;
             }
-            else if (tag == MSG_SEQ_NO && !isSequenceReset)
+            else if (tag == MSG_SEQ_NO)
             {
                 sequenceNumber = buffer.getInt(offset, offset + length);
-                return STOP;
+                if (!isSequenceReset)
+                {
+                    return STOP;
+                }
             }
             else if (tag == NEW_SEQ_NO && isSequenceReset)
             {
-                sequenceNumber = buffer.getInt(offset, offset + length) - 1;
+                newSequenceNumber = buffer.getInt(offset, offset + length) - 1;
                 return STOP;
             }
 
