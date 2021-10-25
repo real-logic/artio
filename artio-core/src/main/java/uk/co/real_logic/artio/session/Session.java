@@ -1058,10 +1058,12 @@ public class Session
     }
 
     /**
-     * Check if the session is replaying messages.
+     * Gets whether the session is replaying messages.
+     *
      * @return true if the session is replaying messages, false otherwise.
      */
-    public boolean isReplaying() {
+    public boolean isReplaying()
+    {
         return replaying;
     }
 
