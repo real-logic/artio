@@ -1057,6 +1057,14 @@ public class Session
         return lastSentMsgSeqNum;
     }
 
+    /**
+     * Check if the session is replaying messages.
+     * @return true if the session is replaying messages, false otherwise.
+     */
+    public boolean isReplaying() {
+        return replaying;
+    }
+
     public String toString()
     {
         return getClass().getSimpleName() + "{" +
