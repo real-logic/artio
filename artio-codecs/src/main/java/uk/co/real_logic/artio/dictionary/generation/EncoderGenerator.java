@@ -297,7 +297,7 @@ class EncoderGenerator extends Generator
         {
             out.append(
                 String.format("\n" +
-                "    %2$s static final String DEFAULT_BEGIN_STRING=\"%1$s\";" +
+                "    %2$s static final byte[] DEFAULT_BEGIN_STRING=\"%1$s\".getBytes(StandardCharsets.US_ASCII);" +
                 "\n\n",
                 beginString,
                 scope));
@@ -358,7 +358,7 @@ class EncoderGenerator extends Generator
                 additionalReset = RESET_NEXT_GROUP;
                 break;
             case HEADER:
-                additionalReset = "        beginString(DEFAULT_BEGIN_STRING);\n";
+                additionalReset = "        beginStringAsCopy(DEFAULT_BEGIN_STRING, 0, DEFAULT_BEGIN_STRING.length);\n";
                 break;
             default:
                 additionalReset = "";
@@ -426,11 +426,7 @@ class EncoderGenerator extends Generator
             return String.format(
                 "    public %s()\n" +
                 "    {\n" +
-                "        beginStringAsCopy(\n" +
-                "            DEFAULT_BEGIN_STRING.getBytes(StandardCharsets.US_ASCII),\n" +
-                "            0,\n" +
-                "            DEFAULT_BEGIN_STRING.length()\n" +
-                "        );\n" +
+                "        beginStringAsCopy(DEFAULT_BEGIN_STRING, 0, DEFAULT_BEGIN_STRING.length);\n" +
                 "    }\n\n",
                 className);
         }
