@@ -358,7 +358,7 @@ class EncoderGenerator extends Generator
                 additionalReset = RESET_NEXT_GROUP;
                 break;
             case HEADER:
-                additionalReset = "        beginString(DEFAULT_BEGIN_STRING);\n";
+                additionalReset = "        beginStringAsCopy(DEFAULT_BEGIN_STRING, 0, DEFAULT_BEGIN_STRING.length);\n";
                 break;
             default:
                 additionalReset = "";
@@ -426,7 +426,7 @@ class EncoderGenerator extends Generator
             return String.format(
                 "    public %s()\n" +
                 "    {\n" +
-                "        beginString(DEFAULT_BEGIN_STRING);\n" +
+                "        beginStringAsCopy(DEFAULT_BEGIN_STRING, 0, DEFAULT_BEGIN_STRING.length);\n" +
                 "    }\n\n",
                 className);
         }
