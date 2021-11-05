@@ -39,10 +39,12 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isA;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class EngineAndLibraryIntegrationTest
@@ -59,6 +61,7 @@ public class EngineAndLibraryIntegrationTest
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler sessionHandler = new FakeHandler(otfAcceptor);
     private final TestSystem testSystem = new TestSystem();
+    private final int port = unusedPort();
 
     @Before
     public void launch()
@@ -83,7 +86,7 @@ public class EngineAndLibraryIntegrationTest
 
     private void launchEngine(final int replyTimeoutInMs)
     {
-        final EngineConfiguration config = acceptingConfig(unusedPort(), ACCEPTOR_ID, INITIATOR_ID, nanoClock);
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         config.deleteLogFileDirOnStart(true);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
@@ -184,8 +187,9 @@ public class EngineAndLibraryIntegrationTest
         );
     }
 
-    @Test(timeout = 5_000L)
-    public void libraryShouldReconnectToEngine() throws InterruptedException
+    //  -Dfix.core.debug=GATEWAY_MESSAGE
+    @Test(timeout = 10_000L)
+    public void libraryShouldReconnectToEngine() throws Exception
     {
         final int beyondTimeout = SHORT_TIMEOUT_IN_MS + 1;
 
@@ -193,23 +197,32 @@ public class EngineAndLibraryIntegrationTest
         awaitLibraryConnect(library);
         assertNumActiveLibraries(1);
 
-        Thread.sleep(beyondTimeout);
-        assertEventuallyTrue("engine fails to timeout library", () -> libraries(engine).size() == 1);
-        // Poll until engine heartbeat messages are all read in order to force a library timeout
-        library.poll(50);
-
-        assertEventuallyTrue("Library still connected", () ->
+        try (FixConnection connection = FixConnection.initiate(port))
         {
+            connection.logon(true);
+            connection.readLogon();
+
+            final long sessionId = sessionHandler.awaitSessionId(testSystem::poll);
+            assertEquals(OK, requestSession(library, sessionId, testSystem));
+
             Thread.sleep(beyondTimeout);
-            testSystem.poll();
-            assertFalse("library still connected", library.isConnected());
-        });
+            assertEventuallyTrue("engine fails to timeout library", () -> libraries(engine).size() == 1);
+            // Poll until engine heartbeat messages are all read in order to force a library timeout
+            library.poll(50);
 
-        assertEventuallyTrue("library reconnect fails", () ->
-        {
-            testSystem.poll();
-            return libraries(engine).size() == 2 && library.isConnected();
-        });
+            assertEventuallyTrue("Library still connected", () ->
+            {
+                Thread.sleep(beyondTimeout);
+                testSystem.poll();
+                assertFalse("library still connected", library.isConnected());
+            });
+
+            assertEventuallyTrue("library reconnect fails", () ->
+            {
+                testSystem.poll();
+                return libraries(engine).size() == 2 && library.isConnected();
+            });
+        }
     }
 
     @Test
@@ -242,6 +255,7 @@ public class EngineAndLibraryIntegrationTest
 
         final LibraryConfiguration config = new LibraryConfiguration();
         config
+            .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .libraryConnectHandler(fakeConnectHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))

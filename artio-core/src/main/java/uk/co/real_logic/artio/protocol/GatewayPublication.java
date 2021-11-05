@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
@@ -135,6 +136,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
+    private ExpandableArrayBuffer messageBuffer;
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
     private final ResetSequenceNumberEncoder resetSequenceNumber = new ResetSequenceNumberEncoder();
@@ -970,19 +972,11 @@ public class GatewayPublication extends ClaimablePublication
         final List<?> sessions)
     {
         final int sessionsCount = sessions.size();
-        final long position = claim(CONTROL_NOTIFICATION_LENGTH +
-            sessionsCount * SessionsEncoder.sbeBlockLength());
-
-        if (position < 0)
-        {
-            return position;
-        }
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
+        final int framedLength = CONTROL_NOTIFICATION_LENGTH + sessionsCount * SessionsEncoder.sbeBlockLength();
+        final ExpandableArrayBuffer buffer = buffer(framedLength);
 
         controlNotification
-            .wrapAndApplyHeader(buffer, offset, header)
+            .wrapAndApplyHeader(buffer, 0, header)
             .libraryId(libraryId)
             .initialAcceptedSessionOwner(initialAcceptedSessionOwner);
 
@@ -993,11 +987,27 @@ public class GatewayPublication extends ClaimablePublication
             sessionsEncoder.next().sessionId(session.sessionId());
         }
 
-        bufferClaim.commit();
+        final long position = dataPublication.offer(buffer, 0, framedLength);
 
-        logSbeMessage(GATEWAY_MESSAGE, controlNotification);
+        if (position > 0)
+        {
+            logSbeMessage(GATEWAY_MESSAGE, controlNotification);
+        }
 
         return position;
+    }
+
+    private ExpandableArrayBuffer buffer(final int framedLength)
+    {
+        ExpandableArrayBuffer messageBuffer = this.messageBuffer;
+        if (messageBuffer == null)
+        {
+            messageBuffer = this.messageBuffer = new ExpandableArrayBuffer(framedLength);
+            return messageBuffer;
+        }
+
+        messageBuffer.checkLimit(framedLength);
+        return messageBuffer;
     }
 
     public long saveSlowStatusNotification(final int libraryId, final long connectionId, final SlowStatus status)
