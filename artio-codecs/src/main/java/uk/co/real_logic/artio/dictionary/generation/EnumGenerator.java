@@ -379,7 +379,14 @@ final class EnumGenerator
             case NUMINGROUP:
             case DAYOFMONTH:
                 // Validate that the representation genuinely is a parseable int
+                //noinspection ResultOfMethodCallIgnored
                 Integer.parseInt(representation);
+                return representation;
+
+            case LONG:
+                // Validate that the representation genuinely is a parseable int
+                //noinspection ResultOfMethodCallIgnored
+                Long.parseLong(representation);
                 return representation;
 
             case STRING:

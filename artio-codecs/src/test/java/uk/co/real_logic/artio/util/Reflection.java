@@ -38,6 +38,12 @@ public final class Reflection
         set(object, setter, int.class, value);
     }
 
+    public static void setLong(final Object object, final String setter, final long value)
+        throws Exception
+    {
+        set(object, setter, long.class, value);
+    }
+
     public static void setChar(final Object object, final String setter, final char value)
         throws Exception
     {

@@ -300,7 +300,7 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void decodesValues() throws Exception
+    public void shouldDecodeValues() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
 
@@ -312,7 +312,18 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void decodesEnumValuesUsingAsEnumMethods() throws Exception
+    public void shouldSupportLongFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(LONG_FIELD_MESSAGE);
+
+        assertEquals(Long.MAX_VALUE, getLongField(decoder));
+        assertValid(decoder);
+
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_LONG_FIELD_MESSAGE));
+    }
+
+    @Test
+    public void shouldDecodeEnumValuesUsingAsEnumMethods() throws Exception
     {
         final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ALL_FIELDS, decoder);
@@ -326,7 +337,7 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    public void shouldDecodeMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
     {
         final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ONLY_REQ_FIELDS, decoder);
@@ -1872,6 +1883,11 @@ public abstract class AbstractDecoderGeneratorTest
     Object getIntField(final Object decoder) throws Exception
     {
         return get(decoder, INT_FIELD);
+    }
+
+    long getLongField(final Object decoder) throws Exception
+    {
+        return (long)get(decoder, LONG_FIELD);
     }
 
     private char[] getOnBehalfOfCompId(final Decoder decoder) throws Exception

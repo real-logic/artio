@@ -19,6 +19,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 /**
  * Class provides common implementation methods used by decoders, external systems shouldn't assume API stability.
@@ -57,6 +58,25 @@ public abstract class CommonDecoderImpl
                 rejectReason = INCORRECT_DATA_FORMAT_FOR_VALUE;
             }
             return MISSING_INT;
+        }
+    }
+
+    public long getLong(
+        final AsciiBuffer buffer,
+        final int startInclusive, final int endExclusive, final int tag, final boolean validation)
+    {
+        try
+        {
+            return buffer.parseLongAscii(startInclusive, endExclusive - startInclusive);
+        }
+        catch (final NumberFormatException e)
+        {
+            if (validation)
+            {
+                invalidTagId = tag;
+                rejectReason = INCORRECT_DATA_FORMAT_FOR_VALUE;
+            }
+            return MISSING_LONG;
         }
     }
 
@@ -99,6 +119,26 @@ public abstract class CommonDecoderImpl
             else
             {
                 return MISSING_INT;
+            }
+        }
+    }
+
+    public long getLongFlyweight(
+        final AsciiBuffer buffer, final int offset, final int length, final int tag, final boolean validation)
+    {
+        try
+        {
+            return buffer.parseLongAscii(offset, length);
+        }
+        catch (final NumberFormatException e)
+        {
+            if (validation)
+            {
+                throw new NumberFormatException(e.getMessage() + " tag=" + tag);
+            }
+            else
+            {
+                return MISSING_LONG;
             }
         }
     }

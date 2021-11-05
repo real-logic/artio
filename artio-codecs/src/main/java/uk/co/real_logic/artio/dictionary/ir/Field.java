@@ -133,6 +133,9 @@ public final class Field implements Element
         NUMINGROUP(false, true, false, false, false),
         DAYOFMONTH(false, true, false, false, false),
 
+        // Custom LONG integer type. Not supported elsewhere by FIX AFAIK
+        LONG(false, true, false, false, false),
+
         // float types
         FLOAT(false, false, true, false, false),
         PRICE(false, false, true, false, false),

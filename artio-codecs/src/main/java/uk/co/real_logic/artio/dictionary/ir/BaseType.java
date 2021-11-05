@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 public enum BaseType
 {
     INT,
+    LONG,
     FLOAT,
     CHAR,
     STRING,
@@ -33,6 +34,8 @@ public enum BaseType
         {
             case INT:
                 return Type.INT;
+            case LONG:
+                return Type.LONG;
             case FLOAT:
                 return Type.FLOAT;
             case CHAR:
@@ -60,6 +63,9 @@ public enum BaseType
             case NUMINGROUP:
             case DAYOFMONTH:
                 return INT;
+
+            case LONG:
+                return LONG;
 
             case FLOAT:
             case PRICE:

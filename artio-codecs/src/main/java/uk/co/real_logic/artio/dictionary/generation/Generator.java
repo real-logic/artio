@@ -314,6 +314,9 @@ public abstract class Generator
             case DAYOFMONTH:
                 return resetRequiredInt(field);
 
+            case LONG:
+                return resetRequiredLong(field);
+
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
@@ -358,6 +361,8 @@ public abstract class Generator
     }
 
     protected abstract String resetRequiredInt(Field field);
+
+    protected abstract String resetRequiredLong(Field field);
 
     protected abstract String optionalReset(Field field, String name);
 

@@ -359,6 +359,21 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldSupportLongFields() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setLongField(encoder);
+        setupHeader(encoder);
+        setupTrailer(encoder);
+
+        assertEncodesTo(encoder, LONG_FIELD_MESSAGE);
+
+        assertToStringAndAppendToMatches(encoder, containsString(STRING_JUST_LONG_FIELD));
+    }
+
+    @Test
     public void encodesValuesWithOptionalTrailerFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
@@ -1014,6 +1029,11 @@ public class EncoderGeneratorTest
     private void setIntField(final Encoder encoder) throws Exception
     {
         setInt(encoder, INT_FIELD, 2);
+    }
+
+    private void setLongField(final Encoder encoder) throws Exception
+    {
+        setLong(encoder, LONG_FIELD, Long.MAX_VALUE);
     }
 
     private void setSomeTimeField(final Encoder encoder, final int someTime) throws Exception

@@ -447,6 +447,11 @@ class DecoderGenerator extends Generator
         return resetFieldValue(field, "MISSING_INT");
     }
 
+    protected String resetRequiredLong(final Field field)
+    {
+        return resetFieldValue(field, "MISSING_LONG");
+    }
+
     private String additionalReset(final boolean isGroup)
     {
         return
@@ -1400,6 +1405,10 @@ class DecoderGenerator extends Generator
                 return lengthBasedFieldLazyInitialization(fieldName, "getIntFlyweight(buffer",
                     ", " + tag + ", " + CODEC_VALIDATION_ENABLED);
 
+            case LONG:
+                return lengthBasedFieldLazyInitialization(fieldName, "getLongFlyweight(buffer",
+                    ", " + tag + ", " + CODEC_VALIDATION_ENABLED);
+
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
@@ -1502,6 +1511,9 @@ class DecoderGenerator extends Generator
             case DAYOFMONTH:
                 return " = MISSING_INT";
 
+            case LONG:
+                return " = MISSING_LONG";
+
             case DATA:
             case XMLDATA:
                 return initByteArray(initialBufferSize);
@@ -1562,6 +1574,9 @@ class DecoderGenerator extends Generator
             case NUMINGROUP:
             case DAYOFMONTH:
                 return "int";
+
+            case LONG:
+                return "long";
 
             case FLOAT:
             case PRICE:
@@ -1951,6 +1966,14 @@ class DecoderGenerator extends Generator
                 decodeMethod = String.format(
                     "getInt(buffer, valueOffset, endOfField, %d, " + CODEC_VALIDATION_ENABLED + ")", field.number());
                 break;
+            case LONG:
+                if (flyweightsEnabled)
+                {
+                    return "";
+                }
+                decodeMethod = String.format(
+                    "getLong(buffer, valueOffset, endOfField, %d, " + CODEC_VALIDATION_ENABLED + ")", field.number());
+                break;
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
@@ -2292,6 +2315,7 @@ class DecoderGenerator extends Generator
             case CHAR:
             case SEQNUM:
             case DAYOFMONTH:
+            case LONG:
                 return String.format("%2$s.%1$s(this.%1$s());", fieldName, encoderName);
 
             case DATA:

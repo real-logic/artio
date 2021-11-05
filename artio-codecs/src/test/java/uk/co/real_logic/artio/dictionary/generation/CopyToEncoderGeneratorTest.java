@@ -114,7 +114,8 @@ public class CopyToEncoderGeneratorTest
             new Object[] {NESTED_GROUP_MESSAGE},
             new Object[] {ZERO_REPEATING_GROUP_MESSAGE},
             new Object[] {SOH_IN_DATA_FIELD_MESSAGE},
-            new Object[] {SHORT_TIMESTAMP_MESSAGE}
+            new Object[] {SHORT_TIMESTAMP_MESSAGE},
+            new Object[] {LONG_FIELD_MESSAGE}
         );
     }
 

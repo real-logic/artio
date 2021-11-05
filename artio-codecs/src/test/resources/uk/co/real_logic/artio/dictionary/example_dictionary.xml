@@ -89,6 +89,7 @@
         </field>
         <field number="110" name="MinQty" type="QTY"/>
         <field number="386" name="NoTradingSessions" type="INT"/>
+        <field number="387" name="ExampleLongField" type="LONG"/>
         <field number="336" name="TradingSessionID" type="STRING"/>
         <field number="81" name="ProcessCode" type="CHAR">
             <value enum="0" description="REGULAR"/>

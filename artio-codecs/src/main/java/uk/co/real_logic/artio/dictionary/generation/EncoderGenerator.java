@@ -631,6 +631,9 @@ class EncoderGenerator extends Generator
             case DAYOFMONTH:
                 return generateSetter.apply("int");
 
+            case LONG:
+                return generateSetter.apply("long");
+
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
@@ -1052,6 +1055,9 @@ class EncoderGenerator extends Generator
             case DAYOFMONTH:
                 return putValue(fieldName, tag, "Int", enablingSuffix, indent);
 
+            case LONG:
+                return putValue(fieldName, tag, "Long", enablingSuffix, indent);
+
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
@@ -1297,6 +1303,11 @@ class EncoderGenerator extends Generator
     }
 
     protected String resetRequiredInt(final Field field)
+    {
+        return resetByFlag(field.name());
+    }
+
+    protected String resetRequiredLong(final Field field)
     {
         return resetByFlag(field.name());
     }
@@ -1549,6 +1560,7 @@ class EncoderGenerator extends Generator
             case CHAR:
             case SEQNUM:
             case DAYOFMONTH:
+            case LONG:
                 return String.format("%2$s.%1$s(this.%1$s());", fieldName, encoderName);
 
             case DATA:

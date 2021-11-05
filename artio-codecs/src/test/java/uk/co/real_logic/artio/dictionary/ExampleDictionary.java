@@ -80,6 +80,7 @@ public final class ExampleDictionary
     public static final String TEST_REQ_ID = "testReqID";
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
     public static final String INT_FIELD = "intField";
+    public static final String LONG_FIELD = "longField";
     public static final String FLOAT_FIELD = "floatField";
     public static final String BOOLEAN_FIELD = "booleanField";
     public static final String DATA_FIELD = "dataField";
@@ -179,6 +180,13 @@ public final class ExampleDictionary
         "  \"MessageName\": \"Heartbeat\",\n" +
         HEADER_TO_STRING +
         STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
+
+    public static final String STRING_JUST_LONG_FIELD =
+        "\"LongField\": \"9223372036854775807\"";
+
+    public static final String STRING_LONG_FIELD_MESSAGE =
+        STRING_NO_OPTIONAL_MESSAGE_EXAMPLE +
+        ",\n  " + STRING_JUST_LONG_FIELD;
 
     public static final String COMPONENT_TO_STRING =
         "  \"EgComponent\": {\n" +
@@ -460,6 +468,10 @@ public final class ExampleDictionary
     public static final String EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP =
         "8=FIX.4.4\0019=81\00135=OCRG\00110=246\001";
 
+    public static final String LONG_FIELD_MESSAGE =
+        "8=FIX.4.4\0019=78\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\0011008=9223372036854775807\00110=033\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
@@ -596,6 +608,7 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
         heartbeat.optionalEntry(groupWithRequiredField);
+        heartbeat.optionalEntry(registerField(messageEgFields, 1008, "LongField", LONG));
 
         final Component header = new Component("Header");
         header

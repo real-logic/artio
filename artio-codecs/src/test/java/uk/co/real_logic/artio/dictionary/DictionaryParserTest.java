@@ -69,6 +69,8 @@ public class DictionaryParserTest
         assertEquals("BodyLength", bodyLength.name());
         assertEquals(9, bodyLength.number());
         assertEquals(Type.INT, bodyLength.type());
+
+        assertEquals(Type.LONG, field("ExampleLongField").type());
     }
 
     @Test
@@ -84,7 +86,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllFields()
     {
-        assertEquals(49, dictionary.fields().size());
+        assertEquals(50, dictionary.fields().size());
     }
 
     @Test
