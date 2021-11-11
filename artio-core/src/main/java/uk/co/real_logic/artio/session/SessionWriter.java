@@ -35,9 +35,10 @@ public class SessionWriter
 {
     private final int libraryId;
     private final long sessionId;
-    private final long connectionId;
     private final MutableAsciiBuffer asciiBuffer;
     private final GatewayPublication publication;
+
+    private long connectionId;
     private int sequenceIndex;
     private Session session;
     private boolean closed = false;
@@ -87,6 +88,28 @@ public class SessionWriter
     public int sequenceIndex()
     {
         return sequenceIndex;
+    }
+
+    /**
+     * Sets the current connection id. This can be obtained from {@link Session#connectionId()}.
+     *
+     * @param connectionId the current connection id.
+     * @return this
+     */
+    public SessionWriter connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
+        return this;
+    }
+
+    /**
+     * Gets the current connection id.
+     *
+     * @return the current connection id.
+     */
+    public long connectionId()
+    {
+        return connectionId;
     }
 
     /**
@@ -175,6 +198,7 @@ public class SessionWriter
     void linkTo(final Session session)
     {
         this.session = session;
+        this.connectionId = session.connectionId();
     }
 
     void checkState()

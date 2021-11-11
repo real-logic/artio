@@ -129,7 +129,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
-        final long writerSessionId = writeMessageWithSessionWriter();
+        final SessionWriter sessionWriter = writeMessageWithFollowerSessionWriter();
+        final long writerSessionId = sessionWriter.id();
 
         fakeSessionProxy.sequenceNumberAdjustment = 1;
 
@@ -139,6 +140,14 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(3, 1);
         assertEquals("Y", resentNewOrderSingle.possDup());
+
+
+        // Check we can continue to use the session writer after session reconnected.
+        assertEquals(acceptingSession.connectionId(), sessionWriter.connectionId());
+        initiatingOtfAcceptor.messages().clear();
+        final int secondNOSSeqNum = acceptingSession.lastSentMsgSeqNum() + 1;
+        writeMessageWith(sessionWriter, secondNOSSeqNum);
+        awaitMessageFromSessionWriter(secondNOSSeqNum, secondNOSSeqNum);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -173,7 +182,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         return receivedNewOrderSingle;
     }
 
-    private long writeMessageWithSessionWriter()
+    private SessionWriter writeMessageWithFollowerSessionWriter()
     {
         final HeaderEncoder headerEncoder = new HeaderEncoder()
             .senderCompID(INITIATOR_ID)
@@ -187,7 +196,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         writeMessageWith(sessionWriter, 1);
 
-        return sessionWriter.id();
+        return sessionWriter;
     }
 
     private void writeMessageWith(final SessionWriter sessionWriter, final int msgSeqNum)
