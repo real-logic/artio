@@ -261,7 +261,7 @@ public final class FixConnection implements AutoCloseable
         send(logon);
     }
 
-    FixConnection msgSeqNum(final int msgSeqNum)
+    public FixConnection msgSeqNum(final int msgSeqNum)
     {
         this.msgSeqNum = msgSeqNum;
         return this;
@@ -279,7 +279,7 @@ public final class FixConnection implements AutoCloseable
         send(logout);
     }
 
-    void setupHeader(final SessionHeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
+    public void setupHeader(final SessionHeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
     {
         final long timestamp = System.currentTimeMillis();
         final int timestampLength = sendingTimeEncoder.encode(timestamp);

@@ -98,4 +98,5 @@ public interface FixDictionary
 
     SessionHeaderDecoder makeHeaderDecoder();
 
+    SessionHeaderEncoder makeHeaderEncoder();
 }

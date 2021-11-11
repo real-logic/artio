@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.decoder;
 
 import org.agrona.AsciiSequenceView;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
 public interface SessionHeaderDecoder
@@ -26,6 +28,12 @@ public interface SessionHeaderDecoder
      * Resets the result of the decoder.
      */
     void reset();
+
+    StringBuilder appendTo(StringBuilder builder);
+
+    StringBuilder appendTo(StringBuilder builder, int level);
+
+    SessionHeaderEncoder toEncoder(Encoder encoder);
 
     char[] beginString();
 

@@ -185,4 +185,12 @@ public interface SessionHeaderEncoder
 
     SessionHeaderEncoder msgType(byte[] value, int offset, int length);
 
+    void reset();
+
+    StringBuilder appendTo(StringBuilder builder);
+
+    StringBuilder appendTo(StringBuilder builder, int level);
+
+    SessionHeaderEncoder copyTo(Encoder encoder);
+
 }

@@ -55,6 +55,11 @@ class FixDictionaryGenerator
         "    {\n" +
         "        return new HeaderDecoder();\n" +
         "    }\n" +
+        "\n" +
+        "    public SessionHeaderEncoder makeHeaderEncoder()\n" +
+        "    {\n" +
+        "        return new HeaderEncoder();\n" +
+        "    }\n" +
         "\n";
 
     private static final String MAKE_TEMPLATE = "" +
@@ -120,6 +125,9 @@ class FixDictionaryGenerator
                 addEncoderImport(out, encoderPackage, "SequenceReset", allMessageNames, sb);
                 out.append(importFor(AbstractBusinessMessageRejectEncoder.class));
                 addEncoderImport(out, encoderPackage, "BusinessMessageReject", allMessageNames, sb);
+
+                out.append(importFor(SessionHeaderEncoder.class));
+                out.append(importFor(encoderPackage + ".HeaderEncoder"));
 
                 out.append(importFor(AbstractLogonDecoder.class));
                 addDecoderImport(out, decoderPackage, "Logon", allMessageNames, sb);
