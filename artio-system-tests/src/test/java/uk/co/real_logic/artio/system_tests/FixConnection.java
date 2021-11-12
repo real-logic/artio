@@ -114,7 +114,7 @@ public final class FixConnection implements AutoCloseable
     }
 
     // Can read data
-    boolean isConnected()
+    public boolean isConnected()
     {
         try
         {
@@ -267,7 +267,7 @@ public final class FixConnection implements AutoCloseable
         return this;
     }
 
-    int acquireMsgSeqNum()
+    public int acquireMsgSeqNum()
     {
         return this.msgSeqNum++;
     }

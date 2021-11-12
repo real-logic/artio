@@ -38,27 +38,24 @@ public final class CodecGenerator
         configuration.conclude();
 
         final String outputPath = configuration.outputPath();
-        final boolean allowDuplicates = configuration.allowDuplicateFields();
-        final DictionaryParser parser = new DictionaryParser(allowDuplicates);
         final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
 
         final boolean hasSharedCodecs = configuration.sharedCodecConfiguration() != null;
         if (hasSharedCodecs)
         {
             generateSharedDictionaries(
-                configuration, outputPath, parser, codecRejectUnknownEnumValueEnabled);
+                configuration, outputPath, codecRejectUnknownEnumValueEnabled);
         }
         else
         {
             generateNormalDictionaries(
-                configuration, outputPath, parser, codecRejectUnknownEnumValueEnabled);
+                configuration, outputPath, codecRejectUnknownEnumValueEnabled);
         }
     }
 
     private static void generateSharedDictionaries(
         final CodecConfiguration configuration,
         final String outputPath,
-        final DictionaryParser parser,
         final String codecRejectUnknownEnumValueEnabled)
     {
         final SharedCodecConfiguration sharedCodecs = configuration.sharedCodecConfiguration();
@@ -68,6 +65,7 @@ public final class CodecGenerator
             final String name = normalise(dictionaryConfig.dictionaryName());
             try
             {
+                final DictionaryParser parser = new DictionaryParser(dictionaryConfig.allowDuplicateFields());
                 final Dictionary dictionary = parseStreams(parser, dictionaryConfig.toStreams());
                 dictionary.name(name);
                 inputDictionaries.add(dictionary);
@@ -97,10 +95,11 @@ public final class CodecGenerator
     private static void generateNormalDictionaries(
         final CodecConfiguration configuration,
         final String outputPath,
-        final DictionaryParser parser,
         final String codecRejectUnknownEnumValueEnabled) throws Exception
     {
-        final InputStream[] fileStreams = configuration.nonSharedDictionary().toStreams();
+        final GeneratorDictionaryConfiguration nonSharedDictionary = configuration.nonSharedDictionary();
+        final DictionaryParser parser = new DictionaryParser(nonSharedDictionary.allowDuplicateFields());
+        final InputStream[] fileStreams = nonSharedDictionary.toStreams();
         try
         {
             final Dictionary dictionary = parseStreams(parser, fileStreams);

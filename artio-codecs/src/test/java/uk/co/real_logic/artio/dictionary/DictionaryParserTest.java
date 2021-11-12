@@ -242,8 +242,7 @@ public class DictionaryParserTest
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
-            "Message: DedupeFieldsTest Field : MemberSubID (104)\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
+            "Message: DedupeFieldsTest Field : MemberSubID (104)\n"
         );
     }
 
@@ -254,8 +253,7 @@ public class DictionaryParserTest
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
-            "Message: DuplicatedFieldMessage Field : MemberID (100) Through Path: [Members, MemberIDsGroup]\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser)."
+            "Message: DuplicatedFieldMessage Field : MemberID (100) Through Path: [Members, MemberIDsGroup]\n"
         );
         parseDictionary("example_duplicate_dictionary.xml", true);
     }
@@ -268,8 +266,7 @@ public class DictionaryParserTest
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
             "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [Members, NextComponent]\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n" +
-            "Use -Dfix.codecs.allow_duplicate_fields=true to allow duplicated fields (Dangerous. May break parser).");
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n");
     }
 
     @Test
@@ -393,7 +390,7 @@ public class DictionaryParserTest
             try
             {
                 assertThat(e.getClass(), typeCompatibleWith(expectedException));
-                assertThat(e.getMessage(), is(message));
+                assertThat(e.getMessage(), containsString(message));
             }
             catch (final AssertionError error)
             {

@@ -52,7 +52,6 @@ public final class CodecConfiguration
 
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
-    private boolean allowDuplicateFields = Boolean.getBoolean(FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY);
     private SharedCodecConfiguration sharedCodecConfiguration;
 
     private String codecRejectUnknownEnumValueEnabled;
@@ -60,7 +59,8 @@ public final class CodecConfiguration
 
     private BiFunction<String, String, OutputManager> outputManagerFactory = PackageOutputManager::new;
     private final GeneratorDictionaryConfiguration nonSharedDictionary =
-        new GeneratorDictionaryConfiguration(null, null, null);
+        new GeneratorDictionaryConfiguration(null, null, null,
+        Boolean.getBoolean(FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY));
 
     public CodecConfiguration()
     {
@@ -101,16 +101,29 @@ public final class CodecConfiguration
         return this;
     }
 
+    /**
+     * Allow duplicate fields.
+     *
+     * Defaults to the value of {@link #FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY} if set.
+     *
+     * Can be overridden for individual dictionaries in shared codec mode using
+     * {@link SharedCodecConfiguration#withDictionary(String, boolean, String...)} and
+     * {@link SharedCodecConfiguration#withDictionary(String, boolean, InputStream...)}. If not overridden
+     * then shared codecs default to this value.
+     *
+     * @param allowDuplicateFields true to enable, false to disable
+     * @return this
+     */
     public CodecConfiguration allowDuplicateFields(final boolean allowDuplicateFields)
     {
-        this.allowDuplicateFields = allowDuplicateFields;
+        nonSharedDictionary.allowDuplicateFields(allowDuplicateFields);
         return this;
     }
 
     /**
      * Provide the XML file, or files, that are used to generate the Dictionaries. Multiple dictionary files can be
      * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
-     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, String...)} method and not
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, boolean, String...)} method and not
      * this one. {@link #fileStreams(InputStream...)} is an alternative configuration option that lets you provide
      * inputstreams as the source of your XML files.
      *
@@ -127,7 +140,7 @@ public final class CodecConfiguration
      * Provide the XML document, or documents, that are used to generate the Dictionaries as instance of
      * {@link InputStream}. Multiple dictionary files can be
      * used to provide split data and transport XML files as used by FIX 5.0 / FIXT. If you want to generate a shared
-     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, InputStream...)} method and not
+     * dictionary then please use {@link SharedCodecConfiguration#withDictionary(String, boolean, InputStream...)} method and not
      * this one. {@link #fileNames(String...)} is an alternative configuration option that lets you provide
      * file names as the source of your XML files.
      *
@@ -170,7 +183,7 @@ public final class CodecConfiguration
      */
     public SharedCodecConfiguration sharedCodecsEnabled()
     {
-        sharedCodecConfiguration = new SharedCodecConfiguration();
+        sharedCodecConfiguration = new SharedCodecConfiguration(nonSharedDictionary().allowDuplicateFields());
         return sharedCodecConfiguration;
     }
 
@@ -187,11 +200,6 @@ public final class CodecConfiguration
     boolean flyweightsEnabled()
     {
         return flyweightsEnabled;
-    }
-
-    boolean allowDuplicateFields()
-    {
-        return allowDuplicateFields;
     }
 
     String codecRejectUnknownEnumValueEnabled()

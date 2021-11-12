@@ -22,16 +22,21 @@ import java.io.InputStream;
 
 class GeneratorDictionaryConfiguration
 {
+    private boolean allowDuplicateFields;
     private String dictionaryName;
     private InputStream[] fileStreams;
     private String[] fileNames;
 
     GeneratorDictionaryConfiguration(
-        final String dictionaryName, final InputStream[] fileStreams, final String[] fileNames)
+        final String dictionaryName,
+        final InputStream[] fileStreams,
+        final String[] fileNames,
+        final boolean allowDuplicateFields)
     {
         this.dictionaryName = dictionaryName;
         this.fileStreams = fileStreams;
         this.fileNames = fileNames;
+        this.allowDuplicateFields = allowDuplicateFields;
     }
 
     void dictionaryName(final String dictionaryName)
@@ -57,6 +62,16 @@ class GeneratorDictionaryConfiguration
     boolean hasStreams()
     {
         return fileStreams != null || fileNames != null;
+    }
+
+    boolean allowDuplicateFields()
+    {
+        return allowDuplicateFields;
+    }
+
+    void allowDuplicateFields(final boolean allowDuplicateFields)
+    {
+        this.allowDuplicateFields = allowDuplicateFields;
     }
 
     InputStream[] toStreams() throws FileNotFoundException

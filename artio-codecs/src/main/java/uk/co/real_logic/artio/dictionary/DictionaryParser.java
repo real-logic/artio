@@ -491,7 +491,9 @@ public final class DictionaryParser
             if (!allowDuplicates)
             {
                 throw new IllegalStateException(String.format(
-                        "%sUse -D%s=true to allow duplicated fields (Dangerous. May break parser).",
+                        "%sUse -D%s=true to allow duplicated fields (Dangerous. May break parser). " +
+                        "If using shared codecs then duplicate fields are defined on a per dictionary basis," +
+                        " using SharedCodecConfiguration.withDictionary().",
                         errorMessage,
                         CodecConfiguration.FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY));
             }
