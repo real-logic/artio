@@ -36,7 +36,6 @@ import java.util.*;
 import java.util.function.UnaryOperator;
 
 import static java.lang.reflect.Modifier.isAbstract;
-import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_CHAR;
@@ -148,7 +147,7 @@ public class SharedCodecsTest
             SOURCES.get("uk.co.real_logic.artio.shared_dictionary_1.decoder.LogonDecoder"));*/
 
         final String nosEncoderName = executionReportEncoder(DICT_1_NORM);
-        executionReportEncoder1 = compileInMemory(nosEncoderName, SOURCES);
+        executionReportEncoder1 = GenerationCompileUtil.compileCleanInMemory(nosEncoderName, SOURCES);
         classLoader = executionReportEncoder1.getClassLoader();
         executionReportEncoder2 = loadClass(executionReportEncoder(DICT_2_NORM));
         executionReportEncoder3 = loadClass(executionReportEncoder(DICT_3_NORM));
@@ -165,6 +164,8 @@ public class SharedCodecsTest
         logonEncoder1 = loadClass(logonEncoder(DICT_1_NORM));
         logonDecoder1 = loadClass(logonDecoder(DICT_1_NORM));
     }
+
+
 
     private static String executionReportEncoder(final String dictNorm)
     {

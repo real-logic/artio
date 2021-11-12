@@ -1155,6 +1155,7 @@ class DecoderGenerator extends Generator
                 "        {\n" +
                 "            return remainder > 0 && current != null;\n" +
                 "        }\n\n" +
+                "        @SuppressWarnings(\"unchecked\")\n" +
                 "        public T next()\n" +
                 "        {\n" +
                 "            remainder--;\n" +
@@ -1166,6 +1167,7 @@ class DecoderGenerator extends Generator
                 "        {\n" +
                 "            return %4$s;\n" +
                 "        }\n\n" +
+                "        @SuppressWarnings(\"unchecked\")\n" +
                 "        public void reset()\n" +
                 "        {\n" +
                 "            remainder = numberFieldValue();\n" +
