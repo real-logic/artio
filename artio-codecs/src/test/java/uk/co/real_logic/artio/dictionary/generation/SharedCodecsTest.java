@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
@@ -95,6 +96,10 @@ public class SharedCodecsTest
     private static Class<?> headerEncoder2;
     private static Class<?> headerEncoderShared;
 
+    private MutableAsciiBuffer buffer;
+    private int length;
+    private int offset;
+
     @BeforeClass
     public static void generate() throws Exception
     {
@@ -119,6 +124,8 @@ public class SharedCodecsTest
         {
             SOURCES.putAll(outputManager.getSources());
         }
+
+        // System.out.println(SOURCES.values().stream().mapToInt(CharSequence::length).sum());
 
         if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
@@ -165,8 +172,6 @@ public class SharedCodecsTest
         logonDecoder1 = loadClass(logonDecoder(DICT_1_NORM));
     }
 
-
-
     private static String executionReportEncoder(final String dictNorm)
     {
         return encoder(dictNorm, EXECUTION_REPORT);
@@ -195,6 +200,11 @@ public class SharedCodecsTest
     private static String newOrderSingleEncoder(final String dictNorm)
     {
         return encoder(dictNorm, "NewOrderSingle");
+    }
+
+    private static String constants(final String dictNorm)
+    {
+        return className(dictNorm, (dictNorm == null ? "Shared" : "") + "Constants", "", "");
     }
 
     private static String newOrderSingleDecoder(final String dictNorm)
@@ -317,11 +327,6 @@ public class SharedCodecsTest
     {
         return ExampleDictionary.class.getResourceAsStream(dict + ".xml");
     }
-
-    private MutableAsciiBuffer buffer;
-    private int length;
-    private int offset;
-    private String encoded;
 
     @Test
     public void shouldGenerateClassStructure()
@@ -744,6 +749,26 @@ public class SharedCodecsTest
         noClass(newOrderSingleDecoder(DICT_2_NORM));
     }
 
+    @Test
+    public void shouldGenerateSharedConstantsClass() throws Exception
+    {
+        final Class<?> sharedConstants = loadClass(constants(null));
+        final Class<?> dict1Constants = loadClass(constants(DICT_1_NORM));
+
+        // Hierarchy
+        assertTrue(sharedConstants.isAssignableFrom(dict1Constants));
+
+        // Shared Message Constants
+        sharedConstants.getDeclaredField("LOGON_MESSAGE_AS_STR");
+        sharedConstants.getDeclaredField("LOGON_MESSAGE");
+        noField(dict1Constants, "LOGON_MESSAGE_AS_STR");
+        noField(dict1Constants, "LOGON_MESSAGE");
+
+        // Shared Field Constants
+        sharedConstants.getDeclaredField("BEGIN_STRING");
+        noField(dict1Constants, "BEGIN_STRING");
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> Class<T> loadClass(final String name) throws ClassNotFoundException
     {
@@ -783,7 +808,18 @@ public class SharedCodecsTest
         }
     }
 
-
+    private void noField(final Class<?> cls, final String name)
+    {
+        try
+        {
+            final Field field = cls.getDeclaredField(name);
+            fail("Found field: " + field + " which shouldn't exist");
+        }
+        catch (final NoSuchFieldException e)
+        {
+            // Deliberately blank
+        }
+    }
 
     private void setupEncoder(final Encoder encoder, final boolean optionalFields) throws Exception
     {
@@ -858,8 +894,8 @@ public class SharedCodecsTest
         final long result = encoder.encode(buffer, 0);
         length = Encoder.length(result);
         offset = Encoder.offset(result);
-        encoded = buffer.getStringWithoutLengthAscii(offset, length);
 
+        final String encoded = buffer.getStringWithoutLengthAscii(offset, length);
         assertEquals(encoder.toString(), msg, encoded);
     }
 

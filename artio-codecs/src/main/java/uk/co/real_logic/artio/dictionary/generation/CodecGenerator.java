@@ -148,7 +148,7 @@ public final class CodecGenerator
         final OutputManager encoderOutput = outputManagerFactory.apply(outputPath, encoderPackage);
 
         new EnumGenerator(dictionary, parentPackage, parentOutput).generate();
-        new ConstantGenerator(dictionary, parentPackage, parentOutput).generate();
+        new ConstantGenerator(dictionary, parentPackage, configuration.parentPackage(), parentOutput).generate();
 
         new FixDictionaryGenerator(
             dictionary,

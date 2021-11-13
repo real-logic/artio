@@ -27,6 +27,7 @@ public final class Field implements Element
 {
     private final int number;
     private final String name;
+    private boolean isInParent;
     private Type type;
     private final List<Value> values;
 
@@ -122,6 +123,16 @@ public final class Field implements Element
             ", associatedLengthField=" + associatedLengthField +
             ", values=" + values +
             '}';
+    }
+
+    public boolean isInParent()
+    {
+        return isInParent;
+    }
+
+    public void isInParent(final boolean isInParent)
+    {
+        this.isInParent = isInParent;
     }
 
     public enum Type

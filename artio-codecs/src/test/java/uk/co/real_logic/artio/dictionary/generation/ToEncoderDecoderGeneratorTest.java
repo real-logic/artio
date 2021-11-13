@@ -88,7 +88,7 @@ public class ToEncoderDecoderGeneratorTest
     {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
-            MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+            MESSAGE_EXAMPLE, TEST_PACKAGE, null, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE,

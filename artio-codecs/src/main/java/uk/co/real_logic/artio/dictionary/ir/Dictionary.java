@@ -108,6 +108,11 @@ public final class Dictionary
         return sharedParent;
     }
 
+    public boolean hasSharedParent()
+    {
+        return sharedParent() != null;
+    }
+
     public void sharedParent(final Dictionary sharedParent)
     {
         this.sharedParent = sharedParent;

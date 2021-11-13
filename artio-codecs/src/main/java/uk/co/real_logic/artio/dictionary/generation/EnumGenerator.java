@@ -73,7 +73,7 @@ final class EnumGenerator
 
     public void generate()
     {
-        if (dictionary.sharedParent() != null)
+        if (dictionary.hasSharedParent())
         {
             return;
         }

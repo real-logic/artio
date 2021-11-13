@@ -690,7 +690,7 @@ public abstract class Generator
 
     boolean hasParent()
     {
-        return dictionary.sharedParent() != null;
+        return dictionary.hasSharedParent();
     }
 
     String parentDictPackage()

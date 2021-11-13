@@ -449,6 +449,8 @@ class CodecSharer
                 return sharedField;
             }
 
+            field.isInParent(true);
+
             if (sharedField == null)
             {
                 return copyOf(field);
@@ -473,6 +475,13 @@ class CodecSharer
                             System.err.println("Clash error for enum: " + sharedField);
                             System.out.println(field);
                         }
+
+                        // Remove sharing of previous instances:
+                        inputDictionaries.forEach(dict ->
+                        {
+                            final Field alreadySharedField = dict.fields().get(name);
+                            alreadySharedField.isInParent(false);
+                        });
                         return CLASH_SENTINEL;
                     }
                     else

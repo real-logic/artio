@@ -34,7 +34,7 @@ public class PrinterGeneratorTest
 {
     private static final StringWriterOutputManager OUTPUT_MANAGER = new StringWriterOutputManager();
     private static final ConstantGenerator CONSTANT_GENERATOR = new ConstantGenerator(
-        MESSAGE_EXAMPLE, TEST_PACKAGE, OUTPUT_MANAGER);
+        MESSAGE_EXAMPLE, TEST_PACKAGE, null, OUTPUT_MANAGER);
     private static final EnumGenerator ENUM_GENERATOR = new EnumGenerator(
         MESSAGE_EXAMPLE, TEST_PACKAGE, OUTPUT_MANAGER);
 
