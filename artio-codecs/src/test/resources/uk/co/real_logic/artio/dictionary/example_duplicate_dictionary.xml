@@ -4,6 +4,19 @@
         <field name="BeginString" required="Y"/>
         <field name="BodyLength" required="Y"/>
         <field name="MsgType" required="Y"/>
+        <field name="SenderCompID" required="Y"/>
+        <field name="TargetCompID" required="Y"/>
+        <field name="MsgSeqNum" required="Y"/>
+        <field name="SenderSubID" required="N"/>
+        <field name="SenderLocationID" required="N"/>
+        <field name="TargetSubID" required="N"/>
+        <field name="TargetLocationID" required="N"/>
+        <field name="PossDupFlag" required="N"/>
+        <field name="PossResend" required="N"/>
+        <field name="SendingTime" required="Y"/>
+        <field name="OrigSendingTime" required="N"/>
+        <field name="LastMsgSeqNumProcessed" required="N"/>
+        <field name="OnBehalfOfCompID" required="N" />
     </header>
     <trailer>
         <field name="CheckSum" required="Y"/>
@@ -13,8 +26,16 @@
             <field name="MemberID" required="N"/>
             <component name="Members" required="N"/>
         </message>
+        <!-- Fails to compile -->
+        <!--<message name="DuplicatedFieldMessageNoGroup" msgtype="U2" msgcat="app">
+            <field name="MemberID" required="N"/>
+            <component name="Member" required="N"/>
+        </message>-->
     </messages>
     <components>
+        <component name="Member">
+            <field name="MemberID" required="N"/>
+        </component>
         <component name="Members">
             <group name="NoMemberIDs" required="N">
                 <field name="MemberID" required="N"/>
@@ -32,7 +53,21 @@
             <value enum="8" description="EXECUTION_REPORT"/>
             <value enum="D" description="ORDER_SINGLE"/>
         </field>
+        <field number="49" name="SenderCompID" type="STRING"/>
+        <field number="50" name="SenderSubID" type="STRING"/>
+        <field number="142" name="SenderLocationID" type="STRING"/>
+        <field number="56" name="TargetCompID" type="STRING"/>
+        <field number="57" name="TargetSubID" type="STRING"/>
+        <field number="143" name="TargetLocationID" type="STRING"/>
+        <field number="34" name="MsgSeqNum" type="SEQNUM"/>
+        <field number="43" name="PossDupFlag" type="BOOLEAN"/>
+        <field number="97" name="PossResend" type="BOOLEAN"/>
+        <field number="52" name="SendingTime" type="UTCTIMESTAMP"/>
+        <field number="122" name="OrigSendingTime" type="UTCTIMESTAMP"/>
+        <field number="369" name="LastMsgSeqNumProcessed" type="SEQNUM"/>
         <field number="10" name="CheckSum" type="STRING"/>
+        <field number="115" name="OnBehalfOfCompID" type="STRING" />
+
         <field number="100" name="MemberID" type="STRING"/>
         <field number="101" name="NoMemberIDs" type="NUMINGROUP"/>
         <field number="102" name="NoMemberSubIDs" type="NUMINGROUP"/>

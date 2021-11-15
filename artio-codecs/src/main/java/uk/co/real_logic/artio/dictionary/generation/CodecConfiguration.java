@@ -102,7 +102,7 @@ public final class CodecConfiguration
     }
 
     /**
-     * Allow duplicate fields.
+     * Allow duplicate fields. Executable documentation can be found in the test "DuplicateFieldsTest".
      *
      * Defaults to the value of {@link #FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY} if set.
      *

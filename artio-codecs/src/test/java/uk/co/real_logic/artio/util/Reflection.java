@@ -242,7 +242,7 @@ public final class Reflection
         return (boolean)get(object, field);
     }
 
-    public static String getString(final Decoder decoder, final String field) throws Exception
+    public static String getString(final Object decoder, final String field) throws Exception
     {
         return (String)get(decoder, field);
     }
