@@ -248,7 +248,11 @@ class DecoderGenerator extends Generator
         if (isMessage)
         {
             final Message message = (Message)aggregate;
-            out.append(messageType(message.fullType(), message.packedType()));
+            // Normally generate these, but if its shared only generate it in the parent
+            if (!message.isInParent() || isSharedParent())
+            {
+                out.append(messageType(message.fullType(), message.packedType()));
+            }
 
             if (!isSharedParent())
             {

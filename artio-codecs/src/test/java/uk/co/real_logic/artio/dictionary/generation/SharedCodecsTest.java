@@ -351,6 +351,22 @@ public class SharedCodecsTest
         assertTrue(executionReportDecoderShared.isAssignableFrom(executionReportDecoder2));
     }
 
+    @Test
+    public void shouldShareMessageConstants() throws NoSuchFieldException, NoSuchMethodException
+    {
+        executionReportDecoderShared.getDeclaredField("MESSAGE_TYPE");
+        executionReportDecoderShared.getDeclaredField("MESSAGE_TYPE_AS_STRING");
+        executionReportDecoderShared.getDeclaredField("MESSAGE_TYPE_CHARS");
+        executionReportDecoderShared.getDeclaredField("MESSAGE_TYPE_BYTES");
+
+        noField(executionReportDecoder1, "MESSAGE_TYPE");
+        noField(executionReportDecoder1, "MESSAGE_TYPE_AS_STRING");
+        noField(executionReportDecoder1, "MESSAGE_TYPE_CHARS");
+        noField(executionReportDecoder1, "MESSAGE_TYPE_BYTES");
+
+        executionReportEncoderShared.getDeclaredMethod("messageType");
+    }
+
     private void assertAbstract(final Class<?> cls)
     {
         assertTrue(cls + " not abstract", isAbstract(cls.getModifiers()));
