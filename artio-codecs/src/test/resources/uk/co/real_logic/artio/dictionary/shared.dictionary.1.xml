@@ -108,6 +108,7 @@
                 </group>
             </group>
             <component name="SemiSharedComponent" required="N" />
+            <component name="SometimesComponent" required="N" />
         </message>
     </messages>
     <components>
@@ -129,6 +130,9 @@
         </component>
         <component name="OrderQtyData">
             <field name="OrderQty" required="N"/>
+        </component>
+        <component name="SometimesComponent">
+            <field name="FieldSometimesInComponent" required="N"/>
         </component>
     </components>
     <fields>
@@ -275,7 +279,11 @@
             <value enum="1" description="FILL"/>
             <value enum="2" description="CANCELED"/>
         </field>
-        <field number="405" name="SemiSharedField" type="STRING">
-        </field>
+        <field number="405" name="SemiSharedField" type="STRING"/>
+        <!--
+            Field that is shared across dictionaries sometimes in a
+            component and sometimes not.
+        -->
+        <field number="406" name="FieldSometimesInComponent" type="STRING"/>
     </fields>
 </fix>

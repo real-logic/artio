@@ -142,4 +142,13 @@ public abstract class Aggregate
         this.isInParent = isInParent;
     }
 
+    public Stream<Entry> componentEntries()
+    {
+        return entriesWith((element) -> element instanceof Component);
+    }
+
+    public boolean hasComponent(final String componentName)
+    {
+        return componentEntries().anyMatch(e -> componentName.equals(e.name()));
+    }
 }

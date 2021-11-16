@@ -20,12 +20,15 @@ import org.agrona.Verify;
 import org.agrona.generation.ResourceConsumer;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public final class Entry
 {
+    public static final Comparator<Entry> BY_NAME = Comparator.comparing(Entry::name);
+
     private boolean required;
     private Element element;
     private boolean isInParent;

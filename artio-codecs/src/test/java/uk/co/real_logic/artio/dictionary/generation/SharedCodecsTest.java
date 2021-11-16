@@ -74,6 +74,11 @@ public class SharedCodecsTest
         "\001151=2\001152=1\001154=Y\001404=2\001382=1\001375=aContraBroker\001400=1\001401=value\001402=1" +
         "\001403=inner\001405=ABC\00110=185\001";
 
+    private static final String FIELD_SOMETIMES_IN_COMPONENT = "fieldSometimesInComponent";
+    private static final String RESET_FIELD_SOMETIMES_IN_COMPONENT = "resetFieldSometimesInComponent";
+    private static final String FIELD_SOMETIMES_IN_COMPONENT_LENGTH = "fieldSometimesInComponentLength";
+    public static final String SOMETIMES_COMPONENT = "SometimesComponent";
+
     private static Class<?> executionReportEncoderShared;
 
     private static Class<?> logonEncoder1;
@@ -647,6 +652,11 @@ public class SharedCodecsTest
         throws NoSuchMethodException
     {
         executionReportEncoderShared.getDeclaredMethod(methodName, parameterTypes);
+        assertNotOnEncoderChildren(methodName, parameterTypes);
+    }
+
+    private void assertNotOnEncoderChildren(final String methodName, final Class<?>... parameterTypes)
+    {
         noMethod(executionReportEncoder1, methodName, parameterTypes);
         noMethod(executionReportEncoder2, methodName, parameterTypes);
         noMethod(executionReportEncoder3, methodName, parameterTypes);
@@ -722,6 +732,34 @@ public class SharedCodecsTest
         // Shared Field Constants
         sharedConstants.getDeclaredField("BEGIN_STRING");
         noField(dict1Constants, "BEGIN_STRING");
+    }
+
+    @Test
+    public void shouldShareFieldsThatAreSometimesInComponents() throws Exception
+    {
+        // FieldSometimesInComponent is in a component in dict 1, and directly on the ER in other dicts
+        final Class<?> sometimesComponentEncoder = loadClass(sometimesComponentEncoder(null));
+        final Class<?> sometimesComponentDecoder = loadClass(sometimesComponentDecoder(null));
+        loadClass(sometimesComponentEncoder(DICT_1_NORM));
+        loadClass(sometimesComponentDecoder(DICT_1_NORM));
+        loadClass(sometimesComponentEncoder(DICT_2_NORM));
+        loadClass(sometimesComponentDecoder(DICT_2_NORM));
+
+        sometimesComponentEncoder.getMethod(FIELD_SOMETIMES_IN_COMPONENT);
+        sometimesComponentDecoder.getMethod(FIELD_SOMETIMES_IN_COMPONENT);
+        sometimesComponentDecoder.getMethod(FIELD_SOMETIMES_IN_COMPONENT_LENGTH);
+
+        assertNotOnEncoderChildren(FIELD_SOMETIMES_IN_COMPONENT, CharSequence.class);
+    }
+
+    private String sometimesComponentDecoder(final String dictNorm)
+    {
+        return decoder(dictNorm, SOMETIMES_COMPONENT);
+    }
+
+    private String sometimesComponentEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, SOMETIMES_COMPONENT);
     }
 
     private static Class<Object> loadClass(final String className) throws ClassNotFoundException

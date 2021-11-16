@@ -225,7 +225,7 @@ class DecoderGenerator extends Generator
         final boolean isMessage = type == MESSAGE;
         final boolean isGroup = type == GROUP;
         final List<String> interfaces = aggregate
-            .entriesWith((element) -> element instanceof Component)
+            .componentEntries()
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 

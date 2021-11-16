@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.artio.dictionary.DictionaryParser;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
@@ -53,22 +54,17 @@ class CodecSharer
     {
         findSharedFields();
 
-//        System.out.println("sharedNameToField = " + sharedNameToField);
-
         findSharedGroups();
         findSharedComponents();
-        final List<Message> messages = findSharedMessages();
+        final Map<String, Message> nameToSharedMessage = findSharedMessages();
+        findComponentsWithSharedFieldsNotInAllDictionaries(nameToSharedMessage);
+
         final Component header = findSharedComponent(Dictionary::header);
         final Component trailer = findSharedComponent(Dictionary::trailer);
         final String specType = DictionaryParser.DEFAULT_SPEC_TYPE;
         final int majorVersion = 0;
         final int minorVersion = 0;
-
-//        System.out.println("commonGroupIds = " + commonGroupIds);
-//        System.out.println("sharedIdToGroup = " + sharedIdToGroup);
-//        System.out.println("components = " + components);
-//        System.out.println("inputDictionaries.get(0).components() = " + inputDictionaries.get(0).components());
-//        System.out.println("messages = " + messages);
+        final List<Message> messages = new ArrayList<>(nameToSharedMessage.values());
 
         final Dictionary sharedDictionary = new Dictionary(
             messages,
@@ -157,6 +153,7 @@ class CodecSharer
 
     private void findSharedComponents()
     {
+        // find components in all dictionaries
         findSharedAggregates(
             sharedNameToComponent,
             null,
@@ -166,17 +163,175 @@ class CodecSharer
             pair -> pair.agg().name());
     }
 
-    private List<Message> findSharedMessages()
+    // Aim is to maximise sharing between dictionaries by
+    private void findComponentsWithSharedFieldsNotInAllDictionaries(final Map<String, Message> nameToSharedMessage)
     {
-        final Map<String, Message> nameToMessage = findSharedAggregates(
+        // Shared messages within dictionaries
+        final Map<String, List<Message>> sharedMessageNameToMessages = inputDictionaries
+            .stream()
+            .flatMap(dictionary -> dictionary
+            .messages()
+            .stream()
+            .filter(msg -> nameToSharedMessage.containsKey(msg.name())))
+            .collect(groupingBy(Message::name));
+
+        // components not in all dictionaries
+        final Map<String, List<Component>> otherNameToComponents = inputDictionaries
+            .stream()
+            .flatMap(dictionary -> dictionary
+            .components()
+            .entrySet()
+            .stream()
+            .filter(e -> !sharedNameToComponent.containsKey(e.getKey())))
+            .map(Map.Entry::getValue)
+            .collect(groupingBy(Component::name));
+
+        otherNameToComponents.forEach((componentName, components) ->
+        {
+            final Set<String> sharedFieldNames = findFieldsInAllInstancesOfComponent(components);
+            if (sharedFieldNames.isEmpty())
+            {
+                return;
+            }
+
+            final Int2ObjectHashMap<Component> indexToSynthesizedComponent = new Int2ObjectHashMap<>();
+
+            // find shared messages that implement the component in some but not all cases
+            sharedMessageNameToMessages.forEach((msgName, messages) ->
+            {
+                final Int2ObjectHashMap<Message> messagesWithoutComponent = new Int2ObjectHashMap<>();
+                final int withComponentCount = findMessagesWithoutComponent(
+                    componentName, messages, messagesWithoutComponent);
+
+                // some but not all
+                if (withComponentCount > 0 && withComponentCount != messages.size())
+                {
+                    for (final Map.Entry<Integer, Message> entry : messagesWithoutComponent.entrySet())
+                    {
+                        final Message message = entry.getValue();
+                        // check it contains all the common fields
+                        final List<Entry> componentFieldEntries = message
+                            .fieldEntries()
+                            .filter(e -> sharedFieldNames.contains(e.name()))
+                            .collect(toList());
+
+                        if (sharedFieldNames.size() == componentFieldEntries.size())
+                        {
+                            final int index = entry.getKey();
+                            final Component synthesizedComponent = lookupSynthesizedComponent(
+                                componentName, indexToSynthesizedComponent, componentFieldEntries, index);
+
+                            final List<Entry> entries = message.entries();
+                            entries.removeAll(componentFieldEntries);
+                            entries.add(Entry.optional(synthesizedComponent));
+                        }
+                    }
+                }
+            });
+
+            synthesizeParentComponent(componentName, sharedFieldNames, indexToSynthesizedComponent);
+        });
+    }
+
+    private void synthesizeParentComponent(
+        final String componentName,
+        final Set<String> sharedFieldNames,
+        final Int2ObjectHashMap<Component> indexToSynthesizedComponent)
+    {
+        if (!indexToSynthesizedComponent.isEmpty())
+        {
+            final Component synthesizedParentComponent = new Component(componentName);
+            final List<Entry> entries = synthesizedParentComponent.entries();
+            for (final String fieldName : sharedFieldNames)
+            {
+                entries.add(Entry.optional(sharedNameToField.get(fieldName)));
+            }
+            entries.sort(Entry.BY_NAME);
+            final int entrySize = entries.size();
+            for (int i = 0; i < entrySize; i++)
+            {
+                final Entry parentEntry = entries.get(i);
+                final int index = i;
+                parentEntry.sharedChildEntries(indexToSynthesizedComponent
+                    .values()
+                    .stream()
+                    .map(comp -> comp.entries().get(index))
+                    .collect(toList()));
+            }
+            sharedNameToComponent.put(componentName, synthesizedParentComponent);
+        }
+    }
+
+    private Set<String> findFieldsInAllInstancesOfComponent(final List<Component> components)
+    {
+        final Component component = components.get(0);
+        final Set<String> sharedFieldNames = component
+            .fieldEntries()
+            .map(Entry::name)
+            .filter(sharedNameToField::containsKey)
+            .collect(toSet());
+
+        final int size = components.size();
+        for (int i = 1; i < size; i++)
+        {
+            final Set<String> fieldNames = components.get(i).fieldEntries().map(Entry::name).collect(toSet());
+            sharedFieldNames.retainAll(fieldNames);
+        }
+        return sharedFieldNames;
+    }
+
+    private int findMessagesWithoutComponent(
+        final String componentName,
+        final List<Message> messages,
+        final Int2ObjectHashMap<Message> messagesWithoutComponent)
+    {
+        int withComponentCount = 0;
+        final int messagesSize = messages.size();
+        for (int i = 0; i < messagesSize; i++)
+        {
+            final Message msg = messages.get(i);
+            if (msg.hasComponent(componentName))
+            {
+                withComponentCount++;
+            }
+            else
+            {
+                messagesWithoutComponent.put(i, msg);
+            }
+        }
+        return withComponentCount;
+    }
+
+    private Component lookupSynthesizedComponent(
+        final String componentName,
+        final Int2ObjectHashMap<Component> indexToComponent,
+        final List<Entry> componentFieldEntries,
+        final int index)
+    {
+        Component synthesizedComponent = indexToComponent.get(index);
+        if (synthesizedComponent == null)
+        {
+            synthesizedComponent = new Component(componentName);
+            synthesizedComponent.isInParent(true);
+            componentFieldEntries.sort(Entry.BY_NAME);
+            componentFieldEntries.forEach(fieldEntry -> fieldEntry.isInParent(true));
+            synthesizedComponent.entries().addAll(componentFieldEntries);
+            indexToComponent.put(index, synthesizedComponent);
+
+            inputDictionaries.get(index).components().put(componentName, synthesizedComponent);
+        }
+        return synthesizedComponent;
+    }
+
+    private Map<String, Message> findSharedMessages()
+    {
+        return findSharedAggregates(
             new HashMap<>(),
             null,
             dict -> addFakeParents(dict.messages()),
             (msg, sharedMessage) -> msg.packedType() == sharedMessage.packedType(),
             this::copyOf,
             pair -> pair.agg().name());
-
-        return new ArrayList<>(nameToMessage.values());
     }
 
     private static final class AggPath<T extends Aggregate>
@@ -211,7 +366,7 @@ class CodecSharer
 
     // Groups existing within a Message or Component, so we put the message or component name into the
     // name map for the groups, so we can lookup the precise group later on.
-    // Thus all the getName functions that need parent objects
+    // Thus all the getName functions need parent objects
     private <T extends Aggregate> Map<String, T> findSharedAggregates(
         final Map<String, T> nameToAggregate,
         final Set<String> commonAggregateNamesCopy,
