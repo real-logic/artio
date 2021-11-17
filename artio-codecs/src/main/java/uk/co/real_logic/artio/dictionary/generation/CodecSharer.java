@@ -176,25 +176,35 @@ class CodecSharer
             .collect(groupingBy(Message::name));
 
         // components not in all dictionaries
-        final Map<String, List<Component>> otherNameToComponents = inputDictionaries
+        final Map<String, List<Component>> allNameToComponents = inputDictionaries
             .stream()
             .flatMap(dictionary -> dictionary
             .components()
             .entrySet()
-            .stream()
-            .filter(e -> !sharedNameToComponent.containsKey(e.getKey())))
+            .stream())
             .map(Map.Entry::getValue)
             .collect(groupingBy(Component::name));
 
-        otherNameToComponents.forEach((componentName, components) ->
+        allNameToComponents.forEach((componentName, components) ->
         {
-            final Set<String> sharedFieldNames = findFieldsInAllInstancesOfComponent(components);
-            if (sharedFieldNames.isEmpty())
-            {
-                return;
-            }
-
             final Int2ObjectHashMap<Component> indexToSynthesizedComponent = new Int2ObjectHashMap<>();
+            final Set<String> sharedFieldNames;
+            final Component sharedComponent = sharedNameToComponent.get(componentName);
+            final boolean syntheticParentComponent = sharedComponent == null;
+
+            if (syntheticParentComponent)
+            {
+                // synthesize a fake component to do this analysis.
+                sharedFieldNames = findFieldsInAllInstancesOfComponent(components);
+                if (sharedFieldNames.isEmpty())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                sharedFieldNames = sharedComponent.fieldNames();
+            }
 
             // find shared messages that implement the component in some but not all cases
             sharedMessageNameToMessages.forEach((msgName, messages) ->
@@ -229,7 +239,10 @@ class CodecSharer
                 }
             });
 
-            synthesizeParentComponent(componentName, sharedFieldNames, indexToSynthesizedComponent);
+            if (syntheticParentComponent)
+            {
+                synthesizeParentComponent(componentName, sharedFieldNames, indexToSynthesizedComponent);
+            }
         });
     }
 
@@ -274,7 +287,7 @@ class CodecSharer
         final int size = components.size();
         for (int i = 1; i < size; i++)
         {
-            final Set<String> fieldNames = components.get(i).fieldEntries().map(Entry::name).collect(toSet());
+            final Set<String> fieldNames = components.get(i).fieldNames();
             sharedFieldNames.retainAll(fieldNames);
         }
         return sharedFieldNames;
@@ -628,7 +641,7 @@ class CodecSharer
                         if (sharedField.isEnum())
                         {
                             System.err.println("Clash error for enum: " + sharedField);
-                            System.out.println(field);
+                            System.err.println(field);
                         }
 
                         // Remove sharing of previous instances:

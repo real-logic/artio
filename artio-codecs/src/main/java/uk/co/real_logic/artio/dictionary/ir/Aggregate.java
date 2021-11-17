@@ -17,8 +17,11 @@ package uk.co.real_logic.artio.dictionary.ir;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toSet;
 
 /**
  * A Aggregate is either a group, a message or a component.
@@ -150,5 +153,10 @@ public abstract class Aggregate
     public boolean hasComponent(final String componentName)
     {
         return componentEntries().anyMatch(e -> componentName.equals(e.name()));
+    }
+
+    public Set<String> fieldNames()
+    {
+        return fieldEntries().map(Entry::name).collect(toSet());
     }
 }
