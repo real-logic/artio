@@ -2328,7 +2328,7 @@ public class Session
         proxy.libraryConnected(libraryConnected);
     }
 
-    void sequenceIndex(final int sequenceIndex)
+    public void sequenceIndex(final int sequenceIndex)
     {
         this.sequenceIndex = sequenceIndex;
     }
