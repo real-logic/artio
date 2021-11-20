@@ -309,7 +309,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         final int start = offset + minusAdj;
 
         final int length = remainder == Long.MIN_VALUE ? AsciiEncoding.MIN_LONG_VALUE.length - 1 :
-            AsciiEncoding.endOffset(-remainder) + 1;
+            AsciiEncoding.digitCount(-remainder);
 
         if (length <= scale)
         {
