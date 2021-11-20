@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.util;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 
@@ -109,11 +111,55 @@ public class CharFormatterTest
         assertFormatsTo("MsgSeqNum too low, expecting 0 but received 1", formatter);
     }
 
+    @Test
+    public void shouldEncodeIntToAscii()
+    {
+        final CharFormatter formatter = new CharFormatter("%s");
+
+        assertPutIntAscii(formatter, 2, 0, "0");
+        assertPutIntAscii(formatter, 1, 1, "1");
+        assertPutIntAscii(formatter, 8, -21, "-21");
+        assertPutIntAscii(formatter, 0, 12345678, "12345678");
+        assertPutIntAscii(formatter, 3, Integer.MAX_VALUE, String.valueOf(Integer.MAX_VALUE));
+        assertPutIntAscii(formatter, 4, Integer.MIN_VALUE, String.valueOf(Integer.MIN_VALUE));
+    }
+
+    @Test
+    public void shouldEncodeLongToAscii()
+    {
+        final CharFormatter formatter = new CharFormatter("%s");
+
+        assertPutLongAscii(formatter, 10, 0, "0");
+        assertPutLongAscii(formatter, 0, -42, "-42");
+        assertPutLongAscii(formatter, 3, 123, "123");
+        assertPutLongAscii(formatter, 5, 999_999_999_999L, "999999999999");
+        assertPutLongAscii(formatter, 3, Long.MAX_VALUE, String.valueOf(Long.MAX_VALUE));
+        assertPutLongAscii(formatter, 4, Long.MIN_VALUE, String.valueOf(Long.MIN_VALUE));
+    }
+
     private void assertFormatsTo(final String format, final CharFormatter formatter)
     {
         final StringBuilder builder = new StringBuilder();
         formatter.appendTo(builder);
 
         assertEquals(format, builder.toString());
+    }
+
+    private static void assertPutIntAscii(
+        final CharFormatter formatter, final int index, final int value, final String encodedValue)
+    {
+        final char[] buffer = new char[16];
+        final int length = formatter.putIntAscii(buffer, index, value);
+        assertEquals(encodedValue.length(), length);
+        assertEquals(encodedValue, new String(Arrays.copyOfRange(buffer, index, index + length)));
+    }
+
+    private static void assertPutLongAscii(
+        final CharFormatter formatter, final int index, final long value, final String encodedValue)
+    {
+        final char[] buffer = new char[32];
+        final int length = formatter.putLongAscii(buffer, index, value);
+        assertEquals(encodedValue.length(), length);
+        assertEquals(encodedValue, new String(Arrays.copyOfRange(buffer, index, index + length)));
     }
 }
