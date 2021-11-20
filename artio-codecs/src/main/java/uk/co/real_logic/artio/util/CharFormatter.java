@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.util;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import static org.agrona.AsciiEncoding.endOffset;
+import static org.agrona.AsciiEncoding.digitCount;
 import static uk.co.real_logic.artio.util.AsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.artio.util.AsciiBuffer.LONGEST_LONG_LENGTH;
 
@@ -175,7 +175,7 @@ public class CharFormatter
             quotient = -quotient;
         }
 
-        int i = endOffset(quotient);
+        int i = digitCount(quotient) - 1;
         length += i;
 
         while (i >= 0)
@@ -215,7 +215,7 @@ public class CharFormatter
             quotient = -quotient;
         }
 
-        int i = endOffset(quotient);
+        int i = digitCount(quotient) - 1;
         length += i;
 
         while (i >= 0)
