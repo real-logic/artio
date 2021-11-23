@@ -938,21 +938,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         }
     }
 
-    private void sleep(final int timeInMs)
-    {
-        testSystem.awaitBlocking(() ->
-        {
-            try
-            {
-                Thread.sleep(timeInMs);
-            }
-            catch (final InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-        });
-    }
-
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldReplayAMixOfEngineAndLibraryMessages()
     {

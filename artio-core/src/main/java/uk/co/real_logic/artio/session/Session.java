@@ -547,7 +547,11 @@ public class Session
             }
             else
             {
-                position = requestDisconnect(reason);
+                // Delay disconnect until the reply logout has been round-tripped via the cluster
+                if (proxy instanceof DirectSessionProxy)
+                {
+                    position = requestDisconnect(reason);
+                }
             }
         }
 
@@ -1670,7 +1674,7 @@ public class Session
             final SessionWriter sessionWriter = sessionWriterRef.get();
             if (sessionWriter != null)
             {
-                sessionWriter.linkTo(this);
+                sessionWriter.linkTo((InternalSession)this);
             }
         }
     }

@@ -43,6 +43,7 @@ import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
@@ -170,6 +171,24 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldReceiveLogoutBeforeDisconnectInClusteredCase()
+    {
+        connectSessions();
+
+        // fake delaying a logout to simulate it round-tripping a cluster
+        fakeSessionProxy.send(false);
+        testSystem.awaitSend(initiatingSession::startLogout);
+        testSystem.awaitMessageOf(acceptingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+        assertEquals(1, fakeSessionProxy.sentLogouts);
+
+        testSystem.awaitSend(fakeSessionProxy::sendLogoutMessage);
+
+        assertSessionDisconnected(initiatingSession);
+        final FixMessage lastInitRecvMsg = initiatingOtfAcceptor.lastReceivedMessage();
+        assertEquals(LOGOUT_MESSAGE_AS_STR, lastInitRecvMsg.msgType());
+    }
+
     private FixMessage awaitMessageFromSessionWriter(final int lastReceivedMsgSeqNum, final int newOrderSingleSeqNum)
     {
         final FixMessage receivedNewOrderSingle = withTimeout("Unable to find NOS", () ->
@@ -260,6 +279,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochFractionFormat epochFractionPrecision)
     {
         sessionProxyRequests++;
+        fakeSessionProxy.setup(gatewayPublication, libraryId);
         return fakeSessionProxy;
     }
 
@@ -271,14 +291,29 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         private final LogonEncoder logon = new LogonEncoder();
         private final LogoutEncoder logout = new LogoutEncoder();
         private final List<HeaderEncoder> headers = asList(logon.header(), heartbeat.header(), logout.header());
+        private GatewayPublication gatewayPublication;
+        private int libraryId;
+
+        FakeSessionProxy()
+        {
+
+        }
 
         private int sentLogons = 0;
+        private int sentLogouts = 0;
         private int sentHeartbeats = 0;
         private int sentResendRequests = 0;
 
         private int sequenceNumberAdjustment = 0;
 
         private boolean seqNumResetRequested = false;
+
+        private boolean send = true;
+
+        public void send(final boolean send)
+        {
+            this.send = send;
+        }
 
         public void fixDictionary(final FixDictionary dictionary)
         {
@@ -312,8 +347,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         public long sendRequestDisconnect(final long connectionId, final DisconnectReason reason)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendRequestDisconnect");
-            return 0;
+            return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
         }
 
         public long sendLogon(
@@ -353,11 +387,25 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         public long sendLogout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            sentLogouts++;
+
             final int adjustedMsgSeqNo = msgSeqNo + sequenceNumberAdjustment;
             final HeaderEncoder header = logout.header();
             setupHeader(header, adjustedMsgSeqNo);
 
-            return acceptingSessionWriter.send(logout, adjustedMsgSeqNo);
+            if (send)
+            {
+                return sendLogoutMessage();
+            }
+            else
+            {
+                return 1;
+            }
+        }
+
+        long sendLogoutMessage()
+        {
+            return acceptingSessionWriter.send(logout, logout.header().msgSeqNum());
         }
 
         public long sendLogout(
@@ -495,6 +543,12 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         private boolean notNullOrEmpty(final String string)
         {
             return string != null && string.length() > 0;
+        }
+
+        void setup(final GatewayPublication gatewayPublication, final int libraryId)
+        {
+            this.gatewayPublication = gatewayPublication;
+            this.libraryId = libraryId;
         }
     }
 }
