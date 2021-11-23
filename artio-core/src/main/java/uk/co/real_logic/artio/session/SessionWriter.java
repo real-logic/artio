@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -40,7 +41,7 @@ public class SessionWriter
 
     private long connectionId;
     private int sequenceIndex;
-    private Session session;
+    private InternalSession session;
     private boolean closed = false;
 
     public SessionWriter(
@@ -156,10 +157,15 @@ public class SessionWriter
 
         if (position > 0)
         {
-            final Session session = this.session;
+            final InternalSession session = this.session;
             if (session != null)
             {
                 session.lastSentMsgSeqNum(seqNum);
+
+                if (messageType == SessionConstants.LOGOUT_MESSAGE_TYPE)
+                {
+                    session.onSessionWriterLogout();
+                }
             }
         }
 
@@ -195,7 +201,7 @@ public class SessionWriter
 
     // ---------- Internal API ----------
 
-    void linkTo(final Session session)
+    void linkTo(final InternalSession session)
     {
         this.session = session;
         this.connectionId = session.connectionId();

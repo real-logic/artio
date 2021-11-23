@@ -98,7 +98,8 @@ public abstract class CommonDecoderImpl
             }
             else
             {
-                return DecimalFloat.MISSING_FLOAT;
+                number.set(DecimalFloat.MISSING_FLOAT);
+                return number;
             }
         }
     }
@@ -181,7 +182,8 @@ public abstract class CommonDecoderImpl
             }
             else
             {
-                return DecimalFloat.MISSING_FLOAT;
+                number.set(DecimalFloat.MISSING_FLOAT);
+                return number;
             }
         }
     }

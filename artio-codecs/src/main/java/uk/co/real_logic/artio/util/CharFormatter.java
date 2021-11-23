@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.util;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import static org.agrona.AsciiEncoding.endOffset;
+import static org.agrona.AsciiEncoding.digitCount;
 import static uk.co.real_logic.artio.util.AsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.artio.util.AsciiBuffer.LONGEST_LONG_LENGTH;
 
@@ -32,6 +32,7 @@ public class CharFormatter
     private static final Pattern PATTERN = Pattern.compile("%s");
     private static final Pattern NEWLINE = Pattern.compile("%n");
     private static final char[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).toCharArray();
+    private static final char[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).toCharArray();
 
     private final String formatString;
     private final char[][] segments;
@@ -153,14 +154,14 @@ public class CharFormatter
     {
         if (value == 0)
         {
-            buffer[0] = '0';
+            buffer[index] = '0';
             return 1;
         }
 
         if (value == Integer.MIN_VALUE)
         {
             final int length = MIN_INTEGER_VALUE.length;
-            System.arraycopy(MIN_INTEGER_VALUE, 0, buffer, 0, length);
+            System.arraycopy(MIN_INTEGER_VALUE, 0, buffer, index, length);
             return length;
         }
 
@@ -175,7 +176,7 @@ public class CharFormatter
             quotient = -quotient;
         }
 
-        int i = endOffset(quotient);
+        int i = digitCount(quotient) - 1;
         length += i;
 
         while (i >= 0)
@@ -193,14 +194,14 @@ public class CharFormatter
     {
         if (value == 0)
         {
-            buffer[0] = '0';
+            buffer[index] = '0';
             return 1;
         }
 
         if (value == Long.MIN_VALUE)
         {
-            final int length = MIN_INTEGER_VALUE.length;
-            System.arraycopy(MIN_INTEGER_VALUE, 0, buffer, 0, length);
+            final int length = MIN_LONG_VALUE.length;
+            System.arraycopy(MIN_LONG_VALUE, 0, buffer, index, length);
             return length;
         }
 
@@ -215,7 +216,7 @@ public class CharFormatter
             quotient = -quotient;
         }
 
-        int i = endOffset(quotient);
+        int i = digitCount(quotient) - 1;
         length += i;
 
         while (i >= 0)

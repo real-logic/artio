@@ -107,19 +107,27 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Unbinds the acceptor socket, and disconnects currently connected TCP connections if requested.
+     * Unbinds the acceptor socket, and optionally starts an end of day
+     * operation if requested. The end of day operation performs the following
+     * steps:
+     *
+     * <ol>
+     *     <li>Sends a logout message to every FIX counter-party</li>
+     *     <li>Disconnects each FIX connection after it receives either a logout reply
+     *     or the heartbeat timeout elapses.</li>
+     *     <li>Disconnects the libraries from the engine</li>
+     * </ol>
      *
      * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
      * should be retried on a duty cycle.
      *
-     * @param disconnect if currently connected connections need to be disconnected
+     * @param endOfDay if currently connected connections need to be logged out and disconnected
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
-    public Reply<?> unbind(final boolean disconnect)
+    public Reply<?> unbind(final boolean endOfDay)
     {
-        return framerContext.unbind(disconnect);
+        return framerContext.unbind(endOfDay);
     }
-
 
     /**
      * Binds the acceptor socket to the configured address. This only needs to be called if you had called

@@ -37,7 +37,7 @@ public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(INVALID_INT_VALUE_MESSAGE);
 
         assertTargetThrows(() -> getIntField(decoder), NumberFormatException.class,
-            "'A' is not a valid digit @ 33 tag=116");
+            "error parsing int: A tag=116");
     }
 
     @Test

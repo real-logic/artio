@@ -32,6 +32,8 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.lang.ref.WeakReference;
 
+import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
+
 /**
  * Exposes Session methods to internal APIs that we don't want to expose to the outside world
  */
@@ -350,5 +352,10 @@ public class InternalSession extends Session implements AutoCloseable
     public void onReplayComplete()
     {
         super.onReplayComplete();
+    }
+
+    public void onSessionWriterLogout()
+    {
+        requestDisconnect(LOGOUT);
     }
 }

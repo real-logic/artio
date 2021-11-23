@@ -762,4 +762,20 @@ public class AbstractGatewayToGatewaySystemTest
             .get();
         assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
+
+    void sleep(final int timeInMs)
+    {
+        testSystem.awaitBlocking(() ->
+        {
+            try
+            {
+                Thread.sleep(timeInMs);
+            }
+            catch (final InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+    }
+
 }

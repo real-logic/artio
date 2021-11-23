@@ -2238,7 +2238,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (state != CONNECTED)
         {
-            throw new IllegalStateException("Library has been closed or is performing end of day operation");
+            throw new IllegalStateException(
+                "Library has been closed or is performing end of day operation, state = " + state);
         }
     }
 
