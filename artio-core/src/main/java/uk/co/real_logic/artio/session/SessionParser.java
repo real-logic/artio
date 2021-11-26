@@ -196,14 +196,23 @@ public class SessionParser
     private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final int refTagId,
         final long position)
     {
-        final Action action = rejectExceptionalMessage(messageType, refTagId, position);
-
-        if (action == CONTINUE)
+        try
         {
-            onError(e);
-        }
+            final Action action = rejectExceptionalMessage(messageType, refTagId, position);
+            if (action == CONTINUE)
+            {
+                onError(e);
+            }
 
-        return action;
+            return action;
+        }
+        catch (final Exception secondEx)
+        {
+            // Case that sending the reject has also failed
+            secondEx.addSuppressed(e);
+            onError(secondEx);
+            return CONTINUE;
+        }
     }
 
     private Action rejectExceptionalMessage(final long messageType, final int refTagId, final long position)
