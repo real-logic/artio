@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="20"
+                   version="21"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -148,6 +148,9 @@
                         description="Session has been disconnected.">9</validValue>
             <validValue name="DISABLED"
                         description="DISCONNECTED and unable to reconnect.">10</validValue>
+            <validValue name="AWAITING_ASYNC_PROXY_LOGOUT"
+                        description="Logout has been sent on an async SessionProxy, the session is waiting for it to be written via a SessionWriter."
+                        sinceVersion="21">11</validValue>
         </enum>
         <enum name="SequenceNumberType" encodingType="uint8">
             <validValue name="TRANSIENT">0</validValue>

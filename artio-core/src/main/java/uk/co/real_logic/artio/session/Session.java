@@ -470,10 +470,18 @@ public class Session
         }
         else
         {
-            awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
-            state(AWAITING_LOGOUT);
+            if (!proxy.isAsync())
+            {
+                onStartLogout();
+            }
         }
         return position;
+    }
+
+    void onStartLogout()
+    {
+        awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
+        state(AWAITING_LOGOUT);
     }
 
     /**
@@ -548,7 +556,11 @@ public class Session
             else
             {
                 // Delay disconnect until the reply logout has been round-tripped via the cluster
-                if (proxy instanceof DirectSessionProxy)
+                if (proxy.isAsync())
+                {
+                    state(AWAITING_ASYNC_PROXY_LOGOUT);
+                }
+                else
                 {
                     position = requestDisconnect(reason);
                 }
@@ -2240,9 +2252,7 @@ public class Session
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
-                final long position = trySendLogout();
-
-                state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
+                logoutAndDisconnect(APPLICATION_DISCONNECT);
 
                 return 1;
             }

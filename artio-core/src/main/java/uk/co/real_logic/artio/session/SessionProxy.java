@@ -108,4 +108,12 @@ public interface SessionProxy
     boolean seqNumResetRequested();
 
     long sendCancelOnDisconnectTrigger(long id, long timeInNs);
+
+    /**
+     * Determines whether this implementation is asynchronous, for example, that it round-trips a message
+     * via an external cluster system and then writes out the message via a follower session.
+     *
+     * @return true if asynchronous, false otherwise.
+     */
+    boolean isAsync();
 }
