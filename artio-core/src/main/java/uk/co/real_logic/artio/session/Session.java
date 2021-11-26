@@ -1199,6 +1199,7 @@ public class Session
         else if (state == DISCONNECTED || state == DISABLED)
         {
             // Ignore any messages sent by the counter-party after a logout has occurred.
+            messageInfo.isValid(false);
             return CONTINUE;
         }
         else
@@ -1811,7 +1812,8 @@ public class Session
         final boolean possDup,
         final long position)
     {
-        if (msgSeqNo == expectedReceivedSeqNum())
+        final SessionState state = this.state;
+        if (msgSeqNo == expectedReceivedSeqNum() && state != DISCONNECTED && state != DISABLED)
         {
             final int sentSeqNum = newSentSeqNum();
             final long sentPosition = proxy.sendHeartbeat(
