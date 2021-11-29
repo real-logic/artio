@@ -187,7 +187,8 @@ public class EngineContext implements AutoCloseable
             connectionIdToILinkUuid,
             configuration.supportedFixPProtocolType(),
             reader,
-            configuration.timeIndexReplayFlushIntervalInNs());
+            configuration.timeIndexReplayFlushIntervalInNs(),
+            streamId == configuration.outboundLibraryStream());
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)

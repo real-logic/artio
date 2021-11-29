@@ -54,7 +54,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
  * Tail position counter
  * Multiple ReplayIndexRecord entries
  */
-public class ReplayIndex implements Index
+public class ReplayIndex implements Index, RedactHandler
 {
     private static final long NO_TIMESTAMP = -1;
 
@@ -84,6 +84,7 @@ public class ReplayIndex implements Index
     private final ErrorHandler errorHandler;
     private final RecordingIdLookup recordingIdLookup;
     private final TimeIndexWriter timeIndex;
+    private final SessionOwnershipTracker sessTracker;
 
     public ReplayIndex(
         final String logFileDir,
@@ -98,7 +99,8 @@ public class ReplayIndex implements Index
         final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType,
         final SequenceNumberIndexReader reader,
-        final long timeIndexReplayFlushIntervalInNs)
+        final long timeIndexReplayFlushIntervalInNs,
+        final boolean sent)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
@@ -108,6 +110,7 @@ public class ReplayIndex implements Index
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
+        sessTracker = new SessionOwnershipTracker(sent, this);
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
@@ -194,11 +197,16 @@ public class ReplayIndex implements Index
             switch (templateId)
             {
                 case FixMessageEncoder.TEMPLATE_ID:
+                {
                     messageFrame.wrap(srcBuffer, offset, blockLength, version);
-                    onFixMessage(
-                        srcBuffer, header, recordingId, endPosition,
-                        length, offset, blockLength, version, beginMessage);
+                    if (!sessTracker.messageFromWrongLibrary(messageFrame.session(), messageFrame.libraryId()))
+                    {
+                        onFixMessage(
+                            srcBuffer, header, recordingId, endPosition,
+                            length, offset, blockLength, version, beginMessage);
+                    }
                     break;
+                }
 
                 case ThrottleNotificationDecoder.TEMPLATE_ID:
                 {
@@ -206,9 +214,12 @@ public class ReplayIndex implements Index
                     final int sequenceNumber = throttleNotification.refSeqNum();
                     final long fixSessionId = throttleNotification.session();
                     final int sequenceIndex = throttleNotification.sequenceIndex();
-
-                    sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, NO_TIMESTAMP);
+                    if (!sessTracker.messageFromWrongLibrary(fixSessionId, throttleNotification.libraryId()))
+                    {
+                        sessionIndex(fixSessionId).onRecord(
+                            endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId,
+                            NO_TIMESTAMP);
+                    }
                     break;
                 }
 
@@ -218,9 +229,12 @@ public class ReplayIndex implements Index
                     final int sequenceNumber = throttleReject.sequenceNumber();
                     final long fixSessionId = throttleReject.session();
                     final int sequenceIndex = throttleReject.sequenceIndex();
-
-                    sessionIndex(fixSessionId).onRecord(
-                        endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, NO_TIMESTAMP);
+                    if (!sessTracker.messageFromWrongLibrary(fixSessionId, throttleReject.libraryId()))
+                    {
+                        sessionIndex(fixSessionId).onRecord(
+                            endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId,
+                            NO_TIMESTAMP);
+                    }
                     break;
                 }
 
@@ -241,6 +255,12 @@ public class ReplayIndex implements Index
                 {
                     redactSequenceUpdateDecoder.wrap(srcBuffer, offset, blockLength, version);
                     onRedactSequenceUpdateDecoder();
+                    break;
+                }
+
+                case ManageSessionDecoder.TEMPLATE_ID:
+                {
+                    sessTracker.onManageSession(srcBuffer, offset, blockLength, version);
                     break;
                 }
             }
@@ -373,6 +393,10 @@ public class ReplayIndex implements Index
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
         positionReader.readLastPosition(consumer);
+    }
+
+    public void onRedact(final long sessionId, final int lastSequenceNumber)
+    {
     }
 
     private final class SessionIndex implements AutoCloseable
