@@ -132,6 +132,7 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
+        TestHelper.clearPollStatus(initiatingLibrary);
         Exceptions.closeAll(
             this::closeInitiatingEngine,
             this::closeAcceptingEngine,
@@ -153,7 +154,6 @@ public class AbstractGatewayToGatewaySystemTest
 
     void closeInitiatingEngine()
     {
-        TestHelper.clearPollStatus(initiatingLibrary);
         closeEngine(initiatingEngine);
         validateReplayIndex(initiatingEngine, initiatingSession);
     }
