@@ -74,7 +74,7 @@ public final class LibraryConfiguration extends CommonConfiguration
         {
             libraryId = ThreadLocalRandom.current().nextInt();
         }
-        while (libraryId == ENGINE_LIBRARY_ID);
+        while (libraryId == ENGINE_LIBRARY_ID || libraryId < ENGINE_LIBRARY_ID);
 
         this.libraryId = libraryId;
     }

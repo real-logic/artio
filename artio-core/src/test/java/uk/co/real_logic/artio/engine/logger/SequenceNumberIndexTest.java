@@ -453,7 +453,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
             DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null,
             new Long2LongHashMap(UNK_SESSION),
-            FixPProtocolType.ILINK_3);
+            FixPProtocolType.ILINK_3, true);
     }
 
     private MappedFile newIndexFile()

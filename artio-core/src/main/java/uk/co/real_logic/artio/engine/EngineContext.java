@@ -112,7 +112,8 @@ public class EngineContext implements AutoCloseable
                 epochClock,
                 configuration.logFileDir(),
                 connectionIdToFixPSessionId,
-                fixPProtocolType);
+                fixPProtocolType,
+                true);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -123,7 +124,8 @@ public class EngineContext implements AutoCloseable
                 epochClock,
                 null,
                 connectionIdToFixPSessionId,
-                fixPProtocolType);
+                fixPProtocolType,
+                false);
 
             newStreams();
             newArchivingAgent();

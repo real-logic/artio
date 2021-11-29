@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 import java.util.function.Function;
@@ -91,4 +92,8 @@ final class LibraryDriver implements AutoCloseable
         testSystem.poll();
     }
 
+    public Session requestSession(final long sessionId)
+    {
+        return SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
+    }
 }

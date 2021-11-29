@@ -21,7 +21,10 @@ import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.*;
+import org.agrona.collections.CollectionUtil;
+import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -47,6 +50,7 @@ import java.util.function.Predicate;
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -77,6 +81,7 @@ public class SequenceNumberIndexWriter implements Index
     private final ThrottleNotificationDecoder throttleNotification = new ThrottleNotificationDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
+    private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -92,6 +97,7 @@ public class SequenceNumberIndexWriter implements Index
     private final SequenceNumberIndexReader reader;
     private byte[] metaDataWriteBuffer = new byte[0];
     private final Long2ObjectHashMap<LongHashSet> sessionIdToRedactPositions = new Long2ObjectHashMap<>();
+    private final Long2LongHashMap sessionIdToLibraryId = new Long2LongHashMap(MISSING_RECORD);
 
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private FramerContext framerContext;
@@ -112,6 +118,7 @@ public class SequenceNumberIndexWriter implements Index
     private long nextRollPosition = UNINITIALISED;
 
     private final EpochClock clock;
+    private final boolean sent;
     private final long indexFileStateFlushTimeoutInMs;
     private long lastUpdatedFileTimeInMs;
     private boolean hasSavedRecordSinceFileUpdate = false;
@@ -126,7 +133,8 @@ public class SequenceNumberIndexWriter implements Index
         final EpochClock clock,
         final String metaDataDir,
         final Long2LongHashMap connectionIdToFixPSessionId,
-        final FixPProtocolType fixPProtocolType)
+        final FixPProtocolType fixPProtocolType,
+        final boolean sent)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -135,6 +143,7 @@ public class SequenceNumberIndexWriter implements Index
         this.fileCapacity = indexFile.buffer().capacity();
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
+        this.sent = sent;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
@@ -336,6 +345,13 @@ public class SequenceNumberIndexWriter implements Index
                     break;
                 }
 
+                case ManageSessionDecoder.TEMPLATE_ID:
+                {
+                    manageSession.wrap(buffer, offset, actingBlockLength, version);
+                    onManageSessionMessage();
+                    break;
+                }
+
                 default:
                 {
                     fixPSequenceIndexer.onFragment(buffer, srcOffset, length, header);
@@ -346,6 +362,29 @@ public class SequenceNumberIndexWriter implements Index
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
         positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
+    }
+
+    private void onManageSessionMessage()
+    {
+        final int libraryId = manageSession.libraryId();
+        final long sessionId = manageSession.session();
+        final int lastSequenceNumber = sent ? manageSession.lastSentSequenceNumber() :
+            manageSession.lastReceivedSequenceNumber();
+
+        // Cover the case where the engine has acquired a session from a library and we've already indexed a message
+        // that was from the wrong library
+        final int lastKnownSequenceNumber = reader.lastKnownSequenceNumber(sessionId);
+
+        if (lastKnownSequenceNumber > lastSequenceNumber && lastSequenceNumber != 0)
+        {
+            /*System.out.println("SequenceNumberIndexWriter.onManageSessionMessage, lastKnownSequenceNumber = " +
+                lastKnownSequenceNumber + ", lastSequenceNumber = " + lastSequenceNumber);*/
+            onRedactSequenceUpdate(lastSequenceNumber, sessionId, NO_REQUIRED_POSITION);
+        }
+
+        /*System.out.println("SequenceNumberIndexWriter.onManageSessionMessage, sessionId = " +
+            sessionId + ", libraryId = " + libraryId);*/
+        sessionIdToLibraryId.put(sessionId, libraryId);
     }
 
     private void onFollowerSessionReply()
@@ -363,8 +402,9 @@ public class SequenceNumberIndexWriter implements Index
         final ThrottleRejectDecoder throttleReject = this.throttleReject;
         final long sessionId = throttleReject.session();
         final int sequenceNumber = throttleReject.sequenceNumber();
+        final int libraryId = throttleReject.libraryId();
 
-        return onThrottle(position, sessionId, sequenceNumber);
+        return onThrottle(position, sessionId, sequenceNumber, libraryId);
     }
 
     private boolean onThrottleNotification(final long position)
@@ -372,12 +412,19 @@ public class SequenceNumberIndexWriter implements Index
         final ThrottleNotificationDecoder throttleNotification = this.throttleNotification;
         final long sessionId = throttleNotification.session();
         final int sequenceNumber = throttleNotification.refSeqNum();
+        final int libraryId = throttleNotification.libraryId();
 
-        return onThrottle(position, sessionId, sequenceNumber);
+        return onThrottle(position, sessionId, sequenceNumber, libraryId);
     }
 
-    private boolean onThrottle(final long position, final long sessionId, final int sequenceNumber)
+    private boolean onThrottle(
+        final long position, final long sessionId, final int sequenceNumber, final int libraryId)
     {
+        if (messageFromWrongLibrary(sessionId, libraryId))
+        {
+            return false;
+        }
+
         if (checkRedactPosition(position, sessionId))
         {
             return false;
@@ -457,6 +504,14 @@ public class SequenceNumberIndexWriter implements Index
             return false;
         }
 
+        final int libraryId = messageFrame.libraryId();
+
+        if (messageFromWrongLibrary(sessionId, libraryId))
+        {
+            // System.out.println("DROPPED! " + buffer.getStringWithoutLengthAscii(offset, messageFrame.bodyLength()));
+            return false;
+        }
+
         offset += FixMessageDecoder.bodyHeaderLength();
         final int msgSeqNum = sequenceNumberExtractor.extract(buffer, offset, messageFrame.bodyLength());
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
@@ -468,6 +523,15 @@ public class SequenceNumberIndexWriter implements Index
             }
         }
         return true;
+    }
+
+    private boolean messageFromWrongLibrary(final long sessionId, final int libraryId)
+    {
+        final long expectedLibraryId = sessionIdToLibraryId.get(sessionId);
+        return expectedLibraryId != MISSING_RECORD &&
+            libraryId != expectedLibraryId && libraryId != ENGINE_LIBRARY_ID;
+        /*System.out.println("SequenceNumberIndexWriter.messageFromWrongLibrary: " + b +
+            ", expectedLibraryId = " + expectedLibraryId + ", libraryId = " + libraryId);*/
     }
 
     private boolean checkRedactPosition(final long messagePosition, final long sessionId)

@@ -87,7 +87,7 @@ import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.artio.messages.SessionStatus.SESSION_HANDOVER;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -141,8 +141,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final FixSenderEndPoints fixSenderEndPoints;
     private final CountersReader countersReader;
     private final long outboundIndexRegistrationId;
-    private SenderSequenceNumbers senderSequenceNumbers;
-    private FixCounters fixCounters;
+    private final SenderSequenceNumbers senderSequenceNumbers;
+    private final FixCounters fixCounters;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
     private final EngineConfiguration configuration;
@@ -605,12 +605,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     session.password(),
                     engineBlockablePosition);
 
-                schedule(() -> saveManageSession(
-                    ENGINE_LIBRARY_ID,
-                    session,
-                    sentSequenceNumber,
-                    receivedSequenceNumber,
-                    SessionStatus.LIBRARY_NOTIFICATION));
+                schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
 
                 if (performingDisconnectOperation)
                 {
@@ -1892,13 +1887,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // logging on at this point in time.
                 if (session != null)
                 {
-                    unitsOfWork.add(
-                        () -> saveManageSession(
+                    unitsOfWork.add(saveManageSession(
                         libraryId,
-                        fixGatewaySession,
-                        session.lastSentMsgSeqNum(),
-                        session.lastReceivedMsgSeqNum(),
-                        LIBRARY_NOTIFICATION));
+                        fixGatewaySession));
                 }
             }
         }
@@ -2000,12 +1991,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     password,
                     engineBlockablePosition);
 
-                schedule(() -> saveManageSession(
-                    ENGINE_LIBRARY_ID,
-                    session,
-                    lastSentSequenceNumber,
-                    lastReceivedSequenceNumber,
-                    SessionStatus.LIBRARY_NOTIFICATION));
+                schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
             }
         }
 
@@ -2245,8 +2231,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private final LiveLibraryInfo libraryInfo;
         private final FixGatewaySession gatewaySession;
         private final InternalSession session;
-        private final long connectionId;
         private final long sessionId;
+        private final long connectionId;
 
         // captured in awaitGatewaySessionMessagesSent
         private int lastSentSeqNum;
@@ -2264,27 +2250,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             libraryId = libraryInfo.libraryId();
             session = gatewaySession.session();
-            connectionId = gatewaySession.connectionId();
             sessionId = session.id();
 
+            connectionId = gatewaySession.connectionId();
             final DirectBuffer buffer = new UnsafeBuffer();
             final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
 
             workList.add(this::awaitGatewaySessionMessagesSent);
             workList.add(this::awaitIndexer);
 
-            workList.add(() -> saveManageSession(
-                libraryId,
-                gatewaySession,
-                lastSentSeqNum,
-                lastRecvSeqNum,
-                SessionStatus.SESSION_HANDOVER,
-                session.compositeKey(),
-                connectionId,
-                session,
-                correlationId,
-                status,
-                buffer));
+            workList.add(new UnitOfWork(
+                () -> saveManageSessionTo(correlationId, status, buffer, outboundPublication),
+                () -> saveManageSessionTo(correlationId, status, buffer, inboundPublication)));
             scheduleCatchupSession(
                 workList,
                 libraryId,
@@ -2315,6 +2292,55 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
 
             return COMPLETE;
+        }
+
+        private long saveManageSessionTo(
+            final long correlationId,
+            final MetaDataStatus metaDataStatus,
+            final DirectBuffer metaData,
+            final GatewayPublication publication)
+        {
+            final CompositeKey compositeKey = session.compositeKey();
+            return publication.saveManageSession(
+                libraryId,
+                connectionId,
+                gatewaySession.sessionId(),
+                lastSentSeqNum,
+                lastRecvSeqNum,
+                SessionStatus.SESSION_HANDOVER,
+                gatewaySession.slowStatus(),
+                gatewaySession.connectionType(),
+                session.state(),
+                session.awaitingResend(),
+                gatewaySession.heartbeatIntervalInS(),
+                gatewaySession.closedResendInterval(),
+                gatewaySession.resendRequestChunkSize(),
+                gatewaySession.sendRedundantResendRequests(),
+                gatewaySession.enableLastMsgSeqNumProcessed(),
+                correlationId,
+                gatewaySession.sequenceIndex(),
+                session.lastResentMsgSeqNo(),
+                session.lastResendChunkMsgSeqNum(),
+                session.endOfResendRequestRange(),
+                session.awaitingHeartbeat(),
+                gatewaySession.logonReceivedSequenceNumber(),
+                gatewaySession.logonSequenceIndex(),
+                session.lastLogonTimeInNs(),
+                session.lastSequenceResetTimeInNs(),
+                compositeKey.localCompId(),
+                compositeKey.localSubId(),
+                compositeKey.localLocationId(),
+                compositeKey.remoteCompId(),
+                compositeKey.remoteSubId(),
+                compositeKey.remoteLocationId(),
+                gatewaySession.address(),
+                gatewaySession.username(),
+                gatewaySession.password(),
+                gatewaySession.fixDictionary().getClass(),
+                metaDataStatus,
+                metaData,
+                gatewaySession.cancelOnDisconnectOption(),
+                gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
         }
     }
 
@@ -2432,7 +2458,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryInfo.addSession(gatewaySession);
 
                 workList.add(this::checkLoggerUpToDate);
-                workList.add(this::saveManageSession);
+                workList.add(() -> saveManageSession(outboundPublication));
+                workList.add(() -> saveManageSession(inboundPublication));
                 scheduleCatchupSession(
                     workList,
                     libraryId,
@@ -2469,7 +2496,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return COMPLETE;
         }
 
-        private long saveManageSession()
+        private long saveManageSession(final GatewayPublication inboundPublication)
         {
             return inboundPublication.saveManageSession(
                 libraryInfo.libraryId(),
@@ -2477,7 +2504,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.sessionId(),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
-                SessionStatus.SESSION_HANDOVER,
+                SESSION_HANDOVER,
                 SlowStatus.NOT_SLOW,
                 gatewaySession.connectionType(),
                 SessionState.DISCONNECTED,
@@ -2670,50 +2697,55 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionId)));
     }
 
-    private long saveManageSession(
+    private Continuation saveManageSession(
         final int libraryId,
-        final FixGatewaySession gatewaySession,
-        final int lastSentSeqNum,
-        final int lastReceivedSeqNum,
-        final SessionStatus sessionstatus)
+        final FixGatewaySession gatewaySession)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
         {
-            final long connectionId = gatewaySession.connectionId();
-
             final InternalSession session = gatewaySession.session();
             return saveManageSession(
                 libraryId,
                 gatewaySession,
-                lastSentSeqNum,
-                lastReceivedSeqNum,
-                sessionstatus,
+                SessionStatus.LIBRARY_NOTIFICATION,
                 compositeKey,
-                connectionId,
                 session,
                 NO_CORRELATION_ID,
                 MetaDataStatus.NULL_VAL,
                 NULL_METADATA);
         }
 
-        return COMPLETE;
+        return () -> COMPLETE;
     }
 
-    private long saveManageSession(
+    private UnitOfWork saveManageSession(
         final int libraryId,
         final FixGatewaySession gatewaySession,
-        final int lastSentSeqNum,
-        final int lastReceivedSeqNum,
         final SessionStatus sessionstatus,
         final CompositeKey compositeKey,
-        final long connectionId,
         final InternalSession session,
         final long correlationId,
         final MetaDataStatus metaDataStatus,
         final DirectBuffer metaData)
     {
-        return inboundPublication.saveManageSession(
+        return new UnitOfWork(
+            () -> saveManageSessionTo(libraryId, gatewaySession, sessionstatus,
+                compositeKey, session, correlationId, metaDataStatus, metaData, inboundPublication),
+            () -> saveManageSessionTo(libraryId, gatewaySession, sessionstatus,
+                compositeKey, session, correlationId, metaDataStatus, metaData, outboundPublication));
+    }
+
+    private long saveManageSessionTo(
+        final int libraryId, final FixGatewaySession gatewaySession, final SessionStatus sessionstatus,
+        final CompositeKey compositeKey, final InternalSession session, final long correlationId,
+        final MetaDataStatus metaDataStatus, final DirectBuffer metaData, final GatewayPublication publication)
+    {
+        final long connectionId = gatewaySession.connectionId();
+        final int lastSentSeqNum = session.lastSentMsgSeqNum();
+        final int lastReceivedSeqNum = session.lastReceivedMsgSeqNum();
+
+        return publication.saveManageSession(
             libraryId,
             connectionId,
             gatewaySession.sessionId(),
@@ -2851,28 +2883,33 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (!soleLibraryMode)
         {
             // Notify libraries of the existence of this logged on session.
-            schedule(() ->
+            schedule(new Continuation()
             {
-                final InternalSession session = gatewaySession.session();
-                if (null == session)
-                {
-                    // Another library is now handling the session, don't publish availability.
-                    return COMPLETE;
-                }
+                private final CompositeKey key = gatewaySession.sessionKey();
+                private InternalSession session = gatewaySession.session();
 
-                final CompositeKey key = gatewaySession.sessionKey();
-                return saveManageSession(
+                private final Continuation saveManageSession = session == null ? null : saveManageSession(
                     ENGINE_LIBRARY_ID,
                     gatewaySession,
-                    session.lastSentMsgSeqNum(),
-                    session.lastReceivedMsgSeqNum(),
-                    SessionStatus.SESSION_HANDOVER,
+                    SESSION_HANDOVER,
                     key,
-                    gatewaySession.connectionId(),
                     session,
                     NO_CORRELATION_ID,
                     MetaDataStatus.NULL_VAL,
                     NULL_METADATA);
+
+                @Override
+                public long attempt()
+                {
+                    session = gatewaySession.session();
+                    if (session == null)
+                    {
+                        // Another library is now handling the session, don't publish availability.
+                        return COMPLETE;
+                    }
+
+                    return saveManageSession.attempt();
+                }
             });
         }
     }
@@ -3474,14 +3511,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             if (configuration.logAllMessages())
             {
-                work(this::checkLoggerUpToDate, this::saveManageSession);
+                work(this::checkLoggerUpToDate, this::saveManageSessionOutbound, this::saveManageSessionInbound);
             }
             else
             {
                 noMetaData();
                 gatewaySession.lastLogonWasSequenceReset();
 
-                work(this::onLogon, this::saveManageSession);
+                work(this::onLogon, this::saveManageSessionOutbound, this::saveManageSessionInbound);
             }
         }
 
@@ -3579,20 +3616,42 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return COMPLETE;
         }
 
-        private long saveManageSession()
+        private long saveManageSessionOutbound()
         {
             if (checkDisconnectDuringHandover())
             {
                 return COMPLETE;
             }
 
-            final long position = inboundPublication.saveManageSession(
+            return saveManageSession(outboundPublication);
+        }
+
+        private long saveManageSessionInbound()
+        {
+            if (checkDisconnectDuringHandover())
+            {
+                return COMPLETE;
+            }
+
+            final long position = saveManageSession(inboundPublication);
+            if (position > 0)
+            {
+                library.connectionFinishesConnecting(correlationId);
+                gatewaySession.play();
+            }
+
+            return position;
+        }
+
+        private long saveManageSession(final GatewayPublication publication)
+        {
+            return publication.saveManageSession(
                 libraryId,
                 connectionId,
                 sessionId,
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
-                SessionStatus.SESSION_HANDOVER,
+                SESSION_HANDOVER,
                 SlowStatus.NOT_SLOW,
                 connectionType,
                 CONNECTED,
@@ -3626,14 +3685,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 metaDataBuffer,
                 cancelOnDisconnectOption,
                 cancelOnDisconnectTimeoutWindowInNs);
-
-            if (position > 0)
-            {
-                library.connectionFinishesConnecting(correlationId);
-                gatewaySession.play();
-            }
-
-            return position;
         }
     }
 

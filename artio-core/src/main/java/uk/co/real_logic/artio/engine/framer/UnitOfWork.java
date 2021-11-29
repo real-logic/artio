@@ -15,13 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import uk.co.real_logic.artio.Pressure;
 
 import java.util.Arrays;
 import java.util.List;
-
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class UnitOfWork implements Continuation
 {
@@ -43,24 +40,19 @@ class UnitOfWork implements Continuation
         this.workList = workList;
     }
 
-    public Action attemptToAction()
+    public long attempt()
     {
         for (final int size = workList.size(); index < size; index++)
         {
             final Continuation continuation = workList.get(index);
-            final Action action = continuation.attemptToAction();
+            final long position = continuation.attempt();
 
-            if (action == ABORT)
+            if (Pressure.isBackPressured(position))
             {
-                return ABORT;
+                return position;
             }
         }
 
-        return CONTINUE;
-    }
-
-    public long attempt()
-    {
-        return 0;
+        return COMPLETE;
     }
 }

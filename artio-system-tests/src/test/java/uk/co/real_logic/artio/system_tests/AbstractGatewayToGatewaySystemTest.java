@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.library.TestHelper;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
@@ -142,6 +143,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     void closeAcceptingLibrary()
     {
+        TestHelper.clearPollStatus(acceptingLibrary);
         CloseHelper.close(acceptingLibrary);
         if (testSystem != null)
         {
@@ -151,6 +153,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     void closeInitiatingEngine()
     {
+        TestHelper.clearPollStatus(initiatingLibrary);
         closeEngine(initiatingEngine);
         validateReplayIndex(initiatingEngine, initiatingSession);
     }

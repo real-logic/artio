@@ -668,11 +668,39 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void engineShouldAcquireTimedOutAcceptingSessions()
     {
+        final String invalidTestReqId = "Too Late";
+
         acquireAcceptingSession();
 
         testSystem.remove(acceptingLibrary);
 
-        acceptingEngineHasSessionAndLibraryIsNotified();
+        final LibraryDriver driver = LibraryDriver.accepting(testSystem, nanoClock);
+        try (LibraryDriver library2 = driver)
+        {
+            library2.becomeOnlyLibraryConnectedTo(acceptingEngine);
+
+            // Send an invalid message in order to test that it doesn't get through to the counter-party
+            final int lastSentMsgSeqNum = acceptingSession.lastSentMsgSeqNum();
+            SystemTestUtil.sendTestRequest(testSystem, acceptingSession, invalidTestReqId);
+
+            final LibraryInfo engineLibraryInfo = engineLibrary(libraries(acceptingEngine));
+
+            assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
+            assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
+            assertSameSession(sessionId, acceptingSession);
+
+            final Session session = library2.requestSession(sessionId.surrogateId());
+            assertEquals(lastSentMsgSeqNum, session.lastSentMsgSeqNum());
+
+            logoutInitiatingSession();
+            assertSessionDisconnected(initiatingSession);
+        }
+
+        assertThat(initiatingOtfAcceptor.messages().toString(), not(containsString(invalidTestReqId)));
+
+        // TODO: check with FAS
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

@@ -162,6 +162,11 @@ public class FixLibrary extends GatewayProcess
         }
     }
 
+    void clearPollStatus()
+    {
+        isPolling = false;
+    }
+
     /**
      * Check if the library is connected to an engine.
      * <p>
