@@ -470,10 +470,18 @@ public class Session
         }
         else
         {
-            awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
-            state(AWAITING_LOGOUT);
+            if (!proxy.isAsync())
+            {
+                onStartLogout();
+            }
         }
         return position;
+    }
+
+    void onStartLogout()
+    {
+        awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
+        state(AWAITING_LOGOUT);
     }
 
     /**
@@ -548,7 +556,11 @@ public class Session
             else
             {
                 // Delay disconnect until the reply logout has been round-tripped via the cluster
-                if (proxy instanceof DirectSessionProxy)
+                if (proxy.isAsync())
+                {
+                    state(AWAITING_ASYNC_PROXY_LOGOUT);
+                }
+                else
                 {
                     position = requestDisconnect(reason);
                 }
@@ -1187,6 +1199,7 @@ public class Session
         else if (state == DISCONNECTED || state == DISABLED)
         {
             // Ignore any messages sent by the counter-party after a logout has occurred.
+            messageInfo.isValid(false);
             return CONTINUE;
         }
         else
@@ -1799,7 +1812,8 @@ public class Session
         final boolean possDup,
         final long position)
     {
-        if (msgSeqNo == expectedReceivedSeqNum())
+        final SessionState state = this.state;
+        if (msgSeqNo == expectedReceivedSeqNum() && state != DISCONNECTED && state != DISABLED)
         {
             final int sentSeqNum = newSentSeqNum();
             final long sentPosition = proxy.sendHeartbeat(
@@ -2240,9 +2254,7 @@ public class Session
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
-                final long position = trySendLogout();
-
-                state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
+                logoutAndDisconnect(APPLICATION_DISCONNECT);
 
                 return 1;
             }
@@ -2332,7 +2344,7 @@ public class Session
         proxy.libraryConnected(libraryConnected);
     }
 
-    void sequenceIndex(final int sequenceIndex)
+    public void sequenceIndex(final int sequenceIndex)
     {
         this.sequenceIndex = sequenceIndex;
     }

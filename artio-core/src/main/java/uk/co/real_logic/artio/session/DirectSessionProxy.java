@@ -493,4 +493,9 @@ public class DirectSessionProxy implements SessionProxy
     {
         return gatewayPublication.saveCancelOnDisconnectTrigger(sessionId, timeInNs);
     }
+
+    public boolean isAsync()
+    {
+        return false;
+    }
 }

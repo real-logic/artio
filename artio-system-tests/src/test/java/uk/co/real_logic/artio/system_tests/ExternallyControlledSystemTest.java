@@ -172,9 +172,11 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldReceiveLogoutBeforeDisconnectInClusteredCase()
+    public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseInitiatorSentLogout()
     {
         connectSessions();
+
+        final SessionWriter followerSessionWriter = followerSession();
 
         // fake delaying a logout to simulate it round-tripping a cluster
         fakeSessionProxy.send(false);
@@ -182,11 +184,27 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         testSystem.awaitMessageOf(acceptingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
         assertEquals(1, fakeSessionProxy.sentLogouts);
 
-        testSystem.awaitSend(fakeSessionProxy::sendLogoutMessage);
+        testSystem.awaitSend(() -> fakeSessionProxy.sendLogoutMessage(followerSessionWriter));
 
         assertSessionDisconnected(initiatingSession);
         final FixMessage lastInitRecvMsg = initiatingOtfAcceptor.lastReceivedMessage();
         assertEquals(LOGOUT_MESSAGE_AS_STR, lastInitRecvMsg.msgType());
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseAcceptorSentLogout()
+    {
+        connectSessions();
+        awaitForwardingOfAcceptingSession();
+        final SessionWriter followerSession = followerSession();
+
+        testSystem.awaitSend(() -> fakeSessionProxy.setupAndSendLogoutMessage(2, followerSession));
+
+        testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+        assertSessionDisconnected(initiatingSession);
+
+        final FixMessage fixMessage = testSystem.awaitMessageOf(acceptingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+        assertTrue(fixMessage.isValid());
     }
 
     private FixMessage awaitMessageFromSessionWriter(final int lastReceivedMsgSeqNum, final int newOrderSingleSeqNum)
@@ -203,6 +221,15 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
     private SessionWriter writeMessageWithFollowerSessionWriter()
     {
+        final SessionWriter sessionWriter = followerSession();
+
+        writeMessageWith(sessionWriter, 1);
+
+        return sessionWriter;
+    }
+
+    private SessionWriter followerSession()
+    {
         final HeaderEncoder headerEncoder = new HeaderEncoder()
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID);
@@ -212,9 +239,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(COMPLETED, reply.state());
 
         final SessionWriter sessionWriter = reply.resultIfPresent();
-
-        writeMessageWith(sessionWriter, 1);
-
         return sessionWriter;
     }
 
@@ -395,7 +419,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
             if (send)
             {
-                return sendLogoutMessage();
+                return sendLogoutMessage(acceptingSessionWriter);
             }
             else
             {
@@ -403,9 +427,16 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             }
         }
 
-        long sendLogoutMessage()
+        long setupAndSendLogoutMessage(final int msgSeqNo, final SessionWriter sessionWriter)
         {
-            return acceptingSessionWriter.send(logout, logout.header().msgSeqNum());
+            final HeaderEncoder header = logout.header();
+            setupHeader(header, msgSeqNo);
+            return sendLogoutMessage(sessionWriter);
+        }
+
+        long sendLogoutMessage(final SessionWriter sessionWriter)
+        {
+            return sessionWriter.send(logout, logout.header().msgSeqNum());
         }
 
         public long sendLogout(
@@ -549,6 +580,11 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         {
             this.gatewayPublication = gatewayPublication;
             this.libraryId = libraryId;
+        }
+
+        public boolean isAsync()
+        {
+            return true;
         }
     }
 }
