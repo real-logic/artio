@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
@@ -333,6 +334,20 @@ public final class FixConnection implements AutoCloseable
             if (!decoder.validate())
             {
                 fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId());
+            }
+
+            // check MsgType in case we read an unexpected message, but with a compatible structure
+            try
+            {
+                final Field messageTypeAsStringField = decoder.getClass().getDeclaredField("MESSAGE_TYPE_AS_STRING");
+                final String expectedMsgType = (String)messageTypeAsStringField.get(null);
+                final SessionHeaderDecoder header = decoder.header();
+                final String actualMsgType = new String(header.msgType(), 0, header.msgTypeLength());
+                assertEquals("MsgType", expectedMsgType, actualMsgType);
+            }
+            catch (final NoSuchFieldException | IllegalAccessException e)
+            {
+                LangUtil.rethrowUnchecked(e);
             }
 
             readBuffer.clear();
