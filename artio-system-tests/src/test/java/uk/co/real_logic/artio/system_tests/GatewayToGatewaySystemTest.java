@@ -699,8 +699,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         }
 
         assertThat(initiatingOtfAcceptor.messages().toString(), not(containsString(invalidTestReqId)));
-
-        // TODO: check with FAS
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

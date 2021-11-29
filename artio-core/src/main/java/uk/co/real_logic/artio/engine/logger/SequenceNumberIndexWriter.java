@@ -496,7 +496,6 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
 
         if (sessionOwnershipTracker.messageFromWrongLibrary(sessionId, libraryId))
         {
-            // System.out.println("DROPPED! " + buffer.getStringWithoutLengthAscii(offset, messageFrame.bodyLength()));
             return false;
         }
 

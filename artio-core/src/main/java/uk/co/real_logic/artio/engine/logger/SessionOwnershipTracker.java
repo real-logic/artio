@@ -54,8 +54,6 @@ class SessionOwnershipTracker
 
         redactHandler.onRedact(sessionId, lastSequenceNumber);
 
-        /*System.out.println("SequenceNumberIndexWriter.onManageSessionMessage, sessionId = " +
-            sessionId + ", libraryId = " + libraryId);*/
         sessionIdToLibraryId.put(sessionId, libraryId);
     }
 
@@ -64,8 +62,6 @@ class SessionOwnershipTracker
         final long expectedLibraryId = sessionIdToLibraryId.get(sessionId);
         return expectedLibraryId != MISSING_SESSION &&
             libraryId != expectedLibraryId && libraryId != ENGINE_LIBRARY_ID;
-        /*System.out.println("SequenceNumberIndexWriter.messageFromWrongLibrary: " + b +
-            ", expectedLibraryId = " + expectedLibraryId + ", libraryId = " + libraryId);*/
     }
 }
 
