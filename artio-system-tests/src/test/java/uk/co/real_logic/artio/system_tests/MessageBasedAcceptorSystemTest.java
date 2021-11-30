@@ -212,9 +212,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             // The previous disconnection hasn't yet been detected as it's still active.
             assertTrue(session.isActive());
 
-            connection.msgSeqNum(3);
-
-            connection.logon(false);
+            connection.logon(true);
 
             // During this loop the logout message for the disconnected connection is sent,
             // But not received by the new connection.
