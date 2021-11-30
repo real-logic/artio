@@ -421,15 +421,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertFalse("Premature Acceptor Disconnect", acceptingHandler.hasDisconnected());
 
-        initiatingEngine.close();
+        closeInitiatingEngine();
         testSystem.remove(initiatingLibrary);
 
-        assertEventuallyTrue("Acceptor Disconnected",
-            () ->
-            {
-                testSystem.poll();
-                return acceptingHandler.hasDisconnected();
-            });
+        Timing.assertEventuallyTrue("Acceptor Disconnected", () ->
+        {
+            testSystem.poll();
+            return acceptingHandler.hasDisconnected();
+        }, 10_000);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

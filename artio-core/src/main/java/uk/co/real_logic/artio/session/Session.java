@@ -1009,6 +1009,17 @@ public class Session
         return sequenceIndex;
     }
 
+    /**
+     * Set the current sequence index. See {@link #sequenceIndex()} for details on the sequence index. Care should be
+     * taken when setting this value here as it isn't persisted until the next message is sent.
+     *
+     * @param sequenceIndex the current sequence index
+     */
+    public void sequenceIndex(final int sequenceIndex)
+    {
+        this.sequenceIndex = sequenceIndex;
+    }
+
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
@@ -2342,11 +2353,6 @@ public class Session
     void libraryConnected(final boolean libraryConnected)
     {
         proxy.libraryConnected(libraryConnected);
-    }
-
-    public void sequenceIndex(final int sequenceIndex)
-    {
-        this.sequenceIndex = sequenceIndex;
     }
 
     protected long sendingTime(final long sendingTime, final long origSendingTime)

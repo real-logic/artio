@@ -51,7 +51,6 @@ import uk.co.real_logic.artio.session.SessionWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static junit.framework.TestCase.assertTrue;
 import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -106,7 +105,6 @@ public class AbstractGatewayToGatewaySystemTest
     void launchGatewayToGateway()
     {
         final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH, true);
-        context.publicationLingerTimeoutNs(SECONDS.toNanos(1));
         mediaDriver = launchMediaDriver(context);
 
 //        logger = FixMessageLogger.start();
