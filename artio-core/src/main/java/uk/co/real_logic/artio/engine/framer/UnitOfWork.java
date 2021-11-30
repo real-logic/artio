@@ -55,4 +55,9 @@ class UnitOfWork implements Continuation
 
         return COMPLETE;
     }
+
+    void add(final Continuation continuation)
+    {
+        workList.add(continuation);
+    }
 }

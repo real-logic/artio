@@ -2119,7 +2119,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     class SessionHandover extends UnitOfWork
     {
         private final int aeronSessionId;
-        private final long requiredPosition;
+        long requiredPosition;
 
         SessionHandover()
         {
@@ -2256,12 +2256,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final DirectBuffer buffer = new UnsafeBuffer();
             final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
 
-            workList.add(this::awaitGatewaySessionMessagesSent);
-            workList.add(this::awaitIndexer);
+            add(this::awaitGatewaySessionMessagesSent);
+            add(() -> saveManageSessionTo(correlationId, status, buffer, outboundPublication));
+            add(this::awaitIndexer);
 
-            workList.add(new UnitOfWork(
-                () -> saveManageSessionTo(correlationId, status, buffer, outboundPublication),
-                () -> saveManageSessionTo(correlationId, status, buffer, inboundPublication)));
+            // Notify the library
+            add(() -> saveManageSessionTo(correlationId, status, buffer, inboundPublication));
             scheduleCatchupSession(
                 workList,
                 libraryId,
@@ -2301,13 +2301,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final GatewayPublication publication)
         {
             final CompositeKey compositeKey = session.compositeKey();
-            return publication.saveManageSession(
+            final long position = publication.saveManageSession(
                 libraryId,
                 connectionId,
                 gatewaySession.sessionId(),
                 lastSentSeqNum,
                 lastRecvSeqNum,
-                SessionStatus.SESSION_HANDOVER,
+                SESSION_HANDOVER,
                 gatewaySession.slowStatus(),
                 gatewaySession.connectionType(),
                 session.state(),
@@ -2341,6 +2341,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 metaData,
                 gatewaySession.cancelOnDisconnectOption(),
                 gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
+
+            if (position > 0)
+            {
+                // technically the wrong position is written on the inbound publication, but its always used
+                // in awaitIndexer() before then
+                this.requiredPosition = position;
+            }
+
+            return position;
         }
     }
 

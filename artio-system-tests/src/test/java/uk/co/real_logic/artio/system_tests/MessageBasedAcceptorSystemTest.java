@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.concurrent.status.ReadablePosition;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import uk.co.real_logic.artio.Constants;
@@ -368,13 +369,15 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             final int headerSeqNum = connection.exchangeTestRequestHeartbeat(testReqId).header().msgSeqNum();
 
             session = acquireSession();
-            ReportFactory.sendOneReport(testSystem, session, Side.SELL);
+            final long reportIndex = ReportFactory.sendOneReport(testSystem, session, Side.SELL);
+
+            final ReadablePosition libraryPosition = testSystem.awaitReply(
+                engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
+            testSystem.awaitPosition(libraryPosition, reportIndex);
 
             testSystem.awaitBlocking(() ->
             {
                 final int reportSeqNum = connection.readExecutionReport().header().msgSeqNum();
-
-                sleep(200);
 
                 // Send an invalid resend request
                 final int invalidSeqNum = reportSeqNum + 100;
@@ -382,7 +385,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
                 final SequenceResetDecoder sequenceResetDecoder = connection.readMessage(new SequenceResetDecoder());
                 assertTrue(sequenceResetDecoder.header().possDupFlag());
-                assertEquals(reportSeqNum, sequenceResetDecoder.newSeqNo());
+                assertEquals(connection.lastMessageAsString(), reportSeqNum, sequenceResetDecoder.newSeqNo());
                 final ExecutionReportDecoder secondExecutionReport = connection.readExecutionReport();
                 assertTrue(secondExecutionReport.header().possDupFlag());
                 assertEquals(reportSeqNum, secondExecutionReport.header().msgSeqNum());

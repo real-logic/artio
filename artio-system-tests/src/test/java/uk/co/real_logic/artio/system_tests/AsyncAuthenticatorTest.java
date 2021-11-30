@@ -170,7 +170,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
+    public void messagesCanBeSentFromInitiatorToAcceptorAfterRejectedAuthenticationAttempt()
     {
         final Reply<Session> invalidReply = acquireExecutingAuthProxy();
 

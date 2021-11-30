@@ -55,14 +55,14 @@ public class ReportFactory
         return session.trySend(executionReport);
     }
 
-    public void sendReport(final TestSystem testSystem, final Session session, final Side side)
+    public long sendReport(final TestSystem testSystem, final Session session, final Side side)
     {
-        testSystem.awaitSend(() -> trySendReport(session, Side.SELL));
+        return testSystem.awaitSend(() -> trySendReport(session, side));
     }
 
-    public static void sendOneReport(final TestSystem testSystem, final Session session, final Side side)
+    public static long sendOneReport(final TestSystem testSystem, final Session session, final Side side)
     {
-        new ReportFactory().sendReport(testSystem, session, side);
+        return new ReportFactory().sendReport(testSystem, session, side);
     }
 
     public ExecutionReportEncoder setupReport(final Side side, final int execAndOrderId)
