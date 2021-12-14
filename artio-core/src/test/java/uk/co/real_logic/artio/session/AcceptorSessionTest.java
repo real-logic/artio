@@ -56,7 +56,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             SessionCustomisationStrategy.none(),
             messageInfo,
-            fakeEpochFractionClock);
+            fakeEpochFractionClock,
+            true);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(fixSessionOwner);
         return acceptorSession;

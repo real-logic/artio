@@ -46,7 +46,8 @@ public class AcceptorSession extends InternalSession
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
-        final EpochFractionClock epochFractionClock)
+        final EpochFractionClock epochFractionClock,
+        final boolean backpressureMessagesDuringReplay)
     {
         super(
             defaultInterval,
@@ -69,6 +70,7 @@ public class AcceptorSession extends InternalSession
             customisationStrategy,
             messageInfo,
             epochFractionClock,
-            ConnectionType.ACCEPTOR);
+            ConnectionType.ACCEPTOR,
+            backpressureMessagesDuringReplay);
     }
 }

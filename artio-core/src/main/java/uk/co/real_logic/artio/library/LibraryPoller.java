@@ -2142,7 +2142,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
-            epochFractionClock);
+            epochFractionClock,
+            configuration.backpressureMessagesDuringReplay());
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -2214,7 +2215,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
-            epochFractionClock);
+            epochFractionClock,
+            configuration.backpressureMessagesDuringReplay());
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;

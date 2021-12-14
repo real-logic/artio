@@ -1417,6 +1417,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
+    {
+        super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
+        return this;
+    }
+
     // ------------------------
     // END INHERITED SETTERS
     // ------------------------

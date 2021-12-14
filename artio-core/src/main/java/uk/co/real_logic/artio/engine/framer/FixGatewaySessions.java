@@ -82,6 +82,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final EpochNanoClock clock;
     private final EpochFractionFormat epochFractionPrecision;
     private final UtcTimestampEncoder sendingTimeEncoder;
+    private final boolean backpressureMessagesDuringReplay;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -121,6 +122,7 @@ public class FixGatewaySessions extends GatewaySessions
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.epochNanoClock();
+        this.backpressureMessagesDuringReplay = configuration.backpressureMessagesDuringReplay();
         this.fixContexts = fixContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.epochFractionPrecision = epochFractionPrecision;
@@ -181,7 +183,8 @@ public class FixGatewaySessions extends GatewaySessions
             customisationStrategy,
             messageInfo,
             epochFractionClock,
-            gatewaySession.connectionType());
+            gatewaySession.connectionType(),
+            backpressureMessagesDuringReplay);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -267,10 +270,10 @@ public class FixGatewaySessions extends GatewaySessions
         private final FixGatewaySession session;
         private final AbstractLogonDecoder logon;
         private final FixContexts fixContexts;
-        private FixDictionary fixDictionary;
-        private String remoteAddress;
+        private final String remoteAddress;
         private final boolean resetSeqNum;
 
+        private FixDictionary fixDictionary;
         private Encoder encoder;
         private Class<? extends FixDictionary> fixDictionaryClass;
 

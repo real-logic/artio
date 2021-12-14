@@ -55,7 +55,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             false,
             SessionCustomisationStrategy.none(),
             messageInfo,
-            fakeEpochFractionClock);
+            fakeEpochFractionClock,
+            true);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);
     }

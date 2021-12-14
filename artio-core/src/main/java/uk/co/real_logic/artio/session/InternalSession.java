@@ -68,7 +68,8 @@ public class InternalSession extends Session implements AutoCloseable
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
-        final ConnectionType connectionType)
+        final ConnectionType connectionType,
+        final boolean backpressureMessagesDuringReplay)
     {
         super(
             heartbeatIntervalInS,
@@ -91,7 +92,8 @@ public class InternalSession extends Session implements AutoCloseable
             customisationStrategy,
             messageInfo,
             epochFractionClock,
-            connectionType);
+            connectionType,
+            backpressureMessagesDuringReplay);
     }
 
     public int poll(final long timeInNs)

@@ -255,6 +255,10 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    // ------------------------
+    // BEGIN INHERITED SETTERS
+    // ------------------------
+
     /**
      * {@inheritDoc}
      */
@@ -291,6 +295,19 @@ public final class LibraryConfiguration extends CommonConfiguration
         super.epochNanoClock(epochNanoClock);
         return this;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
+    {
+        super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
+        return this;
+    }
+
+    // ------------------------
+    // END INHERITED SETTERS
+    // ------------------------
 
     void conclude()
     {

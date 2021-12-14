@@ -114,6 +114,7 @@ public class Session
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
     private final CancelOnDisconnect cancelOnDisconnect;
+    private final boolean backpressureMessagesDuringReplay;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
@@ -198,8 +199,10 @@ public class Session
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
-        final ConnectionType connectionType)
+        final ConnectionType connectionType,
+        final boolean backpressureMessagesDuringReplay)
     {
+        this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -650,7 +653,7 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (replaying)
+        if (backpressureMessagesDuringReplay && replaying)
         {
             return BACK_PRESSURED;
         }
@@ -745,7 +748,7 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (replaying)
+        if (backpressureMessagesDuringReplay && replaying)
         {
             return BACK_PRESSURED;
         }
