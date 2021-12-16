@@ -1029,6 +1029,7 @@ public class Session
         state(DISCONNECTED);
         address("", Session.UNKNOWN);
         connectionId(NO_CONNECTION_ID);
+        replaying = false;
 
         cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
     }
