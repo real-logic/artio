@@ -285,5 +285,9 @@
             component and sometimes not.
         -->
         <field number="406" name="FieldSometimesInComponent" type="STRING"/>
+        <field number="407" name="EqualCountEnum" type="CHAR">
+            <value enum="1" description="ORDCXLREQ"/>
+            <value enum="2" description="ORDCXLREPREQ"/>
+        </field>
     </fields>
 </fix>

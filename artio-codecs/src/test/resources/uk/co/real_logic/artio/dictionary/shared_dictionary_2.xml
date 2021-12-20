@@ -246,5 +246,9 @@
         </field>
         <field number="405" name="SemiSharedField" type="STRING"/>
         <field number="406" name="FieldSometimesInComponent" type="STRING"/>
+        <field number="407" name="EqualCountEnum" type="CHAR">
+            <value enum="1" description="ORDER_CANCEL_REQUEST"/>
+            <value enum="2" description="ORDER_CANCEL_REPLACE_REQUEST"/>
+        </field>
     </fields>
 </fix>

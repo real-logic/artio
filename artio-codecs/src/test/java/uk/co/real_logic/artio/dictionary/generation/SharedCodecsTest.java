@@ -245,6 +245,11 @@ public class SharedCodecsTest
         return enumOf(dictNorm, "CollisionEnum");
     }
 
+    private static String equalCountEnum(final String dictNorm)
+    {
+        return enumOf(dictNorm, "EqualCountEnum");
+    }
+
     private static String missingEnum(final String dictNorm)
     {
         return enumOf(dictNorm, "MissingEnum");
@@ -553,14 +558,18 @@ public class SharedCodecsTest
 
         // Collision based upon a name not generated, name put in javadoc
         noEnum(collisionEnum, "VALUE_CLASH");
-        final CharSequence enumSource = WRAPPER.sources().get(collisionEnumName);
-        MatcherAssert.assertThat(enumSource.toString(),
-            containsString("/** Altnames: VALUE_CLASH */ NEW('0')"));
+        assertSourceContains(collisionEnumName, "/** Altnames: VALUE_CLASH */ NEW('0')");
 
         // Overloads generated for other name collision combinations
         assertRepresentation('N', enumValue(collisionEnum, "NEW_N"));
         assertRepresentation('F', enumValue(collisionEnum, "FILL_F"));
         assertRepresentation('C', enumValue(collisionEnum, "CANCELED_C"));
+    }
+
+    private void assertSourceContains(final String className, final String substring)
+    {
+        final CharSequence enumSource = WRAPPER.sources().get(className);
+        MatcherAssert.assertThat(enumSource.toString(), containsString(substring));
     }
 
     @Test
@@ -597,6 +606,23 @@ public class SharedCodecsTest
 
         executionReportDecoderShared.getDeclaredMethod("missingEnum");
         noMethod(executionReportDecoderShared, "missingEnumAsEnum");
+    }
+
+    @Test
+    public <T extends Enum<T>> void shouldSupportConsistNamesWithEqualNumbersOfOverloads() throws Exception
+    {
+        final String equalCountEnumName = equalCountEnum(null);
+        final Class<T> equalCountEnum = WRAPPER.loadClass(equalCountEnumName);
+        assertTrue(equalCountEnum.isEnum());
+
+        final T value1 = enumValue(equalCountEnum, "ORDER_CANCEL_REQUEST");
+        final T value2 = enumValue(equalCountEnum, "ORDER_CANCEL_REPLACE_REQUEST");
+
+        assertRepresentation('1', value1);
+        assertRepresentation('2', value2);
+
+        assertSourceContains(equalCountEnumName, "/** Altnames: ORDCXLREQ */ ORDER_CANCEL_REQUEST");
+        assertSourceContains(equalCountEnumName, "/** Altnames: ORDCXLREPREQ */ ORDER_CANCEL_REPLACE_REQUEST");
     }
 
     private <T extends Enum<T>> T enumValue(final Class<T> collisionEnum, final String name)

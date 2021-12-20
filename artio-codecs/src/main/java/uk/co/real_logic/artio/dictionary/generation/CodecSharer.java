@@ -36,6 +36,9 @@ class CodecSharer
 {
     // Used in sharedNameToField in order to denote a name that has a clash
     private static final Field CLASH_SENTINEL = new Field(-1, "SHARING_CLASH", Field.Type.INT);
+    private static final Comparator<Map.Entry<String, Long>> ENUM_NAME_ORDER =
+        Comparator.<Map.Entry<String, Long>>comparingLong(Map.Entry::getValue) // Dictonary Count
+        .thenComparingInt(e -> e.getKey().length()); // Length of name
 
     private final List<Dictionary> inputDictionaries;
 
@@ -591,7 +594,12 @@ class CodecSharer
 
     private String findCommonName(final Map<String, Long> nameToCount)
     {
-        return nameToCount.keySet().stream().max(Comparator.comparingLong(nameToCount::get)).get();
+        return nameToCount
+            .entrySet()
+            .stream()
+            .max(ENUM_NAME_ORDER)
+            .get()
+            .getKey();
     }
 
     private void mergeField(final Map<String, Field> fields, final String fieldName)
