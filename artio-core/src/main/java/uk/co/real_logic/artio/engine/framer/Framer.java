@@ -189,7 +189,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private FixPProtocol fixPProtocol;
     private AbstractFixPParser fixPParser;
     private AbstractFixPProxy fixPProxy;
-    private FixPMessageDissector fixPDissector;
     private FixPRejectRefIdExtractor fixPRejectRefIdExtractor;
 
     private boolean performingDisconnectOperation = false;
@@ -712,7 +711,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (fixPProtocol == null)
         {
             fixPProtocol = FixPProtocolFactory.make(protocolType, errorHandler);
-            fixPDissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
+            final FixPMessageDissector fixPDissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
             fixPParser = fixPProtocol.makeParser(null);
             try
             {
@@ -997,7 +996,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private Action saveThrottleConfReply(
         final int libraryId, final long correlationId, final ThrottleConfigurationStatus ok)
     {
-        return Pressure.apply(inboundPublication.saveThrottleConfigurationReply(libraryId, correlationId, ok));
+        final long position = inboundPublication.saveThrottleConfigurationReply(libraryId, correlationId, ok);
+        if (Pressure.isBackPressured(position))
+        {
+            schedule(() -> inboundPublication.saveThrottleConfigurationReply(libraryId, correlationId, ok));
+        }
+
+        return CONTINUE;
     }
 
     private boolean checkDuplicateILinkConnection(
@@ -1951,8 +1956,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
-            return Pressure.apply(inboundPublication.saveReleaseSessionReply(
-                SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
+            return saveReleaseSessionReply(correlationId, SessionReplyStatus.UNKNOWN_LIBRARY);
         }
 
         DebugLogger.log(
@@ -1966,8 +1970,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (session == null)
         {
-            return Pressure.apply(inboundPublication.saveReleaseSessionReply(
-                SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+            return saveReleaseSessionReply(correlationId, SessionReplyStatus.UNKNOWN_SESSION);
         }
 
         final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(OK, correlationId));
@@ -1998,6 +2001,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return action;
     }
 
+    private Action saveReleaseSessionReply(final long correlationId, final SessionReplyStatus unknownLibrary)
+    {
+        final long position = inboundPublication.saveReleaseSessionReply(unknownLibrary, correlationId);
+        if (Pressure.isBackPressured(position))
+        {
+            schedule(() -> inboundPublication.saveReleaseSessionReply(unknownLibrary, correlationId));
+        }
+
+        return CONTINUE;
+    }
+
     public Action onRequestSession(
         final int libraryId,
         final long sessionId,
@@ -2008,8 +2022,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
-            return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
+            return saveRequestSessionReply(libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
         }
 
         if (acceptsFixP)
@@ -2021,6 +2034,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return onRequestFixSession(
                 libraryId, libraryInfo, sessionId, correlationId, replayFromSequenceNumber, replayFromSequenceIndex);
         }
+    }
+
+    private Action saveRequestSessionReply(
+        final int libraryId, final SessionReplyStatus status, final long correlationId)
+    {
+        final GatewayPublication inboundPublication = this.inboundPublication;
+        final long position = inboundPublication.saveRequestSessionReply(libraryId, status, correlationId);
+        if (Pressure.isBackPressured(position))
+        {
+            schedule(() -> inboundPublication.saveRequestSessionReply(libraryId, status, correlationId));
+        }
+
+        return CONTINUE;
     }
 
     private Action onRequestFixPSession(
@@ -2207,16 +2233,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
             else
             {
-                return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+                return saveRequestSessionReply(libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             }
         }
 
         final InternalSession session = gatewaySession.session();
         if (!session.isActive())
         {
-            return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                libraryId, SESSION_NOT_LOGGED_IN, correlationId));
+            return saveRequestSessionReply(libraryId, SESSION_NOT_LOGGED_IN, correlationId);
         }
 
         schedule(new OnRequestFixSessionHandover(
@@ -2563,21 +2587,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
-            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
-                libraryId, correlationId, ReplayMessagesStatus.UNKNOWN_LIBRARY));
+            return saveReplayMessagesReply(libraryId, correlationId, ReplayMessagesStatus.UNKNOWN_LIBRARY);
         }
 
         final FixGatewaySession gatewaySession = (FixGatewaySession)libraryInfo.lookupSessionById(sessionId);
         if (gatewaySession == null)
         {
-            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
-                libraryId, correlationId, ReplayMessagesStatus.SESSION_NOT_OWNED));
+            return saveReplayMessagesReply(libraryId, correlationId, ReplayMessagesStatus.SESSION_NOT_OWNED);
         }
 
         if (!configuration.logInboundMessages())
         {
-            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
-                libraryId, correlationId, ReplayMessagesStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES));
+            return saveReplayMessagesReply(libraryId, correlationId,
+                ReplayMessagesStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES);
         }
 
         schedule(new CatchupReplayer(
@@ -2599,6 +2621,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.sessionEpochFractionFormat(),
             clock));
 
+        return CONTINUE;
+    }
+
+    private Action saveReplayMessagesReply(
+        final int libraryId, final long correlationId, final ReplayMessagesStatus unknownLibrary)
+    {
+        final long position = inboundPublication.saveReplayMessagesReply(libraryId, correlationId, unknownLibrary);
+        if (Pressure.isBackPressured(position))
+        {
+            schedule(() -> inboundPublication.saveReplayMessagesReply(libraryId, correlationId, unknownLibrary));
+        }
         return CONTINUE;
     }
 
@@ -3283,7 +3316,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SlowStatus status)
     {
         final long position = inboundPublication.saveSlowStatusNotification(libraryId, connectionId, status);
-
         if (Pressure.isBackPressured(position))
         {
             toResend.put(connectionId, libraryId);
