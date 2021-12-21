@@ -69,13 +69,15 @@ class ExplicitFixPSenderEndPoint extends FixPSenderEndPoint
             }
             else
             {
+                final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
                 if (messageTimingHandler != null)
                 {
                     final int sbeHeaderOffset = offset + SOFH_LENGTH;
                     final long sequenceNumber = clientSeqNum(directBuffer, sbeHeaderOffset);
                     if (sequenceNumber != MISSING_OFFSET)
                     {
-                        messageTimingHandler.onMessage(sequenceNumber, connectionId);
+                        messageTimingHandler.onMessage(
+                            sequenceNumber, connectionId, directBuffer, 0, 0);
                     }
                 }
 

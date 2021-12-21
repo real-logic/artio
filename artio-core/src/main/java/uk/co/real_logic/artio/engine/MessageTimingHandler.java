@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import org.agrona.DirectBuffer;
+
 /**
  * Handler can be used to take per-message timings. The callback will be called when a message is passed
  * to the TCP stack. This doesn't mean that the message is actually on the wire - just that it is in the
@@ -29,6 +31,11 @@ public interface MessageTimingHandler
      * Called when a message is written to the TCP stack.
      * @param sequenceNumber the sequence number of the message being sent.
      * @param connectionId the connection id of the connection that the message is sent on.
+     * @param metaDataBuffer a buffer containing metadata written with this message, if any
+     * @param metaDataOffset if metaDataLength &lt; 0 the offset within the buffer where the metadata starts otherwise
+     *                       unspecified.
+     * @param metaDataLength the length of the metadata, if none was written this will be 0
      */
-    void onMessage(long sequenceNumber, long connectionId);
+    void onMessage(
+        long sequenceNumber, long connectionId, DirectBuffer metaDataBuffer, int metaDataOffset, int metaDataLength);
 }

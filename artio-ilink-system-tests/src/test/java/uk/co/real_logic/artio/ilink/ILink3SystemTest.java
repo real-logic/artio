@@ -593,7 +593,7 @@ public class ILink3SystemTest
         // and no other message is sent to CME
         sleepHalfInterval();
         testServer.writeSequence(1, NotLapsed);
-        testServer.readSequence(1, NotLapsed);
+        testServer.readSequence(1);
 
         // From CME - as a heartbeat message to be sent when a KeepAliveInterval interval from CME lapses and
         // no other message is sent to customer
@@ -648,7 +648,7 @@ public class ILink3SystemTest
             return handler.hasReceivedNotApplied();
         });
 
-        testServer.readSequence(4, NotLapsed);
+        testServer.readSequence(4);
     }
 
     @Test
@@ -711,9 +711,9 @@ public class ILink3SystemTest
         // Let's pretend we haven't received 1-3 and initiate a resend.
         testServer.writeNotApplied(1, 3);
 
-        testServer.readSequence(2, NotLapsed);
+        testServer.readSequence(2);
         testServer.readPartyDetailsDefinitionRequest(2, 1);
-        testServer.readSequence(4, NotLapsed);
+        testServer.readSequence(4);
 
         assertEventuallyTrue("Session never re-establishes", () ->
         {
@@ -800,7 +800,7 @@ public class ILink3SystemTest
         agreeRecvSeqNo(4);
 
         // Check there's no second retransmission
-        testServer.readSequence(2, NotLapsed);
+        testServer.readSequence(2);
 
         testServer.writeExecutionReportStatus(4, false);
         agreeRecvSeqNo(5);

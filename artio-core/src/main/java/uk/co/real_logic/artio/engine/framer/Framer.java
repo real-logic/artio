@@ -1656,7 +1656,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long now = outboundTimer.recordSince(timestamp);
 
         final boolean online = fixSenderEndPoints.onMessage(
-            libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
+            libraryId, connectionId, buffer, offset, length, sequenceNumber, position, metaDataLength);
 
         if (!online)
         {

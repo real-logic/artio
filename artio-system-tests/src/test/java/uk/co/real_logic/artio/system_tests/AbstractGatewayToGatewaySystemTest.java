@@ -100,7 +100,7 @@ public class AbstractGatewayToGatewaySystemTest
     AgentRunner logger;
 
     CapturingAuthenticationStrategy auth;
-    MessageTimingCaptor messageTimingHandler = new MessageTimingCaptor();
+    final MessageTimingCaptor messageTimingHandler = new MessageTimingCaptor();
 
     void launchGatewayToGateway()
     {

@@ -455,7 +455,7 @@ public class FixSenderEndPointTest
 
     private void onOutboundMessage(final long timeInMs, final long position)
     {
-        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, position, timeInMs);
+        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, position, timeInMs, 0);
     }
 
     private void onReplayMessage(final long timeInMs, final long position)

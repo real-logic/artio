@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 import uk.co.real_logic.artio.session.CompositeKey;
@@ -104,7 +105,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final int bodyLength,
         final int sequenceNumber,
         final long position,
-        final long timeInMs)
+        final long timeInMs,
+        final int metaDataLength)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -119,10 +121,13 @@ class FixSenderEndPoint extends SenderEndPoint
             return;
         }
 
+        final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
         if (attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker) &&
             messageTimingHandler != null)
         {
-            messageTimingHandler.onMessage(sequenceNumber, connectionId);
+            final int metaDataOffset = offset - FixMessageDecoder.bodyHeaderLength() - metaDataLength;
+
+            messageTimingHandler.onMessage(sequenceNumber, connectionId, directBuffer, metaDataOffset, metaDataLength);
         }
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
@@ -166,7 +171,8 @@ class FixSenderEndPoint extends SenderEndPoint
             throttleRejectBuilder.length(),
             sequenceNumber,
             position,
-            timeInMs);
+            timeInMs,
+            0);
     }
 
     public Action onSlowThrottleReject(
@@ -490,7 +496,8 @@ class FixSenderEndPoint extends SenderEndPoint
                 bytesPreviouslySent = bodyLength - remainingLength;
             }
 
-            final int dataOffset = offsetAfterHeader + FRAME_SIZE + metaDataLength + bytesPreviouslySent;
+            final int metaDataOffset = offsetAfterHeader + FRAME_SIZE;
+            final int dataOffset = metaDataOffset + metaDataLength + bytesPreviouslySent;
             final ByteBuffer buffer = directBuffer.byteBuffer();
 
             ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
@@ -512,9 +519,11 @@ class FixSenderEndPoint extends SenderEndPoint
                 tracker.partiallySentMessage = false;
                 tracker.skipPosition = Long.MAX_VALUE;
 
+                final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
                 if (sequenceNumber != REPLAY_MESSAGE && messageTimingHandler != null)
                 {
-                    messageTimingHandler.onMessage(sequenceNumber, connectionId);
+                    messageTimingHandler.onMessage(
+                        sequenceNumber, connectionId, directBuffer, metaDataOffset, metaDataLength);
                 }
 
                 if (!isSlowConsumer())

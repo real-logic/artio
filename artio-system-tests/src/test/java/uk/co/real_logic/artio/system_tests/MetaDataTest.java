@@ -60,6 +60,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
         acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
     }
@@ -132,6 +133,11 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
 
             LockSupport.parkNanos(10_000L);
         });
+
+        testSystem.await("Metadata not called", () -> messageTimingHandler.count() >= 2);
+        messageTimingHandler.verifyConsecutiveSequenceNumbers(acceptingSession.lastSentMsgSeqNum());
+        final DirectBuffer timingBuffer = messageTimingHandler.getMetaData(1);
+        assertEquals(writeBuffer, timingBuffer);
 
         final UnsafeBuffer updateBuffer = updateBuffer();
 

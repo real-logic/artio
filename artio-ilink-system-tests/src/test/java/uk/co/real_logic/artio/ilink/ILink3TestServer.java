@@ -437,12 +437,18 @@ public class ILink3TestServer
 
     public void readSequence(final long nextSeqNo, final KeepAliveLapsed keepAliveIntervalLapsed)
     {
+        final Sequence506Decoder sequence = readSequence(nextSeqNo);
+        assertEquals(keepAliveIntervalLapsed, sequence.keepAliveIntervalLapsed());
+    }
+
+    public Sequence506Decoder readSequence(final long nextSeqNo)
+    {
         final Sequence506Decoder sequence = read(new Sequence506Decoder(), 0);
 
         assertEquals(uuid, sequence.uUID());
         assertEquals(nextSeqNo, sequence.nextSeqNo());
         assertEquals(FTI.Primary, sequence.faultToleranceIndicator());
-        assertEquals(keepAliveIntervalLapsed, sequence.keepAliveIntervalLapsed());
+        return sequence;
     }
 
     public void writeSequence(final int nextSeqNo, final KeepAliveLapsed keepAliveLapsed)

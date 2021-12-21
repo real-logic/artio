@@ -82,12 +82,14 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final int offset,
         final int length,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onOutboundMessage(libraryId, buffer, offset, length, sequenceNumber, position, timeInMs);
+            endPoint.onOutboundMessage(
+                libraryId, buffer, offset, length, sequenceNumber, position, timeInMs, metaDataLength);
             return true;
         }
 
