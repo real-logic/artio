@@ -170,7 +170,6 @@ public class GatewayPublication extends ClaimablePublication
 
     private final EpochNanoClock clock;
     private final int maxPayloadLength;
-    private final int maxInitialBodyLength;
 
     public GatewayPublication(
         final ExclusivePublication dataPublication,
@@ -182,7 +181,6 @@ public class GatewayPublication extends ClaimablePublication
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
         this.clock = clock;
         this.maxPayloadLength = dataPublication.maxPayloadLength();
-        this.maxInitialBodyLength = maxPayloadLength - FRAMED_MESSAGE_SIZE;
     }
 
     public long saveMessage(
@@ -285,6 +283,7 @@ public class GatewayPublication extends ClaimablePublication
         final DirectBuffer srcMetaDataBuffer,
         final int metaDataUpdateOffset)
     {
+        final int maxPayloadLength = this.maxPayloadLength;
         final DirectBuffer metaDataBuffer = srcMetaDataBuffer == null ? NO_METADATA : srcMetaDataBuffer;
         final int metaDataLength = metaDataBuffer.capacity();
 
@@ -292,7 +291,7 @@ public class GatewayPublication extends ClaimablePublication
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength + metaDataLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;
-        int srcFragmentLength = fragmented ? maxInitialBodyLength : srcLength;
+        int srcFragmentLength = fragmented ? maxPayloadLength - (FRAMED_MESSAGE_SIZE + metaDataLength) : srcLength;
         int srcFragmentOffset = srcOffset;
 
         if (fragmented)
