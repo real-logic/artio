@@ -31,7 +31,7 @@ plugins {
     id "com.github.ben-manes.versions" version "0.39.0"
 }
 
-def checkstyleVersion = '9.2'
+def checkstyleVersion = '9.2.1'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13.2'
 def mockitoVersion = '4.2.0'
