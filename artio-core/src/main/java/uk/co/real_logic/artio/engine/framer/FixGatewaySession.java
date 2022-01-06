@@ -122,6 +122,8 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         final BlockablePosition blockablePosition,
         final DirectSessionProxy proxy)
     {
+        lastLibraryId = libraryId;
+        libraryId = ENGINE_LIBRARY_ID;
         this.sessionParser = sessionParser;
         this.session = session;
         this.proxy = proxy;

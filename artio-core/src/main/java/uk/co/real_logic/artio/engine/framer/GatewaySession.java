@@ -34,6 +34,8 @@ abstract class GatewaySession implements AbstractConnectedSessionInfo
 
     protected boolean hasStartedAuthentication = false;
     protected int libraryId;
+    // Only set when owned by gateway, in case that library reconnects.
+    protected int lastLibraryId;
 
     GatewaySession(
         final long connectionId,

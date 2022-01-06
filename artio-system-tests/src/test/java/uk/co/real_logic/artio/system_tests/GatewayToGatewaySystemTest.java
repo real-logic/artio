@@ -274,6 +274,49 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertInvalidLibraryAttempts(acceptingSession.connectionId());
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotifyReconnectedLibrariesOfSessions()
+    {
+        acquireAcceptingSession();
+
+        // Timeout the library from the engine's perspective.
+        testSystem.remove(acceptingLibrary);
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        // Wait for the library to detect the timeout internally.
+        acceptingHandler.clearSessionExistsInfos();
+        testSystem.add(acceptingLibrary);
+        testSystem.await("Library failed to detect timeout", acceptingHandler::hasTimedOut);
+
+        // Notified of the session on the engine
+        final SessionExistsInfo sessionExists = acceptingHandler.lastSessionExists();
+        assertNotNull(sessionExists);
+        assertEquals(acceptingSession.id(), sessionExists.surrogateId());
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotifyReconnectedLibrariesOfDisconnectedSessions()
+    {
+        acquireAcceptingSession();
+
+        // Timeout the library from the engine's perspective.
+        testSystem.remove(acceptingLibrary);
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        testSystem.awaitSend(initiatingSession::logoutAndDisconnect);
+
+        Timing.assertEventuallyTrue("Failed to disconnect on engine", () ->
+        {
+            final List<ConnectedSessionInfo> sessions = libraries(acceptingEngine, testSystem).get(0).sessions();
+            return sessions.isEmpty();
+        });
+
+        // Wait for the library to detect the timeout internally.
+        testSystem.add(acceptingLibrary);
+        testSystem.await("Library failed to detect timeout", acceptingHandler::hasTimedOut);
+        assertTrue("Failed to notify library of disconnect", acceptingHandler.hasDisconnected());
+    }
+
     private void assertInvalidLibraryAttempts(final long connectionId)
     {
         final String connectionIdStr = String.valueOf(connectionId);

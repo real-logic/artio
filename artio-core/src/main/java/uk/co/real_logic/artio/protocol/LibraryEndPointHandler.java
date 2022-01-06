@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
-import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 
 public interface LibraryEndPointHandler
 {
@@ -32,7 +31,8 @@ public interface LibraryEndPointHandler
     Action onRequestSessionReply(int toId, long replyToId, SessionReplyStatus status);
 
     Action onControlNotification(
-        int libraryId, InitialAcceptedSessionOwner initialAcceptedSessionOwner, SessionsDecoder sessions);
+        int libraryId, InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        ControlNotificationDecoder controlNotification);
 
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
 

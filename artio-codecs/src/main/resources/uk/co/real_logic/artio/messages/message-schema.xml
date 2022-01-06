@@ -485,6 +485,9 @@
         <group name="sessions" id="2" dimensionType="groupSizeEncoding">
             <field name="sessionId" id="10" type="FixSessionId"/>
         </group>
+        <group name="disconnectedSessions" id="4" dimensionType="groupSizeEncoding">
+            <field name="sessionId" id="10" type="FixSessionId"/>
+        </group>
     </sbe:message>
 
     <sbe:message name="LibraryTimeout" id="40"

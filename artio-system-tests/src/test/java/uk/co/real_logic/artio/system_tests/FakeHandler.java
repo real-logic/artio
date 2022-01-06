@@ -281,6 +281,11 @@ public class FakeHandler
         sessionExistsInfos.clear();
     }
 
+    public SessionExistsInfo lastSessionExists()
+    {
+        return sessionExistsInfos.pollFirst();
+    }
+
     long awaitSessionIdFor(
         final String initiatorId,
         final String acceptorId,

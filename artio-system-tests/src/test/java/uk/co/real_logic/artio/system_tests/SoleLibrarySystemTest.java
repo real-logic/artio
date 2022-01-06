@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -137,8 +136,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
         // timeout initiatingLibrary
         testSystem.remove(initiatingLibrary);
-        Timing.assertEventuallyTrue("failed to timeout initiatingLibrary", () ->
-            testSystem.libraries(initiatingEngine).size() == 1);
+        awaitLibraryDisconnect(initiatingEngine, testSystem);
 
         acceptingMessagesCanBeExchanged();
     }

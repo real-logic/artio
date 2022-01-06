@@ -17,17 +17,20 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
+import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.CharFormatter;
-import uk.co.real_logic.artio.validation.*;
+import uk.co.real_logic.artio.validation.AbstractAuthenticationProxy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 
@@ -36,6 +39,8 @@ import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
  */
 abstract class GatewaySessions
 {
+    protected final Long2LongHashMap sessionIdToLastLibraryId = new Long2LongHashMap(UNK_SESSION);
+    protected final LongHashSet disconnectedSessionIds = new LongHashSet();
     protected final CharFormatter acquiredConnection = new CharFormatter("Gateway Acquired Connection %s");
     protected final List<GatewaySession> sessions = new ArrayList<>();
     protected final EpochClock epochClock;
@@ -126,6 +131,12 @@ abstract class GatewaySessions
         {
             session.onDisconnectReleasedByOwner();
             session.close();
+
+            final long sessionId = session.sessionId();
+            if (sessionId != UNK_SESSION)
+            {
+                sessionIdToLastLibraryId.put(sessionId, session.lastLibraryId);
+            }
         }
     }
 
@@ -187,6 +198,30 @@ abstract class GatewaySessions
     void track(final GatewaySession gatewaySession)
     {
         sessions.add(gatewaySession);
+    }
+
+    public LongHashSet findDisconnectedSessions(final int libraryId)
+    {
+        disconnectedSessionIds.clear();
+        final Long2LongHashMap.EntryIterator it = sessionIdToLastLibraryId.entrySet().iterator();
+        while (it.hasNext())
+        {
+            it.next();
+            if (it.getLongValue() == libraryId)
+            {
+                disconnectedSessionIds.add(it.getLongKey());
+            }
+        }
+        return disconnectedSessionIds;
+    }
+
+    public void removeDisconnectedSessions(final LongHashSet disconnectedSessions)
+    {
+        final LongHashSet.LongIterator it = disconnectedSessions.iterator();
+        while (it.hasNext())
+        {
+            sessionIdToLastLibraryId.remove(it.nextValue());
+        }
     }
 
     enum AuthenticationState

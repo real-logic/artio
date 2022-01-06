@@ -20,6 +20,7 @@ import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -29,6 +30,7 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.ControlNotificationEncoder.DisconnectedSessionsEncoder;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
 import java.util.List;
@@ -77,7 +79,7 @@ public class GatewayPublication extends ClaimablePublication
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 10;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
-        GroupSizeEncodingEncoder.ENCODED_LENGTH;
+        GroupSizeEncodingEncoder.ENCODED_LENGTH * 2;
     private static final int MID_CONNECTION_DISCONNECT_LENGTH =
         HEADER_LENGTH + MidConnectionDisconnectEncoder.BLOCK_LENGTH;
     private static final int FOLLOWER_SESSION_REQUEST_LENGTH =
@@ -968,10 +970,13 @@ public class GatewayPublication extends ClaimablePublication
     public long saveControlNotification(
         final int libraryId,
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
-        final List<?> sessions)
+        final List<?> sessions,
+        final LongHashSet disconnectedSessionIds)
     {
+        final int disconnectedSessionsCount = disconnectedSessionIds.size();
         final int sessionsCount = sessions.size();
-        final int framedLength = CONTROL_NOTIFICATION_LENGTH + sessionsCount * SessionsEncoder.sbeBlockLength();
+        final int framedLength = CONTROL_NOTIFICATION_LENGTH + sessionsCount * SessionsEncoder.sbeBlockLength() +
+            disconnectedSessionsCount * DisconnectedSessionsEncoder.sbeBlockLength();
         final ExpandableArrayBuffer buffer = buffer(framedLength);
 
         controlNotification
@@ -984,6 +989,14 @@ public class GatewayPublication extends ClaimablePublication
         {
             final SessionInfo session = (SessionInfo)sessions.get(i);
             sessionsEncoder.next().sessionId(session.sessionId());
+        }
+
+        final DisconnectedSessionsEncoder disconnectedSessionsEncoder = controlNotification
+            .disconnectedSessionsCount(disconnectedSessionsCount);
+        final LongHashSet.LongIterator it = disconnectedSessionIds.iterator();
+        while (it.hasNext())
+        {
+            disconnectedSessionsEncoder.next().sessionId(it.nextValue());
         }
 
         final long position = dataPublication.offer(buffer, 0, framedLength);

@@ -29,11 +29,8 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
-import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
-import uk.co.real_logic.artio.messages.MetaDataStatus;
-import uk.co.real_logic.artio.messages.SessionStatus;
-import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
@@ -392,18 +389,28 @@ public class LibraryPollerTest
             0);
     }
 
-    private SessionsDecoder hasOtherSessionId()
+    private ControlNotificationDecoder hasOtherSessionId()
     {
         final SessionsDecoder sessionsDecoder = mock(SessionsDecoder.class);
         when(sessionsDecoder.hasNext()).thenReturn(true, false);
         when(sessionsDecoder.sessionId()).thenReturn(OTHER_SESSION_ID);
-        return sessionsDecoder;
+        return controlNotification(sessionsDecoder);
     }
 
-    private SessionsDecoder noSessionIds()
+    private ControlNotificationDecoder noSessionIds()
     {
         final SessionsDecoder sessionsDecoder = mock(SessionsDecoder.class);
         when(sessionsDecoder.hasNext()).thenReturn(false);
-        return sessionsDecoder;
+        return controlNotification(sessionsDecoder);
+    }
+
+    private ControlNotificationDecoder controlNotification(final SessionsDecoder sessionsDecoder)
+    {
+        final ControlNotificationDecoder controlNotificationDecoder = mock(ControlNotificationDecoder.class);
+        when(controlNotificationDecoder.sessions()).thenReturn(sessionsDecoder);
+        final ControlNotificationDecoder.DisconnectedSessionsDecoder disconnectedSessions =
+            mock(ControlNotificationDecoder.DisconnectedSessionsDecoder.class);
+        when(controlNotificationDecoder.disconnectedSessions()).thenReturn(disconnectedSessions);
+        return controlNotificationDecoder;
     }
 }

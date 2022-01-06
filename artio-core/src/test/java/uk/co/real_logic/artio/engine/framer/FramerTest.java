@@ -692,7 +692,8 @@ public class FramerTest
 
     private void saveControlNotification(final VerificationMode times)
     {
-        verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), any(), sessionCaptor.capture());
+        verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), any(), sessionCaptor.capture(),
+            any());
     }
 
     private void verifyClientDisconnected()

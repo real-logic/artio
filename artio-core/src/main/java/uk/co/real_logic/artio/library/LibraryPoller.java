@@ -128,6 +128,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
+    private final LongHashSet disconnectedSessionIds = new LongHashSet();
 
     // Uniquely identifies library session
     private final int libraryId;
@@ -1651,7 +1652,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onControlNotification(
         final int libraryId,
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
-        final SessionsDecoder sessionsDecoder)
+        final ControlNotificationDecoder controlNotificationDecoder)
     {
         if (libraryId == this.libraryId)
         {
@@ -1667,7 +1668,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             controlUpdateILinkSessions();
 
-            return controlUpdateSessions(libraryId, sessionsDecoder);
+            return controlUpdateSessions(libraryId, controlNotificationDecoder);
         }
 
         return CONTINUE;
@@ -1688,37 +1689,61 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         connectionIdToFixPSubscription.clear();
     }
 
-    private Action controlUpdateSessions(final int libraryId, final SessionsDecoder sessionsDecoder)
+    private Action controlUpdateSessions(
+        final int libraryId, final ControlNotificationDecoder controlNotificationDecoder)
     {
-        // TODO(Nick): This should be a new set, not the actual
-        // set as we remove all the ids to check for existence..
-        // Weirdly looks like this.sessionIds is never used anywhere else?
-        // Why do we have it then? Is the caching saving
-        // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
         final LongHashSet sessionIds = this.sessionIds;
+        sessionIds.clear();
+
+        final LongHashSet disconnectedSessionIds = this.disconnectedSessionIds;
+        disconnectedSessionIds.clear();
+
         InternalSession[] sessions = this.sessions;
 
         // copy session ids.
-        sessionIds.clear();
+        final SessionsDecoder sessionsDecoder = controlNotificationDecoder.sessions();
         while (sessionsDecoder.hasNext())
         {
             sessionsDecoder.next();
             sessionIds.add(sessionsDecoder.sessionId());
         }
 
+        final ControlNotificationDecoder.DisconnectedSessionsDecoder disconnectedSessions =
+            controlNotificationDecoder.disconnectedSessions();
+        while (disconnectedSessions.hasNext())
+        {
+            disconnectedSessions.next();
+            disconnectedSessionIds.add(disconnectedSessions.sessionId());
+        }
+
         for (int i = 0, size = sessions.length; i < size; i++)
         {
             final InternalSession session = sessions[i];
             final long sessionId = session.id();
-            if (!sessionIds.remove(sessionId))
+            final boolean acquiredSession = !sessionIds.remove(sessionId);
+            final boolean disconnectedSession = disconnectedSessionIds.remove(sessionId);
+            if (acquiredSession || disconnectedSession)
             {
                 final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
                 if (subscriber != null)
                 {
-                    subscriber.onTimeout(libraryId);
+                    if (acquiredSession)
+                    {
+                        subscriber.onTimeout(libraryId);
+                    }
+
+                    if (disconnectedSession)
+                    {
+                        final Action action = subscriber.onDisconnect(libraryId, DisconnectReason.REMOTE_DISCONNECT);
+                        if (action == ABORT)
+                        {
+                            this.sessions = sessions;
+                            return ABORT;
+                        }
+                    }
                 }
                 session.disable();
-                // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
+                // TODO: Maybe we shouldn't be creating a lot of arrays and batch this up?
                 sessions = ArrayUtil.remove(sessions, i);
                 cacheSession(session);
                 size--;

@@ -95,6 +95,7 @@ import static uk.co.real_logic.artio.messages.SessionStatus.SESSION_HANDOVER;
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);
+    private static final LongHashSet NO_DISCONNECTED_SESSIONS = new LongHashSet();
 
     private final CharFormatter timingOutFormatter = new CharFormatter("Timing out connection to library %s");
     private final CharFormatter libraryConnectedFormatter = new CharFormatter("Library %s - %s connected");
@@ -1833,7 +1834,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             existingLibrary.onHeartbeat(epochClock.time());
 
             return Pressure.apply(inboundPublication.saveControlNotification(
-                libraryId, initialAcceptedSessionOwner, existingLibrary.sessions()));
+                libraryId, initialAcceptedSessionOwner, existingLibrary.sessions(), NO_DISCONNECTED_SESSIONS));
         }
 
         if (soleLibraryMode)
@@ -1850,23 +1851,27 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         // Send an empty control notification if you've never seen this library before
-        // Since it may have connected to another gateway node if you're clustered.
+        final LongHashSet disconnectedSessions = gatewaySessions.findDisconnectedSessions(libraryId);
         if (Pressure.isBackPressured(
             inboundPublication.saveControlNotification(
-            libraryId, initialAcceptedSessionOwner, Collections.emptyList())))
+            libraryId, initialAcceptedSessionOwner, Collections.emptyList(), disconnectedSessions)))
         {
             return ABORT;
         }
-
-        final LivenessDetector livenessDetector = LivenessDetector.forEngine(
-            inboundPublication,
-            libraryId,
-            configuration.replyTimeoutInMs(),
-            epochClock.time());
+        else
+        {
+            gatewaySessions.removeDisconnectedSessions(disconnectedSessions);
+        }
 
         final List<Continuation> unitsOfWork = new ArrayList<>();
         unitsOfWork.add(() ->
         {
+            final LivenessDetector livenessDetector = LivenessDetector.forEngine(
+                inboundPublication,
+                libraryId,
+                configuration.replyTimeoutInMs(),
+                epochClock.time());
+
             final LibrarySlowPeeker librarySlowPeeker = this.librarySlowPeeker.addLibrary(aeronSessionId);
             if (librarySlowPeeker == null)
             {
