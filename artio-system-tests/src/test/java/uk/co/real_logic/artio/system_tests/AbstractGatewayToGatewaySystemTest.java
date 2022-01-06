@@ -373,6 +373,11 @@ public class AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged(session, initiatingOtfAcceptor);
     }
 
+    void acceptingMessagesCanBeExchanged()
+    {
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+    }
+
     long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)
     {
         final String testReqID = testReqId();

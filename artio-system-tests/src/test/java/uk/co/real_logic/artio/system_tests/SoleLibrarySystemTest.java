@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -39,8 +39,12 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 {
 
-    @Before
-    public void launch()
+    private void launch()
+    {
+        launch(true);
+    }
+
+    private void launch(final boolean logMessages)
     {
         mediaDriver = launchMediaDriver();
 
@@ -49,9 +53,11 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
             .initialAcceptedSessionOwner(SOLE_LIBRARY);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
-        initiatingConfig.deleteLogFileDirOnStart(true);
-        initiatingConfig.initialAcceptedSessionOwner(SOLE_LIBRARY);
+        final EngineConfiguration initiatingConfig =
+            initiatingConfig(libraryAeronPort, nanoClock).deleteLogFileDirOnStart(true)
+            .initialAcceptedSessionOwner(SOLE_LIBRARY)
+            .logInboundMessages(logMessages)
+            .logOutboundMessages(logMessages);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
@@ -63,6 +69,8 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldOnlyHandOffSessionToApplicationWhenConnected()
     {
+        launch();
+
         connectSessions();
 
         acceptingSession = acceptingHandler.lastSession();
@@ -79,6 +87,8 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportUnreleasedOfflineSessionsInSoleLibraryMode()
     {
+        launch();
+
         connectSessions();
         acceptingSession = acceptingHandler.lastSession();
         disconnectSessions();
@@ -101,8 +111,10 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
     // Replicates a bug reported in issue #361 where reconnecting initiators can't reconnect.
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldNotAffectUseAsInitiator()
+    public void shouldAllowReonnectingInitiatorsToReconnect()
     {
+        launch();
+
         connectSessions();
         acceptingSession = acceptingHandler.lastSession();
         messagesCanBeExchanged();
@@ -111,5 +123,23 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         connectSessions();
         messagesCanBeExchanged();
         disconnectSessions();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldAcquireSessionsWithLoggingSwitchedOff()
+    {
+        // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest
+        launch(false);
+
+        connectSessions();
+        acceptingSession = acceptingHandler.lastSession();
+        acceptingMessagesCanBeExchanged();
+
+        // timeout initiatingLibrary
+        testSystem.remove(initiatingLibrary);
+        Timing.assertEventuallyTrue("failed to timeout initiatingLibrary", () ->
+            testSystem.libraries(initiatingEngine).size() == 1);
+
+        acceptingMessagesCanBeExchanged();
     }
 }

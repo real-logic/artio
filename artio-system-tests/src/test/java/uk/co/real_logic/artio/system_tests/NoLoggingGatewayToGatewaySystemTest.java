@@ -118,14 +118,21 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         testSystem.remove(acceptingLibrary);
 
         acceptingEngineHasSessionAndLibraryIsNotified();
+
+        messagesCanBeExchanged();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void engineShouldAcquireTimedOutInitiatingSessions()
     {
+        acquireAcceptingSession();
+
         testSystem.remove(initiatingLibrary);
 
         initiatingEngineHasSessionAndLibraryIsNotified();
+
+        // Ensure that messages can be exchanged after the acquisition.
+        acceptingMessagesCanBeExchanged();
     }
 
     private void engineShouldManageSession(

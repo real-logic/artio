@@ -39,7 +39,6 @@ import uk.co.real_logic.artio.protocol.Streams;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
@@ -251,32 +250,41 @@ public class EngineContext implements AutoCloseable
             final String logFileDir = configuration.logFileDir();
 
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
-            inboundReplayIndex = newReplayIndex(
-                cacheSetSize,
-                cacheNumSets,
-                logFileDir,
-                configuration.inboundLibraryStream(),
-                recordingCoordinator.indexerInboundRecordingIdLookup(),
-                connectionIdToILinkUuid,
-                receivedSequenceNumberIndex.reader());
+            final List<Index> inboundIndices = new ArrayList<>();
+            if (configuration.logInboundMessages())
+            {
+                inboundReplayIndex = newReplayIndex(
+                    cacheSetSize,
+                    cacheNumSets,
+                    logFileDir,
+                    configuration.inboundLibraryStream(),
+                    recordingCoordinator.indexerInboundRecordingIdLookup(),
+                    connectionIdToILinkUuid,
+                    receivedSequenceNumberIndex.reader());
+                inboundIndices.add(inboundReplayIndex);
+            }
+            inboundIndices.add(receivedSequenceNumberIndex);
 
             inboundIndexer = new Indexer(
-                asList(inboundReplayIndex, receivedSequenceNumberIndex),
+                inboundIndices,
                 inboundLibraryStreams.subscription("inboundIndexer"),
                 configuration.agentNamePrefix(),
                 inboundCompletionPosition,
                 configuration.archiveReplayStream());
 
             final List<Index> outboundIndices = new ArrayList<>();
-            outboundReplayIndex = newReplayIndex(
-                cacheSetSize,
-                cacheNumSets,
-                logFileDir,
-                configuration.outboundLibraryStream(),
-                recordingCoordinator.indexerOutboundRecordingIdLookup(),
-                connectionIdToILinkUuid,
-                sentSequenceNumberIndex.reader());
-            outboundIndices.add(outboundReplayIndex);
+            if (configuration.logOutboundMessages())
+            {
+                outboundReplayIndex = newReplayIndex(
+                    cacheSetSize,
+                    cacheNumSets,
+                    logFileDir,
+                    configuration.outboundLibraryStream(),
+                    recordingCoordinator.indexerOutboundRecordingIdLookup(),
+                    connectionIdToILinkUuid,
+                    sentSequenceNumberIndex.reader());
+                outboundIndices.add(outboundReplayIndex);
+            }
             outboundIndices.add(sentSequenceNumberIndex);
 
             final Subscription outboundIndexSubscription = outboundLibraryStreams.subscription("outboundIndexer");
@@ -304,20 +312,14 @@ public class EngineContext implements AutoCloseable
 
     private void newArchivingAgent()
     {
+        newIndexers();
+
+        final Agent replayer;
         if (configuration.logOutboundMessages())
         {
-            newIndexers();
-
             outboundReplayQuery = newReplayQuery(
                 configuration.archiverIdleStrategy(), configuration.outboundLibraryStream());
-            final Replayer replayer = newReplayer(replayPublication, outboundReplayQuery);
-
-            final List<Agent> agents = new ArrayList<>();
-            agents.add(inboundIndexer);
-            agents.add(outboundIndexer);
-            agents.add(replayer);
-
-            indexingAgent = new CompositeAgent(agents);
+            replayer = newReplayer(replayPublication, outboundReplayQuery);
         }
         else
         {
@@ -328,7 +330,7 @@ public class EngineContext implements AutoCloseable
                 clock,
                 configuration.outboundMaxClaimAttempts());
 
-            indexingAgent = new GapFiller(
+            replayer = new GapFiller(
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix(),
@@ -337,18 +339,25 @@ public class EngineContext implements AutoCloseable
                 new FixSessionCodecsFactory(clock, configuration.sessionEpochFractionFormat()),
                 clock);
         }
+
+        final List<Agent> agents = new ArrayList<>();
+        agents.add(inboundIndexer);
+        agents.add(outboundIndexer);
+        agents.add(replayer);
+
+        indexingAgent = new CompositeAgent(agents);
     }
 
     public void catchupIndices()
     {
         // when inbound logging disabled
-        if (inboundIndexer != null)
+        if (configuration.logInboundMessages())
         {
             inboundIndexer.catchIndexUp(aeronArchive, errorHandler);
         }
 
         // when outbound logging disabled
-        if (outboundIndexer != null)
+        if (configuration.logOutboundMessages())
         {
             outboundIndexer.catchIndexUp(aeronArchive, errorHandler);
         }

@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
+import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -369,5 +370,10 @@ public class TestSystem
     public void awaitPosition(final ReadablePosition positionCounter, final long position)
     {
         await("Failed to complete index", () -> positionCounter.getVolatile() >= position);
+    }
+
+    public List<LibraryInfo> libraries(final FixEngine engine)
+    {
+        return awaitCompletedReply(engine.libraries()).resultIfPresent();
     }
 }

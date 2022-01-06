@@ -583,6 +583,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     continue;
                 }
+
                 final long sessionId = session.sessionId();
                 final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);

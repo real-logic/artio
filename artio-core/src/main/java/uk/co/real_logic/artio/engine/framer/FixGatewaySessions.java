@@ -132,7 +132,6 @@ public class FixGatewaySessions extends GatewaySessions
         sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
 
-
     void acquire(
         final FixGatewaySession gatewaySession,
         final SessionState state,

@@ -157,12 +157,19 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         try
         {
             initialiseBuffer();
-            positionWriter = new IndexedPositionWriter(
-                positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
-                errorHandler,
-                indexedPositionsOffset,
-                "SequenceNumberIndex",
-                recordingIdLookup);
+            if (recordingIdLookup != null) // if Logging enabled
+            {
+                positionWriter = new IndexedPositionWriter(
+                    positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
+                    errorHandler,
+                    indexedPositionsOffset,
+                    "SequenceNumberIndex",
+                    recordingIdLookup);
+            }
+            else
+            {
+                positionWriter = null;
+            }
 
             if (metaDataDir != null)
             {
@@ -357,7 +364,10 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         }
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
-        positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
+        if (positionWriter != null)
+        {
+            positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
+        }
     }
 
     public void onRedact(final long sessionId, final int lastSequenceNumber)
@@ -650,7 +660,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
 
     public int doWork()
     {
-        int work = positionWriter.checkRecordings();
+        int work = positionWriter != null ? positionWriter.checkRecordings() : 0;
 
         if (hasSavedRecordSinceFileUpdate)
         {
@@ -718,7 +728,10 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
     private void updateFile()
     {
         checksumFramer.updateChecksums();
-        positionWriter.updateChecksums();
+        if (positionWriter != null)
+        {
+            positionWriter.updateChecksums();
+        }
         saveFile();
         flipFiles();
         hasSavedRecordSinceFileUpdate = false;
@@ -827,8 +840,11 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
 
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
-        // Inefficient, but only run once on startup, so not a big deal.
-        new IndexedPositionReader(positionWriter.buffer()).readLastPosition(consumer);
+        if (positionWriter != null)
+        {
+            // Inefficient, but only run once on startup, so not a big deal.
+            new IndexedPositionReader(positionWriter.buffer()).readLastPosition(consumer);
+        }
     }
 
     private int saveRecord(
