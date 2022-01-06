@@ -56,4 +56,16 @@ public class DecoderGeneratorCopyingTest extends AbstractDecoderGeneratorTest
         assertEquals(FLOAT_FIELD_TAG, decoder.invalidTagId());
     }
 
+    @Test
+    public void shouldValidateDataFormatForOutOfRangeFloats() throws Exception
+    {
+        final Decoder decoder = newHeartbeat();
+
+        decode(OUT_OF_RANGE_FLOAT_VALUE_MESSAGE, decoder);
+
+        assertFalse(decoder.validate());
+        assertEquals(RejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation(), decoder.rejectReason());
+        assertEquals(FLOAT_FIELD_TAG, decoder.invalidTagId());
+    }
+
 }

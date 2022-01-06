@@ -108,6 +108,7 @@ public class DecimalFloatTest
     @Test(expected = ArithmeticException.class)
     public void shouldNotParseValueOutOfRange()
     {
+        // Valid decimal floats have max 18 digits, could also have e, E, -, + or .
         new DecimalFloat().fromString("10000000000000000000000");
     }
 

@@ -88,7 +88,7 @@ public abstract class CommonDecoderImpl
         {
             return buffer.getFloat(number, offset, length);
         }
-        catch (final NumberFormatException e)
+        catch (final NumberFormatException | ArithmeticException e)
         {
             if (validation)
             {
