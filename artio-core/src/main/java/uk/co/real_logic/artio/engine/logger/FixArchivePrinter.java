@@ -60,7 +60,7 @@ public final class FixArchivePrinter
     private int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
-    private boolean ilink = false;
+    private boolean fixp = false;
     private Class<? extends FixDictionary> fixDictionaryType = null;
     private Predicate<SessionHeaderDecoder> headerPredicate = null;
 
@@ -112,8 +112,9 @@ public final class FixArchivePrinter
                     follow = true;
                     break;
 
+                case "fixp":
                 case "ilink":
-                    ilink = true;
+                    fixp = true;
                     break;
 
                 default:
@@ -182,7 +183,7 @@ public final class FixArchivePrinter
 
     private void validateArgs()
     {
-        if (fixDictionaryType == null && !ilink)
+        if (fixDictionaryType == null && !fixp)
         {
             fixDictionaryType = FixDictionary.findDefault();
         }
@@ -236,6 +237,7 @@ public final class FixArchivePrinter
 
         try (FixArchiveScanner scanner = new FixArchiveScanner(configuration))
         {
+            System.out.println("Starting Scan ... ");
             scanner.scan(
                 aeronChannel,
                 queryStreamIds,
@@ -283,8 +285,12 @@ public final class FixArchivePrinter
             false);
         printOption(
             "ilink",
+            "Deprecated: use --fixp.",
+            false);
+        printOption(
+            "fixp",
             "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
-            " only ilink3 messages will be printed out",
+                " only FIXP messages will be printed out",
             false);
         printOption(
             "fixp-protocol",
