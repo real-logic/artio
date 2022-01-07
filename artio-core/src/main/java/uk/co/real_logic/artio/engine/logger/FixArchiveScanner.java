@@ -196,7 +196,6 @@ public class FixArchiveScanner implements AutoCloseable
         scan(aeronChannel, queryStreamIds, fixHandler, fixPHandler, follow, archiveScannerStreamId);
     }
 
-    @SuppressWarnings("WhileLoopReplaceableByForEach")
     public void scan(
         final String aeronChannel,
         final IntHashSet queryStreamIds,
@@ -210,16 +209,8 @@ public class FixArchiveScanner implements AutoCloseable
 
         try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
         {
-            final RecordingPoller[] pollers = new RecordingPoller[queryStreamIds.size()];
-            int i = 0;
-
-            final IntHashSet.IntIterator iterator = queryStreamIds.iterator();
-            while (iterator.hasNext())
-            {
-                final int id = iterator.next();
-                pollers[i] = makePoller(id, replaySubscription, follow, aeronChannel, recordingIdToPositionRange);
-                i++;
-            }
+            final RecordingPoller[] pollers = makeRecordingPollers(
+                aeronChannel, queryStreamIds, follow, recordingIdToPositionRange, replaySubscription);
 
             if (DEBUG_LOG_ARCHIVE_SCAN)
             {
@@ -247,6 +238,27 @@ public class FixArchiveScanner implements AutoCloseable
                 idleStrategy.idle(received);
             }
         }
+    }
+
+    private RecordingPoller[] makeRecordingPollers(
+        final String aeronChannel,
+        final IntHashSet queryStreamIds,
+        final boolean follow,
+        final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange,
+        final Subscription replaySubscription)
+    {
+        return queryStreamIds
+            .stream()
+            .map(id ->
+            {
+                final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(
+                    id, follow, aeronChannel, recordingIdToPositionRange);
+
+                archiveLocations.sort(BY_REVERSE_POSITION);
+
+                return new RecordingPoller(replaySubscription, id, archiveLocations);
+            })
+            .toArray(RecordingPoller[]::new);
     }
 
     private Long2ObjectHashMap<PositionRange> scanIndexIfPossible(
@@ -323,21 +335,6 @@ public class FixArchiveScanner implements AutoCloseable
         }
 
         return true;
-    }
-
-    private RecordingPoller makePoller(
-        final int queryStreamId,
-        final Subscription replaySubscription,
-        final boolean follow,
-        final String aeronChannel,
-        final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange)
-    {
-        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(
-            queryStreamId, follow, aeronChannel, recordingIdToPositionRange);
-
-        archiveLocations.sort(BY_REVERSE_POSITION);
-
-        return new RecordingPoller(replaySubscription, queryStreamId, archiveLocations);
     }
 
     private List<ArchiveLocation> lookupArchiveLocations(
@@ -523,7 +520,7 @@ public class FixArchiveScanner implements AutoCloseable
             }
             else
             {
-                if (image.position() >= stopPosition)
+                if (stopPosition != NULL_POSITION && image.position() >= stopPosition)
                 {
                     image = null;
                     return 1;

@@ -290,7 +290,7 @@ public final class FixArchivePrinter
         printOption(
             "fixp",
             "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
-                " only FIXP messages will be printed out",
+            " only FIXP messages will be printed out",
             false);
         printOption(
             "fixp-protocol",

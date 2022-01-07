@@ -310,7 +310,7 @@ public class StreamTimestampZipper
     {
         private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
         private final FixMessageDecoder fixMessage = new FixMessageDecoder();
-        private final FixPMessageDecoder iLinkMessage = new FixPMessageDecoder();
+        private final FixPMessageDecoder fixpMessage = new FixPMessageDecoder();
         private final ReplayerTimestampDecoder replayerTimestamp = new ReplayerTimestampDecoder();
 
         private final FixMessageConsumer fixHandler;
@@ -371,16 +371,16 @@ public class StreamTimestampZipper
             {
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-                iLinkMessage.wrap(buffer, offset, blockLength, version);
+                fixpMessage.wrap(buffer, offset, blockLength, version);
 
                 offset += FixPMessageDecoder.BLOCK_LENGTH;
 
-                final long timestamp = iLinkMessage.enqueueTime();
+                final long timestamp = fixpMessage.enqueueTime();
 
                 if (timestamp <= maxTimestampToHandle)
                 {
                     owner.handledTimestamp(timestamp);
-                    fixPHandler.onMessage(iLinkMessage, buffer, offset, owner.header);
+                    fixPHandler.onMessage(fixpMessage, buffer, offset, owner.header);
                 }
                 else
                 {
@@ -433,11 +433,11 @@ public class StreamTimestampZipper
             {
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-                iLinkMessage.wrap(buffer, offset, blockLength, version);
+                fixpMessage.wrap(buffer, offset, blockLength, version);
 
                 offset += FixPMessageDecoder.BLOCK_LENGTH;
 
-                fixPHandler.onMessage(iLinkMessage, buffer, offset, owner.header);
+                fixPHandler.onMessage(fixpMessage, buffer, offset, owner.header);
             }
         }
     }

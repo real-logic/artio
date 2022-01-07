@@ -575,7 +575,8 @@ public final class SystemTestUtil
         final EngineConfiguration configuration,
         final IntHashSet queryStreamIds,
         final FixMessageConsumer fixMessageConsumer,
-        final FixPMessageConsumer fixPConsumer)
+        final FixPMessageConsumer fixPConsumer,
+        final boolean follow)
     {
         final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
@@ -588,7 +589,7 @@ public final class SystemTestUtil
                 queryStreamIds,
                 fixMessageConsumer,
                 fixPConsumer,
-                false,
+                follow,
                 DEFAULT_ARCHIVE_SCANNER_STREAM);
         }
     }

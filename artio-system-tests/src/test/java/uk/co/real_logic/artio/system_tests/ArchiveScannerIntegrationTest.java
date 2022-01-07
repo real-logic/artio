@@ -165,7 +165,7 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
 
         SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds,
             FixMessagePredicates.filterBy(fixMessageConsumer, predicate),
-            null);
+            null, false);
 
         assertThat(messages, hasSize(1));
     }

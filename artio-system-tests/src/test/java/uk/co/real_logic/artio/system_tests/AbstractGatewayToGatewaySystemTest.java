@@ -603,7 +603,7 @@ public class AbstractGatewayToGatewaySystemTest
         final FixMessageConsumer fixMessageConsumer =
             (message, buffer, offset, length, header) -> messages.add(message.body());
 
-        SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds, fixMessageConsumer, null);
+        SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds, fixMessageConsumer, null, false);
 
         return messages;
     }

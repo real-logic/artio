@@ -30,6 +30,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.getMessagesFrom
 
 public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinaryEntryPointSystemTest
 {
+    private boolean follow = false;
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhilstGatewayRunningOneStream() throws IOException
     {
@@ -41,6 +43,16 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void canScanArchiveWhilstGatewayRunningBothStreams() throws IOException
     {
+        setupAndExchangeMessages();
+
+        assertArchiveContainsBothMessages();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void canScanArchiveWhilstGatewayRunningBothStreamsFollowMode() throws IOException
+    {
+        follow = true;
+
         setupAndExchangeMessages();
 
         assertArchiveContainsBothMessages();
@@ -89,11 +101,24 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
     {
         final IntArrayList templateIds = new IntArrayList();
         final MessageHeaderDecoder header = new MessageHeaderDecoder();
-        getMessagesFromArchive(configuration, queryStreamIds, null, (fixPMessage, buffer, offset, ignore) ->
+        try
         {
-            header.wrap(buffer, offset + SOFH_LENGTH);
-            templateIds.add(header.templateId());
-        });
+            getMessagesFromArchive(configuration, queryStreamIds, null,
+                (fixPMessage, buffer, offset, ignore) ->
+                {
+                    header.wrap(buffer, offset + SOFH_LENGTH);
+                    templateIds.add(header.templateId());
+
+                    if (follow && templateIds.size() >= 7)
+                    {
+                        throw new TestTerminationException();
+                    }
+                }, follow);
+        }
+        catch (final TestTerminationException e)
+        {
+            // Deliberately blank. This is just used to force termination in follow mode.
+        }
 
         assertThat(templateIds, Matchers.hasItems(
             NegotiateResponseDecoder.TEMPLATE_ID,
@@ -107,5 +132,9 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
         setupArtio();
 
         connectAndExchangeBusinessMessage();
+    }
+
+    static class TestTerminationException extends RuntimeException
+    {
     }
 }
