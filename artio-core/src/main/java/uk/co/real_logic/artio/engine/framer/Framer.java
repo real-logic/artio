@@ -1523,6 +1523,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sendRedundantResendRequests,
                 enableLastMsgSeqNumProcessed,
                 fixDictionary);
+            gatewaySession.libraryId(libraryId);
             gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
             gatewaySession.lastLogonTime(sessionContext.lastLogonTimeInNs());
             library.addSession(gatewaySession);
@@ -1833,8 +1834,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             existingLibrary.onHeartbeat(epochClock.time());
 
-            return Pressure.apply(inboundPublication.saveControlNotification(
-                libraryId, initialAcceptedSessionOwner, existingLibrary.sessions(), NO_DISCONNECTED_SESSIONS));
+            return saveControlNotification(libraryId, existingLibrary.sessions()) ? CONTINUE : ABORT;
         }
 
         if (soleLibraryMode)
@@ -1851,16 +1851,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         // Send an empty control notification if you've never seen this library before
-        final LongHashSet disconnectedSessions = gatewaySessions.findDisconnectedSessions(libraryId);
-        if (Pressure.isBackPressured(
-            inboundPublication.saveControlNotification(
-            libraryId, initialAcceptedSessionOwner, Collections.emptyList(), disconnectedSessions)))
+        if (!saveControlNotification(libraryId, Collections.emptyList()))
         {
             return ABORT;
-        }
-        else
-        {
-            gatewaySessions.removeDisconnectedSessions(disconnectedSessions);
         }
 
         final List<Continuation> unitsOfWork = new ArrayList<>();
@@ -1906,6 +1899,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));
+    }
+
+    private boolean saveControlNotification(final int libraryId, final List<?> sessions)
+    {
+        final LongHashSet disconnectedSessions = gatewaySessions.findDisconnectedSessions(libraryId);
+        if (Pressure.isBackPressured(
+            inboundPublication.saveControlNotification(
+            libraryId, initialAcceptedSessionOwner, sessions, disconnectedSessions)))
+        {
+            return false;
+        }
+        else
+        {
+            gatewaySessions.removeDisconnectedSessions(disconnectedSessions);
+            return true;
+        }
     }
 
     private void soleLibraryModeBind()
