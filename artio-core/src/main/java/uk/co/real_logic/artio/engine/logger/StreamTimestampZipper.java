@@ -22,10 +22,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.FixPMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.ReplayerTimestampDecoder;
+import uk.co.real_logic.artio.messages.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -312,6 +309,7 @@ public class StreamTimestampZipper
         private final FixMessageDecoder fixMessage = new FixMessageDecoder();
         private final FixPMessageDecoder fixpMessage = new FixPMessageDecoder();
         private final ReplayerTimestampDecoder replayerTimestamp = new ReplayerTimestampDecoder();
+        private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
 
         private final FixMessageConsumer fixHandler;
         private final FixPMessageConsumer fixPHandler;
@@ -365,6 +363,14 @@ public class StreamTimestampZipper
 
                 replayerTimestamp.wrap(buffer, offset, blockLength, version);
                 final long timestamp = replayerTimestamp.timestamp();
+                owner.handledTimestamp(timestamp);
+            }
+            else if (templateId == ApplicationHeartbeatDecoder.TEMPLATE_ID)
+            {
+                offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+                applicationHeartbeat.wrap(buffer, offset, blockLength, version);
+                final long timestamp = applicationHeartbeat.timestamp();
                 owner.handledTimestamp(timestamp);
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID)

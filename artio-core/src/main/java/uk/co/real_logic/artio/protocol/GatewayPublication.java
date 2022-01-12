@@ -774,7 +774,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveApplicationHeartbeat(final int libraryId)
+    public long saveApplicationHeartbeat(final int libraryId, final long timestamp)
     {
         final long position = claim(HEARTBEAT_LENGTH);
         if (position < 0)
@@ -785,7 +785,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        applicationHeartbeat.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId);
+        applicationHeartbeat
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .timestamp(timestamp);
 
         bufferClaim.commit();
 

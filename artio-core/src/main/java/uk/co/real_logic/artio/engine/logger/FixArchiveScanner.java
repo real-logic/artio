@@ -25,7 +25,6 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -44,8 +43,6 @@ import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuratio
 public class FixArchiveScanner implements AutoCloseable
 {
     private static final int FRAGMENT_LIMIT = 10;
-
-    private static final ReversePositionComparator BY_REVERSE_POSITION = new ReversePositionComparator();
 
     static final boolean DEBUG_LOG_ARCHIVE_SCAN = DebugLogger.isEnabled(ARCHIVE_SCAN);
 
@@ -249,15 +246,11 @@ public class FixArchiveScanner implements AutoCloseable
     {
         return queryStreamIds
             .stream()
-            .map(id ->
-            {
-                final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(
-                    id, follow, aeronChannel, recordingIdToPositionRange);
-
-                archiveLocations.sort(BY_REVERSE_POSITION);
-
-                return new RecordingPoller(replaySubscription, id, archiveLocations);
-            })
+            .flatMap(id ->
+                lookupArchiveLocations(
+                    id, follow, aeronChannel, recordingIdToPositionRange)
+                    .stream()
+                    .map(archiveLocation -> new RecordingPoller(replaySubscription, id, archiveLocation)))
             .toArray(RecordingPoller[]::new);
     }
 
@@ -419,20 +412,6 @@ public class FixArchiveScanner implements AutoCloseable
         return archiveLocations;
     }
 
-    static class ReversePositionComparator implements Comparator<ArchiveLocation>
-    {
-        public int compare(final ArchiveLocation archiveLocation1, final ArchiveLocation archiveLocation2)
-        {
-            return -1 * Long.compare(getStopPosition(archiveLocation1), getStopPosition(archiveLocation2));
-        }
-
-        long getStopPosition(final ArchiveLocation archiveLocation)
-        {
-            final long stopPosition = archiveLocation.stopPosition;
-            return stopPosition == NULL_POSITION ? Long.MAX_VALUE : stopPosition;
-        }
-    }
-
     static class ArchiveLocation
     {
         final long recordingId;
@@ -470,9 +449,10 @@ public class FixArchiveScanner implements AutoCloseable
 
     class RecordingPoller implements StreamTimestampZipper.Poller
     {
-        private final List<ArchiveLocation> archiveLocations;
         private final Subscription replaySubscription;
         private final int originalStreamId;
+
+        private ArchiveLocation archiveLocation;
 
         long stopPosition;
         Image image;
@@ -480,28 +460,26 @@ public class FixArchiveScanner implements AutoCloseable
         RecordingPoller(
             final Subscription replaySubscription,
             final int originalStreamId,
-            final List<ArchiveLocation> archiveLocations)
+            final ArchiveLocation archiveLocation)
         {
             this.replaySubscription = replaySubscription;
             this.originalStreamId = originalStreamId;
-            this.archiveLocations = archiveLocations;
+            this.archiveLocation = archiveLocation;
         }
 
         boolean isComplete()
         {
-            return stopPosition != NULL_POSITION && image == null && archiveLocations.isEmpty();
+            return stopPosition != NULL_POSITION && image == null && archiveLocation == null;
         }
 
         public int poll(final FragmentAssembler fragmentAssembler)
         {
             if (image == null)
             {
-                if (archiveLocations.isEmpty())
+                if (archiveLocation == null)
                 {
                     return 0;
                 }
-
-                final ArchiveLocation archiveLocation = archiveLocations.remove(archiveLocations.size() - 1);
 
                 if (archiveLocation.length() != 0)
                 {
@@ -514,6 +492,7 @@ public class FixArchiveScanner implements AutoCloseable
 
                     image = lookupImage(sessionId);
                     stopPosition = archiveLocation.stopPosition;
+                    archiveLocation = null;
                 }
 
                 return 1;
@@ -559,7 +538,7 @@ public class FixArchiveScanner implements AutoCloseable
         public String toString()
         {
             return "RecordingPoller{" +
-                "archiveLocations=" + archiveLocations +
+                "archiveLocations=" + archiveLocation +
                 ", replaySubscription=" + replaySubscription +
                 ", originalStreamId=" + originalStreamId +
                 ", stopPosition=" + stopPosition +

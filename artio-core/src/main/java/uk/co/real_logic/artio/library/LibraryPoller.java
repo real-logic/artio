@@ -729,7 +729,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             outboundPublication,
             libraryId,
             configuration.replyTimeoutInMs(),
-            onDisconnectFunc);
+            onDisconnectFunc,
+            epochNanoClock);
     }
 
     private boolean isFirstConnect()

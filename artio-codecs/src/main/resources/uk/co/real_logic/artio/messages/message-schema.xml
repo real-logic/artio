@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="21"
+                   version="22"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -619,6 +619,7 @@
                  description="A heartbeat message sent within the application protocol">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connectCorrelationId" id="2" type="CorrelationId"/>
+        <field name="timestamp" id="3" type="Timestamp" sinceVersion="22"/>
     </sbe:message>
 
     <sbe:message name="ResetSequenceNumber" id="42"

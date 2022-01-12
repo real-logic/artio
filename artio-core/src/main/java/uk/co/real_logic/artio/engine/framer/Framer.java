@@ -52,6 +52,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
@@ -185,6 +186,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
     private final FixPContexts fixPContexts;
+    private final long replyTimeoutInNs;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private FixPProtocol fixPProtocol;
@@ -198,6 +200,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     // true if we should be bound, false otherwise
     // If we're in sole library mode and no library is connected we will be unbound.
     private boolean shouldBind;
+
+    private long nextApplicationHeartbeatTimeInNs = 0;
 
     Framer(
         final EpochClock epochClock,
@@ -271,6 +275,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
         this.fixCounters = fixCounters;
+        replyTimeoutInNs = TimeUnit.MILLISECONDS.toNanos(configuration.replyTimeoutInMs());
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
             configuration.acceptorfixDictionary(),
@@ -406,6 +411,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long timeInNs = clock.nanoTime();
         final long timeInMs = epochClock.time();
         fixSenderEndPoints.timeInMs(timeInMs);
+
+        checkOutboundTimestampSender(timeInNs);
+
         return retryManager.attemptSteps() +
             sendOutboundMessages() +
             sendReplayMessages() +
@@ -416,6 +424,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             fixSenderEndPoints.checkTimeouts(timeInMs) +
             adminCommands.drain(onAdminCommand) +
             checkDutyCycle();
+    }
+
+    private void checkOutboundTimestampSender(final long timeInNs)
+    {
+        // We send this outbound timestamp so that a FixArchiveScanner, in follow mode,
+        // can reproduce a totally ordered sequence of messages.
+
+        final long nextApplicationHeartbeatTimeInNs = this.nextApplicationHeartbeatTimeInNs;
+        if (nextApplicationHeartbeatTimeInNs < timeInNs)
+        {
+            if (outboundPublication.saveApplicationHeartbeat(ENGINE_LIBRARY_ID, timeInNs) > 0)
+            {
+                this.nextApplicationHeartbeatTimeInNs = timeInNs + replyTimeoutInNs;
+            }
+        }
     }
 
     private int checkDutyCycle()
@@ -1863,7 +1886,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication,
                 libraryId,
                 configuration.replyTimeoutInMs(),
-                epochClock.time());
+                epochClock.time(),
+                clock);
 
             final LibrarySlowPeeker librarySlowPeeker = this.librarySlowPeeker.addLibrary(aeronSessionId);
             if (librarySlowPeeker == null)

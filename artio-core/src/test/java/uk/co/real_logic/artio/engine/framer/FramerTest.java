@@ -683,7 +683,7 @@ public class FramerTest
 
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
-        verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
+        verify(inboundPublication).saveApplicationHeartbeat(eq(LIBRARY_ID), anyLong());
         saveControlNotification(times(2));
 
         final List<ConnectedSessionInfo> sessions = sessionCaptor.getValue();
@@ -694,23 +694,6 @@ public class FramerTest
     {
         verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), any(), sessionCaptor.capture(),
             any());
-    }
-
-    private void verifyClientDisconnected()
-    {
-        final int bytesToSend = 1;
-        final ByteBuffer buffer = ByteBuffer.allocateDirect(bytesToSend);
-        while (buffer.hasRemaining())
-        {
-            try
-            {
-                client.write(buffer);
-            }
-            catch (final IOException ignore)
-            {
-                return;
-            }
-        }
     }
 
     private void handoverSessionToLibrary()
