@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
+
 /**
  * Filters to be used in conjunction with {@link FixArchiveScanner}.
  */
@@ -78,11 +80,16 @@ public final class FixMessagePredicates
         {
             final int actingVersion = message.sbeSchemaVersion();
             final int actingBlockLength = message.sbeBlockLength();
+            final int initialOffset = message.initialOffset();
 
             if (predicate.test(message))
             {
                 // Rewrap incase the predicate.test() method has altered the limit()
-                message.wrap(buffer, offset, actingBlockLength, actingVersion);
+                message.wrap(buffer, initialOffset, actingBlockLength, actingVersion);
+                if (actingVersion >= metaDataSinceVersion())
+                {
+                    message.skipMetaData();
+                }
                 consumer.onMessage(message, buffer, offset, length, header);
             }
         }
