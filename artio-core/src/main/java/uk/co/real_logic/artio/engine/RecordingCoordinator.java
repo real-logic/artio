@@ -88,7 +88,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     private final CharFormatter loadRecordings = new CharFormatter(
         "RecordingCoordinator.loadRecordingIds: inbound=%s,outbound=%s");
     private final CharFormatter recordingStarted = new CharFormatter(
-        "RecordingCoordinator.recordingStarted: recordingId=%s,direction=%s");
+        "RecordingCoordinator.recordingStarted: recordingId=%s,direction=%s,sessionId=%s");
 
     // Only used on startup and shutdown
     private final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
@@ -449,7 +449,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             DebugLogger.log(STATE_CLEANUP, recordingStarted
                 .clear()
                 .with(recordingId)
-                .with(isInbound ? "inbound" : "outbound"));
+                .with(isInbound ? "inbound" : "outbound")
+                .with(sessionId));
         }
     }
 
