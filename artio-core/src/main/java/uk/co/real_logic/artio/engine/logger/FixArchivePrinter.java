@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.messages.MessageStatus;
 
 import java.util.function.Predicate;
 
@@ -370,7 +371,10 @@ public final class FixArchivePrinter
         final int length,
         final ArtioLogHeader header)
     {
-        System.out.println(message.body());
+        final MessageStatus status = message.status();
+        final long timestamp = message.timestamp();
+        final String body = message.body();
+        System.out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
     }
 
 }
