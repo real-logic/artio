@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -30,7 +31,7 @@ class FixPSubscription
         this.connection = connection;
     }
 
-    public long onMessage(final DirectBuffer buffer, final int offset)
+    public Action onMessage(final DirectBuffer buffer, final int offset)
     {
         return parser.onMessage(buffer, offset);
     }
@@ -40,9 +41,9 @@ class FixPSubscription
         return connection.requestDisconnect(reason);
     }
 
-    public void onDisconnect(final DisconnectReason reason)
+    public Action onDisconnect(final DisconnectReason reason)
     {
-        connection.unbindState(reason);
+        return connection.unbindState(reason);
     }
 
     public void onReplayComplete()

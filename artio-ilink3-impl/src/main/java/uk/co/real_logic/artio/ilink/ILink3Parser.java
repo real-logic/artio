@@ -17,6 +17,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
@@ -90,7 +91,7 @@ public class ILink3Parser extends AbstractFixPParser
         return Ilink3Protocol.unsupported();
     }
 
-    public long onMessage(final DirectBuffer buffer, final int start)
+    public Action onMessage(final DirectBuffer buffer, final int start)
     {
         int offset = start + SOFH_LENGTH;
 
@@ -156,7 +157,7 @@ public class ILink3Parser extends AbstractFixPParser
         }
     }
 
-    private long onRetransmission(
+    private Action onRetransmission(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         retransmission.wrap(buffer, offset, blockLength, version);
@@ -170,7 +171,7 @@ public class ILink3Parser extends AbstractFixPParser
 //        retransmitReject.splitMsg()
     }
 
-    private long onRetransmitReject(
+    private Action onRetransmitReject(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         retransmitReject.wrap(buffer, offset, blockLength, version);
@@ -184,7 +185,7 @@ public class ILink3Parser extends AbstractFixPParser
 //        retransmitReject.splitMsg()
     }
 
-    private long onNegotiationResponse(
+    private Action onNegotiationResponse(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationResponse.wrap(buffer, offset, blockLength, version);
@@ -199,7 +200,7 @@ public class ILink3Parser extends AbstractFixPParser
             negotiationResponse.previousUUID());
     }
 
-    private long onNegotiationReject(
+    private Action onNegotiationReject(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiationReject.wrap(buffer, offset, blockLength, version);
@@ -213,7 +214,7 @@ public class ILink3Parser extends AbstractFixPParser
             // negotiationResponse.splitMsg());
     }
 
-    private long onEstablishmentAck(
+    private Action onEstablishmentAck(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentAck.wrap(buffer, offset, blockLength, version);
@@ -230,7 +231,7 @@ public class ILink3Parser extends AbstractFixPParser
             // establishmentAck.splitMsg()
     }
 
-    private long onEstablishmentReject(
+    private Action onEstablishmentReject(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establishmentReject.wrap(buffer, offset, blockLength, version);
@@ -245,7 +246,7 @@ public class ILink3Parser extends AbstractFixPParser
         // establishmentReject.splitMsg()
     }
 
-    private long onTerminate(
+    private Action onTerminate(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         terminate.wrap(buffer, offset, blockLength, version);
@@ -258,7 +259,7 @@ public class ILink3Parser extends AbstractFixPParser
             // terminate.splitMsg()
     }
 
-    private long onSequence(
+    private Action onSequence(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         sequence.wrap(buffer, offset, blockLength, version);
@@ -270,7 +271,7 @@ public class ILink3Parser extends AbstractFixPParser
             sequence.keepAliveIntervalLapsed());
     }
 
-    private long onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onNotApplied(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         notApplied.wrap(buffer, offset, blockLength, version);
         DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", notAppliedAppendTo);

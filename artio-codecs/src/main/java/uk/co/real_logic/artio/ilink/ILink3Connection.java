@@ -35,10 +35,8 @@ public interface ILink3Connection extends FixPConnection
      *
      * @param shutdown the shutdown text to send in the Terminate message
      * @param errorCodes the error codes to send in the Terminate message
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
      */
-    long terminate(String shutdown, int errorCodes);
+    void terminate(String shutdown, int errorCodes);
 
     // -----------------------------------------------
     // Accessors

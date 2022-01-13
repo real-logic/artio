@@ -1,12 +1,16 @@
 package uk.co.real_logic.artio.example_fixp_exchange;
 
 import b3.entrypoint.fixp.sbe.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public class FixPExchangeSessionHandler implements FixPConnectionHandler
 {
@@ -19,7 +23,7 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
     {
     }
 
-    public void onBusinessMessage(
+    public Action onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
@@ -37,13 +41,13 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
 
             newOrderSingle.wrap(buffer, offset, blockLength, version);
 
-
             final long position = connection.tryClaim(
                 executionReport, ExecutionReport_NewEncoder.NoMetricsEncoder.sbeBlockLength());
 
             if (position < 0)
             {
                 // handle back-pressure here
+                return ABORT;
             }
 
             executionReport
@@ -65,36 +69,46 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
             connection.commit();
             System.out.println("Sent Execution Report New");
         }
+
+        return CONTINUE;
     }
 
-    public void onNotApplied(
+    public Action onNotApplied(
         final FixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitReject(
+    public Action onRetransmitReject(
         final FixPConnection connection, final String reason, final long requestTimestamp, final int errorCodes)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitTimeout(final FixPConnection connection)
+    public Action onRetransmitTimeout(final FixPConnection connection)
     {
+        return CONTINUE;
     }
 
-    public void onSequence(final FixPConnection connection, final long nextSeqNo)
+    public Action onSequence(final FixPConnection connection, final long nextSeqNo)
     {
+        return CONTINUE;
     }
 
-    public void onError(final FixPConnection connection, final Exception ex)
+    public Action onError(final FixPConnection connection, final Exception ex)
     {
         ex.printStackTrace();
+
+        return CONTINUE;
     }
 
-    public void onDisconnect(final FixPConnection connection, final DisconnectReason reason)
+    public Action onDisconnect(final FixPConnection connection, final DisconnectReason reason)
     {
         System.out.println("onDisconnect conn=" + connection.key() + ",reason=" + reason);
+
+        return CONTINUE;
     }
 }

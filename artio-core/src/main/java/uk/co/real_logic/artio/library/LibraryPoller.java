@@ -1238,7 +1238,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 // FIXP doesn't behave any differently.
-                onFixPDisconnect(connectionId, reason);
+                return onFixPDisconnect(connectionId, reason);
             }
         }
         else
@@ -1274,14 +1274,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    private void onFixPDisconnect(final long connectionId, final DisconnectReason reason)
+    private Action onFixPDisconnect(final long connectionId, final DisconnectReason reason)
     {
-        final FixPSubscription subscription = connectionIdToFixPSubscription.remove(connectionId);
+        final FixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
         if (subscription != null)
         {
-            subscription.onDisconnect(reason);
+            final Action action = subscription.onDisconnect(reason);
+            if (action == ABORT)
+            {
+                return ABORT;
+            }
+            connectionIdToFixPSubscription.remove(connectionId);
             fixPSessionOwner.remove(subscription.session());
         }
+
+        return CONTINUE;
     }
 
     public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
@@ -1289,7 +1296,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixPSubscription subscription = connectionIdToFixPSubscription.get(connectionId);
         if (subscription != null)
         {
-            return Pressure.apply(subscription.onMessage(buffer, offset));
+            return subscription.onMessage(buffer, offset);
         }
 
         return CONTINUE;
@@ -2012,6 +2019,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         final FixPSubscription subscription = new FixPSubscription(
             fixPProtocol.makeParser(connection), connection);
+
+        // TODO
         subscription.onMessage(buffer, offset);
 
         if (!offline)

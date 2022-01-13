@@ -16,24 +16,25 @@
 package uk.co.real_logic.artio.library;
 
 import iLinkBinary.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 import uk.co.real_logic.artio.fixp.FixPMessageDissector;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.ilink.ILink3Proxy;
-import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import java.util.stream.LongStream;
 
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -501,7 +502,7 @@ public class RetransmitQueueTest
             .possRetransFlag(possRetrans ? BooleanFlag.True : BooleanFlag.False)
             .shortSaleType(ShortSaleType.LongSell);
 
-        final long position = connection.onMessage(
+        final Action position = connection.onMessage(
             recvBuffer,
             SOFH_LENGTH + MessageHeaderEncoder.ENCODED_LENGTH,
             ExecutionReportStatus532Encoder.TEMPLATE_ID,
@@ -509,7 +510,7 @@ public class RetransmitQueueTest
             ExecutionReportStatus532Encoder.SCHEMA_VERSION,
             totalLength);
 
-        assertThat(position, Matchers.greaterThanOrEqualTo(0L));
+        assertEquals(CONTINUE, position);
     }
 
     private Matcher<Iterable<? extends Long>> containsRange(final long from, final long toInclusive)

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
 import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import org.agrona.collections.LongArrayList;
@@ -28,6 +29,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
@@ -62,7 +65,7 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         return finishedSending;
     }
 
-    public void onBusinessMessage(
+    public ControlledFragmentHandler.Action onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
@@ -84,11 +87,15 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
 
             lastPosition = sendExecutionReportNew(connection, clOrderID, securityID, abortReport);
         }
+
+        return CONTINUE;
     }
 
-    public void onFinishedSending(final FixPConnection connection)
+    public ControlledFragmentHandler.Action onFinishedSending(final FixPConnection connection)
     {
         finishedSending = true;
+
+        return CONTINUE;
     }
 
     static long sendExecutionReportNew(
@@ -139,39 +146,48 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         return position;
     }
 
-    public void onNotApplied(
+    public ControlledFragmentHandler.Action onNotApplied(
         final FixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
         final NotAppliedResponse response)
     {
         notAppliedResponse.accept(response);
+
+        return CONTINUE;
     }
 
-    public void onRetransmitReject(
+    public ControlledFragmentHandler.Action onRetransmitReject(
         final FixPConnection connection,
         final String reason,
         final long requestTimestamp,
         final int errorCodes)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitTimeout(final FixPConnection connection)
+    public ControlledFragmentHandler.Action onRetransmitTimeout(final FixPConnection connection)
     {
+        return CONTINUE;
     }
 
-    public void onSequence(final FixPConnection connection, final long nextSeqNo)
+    public ControlledFragmentHandler.Action onSequence(final FixPConnection connection, final long nextSeqNo)
     {
+        return CONTINUE;
     }
 
-    public void onError(final FixPConnection connection, final Exception ex)
+    public ControlledFragmentHandler.Action onError(final FixPConnection connection, final Exception ex)
     {
         exceptions.add(ex);
+
+        return CONTINUE;
     }
 
-    public void onDisconnect(final FixPConnection connection, final DisconnectReason reason)
+    public ControlledFragmentHandler.Action onDisconnect(final FixPConnection connection, final DisconnectReason reason)
     {
         this.disconnectReason = reason;
+
+        return CONTINUE;
     }
 
     public DisconnectReason disconnectReason()

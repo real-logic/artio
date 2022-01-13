@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.fixp;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 
 public abstract class AbstractFixPParser
@@ -23,7 +24,7 @@ public abstract class AbstractFixPParser
     public static final int BOOLEAN_FLAG_TRUE = 1;
     public static final int STANDARD_TEMPLATE_ID_OFFSET = 2;
 
-    public abstract long onMessage(DirectBuffer buffer, int offset);
+    public abstract Action onMessage(DirectBuffer buffer, int offset);
 
     public abstract int templateId(DirectBuffer buffer, int offset);
 

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.fixp.FixPConnection;
@@ -32,17 +33,17 @@ public interface ILink3ConnectionHandler extends FixPConnectionHandler
      * Callback for receiving iLink3 business messages. Details of business messages can be found in the
      * <a href="https://www.cmegroup.com/confluence/display/EPICSANDBOX/iLink+3+Application+Layer">CME
      * Documentation</a>. These may also be referred to as application layer messages.
-     *
-     * @param connection the connection receiving this message
+     *  @param connection the connection receiving this message
      * @param templateId the templateId of the iLink3 SBE message that you have received.
      * @param buffer the buffer containing the message.
      * @param offset the offset within the buffer at which your message starts.
      * @param blockLength the blockLength of the received message.
      * @param version the sbe version of the protocol.
      * @param possRetrans true of the possRetrans flag is set to true.
+     * @return
      */
     @Override
-    void onBusinessMessage(
+    ControlledFragmentHandler.Action onBusinessMessage(
         FixPConnection connection,
         int templateId,
         DirectBuffer buffer,

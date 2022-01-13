@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -36,6 +37,8 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import java.nio.ByteOrder;
 
 import static b3.entrypoint.fixp.sbe.CancelOnDisconnectType.DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
@@ -199,9 +202,9 @@ class InternalBinaryEntryPointConnection
     }
 
     // Handles resends
-    private long internalTerminateInclResend(final TerminationCode terminationCode)
+    private void internalTerminateInclResend(final TerminationCode terminationCode)
     {
-        return sendTerminate(terminationCode, State.UNBINDING, State.RESEND_TERMINATE);
+        sendTerminate(terminationCode, State.UNBINDING, State.RESEND_TERMINATE);
     }
 
     public long trySendSequence()
@@ -279,7 +282,7 @@ class InternalBinaryEntryPointConnection
         proxy.ids(connectionId, sessionId);
     }
 
-    public long onNegotiate(
+    public Action onNegotiate(
         final long sessionId,
         final long sessionVerID,
         final long timestamp,
@@ -292,7 +295,7 @@ class InternalBinaryEntryPointConnection
         {
             // Offline session
             onSessionId(sessionId, sessionVerID);
-            return 1;
+            return CONTINUE;
         }
 
         if (!(state == State.ACCEPTED || state == State.SENT_NEGOTIATE_RESPONSE))
@@ -301,7 +304,7 @@ class InternalBinaryEntryPointConnection
 
             if (checkFinishedSending(state))
             {
-                return 1;
+                return CONTINUE;
             }
         }
 
@@ -316,12 +319,12 @@ class InternalBinaryEntryPointConnection
             sessionId, 0, NO_REQUIRED_POSITION);
         if (inboundPos < 0)
         {
-            return inboundPos;
+            return ABORT;
         }
 
         final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
         onAttemptedToSendMessage();
-        return checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE);
+        return Pressure.apply(checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE));
     }
 
     private void onSessionId(final long sessionId, final long sessionVerID)
@@ -344,7 +347,7 @@ class InternalBinaryEntryPointConnection
         return position;
     }
 
-    public long onEstablish(
+    public Action onEstablish(
         final long sessionID,
         final long sessionVerID,
         final long timestamp,
@@ -365,11 +368,11 @@ class InternalBinaryEntryPointConnection
             if (state != State.SENT_NEGOTIATE_RESPONSE)
             {
                 onAttemptedToSendMessage();
-                return proxy.sendEstablishReject(
+                return Pressure.apply(proxy.sendEstablishReject(
                     sessionID,
                     sessionVerID,
                     timestamp,
-                    EstablishRejectCode.ALREADY_ESTABLISHED);
+                    EstablishRejectCode.ALREADY_ESTABLISHED));
             }
             else if (keepAliveIntervalInMs > maxFixPKeepaliveTimeoutInMs)
             {
@@ -381,9 +384,10 @@ class InternalBinaryEntryPointConnection
                     EstablishRejectCode.KEEPALIVE_INTERVAL);
                 if (position > 0)
                 {
-                    fullyUnbind();
+                    return fullyUnbind();
                 }
-                return position;
+
+                return Pressure.apply(position);
             }
         }
 
@@ -401,7 +405,7 @@ class InternalBinaryEntryPointConnection
             }
             else
             {
-                return inboundPos;
+                return ABORT;
             }
         }
 
@@ -424,9 +428,12 @@ class InternalBinaryEntryPointConnection
             this.suppressRedactResend = false;
 
             state(ESTABLISHED);
+            return CONTINUE;
         }
-
-        return position;
+        else
+        {
+            return ABORT;
+        }
     }
 
     private void setupCancelOnDisconnect(
@@ -470,7 +477,7 @@ class InternalBinaryEntryPointConnection
         }
     }
 
-    public long onTerminate(
+    public Action onTerminate(
         final long sessionID, final long sessionVerID, final TerminationCode terminationCode)
     {
         cancelOnDisconnect.checkCancelOnDisconnectLogout(clock.nanoTime());
@@ -490,14 +497,15 @@ class InternalBinaryEntryPointConnection
 
         checkSession(sessionID, sessionVerID);
 
-        return 1;
+        return CONTINUE;
     }
 
-    protected void unbindState(final DisconnectReason reason)
+    protected Action unbindState(final DisconnectReason reason)
     {
         cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
 
         super.unbindState(reason);
+        return null;
     }
 
     private void checkSession(final long sessionID, final long sessionVerID)
@@ -537,19 +545,19 @@ class InternalBinaryEntryPointConnection
         return position;
     }
 
-    public long onSequence(final long nextSeqNo)
+    public Action onSequence(final long nextSeqNo)
     {
         onReceivedMessage();
 
         if (checkFinishedSending(state))
         {
-            return 1;
+            return CONTINUE;
         }
 
         return checkSeqNo(nextSeqNo);
     }
 
-    private long checkSeqNo(final long nextSeqNo)
+    private Action checkSeqNo(final long nextSeqNo)
     {
         final long nextRecvSeqNo = this.nextRecvSeqNo;
 
@@ -563,17 +571,17 @@ class InternalBinaryEntryPointConnection
                 this.nextRecvSeqNo = nextSeqNo;
             }
 
-            return position;
+            return Pressure.apply(position);
         }
         else if (nextSeqNo < nextRecvSeqNo)
         {
-            return internalTerminateInclResend(TerminationCode.FINISHED);
+            internalTerminateInclResend(TerminationCode.FINISHED);
         }
 
-        return 1;
+        return CONTINUE;
     }
 
-    public long onMessage(
+    public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int templateId,
@@ -586,11 +594,9 @@ class InternalBinaryEntryPointConnection
         final State state = state();
         if (canReceiveMessage(state))
         {
-            nextRecvSeqNo++;
-
             dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
-            handler.onBusinessMessage(
+            final Action action = handler.onBusinessMessage(
                 this,
                 templateId,
                 buffer,
@@ -598,13 +604,20 @@ class InternalBinaryEntryPointConnection
                 blockLength,
                 version,
                 false);
+
+            if (action != ABORT)
+            {
+                nextRecvSeqNo++;
+            }
+
+            return action;
         }
         else
         {
             checkFinishedSending(state);
-        }
 
-        return 1;
+            return CONTINUE;
+        }
     }
 
     private boolean canReceiveMessage(final State state)
@@ -649,7 +662,7 @@ class InternalBinaryEntryPointConnection
         }
     }
 
-    public long onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
+    public Action onFinishedSending(final long sessionID, final long sessionVerID, final long lastSeqNo)
     {
         final State state = this.state;
         final boolean weInitiatedFinishedSending = state == RECV_FINISHED_RECEIVING_ONLY;
@@ -660,30 +673,40 @@ class InternalBinaryEntryPointConnection
 
         checkSession(sessionID, sessionVerID);
 
-        final long position = proxy.sendFinishedReceiving(
-            sessionID,
-            sessionVerID,
-            requestTimestampInNs());
-
-        if (position > 0)
+        // it's an abort and retry if we're in these states
+        if (state != RECV_FINISHED_SENDING && state != UNBINDING && state != RESEND_TERMINATE)
         {
-            if (weInitiatedFinishedSending)
+            final long position = proxy.sendFinishedReceiving(
+                sessionID,
+                sessionVerID,
+                requestTimestampInNs());
+
+            if (position > 0)
             {
-                internalTerminateInclResend(TerminationCode.FINISHED);
-            }
-            else // they initiated finished sending
-            {
-                // we're now awaiting a finished receiving or possible retransmit request
-                state(RECV_FINISHED_SENDING);
+                if (weInitiatedFinishedSending)
+                {
+                    internalTerminateInclResend(TerminationCode.FINISHED);
+                }
+                else // they initiated finished sending
+                {
+                    // we're now awaiting a finished receiving or possible retransmit request
+                    state(RECV_FINISHED_SENDING);
+                }
+
+                // post: state == RECV_FINISHED_SENDING || UNBINDING || RESEND_TERMINATE
+
+                return handler.onFinishedSending(this);
             }
 
-            handler.onFinishedSending(this);
+            return ABORT;
         }
-
-        return position;
+        else // Case that we're retrying handler.onFinishedSending() but have already done sendFinishedReceiving
+        {
+            return handler.onFinishedSending(this);
+        }
     }
 
-    public long onFinishedReceiving(final long sessionID, final long sessionVerID)
+    public Action onFinishedReceiving(final long sessionID, final long sessionVerID)
     {
         final State state = this.state;
         final boolean weInitiatedFinishedSending = state == SENT_FINISHED_SENDING || state == RETRY_FINISHED_SENDING;
@@ -704,10 +727,10 @@ class InternalBinaryEntryPointConnection
             internalTerminateInclResend(TerminationCode.FINISHED);
         }
 
-        return 1;
+        return CONTINUE;
     }
 
-    public long onRetransmitRequest(
+    public Action onRetransmitRequest(
         final long sessionID, final long timestampInNs, final long fromSeqNo, final long count)
     {
         final State state = this.state;
@@ -743,7 +766,7 @@ class InternalBinaryEntryPointConnection
                 fromSeqNo, count, requestTimestampInNs(), timestampInNs, nextSentSeqNo);
             if (position < 0)
             {
-                return position;
+                return ABORT;
             }
         }
 
@@ -757,20 +780,24 @@ class InternalBinaryEntryPointConnection
             0,
             0);
 
-        if (position > 0)
-        {
-            replaying = true;
-        }
-
         // suppress if we've failed to send the resend request to the replayer as this will cause this handler to be
         // retried
-        suppressRetransmissionResend = position < 0;
-        return position;
+        if (position < 0)
+        {
+            suppressRetransmissionResend = true;
+            return ABORT;
+        }
+        else
+        {
+            replaying = true;
+            suppressRetransmissionResend = false;
+            return CONTINUE;
+        }
     }
 
-    private long sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)
+    private Action sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)
     {
-        return proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs);
+        return Pressure.apply(proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs));
     }
 
     public Reply<ThrottleConfigurationStatus> throttleMessagesAt(

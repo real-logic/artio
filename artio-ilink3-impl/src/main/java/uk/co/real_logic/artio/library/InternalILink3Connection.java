@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import iLinkBinary.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.LangUtil;
@@ -46,6 +47,8 @@ import java.util.function.Consumer;
 import static iLinkBinary.KeepAliveLapsed.Lapsed;
 import static iLinkBinary.KeepAliveLapsed.NotLapsed;
 import static iLinkBinary.RetransmitRequest508Decoder.lastUUIDNullValue;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
@@ -295,11 +298,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return position;
     }
 
-    public long terminate(final String reason, final int errorCodes)
+    public void terminate(final String reason, final int errorCodes)
     {
         validateCanSend();
 
-        return sendTerminate(reason, errorCodes, State.UNBINDING, State.RESEND_TERMINATE);
+        sendTerminate(reason, errorCodes, State.UNBINDING, State.RESEND_TERMINATE);
     }
 
     public long tryRetransmitRequest(final long uuid, final long fromSeqNo, final int msgCount)
@@ -331,7 +334,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return uuid == thisUuid ? lastUUIDNullValue() : uuid;
     }
 
-    private long sendTerminate(
+    private boolean sendTerminate(
         final String reason, final int errorCodes, final State finalState, final State resendState)
     {
         final long requestTimestamp = requestTimestampInNs();
@@ -346,15 +349,15 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             state = finalState;
             resendTerminateReason = null;
             resendTerminateErrorCodes = 0;
+            return true;
         }
         else
         {
             state = resendState;
             resendTerminateReason = reason;
             resendTerminateErrorCodes = errorCodes;
+            return false;
         }
-
-        return position;
     }
 
     public long uuid()
@@ -697,7 +700,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     // EVENT HANDLERS
 
-    public long onNegotiationResponse(
+    public Action onNegotiationResponse(
         final long uUID,
         final long requestTimestamp,
         final int secretKeySecureIDExpiration,
@@ -706,13 +709,13 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     {
         if (checkBoundaryErrors("Negotiate", uUID, requestTimestamp, lastNegotiateRequestTimestamp))
         {
-            return 1;
+            return CONTINUE;
         }
 
         state = State.NEGOTIATED;
         sendEstablish();
 
-        return 1;
+        return CONTINUE;
     }
 
     private boolean checkBoundaryErrors(
@@ -735,7 +738,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return false;
     }
 
-    public long onNegotiationReject(
+    public Action onNegotiationReject(
         final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
         state = State.NEGOTIATE_REJECTED;
@@ -755,7 +758,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         owner.remove(this);
     }
 
-    public long onEstablishmentAck(
+    public Action onEstablishmentAck(
         final long uUID,
         final long requestTimestamp,
         final long nextSeqNo,
@@ -766,7 +769,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
     {
         if (checkBoundaryErrors("EstablishmentAck", uUID, requestTimestamp, lastEstablishRequestTimestamp))
         {
-            return 1;
+            return CONTINUE;
         }
 
         state = State.ESTABLISHED;
@@ -786,16 +789,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             }
         }
 
-        final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
-        if (position != OK_POSITION)
-        {
-            return position;
-        }
-
-        return 1;
+        checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
+        return CONTINUE;
     }
 
-    public long onEstablishmentReject(
+    public Action onEstablishmentReject(
         final String reason, final long uUID, final long requestTimestamp, final long nextSeqNo, final int errorCodes)
     {
         state = State.ESTABLISH_REJECTED;
@@ -803,7 +801,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return onReject(uUID, requestTimestamp, lastEstablishRequestTimestamp, reasonMsg, errorCodes);
     }
 
-    private long onReject(
+    private Action onReject(
         final long msgUuid,
         final long msgRequestTimestamp,
         final long expectedRequestTimestamp,
@@ -839,10 +837,10 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         connectionError(new IllegalResponseException(msgBuilder.toString()));
 
-        return 1;
+        return CONTINUE;
     }
 
-    public long onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
+    public Action onTerminate(final String reason, final long uUID, final long requestTimestamp, final int errorCodes)
     {
         // We initiated termination
         if (state == State.UNBINDING)
@@ -863,7 +861,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         checkUuid(uUID);
 
-        return 1;
+        return CONTINUE;
     }
 
     private String terminateErrorReason(final int errorCodes)
@@ -878,8 +876,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     private void sendTerminateAck(final String reason, final int errorCodes)
     {
-        final long position = sendTerminate(reason, errorCodes, State.UNBOUND, State.RESEND_TERMINATE_ACK);
-        if (position > 0)
+        if (sendTerminate(reason, errorCodes, State.UNBOUND, State.RESEND_TERMINATE_ACK))
         {
             if (initiateReply != null)
             {
@@ -904,15 +901,14 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
-    public long onSequence(
+    public Action onSequence(
         final long uUID, final long nextSeqNo, final FTI fti, final KeepAliveLapsed keepAliveLapsed)
     {
         if (uUID == uuid())
         {
             onReceivedMessage();
 
-            final long position = checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo);
-            if (position == OK_POSITION)
+            if (checkLowSequenceNumberCase(nextSeqNo, nextRecvSeqNo))
             {
                 final long expectedNextRecvSeqNo = this.nextRecvSeqNo;
                 nextRecvSeqNo(nextSeqNo);
@@ -927,18 +923,13 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                     // implied expectedNextRecvSeqNo == nextSeqNo
                     // Sequence number at this point indicates that CME won't send any more retransmit requests
                     // and we should consider the retransmit to be filled.
-                    final long filledPosition = onRetransmitFilled();
-                    if (Pressure.isBackPressured(filledPosition))
-                    {
-                        return filledPosition;
-                    }
+                    return onRetransmitFilled();
                 }
             }
             else
             {
                 // low sequence number triggered disconnect
-                handler.onSequence(this, nextSeqNo);
-                return position;
+                return handler.onSequence(this, nextSeqNo);
             }
 
             // Reply to any warning messages to keep the session alive.
@@ -947,39 +938,48 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 sendSequence(NotLapsed);
             }
 
-            handler.onSequence(this, nextSeqNo);
+            return handler.onSequence(this, nextSeqNo);
         }
 
-        return 1;
+        return CONTINUE;
     }
 
-    private long checkLowSequenceNumberCase(final long seqNo, final long nextRecvSeqNo)
+    private boolean checkLowSequenceNumberCase(final long seqNo, final long nextRecvSeqNo)
     {
         if (seqNo < nextRecvSeqNo)
         {
-            return terminate(String.format(
+            terminate(String.format(
                 "seqNo=%s,expecting=%s",
                 seqNo,
                 this.nextRecvSeqNo), 0);
+
+            return false;
         }
 
-        return OK_POSITION;
+        return true;
     }
 
-    public long onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
+    public Action onNotApplied(final long uUID, final long fromSeqNo, final long msgCount)
     {
         // Don't invoke the handler on the backpressured retry
         if (!backpressuredNotApplied)
         {
             // Stop messages from being sent whilst a retransmit is underway.
+            final State oldState = this.state;
             state = State.RETRANSMITTING;
-            handler.onNotApplied(this, fromSeqNo, msgCount, response);
+            final Action action = handler.onNotApplied(this, fromSeqNo, msgCount, response);
+            if (action == ABORT)
+            {
+                state = oldState;
+                return ABORT;
+            }
             onReceivedMessage();
         }
 
+        final long position;
         if (response.shouldRetransmit())
         {
-            final long position = inboundPublication.saveValidResendRequest(
+            position = inboundPublication.saveValidResendRequest(
                 uUID,
                 connectionId,
                 fromSeqNo,
@@ -988,23 +988,20 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 NO_BUFFER,
                 0,
                 0);
-
-            backpressuredNotApplied = Pressure.isBackPressured(position);
-
-            return position;
         }
         else
         {
-            final long position = sendSequence(NotLapsed);
+            position = sendSequence(NotLapsed);
             if (position > 0)
             {
                 state = State.ESTABLISHED;
             }
-
-            backpressuredNotApplied = Pressure.isBackPressured(position);
-
-            return position;
         }
+
+        final boolean backPressured = Pressure.isBackPressured(position);
+        backpressuredNotApplied = backPressured;
+
+        return backPressured ? ABORT : CONTINUE;
     }
 
     protected void onReplayComplete()
@@ -1014,7 +1011,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
 //    private
 
-    public long onMessage(
+    public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int templateId,
@@ -1029,13 +1026,13 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             final long seqNum = exchangeSeqNum(buffer, offset);
             if (seqNum == MISSING_OFFSET)
             {
-                return 1;
+                return CONTINUE;
             }
 
             final long uuid = offsets.uuid(templateId, buffer, offset);
             if (uuid == MISSING_OFFSET)
             {
-                return 1;
+                return CONTINUE;
             }
 
             final int possRetrans = offsets.possRetrans(templateId, buffer, offset);
@@ -1047,17 +1044,20 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
             if (uuid != this.uuid)
             {
-                handler.onError(this, new IllegalStateException(String.format(
+                final Action action = handler.onError(this, new IllegalStateException(String.format(
                     "Have received invalid uuid: %d when it should be %d, disconnecting",
                     uuid,
                     this.uuid)));
-                return terminate("Invalid UUID", INVALID_UUID_ERROR_CODE);
+                if (action != ABORT)
+                {
+                    terminate("Invalid UUID", INVALID_UUID_ERROR_CODE);
+                }
+                return action;
             }
 
             final long nextRecvSeqNo = this.nextRecvSeqNo;
             DebugLogger.log(FIXP_SESSION, checkSeqNum, seqNum, nextRecvSeqNo);
-            final long position = checkLowSequenceNumberCase(seqNum, nextRecvSeqNo);
-            if (position == OK_POSITION)
+            if (checkLowSequenceNumberCase(seqNum, nextRecvSeqNo))
             {
                 if (nextRecvSeqNo == seqNum)
                 {
@@ -1066,14 +1066,14 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
                     if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
                     {
-                        onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+                        return onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
                     }
                     else
                     {
                         enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
-                    }
 
-                    return 1;
+                        return CONTINUE;
+                    }
                 }
                 else /* nextRecvSeqNo > seqNum */
                 {
@@ -1095,16 +1095,17 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             }
             else
             {
-                return position;
+                return CONTINUE;
             }
         }
         else
         {
-            return onUnexpectedMessage(buffer, offset, templateId, blockLength, version);
+            onUnexpectedMessage(buffer, offset, templateId, blockLength, version);
+            return CONTINUE;
         }
     }
 
-    private int onUnexpectedMessage(
+    private void onUnexpectedMessage(
         final DirectBuffer buffer, final int offset, final int templateId, final int blockLength, final int version)
     {
         final long seqNum = offsets.seqNum(templateId, buffer, offset);
@@ -1126,11 +1127,9 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 DebugLogger.logSbeDecoder(FIXP_SESSION, "> ", businessRejectAppendTo);
             }
         }
-
-        return 1;
     }
 
-    private long onPossRetransMessage(
+    private Action onPossRetransMessage(
         final DirectBuffer buffer,
         final int offset,
         final int templateId,
@@ -1146,11 +1145,11 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             retransmitContiguousSeqNo = expectedSeqNo - 1;
 
             final long retransmitLastUuid = lookupRetransmitLastUuid(uuid, this.uuid);
-            final long position = onInvalidSequenceNumber(
+            final Action action = onInvalidSequenceNumber(
                 retransmitLastUuid, seqNum, expectedSeqNo, nextRecvSeqNo);
-            if (Pressure.isBackPressured(position))
+            if (action == ABORT)
             {
-                return position;
+                return ABORT;
             }
 
             enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
@@ -1158,19 +1157,24 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         else
         {
             final long nextRetransmitContiguousSeqNo = retransmitContiguousSeqNo + 1;
-            if (seqNum == nextRetransmitContiguousSeqNo)
-            {
-                retransmitContiguousSeqNo = seqNum;
-            }
 
             // nextRetransmitContiguousSeqNo == 0 if all the received messages are in order
             if (nextRetransmitContiguousSeqNo == 0 || seqNum == nextRetransmitContiguousSeqNo)
             {
-                onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+                final Action action = onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+                if (action == ABORT)
+                {
+                    return ABORT;
+                }
             }
             else
             {
                 enqueueRetransmitMessage(buffer, offset, totalLength, seqNum);
+            }
+
+            if (seqNum == nextRetransmitContiguousSeqNo)
+            {
+                retransmitContiguousSeqNo = seqNum;
             }
         }
 
@@ -1183,7 +1187,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             nextRetransmitSeqNo = seqNum + 1;
         }
 
-        return 1;
+        return CONTINUE;
     }
 
     // returns true if the enqueue is successful
@@ -1225,7 +1229,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         retransmitQueueOffset = newQueueSize;
     }
 
-    private void onBusinessMessage(
+    private Action onBusinessMessage(
         final DirectBuffer buffer,
         final int offset,
         final int templateId,
@@ -1238,7 +1242,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
         }
 
-        handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);
+        return handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);
     }
 
     private void checkBusinessRejectSequenceNumber(
@@ -1254,17 +1258,17 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
-    private long onInvalidSequenceNumber(final long seqNum)
+    private Action onInvalidSequenceNumber(final long seqNum)
     {
         return onInvalidSequenceNumber(seqNum, seqNum + 1);
     }
 
-    private long onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
+    private Action onInvalidSequenceNumber(final long msgSeqNum, final long newNextRecvSeqNo)
     {
         return onInvalidSequenceNumber(lastUUIDNullValue(), msgSeqNum, nextRecvSeqNo, newNextRecvSeqNo);
     }
 
-    private long onInvalidSequenceNumber(
+    private Action onInvalidSequenceNumber(
         final long lastUuid, final long msgSeqNum, final long oldNextRecvSeqNo, final long newNextRecvSeqNo)
     {
         final long fromSeqNo = oldNextRecvSeqNo;
@@ -1283,8 +1287,12 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillTimeoutInNs(requestTimestamp);
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
+                return CONTINUE;
             }
-            return position;
+            else
+            {
+                return ABORT;
+            }
         }
         else
         {
@@ -1292,7 +1300,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             addRemainingRetransmitRequests(lastUuid, fromSeqNo, msgCount, totalMsgCount);
             nextRecvSeqNoForCurrentUuid(newNextRecvSeqNo, lastUuid);
 
-            return 1;
+            return CONTINUE;
         }
     }
 
@@ -1310,7 +1318,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
-    private long onRetransmitFilled()
+    private Action onRetransmitFilled()
     {
         processRetransmitQueue();
 
@@ -1355,12 +1363,16 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 retransmitUuid(lastUuid);
                 nextRetransmitSeqNo = fromSeqNo;
                 retransmitFillSeqNo = fromSeqNo + msgCount - 1;
-            }
 
-            return position;
+                return CONTINUE;
+            }
+            else
+            {
+                return ABORT;
+            }
         }
 
-        return 1;
+        return CONTINUE;
     }
 
     private void retransmitFillTimeoutInNs(final long requestTimestampInNs)
@@ -1405,7 +1417,14 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             final long messageUuid = offsets.uuid(templateId, retransmitQueue, messageOffset);
             if (messageUuid == retransmitUuid && seqNum == retransmitContiguousSeqNo + 1)
             {
-                onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                final Action action = onBusinessMessage(
+                    retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                if (action == ABORT)
+                {
+                    this.retransmitContiguousSeqNo = retransmitContiguousSeqNo;
+                    retransmitQueueOffset = offset;
+                    return;
+                }
                 retransmitContiguousSeqNo++;
             }
             else
@@ -1425,7 +1444,14 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             final int version = headerDecoder.version();
 
             final int messageOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
-            onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
+            final Action action = onBusinessMessage(
+                retransmitQueue, messageOffset, templateId, blockLength, version, false);
+            if (action == ABORT)
+            {
+                this.retransmitContiguousSeqNo = NOT_AWAITING_RETRANSMIT;
+                retransmitQueueOffset = 0;
+                return;
+            }
         }
 
         this.retransmitContiguousSeqNo = NOT_AWAITING_RETRANSMIT;
@@ -1469,7 +1495,12 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
             if (retransmitMaxSeqNo == NOT_AWAITING_RETRANSMIT || seqNum <= retransmitMaxSeqNo)
             {
-                onBusinessMessage(retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                final Action action = onBusinessMessage(
+                    retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                if (action == ABORT)
+                {
+                    break;
+                }
 
                 offset += length;
             }
@@ -1526,10 +1557,10 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         return proxy.sendRetransmitRequest(uuid, lastUuid, requestTimestamp, fromSeqNo, msgCount);
     }
 
-    public long onRetransmission(
+    public Action onRetransmission(
         final long uUID, final long lastUUID, final long requestTimestamp, final long fromSeqNo, final int msgCount)
     {
-        return 1;
+        return CONTINUE;
     }
 
     static final class RetransmitRequest
@@ -1582,16 +1613,18 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         }
     }
 
-    public long onRetransmitReject(
+    public Action onRetransmitReject(
         final String reason, final long uuid, final long lastUuid, final long requestTimestamp, final int errorCodes)
     {
         checkUuid(uuid);
 
-        handler.onRetransmitReject(this, reason, requestTimestamp, errorCodes);
+        final Action action = handler.onRetransmitReject(this, reason, requestTimestamp, errorCodes);
+        if (action == ABORT)
+        {
+            return ABORT;
+        }
 
-        onRetransmitFilled();
-
-        return 1;
+        return onRetransmitFilled();
     }
 
     protected void onOfflineReconnect(final long connectionId, final FixPContext context)

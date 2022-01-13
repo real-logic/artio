@@ -15,42 +15,51 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+
 public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
 {
-    public void onNotApplied(
+    public Action onNotApplied(
         final FixPConnection connection,
         final long fromSequenceNumber, final long msgCount, final NotAppliedResponse response)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitReject(
+    public Action onRetransmitReject(
         final FixPConnection connection, final String reason, final long requestTimestamp, final int errorCodes)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitTimeout(final FixPConnection connection)
+    public Action onRetransmitTimeout(final FixPConnection connection)
     {
+        return CONTINUE;
     }
 
-    public void onSequence(final FixPConnection connection, final long nextSeqNo)
+    public Action onSequence(final FixPConnection connection, final long nextSeqNo)
     {
+        return CONTINUE;
     }
 
-    public void onError(final FixPConnection connection, final Exception ex)
+    public Action onError(final FixPConnection connection, final Exception ex)
     {
+        return CONTINUE;
     }
 
-    public void onDisconnect(final FixPConnection connection, final DisconnectReason reason)
+    public Action onDisconnect(final FixPConnection connection, final DisconnectReason reason)
     {
+        return CONTINUE;
     }
 
-    public void onBusinessMessage(
+    public Action onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
@@ -59,5 +68,6 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         final int version,
         final boolean possRetrans)
     {
+        return CONTINUE;
     }
 }

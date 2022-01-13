@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.fixp.AbstractFixPParser;
@@ -70,7 +71,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         return header.version();
     }
 
-    public long onMessage(final DirectBuffer buffer, final int start)
+    public Action onMessage(final DirectBuffer buffer, final int start)
     {
         int offset = start + SOFH_LENGTH;
 
@@ -112,7 +113,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         }
     }
 
-    private long onRetransmitRequest(
+    private Action onRetransmitRequest(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         final RetransmitRequestDecoder retransmitRequest = this.retransmitRequest;
@@ -127,7 +128,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             retransmitRequest.count());
     }
 
-    private long onFinishedSending(
+    private Action onFinishedSending(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         final FinishedSendingDecoder finishedSending = this.finishedSending;
@@ -141,7 +142,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             finishedSending.lastSeqNo());
     }
 
-    private long onFinishedReceiving(
+    private Action onFinishedReceiving(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         final FinishedReceivingDecoder finishedReceiving = this.finishedReceiving;
@@ -154,7 +155,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             finishedReceiving.sessionVerID());
     }
 
-    private long onSequence(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onSequence(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         sequence.wrap(buffer, offset, blockLength, version);
 
@@ -163,7 +164,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
         return handler.onSequence(sequence.nextSeqNo());
     }
 
-    private long onTerminate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onTerminate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         terminate.wrap(buffer, offset, blockLength, version);
 
@@ -175,7 +176,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             terminate.terminationCode());
     }
 
-    private long onEstablish(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onEstablish(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         establish.wrap(buffer, offset, blockLength, version);
 
@@ -191,7 +192,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             establish.codTimeoutWindow().time());
     }
 
-    private long onNegotiate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onNegotiate(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         negotiate.wrap(buffer, offset, blockLength, version);
 

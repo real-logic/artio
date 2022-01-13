@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.ilink;
 
 import iLinkBinary.OrderMassActionReport562Decoder;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.ilink.ILink3TestServer.NO_AFFECTED_ORDERS_COUNT;
 
@@ -48,7 +50,7 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         return hasReceivedNotApplied;
     }
 
-    public void onBusinessMessage(
+    public Action onBusinessMessage(
         final FixPConnection connection,
         final int templateId,
         final DirectBuffer buffer,
@@ -65,9 +67,11 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
             decoder.wrap(buffer, offset, blockLength, version);
             assertEquals(NO_AFFECTED_ORDERS_COUNT, decoder.noAffectedOrders().count());
         }
+
+        return CONTINUE;
     }
 
-    public void onNotApplied(
+    public Action onNotApplied(
         final FixPConnection connection,
         final long fromSequenceNumber,
         final long msgCount,
@@ -75,37 +79,41 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
     {
         hasReceivedNotApplied = true;
         notAppliedResponse.accept(response);
+
+        return CONTINUE;
     }
 
-    public void onRetransmitReject(
+    public Action onRetransmitReject(
         final FixPConnection connection,
         final String reason,
         final long requestTimestamp,
         final int errorCodes)
     {
+        return CONTINUE;
     }
 
-    public void onRetransmitTimeout(final FixPConnection connection)
+    public Action onRetransmitTimeout(final FixPConnection connection)
     {
+        return CONTINUE;
     }
 
-    public void onSequence(final FixPConnection connection, final long nextSeqNo)
+    public Action onSequence(final FixPConnection connection, final long nextSeqNo)
     {
+        return CONTINUE;
     }
 
-    public void onError(final FixPConnection connection, final Exception ex)
+    public Action onError(final FixPConnection connection, final Exception ex)
     {
         exceptions.add(ex);
+
+        return CONTINUE;
     }
 
-    public void onDisconnect(final FixPConnection connection, final DisconnectReason reason)
+    public Action onDisconnect(final FixPConnection connection, final DisconnectReason reason)
     {
         this.disconnectReason = reason;
-    }
 
-    public DisconnectReason disconnectReason()
-    {
-        return disconnectReason;
+        return CONTINUE;
     }
 
     public IntArrayList messageIds()

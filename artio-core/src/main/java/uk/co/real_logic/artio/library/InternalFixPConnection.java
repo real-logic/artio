@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.exceptions.TimeoutException;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.sbe.MessageEncoderFlyweight;
@@ -23,6 +24,7 @@ import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
@@ -283,22 +285,37 @@ public abstract class InternalFixPConnection implements FixPConnection
 
     protected abstract long sendSequence(boolean lapsed);
 
-    protected void fullyUnbind()
+    protected Action fullyUnbind()
     {
-        fullyUnbind(LOGOUT);
+        return fullyUnbind(LOGOUT);
     }
 
-    protected void fullyUnbind(final DisconnectReason reason)
+    protected Action fullyUnbind(final DisconnectReason reason)
     {
-        requestDisconnect(reason);
-        owner.remove(this);
-        unbindState(APPLICATION_DISCONNECT);
+        if (requestDisconnect(reason) < 0)
+        {
+            return ABORT;
+        }
+
+        final Action action = unbindState(APPLICATION_DISCONNECT);
+        if (action != ABORT)
+        {
+            owner.remove(this);
+        }
+
+        return action;
     }
 
-    protected void unbindState(final DisconnectReason reason)
+    protected Action unbindState(final DisconnectReason reason)
     {
+        final State oldState = this.state;
         state(State.UNBOUND);
-        handler.onDisconnect(this, reason);
+        final Action action = handler.onDisconnect(this, reason);
+        if (action == ABORT)
+        {
+            state(oldState);
+            return ABORT;
+        }
 
         // Complete the reply if we're in the process of trying to establish a connection and we haven't provided
         // a more specific reason for a disconnect to happen.
@@ -306,6 +323,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         {
             onReplyError(new Exception("Unbound due to: " + reason));
         }
+
+        return action;
     }
 
     protected void state(final State state)
