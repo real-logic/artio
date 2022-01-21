@@ -47,7 +47,7 @@ public class FixMessageLogger implements Agent
 {
     public static class Configuration
     {
-        public static final int DEFAULT_COMPACTION_SIZE = 64 * 1024;
+        public static final int DEFAULT_COMPACTION_SIZE = 256 * 1024 * 1024;
 
         private FixMessageConsumer fixMessageConsumer;
         private Aeron.Context context;
@@ -324,6 +324,7 @@ public class FixMessageLogger implements Agent
             configuration.fixMessageConsumer,
             configuration.fixPMessageConsumer,
             configuration.compactionSize,
+            false,
             pollers);
     }
 

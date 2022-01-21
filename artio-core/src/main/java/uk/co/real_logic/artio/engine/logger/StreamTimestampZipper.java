@@ -36,29 +36,36 @@ import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVer
 public class StreamTimestampZipper
 {
     private static final TimestampComparator TIMESTAMP_COMPARATOR = new TimestampComparator();
+    private static final ReverseTimestampComparator REVERSE_TIMESTAMP_COMPARATOR = new ReverseTimestampComparator();
     private static final OffsetComparator OFFSET_COMPARATOR = new OffsetComparator();
 
     private final int compactionSize;
     private final StreamPoller[] pollers;
     private final FragmentAssembler fragmentAssembler;
     private final LogEntryHandler logEntryHandler;
+    private final ExpandableArrayBuffer reorderBuffer;
+    private final boolean lazilyCompact;
 
-    private final List<BufferedPosition> positions = new ArrayList<>();
-    private final ExpandableArrayBuffer reorderBuffer = new ExpandableArrayBuffer();
+    private final ArrayList<BufferedPosition> positions = new ArrayList<>();
+
     private int reorderBufferOffset;
 
     public StreamTimestampZipper(
         final FixMessageConsumer fixMessageConsumer,
         final FixPMessageConsumer fixPMessageConsumer,
         final int compactionSize,
+        final boolean lazilyCompact,
         final Poller... pollers)
     {
+        this.lazilyCompact = lazilyCompact;
         this.compactionSize = compactionSize;
         this.pollers = new StreamPoller[pollers.length];
         for (int i = 0; i < pollers.length; i++)
         {
             this.pollers[i] = new StreamPoller(pollers[i]);
         }
+
+        reorderBuffer = new ExpandableArrayBuffer(compactionSize);
         logEntryHandler = new LogEntryHandler(fixMessageConsumer, fixPMessageConsumer);
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
@@ -73,40 +80,77 @@ public class StreamTimestampZipper
             read += pollers[i].poll(pollers, fragmentAssembler);
         }
 
-        read += processReorderBuffer(pollers);
+        // Lazily compact: only process reorder buffer and compact when you hit the compaction size
+        // Can generate a significant speed in batch archive scanning at the expense of greater latency
+        // on handing off messages to the handler
+        if (read > 0 && (!lazilyCompact || reorderBufferOffset > compactionSize))
+        {
+            read += processReorderBuffer(pollers);
 
-        compact();
+            compact();
+        }
 
         return read;
     }
 
     private int processReorderBuffer(final StreamPoller[] pollers)
     {
+        final ArrayList<BufferedPosition> positions = this.positions;
+
         int read = 0;
-        positions.sort(TIMESTAMP_COMPARATOR);
-        final Iterator<BufferedPosition> it = positions.iterator();
-        while (it.hasNext())
+        positions.sort(REVERSE_TIMESTAMP_COMPARATOR);
+
+        final int lastIndex = positions.size() - 1;
+        int i = lastIndex;
+        for (; i >= 0; i--)
         {
-            final BufferedPosition position = it.next();
+            final BufferedPosition position = positions.get(i);
             final long timestamp = position.timestamp;
-            final long timestampLowWaterMark = findMinLowWaterMark(pollers, position.owner);
+            final StreamPoller owner = position.owner;
+            final long timestampLowWaterMark = findMinLowWaterMark(pollers, owner);
 
             if (timestamp <= timestampLowWaterMark)
             {
-                position.owner.handledTimestamp(timestamp);
-                logEntryHandler.owner = position.owner;
+                owner.handledTimestamp(timestamp);
+                logEntryHandler.owner = owner;
                 logEntryHandler.onBufferedMessage(position.offset, position.length);
                 read++;
-                it.remove();
 
-                updateOwnerPosition(position);
+                updateOwnerTimestamp(positions, i, owner);
             }
             else
             {
                 break;
             }
         }
+
+        i++;
+
+        for (int j = lastIndex; j >= i; j--)
+        {
+            positions.remove(j);
+        }
+
         return read;
+    }
+
+    private void updateOwnerTimestamp(
+        final ArrayList<BufferedPosition> positions, final int i, final StreamPoller owner)
+    {
+        // Find the next entry with the same owner and set the owner's timestamp to the next
+        // timestamp
+        for (int j = i - 1; j >= 0; j--)
+        {
+            final BufferedPosition remainingPosition = positions.get(j);
+            if (remainingPosition.owner == owner)
+            {
+                // don't go through method here because this might increase the min buffered timestamp.
+                owner.minBufferedTimestamp = remainingPosition.timestamp;
+                return;
+            }
+        }
+
+        owner.nothingBuffered();
     }
 
     private void compact()
@@ -141,22 +185,6 @@ public class StreamTimestampZipper
     public int bufferCapacity()
     {
         return reorderBuffer.capacity();
-    }
-
-    private void updateOwnerPosition(final BufferedPosition position)
-    {
-        final StreamPoller owner = position.owner;
-        for (final BufferedPosition remainingPosition : positions)
-        {
-            if (remainingPosition.owner == owner)
-            {
-                // don't go through method here because this might increase the min buffered timestamp.
-                owner.minBufferedTimestamp = remainingPosition.timestamp;
-                return;
-            }
-        }
-
-        owner.nothingBuffered();
     }
 
     public void onClose()
@@ -214,6 +242,14 @@ public class StreamTimestampZipper
         public int compare(final BufferedPosition o1, final BufferedPosition o2)
         {
             return Long.compare(o1.timestamp, o2.timestamp);
+        }
+    }
+
+    static class ReverseTimestampComparator implements Comparator<BufferedPosition>
+    {
+        public int compare(final BufferedPosition o1, final BufferedPosition o2)
+        {
+            return Long.compare(o2.timestamp, o1.timestamp);
         }
     }
 

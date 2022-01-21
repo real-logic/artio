@@ -215,7 +215,7 @@ public class FixArchiveScanner implements AutoCloseable
             }
 
             final StreamTimestampZipper timestampZipper = new StreamTimestampZipper(
-                fixHandler, fixPHandler, compactionSize, pollers);
+                fixHandler, fixPHandler, compactionSize, !follow, pollers);
 
             while (true)
             {
