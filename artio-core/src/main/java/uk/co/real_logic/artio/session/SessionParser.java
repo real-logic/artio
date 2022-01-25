@@ -400,7 +400,8 @@ public class SessionParser
                 position,
                 asciiBuffer,
                 offset,
-                length);
+                length,
+                resendRequest);
         }
     }
 

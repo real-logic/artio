@@ -30,6 +30,7 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
+import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
@@ -124,6 +125,9 @@ public class CommonConfiguration
      */
     public static final String LOGGING_SEPARATOR_PROPERTY = "fix.core.debug.separator";
     public static final int NO_FIXP_MAX_RETRANSMISSION_RANGE = 0;
+    public static final ResendRequestController DEFAULT_RESEND_REQUEST_CONTROLLER =
+        (session, resendRequest, correctedEndSeqNo, response) -> response.resend();
+
     protected ThreadFactory threadFactory;
     private int fixPAcceptedSessionMaxRetransmissionRange = NO_FIXP_MAX_RETRANSMISSION_RANGE;
 
@@ -287,6 +291,7 @@ public class CommonConfiguration
     private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
     private boolean backpressureMessagesDuringReplay = true;
+    private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -752,6 +757,20 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Configures how a resend request is responded to. We default to responding to any valid resend request. See
+     * Javadoc on {@link ResendRequestController} for details of how to implement it.
+     *
+     *
+     * @param resendRequestController the controller to use.
+     * @return this
+     */
+    public CommonConfiguration resendRequestController(final ResendRequestController resendRequestController)
+    {
+        this.resendRequestController = resendRequestController;
+        return this;
+    }
+
     // ------------------------
     // END SETTERS
     // ------------------------
@@ -903,6 +922,11 @@ public class CommonConfiguration
     public boolean backpressureMessagesDuringReplay()
     {
         return backpressureMessagesDuringReplay;
+    }
+
+    public ResendRequestController resendRequestController()
+    {
+        return resendRequestController;
     }
 
     // ------------------------

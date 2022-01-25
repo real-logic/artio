@@ -24,6 +24,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
@@ -115,6 +116,8 @@ public class Session
     private final OnMessageInfo messageInfo;
     private final CancelOnDisconnect cancelOnDisconnect;
     private final boolean backpressureMessagesDuringReplay;
+    private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
+    private final ResendRequestController resendRequestController;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
@@ -200,9 +203,11 @@ public class Session
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType,
-        final boolean backpressureMessagesDuringReplay)
+        final boolean backpressureMessagesDuringReplay,
+        final ResendRequestController resendRequestController)
     {
         this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
+        this.resendRequestController = resendRequestController;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -1988,7 +1993,8 @@ public class Session
         final long position,
         final AsciiBuffer messageBuffer,
         final int messageOffset,
-        final int messageLength)
+        final int messageLength,
+        final AbstractResendRequestDecoder resendRequest)
     {
         final long timeInNs = timeInNs();
         final Action action = checkStateAndValidateMessage(
@@ -2051,21 +2057,39 @@ public class Session
         // Min: end too high - replay the valid range and ignore the invalid chunk.
         final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : Math.min(lastSentMsgSeqNum, endSeqNum);
 
-        if (Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
-            id,
-            connectionId,
-            beginSeqNum,
-            correctedEndSeqNo,
-            sequenceIndex,
-            messageBuffer,
-            messageOffset,
-            messageLength)))
+        final ResendRequestResponse resendRequestResponse = this.resendRequestResponse;
+        resendRequestController.onResend(this, resendRequest, correctedEndSeqNo, resendRequestResponse);
+        if (resendRequestResponse.result())
         {
-            return ABORT;
-        }
+            if (Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
+                id,
+                connectionId,
+                beginSeqNum,
+                correctedEndSeqNo,
+                sequenceIndex,
+                messageBuffer,
+                messageOffset,
+                messageLength)))
+            {
+                return ABORT;
+            }
 
-        replaying = true;
-        return CONTINUE;
+            replaying = true;
+
+            return CONTINUE;
+        }
+        else
+        {
+            return checkPosition(proxy.sendReject(
+                newSentSeqNum(),
+                msgSeqNum,
+                resendRequestResponse.refTagId(),
+                RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+                RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
+                OTHER.representation(),
+                sequenceIndex(),
+                lastMsgSeqNumProcessed));
+        }
     }
 
     Action onReject(

@@ -83,6 +83,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final EpochFractionFormat epochFractionPrecision;
     private final UtcTimestampEncoder sendingTimeEncoder;
     private final boolean backpressureMessagesDuringReplay;
+    private final ResendRequestController resendRequestController;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -128,6 +129,7 @@ public class FixGatewaySessions extends GatewaySessions
         this.epochFractionPrecision = epochFractionPrecision;
         this.epochFractionClock = EpochFractionClocks.create(epochClock, configuration.epochNanoClock(),
             epochFractionPrecision);
+        this.resendRequestController = configuration.resendRequestController();
 
         sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
@@ -183,7 +185,8 @@ public class FixGatewaySessions extends GatewaySessions
             messageInfo,
             epochFractionClock,
             gatewaySession.connectionType(),
-            backpressureMessagesDuringReplay);
+            backpressureMessagesDuringReplay,
+            resendRequestController);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());

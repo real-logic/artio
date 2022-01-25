@@ -53,7 +53,8 @@ public class InitiatorSession extends InternalSession
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
-        final boolean backpressureMessagesDuringReplay)
+        final boolean backpressureMessagesDuringReplay,
+        final ResendRequestController resendRequestController)
     {
         super(
             heartbeatInterval,
@@ -77,7 +78,8 @@ public class InitiatorSession extends InternalSession
             messageInfo,
             epochFractionClock,
             ConnectionType.INITIATOR,
-            backpressureMessagesDuringReplay);
+            backpressureMessagesDuringReplay,
+            resendRequestController);
         this.resetSeqNum = resetSeqNum;
     }
 

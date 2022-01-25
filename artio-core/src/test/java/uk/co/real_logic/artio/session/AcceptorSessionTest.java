@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_RESEND_REQUEST_CONTROLLER;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
@@ -57,7 +58,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             SessionCustomisationStrategy.none(),
             messageInfo,
             fakeEpochFractionClock,
-            true);
+            true,
+            DEFAULT_RESEND_REQUEST_CONTROLLER);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(fixSessionOwner);
         return acceptorSession;

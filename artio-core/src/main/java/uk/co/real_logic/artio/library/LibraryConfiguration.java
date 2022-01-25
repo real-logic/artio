@@ -19,6 +19,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.session.DirectSessionProxy;
+import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.session.SessionProxyFactory;
 
@@ -302,6 +303,15 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
     {
         super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration resendRequestController(final ResendRequestController resendRequestController)
+    {
+        super.resendRequestController(resendRequestController);
         return this;
     }
 

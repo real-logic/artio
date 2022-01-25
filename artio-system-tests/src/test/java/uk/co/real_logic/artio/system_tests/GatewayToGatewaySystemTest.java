@@ -41,6 +41,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.function.IntSupplier;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -222,6 +223,38 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int sequenceNumber = acceptorSendsResendRequest();
 
         assertMessageResent(sequenceNumber, SEQUENCE_RESET_MESSAGE_AS_STR, true);
+
+        assertSequenceIndicesAre(0);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void gatewayResendRequestsAreControlled()
+    {
+        fakeResendRequestController.resend(false);
+
+        acquireAcceptingSession();
+
+        messagesCanBeSentFromInitiatorToAcceptor();
+
+        acceptorSendsResendRequest();
+        final int sequenceNumber = acceptingSession.lastSentMsgSeqNum();
+
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
+        assertEventuallyTrue("Failed to receive the reply",
+            () ->
+            {
+                testSystem.poll();
+
+                final List<FixMessage> reject = acceptingOtfAcceptor.receivedMessage("3").collect(toList());
+                assertThat(reject, hasSize(1));
+
+                final FixMessage message = reject.get(0);
+                assertTrue(message.isValid());
+                assertEquals(sequenceNumber, message.getInt(REF_SEQ_NUM));
+                assertEquals(BEGIN_SEQ_NO, message.getInt(REF_TAG_ID));
+            });
+
+        assertTrue(fakeResendRequestController.wasCalled());
 
         assertSequenceIndicesAre(0);
     }

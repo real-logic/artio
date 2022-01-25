@@ -43,6 +43,7 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
+import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
@@ -1423,6 +1424,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
     {
         super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration resendRequestController(final ResendRequestController resendRequestController)
+    {
+        super.resendRequestController(resendRequestController);
         return this;
     }
 

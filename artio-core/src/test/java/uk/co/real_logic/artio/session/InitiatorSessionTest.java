@@ -23,6 +23,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_RESEND_REQUEST_CONTROLLER;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
@@ -56,7 +57,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             SessionCustomisationStrategy.none(),
             messageInfo,
             fakeEpochFractionClock,
-            true);
+            true,
+            DEFAULT_RESEND_REQUEST_CONTROLLER);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);
     }

@@ -40,7 +40,7 @@ public interface ILink3ConnectionHandler extends FixPConnectionHandler
      * @param blockLength the blockLength of the received message.
      * @param version the sbe version of the protocol.
      * @param possRetrans true of the possRetrans flag is set to true.
-     * @return
+     * @return the action to perform
      */
     @Override
     ControlledFragmentHandler.Action onBusinessMessage(

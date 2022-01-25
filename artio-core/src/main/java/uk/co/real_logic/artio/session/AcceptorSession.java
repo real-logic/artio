@@ -47,7 +47,8 @@ public class AcceptorSession extends InternalSession
         final SessionCustomisationStrategy customisationStrategy,
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
-        final boolean backpressureMessagesDuringReplay)
+        final boolean backpressureMessagesDuringReplay,
+        final ResendRequestController resendRequestController)
     {
         super(
             defaultInterval,
@@ -71,6 +72,7 @@ public class AcceptorSession extends InternalSession
             messageInfo,
             epochFractionClock,
             ConnectionType.ACCEPTOR,
-            backpressureMessagesDuringReplay);
+            backpressureMessagesDuringReplay,
+            resendRequestController);
     }
 }

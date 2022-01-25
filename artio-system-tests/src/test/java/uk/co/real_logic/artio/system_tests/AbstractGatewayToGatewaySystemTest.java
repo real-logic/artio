@@ -80,6 +80,7 @@ public class AbstractGatewayToGatewaySystemTest
     protected ArchivingMediaDriver mediaDriver;
     protected TestSystem testSystem;
 
+    final FakeResendRequestController fakeResendRequestController = new FakeResendRequestController();
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
     FixEngine acceptingEngine;
@@ -121,7 +122,11 @@ public class AbstractGatewayToGatewaySystemTest
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
+
+        final LibraryConfiguration initiatingLibraryConfig = initiatingLibraryConfig(
+            libraryAeronPort, initiatingHandler, nanoClock);
+        initiatingLibraryConfig.resendRequestController(fakeResendRequestController);
+        initiatingLibrary = connect(initiatingLibraryConfig);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();

@@ -38,6 +38,7 @@ import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.fields.RejectReason.OTHER;
 import static uk.co.real_logic.artio.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.session.Session.LIBRARY_DISCONNECTED;
@@ -55,6 +56,7 @@ public class DirectSessionProxy implements SessionProxy
     private static final int REJECT_COUNT = RejectReason.values().length;
     private static final byte[][] NOT_LOGGED_ON_SESSION_REJECT_REASONS = new byte[REJECT_COUNT][];
     private static final byte[][] LOGGED_ON_SESSION_REJECT_REASONS = new byte[REJECT_COUNT][];
+    private static final int OTHER_REJECT_INDEX = 19;
 
     static
     {
@@ -397,7 +399,8 @@ public class DirectSessionProxy implements SessionProxy
         {
             reject.refMsgType(refMsgType, refMsgTypeLength);
         }
-        reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
+        final int rejectReasonIndex = rejectReason == OTHER.representation() ? OTHER_REJECT_INDEX : rejectReason;
+        reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReasonIndex]);
 
         final SessionHeaderEncoder header = reject.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
