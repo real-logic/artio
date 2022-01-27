@@ -2334,6 +2334,11 @@ public class Session
                 {
                     if (awaitingHeartbeat)
                     {
+                        // Artio just disconnects the counter-party at this point.
+                        // FIX spec (volume 2, page 16 of 4.4) just says "the connection should be
+                        //considered lost and corrective action be initiated". We treat the counter-party as dead
+                        // and just logout.
+
                         // Drop when back pressured: retried on duty cycle
                         requestDisconnect();
                     }
