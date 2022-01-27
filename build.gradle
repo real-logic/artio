@@ -347,24 +347,23 @@ project(':artio-ilink3-codecs') {
             from generatedDir.absolutePath + "/ilinkbinary.sbeir"
             into outputClasses + '/iLinkBinary'
         }
-    }
 
-    sourcesJar {
-        if (iLink3Enabled) {
-            dependsOn 'generateMessages'
+        sourcesJar {
+            dependsOn generateMessages
+            from sourceSets.generated.java
         }
-        from sourceSets.generated.java
-    }
 
-    javadoc {
-        source += sourceSets.generated.java
-    }
+        javadoc {
+            dependsOn compileGeneratedJava
+            source += sourceSets.generated.java
+        }
 
-    jar {
-        from sourceSets.generated.output
+        jar {
+            from sourceSets.generated.output
 
-        from(outputClasses) {
-            include 'iLinkBinary/ilinkbinary.sbeir'
+            from(outputClasses) {
+                include 'iLinkBinary/ilinkbinary.sbeir'
+            }
         }
     }
 
