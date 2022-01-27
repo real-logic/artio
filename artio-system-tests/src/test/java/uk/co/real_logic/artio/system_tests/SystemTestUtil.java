@@ -86,6 +86,8 @@ public final class SystemTestUtil
 
     public static final long TEST_REPLY_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : 1_000;
 
+    private static final int TEST_COMPACTION_SIZE = 1024 * 1024;
+
     static
     {
         final File parentDirectory = new File(optimalTmpDirName());
@@ -580,7 +582,8 @@ public final class SystemTestUtil
     {
         final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
-            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy())
+            .compactionSize(TEST_COMPACTION_SIZE);
 
         try (FixArchiveScanner scanner = new FixArchiveScanner(context))
         {
