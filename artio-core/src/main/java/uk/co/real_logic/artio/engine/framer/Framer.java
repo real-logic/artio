@@ -96,7 +96,6 @@ import static uk.co.real_logic.artio.messages.SessionStatus.SESSION_HANDOVER;
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);
-    private static final LongHashSet NO_DISCONNECTED_SESSIONS = new LongHashSet();
 
     private final CharFormatter timingOutFormatter = new CharFormatter("Timing out connection to library %s");
     private final CharFormatter libraryConnectedFormatter = new CharFormatter("Library %s - %s connected");
