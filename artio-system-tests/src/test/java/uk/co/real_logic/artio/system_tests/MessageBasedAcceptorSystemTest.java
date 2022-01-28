@@ -583,6 +583,29 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         verify(errorHandler).onError(ArgumentMatchers.any(RuntimeException.class));
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSendLogoutOnTimeoutDisconnect() throws IOException
+    {
+        reasonableTransmissionTimeInMs = 1;
+
+        setup(true, true, true, ENGINE);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            connection.logon(true, 1);
+            final LogonDecoder logon = connection.readLogon();
+            assertTrue(logon.resetSeqNumFlag());
+
+            connection.readHeartbeat();
+            final TestRequestDecoder testRequest = connection.readTestRequest();
+            assertEquals("TEST", testRequest.testReqIDAsString());
+
+            connection.readHeartbeat();
+            connection.readLogout();
+            assertFalse(connection.isConnected());
+        }
+    }
+
     private void shouldSupportLogonBasedSequenceNumberReset(
         final InitialAcceptedSessionOwner owner,
         final BiConsumer<FixConnection, ReportFactory> onNext)

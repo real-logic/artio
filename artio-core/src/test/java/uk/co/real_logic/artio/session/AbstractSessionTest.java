@@ -24,11 +24,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
-import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -52,17 +48,17 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.SessionState.*;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
-import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public abstract class AbstractSessionTest
 {
@@ -582,7 +578,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        verifyDisconnect(times(1));
+        verifyLogout(9, times(1));
     }
 
     @Test
@@ -592,15 +588,15 @@ public abstract class AbstractSessionTest
 
         twoHeartBeatIntervalsPass();
 
-        backPressureDisconnect();
+        backPressureLogout();
 
         poll();
 
-        assertState(DISCONNECTING);
+        assertState(LOGGING_OUT);
 
         poll();
 
-        verifyDisconnect(times(2));
+        verifyLogout(9, times(2));
     }
 
     @Test

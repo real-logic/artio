@@ -21,6 +21,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -53,6 +54,8 @@ public class AbstractMessageBasedAcceptorSystemTest
     int port = unusedPort();
 
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
+
+    long reasonableTransmissionTimeInMs = CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 
     AuthenticationStrategy optionalAuthStrategy;
     ArchivingMediaDriver mediaDriver;
@@ -113,6 +116,7 @@ public class AbstractMessageBasedAcceptorSystemTest
             .initialAcceptedSessionOwner(initialAcceptedSessionOwner)
             .noLogonDisconnectTimeoutInMs(500)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs)
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
 

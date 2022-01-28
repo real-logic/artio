@@ -487,6 +487,11 @@ public final class FixConnection implements AutoCloseable
         return readMessage(new HeartbeatDecoder());
     }
 
+    public TestRequestDecoder readTestRequest()
+    {
+        return readMessage(new TestRequestDecoder());
+    }
+
     public void close()
     {
         CloseHelper.close(socket);
