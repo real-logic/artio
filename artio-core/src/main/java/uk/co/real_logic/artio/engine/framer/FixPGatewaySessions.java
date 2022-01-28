@@ -31,6 +31,8 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.FixPAuthenticationProxy;
 
+import java.io.IOException;
+
 public class FixPGatewaySessions extends GatewaySessions
 {
     static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
@@ -201,6 +203,19 @@ public class FixPGatewaySessions extends GatewaySessions
         protected void encodeRejectMessage()
         {
             rejectEncodeBuffer = fixPProxy.encodeReject(identification, fixPFirstMessageResponse);
+        }
+
+        protected SendRejectResult sendReject()
+        {
+            try
+            {
+                channel.write(rejectEncodeBuffer);
+                return rejectEncodeBuffer.hasRemaining() ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
+            }
+            catch (final IOException e)
+            {
+                return SendRejectResult.DISCONNECTED;
+            }
         }
 
         public void reject()

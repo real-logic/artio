@@ -25,9 +25,9 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.CharFormatter;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.AbstractAuthenticationProxy;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +49,8 @@ abstract class GatewaySessions
     protected final SequenceNumberIndexReader sentSequenceNumberIndex;
     protected final SequenceNumberIndexReader receivedSequenceNumberIndex;
     protected ErrorHandler errorHandler;
+    protected ByteBuffer rejectEncodeBuffer;
+    protected MutableAsciiBuffer rejectAsciiBuffer;
 
     GatewaySessions(
         final EpochClock epochClock,
@@ -235,6 +237,13 @@ abstract class GatewaySessions
         REJECTED
     }
 
+    enum SendRejectResult
+    {
+        INFLIGHT,
+        BACK_PRESSURED,
+        DISCONNECTED
+    }
+
     protected abstract class PendingAcceptorLogon implements AbstractAuthenticationProxy, AcceptorLogonResult
     {
         private static final long NO_REQUIRED_POSITION = -1;
@@ -250,7 +259,6 @@ abstract class GatewaySessions
         protected long requiredPosition = NO_REQUIRED_POSITION;
         protected long lingerTimeoutInMs;
         protected long lingerExpiryTimeInMs;
-        protected ByteBuffer rejectEncodeBuffer;
 
         PendingAcceptorLogon(
             final GatewaySession gatewaySession,
@@ -393,26 +401,28 @@ abstract class GatewaySessions
                 }
             }
 
-            try
+            switch (sendReject())
             {
-                channel.write(rejectEncodeBuffer);
-                if (!rejectEncodeBuffer.hasRemaining())
-                {
-                    lingerExpiryTimeInMs = epochClock.time() + lingerTimeoutInMs;
+                case INFLIGHT:
+                    final long timeInMs = epochClock.time();
+                    lingerExpiryTimeInMs = timeInMs + lingerTimeoutInMs;
                     state = AuthenticationState.LINGERING_REJECT_MESSAGE;
-                }
-            }
-            catch (final IOException e)
-            {
-                // The TCP Connection has disconnected, therefore we consider this complete.
-                state = AuthenticationState.REJECTED;
-                return true;
-            }
+                    return false;
 
-            return false;
+                case BACK_PRESSURED:
+                    return false;
+
+                case DISCONNECTED:
+                default:
+                    // The TCP Connection has disconnected, therefore we consider this complete.
+                    state = AuthenticationState.REJECTED;
+                    return true;
+            }
         }
 
         protected abstract void encodeRejectMessage();
+
+        protected abstract SendRejectResult sendReject();
 
         private void onIndexerCatchup()
         {

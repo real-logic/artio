@@ -22,14 +22,13 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
@@ -37,6 +36,7 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
@@ -54,6 +54,7 @@ import java.util.function.Function;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.FixContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.FixContexts.UNKNOWN_SESSION;
@@ -158,7 +159,7 @@ public class FixGatewaySessions extends GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            FixEngine.ENGINE_LIBRARY_ID,
+            ENGINE_LIBRARY_ID,
             errorHandler,
             epochFractionPrecision);
 
@@ -174,7 +175,7 @@ public class FixGatewaySessions extends GatewaySessions
             sendingTimeWindowInMs,
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            FixEngine.ENGINE_LIBRARY_ID,
+            ENGINE_LIBRARY_ID,
             lastSentSequenceNumber + 1,
             // This gets set by the receiver end point once the logon message has been received.
             0,
@@ -278,6 +279,7 @@ public class FixGatewaySessions extends GatewaySessions
         private FixDictionary fixDictionary;
         private Encoder encoder;
         private Class<? extends FixDictionary> fixDictionaryClass;
+        private long rejectEncodeResult;
 
         FixPendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -444,9 +446,11 @@ public class FixGatewaySessions extends GatewaySessions
 
         protected void encodeRejectMessage()
         {
-            rejectEncodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
-
-            final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(rejectEncodeBuffer);
+            if (rejectEncodeBuffer == null)
+            {
+                rejectEncodeBuffer = ByteBuffer.allocate(ENCODE_BUFFER_SIZE);
+                rejectAsciiBuffer = new MutableAsciiBuffer(rejectEncodeBuffer);
+            }
 
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
@@ -455,12 +459,27 @@ public class FixGatewaySessions extends GatewaySessions
             HeaderSetup.setup(logon.header(), header);
             customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 
-            final long result = encoder.encode(asciiBuffer, 0);
-            final int offset = Encoder.offset(result);
-            final int length = Encoder.length(result);
+            rejectEncodeResult = encoder.encode(rejectAsciiBuffer, 0);
+        }
 
-            ByteBufferUtil.position(rejectEncodeBuffer, offset);
-            ByteBufferUtil.limit(rejectEncodeBuffer, offset + length);
+        protected SendRejectResult sendReject()
+        {
+            final int offset = Encoder.offset(rejectEncodeResult);
+            final int length = Encoder.length(rejectEncodeResult);
+
+            final long position = outboundPublication.saveMessage(
+                rejectAsciiBuffer,
+                offset,
+                length,
+                ENGINE_LIBRARY_ID,
+                encoder.messageType(),
+                Session.UNKNOWN,
+                0,
+                connectionId,
+                MessageStatus.OK,
+                1);
+
+            return Pressure.isBackPressured(position) ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
         }
 
         public void reject()
