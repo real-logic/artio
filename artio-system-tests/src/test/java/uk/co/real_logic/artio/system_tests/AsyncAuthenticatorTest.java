@@ -36,6 +36,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -253,6 +254,22 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     {
         notifyAuthStrategyUpon(
             () -> testSystem.awaitRequestDisconnect(initiatingSession), DisconnectReason.REMOTE_DISCONNECT);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void rejectMessagesCanBeScannedInLogs()
+    {
+        final Reply<Session> invalidReply = acquireExecutingAuthProxy();
+        final RejectEncoder rejectEncoder = newRejectEncoder();
+        auth.reject(rejectEncoder, LINGER_TIMEOUT_IN_MS);
+
+        completeFailedSession(invalidReply);
+
+        final List<String> messagesFromArchive = getMessagesFromArchive(
+            acceptingEngine.configuration(), DEFAULT_OUTBOUND_LIBRARY_STREAM);
+        assertThat(messagesFromArchive, hasSize(1));
+        final String rejectMessage = messagesFromArchive.get(0);
+        assertThat(rejectMessage, containsString("35=3\00149=acceptor"));
     }
 
     private void notifyAuthStrategyUpon(final Runnable disconnector, final DisconnectReason reason)
