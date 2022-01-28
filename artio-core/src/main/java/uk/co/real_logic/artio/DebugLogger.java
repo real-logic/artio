@@ -47,6 +47,12 @@ public final class DebugLogger
         if (it.hasNext())
         {
             APPENDER = it.next();
+            if (DEBUG_FILE != null)
+            {
+                System.err.println("Warning: -D" + DEBUG_FILE_PROPERTY + " has been set, despite a custom " +
+                    "AbstractDebugAppender (" + APPENDER.getClass() + ") being configured via the service loader. " +
+                    "The file property will be ignored by Artio and your customer appender used instead.");
+            }
         }
         else
         {
