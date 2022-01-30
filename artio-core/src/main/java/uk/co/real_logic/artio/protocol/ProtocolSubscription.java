@@ -70,14 +70,10 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     }
 
     public Action onFragment(
-        final DirectBuffer buffer, final int offset, final int length, final Header header)
+        final DirectBuffer buffer, final int start, final int length, final Header header)
     {
-        return onFragment(buffer, offset, length, header.position());
-    }
+        int offset = start;
 
-    @SuppressWarnings("FinalParameters")
-    private Action onFragment(final DirectBuffer buffer, int offset, int length, final long position)
-    {
         messageHeader.wrap(buffer, offset);
 
         final int blockLength = messageHeader.blockLength();
@@ -88,7 +84,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                return onFixMessage(buffer, offset, blockLength, version, position);
+                return onFixMessage(buffer, offset, blockLength, version, header);
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
@@ -138,7 +134,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         final int offset,
         final int blockLength,
         final int version,
-        final long position)
+        final Header header)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int metaDataLength = messageFrame.skipMetaData();
@@ -157,7 +153,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),
-            position,
+            header,
             metaDataLength);
     }
 }

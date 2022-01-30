@@ -133,7 +133,7 @@ public interface EngineEndPointHandler
         DirectBuffer businessRejectRefIDBuffer,
         int businessRejectRefIDOffset,
         int businessRejectRefIDLength,
-        long position);
+        Header header);
 
     Action onThrottleConfiguration(
         int libraryId, long correlationId, long session, int throttleWindowInMs, int throttleLimitOfMessages);

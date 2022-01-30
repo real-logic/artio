@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -34,7 +35,7 @@ public interface ProtocolHandler
         long timestamp,
         MessageStatus status,
         int sequenceNumber,
-        long position,
+        Header header,
         int metaDataLength);
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);

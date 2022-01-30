@@ -18,8 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
@@ -40,8 +44,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -53,8 +60,23 @@ import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
+
+// TODO: test against 0.99
+@RunWith(Parameterized.class)
 public class SlowConsumerTest
 {
+    @Parameters(name = "metadata={0},fragmented={1}")
+    public static Collection<Object[]> data()
+    {
+        return Arrays.asList(new Object[][]
+        {
+            {false, false},
+            {false, true},
+            {true, false},
+            {true, true}
+        });
+    }
+
     private static final int BUFFER_CAPACITY = 16 * 1024;
 
     private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
@@ -66,13 +88,25 @@ public class SlowConsumerTest
     private final FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
     private TestSystem testSystem;
 
-    private final TestRequestEncoder testRequest = newTestRequest();
+    private final boolean fragmentedMessage;
+    private final boolean sendMetadata;
+
+    private final UnsafeBuffer metadata = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+    private final TestRequestEncoder testRequest;
     private final LogonEncoder logon = new LogonEncoder();
     private final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
     private final LockStepFramerEngineScheduler scheduler = new LockStepFramerEngineScheduler();
     private SocketChannel socket;
     private Session session;
+
+    public SlowConsumerTest(final boolean sendMetadata, final boolean fragmentedMessage)
+    {
+        this.sendMetadata = sendMetadata;
+        this.fragmentedMessage = fragmentedMessage;
+
+        testRequest = newTestRequest();
+    }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
@@ -105,7 +139,7 @@ public class SlowConsumerTest
                     hasBecomeSlow = true;
                 }
 
-                session.trySend(testRequest);
+                sendMessage();
             }
 
             testSystem.poll();
@@ -114,6 +148,19 @@ public class SlowConsumerTest
         bytesInBufferAtLeast(sessionInfo, senderMaxBytesInBuffer);
 
         assertTrue(hasBecomeSlow);
+    }
+
+    private void sendMessage()
+    {
+        if (sendMetadata)
+        {
+            session.trySend(testRequest);
+        }
+        else
+        {
+            metadata.putInt(0, session.lastSentMsgSeqNum() + 1);
+            session.trySend(testRequest, metadata, 0);
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -136,14 +183,18 @@ public class SlowConsumerTest
             }
             while (bytesRead > 0);
 
-            session.trySend(testRequest);
+            sendMessage();
 
             testSystem.poll();
         }
 
         assertNotSlow();
 
-        messageTimingCaptor.verifyConsecutiveSequenceNumbers(session.lastSentMsgSeqNum());
+        final int lastSentMsgSeqNum = session.lastSentMsgSeqNum();
+        testSystem.await("Failed to find the messages", () ->
+            messageTimingCaptor.count() >= lastSentMsgSeqNum);
+
+        messageTimingCaptor.verifyConsecutiveSequenceNumbers(lastSentMsgSeqNum);
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
@@ -178,7 +229,7 @@ public class SlowConsumerTest
         {
             for (int i = 0; i < 10; i++)
             {
-                session.trySend(testRequest);
+                sendMessage();
             }
 
             testSystem.poll();
@@ -212,7 +263,7 @@ public class SlowConsumerTest
     private TestRequestEncoder newTestRequest()
     {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("some relatively long test req id");
+        testRequest.testReqID(fragmentedMessage ? largeTestReqId() : "a long test req id");
         return testRequest;
     }
 

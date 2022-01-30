@@ -162,7 +162,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             buffer,
             businessRejectRefIDOffset,
             throttleReject.businessRejectRefIDLength(),
-            header.position());
+            header);
     }
 
     private Action onCancelOnDisconnectTrigger(

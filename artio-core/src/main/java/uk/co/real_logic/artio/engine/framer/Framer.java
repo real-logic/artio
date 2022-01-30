@@ -312,10 +312,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final long timestamp,
                     final MessageStatus status,
                     final int sequenceNumber,
-                    final long position,
+                    final Header header,
                     final int metaDataLength)
                 {
-                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
+                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, header);
                 }
 
                 public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -356,11 +356,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final long timestamp,
                     final MessageStatus status,
                     final int sequenceNumber,
-                    final long position,
+                    final Header header,
                     final int metaDataLength)
                 {
                     return fixSenderEndPoints.onSlowReplayMessage(
-                        connectionId, buffer, offset, length, position, metaDataLength);
+                        connectionId, buffer, offset, length, header, metaDataLength);
                 }
 
                 public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -949,7 +949,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
-        final long position)
+        final Header header)
     {
         return fixSenderEndPoints.onThrottleReject(
             libraryId,
@@ -960,7 +960,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             businessRejectRefIDBuffer,
             businessRejectRefIDOffset,
             businessRejectRefIDLength,
-            position);
+            header);
     }
 
     public Action onThrottleConfiguration(
@@ -1650,13 +1650,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position,
+        final Header header,
         final int metaDataLength)
     {
         final long now = outboundTimer.recordSince(timestamp);
 
         final boolean online = fixSenderEndPoints.onMessage(
-            libraryId, connectionId, buffer, offset, length, sequenceNumber, position, metaDataLength);
+            libraryId, connectionId, buffer, offset, length, sequenceNumber, header, metaDataLength);
 
         if (!online)
         {

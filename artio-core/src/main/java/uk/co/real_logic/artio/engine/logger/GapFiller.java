@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochNanoClock;
@@ -98,7 +99,7 @@ public class GapFiller implements ProtocolHandler, Agent
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position,
+        final Header header,
         final int metaDataLength)
     {
         if (messageType == RESEND_REQUEST_MESSAGE_TYPE && status == MessageStatus.OK)

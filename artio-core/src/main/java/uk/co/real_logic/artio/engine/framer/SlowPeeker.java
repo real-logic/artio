@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.protocol.DataHeaderFlyweight;
 
 class SlowPeeker extends BlockablePosition
 {
@@ -25,6 +26,7 @@ class SlowPeeker extends BlockablePosition
 
     SlowPeeker(final Image peekImage, final Image normalImage)
     {
+        super(peekImage.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
         this.peekImage = peekImage;
         this.normalImage = normalImage;
     }

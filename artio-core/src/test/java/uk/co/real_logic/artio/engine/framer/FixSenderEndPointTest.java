@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.FrameDescriptor;
+import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
@@ -70,6 +72,7 @@ public class FixSenderEndPointTest
     private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
     private final ExclusivePublication inboundPublication = mock(ExclusivePublication.class);
     private final UnsafeBuffer inboundBuffer = new UnsafeBuffer(new byte[INBOUND_BUFFER_LEN]);
+    private final Header header = mock(Header.class);
 
     private final FixSenderEndPoint endPoint = new FixSenderEndPoint(
         CONNECTION_ID,
@@ -91,6 +94,8 @@ public class FixSenderEndPointTest
     @Before
     public void setup()
     {
+        when(header.flags()).thenReturn(FrameDescriptor.UNFRAGMENTED);
+
         when(inboundPublication.tryClaim(anyInt(), any())).then(invocation ->
         {
             final BufferClaim claim = invocation.getArgument(1);
@@ -455,17 +460,25 @@ public class FixSenderEndPointTest
 
     private void onOutboundMessage(final long timeInMs, final long position)
     {
-        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, position, timeInMs, 0);
+        headerPosition(position);
+        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, header, timeInMs, 0);
+    }
+
+    private void headerPosition(final long position)
+    {
+        when(header.position()).thenReturn(position);
     }
 
     private void onReplayMessage(final long timeInMs, final long position)
     {
-        endPoint.onReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position);
+        headerPosition(position);
+        endPoint.onReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header);
     }
 
     private void onSlowReplayMessage(final long timeInMs, final long position)
     {
-        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position, 0);
+        headerPosition(position);
+        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header, 0);
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
@@ -503,11 +516,12 @@ public class FixSenderEndPointTest
 
     private void onSlowOutboundMessage(final long timeInMs)
     {
+        headerPosition(POSITION);
         final Action action = endPoint.onSlowOutboundMessage(
             buffer,
             HEADER_LENGTH,
             LENGTH,
-            POSITION,
+            header,
             BODY_LENGTH,
             LIBRARY_ID,
             timeInMs,
