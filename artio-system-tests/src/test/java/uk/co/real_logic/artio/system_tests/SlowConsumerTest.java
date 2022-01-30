@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.SystemUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -48,7 +49,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -60,14 +60,23 @@ import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-
-// TODO: test against 0.99
 @RunWith(Parameterized.class)
 public class SlowConsumerTest
 {
+    private static final int SIZE_OF_METADATA = 137;
+
     @Parameters(name = "metadata={0},fragmented={1}")
     public static Collection<Object[]> data()
     {
+        // Re-enable these test cases on windows after investigating CI more.
+        if (SystemUtil.isWindows())
+        {
+            return Arrays.asList(new Object[][]
+            {
+                {false, false},
+            });
+        }
+
         return Arrays.asList(new Object[][]
         {
             {false, false},
@@ -91,7 +100,7 @@ public class SlowConsumerTest
     private final boolean fragmentedMessage;
     private final boolean sendMetadata;
 
-    private final UnsafeBuffer metadata = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+    private final UnsafeBuffer metadata = new UnsafeBuffer(new byte[SIZE_OF_METADATA]);
     private final TestRequestEncoder testRequest;
     private final LogonEncoder logon = new LogonEncoder();
     private final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
@@ -154,12 +163,12 @@ public class SlowConsumerTest
     {
         if (sendMetadata)
         {
-            session.trySend(testRequest);
+            metadata.putInt(0, session.lastSentMsgSeqNum() + 1);
+            session.trySend(testRequest, metadata, 0);
         }
         else
         {
-            metadata.putInt(0, session.lastSentMsgSeqNum() + 1);
-            session.trySend(testRequest, metadata, 0);
+            session.trySend(testRequest);
         }
     }
 
@@ -195,6 +204,10 @@ public class SlowConsumerTest
             messageTimingCaptor.count() >= lastSentMsgSeqNum);
 
         messageTimingCaptor.verifyConsecutiveSequenceNumbers(lastSentMsgSeqNum);
+        if (sendMetadata)
+        {
+            messageTimingCaptor.verifyConsecutiveMetaData(lastSentMsgSeqNum);
+        }
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
