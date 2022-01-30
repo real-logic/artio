@@ -22,6 +22,7 @@ import io.aeron.Subscription;
 import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
@@ -1192,7 +1193,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position,
+        final Header header,
         final int metaDataLength)
     {
         if (libraryId == this.libraryId)
@@ -1211,7 +1212,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     messageType,
                     timestamp,
                     status,
-                    position);
+                    header.position());
             }
         }
 

@@ -82,14 +82,14 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final int offset,
         final int length,
         final int sequenceNumber,
-        final long position,
+        final Header header,
         final int metaDataLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onOutboundMessage(
-                libraryId, buffer, offset, length, sequenceNumber, position, timeInMs, metaDataLength);
+                libraryId, buffer, offset, length, sequenceNumber, header, timeInMs, metaDataLength);
             return true;
         }
 
@@ -105,14 +105,14 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
-        final long position)
+        final Header header)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onThrottleReject(
                 libraryId, refMsgType, refSeqNum, sequenceNumber,
-                businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength, position,
+                businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength, header,
                 timeInMs);
         }
 
@@ -120,12 +120,12 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     }
 
     Action onReplayMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onReplayMessage(buffer, offset, length, timeInMs, position);
+            return endPoint.onReplayMessage(buffer, offset, length, timeInMs, header);
         }
         else
         {
@@ -140,13 +140,13 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final long position,
+        final Header header,
         final int metaDataLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position, metaDataLength);
+            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, header, metaDataLength);
         }
         else
         {
@@ -168,7 +168,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
+        return onSlowConsumerMessageFragment(buffer, offset, length, header);
     }
 
     @SuppressWarnings("FinalParameters")
@@ -176,7 +176,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final DirectBuffer buffer,
         int offset,
         final int length,
-        final long position)
+        final Header header)
     {
         final MessageHeaderDecoder messageHeader = this.messageHeader;
         messageHeader.wrap(buffer, offset);
@@ -198,7 +198,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
                 final int libraryId = fixMessage.libraryId();
                 final int sequenceNumber = fixMessage.sequenceNumber();
                 return senderEndPoint.onSlowOutboundMessage(
-                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs,
+                    buffer, offset, length - HEADER_LENGTH, header, bodyLength, libraryId, timeInMs,
                     metaDataLength, sequenceNumber);
             }
         }
@@ -221,7 +221,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
                     buffer,
                     businessRejectRefIDOffset,
                     throttleReject.businessRejectRefIDLength(),
-                    position,
+                    header,
                     timeInMs);
             }
         }

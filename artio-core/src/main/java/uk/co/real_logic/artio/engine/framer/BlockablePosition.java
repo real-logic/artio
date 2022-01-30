@@ -7,7 +7,14 @@ class BlockablePosition
 {
     static final int DID_NOT_BLOCK = 0;
 
+    final int maxPayload;
+
     long blockPosition;
+
+    BlockablePosition(final int maxPayload)
+    {
+        this.maxPayload = maxPayload;
+    }
 
     void blockPosition(final long blockPosition)
     {
