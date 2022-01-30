@@ -21,6 +21,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -67,6 +68,20 @@ public class MessageTimingCaptor implements MessageTimingHandler
         }
     }
 
+    public synchronized void verifyConsecutiveMetaData(final int lastSentMsgSeqNum)
+    {
+        assertThat(metadata, hasSize(lastSentMsgSeqNum));
+        for (int i = 0; i < lastSentMsgSeqNum; i++)
+        {
+            final DirectBuffer buffer = metadata.get(i);
+            if (buffer.capacity() > 0)
+            {
+                final long sequenceNumber = buffer.getInt(0);
+                assertEquals(Arrays.toString(buffer.byteArray()), i + 1L, sequenceNumber);
+            }
+        }
+    }
+
     public synchronized DirectBuffer getMetaData(final int messageIndex)
     {
         return metadata.get(messageIndex);
@@ -76,5 +91,4 @@ public class MessageTimingCaptor implements MessageTimingHandler
     {
         return sequenceNumbers.size();
     }
-
 }

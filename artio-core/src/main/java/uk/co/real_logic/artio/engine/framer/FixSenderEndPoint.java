@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.FixMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 import uk.co.real_logic.artio.session.CompositeKey;
@@ -40,7 +41,6 @@ import java.nio.ByteBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static io.aeron.logbuffer.FrameDescriptor.UNFRAGMENTED;
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
@@ -501,8 +501,10 @@ class FixSenderEndPoint extends SenderEndPoint
                 bytesPreviouslySent = bodyLength - remainingLength;
             }
 
-            final int metaDataOffset = offsetAfterHeader + FRAME_SIZE;
-            final int dataOffset = metaDataOffset + metaDataLength + bytesPreviouslySent;
+            final int metaDataOffset = offsetAfterHeader + FixMessageEncoder.BLOCK_LENGTH +
+                FixMessageDecoder.metaDataHeaderLength();
+            final int dataOffset = metaDataOffset + FixMessageDecoder.bodyHeaderLength() + metaDataLength +
+                bytesPreviouslySent;
             final ByteBuffer buffer = directBuffer.byteBuffer();
 
             ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
