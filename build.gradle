@@ -105,6 +105,12 @@ ext {
     }
 }
 
+release {
+    git {
+        requireBranch = '0.113-updates'
+    }   
+}
+
 allprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
