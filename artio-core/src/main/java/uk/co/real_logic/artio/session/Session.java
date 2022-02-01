@@ -22,6 +22,7 @@ import org.agrona.Verify;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.AbstractRejectEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
@@ -2028,29 +2029,12 @@ public class Session
             // Just an invalid range.
             if (endSeqNum < beginSeqNum)
             {
-                return checkPosition(proxy.sendReject(
-                    newSentSeqNum(),
-                    msgSeqNum,
-                    END_SEQ_NO,
-                    RESEND_REQUEST_MESSAGE_TYPE_CHARS,
-                    RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
-                    VALUE_IS_INCORRECT.representation(),
-                    sequenceIndex(),
-                    lastMsgSeqNumProcessed));
+                return sendReject(msgSeqNum, END_SEQ_NO, VALUE_IS_INCORRECT);
             }
-
             // begin too high - reject
             if (beginSeqNum > lastSentMsgSeqNum)
             {
-                return checkPosition(proxy.sendReject(
-                    newSentSeqNum(),
-                    msgSeqNum,
-                    BEGIN_SEQ_NO,
-                    RESEND_REQUEST_MESSAGE_TYPE_CHARS,
-                    RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
-                    VALUE_IS_INCORRECT.representation(),
-                    sequenceIndex(),
-                    lastMsgSeqNumProcessed));
+                return sendReject(msgSeqNum, BEGIN_SEQ_NO, VALUE_IS_INCORRECT);
             }
         }
 
@@ -2075,21 +2059,31 @@ public class Session
             }
 
             replaying = true;
-
             return CONTINUE;
         }
         else
         {
-            return checkPosition(proxy.sendReject(
-                newSentSeqNum(),
-                msgSeqNum,
-                resendRequestResponse.refTagId(),
-                RESEND_REQUEST_MESSAGE_TYPE_CHARS,
-                RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
-                OTHER.representation(),
-                sequenceIndex(),
-                lastMsgSeqNumProcessed));
+            final AbstractRejectEncoder rejectEncoder = resendRequestResponse.rejectEncoder();
+            if (rejectEncoder != null)
+            {
+                return Pressure.apply(trySend(rejectEncoder));
+            }
+
+            return sendReject(msgSeqNum, resendRequestResponse.refTagId(), OTHER);
         }
+    }
+
+    private Action sendReject(final int msgSeqNum, final int endSeqNo, final RejectReason valueIsIncorrect)
+    {
+        return checkPosition(proxy.sendReject(
+            newSentSeqNum(),
+            msgSeqNum,
+            endSeqNo,
+            RESEND_REQUEST_MESSAGE_TYPE_CHARS,
+            RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
+            valueIsIncorrect.representation(),
+            sequenceIndex(),
+            lastMsgSeqNumProcessed));
     }
 
     Action onReject(

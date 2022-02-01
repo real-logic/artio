@@ -16,18 +16,23 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.builder.RejectEncoder;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.ResendRequestResponse;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.junit.Assert.assertNotNull;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.RESEND_REQUEST_MESSAGE_TYPE_CHARS;
+import static uk.co.real_logic.artio.fields.RejectReason.OTHER;
 
 public class FakeResendRequestController implements ResendRequestController
 {
+    public static final String CUSTOM_MESSAGE = "custom message";
     private boolean resend = true;
 
     private boolean called = false;
+    private boolean customResend = false;
 
     public void onResend(
         final Session session,
@@ -41,6 +46,16 @@ public class FakeResendRequestController implements ResendRequestController
         if (resend)
         {
             response.resend();
+        }
+        else if (customResend)
+        {
+            final RejectEncoder rejectEncoder = new RejectEncoder();
+            rejectEncoder.refTagID(Constants.BEGIN_SEQ_NO);
+            rejectEncoder.refMsgType(RESEND_REQUEST_MESSAGE_TYPE_CHARS);
+            rejectEncoder.refSeqNum(resendRequest.header().msgSeqNum());
+            rejectEncoder.sessionRejectReason(OTHER.representation());
+            rejectEncoder.text(CUSTOM_MESSAGE);
+            response.reject(rejectEncoder);
         }
         else
         {
@@ -56,5 +71,10 @@ public class FakeResendRequestController implements ResendRequestController
     public boolean wasCalled()
     {
         return called;
+    }
+
+    public void customResend(final boolean customResend)
+    {
+        this.customResend = customResend;
     }
 }

@@ -58,6 +58,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
+import static uk.co.real_logic.artio.system_tests.FakeResendRequestController.CUSTOM_MESSAGE;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -230,6 +231,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void gatewayResendRequestsAreControlled()
     {
+        gatewayResendRequestsAreControlled("other");
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void gatewayResendRequestsAreControlledWithCustomRejectMessage()
+    {
+        fakeResendRequestController.customResend(true);
+
+        gatewayResendRequestsAreControlled(CUSTOM_MESSAGE);
+    }
+
+    private void gatewayResendRequestsAreControlled(final String text)
+    {
         fakeResendRequestController.resend(false);
 
         acquireAcceptingSession();
@@ -252,6 +266,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 assertTrue(message.isValid());
                 assertEquals(sequenceNumber, message.getInt(REF_SEQ_NUM));
                 assertEquals(BEGIN_SEQ_NO, message.getInt(REF_TAG_ID));
+                assertEquals(text, message.get(TEXT));
             });
 
         assertTrue(fakeResendRequestController.wasCalled());

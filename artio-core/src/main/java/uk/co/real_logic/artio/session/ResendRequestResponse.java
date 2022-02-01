@@ -15,11 +15,14 @@
  */
 package uk.co.real_logic.artio.session;
 
+import uk.co.real_logic.artio.builder.AbstractRejectEncoder;
+
 public class ResendRequestResponse
 {
     private boolean result;
 
     private int refTagId;
+    private AbstractRejectEncoder rejectEncoder;
 
     /**
      * Invoke when you want to apply normal behaviour and respond to the resend request.
@@ -39,6 +42,18 @@ public class ResendRequestResponse
         this.refTagId = refTagId;
 
         result = false;
+    }
+
+    public void reject(final AbstractRejectEncoder rejectEncoder)
+    {
+        this.rejectEncoder = rejectEncoder;
+
+        result = false;
+    }
+
+    AbstractRejectEncoder rejectEncoder()
+    {
+        return rejectEncoder;
     }
 
     boolean result()
