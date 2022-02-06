@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -153,12 +152,11 @@ public class DecimalFloatTest
     }
 
     @Test
-    @Ignore("reproduced issue https://github.com/real-logic/artio/issues/452")
     public void shouldNotBeAbleToRedefineConstantValues()
     {
         final DecimalFloat value;
-        final DecimalFloat zero = DecimalFloat.ZERO.copy();
-        value = DecimalFloat.ZERO;
+        final DecimalFloat zero = DecimalFloat.ZERO.mutableCopy();
+        value = DecimalFloat.ZERO.mutableCopy(); // compiler now prevent from modifying constants such as ZERO
         assertThat(value, equalTo(zero));
         assertThat(DecimalFloat.ZERO, equalTo(zero));
 

@@ -420,7 +420,7 @@ public class EncoderGeneratorTest
     {
         //Given
         final Encoder encoder = newHeartbeat();
-        final DecimalFloat zero = DecimalFloat.ZERO;
+        final DecimalFloat zero = DecimalFloat.ZERO.mutableCopy();
 
         setFloat(encoder, FLOAT_FIELD, zero);
 
@@ -429,6 +429,7 @@ public class EncoderGeneratorTest
 
         //Then
         assertThat(zero, is(new DecimalFloat()));
+        assertThat(DecimalFloat.ZERO, is(new DecimalFloat()));
     }
 
     @Test

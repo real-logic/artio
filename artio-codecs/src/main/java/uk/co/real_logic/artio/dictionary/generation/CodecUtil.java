@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.MutableDirectBuffer;
-import uk.co.real_logic.artio.fields.DecimalFloat;
-
 import java.util.Arrays;
+
+import org.agrona.MutableDirectBuffer;
+
+
+import uk.co.real_logic.artio.fields.ReadOnlyDecimalFloat;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -261,7 +263,7 @@ public final class CodecUtil
         }
     }
 
-    public static void appendFloat(final StringBuilder builder, final DecimalFloat price)
+    public static void appendFloat(final StringBuilder builder, final ReadOnlyDecimalFloat price)
     {
         final long value = price.value();
         final int scale = price.scale();

@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
 import org.agrona.AsciiSequenceView;
+import uk.co.real_logic.artio.fields.ReadOnlyDecimalFloat;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -62,7 +63,7 @@ public final class Reflection
     public static void setFloat(final Object object, final String setter, final DecimalFloat value)
         throws Exception
     {
-        set(object, setter, DecimalFloat.class, value);
+        set(object, setter, ReadOnlyDecimalFloat.class, value);
     }
 
     public static void setFloat(final Object object, final String setter, final long value, final int scale)

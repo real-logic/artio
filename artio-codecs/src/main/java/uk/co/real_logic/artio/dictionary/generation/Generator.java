@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.LocalMktDateEncoder;
+import uk.co.real_logic.artio.fields.ReadOnlyDecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -154,6 +155,7 @@ public abstract class Generator
         }
 
         out .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, thisPackage, compoundSuffix) : "")
+            .append(importFor(ReadOnlyDecimalFloat.class))
             .append(importFor(DecimalFloat.class))
             .append(importFor(MutableAsciiBuffer.class))
             .append(importFor(AsciiBuffer.class))
