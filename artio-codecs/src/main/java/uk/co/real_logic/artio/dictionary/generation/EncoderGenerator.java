@@ -873,7 +873,7 @@ class EncoderGenerator extends Generator
         return String.format(
             "    %6$s final DecimalFloat %1$s = new DecimalFloat();\n\n" +
             "%2$s" +
-            "    public %3$s %1$s(DecimalFloat value)\n" +
+            "    public %3$s %1$s(ReadOnlyDecimalFloat value)\n" +
             "    {\n" +
             "        %1$s.set(value);\n" +
             "%4$s" +

@@ -16,12 +16,18 @@
 package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.comparesEqualTo;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
+
+
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 
 public class DecimalFloatTest
 {
@@ -143,6 +149,23 @@ public class DecimalFloatTest
     {
         final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1000]);
         buffer.putFloatAscii(0, DecimalFloat.NAN);
+    }
+
+    @Test
+    public void shouldNotBeAbleToRedefineConstantValues()
+    {
+        final DecimalFloat value;
+        final DecimalFloat zero = DecimalFloat.ZERO.mutableCopy();
+        value = DecimalFloat.ZERO.mutableCopy(); // compiler now prevent from modifying constants such as ZERO
+        assertThat(value, equalTo(zero));
+        assertThat(DecimalFloat.ZERO, equalTo(zero));
+
+        // When
+        value.set(new DecimalFloat(5));
+
+        // Then
+        assertThat(value, equalTo(new DecimalFloat(5)));
+        assertThat(DecimalFloat.ZERO, equalTo(zero));
     }
 
     private void parseNumberFromBuffer(final String number)

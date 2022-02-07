@@ -278,7 +278,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return 1;
     }
 
-    public int putFloatAscii(final int offset, final DecimalFloat price)
+    public int putFloatAscii(final int offset, final ReadOnlyDecimalFloat price)
     {
         return putFloatAscii(offset, price.value(), price.scale());
     }
@@ -294,7 +294,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
      */
     public int putFloatAscii(final int offset, final long value, final int scale)
     {
-        if (DecimalFloat.isNaNValue(value, scale))
+        if (ReadOnlyDecimalFloat.isNaNValue(value, scale))
         {
             throw new IllegalArgumentException("You cannot encode NaN into a buffer - it's not a number");
         }
