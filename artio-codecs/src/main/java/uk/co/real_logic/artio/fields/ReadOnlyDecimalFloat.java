@@ -133,7 +133,6 @@ public class ReadOnlyDecimalFloat implements Comparable<ReadOnlyDecimalFloat>
         CodecUtil.appendFloat(builder, this);
     }
 
-    @Override
     public String toString()
     {
         final StringBuilder builder = new StringBuilder();
@@ -141,7 +140,6 @@ public class ReadOnlyDecimalFloat implements Comparable<ReadOnlyDecimalFloat>
         return builder.toString();
     }
 
-    @Override
     public final int compareTo(final ReadOnlyDecimalFloat other)
     {
         final long value = this.value;
@@ -193,9 +191,7 @@ public class ReadOnlyDecimalFloat implements Comparable<ReadOnlyDecimalFloat>
      * Transitive : if x.equals(y) return true and y.equals(z) return true, x.equals(z) return true
      * Consistent : invocations of x.equals(y) return the same value
      * For any x != null, x.equals(null) returns false
-     * <p>
-     * Any class other than DecimalFloat inheriting ReadOnlyDecimalFloat should overwrite this equal method.
-     * <p>
+     *
      * Support for DecimalFloat was done to provide a backward compatibility when some constants such as ZERO or NAN
      * were made read only to avoid subtle bugs. By making DecimalFloats equal the corresponding ReadOnlyDecimalFloat
      * any code that used the predefined constants when they were mutable should still yield the same results,
