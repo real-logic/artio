@@ -985,7 +985,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * this is a per-session parameter - ie the number of ResendRequests that will be queued for processing.
      *
      * @param maxConcurrentSessionReplays the maximum number of resend requests per session that Artio will enqueue
-     *                                    before rejecting any more.
+     *                                    before rejecting anymore.
      * @return this
      */
     public EngineConfiguration maxConcurrentSessionReplays(final int maxConcurrentSessionReplays)
