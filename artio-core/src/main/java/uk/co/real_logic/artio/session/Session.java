@@ -116,12 +116,14 @@ public class Session
     private final SessionCustomisationStrategy customisationStrategy;
     private final OnMessageInfo messageInfo;
     private final CancelOnDisconnect cancelOnDisconnect;
-    private final boolean backpressureMessagesDuringReplay;
+
+    private boolean backpressuredResendRequestResponse = false;
     private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
     private final ResendRequestController resendRequestController;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
+    private boolean backpressureMessagesDuringReplay;
     private CompositeKey sessionKey;
     private SessionState state;
     private String beginString;
@@ -1192,7 +1194,7 @@ public class Session
     {
         final long timeInNs = timeInNs();
         final Action action = checkStateAndValidateMessage(msgSeqNo, timeInNs, msgType, msgTypeLength,
-            sendingTime, origSendingTime, isPossDupOrResend, possDup, position);
+            sendingTime, origSendingTime, possDup, position);
         if (action != null)
         {
             return action;
@@ -1207,7 +1209,6 @@ public class Session
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend,
         final boolean possDup,
         final long position)
     {
@@ -2005,7 +2006,6 @@ public class Session
             RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
             sendingTime,
             origSendingTime,
-            isPossDupOrResend,
             possDup,
             position);
 
@@ -2016,9 +2016,11 @@ public class Session
             return action;
         }
 
+        final int oldLastReceivedMsgSeqNum = this.lastReceivedMsgSeqNum;
         final Action checkSeqAction = checkNormalSeqNoChange(msgSeqNum, timeInNs, isPossDupOrResend, position);
         if (checkSeqAction == ABORT)
         {
+            lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
             return checkSeqAction;
         }
 
@@ -2026,15 +2028,13 @@ public class Session
         // Validate endSeqNo
         if (!replayUpToMostRecent)
         {
-            // Just an invalid range.
-            if (endSeqNum < beginSeqNum)
+            if (endSeqNum < beginSeqNum) // Just an invalid range.
             {
-                return sendReject(msgSeqNum, END_SEQ_NO, VALUE_IS_INCORRECT);
+                return sendReject(msgSeqNum, END_SEQ_NO, VALUE_IS_INCORRECT, oldLastReceivedMsgSeqNum);
             }
-            // begin too high - reject
-            if (beginSeqNum > lastSentMsgSeqNum)
+            if (beginSeqNum > lastSentMsgSeqNum) // begin too high - reject
             {
-                return sendReject(msgSeqNum, BEGIN_SEQ_NO, VALUE_IS_INCORRECT);
+                return sendReject(msgSeqNum, BEGIN_SEQ_NO, VALUE_IS_INCORRECT, oldLastReceivedMsgSeqNum);
             }
         }
 
@@ -2042,7 +2042,10 @@ public class Session
         final int correctedEndSeqNo = replayUpToMostRecent ? lastSentMsgSeqNum : Math.min(lastSentMsgSeqNum, endSeqNum);
 
         final ResendRequestResponse resendRequestResponse = this.resendRequestResponse;
-        resendRequestController.onResend(this, resendRequest, correctedEndSeqNo, resendRequestResponse);
+        if (!backpressuredResendRequestResponse)
+        {
+            resendRequestController.onResend(this, resendRequest, correctedEndSeqNo, resendRequestResponse);
+        }
         if (resendRequestResponse.result())
         {
             if (Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
@@ -2055,6 +2058,7 @@ public class Session
                 messageOffset,
                 messageLength)))
             {
+                lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
                 return ABORT;
             }
 
@@ -2066,16 +2070,39 @@ public class Session
             final AbstractRejectEncoder rejectEncoder = resendRequestResponse.rejectEncoder();
             if (rejectEncoder != null)
             {
-                return Pressure.apply(trySend(rejectEncoder));
+                final boolean oldBackpressureMessagesDuringReplay = this.backpressureMessagesDuringReplay;
+                final long rejectPosition;
+                try
+                {
+                    backpressureMessagesDuringReplay = false;
+                    rejectPosition = trySend(rejectEncoder);
+                }
+                finally
+                {
+                    backpressureMessagesDuringReplay = oldBackpressureMessagesDuringReplay;
+                }
+
+                backpressuredResendRequestResponse = Pressure.isBackPressured(rejectPosition);
+                if (backpressuredResendRequestResponse)
+                {
+                    lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+                    return ABORT;
+                }
+
+                return CONTINUE;
             }
 
-            return sendReject(msgSeqNum, resendRequestResponse.refTagId(), OTHER);
+            return sendReject(msgSeqNum, resendRequestResponse.refTagId(), OTHER, oldLastReceivedMsgSeqNum);
         }
     }
 
-    private Action sendReject(final int msgSeqNum, final int endSeqNo, final RejectReason valueIsIncorrect)
+    private Action sendReject(
+        final int msgSeqNum,
+        final int endSeqNo,
+        final RejectReason valueIsIncorrect,
+        final int oldLastReceivedMsgSeqNum)
     {
-        return checkPosition(proxy.sendReject(
+        if (proxy.sendReject(
             newSentSeqNum(),
             msgSeqNum,
             endSeqNo,
@@ -2083,7 +2110,18 @@ public class Session
             RESEND_REQUEST_MESSAGE_TYPE_CHARS.length,
             valueIsIncorrect.representation(),
             sequenceIndex(),
-            lastMsgSeqNumProcessed));
+            lastMsgSeqNumProcessed) < 0)
+        {
+            backpressuredResendRequestResponse = true;
+            lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+            return ABORT;
+        }
+        else
+        {
+            backpressuredResendRequestResponse = false;
+            lastSentMsgSeqNum(newSentSeqNum());
+            return CONTINUE;
+        }
     }
 
     Action onReject(

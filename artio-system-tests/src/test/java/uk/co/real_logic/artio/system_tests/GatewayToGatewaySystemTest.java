@@ -274,6 +274,45 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldControlResendRequestsAreUnderBackPressure()
+    {
+        gatewayResendRequestsAreControlledUnderBackPressure();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldControlResendRequestsAreUnderBackPressureWithCustomRejectMessage()
+    {
+        fakeResendRequestController.customResend(true);
+        gatewayResendRequestsAreControlledUnderBackPressure();
+    }
+
+    private void gatewayResendRequestsAreControlledUnderBackPressure()
+    {
+        fakeResendRequestController.maxResends(1);
+
+        acquireAcceptingSession();
+
+        for (int i = 0; i < 10; i++)
+        {
+            exchangeExecutionReport(initiatingSession, acceptingOtfAcceptor);
+        }
+
+        acceptingOtfAcceptor.messages().clear();
+
+        // Send two resend requests in order to trigger the repeat control case
+        acceptorSendsResendRequest(1, 0);
+        acceptorSendsResendRequest(1, 0);
+
+        testSystem.await("Failed to receive reject", () ->
+        {
+            final long count = acceptingOtfAcceptor.receivedMessage(REJECT_MESSAGE_AS_STR).count();
+            return count >= 1;
+        });
+
+        assertEquals(2, fakeResendRequestController.callCount());
+    }
+
     // Test exists to replicate a faily complex bug involving a sequence number issue after a library timeout.
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotSendDuplicateSequenceNumbersAfterTimeout()
@@ -1177,11 +1216,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void shouldNotErrorWithDuplicateRequestSession()
     {
         // Slow indexer down a bit with the test request ids in order to make this race more predictable.
-        final String testReqID = largeTestReqId();
-        for (int i = 0; i < 100; i++)
-        {
-            sendTestRequest(testSystem, initiatingSession, testReqID);
-        }
+        exchangeLargeMessages();
 
         final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
@@ -1193,6 +1228,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem.awaitReply(firstReply);
         assertEquals(firstReply.toString(), OK, firstReply.resultIfPresent());
         assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, replyStatus);
+    }
+
+    private void exchangeLargeMessages()
+    {
+        final String testReqID = largeTestReqId();
+        for (int i = 0; i < 100; i++)
+        {
+            sendTestRequest(testSystem, initiatingSession, testReqID);
+        }
     }
 
     private void assertArchiveDoesNotContainPassword()
@@ -1212,6 +1256,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void exchangeExecutionReport()
     {
+        exchangeExecutionReport(acceptingSession, initiatingOtfAcceptor);
+    }
+
+    private void exchangeExecutionReport(final Session session, final FakeOtfAcceptor otfAcceptor)
+    {
         final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
         executionReport
             .orderID("order")
@@ -1220,9 +1269,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .ordStatus(OrdStatus.FILLED)
             .side(Side.BUY);
         executionReport.instrument().symbol("IBM");
-        assertThat(acceptingSession.trySend(executionReport), greaterThan(0L));
-
-        testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        testSystem.awaitSend(() -> session.trySend(executionReport));
+        testSystem.awaitMessageOf(otfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
     }
 
     private void reacquireSession(

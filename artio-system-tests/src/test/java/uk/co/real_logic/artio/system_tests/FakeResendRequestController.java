@@ -31,8 +31,9 @@ public class FakeResendRequestController implements ResendRequestController
     public static final String CUSTOM_MESSAGE = "custom message";
     private boolean resend = true;
 
-    private boolean called = false;
+    private int callCount = 0;
     private boolean customResend = false;
+    private int maxResends = Integer.MAX_VALUE;
 
     public void onResend(
         final Session session,
@@ -40,8 +41,13 @@ public class FakeResendRequestController implements ResendRequestController
         final int correctedEndSeqNo,
         final ResendRequestResponse response)
     {
-        called = true;
+        callCount++;
         assertNotNull(resendRequest);
+
+        if (callCount > maxResends)
+        {
+            resend = false;
+        }
 
         if (resend)
         {
@@ -68,9 +74,19 @@ public class FakeResendRequestController implements ResendRequestController
         this.resend = resend;
     }
 
+    public void maxResends(final int maxResends)
+    {
+        this.maxResends = maxResends;
+    }
+
     public boolean wasCalled()
     {
-        return called;
+        return callCount > 0;
+    }
+
+    public int callCount()
+    {
+        return callCount;
     }
 
     public void customResend(final boolean customResend)
