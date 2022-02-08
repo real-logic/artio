@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
@@ -603,6 +605,21 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             connection.readHeartbeat();
             connection.readLogout();
             assertFalse(connection.isConnected());
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotAllowRequestingOfUnknownSession() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        // Create internal session object with a session id of -1
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            final SessionReplyStatus sessionReplyStatus = requestSession(library, Session.UNKNOWN, testSystem);
+            assertEquals(SessionReplyStatus.UNKNOWN_SESSION, sessionReplyStatus);
         }
     }
 

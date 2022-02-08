@@ -2063,6 +2063,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return saveRequestSessionReply(libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
         }
 
+        if (sessionId == Session.UNKNOWN)
+        {
+            return saveRequestSessionReply(libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId);
+        }
+
         if (acceptsFixP)
         {
             return onRequestFixPSession(libraryId, libraryInfo, sessionId, correlationId);
@@ -2276,7 +2281,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final InternalSession session = gatewaySession.session();
-        if (!session.isActive())
+        if (session == null || !session.isActive())
         {
             return saveRequestSessionReply(libraryId, SESSION_NOT_LOGGED_IN, correlationId);
         }
@@ -2318,6 +2323,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final DirectBuffer buffer = new UnsafeBuffer();
             final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(session.id(), buffer);
 
+            // Add the gateway session into the library's owned set at this point, ie
+            // before the handover has happened in order to avoid another racing
+            // requestSession from handing over an offline session
+            libraryInfo.addSession(gatewaySession);
+
             add(this::awaitGatewaySessionMessagesSent);
             add(() -> saveManageSessionTo(correlationId, status, buffer, outboundPublication));
             add(this::awaitIndexer);
@@ -2350,7 +2360,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             lastRecvSeqNum = session.lastReceivedMsgSeqNum();
             lastSentSeqNum = session.lastSentMsgSeqNum();
 
-            libraryInfo.addSession(gatewaySession);
             DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
 
             return COMPLETE;

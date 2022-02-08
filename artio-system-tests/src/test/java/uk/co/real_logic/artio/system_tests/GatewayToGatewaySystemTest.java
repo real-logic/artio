@@ -1173,6 +1173,28 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotErrorWithDuplicateRequestSession()
+    {
+        // Slow indexer down a bit with the test request ids in order to make this race more predictable.
+        final String testReqID = largeTestReqId();
+        for (int i = 0; i < 100; i++)
+        {
+            sendTestRequest(testSystem, initiatingSession, testReqID);
+        }
+
+        final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
+
+        final Reply<SessionReplyStatus> firstReply = acceptingLibrary
+            .requestSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, TEST_REPLY_TIMEOUT_IN_MS);
+        final SessionReplyStatus replyStatus = requestSession(
+            acceptingLibrary, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, testSystem);
+
+        testSystem.awaitReply(firstReply);
+        assertEquals(firstReply.toString(), OK, firstReply.resultIfPresent());
+        assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, replyStatus);
+    }
+
     private void assertArchiveDoesNotContainPassword()
     {
         final EngineConfiguration configuration = acceptingEngine.configuration();
