@@ -107,7 +107,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         final EngineConfiguration config = initiatingEngine.configuration();
         final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
         assertThat(messages, hasSize(2));
-        for (final String rejectMessage : messages) {
+        for (final String rejectMessage : messages)
+        {
             assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
             assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
         }
