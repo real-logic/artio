@@ -441,7 +441,7 @@ public class FixGatewaySessions extends GatewaySessions
             this.encoder = encoder;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.lingerTimeoutInMs = lingerTimeoutInMs;
-            this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
+            this.state = AuthenticationState.ENCODING_REJECT_MESSAGE;
         }
 
         protected void encodeRejectMessage()

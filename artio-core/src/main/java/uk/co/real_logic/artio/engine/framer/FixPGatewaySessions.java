@@ -228,7 +228,7 @@ public class FixPGatewaySessions extends GatewaySessions
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.fixPFirstMessageResponse = response;
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
-            this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
+            this.state = AuthenticationState.ENCODING_REJECT_MESSAGE;
         }
 
         public String remoteAddress()

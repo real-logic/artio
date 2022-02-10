@@ -38,6 +38,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -92,7 +93,27 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void logonsCanBeRejectedWithCustomMessages()
+    public void shouldBeAbleToRejectLogonsWithCustomMessages()
+    {
+        // We run this test twice to ensure that there's no state that persisted over reconnects
+        // Which was an observed bug in Artio 0.117.
+
+        rejectLogonWithCustomReject();
+
+        auth.reset();
+
+        rejectLogonWithCustomReject();
+
+        final EngineConfiguration config = initiatingEngine.configuration();
+        final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
+        assertThat(messages, hasSize(2));
+        for (final String rejectMessage : messages) {
+            assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
+            assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
+        }
+    }
+
+    private void rejectLogonWithCustomReject()
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
 
@@ -105,13 +126,6 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         final long rejectTime = System.currentTimeMillis() - startTime;
         assertThat(rejectTime, greaterThanOrEqualTo(LINGER_TIMEOUT_IN_MS));
         assertThat(rejectTime, lessThan(2 * LINGER_TIMEOUT_IN_MS));
-
-        final EngineConfiguration config = initiatingEngine.configuration();
-        final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
-        assertThat(messages, hasSize(1));
-        final String rejectMessage = messages.get(0);
-        assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
-        assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS, expected = NullPointerException.class)
@@ -341,6 +355,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         private DisconnectReason disconnectReason;
         private volatile boolean hasDisconnected;
 
+        ControllableAuthenticationStrategy()
+        {
+            reset();
+        }
+
         public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
         {
             authConnectionId = authProxy.connectionId();
@@ -388,6 +407,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         void reset()
         {
+            authConnectionId = NO_CONNECTION_ID;
+            disconnectSessionId = Session.UNKNOWN;
+            disconnectConnectionId = NO_CONNECTION_ID;
+            disconnectReason = null;
+            hasDisconnected = false;
             authProxy = null;
         }
 

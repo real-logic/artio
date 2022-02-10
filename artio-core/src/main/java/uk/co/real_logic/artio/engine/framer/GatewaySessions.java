@@ -232,6 +232,7 @@ abstract class GatewaySessions
         AUTHENTICATED,
         INDEXER_CATCHUP,
         ACCEPTED,
+        ENCODING_REJECT_MESSAGE,
         SENDING_REJECT_MESSAGE,
         LINGERING_REJECT_MESSAGE,
         REJECTED
@@ -344,8 +345,12 @@ abstract class GatewaySessions
                     checkedOnAuthenticationResult();
                     return true;
 
-                case SENDING_REJECT_MESSAGE:
+                case ENCODING_REJECT_MESSAGE:
                     checkedOnAuthenticationResult();
+                    onEncodingRejectMessage();
+                    return false;
+
+                case SENDING_REJECT_MESSAGE:
                     return onSendingRejectMessage();
 
                 case LINGERING_REJECT_MESSAGE:
@@ -385,22 +390,22 @@ abstract class GatewaySessions
             return complete;
         }
 
+        private void onEncodingRejectMessage()
+        {
+            try
+            {
+                encodeRejectMessage();
+                state = AuthenticationState.SENDING_REJECT_MESSAGE;
+            }
+            catch (final Exception e)
+            {
+                errorHandler.onError(e);
+                state = AuthenticationState.REJECTED;
+            }
+        }
+
         private boolean onSendingRejectMessage()
         {
-            if (rejectEncodeBuffer == null)
-            {
-                try
-                {
-                    encodeRejectMessage();
-                }
-                catch (final Exception e)
-                {
-                    errorHandler.onError(e);
-                    state = AuthenticationState.REJECTED;
-                    return true;
-                }
-            }
-
             switch (sendReject())
             {
                 case INFLIGHT:
