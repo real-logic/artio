@@ -118,7 +118,10 @@ public class AbstractGatewayToGatewaySystemTest
         acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = connect(acceptingLibraryConfig);
