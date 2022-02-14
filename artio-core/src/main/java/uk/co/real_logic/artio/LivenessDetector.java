@@ -145,14 +145,13 @@ public final class LivenessDetector
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
-    private boolean heartbeat(final long timeInMs)
+    private void heartbeat(final long timeInMs)
     {
         try
         {
             if (publication.saveApplicationHeartbeat(libraryId, clock.nanoTime()) >= 0)
             {
                 nextSendTimeInMs = timeInMs + sendIntervalInMs;
-                return true;
             }
         }
         catch (final NotConnectedException ex)
@@ -163,17 +162,6 @@ public final class LivenessDetector
             }
 
             disconnect();
-        }
-
-        return false;
-    }
-
-    public void onReconnect(final long timeInMs)
-    {
-        onHeartbeat(timeInMs);
-        if (!heartbeat(timeInMs))
-        {
-            nextSendTimeInMs = 0;
         }
     }
 }

@@ -163,7 +163,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final CharFormatter controlNotificationFormatter = new CharFormatter(
         "%s: Received Control Notification from engine at timeInMs %s");
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
-        "%s: Received Heartbeat from engine at timeInMs %s");
+        "%s: Received Heartbeat(msg=%s) from engine at %sms, sent at %sns");
     private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s");
     private final CharFormatter onDisconnectFormatter = new CharFormatter(
         "%s: Session Disconnect @ Library %s, %s");
@@ -1325,13 +1325,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
     }
 
-    public Action onApplicationHeartbeat(final int libraryId)
+    public Action onApplicationHeartbeat(final int libraryId, final int messageTemplateId, final long timestampInNs)
     {
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, applicationHeartbeatFormatter, libraryId, timeInMs);
+                APPLICATION_HEARTBEAT,
+                applicationHeartbeatFormatter,
+                libraryId,
+                messageTemplateId,
+                timeInMs,
+                timestampInNs);
             livenessDetector.onHeartbeat(timeInMs);
 
             if (!isConnected() && livenessDetector.isConnected())

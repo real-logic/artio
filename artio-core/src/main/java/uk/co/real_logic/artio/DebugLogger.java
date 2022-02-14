@@ -20,6 +20,7 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.AbstractDebugAppender.ThreadLocalAppender;
+import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.CharFormatter;
 
@@ -272,11 +273,12 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
-        final ApplicationHeartbeatEncoder encoder)
+        final ApplicationHeartbeatEncoder encoder,
+        final int streamId)
     {
         if (isEnabled(tag))
         {
-            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder, streamId);
         }
     }
 
@@ -1013,9 +1015,13 @@ public final class DebugLogger
 
         public void logSbeMessage(
             final LogTag tag,
-            final ApplicationHeartbeatEncoder encoder)
+            final ApplicationHeartbeatEncoder encoder,
+            final int streamId)
         {
+            final StringBuilder builder = this.builder;
             appendStart();
+            builder.append("streamId=");
+            builder.append(streamId);
             applicationHeartbeat.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
@@ -1385,6 +1391,9 @@ public final class DebugLogger
             }
             else
             {
+                final int origLimit = byteBuffer.limit();
+                ByteBufferUtil.limit(byteBuffer, offset + length);
+
                 builder.append('{');
                 for (int i = 0; i < length; i++)
                 {
@@ -1398,6 +1407,7 @@ public final class DebugLogger
                         builder.append(", ");
                     }
                 }
+                byteBuffer.limit(origLimit);
             }
             finish(tag);
         }

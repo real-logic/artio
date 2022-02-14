@@ -183,8 +183,12 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final ApplicationHeartbeatDecoder applicationHeartbeat = this.applicationHeartbeat;
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        handler.onApplicationHeartbeat(applicationHeartbeat.libraryId(), header.sessionId());
+        final int libraryId = applicationHeartbeat.libraryId();
+        final long timestampInNs = applicationHeartbeat.timestampInNs();
+        final int sessionId = header.sessionId();
+        handler.onApplicationHeartbeat(libraryId, sessionId, ApplicationHeartbeatDecoder.TEMPLATE_ID, timestampInNs);
         return CONTINUE;
     }
 
@@ -213,9 +217,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final ReleaseSessionDecoder releaseSession = this.releaseSession;
         releaseSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = releaseSession.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), ReleaseSessionDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -242,9 +248,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final RequestSessionDecoder requestSession = this.requestSession;
         requestSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = requestSession.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), RequestSessionDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages but not this message.
@@ -265,9 +273,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final InitiateConnectionDecoder initiateConnection = this.initiateConnection;
         initiateConnection.wrap(buffer, offset, blockLength, version);
         final int libraryId = initiateConnection.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), InitiateConnectionDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but don't process this message.
@@ -307,9 +317,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final RequestDisconnectDecoder requestDisconnect = this.requestDisconnect;
         requestDisconnect.wrap(buffer, offset, blockLength, version);
         final int libraryId = requestDisconnect.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), RequestDisconnectDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -327,9 +339,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final MidConnectionDisconnectDecoder midConnectionDisconnect = this.midConnectionDisconnect;
         midConnectionDisconnect.wrap(buffer, offset, blockLength, version);
         final int libraryId = midConnectionDisconnect.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), MidConnectionDisconnectDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -346,9 +360,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final FollowerSessionRequestDecoder followerSessionRequest = this.followerSessionRequest;
         followerSessionRequest.wrap(buffer, offset, blockLength, version);
         final int libraryId = followerSessionRequest.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), FollowerSessionRequestDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -371,9 +387,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final WriteMetaDataDecoder writeMetaData = this.writeMetaData;
         writeMetaData.wrap(buffer, offset, blockLength, version);
         final int libraryId = writeMetaData.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), WriteMetaDataDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -396,9 +414,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final ReadMetaDataDecoder readMetaData = this.readMetaData;
         readMetaData.wrap(buffer, offset, blockLength, version);
         final int libraryId = readMetaData.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), ReadMetaDataDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -416,9 +436,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final ReplayMessagesDecoder replayMessages = this.replayMessages;
         replayMessages.wrap(buffer, offset, blockLength, version);
         final int libraryId = replayMessages.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), ReplayMessagesDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.
@@ -441,9 +463,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final int version,
         final Header header)
     {
+        final InitiateILinkConnectionDecoder initiateILinkConnection = this.initiateILinkConnection;
         initiateILinkConnection.wrap(buffer, offset, blockLength, version);
         final int libraryId = initiateILinkConnection.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, header.sessionId(), InitiateILinkConnectionDecoder.TEMPLATE_ID, 0);
         if (action != null)
         {
             return action; // Continue processing messages, but not this message.

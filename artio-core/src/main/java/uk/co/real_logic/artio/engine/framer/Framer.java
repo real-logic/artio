@@ -104,7 +104,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final CharFormatter initiatingSessionFormatter = new CharFormatter(
         "Initiating session %s from library %s");
     private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
-        "Received Heartbeat from library %s at timeInMs %s");
+        "Received Heartbeat (msg=%s) from library %s at %sms, sent at %sns");
     private final CharFormatter acquiringSessionFormatter = new CharFormatter(
         "Acquiring session %s from library %s");
     private final CharFormatter releasingSessionFormatter = new CharFormatter(
@@ -1955,14 +1955,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    public Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId)
+    public Action onApplicationHeartbeat(
+        final int libraryId, final int aeronSessionId, final int messageTemplateId, final long timestampInNs)
     {
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
             final long timeInMs = epochClock.time();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, applicationHeartbeatFormatter, libraryId, timeInMs);
+                APPLICATION_HEARTBEAT,
+                applicationHeartbeatFormatter,
+                messageTemplateId,
+                libraryId,
+                timeInMs,
+                timestampInNs);
             library.onHeartbeat(timeInMs);
 
             return null;

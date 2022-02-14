@@ -405,8 +405,8 @@ public class StreamTimestampZipper
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
                 applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-                final long timestamp = applicationHeartbeat.timestamp();
-                owner.handledTimestamp(timestamp);
+                final long timestampInNs = applicationHeartbeat.timestampInNs();
+                owner.handledTimestamp(timestampInNs);
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID)
             {

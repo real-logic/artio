@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.DisconnectedSessionsEncoder;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.List;
 
@@ -41,7 +42,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.agrona.BitUtil.align;
-import static uk.co.real_logic.artio.DebugLogger.logSbeMessage;
+import static uk.co.real_logic.artio.DebugLogger.*;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.messages.ErrorDecoder.messageHeaderLength;
 import static uk.co.real_logic.artio.messages.ErrorEncoder.BLOCK_LENGTH;
@@ -123,6 +124,9 @@ public class GatewayPublication extends ClaimablePublication
         ThrottleConfigurationReplyEncoder.BLOCK_LENGTH;
     private static final int SEQ_INDEX_SYNC_LENGTH = HEADER_LENGTH + SeqIndexSyncEncoder.BLOCK_LENGTH;
 
+    private static final boolean APPLICATION_HEARTBEAT_ATTEMPT_ENABLED = isEnabled(APPLICATION_HEARTBEAT_ATTEMPT);
+    private static final boolean APPLICATION_HEARTBEAT_ENABLED = isEnabled(APPLICATION_HEARTBEAT_ATTEMPT);
+
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
@@ -163,6 +167,8 @@ public class GatewayPublication extends ClaimablePublication
     private final ThrottleConfigurationReplyEncoder throttleConfigurationReply =
         new ThrottleConfigurationReplyEncoder();
     private final SeqIndexSyncEncoder seqIndexSyncEncoder = new SeqIndexSyncEncoder();
+    private final CharFormatter sendHeartbeatAttempt = new CharFormatter(
+        "Failed to send heartbeat, id=%s,ts=%s,stream=%s");
 
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
     private final ValidResendRequestEncoder validResendRequest = new ValidResendRequestEncoder();
@@ -774,11 +780,17 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveApplicationHeartbeat(final int libraryId, final long timestamp)
+    public long saveApplicationHeartbeat(final int libraryId, final long timestampInNs)
     {
         final long position = claim(HEARTBEAT_LENGTH);
         if (position < 0)
         {
+            if (APPLICATION_HEARTBEAT_ATTEMPT_ENABLED)
+            {
+                final int streamId = dataPublication.streamId();
+                log(APPLICATION_HEARTBEAT_ATTEMPT, sendHeartbeatAttempt, libraryId, timestampInNs, streamId);
+            }
+
             return position;
         }
 
@@ -788,11 +800,15 @@ public class GatewayPublication extends ClaimablePublication
         applicationHeartbeat
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
-            .timestamp(timestamp);
+            .timestampInNs(timestampInNs);
 
         bufferClaim.commit();
 
-        logSbeMessage(APPLICATION_HEARTBEAT, applicationHeartbeat);
+        if (APPLICATION_HEARTBEAT_ENABLED)
+        {
+            final int streamId = dataPublication.streamId();
+            logSbeMessage(APPLICATION_HEARTBEAT, applicationHeartbeat, streamId);
+        }
 
         return position;
     }

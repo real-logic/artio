@@ -141,7 +141,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final ThrottleConfigurationReplyDecoder throttleConfigurationReply = this.throttleConfigurationReply;
         throttleConfigurationReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = throttleConfigurationReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, ThrottleConfigurationReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -159,7 +160,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final ThrottleNotificationDecoder throttleNotification = this.throttleNotification;
         throttleNotification.wrap(buffer, offset, blockLength, version);
         final int libraryId = throttleNotification.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ThrottleNotificationDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -200,9 +201,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final ControlNotificationDecoder controlNotification = this.controlNotification;
         controlNotification.wrap(buffer, offset, blockLength, version);
         final int libraryId = controlNotification.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ControlNotificationDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -220,9 +222,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final SlowStatusNotificationDecoder slowStatusNotification = this.slowStatusNotification;
         slowStatusNotification.wrap(buffer, offset, blockLength, version);
         final int libraryId = slowStatusNotification.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, SlowStatusNotificationDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -240,9 +243,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber = this.resetLibrarySequenceNumber;
         resetLibrarySequenceNumber.wrap(buffer, offset, blockLength, version);
         final int libraryId = resetLibrarySequenceNumber.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(
+            libraryId, ResetLibrarySequenceNumberDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -259,9 +264,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final FollowerSessionReplyDecoder followerSessionReply = this.followerSessionReply;
         followerSessionReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = followerSessionReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, FollowerSessionReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -279,16 +285,20 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final ApplicationHeartbeatDecoder applicationHeartbeat = this.applicationHeartbeat;
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
+        final int libraryId = applicationHeartbeat.libraryId();
+        final long timestampInNs = applicationHeartbeat.timestampInNs();
+        return handler.onApplicationHeartbeat(libraryId, ApplicationHeartbeatDecoder.TEMPLATE_ID, timestampInNs);
     }
 
     private Action onReleaseSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final ReleaseSessionReplyDecoder releaseSessionReply = this.releaseSessionReply;
         releaseSessionReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = releaseSessionReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ReleaseSessionReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -303,9 +313,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onRequestSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final RequestSessionReplyDecoder requestSessionReply = this.requestSessionReply;
         requestSessionReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = requestSessionReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, RequestSessionReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -320,9 +331,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onWriteMetaDataReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final WriteMetaDataReplyDecoder writeMetaDataReply = this.writeMetaDataReply;
         writeMetaDataReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = writeMetaDataReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, WriteMetaDataReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -337,9 +349,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onReadMetaDataReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final ReadMetaDataReplyDecoder readMetaDataReply = this.readMetaDataReply;
         readMetaDataReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = readMetaDataReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ReadMetaDataReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -357,9 +370,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onILinkConnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final ILinkConnectDecoder iLinkConnect = this.iLinkConnect;
         iLinkConnect.wrap(buffer, offset, blockLength, version);
         final int libraryId = iLinkConnect.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ILinkConnectDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -379,9 +393,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onReplayMessagesReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final ReplayMessagesReplyDecoder replayMessagesReply = this.replayMessagesReply;
         replayMessagesReply.wrap(buffer, offset, blockLength, version);
         final int libraryId = replayMessagesReply.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ReplayMessagesReplyDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -396,9 +411,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onError(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
+        final ErrorDecoder error = this.error;
         error.wrap(buffer, offset, blockLength, version);
         final int libraryId = error.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ErrorDecoder.TEMPLATE_ID, 0);
         if (action == ABORT)
         {
             return action;
@@ -416,9 +432,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final ManageSessionDecoder manageSession = this.manageSession;
         manageSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = manageSession.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ManageSessionDecoder.TEMPLATE_ID, 0);
 
         if (ABORT == action)
         {
@@ -475,9 +492,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final EndOfDayDecoder endOfDay = this.endOfDay;
         endOfDay.wrap(buffer, offset, blockLength, version);
         final int libraryId = endOfDay.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, EndOfDayDecoder.TEMPLATE_ID, 0);
 
         if (ABORT == action)
         {
@@ -493,10 +511,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int blockLength,
         final int version)
     {
+        final ReplayCompleteDecoder replayComplete = this.replayComplete;
         replayComplete.wrap(buffer, offset, blockLength, version);
         final long connection = replayComplete.connection();
         final int libraryId = replayComplete.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
+        final Action action = handler.onApplicationHeartbeat(libraryId, ReplayCompleteDecoder.TEMPLATE_ID, 0);
 
         if (ABORT == action)
         {

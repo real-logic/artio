@@ -317,7 +317,7 @@ public class LibraryPollerTest
     {
         return (inv) ->
         {
-            library.onApplicationHeartbeat(libraryId());
+            library.onApplicationHeartbeat(libraryId(), ApplicationHeartbeatDecoder.TEMPLATE_ID, 0);
             return 1;
         };
     }

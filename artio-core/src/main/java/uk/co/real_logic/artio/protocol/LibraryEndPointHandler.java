@@ -24,7 +24,7 @@ public interface LibraryEndPointHandler
 {
     Action onError(int libraryId, GatewayError errorType, long replyToId, String message);
 
-    Action onApplicationHeartbeat(int libraryId);
+    Action onApplicationHeartbeat(int libraryId, int messageTemplateId, long timestampInNs);
 
     Action onReleaseSessionReply(int libraryId, long replyToId, SessionReplyStatus status);
 

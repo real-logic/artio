@@ -162,7 +162,7 @@ public class CommonConfiguration
         Set<LogTag> debugTags = Collections.emptySet();
         if (debugPrintMessagesValue != null)
         {
-            if ("all".equals(debugPrintMessagesValue) || "true".equals(debugPrintMessagesValue))
+            if ("all".equalsIgnoreCase(debugPrintMessagesValue) || "true".equalsIgnoreCase(debugPrintMessagesValue))
             {
                 debugPrintMessages = true;
                 debugTags = EnumSet.allOf(LogTag.class);

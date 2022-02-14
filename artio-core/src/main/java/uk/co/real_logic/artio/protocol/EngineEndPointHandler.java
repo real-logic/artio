@@ -59,7 +59,7 @@ public interface EngineEndPointHandler
 
     Action onRequestDisconnect(int libraryId, long connectionId, DisconnectReason reason);
 
-    Action onApplicationHeartbeat(int libraryId, int aeronSessionId);
+    Action onApplicationHeartbeat(int libraryId, int aeronSessionId, int messageTemplateId, long timestampInNs);
 
     Action onReleaseSession(
         int libraryId,

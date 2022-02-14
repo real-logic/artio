@@ -619,7 +619,7 @@
                  description="A heartbeat message sent within the application protocol">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connectCorrelationId" id="2" type="CorrelationId"/>
-        <field name="timestamp" id="3" type="Timestamp" sinceVersion="22"/>
+        <field name="timestampInNs" id="3" type="Timestamp" sinceVersion="22"/>
     </sbe:message>
 
     <sbe:message name="ResetSequenceNumber" id="42"

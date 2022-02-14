@@ -41,7 +41,17 @@ public enum LogTag
     FIX_CONNECTION,
     FIX_TEST,
     GATEWAY_MESSAGE,
+    /**
+     * This logs the flow of messages when application heartbeat messages are sent.
+     * */
     APPLICATION_HEARTBEAT,
+
+    /**
+     * This logs the flow of messages when application heartbeat messages are attempted but not sent. This
+     * could become quite spammy in the case that you have a lot of back-pressure
+     */
+    APPLICATION_HEARTBEAT_ATTEMPT,
+
     POSITION,
     CATCHUP,
     REPLAY,
