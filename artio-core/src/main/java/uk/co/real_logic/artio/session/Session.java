@@ -2568,8 +2568,8 @@ public class Session
     void refreshSequenceNumberCounters(final FixCounters counters)
     {
         closeCounters();
-        receivedMsgSeqNo = counters.receivedMsgSeqNo(connectionId);
-        sentMsgSeqNo = counters.sentMsgSeqNo(connectionId);
+        receivedMsgSeqNo = counters.receivedMsgSeqNo(connectionId, id);
+        sentMsgSeqNo = counters.sentMsgSeqNo(connectionId, id);
     }
 
     /**

@@ -89,8 +89,8 @@ public class LibraryPollerTest
         when(transport.outboundPublication()).thenReturn(outboundPublication);
         when(transport.inboundSubscription()).thenReturn(inboundSubscription);
 
-        when(counters.receivedMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
-        when(counters.sentMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
+        when(counters.receivedMsgSeqNo(anyLong(), anyLong())).thenReturn(mock(AtomicCounter.class));
+        when(counters.sentMsgSeqNo(anyLong(), anyLong())).thenReturn(mock(AtomicCounter.class));
 
         when(sessionAcquireHandler.onSessionAcquired(session.capture(), any())).thenReturn(sessionHandler);
     }

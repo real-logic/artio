@@ -146,9 +146,10 @@ public class FixGatewaySessions extends GatewaySessions
         final String password,
         final BlockablePosition engineBlockablePosition)
     {
+        final long sessionId = gatewaySession.sessionId();
         final long connectionId = gatewaySession.connectionId();
-        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
-        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId, sessionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId, sessionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
         final OnMessageInfo messageInfo = new OnMessageInfo();
 

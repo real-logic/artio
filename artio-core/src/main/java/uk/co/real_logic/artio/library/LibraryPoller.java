@@ -1052,7 +1052,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 session = newInitiatorSession(
                     connectionId, initialSentSequenceNumber, initialReceivedSequenceNumber,
                     sessionState, sequenceIndex, enableLastMsgSeqNumProcessed,
-                    fixDictionary, resetSeqNum, messageInfo);
+                    fixDictionary, resetSeqNum, messageInfo, sessionId);
             }
             else
             {
@@ -1067,7 +1067,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 session = acceptSession(
                     connectionId, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                    enableLastMsgSeqNumProcessed, fixDictionary, messageInfo);
+                    enableLastMsgSeqNumProcessed, fixDictionary, messageInfo, sessionId);
                 session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
             }
             else
@@ -2154,7 +2154,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary,
         final boolean resetSeqNum,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final long sessionId)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
 
@@ -2171,8 +2172,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             outboundPublication,
             sessionIdStrategy,
             configuration.sendingTimeWindowInMs(),
-            fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId),
+            fixCounters.receivedMsgSeqNo(connectionId, sessionId),
+            fixCounters.sentMsgSeqNo(connectionId, sessionId),
             libraryId,
             initialSentSequenceNumber,
             sequenceIndex,
@@ -2230,11 +2231,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int sequenceIndex,
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary,
-        final OnMessageInfo messageInfo)
+        final OnMessageInfo messageInfo,
+        final long sessionId)
     {
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
-        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
-        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId, sessionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId, sessionId);
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
 
         final InternalSession session = new AcceptorSession(

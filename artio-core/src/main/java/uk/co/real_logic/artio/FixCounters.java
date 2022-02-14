@@ -21,12 +21,14 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 import static uk.co.real_logic.artio.FixCounters.FixCountersId.*;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 
 public class FixCounters implements AutoCloseable
 {
@@ -165,14 +167,45 @@ public class FixCounters implements AutoCloseable
                 "Invalid Library Attempts for " + address + " id = " + connectionId);
     }
 
-    public AtomicCounter sentMsgSeqNo(final long connectionId)
+    public AtomicCounter sentMsgSeqNo(final long connectionId, final long sessionId)
     {
-        return newCounter(FixCountersId.SENT_MSG_SEQ_NO_TYPE_ID.id(), "Last Sent MsgSeqNo for " + connectionId);
+        return newCounter(
+            FixCountersId.SENT_MSG_SEQ_NO_TYPE_ID.id(), msgSeqNoLabel("Sent", connectionId, sessionId));
     }
 
-    public AtomicCounter receivedMsgSeqNo(final long connectionId)
+    public AtomicCounter receivedMsgSeqNo(final long connectionId, final long sessionId)
     {
-        return newCounter(FixCountersId.RECV_MSG_SEQ_NO_TYPE_ID.id(), "Last Received MsgSeqNo for " + connectionId);
+        return newCounter(
+            FixCountersId.RECV_MSG_SEQ_NO_TYPE_ID.id(), msgSeqNoLabel("Received", connectionId, sessionId));
+    }
+
+    private String msgSeqNoLabel(final String type, final long connectionId, final long sessionId)
+    {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Last ");
+        sb.append(type);
+        sb.append(" MsgSeqNo ");
+
+        final boolean hasConnectionId = connectionId != NO_CONNECTION_ID;
+        if (hasConnectionId)
+        {
+            sb.append("connId=");
+            sb.append(connectionId);
+        }
+
+        if (sessionId != Session.UNKNOWN)
+        {
+            if (hasConnectionId)
+            {
+                sb.append(",");
+            }
+            sb.append("sessId=");
+            sb.append(sessionId);
+        }
+
+        final String label = sb.toString();
+        System.out.println("label = " + label);
+        return label;
     }
 
     private AtomicCounter newCounter(final int typeId, final String label)
