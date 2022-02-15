@@ -239,6 +239,12 @@ class FixReplayerSession extends ReplayerSession
                 }
                 else if (msgSeqNum > lastSeqNo + 1)
                 {
+                    if (lastSeqNo == 0)
+                    {
+                        // In the unlikely event of requesting a resend-request that is larger than the replay index
+                        // size the gap-fill at the beginning of the resend-request can hit this condition.
+                        lastSeqNo = 1;
+                    }
                     sendGapFill(lastSeqNo, msgSeqNum);
                 }
 
