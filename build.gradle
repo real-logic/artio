@@ -166,7 +166,9 @@ subprojects {
             'aeron.dir.warn.if.exists': 'false',
             'aeron.use.windows.high.res.timer': 'true',
             'aeron.term.buffer.sparse.file': 'true',
-            'aeron.perform.storage.checks': 'false')
+            'aeron.perform.storage.checks': 'false',
+            'aeron.publication.unblock.timeout': '35000000000',
+            'aeron.client.liveness.timeout': '30000000000')
 
         def threshold = System.getProperty("org.agrona.transport.iteration.threshold")
         systemProperty "org.agrona.transport.iteration.threshold", threshold
