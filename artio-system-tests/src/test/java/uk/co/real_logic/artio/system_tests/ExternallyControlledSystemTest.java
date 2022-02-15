@@ -142,7 +142,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(3, 1);
         assertEquals("Y", resentNewOrderSingle.possDup());
 
-
         // Check we can continue to use the session writer after session reconnected.
         assertEquals(acceptingSession.connectionId(), sessionWriter.connectionId());
         initiatingOtfAcceptor.messages().clear();

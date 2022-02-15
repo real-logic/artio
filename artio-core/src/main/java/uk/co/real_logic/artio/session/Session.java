@@ -661,7 +661,7 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (backpressureMessagesDuringReplay && replaying)
+        if (replayBackpressure())
         {
             return BACK_PRESSURED;
         }
@@ -674,6 +674,11 @@ public class Session
         final long type = encoder.messageType();
 
         return trySend(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
+    }
+
+    private boolean replayBackpressure()
+    {
+        return backpressureMessagesDuringReplay && replaying;
     }
 
     /**
@@ -756,7 +761,7 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (backpressureMessagesDuringReplay && replaying)
+        if (replayBackpressure())
         {
             return BACK_PRESSURED;
         }
@@ -829,6 +834,11 @@ public class Session
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
+        if (replayBackpressure())
+        {
+            return BACK_PRESSURED;
+        }
+
         final int newSequenceIndex = sequenceIndex() + 1;
         final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, newSequenceIndex, lastMsgSeqNumProcessed);
@@ -959,6 +969,11 @@ public class Session
      */
     public long tryResetSequenceNumbers()
     {
+        if (replayBackpressure())
+        {
+            return BACK_PRESSURED;
+        }
+
         if (state == DISCONNECTED)
         {
             return trySendSequenceReset(1, 1);
@@ -2171,6 +2186,11 @@ public class Session
 
     private long trySendLogout()
     {
+        if (replayBackpressure())
+        {
+            return BACK_PRESSURED;
+        }
+
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
             proxy.sendLogout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed) :
@@ -2355,11 +2375,14 @@ public class Session
                 final boolean isActive = state == ACTIVE_VALUE;
                 if (isActive && timeInNs >= nextRequiredHeartbeatTimeInNs)
                 {
-                    // Drop when back pressured: retried on duty cycle
-                    final int sentSeqNum = newSentSeqNum();
-                    final long position = proxy.sendHeartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
-                    lastSentMsgSeqNum(sentSeqNum, position);
-                    actions++;
+                    if (!replayBackpressure())
+                    {
+                        // Drop when back pressured: retried on duty cycle
+                        final int sentSeqNum = newSentSeqNum();
+                        final long position = proxy.sendHeartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+                        lastSentMsgSeqNum(sentSeqNum, position);
+                        actions++;
+                    }
                 }
 
                 if (timeInNs >= nextRequiredInboundMessageTimeInNs)
@@ -2373,7 +2396,7 @@ public class Session
                         // Drop when back pressured: retried on duty cycle
                         startLogout();
                     }
-                    else if (isActive)
+                    else if (isActive && !replayBackpressure())
                     {
                         final int sentSeqNum = newSentSeqNum();
                         if (proxy.sendTestRequest(
