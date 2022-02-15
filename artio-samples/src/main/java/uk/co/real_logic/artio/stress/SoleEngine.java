@@ -30,6 +30,7 @@ public final class SoleEngine
             .libraryAeronChannel(AERON_CHANNEL)
             .errorIfDuplicateEngineDetected(false);
 
+        configuration.slowConsumerTimeoutInMs(1000);
         configuration.replyTimeoutInMs(1000);
 
         System.out.println("Server Logs at " + configuration.logFileDir());

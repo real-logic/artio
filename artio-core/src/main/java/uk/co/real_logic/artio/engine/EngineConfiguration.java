@@ -621,8 +621,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public EngineConfiguration slowConsumerTimeoutInMs(final long slowConsumerTimeoutInMs)
     {
+        validateSlowConsumerAndReplyTimeout(slowConsumerTimeoutInMs, replyTimeoutInMs());
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
         return this;
+    }
+
+    private void validateSlowConsumerAndReplyTimeout(
+        final long slowConsumerTimeoutInMs, final long replyTimeoutInMs)
+    {
+        if (slowConsumerTimeoutInMs > replyTimeoutInMs)
+        {
+            throw new IllegalArgumentException("slowConsumerTimeoutInMs (" + slowConsumerTimeoutInMs +
+                ") should not be set below replyTimeoutInMs (" + replyTimeoutInMs + ") as this might lead to" +
+                " slow consumers triggering library timeouts");
+        }
     }
 
     public EngineConfiguration scheduler(final EngineScheduler scheduler)
@@ -1251,6 +1263,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
+        validateSlowConsumerAndReplyTimeout(slowConsumerTimeoutInMs, replyTimeoutInMs);
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
     }

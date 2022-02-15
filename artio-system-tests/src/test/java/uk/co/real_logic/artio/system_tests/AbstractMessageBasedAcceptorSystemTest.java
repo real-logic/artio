@@ -115,6 +115,7 @@ public class AbstractMessageBasedAcceptorSystemTest
             .logFileDir(ACCEPTOR_LOGS)
             .initialAcceptedSessionOwner(initialAcceptedSessionOwner)
             .noLogonDisconnectTimeoutInMs(500)
+            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs)
             .sessionPersistenceStrategy(logon ->

@@ -203,9 +203,7 @@ public class FixCounters implements AutoCloseable
             sb.append(sessionId);
         }
 
-        final String label = sb.toString();
-        System.out.println("label = " + label);
-        return label;
+        return sb.toString();
     }
 
     private AtomicCounter newCounter(final int typeId, final String label)

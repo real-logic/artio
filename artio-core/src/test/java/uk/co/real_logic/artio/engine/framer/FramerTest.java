@@ -131,6 +131,7 @@ public class FramerTest
 
     private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
+        .slowConsumerTimeoutInMs(REPLY_TIMEOUT_IN_MS)
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS)
         .libraryAeronChannel(IPC_CHANNEL)
         .conclude();
