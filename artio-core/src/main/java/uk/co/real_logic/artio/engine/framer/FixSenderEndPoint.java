@@ -665,19 +665,12 @@ class FixSenderEndPoint extends SenderEndPoint
         this.configuration = configuration;
     }
 
-    public void onValidResendRequest(final long correlationId)
+    public void onValidResendRequest(final long correlationId, final boolean slow)
     {
-        pushValidResendRequest(correlationId);
-    }
-
-    public void onSlowValidResendRequest(final long correlationId)
-    {
-        pushValidResendRequest(correlationId);
-    }
-
-    private void pushValidResendRequest(final long correlationId)
-    {
-        queuedReplay = correlationId;
+        if (slow == isSlowConsumer())
+        {
+            queuedReplay = correlationId;
+        }
     }
 
     public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
@@ -707,6 +700,7 @@ class FixSenderEndPoint extends SenderEndPoint
         if (replay == correlationId)
         {
             replayInFlight = replay;
+            replayTracker.skipPosition = Long.MAX_VALUE;
             queuedReplay = NO_REPLAY_CORRELATION_ID;
             dropFurtherBehind(-START_REPLAY_LENGTH);
         }
@@ -719,6 +713,8 @@ class FixSenderEndPoint extends SenderEndPoint
 
     private void blockStartReplay(final long msgPosition, final boolean slow)
     {
+        final StreamTracker replayTracker = this.replayTracker;
+        final boolean slowBecauseOfNormalStream = replayTracker.sentPosition == 0;
         final long msgStartPosition = msgPosition - START_REPLAY_LENGTH;
         blockPositionOther(msgStartPosition, msgPosition, replayTracker);
 
@@ -726,16 +722,22 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             // become slow consumer
             bytesInBuffer.setOrdered(START_REPLAY_LENGTH);
+            replayTracker.sentPosition = msgStartPosition;
             sendSlowStatus(true);
         }
-
-        // if slow, we've already seen this message and added it to the bytes in buffer total
+        else if (slowBecauseOfNormalStream)
+        {
+            // if slow due to us, we've already seen this message and added it to the bytes in buffer total
+            bytesInBuffer.getAndAddOrdered(START_REPLAY_LENGTH);
+        }
     }
 
     // Struct for tracking the slow state of the replay and outbound streams
     static class StreamTracker
     {
+        // All messages with a position < sentPosition have been sent.
         private long sentPosition;
+        // Any messages with a position > skipPosition should be skipped
         private long skipPosition = Long.MAX_VALUE;
         private boolean partiallySentMessage = false;
         private BlockablePosition blockablePosition;

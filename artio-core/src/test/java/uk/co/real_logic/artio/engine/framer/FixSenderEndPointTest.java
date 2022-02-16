@@ -302,7 +302,7 @@ public class FixSenderEndPointTest
 
     private void startValidReplay()
     {
-        endPoint.onSlowValidResendRequest(REPLAY_CORRELATION_ID);
+        endPoint.onValidResendRequest(REPLAY_CORRELATION_ID, false);
         endPoint.onStartReplay(REPLAY_CORRELATION_ID, 64, false);
     }
 
@@ -460,8 +460,6 @@ public class FixSenderEndPointTest
     }
 
     // TODO:
-    // subscription already a slow consumer when this happens - ie we should only use onValidResendRequest from the
-    // subscription that we're in
     // multiple resends in a buffer
     // add correlation ids to complete message
 
@@ -470,6 +468,7 @@ public class FixSenderEndPointTest
     {
         final int outboundMsgPosition = 768;
         final int msgPosition = 512;
+        final int replayMsgPosition = msgPosition + FRAGMENT_LENGTH;
 
         // Replayer wins the race and we try to start replaying whilst there are FIX messages on the outbound path
         endPoint.onStartReplay(REPLAY_CORRELATION_ID, msgPosition, false);
@@ -477,14 +476,14 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(START_REPLAY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
-        onReplayMessage(1, BODY_LENGTH);
+        onReplayMessage(1, replayMsgPosition);
         assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
         verifyBlocksReplayAt(msgPosition - START_REPLAY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
-        onSlowReplayMessage(1, BODY_LENGTH);
+        onSlowReplayMessage(1, replayMsgPosition);
         assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
 
         byteBufferNotWritten();
@@ -506,13 +505,13 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
 
         // Actually do the replay
-        endPoint.onSlowValidResendRequest(REPLAY_CORRELATION_ID);
+        onSlowValidResendRequest();
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
         verifyDoesNotBlock();
 
         channelWillWrite(BODY_LENGTH);
-        onSlowReplayMessage(1, BODY_LENGTH);
+        onSlowReplayMessage(1, replayMsgPosition);
         byteBufferWritten();
         assertBytesInBuffer(0);
         assertReplayPaused();
@@ -520,6 +519,68 @@ public class FixSenderEndPointTest
         onSlowStreamReplayComplete();
 
         assertNotReplayPaused();
+    }
+
+    @Test
+    public void shouldNotSendReplayMessageUntilNormalMessagesDrainedStartingSlowConsumer()
+    {
+        // Same as previous test, but starting off as a slow consumer.
+        final int startingBytesInBuffer = BODY_LENGTH;
+
+        becomeSlowConsumer();
+        assertBytesInBuffer(startingBytesInBuffer);
+
+        final int outboundMsgPosition = 768;
+        final int msgPosition = 512;
+        final int replayMsgPosition = msgPosition + FRAGMENT_LENGTH;
+
+        // Replayer wins the race and we try to start replaying whilst there are FIX messages on the outbound path
+        endPoint.onStartReplay(REPLAY_CORRELATION_ID, msgPosition, false);
+        assertBytesInBuffer(startingBytesInBuffer);
+
+        channelWillWrite(BODY_LENGTH);
+        onReplayMessage(1, replayMsgPosition);
+        assertBytesInBuffer(startingBytesInBuffer + BODY_LENGTH);
+
+        onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
+        verifyBlocksReplayAt(msgPosition - START_REPLAY_LENGTH);
+        assertBytesInBuffer(startingBytesInBuffer + START_REPLAY_LENGTH + BODY_LENGTH);
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(1, replayMsgPosition);
+        assertBytesInBuffer(startingBytesInBuffer + START_REPLAY_LENGTH + BODY_LENGTH);
+
+        byteBufferNotWritten();
+        assertNotReplayPaused();
+
+        // Send the FIX message in the outbound buffer
+        // now re-attempt the original slow message on the slow poll
+        channelWillWrite(BODY_LENGTH);
+        onSlowOutboundMessage();
+        verifyDoesNotBlock();
+        byteBufferWritten();
+        assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
+
+        // Actually do the replay
+        onSlowValidResendRequest();
+
+        onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
+        verifyDoesNotBlock();
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(1, replayMsgPosition);
+        byteBufferWritten();
+        assertBytesInBuffer(0);
+        assertReplayPaused();
+
+        onSlowStreamReplayComplete();
+
+        assertNotReplayPaused();
+    }
+
+    private void onSlowValidResendRequest()
+    {
+        endPoint.onValidResendRequest(REPLAY_CORRELATION_ID, true);
     }
 
     private void onSlowStartReplay(final int replayCorrelationId, final int msgPosition)

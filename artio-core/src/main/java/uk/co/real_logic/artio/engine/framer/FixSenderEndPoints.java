@@ -23,6 +23,7 @@ import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.StartReplayDecoder;
 import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
 
 import java.util.function.LongToIntFunction;
@@ -36,6 +37,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final StartReplayDecoder startReplay = new StartReplayDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
@@ -225,6 +227,16 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
                     timeInMs);
             }
         }
+        else if (templateId == StartReplayDecoder.TEMPLATE_ID)
+        {
+            offset += HEADER_LENGTH;
+            final int version = messageHeader.version();
+            startReplay.wrap(buffer, offset, messageHeader.blockLength(), version);
+
+            final long connectionId = startReplay.connection();
+            final long correlationId = startReplay.correlationId();
+            onStartReplay(connectionId, correlationId, header.position(), true);
+        }
 
         return CONTINUE;
     }
@@ -276,12 +288,12 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         return libraryLookup;
     }
 
-    public void onValidResendRequest(final long connection, final long correlationId)
+    public void onValidResendRequest(final long connection, final long correlationId, final boolean slow)
     {
         final FixSenderEndPoint fixSenderEndPoint = connectionIdToSenderEndpoint.get(connection);
         if (fixSenderEndPoint != null)
         {
-            fixSenderEndPoint.onValidResendRequest(correlationId);
+            fixSenderEndPoint.onValidResendRequest(correlationId, slow);
         }
     }
 

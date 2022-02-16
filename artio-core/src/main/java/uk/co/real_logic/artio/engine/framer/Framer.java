@@ -1688,7 +1688,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public Action onValidResendRequest(
         final long session, final long connection, final long correlationId, final Header header)
     {
-        fixSenderEndPoints.onValidResendRequest(connection, correlationId);
+        fixSenderEndPoints.onValidResendRequest(connection, correlationId, false);
 
         return CONTINUE;
     }
