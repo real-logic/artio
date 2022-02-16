@@ -30,10 +30,7 @@ import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.FixMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.CompositeKey;
 
 import java.io.IOException;
@@ -46,10 +43,12 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
+import static uk.co.real_logic.artio.session.Session.NO_REPLAY_CORRELATION_ID;
 
 class FixSenderEndPoint extends SenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+    static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
     public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
@@ -69,6 +68,8 @@ class FixSenderEndPoint extends SenderEndPoint
     private FixDictionary fixDictionary;
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
+    private long replayInFlight;
+    private long queuedReplay;
 
     FixSenderEndPoint(
         final long connectionId,
@@ -292,6 +293,12 @@ class FixSenderEndPoint extends SenderEndPoint
         final Header header,
         final int metaDataLength)
     {
+        if (replayInFlight == NO_REPLAY_CORRELATION_ID)
+        {
+            // Invariant: already blocked here by start replay message, skip this message until ready to send replay
+            return CONTINUE;
+        }
+
         if (!outboundTracker.partiallySentMessage)
         {
             replayPaused = true;
@@ -437,7 +444,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replayPaused)
         {
-            return blockPosition(header, length, outboundTracker);
+            return blockPositionFixMessage(header, length, outboundTracker);
         }
 
         return attemptSlowMessage(
@@ -480,7 +487,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (partiallySentOtherStream(tracker))
         {
-            return blockPosition(header, length, tracker);
+            return blockPositionFixMessage(header, length, tracker);
         }
 
         try
@@ -518,7 +525,7 @@ class FixSenderEndPoint extends SenderEndPoint
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 tracker.sentPosition = (position - remainingLength) + written;
-                return blockPosition(header, length, tracker);
+                return blockPositionFixMessage(header, length, tracker);
             }
             else
             {
@@ -547,10 +554,11 @@ class FixSenderEndPoint extends SenderEndPoint
         return CONTINUE;
     }
 
-    private Action blockPosition(final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker)
+    private Action blockPositionFixMessage(
+        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker)
     {
         final BlockablePosition blockablePosition = tracker.blockablePosition;
-        final long messagePosition = header.position();
+
         final int aeronHeaderLength;
         if ((header.flags() & UNFRAGMENTED) == UNFRAGMENTED)
         {
@@ -563,10 +571,21 @@ class FixSenderEndPoint extends SenderEndPoint
         }
         final int frameLength = aeronHeaderLength + fragLengthWithoutHeader + HEADER_LENGTH;
         final int alignedLength = ArchiveDescriptor.alignTerm(frameLength);
+        final long messagePosition = header.position();
         final long messageStartPosition = messagePosition - alignedLength;
+
         blockablePosition.blockPosition(messageStartPosition);
         tracker.skipPosition = messagePosition;
         return Action.CONTINUE;
+    }
+
+    private void blockPositionOther(
+        final long messageStartPosition, final long messagePosition, final StreamTracker tracker)
+    {
+        // Assumes non-fragmented message
+        final BlockablePosition blockablePosition = tracker.blockablePosition;
+        blockablePosition.blockPosition(messageStartPosition);
+        tracker.skipPosition = messagePosition;
     }
 
     private boolean partiallySentOtherStream(final StreamTracker tracker)
@@ -644,6 +663,73 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         this.sessionKey = sessionKey;
         this.configuration = configuration;
+    }
+
+    public void onValidResendRequest(final long correlationId)
+    {
+        pushValidResendRequest(correlationId);
+    }
+
+    public void onSlowValidResendRequest(final long correlationId)
+    {
+        pushValidResendRequest(correlationId);
+    }
+
+    private void pushValidResendRequest(final long correlationId)
+    {
+        queuedReplay = correlationId;
+    }
+
+    public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
+    {
+        if (slow == isSlowConsumer())
+        {
+            checkStartReplay(correlationId, msgPosition, slow);
+        }
+    }
+
+    private void checkStartReplay(
+        final long correlationId, final long msgPosition, final boolean slow)
+    {
+        final long replay = this.queuedReplay;
+        if (replay == NO_REPLAY_CORRELATION_ID)
+        {
+            blockStartReplay(msgPosition, slow);
+            return;
+        }
+
+        if (replayInFlight != NO_REPLAY_CORRELATION_ID)
+        {
+            errorHandler.onError(new IllegalStateException("invariant fail: replayInFlight = " + replayInFlight +
+                " when trying to process " + correlationId));
+        }
+
+        if (replay == correlationId)
+        {
+            replayInFlight = replay;
+            queuedReplay = NO_REPLAY_CORRELATION_ID;
+            dropFurtherBehind(-START_REPLAY_LENGTH);
+        }
+        else
+        {
+            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, replay = " + replay +
+                " when trying to process " + correlationId));
+        }
+    }
+
+    private void blockStartReplay(final long msgPosition, final boolean slow)
+    {
+        final long msgStartPosition = msgPosition - START_REPLAY_LENGTH;
+        blockPositionOther(msgStartPosition, msgPosition, replayTracker);
+
+        if (!slow)
+        {
+            // become slow consumer
+            bytesInBuffer.setOrdered(START_REPLAY_LENGTH);
+            sendSlowStatus(true);
+        }
+
+        // if slow, we've already seen this message and added it to the bytes in buffer total
     }
 
     // Struct for tracking the slow state of the replay and outbound streams

@@ -275,4 +275,23 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     {
         return libraryLookup;
     }
+
+    public void onValidResendRequest(final long connection, final long correlationId)
+    {
+        final FixSenderEndPoint fixSenderEndPoint = connectionIdToSenderEndpoint.get(connection);
+        if (fixSenderEndPoint != null)
+        {
+            fixSenderEndPoint.onValidResendRequest(correlationId);
+        }
+    }
+
+    public void onStartReplay(
+        final long connection, final long correlationId, final long position, final boolean slow)
+    {
+        final FixSenderEndPoint fixSenderEndPoint = connectionIdToSenderEndpoint.get(connection);
+        if (fixSenderEndPoint != null)
+        {
+            fixSenderEndPoint.onStartReplay(correlationId, position, slow);
+        }
+    }
 }

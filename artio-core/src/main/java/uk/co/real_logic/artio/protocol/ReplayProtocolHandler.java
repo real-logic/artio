@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.protocol;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 
 /**
@@ -23,8 +22,9 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
  *
  * @see Action
  */
-@FunctionalInterface
 public interface ReplayProtocolHandler
 {
-    ControlledFragmentHandler.Action onReplayComplete(long connectionId);
+    Action onReplayComplete(long connectionId);
+
+    Action onStartReplay(long session, long connection, long correlationId, long position);
 }

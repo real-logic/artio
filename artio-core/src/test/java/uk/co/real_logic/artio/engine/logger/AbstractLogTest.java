@@ -37,6 +37,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES;
 import static uk.co.real_logic.artio.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
+import static uk.co.real_logic.artio.engine.logger.Replayer.START_REPLAY_LENGTH;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 
 public class AbstractLogTest
@@ -222,6 +223,7 @@ public class AbstractLogTest
     protected void backpressureTryClaim()
     {
         when(publication.tryClaim(anyInt(), any())).thenReturn(Publication.BACK_PRESSURED);
+        when(publication.tryClaim(eq(START_REPLAY_LENGTH), any())).thenReturn(1L);
     }
 
     protected void setupClaim(final int srcLength)

@@ -985,6 +985,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                 fromSeqNo,
                 fromSeqNo + msgCount - 1,
                 0,
+                0,
                 NO_BUFFER,
                 0,
                 0);

@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteDecoder;
+import uk.co.real_logic.artio.messages.StartReplayDecoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
@@ -27,6 +28,7 @@ public final class ReplayProtocolSubscription implements ControlledFragmentHandl
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
+    private final StartReplayDecoder startReplay = new StartReplayDecoder();
     private final ReplayProtocolHandler handler;
 
     public ReplayProtocolSubscription(final ReplayProtocolHandler handler)
@@ -55,6 +57,11 @@ public final class ReplayProtocolSubscription implements ControlledFragmentHandl
             {
                 return onReplayComplete(buffer, offset, blockLength, version);
             }
+
+            case StartReplayDecoder.TEMPLATE_ID:
+            {
+                return onStartReplay(buffer, offset, blockLength, version, position);
+            }
         }
 
         return CONTINUE;
@@ -66,8 +73,25 @@ public final class ReplayProtocolSubscription implements ControlledFragmentHandl
         final int blockLength,
         final int version)
     {
+        final ReplayCompleteDecoder replayComplete = this.replayComplete;
         replayComplete.wrap(buffer, offset, blockLength, version);
         return handler.onReplayComplete(
             replayComplete.connection());
+    }
+
+    private Action onStartReplay(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final long position)
+    {
+        final StartReplayDecoder startReplay = this.startReplay;
+        startReplay.wrap(buffer, offset, blockLength, version);
+        return handler.onStartReplay(
+            startReplay.session(),
+            startReplay.connection(),
+            startReplay.correlationId(),
+            position);
     }
 }

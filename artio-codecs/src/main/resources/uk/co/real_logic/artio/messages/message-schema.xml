@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="22"
+                   version="23"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -668,12 +668,19 @@
         <field name="beginSequenceNumber" id="3" type="uint32"/>
         <field name="endSequenceNumber" id="4" type="uint32"/>
         <field name="SequenceIndex" id="5" type="int32"/>
+        <field name="correlationId" id="7" type="CorrelationId" sinceVersion="23"/>
         <data name="body" id="6" type="AsciiString"/>
     </sbe:message>
 
     <!-- Replay Stream Only messages -->
     <sbe:message name="ReplayerTimestamp" id="61" description="" sinceVersion="13">
         <field name="timestamp" id="0" type="Timestamp"/>
+    </sbe:message>
+
+    <sbe:message name="StartReplay" id="75" description="" sinceVersion="23">
+        <field name="session" id="1" type="FixSessionId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
     </sbe:message>
 
     <!-- Admin Stream Only messages -->

@@ -41,6 +41,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.engine.framer.FixSenderEndPoint.START_REPLAY_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
@@ -58,6 +59,7 @@ public class FixSenderEndPointTest
     private static final long BEGIN_POSITION = 8000;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
     public static final int INBOUND_BUFFER_LEN = 128;
+    public static final int REPLAY_CORRELATION_ID = 2;
 
     private final TcpChannel tcpChannel = mock(TcpChannel.class);
     private final AtomicCounter bytesInBuffer = fakeCounter();
@@ -115,7 +117,7 @@ public class FixSenderEndPointTest
         onSlowOutboundMessage();
         byteBufferWritten();
         assertBytesInBuffer(0);
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
     }
 
     @Test
@@ -134,7 +136,7 @@ public class FixSenderEndPointTest
 
         channelWillWrite(remaining);
         onSlowOutboundMessage();
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
         byteBufferWritten();
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
@@ -209,7 +211,7 @@ public class FixSenderEndPointTest
 
         verifySlowConsumerDisconnect(never());
         verifyNoMoreErrors();
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
     }
 
     @Test
@@ -277,7 +279,9 @@ public class FixSenderEndPointTest
     @Test
     public void shouldRetryReplaySlowConsumer()
     {
-        final long position = 0;
+        startValidReplay();
+
+        final long position = 128;
         channelWillWrite(0);
         onReplayMessage(0, position);
         byteBufferWritten();
@@ -288,12 +292,18 @@ public class FixSenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
 
         onSlowStreamReplayComplete();
         assertNotReplayPaused();
 
         assertBytesInBuffer(0);
+    }
+
+    private void startValidReplay()
+    {
+        endPoint.onSlowValidResendRequest(REPLAY_CORRELATION_ID);
+        endPoint.onStartReplay(REPLAY_CORRELATION_ID, 64, false);
     }
 
     @Test
@@ -318,6 +328,8 @@ public class FixSenderEndPointTest
     @Test
     public void shouldBeAbleToFragmentReplaySlowConsumerRetries()
     {
+        startValidReplay();
+
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
 
@@ -325,7 +337,7 @@ public class FixSenderEndPointTest
         channelWillWrite(0);
         onReplayMessage(0, position);
         byteBufferWritten();
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
 
         onNormalStreamReplayComplete();
         assertReplayPaused();
@@ -344,7 +356,7 @@ public class FixSenderEndPointTest
         byteBufferWritten();
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
-        verifyDoesNotBlockLibrary();
+        verifyDoesNotBlock();
 
         onSlowStreamReplayComplete();
         assertNotReplayPaused();
@@ -353,6 +365,8 @@ public class FixSenderEndPointTest
     @Test
     public void shouldNotSendSlowConsumerMessageUntilReplayComplete()
     {
+        startValidReplay();
+
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
 
@@ -400,6 +414,8 @@ public class FixSenderEndPointTest
     @Test
     public void shouldNotSendReplayMessageUntilSlowConsumerComplete()
     {
+        startValidReplay();
+
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
         final long position = FRAGMENT_LENGTH;
@@ -443,6 +459,74 @@ public class FixSenderEndPointTest
         verifyNoMoreErrors();
     }
 
+    // TODO:
+    // subscription already a slow consumer when this happens - ie we should only use onValidResendRequest from the
+    // subscription that we're in
+    // multiple resends in a buffer
+    // add correlation ids to complete message
+
+    @Test
+    public void shouldNotSendReplayMessageUntilNormalMessagesDrained()
+    {
+        final int outboundMsgPosition = 768;
+        final int msgPosition = 512;
+
+        // Replayer wins the race and we try to start replaying whilst there are FIX messages on the outbound path
+        endPoint.onStartReplay(REPLAY_CORRELATION_ID, msgPosition, false);
+        verifyBlocksReplayAt(msgPosition - START_REPLAY_LENGTH);
+        assertBytesInBuffer(START_REPLAY_LENGTH);
+
+        channelWillWrite(BODY_LENGTH);
+        onReplayMessage(1, BODY_LENGTH);
+        assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
+
+        onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
+        verifyBlocksReplayAt(msgPosition - START_REPLAY_LENGTH);
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(1, BODY_LENGTH);
+        assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
+
+        byteBufferNotWritten();
+        assertNotReplayPaused();
+
+        // Send the FIX message in the outbound buffer
+        // First time ignored as we're in the slow group
+        channelWillWrite(BODY_LENGTH);
+        onOutboundMessage(1, outboundMsgPosition);
+        verifyDoesNotBlock();
+        byteBufferNotWritten();
+        assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH + BODY_LENGTH);
+
+        // now sent on the slow poll
+        channelWillWrite(BODY_LENGTH);
+        onSlowOutboundMessage();
+        verifyDoesNotBlock();
+        byteBufferWritten();
+        assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
+
+        // Actually do the replay
+        endPoint.onSlowValidResendRequest(REPLAY_CORRELATION_ID);
+
+        onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
+        verifyDoesNotBlock();
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(1, BODY_LENGTH);
+        byteBufferWritten();
+        assertBytesInBuffer(0);
+        assertReplayPaused();
+
+        onSlowStreamReplayComplete();
+
+        assertNotReplayPaused();
+    }
+
+    private void onSlowStartReplay(final int replayCorrelationId, final int msgPosition)
+    {
+        endPoint.onStartReplay(replayCorrelationId, msgPosition, true);
+    }
+
     private void byteBufferNotWritten()
     {
         byteBufferWritten(never());
@@ -472,13 +556,13 @@ public class FixSenderEndPointTest
     private void onReplayMessage(final long timeInMs, final long position)
     {
         headerPosition(position);
-        endPoint.onReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header);
+        assertEquals(CONTINUE, endPoint.onReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header));
     }
 
     private void onSlowReplayMessage(final long timeInMs, final long position)
     {
         headerPosition(position);
-        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header, 0);
+        assertEquals(CONTINUE, endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, header, 0));
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
@@ -575,9 +659,14 @@ public class FixSenderEndPointTest
         return atomicCounter;
     }
 
-    private void verifyDoesNotBlockLibrary()
+    private void verifyDoesNotBlock()
     {
         verify(libraryBlockablePosition, never()).blockPosition(anyLong());
+        verifyDoesNotBlockReplay();
+    }
+
+    private void verifyDoesNotBlockReplay()
+    {
         verify(replayBlockablePosition, never()).blockPosition(anyLong());
     }
 

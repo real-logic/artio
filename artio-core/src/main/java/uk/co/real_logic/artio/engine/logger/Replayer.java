@@ -22,6 +22,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -32,6 +33,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;
@@ -68,7 +70,10 @@ public class Replayer implements Agent, ControlledFragmentHandler
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
         ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     static final int SIZE_OF_LENGTH_FIELD = FixMessageDecoder.bodyHeaderLength();
+
     private static final int POLL_LIMIT = 10;
+    static final int START_REPLAY_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + StartReplayEncoder.BLOCK_LENGTH;
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final BufferClaim bufferClaim;
@@ -114,6 +119,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
+    private final StartReplayEncoder startReplayEncoder = new StartReplayEncoder();
 
     private final int maxBytesInBuffer;
     private final ReplayerCommandQueue replayerCommandQueue;
@@ -132,6 +138,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final FixPRetransmitHandler fixPRetransmitHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final UtcTimestampEncoder utcTimestampEncoder;
+
+    private boolean sendStartReplay = true;
 
     public Replayer(
         final ReplayQuery outboundReplayQuery,
@@ -214,9 +222,11 @@ public class Replayer implements Agent, ControlledFragmentHandler
                 final long beginSeqNo = validResendRequest.beginSequenceNumber();
                 final long endSeqNo = validResendRequest.endSequenceNumber();
                 final int sequenceIndex = validResendRequest.sequenceIndex();
+                final long correlationId = validResendRequest.correlationId();
                 validResendRequest.wrapBody(asciiBuffer);
 
-                return onResendRequest(sessionId, connectionId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
+                return onResendRequest(
+                    sessionId, connectionId, correlationId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
             }
 
             case ILinkConnectDecoder.TEMPLATE_ID:
@@ -282,6 +292,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     Action onResendRequest(
         final long sessionId,
         final long connectionId,
+        final long correlationId,
         final long beginSeqNo,
         final long endSeqNo,
         final int sequenceIndex,
@@ -315,8 +326,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             final MutableAsciiBuffer copiedBuffer = new MutableAsciiBuffer(new byte[length]);
             copiedBuffer.putBytes(0, asciiBuffer, 0, length);
 
-            replayChannel.enqueueReplay(
-                new EnqueuedReplay(sessionId, connectionId, beginSeqNo, endSeqNo, sequenceIndex, copiedBuffer));
+            replayChannel.enqueueReplay(new EnqueuedReplay(
+                sessionId, connectionId, correlationId, beginSeqNo, endSeqNo, sequenceIndex, copiedBuffer));
 
             return COMMIT;
         }
@@ -326,7 +337,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             try
             {
                 final ReplayerSession session = processResendRequest(
-                    sessionId, connectionId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
+                    sessionId, connectionId, correlationId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
                 if (session == null)
                 {
                     return ABORT;
@@ -341,6 +352,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             catch (final IllegalStateException e)
             {
                 errorHandler.onError(e);
+                sendStartReplay = true;
                 return CONTINUE;
             }
         }
@@ -349,6 +361,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private ReplayerSession processResendRequest(
         final long sessionId,
         final long connectionId,
+        final long correlationId,
         final long beginSeqNo,
         final long endSeqNo,
         final int sequenceIndex,
@@ -357,8 +370,29 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
         if (sessionCodecs != null)
         {
-            return processFixResendRequest(
+            if (sendStartReplay)
+            {
+                final long position = publication.tryClaim(START_REPLAY_LENGTH, bufferClaim);
+                if (Pressure.isBackPressured(position))
+                {
+                    return null;
+                }
+
+                final MutableDirectBuffer buffer = bufferClaim.buffer();
+                final int offset = bufferClaim.offset();
+                startReplayEncoder
+                    .wrapAndApplyHeader(buffer, offset, messageHeaderEncoder)
+                    .session(sessionId)
+                    .connection(connectionId)
+                    .correlationId(correlationId);
+                bufferClaim.commit();
+            }
+
+            final FixReplayerSession fixReplayerSession = processFixResendRequest(
                 sessionId, connectionId, (int)beginSeqNo, (int)endSeqNo, sequenceIndex, asciiBuffer, sessionCodecs);
+            // Suppress resending of start replay if back-pressure happens here, ie if fixReplayerSession == null.
+            sendStartReplay = fixReplayerSession != null;
+            return fixReplayerSession;
         }
         else if (fixPConnectionIds.contains(connectionId))
         {
@@ -495,6 +529,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
                         final ReplayerSession session = processResendRequest(
                             enqueuedReplay.sessionId(),
                             enqueuedReplay.connectionId(),
+                            enqueuedReplay.correlationId(),
                             enqueuedReplay.beginSeqNo(),
                             enqueuedReplay.endSeqNo(),
                             enqueuedReplay.sequenceIndex(),

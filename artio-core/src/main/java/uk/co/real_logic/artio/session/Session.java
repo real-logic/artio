@@ -43,6 +43,7 @@ import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -90,6 +91,7 @@ public class Session
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     private static final int INITIAL_SEQUENCE_NUMBER = 1;
+    public static final long NO_REPLAY_CORRELATION_ID = 0;
 
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
@@ -118,6 +120,7 @@ public class Session
     private final CancelOnDisconnect cancelOnDisconnect;
 
     private boolean backpressuredResendRequestResponse = false;
+    private boolean backpressuredOutboundValidResendRequest = false;
     private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
     private final ResendRequestController resendRequestController;
 
@@ -2061,22 +2064,35 @@ public class Session
         {
             resendRequestController.onResend(this, resendRequest, correctedEndSeqNo, resendRequestResponse);
         }
+
         if (resendRequestResponse.result())
         {
-            if (Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
-                id,
-                connectionId,
-                beginSeqNum,
-                correctedEndSeqNo,
-                sequenceIndex,
-                messageBuffer,
-                messageOffset,
-                messageLength)))
+            final long correlationId = generateReplayCorrelationId();
+
+            // Notify the sender end point that a replay is going to happen.
+            if (!backpressuredResendRequestResponse || backpressuredOutboundValidResendRequest)
+            {
+                if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
+                    correlationId, outboundPublication))
+                {
+                    lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+                    backpressuredResendRequestResponse = true;
+                    backpressuredOutboundValidResendRequest = true;
+                    return ABORT;
+                }
+
+                backpressuredOutboundValidResendRequest = false;
+            }
+
+            if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
+                correlationId, inboundPublication))
             {
                 lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+                backpressuredResendRequestResponse = true;
                 return ABORT;
             }
 
+            backpressuredResendRequestResponse = false;
             replaying = true;
             return CONTINUE;
         }
@@ -2085,29 +2101,62 @@ public class Session
             final AbstractRejectEncoder rejectEncoder = resendRequestResponse.rejectEncoder();
             if (rejectEncoder != null)
             {
-                final boolean oldBackpressureMessagesDuringReplay = this.backpressureMessagesDuringReplay;
-                final long rejectPosition;
-                try
-                {
-                    backpressureMessagesDuringReplay = false;
-                    rejectPosition = trySend(rejectEncoder);
-                }
-                finally
-                {
-                    backpressureMessagesDuringReplay = oldBackpressureMessagesDuringReplay;
-                }
-
-                backpressuredResendRequestResponse = Pressure.isBackPressured(rejectPosition);
-                if (backpressuredResendRequestResponse)
-                {
-                    lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
-                    return ABORT;
-                }
-
-                return CONTINUE;
+                return sendCustomReject(oldLastReceivedMsgSeqNum, rejectEncoder);
             }
 
             return sendReject(msgSeqNum, resendRequestResponse.refTagId(), OTHER, oldLastReceivedMsgSeqNum);
+        }
+    }
+
+    private Action sendCustomReject(final int oldLastReceivedMsgSeqNum, final AbstractRejectEncoder rejectEncoder)
+    {
+        final boolean oldBackpressureMessagesDuringReplay = this.backpressureMessagesDuringReplay;
+        final long rejectPosition;
+        try
+        {
+            backpressureMessagesDuringReplay = false;
+            rejectPosition = trySend(rejectEncoder);
+        }
+        finally
+        {
+            backpressureMessagesDuringReplay = oldBackpressureMessagesDuringReplay;
+        }
+
+        backpressuredResendRequestResponse = Pressure.isBackPressured(rejectPosition);
+        if (backpressuredResendRequestResponse)
+        {
+            lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+            return ABORT;
+        }
+
+        return CONTINUE;
+    }
+
+    private boolean saveValidResendRequest(
+        final int beginSeqNum, final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength,
+        final int correctedEndSeqNo, final long correlationId, final GatewayPublication inboundPublication)
+    {
+        return Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
+            id,
+            connectionId,
+            beginSeqNum,
+            correctedEndSeqNo,
+            sequenceIndex,
+            correlationId,
+            messageBuffer,
+            messageOffset,
+            messageLength));
+    }
+
+    private long generateReplayCorrelationId()
+    {
+        while (true)
+        {
+            final long correlationId = ThreadLocalRandom.current().nextLong();
+            if (correlationId != NO_REPLAY_CORRELATION_ID)
+            {
+                return correlationId;
+            }
         }
     }
 

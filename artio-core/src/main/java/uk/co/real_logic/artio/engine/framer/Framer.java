@@ -334,15 +334,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return fixPSenderEndPoints.onMessage(connectionId, buffer, offset, true);
                 }
             },
-            new ReplayProtocolSubscription((connectionId) ->
-            {
-                final Action action = fixSenderEndPoints.onReplayComplete(connectionId);
-                if (action != ABORT)
-                {
-                    return fixPSenderEndPoints.onReplayComplete(connectionId);
-                }
-                return action;
-            })),
+            new ReplayProtocolSubscription(new FramerReplayProtocolHandler(false))),
             0,
             true);
 
@@ -379,7 +371,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return CONTINUE;
                 }
             },
-            new ReplayProtocolSubscription(fixSenderEndPoints::onReplayComplete)), 0, true);
+            new ReplayProtocolSubscription(new FramerReplayProtocolHandler(true))), 0, true);
         adminEngineProtocolSubscription = new AdminEngineProtocolSubscription(this);
 
         channelSupplier = configuration.channelSupplier();
@@ -1405,7 +1397,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession = library.lookupSessionById(sessionId);
         if (gatewaySession != null && !acceptsFixP)
         {
-            return !((FixGatewaySession)gatewaySession).isOffline();
+            return !gatewaySession.isOffline();
         }
 
         return isOwnedSession(sessionId);
@@ -1689,6 +1681,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         sendTimer.recordSince(now);
+
+        return CONTINUE;
+    }
+
+    public Action onValidResendRequest(
+        final long session, final long connection, final long correlationId, final Header header)
+    {
+        fixSenderEndPoints.onValidResendRequest(connection, correlationId);
 
         return CONTINUE;
     }
@@ -3795,6 +3795,34 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             return continuation instanceof CancelOnDisconnectTimeoutOperation &&
                 ((CancelOnDisconnectTimeoutOperation)continuation).sessionId() == sessionId;
+        }
+    }
+
+    class FramerReplayProtocolHandler implements ReplayProtocolHandler
+    {
+        private final boolean slow;
+
+        FramerReplayProtocolHandler(final boolean slow)
+        {
+            this.slow = slow;
+        }
+
+        public Action onReplayComplete(final long connectionId)
+        {
+            final Action action = fixSenderEndPoints.onReplayComplete(connectionId);
+            if (action != ABORT)
+            {
+                return fixPSenderEndPoints.onReplayComplete(connectionId);
+            }
+            return action;
+        }
+
+        public Action onStartReplay(
+            final long session, final long connection, final long correlationId, final long position)
+        {
+            fixSenderEndPoints.onStartReplay(connection, correlationId, position, slow);
+
+            return CONTINUE;
         }
     }
 }

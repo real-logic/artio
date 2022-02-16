@@ -21,6 +21,7 @@ public class EnqueuedReplay
 {
     private final long sessionId;
     private final long connectionId;
+    private final long correlationId;
     private final long beginSeqNo;
     private final long endSeqNo;
     private final int sequenceIndex;
@@ -29,7 +30,7 @@ public class EnqueuedReplay
     public EnqueuedReplay(
         final long sessionId,
         final long connectionId,
-        final long beginSeqNo,
+        final long correlationId, final long beginSeqNo,
         final long endSeqNo,
         final int sequenceIndex,
         final AsciiBuffer asciiBuffer)
@@ -37,6 +38,7 @@ public class EnqueuedReplay
 
         this.sessionId = sessionId;
         this.connectionId = connectionId;
+        this.correlationId = correlationId;
         this.beginSeqNo = beginSeqNo;
         this.endSeqNo = endSeqNo;
         this.sequenceIndex = sequenceIndex;
@@ -68,11 +70,17 @@ public class EnqueuedReplay
         return sequenceIndex;
     }
 
+    public long correlationId()
+    {
+        return correlationId;
+    }
+
     public String toString()
     {
         return "EnqueuedReplay{" +
             "sessionId=" + sessionId +
             ", connectionId=" + connectionId +
+            ", correlationId=" + correlationId +
             ", beginSeqNo=" + beginSeqNo +
             ", endSeqNo=" + endSeqNo +
             ", sequenceIndex=" + sequenceIndex +

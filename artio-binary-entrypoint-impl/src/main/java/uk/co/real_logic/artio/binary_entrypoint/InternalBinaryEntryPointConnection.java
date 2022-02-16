@@ -776,6 +776,7 @@ class InternalBinaryEntryPointConnection
             fromSeqNo,
             endSequenceNumber,
             (int)sessionVerId, // TODO
+            0,
             EMPTY_BUFFER,
             0,
             0);
