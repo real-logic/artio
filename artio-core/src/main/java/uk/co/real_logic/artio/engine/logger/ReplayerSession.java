@@ -34,6 +34,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     private final IdleStrategy idleStrategy;
 
     final long connectionId;
+    final long correlationId;
     final BufferClaim bufferClaim;
 
     final ExclusivePublication publication;
@@ -50,6 +51,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
 
     protected ReplayerSession(
         final long connectionId,
+        final long correlationId,
         final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final int maxClaimAttempts,
@@ -64,6 +66,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
         final int maxBytesInBuffer)
     {
         this.connectionId = connectionId;
+        this.correlationId = correlationId;
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
         this.maxClaimAttempts = maxClaimAttempts;
@@ -133,7 +136,8 @@ abstract class ReplayerSession implements ControlledFragmentHandler
                 bufferClaim.buffer(),
                 bufferClaim.offset(),
                 replayer.messageHeaderEncoder)
-                .connection(connectionId);
+                .connection(connectionId)
+                .correlationId(correlationId);
 
             bufferClaim.commit();
 

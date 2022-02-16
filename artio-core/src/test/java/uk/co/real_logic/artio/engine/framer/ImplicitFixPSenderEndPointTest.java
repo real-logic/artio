@@ -47,6 +47,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 public class ImplicitFixPSenderEndPointTest
 {
     private static final int CONNECTION_ID = 1;
+    private static final int CORRELATION_ID = 3;
     private static final int LIBRARY_ID = 2;
     private static final int OFFSET = 1;
     private static final int CAPACITY = 256;
@@ -214,7 +215,7 @@ public class ImplicitFixPSenderEndPointTest
 
         // verify sequence sent
         onWrite().then(inv -> checkMessageFullySent(4, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(1);
 
         onSentMessage(5, false);
@@ -236,7 +237,7 @@ public class ImplicitFixPSenderEndPointTest
             .then(inv -> checkBackpressuredResent(1, inv))
             .then(inv -> checkMessageFullySent(2, inv))
             .then(inv -> checkMessageFullySent(4, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(3);
 
         onSentMessage(5, false);
@@ -256,7 +257,7 @@ public class ImplicitFixPSenderEndPointTest
         onWrite()
             .then(inv -> checkMessageFullySent(4, inv))
             .then(inv -> checkMessageFullySent(5, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(2);
 
         onSentMessage(6, false);
@@ -282,7 +283,7 @@ public class ImplicitFixPSenderEndPointTest
 
         // verify sequence sent
         onWrite().then(inv -> checkMessageFullySent(4, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(1);
 
         onSentMessage(5, false);
@@ -293,7 +294,7 @@ public class ImplicitFixPSenderEndPointTest
     {
         onNotSentMessage(1, true);
         onNotSentMessage(2, true);
-        assertEquals(ABORT, endPoint.onReplayComplete());
+        assertEquals(ABORT, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(0);
         assertBytesInBuffer(0);
 
@@ -306,7 +307,7 @@ public class ImplicitFixPSenderEndPointTest
 
         // verify sequence sent
         onWrite().then(inv -> checkMessageFullySent(4, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(1);
 
         onSentMessage(5, false);
@@ -317,7 +318,7 @@ public class ImplicitFixPSenderEndPointTest
     {
         onNotSentMessage(1, true);
         onNotSentMessage(2, true);
-        assertEquals(ABORT, endPoint.onReplayComplete());
+        assertEquals(ABORT, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(0);
 
         onBackpressuredMessage(3, false);
@@ -337,7 +338,7 @@ public class ImplicitFixPSenderEndPointTest
 
         // verify sequence sent
         onWrite().then(inv -> checkMessageFullySent(5, inv));
-        assertEquals(CONTINUE, endPoint.onReplayComplete());
+        assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID, false));
         verifyWritten(1);
 
         onSentMessage(6, false);

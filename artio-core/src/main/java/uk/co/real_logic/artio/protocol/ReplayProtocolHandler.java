@@ -24,7 +24,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
  */
 public interface ReplayProtocolHandler
 {
-    Action onReplayComplete(long connectionId);
+    Action onReplayComplete(long connectionId, long correlationId);
 
     Action onStartReplay(long session, long connection, long correlationId, long position);
 }

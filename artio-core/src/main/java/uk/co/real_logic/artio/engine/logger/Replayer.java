@@ -389,7 +389,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             }
 
             final FixReplayerSession fixReplayerSession = processFixResendRequest(
-                sessionId, connectionId, (int)beginSeqNo, (int)endSeqNo, sequenceIndex, asciiBuffer, sessionCodecs);
+                sessionId, connectionId, correlationId, (int)beginSeqNo, (int)endSeqNo, sequenceIndex, asciiBuffer,
+                sessionCodecs);
             // Suppress resending of start replay if back-pressure happens here, ie if fixReplayerSession == null.
             sendStartReplay = fixReplayerSession != null;
             return fixReplayerSession;
@@ -408,7 +409,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             }
 
             final FixPReplayerSession session = new FixPReplayerSession(
-                connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, outboundReplayQuery,
+                connectionId, correlationId, bufferClaim, idleStrategy, maxClaimAttempts, publication,
+                outboundReplayQuery,
                 (int)beginSeqNo, (int)endSeqNo, sessionId, this, gapfillOnRetransmitILinkTemplateIds,
                 fixPMessageEncoder, binaryFixPParser.get(), binaryFixPProxy.get(), abstractBinaryFixPOffsets.get(),
                 fixPRetransmitHandler, bytesInBuffer, configuration.senderMaxBytesInBuffer());
@@ -424,6 +426,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private FixReplayerSession processFixResendRequest(
         final long sessionId,
         final long connectionId,
+        final long correlationId,
         final int beginSeqNo,
         final int endSeqNo,
         final int sequenceIndex,
@@ -478,6 +481,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
             beginSeqNo,
             endSeqNo,
             connectionId,
+            correlationId,
             sessionId,
             sequenceIndex,
             outboundReplayQuery,

@@ -96,6 +96,7 @@ class FixReplayerSession extends ReplayerSession
         final int beginSeqNo,
         final int endSeqNo,
         final long connectionId,
+        final long correlationId,
         final long sessionId,
         final int sequenceIndex,
         final ReplayQuery replayQuery,
@@ -108,7 +109,8 @@ class FixReplayerSession extends ReplayerSession
         final Replayer replayer,
         final FixThrottleRejectBuilder throttleRejectBuilder)
     {
-        super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
+        super(connectionId, correlationId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery,
+            beginSeqNo, endSeqNo,
             sessionId, sequenceIndex, replayer, bytesInBuffer, maxBytesInBuffer);
         this.replayHandler = replayHandler;
         this.gapFillMessageTypes = gapFillMessageTypes;

@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Pressure;
@@ -67,7 +67,7 @@ public class SenderEndPoint implements AutoCloseable
         this.framer = framer;
     }
 
-    public ControlledFragmentHandler.Action onReplayComplete()
+    public Action onReplayComplete(final long correlationId, final boolean slow)
     {
         final BufferClaim bufferClaim = this.bufferClaim;
         final long position = inboundPublication.tryClaim(REPLAY_COMPLETE_LENGTH, bufferClaim);
@@ -80,7 +80,8 @@ public class SenderEndPoint implements AutoCloseable
         replayComplete
             .wrapAndApplyHeader(bufferClaim.buffer(), bufferClaim.offset(), messageHeader)
             .connection(connectionId)
-            .libraryId(libraryId);
+            .libraryId(libraryId)
+            .correlationId(correlationId);
 
         bufferClaim.commit();
 

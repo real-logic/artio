@@ -3807,12 +3807,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.slow = slow;
         }
 
-        public Action onReplayComplete(final long connectionId)
+        public Action onReplayComplete(final long connectionId, final long correlationId)
         {
-            final Action action = fixSenderEndPoints.onReplayComplete(connectionId);
+            final Action action = fixSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
             if (action != ABORT)
             {
-                return fixPSenderEndPoints.onReplayComplete(connectionId);
+                return fixPSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
             }
             return action;
         }

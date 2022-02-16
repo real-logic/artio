@@ -21,6 +21,7 @@ import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.LongArrayQueue;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -59,6 +60,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private final StreamTracker replayTracker;
     private final SenderSequenceNumber senderSequenceNumber;
     private final MessageTimingHandler messageTimingHandler;
+    private final LongArrayQueue replayQueue;
 
     private long sessionId;
     private long sendingTimeoutTimeInMs;
@@ -69,7 +71,6 @@ class FixSenderEndPoint extends SenderEndPoint
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
     private long replayInFlight;
-    private long queuedReplay;
 
     FixSenderEndPoint(
         final long connectionId,
@@ -86,7 +87,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final long slowConsumerTimeoutInMs,
         final long timeInMs,
         final SenderSequenceNumber senderSequenceNumber,
-        final MessageTimingHandler messageTimingHandler)
+        final MessageTimingHandler messageTimingHandler,
+        final int maxConcurrentSessionReplays)
     {
         super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
             framer);
@@ -100,6 +102,8 @@ class FixSenderEndPoint extends SenderEndPoint
         replayTracker = new StreamTracker(replayBlockablePosition);
         this.messageTimingHandler = messageTimingHandler;
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
+        replayQueue = new LongArrayQueue(
+            Math.max(LongArrayQueue.MIN_CAPACITY, maxConcurrentSessionReplays), NO_REPLAY_CORRELATION_ID);
     }
 
     void onOutboundMessage(
@@ -644,14 +648,24 @@ class FixSenderEndPoint extends SenderEndPoint
         return false;
     }
 
-    public Action onReplayComplete()
+    public Action onReplayComplete(final long correlationId, final boolean slow)
     {
-        if (!replayTracker.partiallySentMessage)
+        // We don't do a slow check here because you may catchup during the replay if you only became replay slow
+        // and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
+        // duplicates
+
+        final StreamTracker replayTracker = this.replayTracker;
+        if (correlationId == replayInFlight && // dedup by checking the correlation id
+            !replayTracker.partiallySentMessage &&
+            replayTracker.skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
             replayPaused = false;
+
+            replayInFlight = NO_REPLAY_CORRELATION_ID;
+            return super.onReplayComplete(correlationId, slow);
         }
 
-        return super.onReplayComplete();
+        return CONTINUE;
     }
 
     void fixDictionary(final FixDictionary fixDictionary)
@@ -667,10 +681,35 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onValidResendRequest(final long correlationId, final boolean slow)
     {
-        if (slow == isSlowConsumer())
+        if (isSlowConsumer())
         {
-            queuedReplay = correlationId;
+            if (slow)
+            {
+                replayQueue.addLong(correlationId);
+            }
         }
+        else
+        {
+            // Can potentially flip from slow to normal at the end of a replay, so instead of checking
+            // that slow == isSlowConsumer() we just add and dedup
+            if (!contains(replayQueue, correlationId))
+            {
+                replayQueue.addLong(correlationId);
+            }
+        }
+    }
+
+    private boolean contains(final LongArrayQueue replayQueue, final long correlationId)
+    {
+        final LongArrayQueue.LongIterator it = replayQueue.iterator();
+        while (it.hasNext())
+        {
+            if (it.nextValue() == correlationId)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
@@ -684,7 +723,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private void checkStartReplay(
         final long correlationId, final long msgPosition, final boolean slow)
     {
-        final long replay = this.queuedReplay;
+        final long replay = replayQueue.peekLong();
         if (replay == NO_REPLAY_CORRELATION_ID)
         {
             blockStartReplay(msgPosition, slow);
@@ -699,10 +738,14 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replay == correlationId)
         {
+
             replayInFlight = replay;
             replayTracker.skipPosition = Long.MAX_VALUE;
-            queuedReplay = NO_REPLAY_CORRELATION_ID;
-            dropFurtherBehind(-START_REPLAY_LENGTH);
+            replayQueue.removeLong();
+            if (slow)
+            {
+                dropFurtherBehind(-START_REPLAY_LENGTH);
+            }
         }
         else
         {
@@ -753,4 +796,13 @@ class FixSenderEndPoint extends SenderEndPoint
         return replayPaused;
     }
 
+    public long replayInFlight()
+    {
+        return replayInFlight;
+    }
+
+    public LongArrayQueue queuedReplay()
+    {
+        return replayQueue;
+    }
 }

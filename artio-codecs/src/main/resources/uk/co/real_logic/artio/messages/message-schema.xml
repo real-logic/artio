@@ -643,7 +643,9 @@
     <sbe:message name="ReplayComplete" id="45"
                  description="Replayer tells SenderEndPoint that the current replay is complete">
         <field name="connection" id="1" type="ConnectionId"/>
-        <field name="libraryId" id="2" type="LibraryId" sinceVersion="9"/>
+        <field name="libraryId" id="2" type="LibraryId" sinceVersion="9"
+           description="Set when going from Framer to Library, but not from Replayer to Framer"/>
+        <field name="correlationId" id="3" type="CorrelationId" sinceVersion="23" />
     </sbe:message>
 
     <sbe:message name="FixPMessage" id="58" description="FIXP Message Header"

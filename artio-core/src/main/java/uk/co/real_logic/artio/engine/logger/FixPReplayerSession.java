@@ -64,7 +64,7 @@ public class FixPReplayerSession extends ReplayerSession
 
     public FixPReplayerSession(
         final long connectionId,
-        final BufferClaim bufferClaim,
+        final long correlationId, final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final int maxClaimAttempts,
         final ExclusivePublication publication,
@@ -82,7 +82,8 @@ public class FixPReplayerSession extends ReplayerSession
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer)
     {
-        super(connectionId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery, beginSeqNo, endSeqNo,
+        super(connectionId, correlationId, bufferClaim, idleStrategy, maxClaimAttempts, publication, replayQuery,
+            beginSeqNo, endSeqNo,
             sessionId, 0, replayer, bytesInBuffer, maxBytesInBuffer);
 
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;

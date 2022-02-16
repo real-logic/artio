@@ -111,7 +111,8 @@ class FixEndPointFactory
             configuration.slowConsumerTimeoutInMs(),
             System.currentTimeMillis(),
             senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer),
-            messageTimingHandler);
+            messageTimingHandler,
+            configuration.maxConcurrentSessionReplays());
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

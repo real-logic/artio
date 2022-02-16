@@ -76,7 +76,8 @@ public final class ReplayProtocolSubscription implements ControlledFragmentHandl
         final ReplayCompleteDecoder replayComplete = this.replayComplete;
         replayComplete.wrap(buffer, offset, blockLength, version);
         return handler.onReplayComplete(
-            replayComplete.connection());
+            replayComplete.connection(),
+            replayComplete.correlationId());
     }
 
     private Action onStartReplay(
