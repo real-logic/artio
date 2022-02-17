@@ -1754,7 +1754,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);
         final FixSenderEndPoint senderEndPoint = endPointFactory.senderEndPoint(
-            channel, connectionId, libraryId, libraryBlockablePosition, this);
+            channel, connectionId, libraryId, libraryBlockablePosition, this, receiverEndPoint);
         fixSenderEndPoints.add(senderEndPoint);
 
         final FixGatewaySession gatewaySession = new FixGatewaySession(

@@ -158,7 +158,7 @@ public class FramerTest
             any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
+        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then((inv) -> connectionId.getValue());
@@ -1001,7 +1001,7 @@ public class FramerTest
             notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer));
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer));
+            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer), any());
     }
 
     private void verifyLibraryTimeout()

@@ -95,7 +95,8 @@ public class FixSenderEndPointTest
         0,
         senderSequenceNumber,
         messageTimingHandler,
-        DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS);
+        DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
+        mock(FixReceiverEndPoint.class));
 
     @Before
     public void setup()

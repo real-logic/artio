@@ -92,7 +92,8 @@ class FixEndPointFactory
         final long connectionId,
         final int libraryId,
         final BlockablePosition libraryBlockablePosition,
-        final Framer framer)
+        final Framer framer,
+        final FixReceiverEndPoint receiverEndPoint)
     {
         final String remoteAddress = channel.remoteAddr();
         final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, remoteAddress);
@@ -112,7 +113,8 @@ class FixEndPointFactory
             System.currentTimeMillis(),
             senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer),
             messageTimingHandler,
-            configuration.maxConcurrentSessionReplays());
+            configuration.maxConcurrentSessionReplays(),
+            receiverEndPoint);
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

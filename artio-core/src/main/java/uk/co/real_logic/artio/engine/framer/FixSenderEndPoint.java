@@ -60,6 +60,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private final StreamTracker replayTracker;
     private final SenderSequenceNumber senderSequenceNumber;
     private final MessageTimingHandler messageTimingHandler;
+    private final FixReceiverEndPoint receiverEndPoint;
     private final LongArrayQueue replayQueue;
 
     private long sessionId;
@@ -88,7 +89,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final long timeInMs,
         final SenderSequenceNumber senderSequenceNumber,
         final MessageTimingHandler messageTimingHandler,
-        final int maxConcurrentSessionReplays)
+        final int maxConcurrentSessionReplays,
+        final FixReceiverEndPoint receiverEndPoint)
     {
         super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
             framer);
@@ -101,6 +103,7 @@ class FixSenderEndPoint extends SenderEndPoint
         outboundTracker = new StreamTracker(outboundBlockablePosition);
         replayTracker = new StreamTracker(replayBlockablePosition);
         this.messageTimingHandler = messageTimingHandler;
+        this.receiverEndPoint = receiverEndPoint;
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
         replayQueue = new LongArrayQueue(
             Math.max(LongArrayQueue.MIN_CAPACITY, maxConcurrentSessionReplays), NO_REPLAY_CORRELATION_ID);
@@ -281,7 +284,7 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         if (!isSlowConsumer())
         {
-            replayPaused = true;
+            replayPaused(true);
         }
 
         attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, header, replayTracker);
@@ -305,7 +308,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (!outboundTracker.partiallySentMessage)
         {
-            replayPaused = true;
+            replayPaused(true);
         }
 
         final int totalFrameSize = FRAME_SIZE + metaDataLength;
@@ -659,7 +662,7 @@ class FixSenderEndPoint extends SenderEndPoint
             !replayTracker.partiallySentMessage &&
             replayTracker.skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
-            replayPaused = false;
+            replayPaused(false);
 
             replayInFlight = NO_REPLAY_CORRELATION_ID;
             return super.onReplayComplete(correlationId, slow);
@@ -788,6 +791,19 @@ class FixSenderEndPoint extends SenderEndPoint
         StreamTracker(final BlockablePosition blockablePosition)
         {
             this.blockablePosition = blockablePosition;
+        }
+    }
+
+    private void replayPaused(final boolean replayPaused)
+    {
+        this.replayPaused = replayPaused;
+        if (replayPaused)
+        {
+            receiverEndPoint.pause();
+        }
+        else
+        {
+            receiverEndPoint.play();
         }
     }
 
