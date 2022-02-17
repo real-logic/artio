@@ -156,6 +156,9 @@ public class Session
     private int lastMsgSeqNumProcessed;
     private int lastSentMsgSeqNum;
     private int sequenceIndex;
+    // randomise the start position in order to reduce risk of clashing with another Session instance when you do
+    // engine/library hand-over.
+    private long nextReplayCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
     private long heartbeatIntervalInNs;
     private long nextRequiredInboundMessageTimeInNs;
@@ -2150,14 +2153,13 @@ public class Session
 
     private long generateReplayCorrelationId()
     {
-        while (true)
+        final long replayCorrelationId = nextReplayCorrelationId;
+        nextReplayCorrelationId++;
+        if (nextReplayCorrelationId == NO_REPLAY_CORRELATION_ID)
         {
-            final long correlationId = ThreadLocalRandom.current().nextLong();
-            if (correlationId != NO_REPLAY_CORRELATION_ID)
-            {
-                return correlationId;
-            }
+            nextReplayCorrelationId++;
         }
+        return replayCorrelationId;
     }
 
     private Action sendReject(
