@@ -468,10 +468,6 @@ public class FixSenderEndPointTest
         verifyNoMoreErrors();
     }
 
-    // TODO:
-    // multiple resends: two valid resend requests
-    // add correlation ids to complete message
-
     @Test
     public void shouldNotSendReplayMessageUntilNormalMessagesDrained()
     {
