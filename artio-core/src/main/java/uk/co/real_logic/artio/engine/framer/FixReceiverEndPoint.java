@@ -239,7 +239,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             if (bytesRead == SOCKET_DISCONNECTED)
             {
                 // Don't return the negative bytesRead below as that will indicate back-pressure
-                // And trigger
+                // And trigger blocking of other receiver end points.
                 return 0;
             }
 
