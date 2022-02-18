@@ -236,6 +236,13 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         {
             final long latestReadTimestampInNs = clock.nanoTime();
             final int bytesRead = readData();
+            if (bytesRead == SOCKET_DISCONNECTED)
+            {
+                // Don't return the negative bytesRead below as that will indicate back-pressure
+                // And trigger
+                return 0;
+            }
+
             if (frameMessages(bytesRead == 0 ? lastReadTimestampInNs : latestReadTimestampInNs))
             {
                 lastReadTimestampInNs = latestReadTimestampInNs;
@@ -437,6 +444,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     {
                         onLogon(readTimestampInNs, firstMessage);
                     }
+
                     if (!saveMessage(offset, messageType, length, readTimestampInNs, firstMessage))
                     {
                         return false;

@@ -201,16 +201,22 @@ class ReceiverEndPoints extends TransportPoller
             int i;
             for (i = 0; i < size; i++)
             {
-                final ReceiverEndPoint endPoint = (ReceiverEndPoint)keys[i].attachment();
-                final int polledBytes = endPoint.poll();
-                if (polledBytes < 0)
+                final SelectionKey key = keys[i];
+                // key could be null if a ReceiverEndPoint was removed during the processing of a previous key in the
+                // current poll iteration
+                if (key != null)
                 {
-                    backpressuredEndPoint = endPoint;
-                    bytesReceived -= polledBytes;
-                    break;
-                }
+                    final ReceiverEndPoint endPoint = (ReceiverEndPoint)key.attachment();
+                    final int polledBytes = endPoint.poll();
+                    if (polledBytes < 0)
+                    {
+                        backpressuredEndPoint = endPoint;
+                        bytesReceived -= polledBytes;
+                        break;
+                    }
 
-                bytesReceived += polledBytes;
+                    bytesReceived += polledBytes;
+                }
             }
 
             if (i != 0)
