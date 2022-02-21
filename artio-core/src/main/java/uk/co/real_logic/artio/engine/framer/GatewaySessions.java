@@ -36,6 +36,8 @@ import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
  */
 abstract class GatewaySessions
 {
+    public static final boolean TEMPORARY_LINGER_TIMING = Boolean.getBoolean("fix.core.linger_timing");
+
     protected final CharFormatter acquiredConnection = new CharFormatter("Gateway Acquired Connection %s");
     protected final List<GatewaySession> sessions = new ArrayList<>();
     protected final EpochClock epochClock;
@@ -400,9 +402,9 @@ abstract class GatewaySessions
 
         public void setState(final AuthenticationState state)
         {
-            if (state == AuthenticationState.REJECTED ||
+            if (TEMPORARY_LINGER_TIMING && (state == AuthenticationState.REJECTED ||
                 state == AuthenticationState.SENDING_REJECT_MESSAGE ||
-                state == AuthenticationState.LINGERING_REJECT_MESSAGE)
+                state == AuthenticationState.LINGERING_REJECT_MESSAGE))
             {
                 System.out.println("setState, state = " + state + ", connectionId = " + connectionId +
                     ", timeInNs: " + System.nanoTime());
@@ -415,7 +417,7 @@ abstract class GatewaySessions
             setState(AuthenticationState.REJECTED);
             final ReceiverEndPoint receiverEndPoint = this.receiverEndPoint;
             receiverEndPoint.poll();
-            if (!receiverEndPoint.hasDisconnected)
+            if (!receiverEndPoint.hasDisconnected())
             {
                 framer.receiverEndPointPollingRequired(receiverEndPoint);
             }

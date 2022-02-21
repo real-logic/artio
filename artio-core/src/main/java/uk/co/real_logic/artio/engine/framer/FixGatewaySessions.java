@@ -440,11 +440,14 @@ public class FixGatewaySessions extends GatewaySessions
                     "lingerTimeoutInMs should not be negative, (%d)", lingerTimeoutInMs));
             }
 
-            final long totalCallbackRejectTimeInNs = System.nanoTime() - authenticateAsyncStartInNs;
-            System.out.println(
-                "FGS onReject: authenticateAsyncTimeInNs: " + authenticateAsyncBlockingTimeInNs +
-                ", totalCallbackRejectTimeInNs = " + totalCallbackRejectTimeInNs +
-                ", authenticateAsyncStartInNs = " + authenticateAsyncStartInNs);
+            if (TEMPORARY_LINGER_TIMING)
+            {
+                final long totalCallbackRejectTimeInNs = System.nanoTime() - authenticateAsyncStartInNs;
+                System.out.println(
+                    "FGS onReject: authenticateAsyncTimeInNs: " + authenticateAsyncBlockingTimeInNs +
+                    ", totalCallbackRejectTimeInNs = " + totalCallbackRejectTimeInNs +
+                    ", authenticateAsyncStartInNs = " + authenticateAsyncStartInNs);
+            }
 
             this.encoder = encoder;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;

@@ -186,8 +186,12 @@ class ReceiverEndPoints extends TransportPoller
             {
                 if (backpressuredEndPoint.retryFrameMessages())
                 {
-                    System.out.println("no longer backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
-                        " @ " + System.nanoTime());
+                    if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+                    {
+                        System.out.println("no longer backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
+                            " @ " + System.nanoTime());
+                    }
+
                     this.backpressuredEndPoint = null;
 
                     bytesReceived += pollNormalEndPoints(numRequiredPollingEndPoints);
@@ -236,8 +240,12 @@ class ReceiverEndPoints extends TransportPoller
                     final int polledBytes = endPoint.poll();
                     if (polledBytes < 0)
                     {
-                        System.out.println("backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
-                            " @ " + System.nanoTime());
+                        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+                        {
+                            System.out.println("backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
+                                " @ " + System.nanoTime());
+                        }
+
                         backpressuredEndPoint = endPoint;
                         bytesReceived -= polledBytes;
                         break;
