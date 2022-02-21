@@ -129,6 +129,7 @@ public class ReceiverEndPointTest
             any(),
             any(),
             eq(framer),
+            any(),
             any()))
             .thenReturn(logonResult);
     }

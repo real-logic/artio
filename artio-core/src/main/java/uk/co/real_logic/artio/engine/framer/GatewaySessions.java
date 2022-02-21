@@ -207,6 +207,7 @@ abstract class GatewaySessions
         protected final long connectionId;
         protected final TcpChannel channel;
         protected final Framer framer;
+        protected final ReceiverEndPoint receiverEndPoint;
 
         protected volatile AuthenticationState state = AuthenticationState.PENDING;
 
@@ -221,12 +222,14 @@ abstract class GatewaySessions
             final GatewaySession gatewaySession,
             final long connectionId,
             final TcpChannel channel,
-            final Framer framer)
+            final Framer framer,
+            final ReceiverEndPoint receiverEndPoint)
         {
             this.session = gatewaySession;
             this.connectionId = connectionId;
             this.channel = channel;
             this.framer = framer;
+            this.receiverEndPoint = receiverEndPoint;
         }
 
         protected void onStrategyError(
@@ -306,7 +309,7 @@ abstract class GatewaySessions
                     return onSendingRejectMessage();
 
                 case LINGERING_REJECT_MESSAGE:
-                    return onLingerRejectMessage();
+                    return false;
 
                 case INDEXER_CATCHUP:
                     onIndexerCatchup();
@@ -327,19 +330,6 @@ abstract class GatewaySessions
                 session.onAuthenticationResult();
                 session = null;
             }
-        }
-
-        private boolean onLingerRejectMessage()
-        {
-            final long timeInMs = epochClock.time();
-            final boolean complete = timeInMs >= lingerExpiryTimeInMs;
-
-            if (complete)
-            {
-                setState(AuthenticationState.REJECTED);
-            }
-
-            return complete;
         }
 
         private boolean onSendingRejectMessage()
@@ -364,6 +354,7 @@ abstract class GatewaySessions
                 if (!rejectEncodeBuffer.hasRemaining())
                 {
                     lingerExpiryTimeInMs = epochClock.time() + lingerTimeoutInMs;
+                    framer.startLingering(this, lingerExpiryTimeInMs);
                     setState(AuthenticationState.LINGERING_REJECT_MESSAGE);
                 }
             }
@@ -417,6 +408,17 @@ abstract class GatewaySessions
                     ", timeInNs: " + System.nanoTime());
             }
             this.state = state;
+        }
+
+        public void onLingerTimeout()
+        {
+            setState(AuthenticationState.REJECTED);
+            final ReceiverEndPoint receiverEndPoint = this.receiverEndPoint;
+            receiverEndPoint.poll();
+            if (!receiverEndPoint.hasDisconnected)
+            {
+                framer.receiverEndPointPollingRequired(receiverEndPoint);
+            }
         }
     }
 

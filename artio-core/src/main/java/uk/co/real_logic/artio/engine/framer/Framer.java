@@ -19,6 +19,7 @@ import io.aeron.*;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import org.agrona.DeadlineTimerWheel;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -34,6 +35,7 @@ import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.framer.GatewaySessions.PendingAcceptorLogon;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -184,6 +186,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
     private final FixPContexts fixPContexts;
+    private final DeadlineTimerWheel timerWheel;
+    private final TimerEventHandler timerEventHandler;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private FixPProtocol fixPProtocol;
@@ -270,6 +274,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
         this.fixCounters = fixCounters;
+        this.timerEventHandler = new TimerEventHandler(errorHandler);
 
         acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
             configuration.acceptorfixDictionary(),
@@ -381,6 +386,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         shouldBind = configuration.bindAtStartup();
         outboundEngineImage = librarySubscription.imageBySessionId(outboundPublication.sessionId());
         outboundEngineSlowImage = slowSubscription.imageBySessionId(outboundPublication.sessionId());
+        timerWheel = new DeadlineTimerWheel(
+            MILLISECONDS, epochClock.time(), 128, 512);
     }
 
     private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
@@ -414,14 +421,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.pollSessions(timeInMs, timeInNs) +
             fixSenderEndPoints.checkTimeouts(timeInMs) +
             adminCommands.drain(onAdminCommand) +
-            checkDutyCycle();
+            checkDutyCycle(timeInMs);
     }
 
-    private int checkDutyCycle()
+    private int checkDutyCycle(final long timeInMs)
     {
         return removeIf(replies, ResetSequenceNumberCommand::poll) +
             resendSaveNotifications(resendSlowStatus, SlowStatus.SLOW) +
-            resendSaveNotifications(resendNotSlowStatus, SlowStatus.NOT_SLOW);
+            resendSaveNotifications(resendNotSlowStatus, SlowStatus.NOT_SLOW) +
+            timerWheel.poll(timeInMs, timerEventHandler, 10);
     }
 
     private int resendSaveNotifications(final Long2LongHashMap resend, final SlowStatus status)
@@ -1195,6 +1203,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         resetSequenceNumberCommand.setupAdminReset(correlationId, adminReplyPublication);
 
         onResetSequenceNumber(resetSequenceNumberCommand);
+    }
+
+    public void startLingering(
+        final PendingAcceptorLogon pendingAcceptorLogon, final long lingerExpiryTimeInMs)
+    {
+        final long timerId = timerWheel.scheduleTimer(lingerExpiryTimeInMs);
+        timerEventHandler.startLingering(timerId, pendingAcceptorLogon);
+        receiverEndPoints.receiverEndPointPollingOptional(pendingAcceptorLogon.connectionId());
     }
 
     private final class ILink3LookupConnectOperation implements Continuation
@@ -3325,6 +3341,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     void receiverEndPointPollingOptional(final long connectionId)
     {
         receiverEndPoints.receiverEndPointPollingOptional(connectionId);
+    }
+
+    void receiverEndPointPollingRequired(final ReceiverEndPoint receiverEndPoint)
+    {
+        receiverEndPoints.receiverEndPointPollingRequired(receiverEndPoint.connectionId);
     }
 
     void onBind(final BindCommand bindCommand)

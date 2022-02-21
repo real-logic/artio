@@ -75,7 +75,8 @@ public class FixPGatewaySessions extends GatewaySessions
         final Framer framer,
         final FixPProtocolType protocolType,
         final FixPContext identification,
-        final AbstractFixPProxy fixPProxy)
+        final AbstractFixPProxy fixPProxy,
+        final ReceiverEndPoint receiverEndPoint)
     {
         return new FixPPendingAcceptorLogon(
             sessionId,
@@ -88,7 +89,8 @@ public class FixPGatewaySessions extends GatewaySessions
             framer,
             protocolType,
             identification,
-            fixPProxy);
+            fixPProxy,
+            receiverEndPoint);
     }
 
     public FixPContexts fixPContexts()
@@ -121,9 +123,10 @@ public class FixPGatewaySessions extends GatewaySessions
             final Framer framer,
             final FixPProtocolType protocolType,
             final FixPContext identification,
-            final AbstractFixPProxy fixPProxy)
+            final AbstractFixPProxy fixPProxy,
+            final ReceiverEndPoint receiverEndPoint)
         {
-            super(gatewaySession, connectionId, channel, framer);
+            super(gatewaySession, connectionId, channel, framer, receiverEndPoint);
             this.sessionId = sessionId;
             this.buffer = buffer;
             this.offset = offset;
