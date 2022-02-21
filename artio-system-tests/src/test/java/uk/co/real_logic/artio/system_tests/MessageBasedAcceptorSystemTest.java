@@ -622,6 +622,60 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         }
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportResendRequestsAfterSequenceReset() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        final ReadablePosition libraryPosition = testSystem.libraryPosition(engine, library);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            // Given setup session with 1 sent execution report
+            logon(connection);
+
+            session = acquireSession();
+            ReportFactory.sendOneReport(testSystem, session, Side.SELL);
+
+            final ExecutionReportDecoder executionReport = connection.readExecutionReport();
+            assertSell(executionReport);
+            final int msgSeqNum = executionReport.header().msgSeqNum();
+
+            // When you perform the sequence reset
+            // NB: this is a high sequence number, so a normal FIX session would reject this message but it can be
+            // useful to send it on an offline session
+            final int highSeqNum = 100;
+            assertThat(highSeqNum, greaterThan(msgSeqNum));
+            final long position = testSystem.awaitSend(() -> session.trySendSequenceReset(highSeqNum, highSeqNum));
+
+            testSystem.awaitBlocking(() ->
+            {
+                final SequenceResetDecoder sequenceReset = connection.readSequenceReset();
+                assertFalse(sequenceReset.toString(), sequenceReset.hasGapFillFlag());
+                assertEquals(highSeqNum, sequenceReset.newSeqNo());
+            });
+
+            testSystem.awaitPosition(libraryPosition, position);
+
+            testSystem.awaitBlocking(() ->
+            {
+                // Then you get the resend
+                connection.msgSeqNum(highSeqNum).sendResendRequest(1, 0);
+                connection.readSequenceResetGapFill(msgSeqNum);
+                final ExecutionReportDecoder executionReportResent = connection.readExecutionReport(msgSeqNum);
+                assertSell(executionReportResent);
+                connection.readSequenceResetGapFill(highSeqNum);
+            });
+        }
+    }
+
+    private void assertSell(final ExecutionReportDecoder executionReport)
+    {
+        assertEquals(executionReport.toString(), Side.SELL, executionReport.sideAsEnum());
+    }
+
     private void shouldSupportLogonBasedSequenceNumberReset(
         final InitialAcceptedSessionOwner owner,
         final BiConsumer<FixConnection, ReportFactory> onNext)

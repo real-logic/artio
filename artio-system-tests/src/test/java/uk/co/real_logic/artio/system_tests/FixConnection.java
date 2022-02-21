@@ -415,6 +415,21 @@ public final class FixConnection implements AutoCloseable
         return readMessage(new LogonDecoder());
     }
 
+    public SequenceResetDecoder readSequenceReset()
+    {
+        return readMessage(new SequenceResetDecoder());
+    }
+
+    public SequenceResetDecoder readSequenceResetGapFill(final int newSeqNo)
+    {
+        final SequenceResetDecoder sequenceReset = readSequenceReset();
+        final String msg = sequenceReset.toString();
+        assertTrue(msg, sequenceReset.header().possDupFlag());
+        assertTrue(msg, sequenceReset.hasGapFillFlag());
+        assertEquals(msg, newSeqNo, sequenceReset.newSeqNo());
+        return sequenceReset;
+    }
+
     public LogonDecoder readLogon(final int msgSeqNum)
     {
         final LogonDecoder logonReply = readLogon();

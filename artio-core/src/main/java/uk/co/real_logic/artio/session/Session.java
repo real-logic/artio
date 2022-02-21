@@ -827,10 +827,20 @@ public class Session
 
     /**
      * Reset the sequence number, so that the specified sequence number will be the sequence
-     * number of the next message. This sends a sequence reset message and can thus only be
-     * used to increase the sequence number of the session.
+     * number of the next message. This sends a sequence reset message without the gap-fill flag (henceforth referred
+     * to as SequenceReset-Reset messages). SequenceReset-Reset messages will be rejected by the counter-party if they
+     * are lower than the current sequence number and can thus only be used to increase the sequence number of the
+     * session if your session is online.
      * <p>
-     * If you want to reset the sequence number back to 1 you should use
+     * If you have an offline or disconnected session then Artio will treat this as
+     * a sequence number reset of that session and a lower sequence number is valid. If you want to reset both outbound
+     * and inbound messages then use the {@link #trySendSequenceReset(int, int)} method.
+     * <p>
+     * If the <code>nextSentMessageSequenceNumber</code> parameter is lower than the existing next sent sequence
+     * number then this method treats that as a sequence number reset and increments the sequence index. If it is
+     * higher then the sequence index is not modified.
+     * <p>
+     * If you want to reset the sequence number back to 1 whilst online according to the FIX protocol you should use
      * {@link #tryResetSequenceNumbers()}.
      *
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
@@ -845,13 +855,22 @@ public class Session
             return BACK_PRESSURED;
         }
 
-        final int newSequenceIndex = sequenceIndex() + 1;
+        final boolean resetsSequenceNumbers = resetsSentSequenceNumbers(nextSentMessageSequenceNumber);
+        final int newSequenceIndex = sequenceIndex() + (resetsSequenceNumbers ? 1 : 0);
         final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, newSequenceIndex, lastMsgSeqNumProcessed);
-        nextSequenceIndex(clock.nanoTime(), position);
+        if (resetsSequenceNumbers)
+        {
+            nextSequenceIndex(clock.nanoTime(), position);
+        }
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
 
         return position;
+    }
+
+    private boolean resetsSentSequenceNumbers(final int nextSentMessageSequenceNumber)
+    {
+        return nextSentMessageSequenceNumber < this.lastSentMsgSeqNum + 1;
     }
 
     /**
@@ -869,7 +888,8 @@ public class Session
 
     /**
      * Acts like {@link #trySendSequenceReset(int)} but also resets the received sequence number. This method
-     * can be used to reset sequence numbers of offline sessions.
+     * can be used to reset sequence numbers of offline sessions. See {@link #trySendSequenceReset(int)} to understand
+     * the impact on sequenceIndexes and when it is valid to use this method.
      *
      * If the return value of this method is negative it indicates back-pressure has been applied and this method
      * should be retried. See {@link Publication} for constant values indicating the meaning of the back-pressure
@@ -888,8 +908,10 @@ public class Session
         final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
         if (position >= 0)
         {
-            // Do not reset the sequence index at this point.
-            lastReceivedMsgSeqNumOnly(nextReceivedMessageSequenceNumber - 1);
+            final int newLastReceivedMessageSequenceNumber = nextReceivedMessageSequenceNumber - 1;
+            // Do not reset the sequence index at this point
+            lastReceivedMsgSeqNumOnly(newLastReceivedMessageSequenceNumber);
+
             if (redact(NO_REQUIRED_POSITION))
             {
                 fixSessionOwner.enqueueTask(() -> redact(NO_REQUIRED_POSITION));

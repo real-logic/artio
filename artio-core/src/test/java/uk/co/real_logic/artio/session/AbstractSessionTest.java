@@ -254,10 +254,9 @@ public abstract class AbstractSessionTest
 
         session().trySendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
-        final int nextSequenceIndex = SEQUENCE_INDEX + 1;
-        verify(sessionProxy).sendSequenceReset(anyInt(), eq(newSentSeqNo), eq(nextSequenceIndex), anyInt());
+        verify(sessionProxy).sendSequenceReset(anyInt(), eq(newSentSeqNo), eq(SEQUENCE_INDEX), anyInt());
         assertEquals(newSentSeqNo - 1, session().lastSentMsgSeqNum());
-        assertSequenceIndexIs(nextSequenceIndex);
+        assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
     @Test

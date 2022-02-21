@@ -171,7 +171,8 @@ public class ReplayQuery implements AutoCloseable
             final int beginSequenceIndex,
             final int endSequenceNumber,
             final int endSequenceIndex,
-            final LogTag logTag, final MessageTracker messageTracker)
+            final LogTag logTag,
+            final MessageTracker messageTracker)
         {
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
