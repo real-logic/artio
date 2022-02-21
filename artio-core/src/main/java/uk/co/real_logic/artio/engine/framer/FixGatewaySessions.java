@@ -230,13 +230,14 @@ public class FixGatewaySessions extends GatewaySessions
         final TcpChannel channel,
         final FixDictionary fixDictionary,
         final Framer framer,
-        final String remoteAddress)
+        final String remoteAddress,
+        final FixReceiverEndPoint fixReceiverEndPoint)
     {
         gatewaySession.startAuthentication(epochClock.time());
 
         return new FixPendingAcceptorLogon(
             sessionIdStrategy, gatewaySession, logon, connectionId, fixContexts, channel, fixDictionary, framer,
-            remoteAddress);
+            remoteAddress, fixReceiverEndPoint);
     }
 
     void onUserRequest(
@@ -293,9 +294,10 @@ public class FixGatewaySessions extends GatewaySessions
             final TcpChannel channel,
             final FixDictionary fixDictionary,
             final Framer framer,
-            final String remoteAddress)
+            final String remoteAddress,
+            final FixReceiverEndPoint fixReceiverEndPoint)
         {
-            super(gatewaySession, connectionId, channel, framer);
+            super(gatewaySession, connectionId, channel, framer, fixReceiverEndPoint);
 
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
