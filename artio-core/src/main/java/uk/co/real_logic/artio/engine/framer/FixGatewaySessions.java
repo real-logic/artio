@@ -281,6 +281,8 @@ public class FixGatewaySessions extends GatewaySessions
         private Encoder encoder;
         private Class<? extends FixDictionary> fixDictionaryClass;
         private long rejectEncodeResult;
+        private long authenticateAsyncStartInNs;
+        private long authenticateAsyncBlockingTimeInNs;
 
         FixPendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -339,7 +341,9 @@ public class FixGatewaySessions extends GatewaySessions
         {
             try
             {
+                authenticateAsyncStartInNs = System.nanoTime();
                 authenticationStrategy.authenticateAsync(logon, this);
+                this.authenticateAsyncBlockingTimeInNs = System.nanoTime() - authenticateAsyncStartInNs;
             }
             catch (final Throwable throwable)
             {
@@ -357,7 +361,7 @@ public class FixGatewaySessions extends GatewaySessions
             validateState();
 
             this.fixDictionaryClass = fixDictionaryClass;
-            state = AuthenticationState.AUTHENTICATED;
+            setState(AuthenticationState.AUTHENTICATED);
         }
 
         protected void onAuthenticated()
@@ -418,12 +422,12 @@ public class FixGatewaySessions extends GatewaySessions
             {
                 session.acceptorSequenceNumbers(UNK_SESSION, UNK_SESSION);
                 session.lastLogonWasSequenceReset();
-                state = AuthenticationState.ACCEPTED;
+                setState(AuthenticationState.ACCEPTED);
             }
             else
             {
                 requiredPosition = outboundPublication.position();
-                state = AuthenticationState.INDEXER_CATCHUP;
+                setState(AuthenticationState.INDEXER_CATCHUP);
             }
 
             framer.onGatewaySessionSetup(session, isOfflineReconnect);
@@ -439,10 +443,16 @@ public class FixGatewaySessions extends GatewaySessions
                     "lingerTimeoutInMs should not be negative, (%d)", lingerTimeoutInMs));
             }
 
+            final long totalCallbackRejectTimeInNs = System.nanoTime() - authenticateAsyncStartInNs;
+            System.out.println(
+                "FGS onReject: authenticateAsyncTimeInNs: " + authenticateAsyncBlockingTimeInNs +
+                ", totalCallbackRejectTimeInNs = " + totalCallbackRejectTimeInNs +
+                ", authenticateAsyncStartInNs = " + authenticateAsyncStartInNs);
+
             this.encoder = encoder;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.lingerTimeoutInMs = lingerTimeoutInMs;
-            this.state = AuthenticationState.ENCODING_REJECT_MESSAGE;
+            setState(AuthenticationState.ENCODING_REJECT_MESSAGE);
         }
 
         protected void encodeRejectMessage()

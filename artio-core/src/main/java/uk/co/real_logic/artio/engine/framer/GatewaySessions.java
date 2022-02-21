@@ -312,7 +312,7 @@ abstract class GatewaySessions
         {
             validateState();
 
-            state = AuthenticationState.AUTHENTICATED;
+            setState(AuthenticationState.AUTHENTICATED);
         }
 
         protected void validateState()
@@ -384,7 +384,7 @@ abstract class GatewaySessions
 
             if (complete)
             {
-                state = AuthenticationState.REJECTED;
+                setState(AuthenticationState.REJECTED);
             }
 
             return complete;
@@ -395,12 +395,12 @@ abstract class GatewaySessions
             try
             {
                 encodeRejectMessage();
-                state = AuthenticationState.SENDING_REJECT_MESSAGE;
+                setState(AuthenticationState.SENDING_REJECT_MESSAGE);
             }
             catch (final Exception e)
             {
                 errorHandler.onError(e);
-                state = AuthenticationState.REJECTED;
+                setState(AuthenticationState.REJECTED);
             }
         }
 
@@ -433,7 +433,7 @@ abstract class GatewaySessions
         {
             if (lookupSequenceNumbers(session, requiredPosition))
             {
-                state = AuthenticationState.ACCEPTED;
+                setState(AuthenticationState.ACCEPTED);
             }
         }
 
@@ -444,7 +444,7 @@ abstract class GatewaySessions
             validateState();
 
             this.reason = reason;
-            this.state = AuthenticationState.REJECTED;
+            this.setState(AuthenticationState.REJECTED);
         }
 
         public boolean isAccepted()
@@ -455,6 +455,18 @@ abstract class GatewaySessions
         public long connectionId()
         {
             return connectionId;
+        }
+
+        public void setState(final AuthenticationState state)
+        {
+            if (state == AuthenticationState.REJECTED ||
+                state == AuthenticationState.SENDING_REJECT_MESSAGE ||
+                state == AuthenticationState.LINGERING_REJECT_MESSAGE)
+            {
+                System.out.println("setState, state = " + state + ", connectionId = " + connectionId +
+                    ", timeInNs: " + System.nanoTime());
+            }
+            this.state = state;
         }
     }
 
