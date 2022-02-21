@@ -98,7 +98,7 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
 
         return gatewaySessions.authenticate(
             sessionId, buffer, offset, messageSize, this, connectionId, channel, framer, protocolType,
-            context, fixPProxy);
+            context, fixPProxy, receiverEndPoint);
     }
 
     void setupOfflineSession(

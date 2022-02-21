@@ -51,12 +51,17 @@ class ReceiverEndPoints extends TransportPoller
     {
         if (endPoint.requiresAuthentication())
         {
-            requiredPollingEndPoints = ArrayUtil.add(requiredPollingEndPoints, endPoint);
+            addToRequiredPollingEndpoints(endPoint);
         }
         else
         {
             addToNormalEndpoints(endPoint);
         }
+    }
+
+    private void addToRequiredPollingEndpoints(final ReceiverEndPoint endPoint)
+    {
+        requiredPollingEndPoints = ArrayUtil.add(requiredPollingEndPoints, endPoint);
     }
 
     private void addToNormalEndpoints(final ReceiverEndPoint endPoint)
@@ -88,6 +93,25 @@ class ReceiverEndPoints extends TransportPoller
         }
 
         selectNowToForceProcessing();
+    }
+
+    void receiverEndPointPollingRequired(final long connectionId)
+    {
+        final ReceiverEndPoint[] endPoints = this.endPoints;
+        final int index = findEndPoint(connectionId, endPoints);
+        if (index != UNKNOWN_INDEX)
+        {
+            final ReceiverEndPoint endPoint = endPoints[index];
+            this.endPoints = ArrayUtil.remove(endPoints, index);
+
+            addToRequiredPollingEndpoints(endPoint);
+        }
+        else
+        {
+            errorHandler.onError(new Exception(String.format(
+                "Unable to make endpoint required for polling due to it not being found, connectionId=%d",
+                connectionId)));
+        }
     }
 
     void receiverEndPointPollingOptional(final long connectionId)
