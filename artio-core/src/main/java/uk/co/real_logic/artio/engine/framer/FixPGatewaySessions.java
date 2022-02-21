@@ -169,7 +169,7 @@ public class FixPGatewaySessions extends GatewaySessions
 
             if (framer.onFixPLogonMessageReceived(session, sessionId))
             {
-                state = AuthenticationState.ACCEPTED;
+                setState(AuthenticationState.ACCEPTED);
             }
             else
             {
@@ -193,7 +193,7 @@ public class FixPGatewaySessions extends GatewaySessions
                 }
                 else
                 {
-                    state = AuthenticationState.ACCEPTED;
+                    setState(AuthenticationState.ACCEPTED);
                 }
             }
         }
@@ -213,7 +213,7 @@ public class FixPGatewaySessions extends GatewaySessions
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.fixPFirstMessageResponse = response;
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
-            this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
+            this.setState(AuthenticationState.SENDING_REJECT_MESSAGE);
         }
 
         public String remoteAddress()
