@@ -31,7 +31,6 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
@@ -79,6 +78,9 @@ public class ReplayIndex implements Index, RedactHandler
     private final String logFileDir;
     private final int requiredStreamId;
     private final int indexFileSize;
+    private final int segmentSize;
+    private final int segmentSizeBitShift;
+    private final int segmentCount;
     private final BufferFactory bufferFactory;
     private final AtomicBuffer positionBuffer;
     private final ErrorHandler errorHandler;
@@ -89,7 +91,8 @@ public class ReplayIndex implements Index, RedactHandler
     public ReplayIndex(
         final String logFileDir,
         final int requiredStreamId,
-        final int indexFileSize,
+        final int indexFileCapacity,
+        final int indexSegmentCapacity,
         final int cacheNumSets,
         final int cacheSetSize,
         final BufferFactory bufferFactory,
@@ -104,11 +107,18 @@ public class ReplayIndex implements Index, RedactHandler
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
-        this.indexFileSize = indexFileSize;
+        this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
+        this.segmentSize = ReplayIndexDescriptor.capacityToBytes(indexSegmentCapacity);
+        this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
+        this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
+
+        checkPowerOfTwo("segmentCount", segmentCount);
+        checkPowerOfTwo("segmentSize", segmentSize);
+        checkPowerOfTwo("indexFileSize", indexFileSize);
 
         sessTracker = new SessionOwnershipTracker(sent, this);
         fixPSequenceIndexer = new FixPSequenceIndexer(
@@ -116,7 +126,7 @@ public class ReplayIndex implements Index, RedactHandler
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
         sequenceNumberExtractor = new SequenceNumberExtractor();
-        checkIndexFileSize(indexFileSize);
+        checkIndexRecordCapacity(indexFileCapacity);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
@@ -124,6 +134,15 @@ public class ReplayIndex implements Index, RedactHandler
         positionReader = new IndexedPositionReader(positionBuffer);
         timeIndex = new TimeIndexWriter(
             logFileDir, requiredStreamId, timeIndexReplayFlushIntervalInNs, errorHandler);
+    }
+
+    private void checkPowerOfTwo(final String name, final int value)
+    {
+        if (!BitUtil.isPowerOfTwo(value))
+        {
+            throw new IllegalStateException(
+                "segmentCount must be a positive power of 2: " + name + "=" + value);
+        }
     }
 
     private void onFixPSequenceUpdate(
@@ -362,7 +381,7 @@ public class ReplayIndex implements Index, RedactHandler
         else
         {
             // File might be present but not within the cache.
-            final File replayIndexFile = replayIndexFile(sessionId);
+            final File replayIndexFile = replayIndexHeaderFile(sessionId);
             if (replayIndexFile.exists())
             {
                 deleteFile(replayIndexFile);
@@ -401,23 +420,36 @@ public class ReplayIndex implements Index, RedactHandler
 
     private final class SessionIndex implements AutoCloseable
     {
-        private final ByteBuffer wrappedBuffer;
-        private final AtomicBuffer buffer;
-        private final int recordCapacity;
-        private final File replayIndexFile;
+        private final long fixSessionId;
+        private final int segmentSize;
+        private final int segmentSizeBitShift;
+
+        private final UnsafeBuffer headerBuffer;
+        private final File headerFile;
+
+        private final UnsafeBuffer[] segmentBuffers;
+        private final File[] segmentBufferFiles;
 
         SessionIndex(final long fixSessionId)
         {
-            replayIndexFile = replayIndexFile(fixSessionId);
-            final boolean exists = replayIndexFile.exists();
-            this.wrappedBuffer = bufferFactory.map(replayIndexFile, indexFileSize);
-            this.buffer = new UnsafeBuffer(wrappedBuffer);
+            final ReplayIndex replayIndex = ReplayIndex.this;
 
-            recordCapacity = recordCapacity(buffer.capacity());
+            this.fixSessionId = fixSessionId;
+            this.segmentSize = replayIndex.segmentSize;
+            this.segmentSizeBitShift = replayIndex.segmentSizeBitShift;
+            segmentBuffers = new UnsafeBuffer[segmentCount];
+            segmentBufferFiles = new File[segmentCount];
+
+            headerFile = replayIndexHeaderFile(fixSessionId);
+            final boolean exists = headerFile.exists();
+            this.headerBuffer = mapUnsafeBuffer(HEADER_FILE_SIZE, headerFile);
+
             if (!exists)
             {
+                final ReplayIndexRecordEncoder replayIndexRecord = replayIndex.replayIndexRecord;
+                final MessageHeaderEncoder indexHeaderEncoder = replayIndex.indexHeaderEncoder;
                 indexHeaderEncoder
-                    .wrap(buffer, 0)
+                    .wrap(headerBuffer, 0)
                     .blockLength(replayIndexRecord.sbeBlockLength())
                     .templateId(replayIndexRecord.sbeTemplateId())
                     .schemaId(replayIndexRecord.sbeSchemaId())
@@ -426,9 +458,28 @@ public class ReplayIndex implements Index, RedactHandler
             else
             {
                 // Reset the positions in order to avoid wraps at the start.
-                final long resetPosition = beginChange(buffer);
-                endChangeOrdered(buffer, resetPosition);
+                final long resetPosition = beginChange(headerBuffer);
+                endChangeOrdered(headerBuffer, resetPosition);
+
+                for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+                {
+                    final File file = replayIndexSegmentFile(fixSessionId, segmentIndex);
+                    if (file.exists())
+                    {
+                        final long fileLength = file.length();
+                        if (fileLength != segmentSize)
+                        {
+                            throw new IllegalArgumentException("Invalid segment file size: " +
+                                file.getAbsolutePath() + " segmentSize=" + segmentSize + ", fileLength=" + fileLength);
+                        }
+                    }
+                }
             }
+        }
+
+        private UnsafeBuffer mapUnsafeBuffer(final int size, final File replayIndexFile)
+        {
+            return new UnsafeBuffer(bufferFactory.map(replayIndexFile, size));
         }
 
         void onRecord(
@@ -440,26 +491,29 @@ public class ReplayIndex implements Index, RedactHandler
             final long knownRecordingId,
             final long timestamp)
         {
-            final long beginChangePosition = beginChange(buffer);
+            final long beginChangePosition = beginChange(headerBuffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
             final long recordingId = knownRecordingId ==
                 NULL_RECORDING_ID ? recordingIdLookup.getRecordingId(aeronSessionId) : knownRecordingId;
             final long beginPosition = endPosition - length;
 
-            beginChangeOrdered(buffer, changePosition);
+            beginChangeOrdered(headerBuffer, changePosition);
             UNSAFE.storeFence();
 
-            final int offset = offset(beginChangePosition, recordCapacity);
+            final int segmentIndex = ReplayIndexDescriptor.segmentIndex(
+                beginChangePosition, segmentSizeBitShift, indexFileSize);
+            final UnsafeBuffer segmentBuffer = segmentBuffer(segmentIndex);
+            final int offset = offsetInSegment(beginChangePosition, segmentSize);
 
             replayIndexRecord
-                .wrap(buffer, offset)
+                .wrap(segmentBuffer, offset)
                 .position(beginPosition)
                 .sequenceNumber(sequenceNumber)
                 .sequenceIndex(sequenceIndex)
                 .recordingId(recordingId)
                 .length(length);
 
-            endChangeOrdered(buffer, changePosition);
+            endChangeOrdered(headerBuffer, changePosition);
 
             if (timestamp != NO_TIMESTAMP)
             {
@@ -467,21 +521,53 @@ public class ReplayIndex implements Index, RedactHandler
             }
         }
 
+        private UnsafeBuffer segmentBuffer(final int segmentIndex)
+        {
+            UnsafeBuffer segmentBuffer = segmentBuffers[segmentIndex];
+            if (segmentBuffer == null)
+            {
+                final File file = replayIndexSegmentFile(fixSessionId, segmentIndex);
+                segmentBufferFiles[segmentIndex] = file;
+                segmentBuffer = mapUnsafeBuffer(segmentSize, file);
+                segmentBuffers[segmentIndex] = segmentBuffer;
+            }
+            return segmentBuffer;
+        }
+
         void reset()
         {
             close();
-            deleteFile(replayIndexFile);
+            deleteFile(headerFile);
+            for (final File segmentFile: segmentBufferFiles)
+            {
+                if (segmentFile != null)
+                {
+                    deleteFile(segmentFile);
+                }
+            }
         }
 
         public void close()
         {
-            IoUtil.unmap(wrappedBuffer);
+            IoUtil.unmap(headerBuffer.byteBuffer());
+            for (final UnsafeBuffer segmentBuffer : segmentBuffers)
+            {
+                if (segmentBuffer != null)
+                {
+                    IoUtil.unmap(segmentBuffer.byteBuffer());
+                }
+            }
         }
     }
 
-    private File replayIndexFile(final long fixSessionId)
+    private File replayIndexHeaderFile(final long fixSessionId)
     {
-        return ReplayIndexDescriptor.replayIndexFile(logFileDir, fixSessionId, requiredStreamId);
+        return ReplayIndexDescriptor.replayIndexHeaderFile(logFileDir, fixSessionId, requiredStreamId);
+    }
+
+    private File replayIndexSegmentFile(final long fixSessionId, final int segmentIndex)
+    {
+        return ReplayIndexDescriptor.replayIndexSegmentFile(logFileDir, fixSessionId, requiredStreamId, segmentIndex);
     }
 
     private void deleteFile(final File replayIndexFile)

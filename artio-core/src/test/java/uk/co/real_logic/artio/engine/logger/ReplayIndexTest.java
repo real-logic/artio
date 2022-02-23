@@ -23,21 +23,23 @@ import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.verification.VerificationMode;
+import org.mockito.Mockito;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
 
@@ -56,7 +58,6 @@ import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayIndexTest extends AbstractLogTest
@@ -85,7 +86,7 @@ public class ReplayIndexTest extends AbstractLogTest
     private final IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private final IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
 
-    private final ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
+    private final FakeMessageHandler fakeHandler = new FakeMessageHandler();
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private ArchivingMediaDriver mediaDriver;
@@ -100,7 +101,8 @@ public class ReplayIndexTest extends AbstractLogTest
         replayIndex = new ReplayIndex(
             DEFAULT_LOG_FILE_DIR,
             STREAM_ID,
-            DEFAULT_REPLAY_INDEX_FILE_SIZE,
+            DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+            DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY,
             DEFAULT_LOGGER_CACHE_NUM_SETS,
             DEFAULT_LOGGER_CACHE_SET_SIZE,
             newBufferFactory,
@@ -135,8 +137,8 @@ public class ReplayIndexTest extends AbstractLogTest
         publication = aeron.addExclusivePublication(CHANNEL, STREAM_ID);
         subscription = aeron.addSubscription(CHANNEL, STREAM_ID);
 
-        IoUtil.deleteIfExists(logFile(SESSION_ID));
-        IoUtil.deleteIfExists(logFile(SESSION_ID_2));
+        final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        IoUtil.delete(logFileDir, false);
 
         newReplayIndex();
         query = new ReplayQuery(
@@ -148,7 +150,9 @@ public class ReplayIndexTest extends AbstractLogTest
             new NoOpIdleStrategy(),
             aeronArchive,
             errorHandler,
-            DEFAULT_ARCHIVE_REPLAY_STREAM);
+            DEFAULT_ARCHIVE_REPLAY_STREAM,
+            DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+            DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY);
     }
 
     @After
@@ -272,8 +276,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test(timeout = 20_000L)
     public void shouldNotStopIndexingWhenBufferFull()
     {
-        final int totalMessages =
-            (DEFAULT_REPLAY_INDEX_FILE_SIZE - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
+        final int totalMessages = DEFAULT_REPLAY_INDEX_RECORD_CAPACITY;
         final int beginSequenceNumber = totalMessages / 2;
         final int endSequenceNumber = totalMessages + 1;
         // +1 because these are inclusive
@@ -298,7 +301,7 @@ public class ReplayIndexTest extends AbstractLogTest
         final int aeronSessionId = publication.sessionId();
         final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
 
-        verify(positionConsumer, times(1))
+        verify(positionConsumer, Mockito.times(1))
             .accept(aeronSessionId, recordingId, alignedEndPosition());
     }
 
@@ -396,23 +399,17 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void verifyNoMessageRead()
     {
-        verifyMessagesRead(never());
+        verifyMessagesRead(0);
     }
 
     private void verifyMessagesRead(final int number)
     {
-        verifyMessagesRead(times(number));
-    }
-
-    private void verifyMessagesRead(final VerificationMode times)
-    {
-        verify(mockHandler, times)
-            .onFragment(any(), anyInt(), anyInt(), any());
+        assertEquals(fakeHandler.times(), number);
     }
 
     private void verifyMappedFile(final long sessionId, final int wantedNumberOfInvocations)
     {
-        verify(existingBufferFactory, times(wantedNumberOfInvocations)).map(logFile(sessionId));
+        verify(existingBufferFactory, Mockito.times(wantedNumberOfInvocations)).map(logFile(sessionId));
     }
 
     private void verifyMappedFile(final long sessionId)
@@ -422,7 +419,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private File logFile(final long sessionId)
     {
-        return ReplayIndexDescriptor.replayIndexFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID);
+        return ReplayIndexDescriptor.replayIndexHeaderFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID);
     }
 
     private void indexRecord()
@@ -502,7 +499,7 @@ public class ReplayIndexTest extends AbstractLogTest
             endSequenceNumber,
             endSequenceIndex,
             REPLAY,
-            new FixMessageTracker(REPLAY, mockHandler, sessionId));
+            new FixMessageTracker(REPLAY, fakeHandler, sessionId));
 
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         while (!operation.pollReplay())
@@ -514,4 +511,22 @@ public class ReplayIndexTest extends AbstractLogTest
         return operation.replayedMessages();
     }
 
+    static class FakeMessageHandler implements ControlledFragmentHandler
+    {
+        LongHashSet positions = new LongHashSet();
+        int times = 0;
+
+        public Action onFragment(
+            final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            positions.add(header.position());
+            times++;
+            return Action.CONTINUE;
+        }
+
+        public int times()
+        {
+            return times;
+        }
+    }
 }

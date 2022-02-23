@@ -20,8 +20,7 @@ import uk.co.real_logic.artio.LogTag;
 
 import java.io.IOException;
 
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 
 /**
  * Allows reproduction of replay query issues
@@ -44,7 +43,9 @@ public final class ReplayQueryChecker
             CommonConfiguration.backoffIdleStrategy(),
             null,
             Throwable::printStackTrace,
-            -1);
+            -1,
+            DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+            DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY);
 
         query.query(
             sessionId,
