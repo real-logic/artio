@@ -405,10 +405,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return outboundSlowPeeker;
     }
 
+    private long lastTimeInNs = 0;
+
     public int doWork() throws Exception
     {
         final long timeInNs = clock.nanoTime();
         final long timeInMs = epochClock.time();
+        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+        {
+            final long lastTimeInNs = this.lastTimeInNs;
+            if (lastTimeInNs != 0)
+            {
+                final long deltaInNs = timeInNs - lastTimeInNs;
+                if (deltaInNs > 5_000_000)
+                {
+                    System.out.println("last Framer.doWork() >5ms: " + deltaInNs + "ns @ " + timeInNs);
+                }
+            }
+            this.lastTimeInNs = timeInNs;
+        }
+
         fixSenderEndPoints.timeInMs(timeInMs);
 
         checkOutboundTimestampSender(timeInNs);
