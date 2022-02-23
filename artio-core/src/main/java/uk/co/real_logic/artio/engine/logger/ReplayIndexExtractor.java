@@ -1,6 +1,5 @@
 package uk.co.real_logic.artio.engine.logger;
 
-import org.agrona.IoUtil;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -9,8 +8,9 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
-import java.io.*;
-import java.nio.MappedByteBuffer;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import static io.aeron.Aeron.NULL_VALUE;
 import static uk.co.real_logic.artio.builder.Encoder.BITS_IN_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.ReplayQuery.trueBeginPosition;
 
 /**
@@ -358,11 +357,9 @@ public final class ReplayIndexExtractor
         final UnsafeBuffer[] segmentBuffers = new UnsafeBuffer[segmentCount];
         final int segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
 
-        final MappedByteBuffer headerByteBuffer = LoggerUtil.mapExistingFile(headerFile);
+        final UnsafeBuffer headerBuffer = new UnsafeBuffer(LoggerUtil.mapExistingFile(headerFile));
         try
         {
-            final UnsafeBuffer headerBuffer = new UnsafeBuffer(headerByteBuffer);
-
             final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
             final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
 
@@ -404,7 +401,7 @@ public final class ReplayIndexExtractor
         }
         finally
         {
-            IoUtil.unmap(headerByteBuffer);
+            ReplayIndexDescriptor.unmapBuffers(headerBuffer, segmentBuffers);
         }
     }
 

@@ -549,14 +549,7 @@ public class ReplayIndex implements Index, RedactHandler
 
         public void close()
         {
-            IoUtil.unmap(headerBuffer.byteBuffer());
-            for (final UnsafeBuffer segmentBuffer : segmentBuffers)
-            {
-                if (segmentBuffer != null)
-                {
-                    IoUtil.unmap(segmentBuffer.byteBuffer());
-                }
-            }
+            ReplayIndexDescriptor.unmapBuffers(headerBuffer, segmentBuffers);
         }
     }
 

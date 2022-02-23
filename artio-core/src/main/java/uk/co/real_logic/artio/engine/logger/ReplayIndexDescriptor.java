@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.BitUtil;
+import org.agrona.IoUtil;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -73,6 +74,18 @@ public final class ReplayIndexDescriptor
             }
         }
         return sessionIds;
+    }
+
+    static void unmapBuffers(final UnsafeBuffer headerBuffer, final UnsafeBuffer[] segmentBuffers)
+    {
+        IoUtil.unmap(headerBuffer.byteBuffer());
+        for (final UnsafeBuffer segmentBuffer : segmentBuffers)
+        {
+            if (segmentBuffer != null)
+            {
+                IoUtil.unmap(segmentBuffer.byteBuffer());
+            }
+        }
     }
 
     public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId, final int bufferSize)
