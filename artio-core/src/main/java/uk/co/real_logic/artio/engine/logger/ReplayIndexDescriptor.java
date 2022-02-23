@@ -29,8 +29,7 @@ public final class ReplayIndexDescriptor
 {
     private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
-
-    public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+    public static final int HEADER_FILE_SIZE = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
     public static final int RECORD_LENGTH = 32;
     static
@@ -42,15 +41,22 @@ public final class ReplayIndexDescriptor
         }
     }
 
-    static File replayIndexFile(final String logFileDir, final long fixSessionId, final int streamId)
+    static File replayIndexHeaderFile(final String logFileDir, final long fixSessionId, final int streamId)
     {
-        return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
+        return new File(logFileDir + File.separator + "replay-index-" + fixSessionId + "-" + streamId + "-header");
+    }
+
+    static File replayIndexSegmentFile(
+        final String logFileDir, final long fixSessionId, final int streamId, final int segmentIndex)
+    {
+        return new File(
+            logFileDir + File.separator + "replay-index-" + fixSessionId + "-" + streamId + "-" + segmentIndex);
     }
 
     static LongHashSet listReplayIndexSessionIds(final File logFileDir, final int streamId)
     {
         final String prefix = "replay-index-";
-        final String suffix = "-" + streamId;
+        final String suffix = "-" + streamId + "-header";
         final LongHashSet sessionIds = new LongHashSet();
         for (final File file : Objects.requireNonNull(logFileDir.listFiles()))
         {
@@ -105,30 +111,37 @@ public final class ReplayIndexDescriptor
         return buffer.getLong(BEGIN_CHANGE_OFFSET);
     }
 
-    static int recordCapacity(final int indexFileSize)
+    static int offsetInSegment(final long changePosition, final int capacity)
     {
-        return indexFileSize - INITIAL_RECORD_OFFSET;
+        // changePosition % capacity = changePosition & (capacity - 1)
+        return ((int)changePosition & (capacity - 1));
     }
 
-    static int offset(final long changePosition, final int capacity)
+    public static int segmentIndex(final long position, final int segmentSizeBitShift, final int indexFileSize)
     {
-        return INITIAL_RECORD_OFFSET + ((int)changePosition & (capacity - 1));
+        // position % indexFileSize
+        final long offsetWithinRing = position & (indexFileSize - 1);
+
+        // floor(offsetWithinRing / segmentSize)
+        return (int)(offsetWithinRing >> segmentSizeBitShift);
     }
 
-    static void checkIndexFileSize(final int indexFileSize)
+    static void checkIndexRecordCapacity(final int recordCapacity)
     {
-        final int recordCapacity = recordCapacity(indexFileSize);
         if (!BitUtil.isPowerOfTwo(recordCapacity))
         {
             throw new IllegalStateException(
-                "IndexFileSize must be a positive power of 2 + INITIAL_RECORD_OFFSET: indexFileSize=" + indexFileSize);
+                "IndexFileSize must be a positive power of 2: recordCapacity=" + recordCapacity);
         }
+    }
 
-        if ((recordCapacity % RECORD_LENGTH) != 0)
-        {
-            throw new IllegalStateException(
-                "IndexFileSize must be a multiple of RECORD_LENGTH + INITIAL_RECORD_OFFSET: indexFileSize=" +
-                indexFileSize);
-        }
+    public static int capacityToBytes(final int indexSegmentCapacity)
+    {
+        return indexSegmentCapacity * RECORD_LENGTH;
+    }
+
+    public static int segmentCount(final int indexFileCapacity, final int indexSegmentCapacity)
+    {
+        return indexFileCapacity / indexSegmentCapacity;
     }
 }

@@ -176,7 +176,8 @@ public class EngineContext implements AutoCloseable
         return new ReplayIndex(
             logFileDir,
             streamId,
-            configuration.replayIndexFileSize(),
+            configuration.replayIndexFileRecordCapacity(),
+            configuration.replayIndexSegmentRecordCapacity(),
             cacheNumSets,
             cacheSetSize,
             LoggerUtil::map,
@@ -206,7 +207,9 @@ public class EngineContext implements AutoCloseable
             idleStrategy,
             aeronArchive,
             errorHandler,
-            archiveReplayStream);
+            archiveReplayStream,
+            configuration.replayIndexFileRecordCapacity(),
+            configuration.replayIndexSegmentRecordCapacity());
     }
 
     private Replayer newReplayer(

@@ -30,8 +30,6 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
@@ -63,6 +61,10 @@ public class ReplayQuery implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
     private final int archiveReplayStream;
+    private final int segmentSize;
+    private final int segmentSizeBitShift;
+    private final int segmentCount;
+    private final int indexFileSize;
 
     private Subscription replaySubscription;
 
@@ -75,7 +77,9 @@ public class ReplayQuery implements AutoCloseable
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
-        final int archiveReplayStream)
+        final int archiveReplayStream,
+        final int indexFileCapacity,
+        final int indexSegmentCapacity)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
@@ -84,6 +88,11 @@ public class ReplayQuery implements AutoCloseable
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
         this.archiveReplayStream = archiveReplayStream;
+
+        this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
+        this.segmentSize = ReplayIndexDescriptor.capacityToBytes(indexSegmentCapacity);
+        this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
+        this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
 
         logFileDirFile = new File(logFileDir);
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
@@ -121,7 +130,7 @@ public class ReplayQuery implements AutoCloseable
         for (final SessionQuery query : fixSessionToIndex.values())
         {
             aggregateLowerPosition(query.queryStartPositions(), newStartPositions);
-            allSessionIds.remove(query.sessionId);
+            allSessionIds.remove(query.fixSessionId);
         }
 
         final LongHashSet.LongIterator sessionIdIt = allSessionIds.iterator();
@@ -147,21 +156,22 @@ public class ReplayQuery implements AutoCloseable
 
     private final class SessionQuery implements AutoCloseable
     {
-        private final ByteBuffer wrappedBuffer;
-        private final long sessionId;
-        private final UnsafeBuffer buffer;
-        private final int capacity;
+        private final long fixSessionId;
+
+        private final UnsafeBuffer headerBuffer;
+        private final UnsafeBuffer[] segmentBuffers;
+
         private final int actingBlockLength;
         private final int actingVersion;
 
-        SessionQuery(final long sessionId)
+        SessionQuery(final long fixSessionId)
         {
-            wrappedBuffer = indexBufferFactory.map(replayIndexFile(logFileDir, sessionId, requiredStreamId));
-            buffer = new UnsafeBuffer(wrappedBuffer);
-            capacity = recordCapacity(buffer.capacity());
-            this.sessionId = sessionId;
+            segmentBuffers = new UnsafeBuffer[segmentCount];
+            headerBuffer = new UnsafeBuffer(indexBufferFactory.map(replayIndexHeaderFile(
+                logFileDir, fixSessionId, requiredStreamId)));
+            this.fixSessionId = fixSessionId;
 
-            messageFrameHeader.wrap(buffer, 0);
+            messageFrameHeader.wrap(headerBuffer, 0);
             actingBlockLength = messageFrameHeader.blockLength();
             actingVersion = messageFrameHeader.version();
         }
@@ -174,8 +184,16 @@ public class ReplayQuery implements AutoCloseable
             final LogTag logTag,
             final MessageTracker messageTracker)
         {
+            final UnsafeBuffer[] segmentBuffers = this.segmentBuffers;
+            final int segmentSize = ReplayQuery.this.segmentSize;
+            final int segmentSizeBitShift = ReplayQuery.this.segmentSizeBitShift;
+            final ReplayIndexRecordDecoder indexRecord = ReplayQuery.this.indexRecord;
+            final IdleStrategy idleStrategy = ReplayQuery.this.idleStrategy;
+            final UnsafeBuffer headerBuffer = this.headerBuffer;
+            final int indexFileSize = ReplayQuery.this.indexFileSize;
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
+
             final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
             // LOOKUP THE RANGE FROM THE INDEX
@@ -184,22 +202,26 @@ public class ReplayQuery implements AutoCloseable
             RecordingRange currentRange = null;
 
             long iteratorPosition = getIteratorPosition();
-            long stopIteratingPosition = iteratorPosition + capacity;
+            long stopIteratingPosition = iteratorPosition + indexFileSize;
 
             int lastSequenceNumber = -1;
             while (iteratorPosition < stopIteratingPosition)
             {
-                final long changePosition = endChangeVolatile(buffer);
+                final long changePosition = endChangeVolatile(headerBuffer);
 
                 // Lapped by writer
-                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                if (changePosition > iteratorPosition &&
+                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
                 {
                     iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + capacity;
+                    stopIteratingPosition = iteratorPosition + indexFileSize;
                 }
 
-                final int offset = offset(iteratorPosition, capacity);
-                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
+                final UnsafeBuffer segmentBuffer = segmentBuffer(
+                    iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize);
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+
+                indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
@@ -209,7 +231,7 @@ public class ReplayQuery implements AutoCloseable
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
                 // if the block was read atomically with no updates
-                if (changePosition == beginChangeVolatile(buffer))
+                if (changePosition == beginChangeVolatile(headerBuffer))
                 {
                     idleStrategy.reset();
 
@@ -252,6 +274,23 @@ public class ReplayQuery implements AutoCloseable
             }
 
             return newReplayOperation(ranges, logTag, messageTracker);
+        }
+
+        private UnsafeBuffer segmentBuffer(
+            final long position,
+            final int segmentSizeBitShift,
+            final UnsafeBuffer[] segmentBuffers,
+            final int indexFileSize)
+        {
+            final int segmentIndex = ReplayIndexDescriptor.segmentIndex(position, segmentSizeBitShift, indexFileSize);
+            UnsafeBuffer segmentBuffer = segmentBuffers[segmentIndex];
+            if (segmentBuffer == null)
+            {
+                final File file = replayIndexSegmentFile(logFileDir, fixSessionId, requiredStreamId, segmentIndex);
+                segmentBuffer = new UnsafeBuffer(indexBufferFactory.map(file));
+                segmentBuffers[segmentIndex] = segmentBuffer;
+            }
+            return segmentBuffer;
         }
 
         private long skipToStart(final int beginSequenceNumber, final long iteratorPosition, final int sequenceNumber)
@@ -307,12 +346,12 @@ public class ReplayQuery implements AutoCloseable
             RecordingRange range = currentRange;
             if (range == null)
             {
-                range = new RecordingRange(recordingId, sessionId);
+                range = new RecordingRange(recordingId, fixSessionId);
             }
             else if (range.recordingId != recordingId)
             {
                 ranges.add(range);
-                range = new RecordingRange(recordingId, sessionId);
+                range = new RecordingRange(recordingId, fixSessionId);
             }
 
             range.add(
@@ -330,9 +369,9 @@ public class ReplayQuery implements AutoCloseable
         private long getIteratorPosition()
         {
             // positions on a monotonically increasing scale
-            long iteratorPosition = beginChangeVolatile(buffer);
+            long iteratorPosition = beginChangeVolatile(headerBuffer);
             // First iteration around you need to start at 0
-            if (iteratorPosition < capacity)
+            if (iteratorPosition < indexFileSize)
             {
                 iteratorPosition = 0;
             }
@@ -341,37 +380,47 @@ public class ReplayQuery implements AutoCloseable
 
         public Long2LongHashMap queryStartPositions()
         {
+            final UnsafeBuffer headerBuffer = this.headerBuffer;
+            final int indexFileSize = ReplayQuery.this.indexFileSize;
+            final ReplayIndexRecordDecoder indexRecord = ReplayQuery.this.indexRecord;
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
+            final int segmentSizeBitShift = ReplayQuery.this.segmentSizeBitShift;
+            final UnsafeBuffer[] segmentBuffers = this.segmentBuffers;
+            final int segmentSize = ReplayQuery.this.segmentSize;
+            final IdleStrategy idleStrategy = ReplayQuery.this.idleStrategy;
 
             long iteratorPosition = getIteratorPosition();
-            long stopIteratingPosition = iteratorPosition + capacity;
+            long stopIteratingPosition = iteratorPosition + indexFileSize;
 
             final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
             int highestSequenceIndex = 0;
 
             while (iteratorPosition != stopIteratingPosition)
             {
-                final long changePosition = endChangeVolatile(buffer);
+                final long changePosition = endChangeVolatile(headerBuffer);
 
                 // Lapped by writer
-                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                if (changePosition > iteratorPosition &&
+                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
                 {
                     iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + capacity;
+                    stopIteratingPosition = iteratorPosition + indexFileSize;
                 }
 
-                final int offset = offset(iteratorPosition, capacity);
-                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
+                final UnsafeBuffer segmentBuffer = segmentBuffer(
+                    iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize);
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+
+                indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();
                 final int sequenceIndex = indexRecord.sequenceIndex();
-                final int sequenceNumber = indexRecord.sequenceNumber();
                 final long recordingId = indexRecord.recordingId();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
                 // if the block was read atomically with no updates
-                if (changePosition == beginChangeVolatile(buffer))
+                if (changePosition == beginChangeVolatile(headerBuffer))
                 {
                     idleStrategy.reset();
 
@@ -396,9 +445,13 @@ public class ReplayQuery implements AutoCloseable
 
         public void close()
         {
-            if (wrappedBuffer instanceof MappedByteBuffer)
+            IoUtil.unmap(headerBuffer.byteBuffer());
+            for (final UnsafeBuffer segmentBuffer : segmentBuffers)
             {
-                IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
+                if (segmentBuffer != null)
+                {
+                    IoUtil.unmap(segmentBuffer.byteBuffer());
+                }
             }
         }
     }

@@ -329,50 +329,67 @@ public final class ReplayIndexExtractor
 
     public static void extract(
         final EngineConfiguration configuration,
-        final long sessionId,
+        final long fixSessionId,
         final boolean inbound,
         final ReplayIndexHandler handler)
     {
         final int streamId = inbound ? configuration.inboundLibraryStream() : configuration.outboundLibraryStream();
-        final File file = replayIndexFile(configuration.logFileDir(), sessionId, streamId);
+        final String logFileDir = configuration.logFileDir();
+        final File file = replayIndexHeaderFile(logFileDir, fixSessionId, streamId);
         if (file.exists())
         {
-            extract(file, handler);
+            extract(file, configuration.replayIndexFileRecordCapacity(),
+                configuration.replayIndexSegmentRecordCapacity(), fixSessionId, streamId, logFileDir, handler);
         }
     }
 
-    public static void extract(final File file, final ReplayIndexHandler handler)
+    public static void extract(
+        final File headerFile,
+        final int indexFileCapacity,
+        final int indexSegmentCapacity,
+        final long fixSessionId,
+        final int streamId,
+        final String logFileDir,
+        final ReplayIndexHandler handler)
     {
-        final MappedByteBuffer mappedByteBuffer = LoggerUtil.mapExistingFile(file);
+        final int indexFileSize = capacityToBytes(indexFileCapacity);
+        final int segmentSize = capacityToBytes(indexSegmentCapacity);
+        final int segmentCount = segmentCount(indexFileCapacity, indexSegmentCapacity);
+        final UnsafeBuffer[] segmentBuffers = new UnsafeBuffer[segmentCount];
+        final int segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
+
+        final MappedByteBuffer headerByteBuffer = LoggerUtil.mapExistingFile(headerFile);
         try
         {
-            final UnsafeBuffer buffer = new UnsafeBuffer(mappedByteBuffer);
+            final UnsafeBuffer headerBuffer = new UnsafeBuffer(headerByteBuffer);
 
             final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
             final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
 
-            messageFrameHeader.wrap(buffer, 0);
+            messageFrameHeader.wrap(headerBuffer, 0);
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
 
-            final int capacity = recordCapacity(buffer.capacity());
-
-            long iteratorPosition = beginChangeVolatile(buffer);
-            long stopIteratingPosition = iteratorPosition + capacity;
+            long iteratorPosition = beginChangeVolatile(headerBuffer);
+            long stopIteratingPosition = iteratorPosition + indexFileSize;
 
             while (iteratorPosition < stopIteratingPosition)
             {
-                final long changePosition = endChangeVolatile(buffer);
+                final long changePosition = endChangeVolatile(headerBuffer);
 
-                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                if (changePosition > iteratorPosition &&
+                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
                 {
                     handler.onLapped();
                     iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + capacity;
+                    stopIteratingPosition = iteratorPosition + indexFileSize;
                 }
 
-                final int offset = offset(iteratorPosition, capacity);
-                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
+                final UnsafeBuffer segmentBuffer = segmentBuffer(
+                    iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize,
+                    fixSessionId, streamId, logFileDir);
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+                indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();
 
                 if (beginPosition == 0)
@@ -387,7 +404,26 @@ public final class ReplayIndexExtractor
         }
         finally
         {
-            IoUtil.unmap(mappedByteBuffer);
+            IoUtil.unmap(headerByteBuffer);
         }
+    }
+
+    private static UnsafeBuffer segmentBuffer(
+        final long position,
+        final int segmentSizeBitShift,
+        final UnsafeBuffer[] segmentBuffers,
+        final int indexFileSize,
+        final long fixSessionId,
+        final int streamId, final String logFileDir)
+    {
+        final int segmentIndex = ReplayIndexDescriptor.segmentIndex(position, segmentSizeBitShift, indexFileSize);
+        UnsafeBuffer segmentBuffer = segmentBuffers[segmentIndex];
+        if (segmentBuffer == null)
+        {
+            final File file = replayIndexSegmentFile(logFileDir, fixSessionId, streamId, segmentIndex);
+            segmentBuffer = new UnsafeBuffer(LoggerUtil.mapExistingFile(file));
+            segmentBuffers[segmentIndex] = segmentBuffer;
+        }
+        return segmentBuffer;
     }
 }

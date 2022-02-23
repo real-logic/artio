@@ -15,11 +15,16 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.logger.ReplayIndexExtractor.ReplayIndexHandler;
+import uk.co.real_logic.artio.engine.logger.ReplayIndexExtractor.StartPositionExtractor;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Prints out the state of a replay index file.
@@ -28,11 +33,25 @@ public final class ReplayIndexDumper
 {
     public static void main(final String[] args) throws IOException
     {
-        final File file = new File(args[0]);
+        final File headerFile = new File(args[0]);
+        final long fixSessionId = Long.parseLong(args[1]);
+        final int streamId = Integer.parseInt(args[2]);
+        final String logFileDir = headerFile.getParent();
 
-        final ReplayIndexExtractor.StartPositionExtractor positionExtractor =
-            new ReplayIndexExtractor.StartPositionExtractor();
-        ReplayIndexExtractor.extract(file, positionExtractor);
+        final Consumer<ReplayIndexHandler> extract = handler ->
+        {
+            ReplayIndexExtractor.extract(
+                headerFile,
+                EngineConfiguration.DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+                EngineConfiguration.DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY,
+                fixSessionId,
+                streamId,
+                logFileDir,
+                handler);
+        };
+
+        final StartPositionExtractor positionExtractor = new StartPositionExtractor();
+        extract.accept(positionExtractor);
         System.out.println("positionExtractor.highestSequenceIndex() = " + positionExtractor.highestSequenceIndex());
         System.out.println("positionExtractor.recordingIdToStartPosition() = " +
             positionExtractor.recordingIdToStartPosition());
@@ -40,11 +59,11 @@ public final class ReplayIndexDumper
         final String output = "replay-index-dump.csv";
         try (BufferedWriter out = new BufferedWriter(new FileWriter(output)))
         {
-            ReplayIndexExtractor.extract(file, new ReplayIndexExtractor.PrintError(out));
+            extract.accept(new ReplayIndexExtractor.PrintError(out));
         }
 
         final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
-        ReplayIndexExtractor.extract(file, validator);
+        extract.accept(validator);
 
         final List<ReplayIndexExtractor.ValidationError> errors = validator.errors();
         errors.forEach(System.err::println);

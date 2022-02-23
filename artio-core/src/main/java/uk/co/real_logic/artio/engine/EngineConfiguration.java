@@ -63,7 +63,7 @@ import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.HEADER_FILE_SIZE;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.FixPProtocolType.ILINK_3;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
@@ -88,10 +88,27 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Property name for the directory to log archive data into
      */
     public static final String LOG_FILE_DIR_PROP = "logging.dir";
+
     /**
-     * Property name for size of logging index files
+     * Property name for maximum number of records in logging index files
      */
+    public static final String REPLAY_INDEX_RECORD_CAPACITY_PROP = "logging.index.records";
+
+    /**
+     * Deprecated property name for size of logging index files. Do not use this, set
+     * {@link #REPLAY_INDEX_RECORD_CAPACITY_PROP} instead.
+     */
+    @Deprecated
     public static final String REPLAY_INDEX_FILE_SIZE_PROP = "logging.index.size";
+
+    static
+    {
+        if (System.getProperty(REPLAY_INDEX_FILE_SIZE_PROP) != null)
+        {
+            System.err.println(REPLAY_INDEX_FILE_SIZE_PROP + " is deprecated, please use " +
+                REPLAY_INDEX_RECORD_CAPACITY_PROP + " instead.");
+        }
+    }
 
     // Care needs to be taken when setting the fragment limits, and buffer sizes
     // The inbound bytes received and buffer sizes should always be set low enough
@@ -144,9 +161,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     // ------------------------------------------------
 
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
-    public static final int DEFAULT_REPLAY_INDEX_RECORD_CAPACITY = 65536;
-    public static final int DEFAULT_REPLAY_INDEX_FILE_SIZE =
-        replayIndexFileCapacityToBytes(DEFAULT_REPLAY_INDEX_RECORD_CAPACITY);
+    public static final int DEFAULT_REPLAY_INDEX_RECORD_CAPACITY = 262144;
+    public static final int DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY = 65536;
     public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
     public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
@@ -208,7 +224,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String host = null;
     private int port;
-    private int replayIndexFileSizeInBytes = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
+    private int replayIndexFileRecordCapacity = getInteger(
+        REPLAY_INDEX_RECORD_CAPACITY_PROP, DEFAULT_REPLAY_INDEX_RECORD_CAPACITY);
+    private int replayIndexSegmentRecordCapacity = DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY;
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
     private int loggerCacheNumSets = DEFAULT_LOGGER_CACHE_NUM_SETS;
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
@@ -405,36 +423,37 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the size of index files. It is recommended that you use {@link #replayIndexFileCapacityToBytes(int)}.
+     * Sets the maximum size of index files. as calculated by the number of records that can be stored per FIX session.
+     * In business terms this is maximum number of messages back in history that Artio can respond to resend requests
+     * from. Each session's index storage is divided into segments, the size of a segment is configured by
+     * {@link #replayIndexSegmentRecordCapacity(int)}.
      *
-     * This is the size in bytes for the replay index file that is used for each session.
-     * If you want to size in terms of the last N Fix message fragments that you have received then
-     * use the formula: INITIAL_RECORD_OFFSET + N * ReplayIndexDescriptor.RECORD_LENGTH.
+     * If this isn't a power of two, then the next positive power of two will be used.
      *
-     * @param indexFileSizeInBytes the size of index files.
+     * {@link #replayIndexFileCapacityToBytes(int)} can be used in order to calculate the maximum space required per
+     * FIX session.
+     *
+     * @param replayIndexFileRecordCapacity the number of fix messages to keep track of the replay index.
      * @return this
-     * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
-     * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
-     * @see #replayIndexFileCapacityToBytes(int)
      */
-    @Deprecated
-    public EngineConfiguration replayIndexFileSize(final int indexFileSizeInBytes)
+    public EngineConfiguration replayIndexFileRecordCapacity(final int replayIndexFileRecordCapacity)
     {
-        this.replayIndexFileSizeInBytes = indexFileSizeInBytes;
+        this.replayIndexFileRecordCapacity = findNextPositivePowerOfTwo(replayIndexFileRecordCapacity);
         return this;
     }
 
     /**
-     * Sets the size of index files. as calculated by the number of records that can be stored. This is maximum number
-     * of messages back in history that Artio can respond to resend requests from.
+     * Sets the capacity of an individual segment file. See {@link #replayIndexFileRecordCapacity(int)} for more
+     * details.
      *
-     * @param indexFileCapacityInRecords the number of fix messages to keep track of the replay index.
+     * If this isn't a power of two, then the next positive power of two will be used.
+     *
+     * @param indexSegmentCapacityInRecords the capacity of an individual segment file
      * @return this
-     * @see #replayIndexFileSize(int)
      */
-    public EngineConfiguration replayIndexFileRecordCapacity(final int indexFileCapacityInRecords)
+    public EngineConfiguration replayIndexSegmentRecordCapacity(final int indexSegmentCapacityInRecords)
     {
-        this.replayIndexFileSizeInBytes = replayIndexFileCapacityToBytes(indexFileCapacityInRecords);
+        this.replayIndexSegmentRecordCapacity = findNextPositivePowerOfTwo(indexSegmentCapacityInRecords);
         return this;
     }
 
@@ -447,8 +466,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public static int replayIndexFileCapacityToBytes(final int requestedNumberOfRecordsToStore)
     {
-        return INITIAL_RECORD_OFFSET +
-            findNextPositivePowerOfTwo(ReplayIndexDescriptor.RECORD_LENGTH * requestedNumberOfRecordsToStore);
+        return HEADER_FILE_SIZE + ReplayIndexDescriptor.RECORD_LENGTH *
+            findNextPositivePowerOfTwo(requestedNumberOfRecordsToStore);
     }
 
     /**
@@ -1522,9 +1541,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logFileDir;
     }
 
-    public int replayIndexFileSize()
+    public int replayIndexFileRecordCapacity()
     {
-        return replayIndexFileSizeInBytes;
+        return replayIndexFileRecordCapacity;
+    }
+
+    public int replayIndexSegmentRecordCapacity()
+    {
+        return replayIndexSegmentRecordCapacity;
     }
 
     public int loggerCacheSetSize()

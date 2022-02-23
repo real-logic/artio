@@ -3,6 +3,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import org.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 
 import java.io.File;
 
@@ -36,14 +37,22 @@ public final class ReplayIndexPositionScanner
         ReplayIndexDescriptor.listReplayIndexSessionIds(logFileDir, streamId)
             .stream()
             .sorted()
-            .forEach(sessionId ->
+            .forEach(fixSessionId ->
             {
-                final File file = ReplayIndexDescriptor.replayIndexFile(logFilePath, sessionId, streamId);
+                final File headerFile = ReplayIndexDescriptor.replayIndexHeaderFile(
+                    logFilePath, fixSessionId, streamId);
                 final ReplayIndexExtractor.StartPositionExtractor positionExtractor =
                     new ReplayIndexExtractor.StartPositionExtractor();
-                ReplayIndexExtractor.extract(file, positionExtractor);
+                ReplayIndexExtractor.extract(
+                    headerFile,
+                    EngineConfiguration.DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+                    EngineConfiguration.DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY,
+                    fixSessionId,
+                    streamId,
+                    logFileDir.getPath(),
+                    positionExtractor);
 
-                System.out.println("file = " + file);
+                System.out.println("file = " + headerFile);
                 System.out.println("positionExtractor.highestSequenceIndex() = " +
                     positionExtractor.highestSequenceIndex());
                 final Long2LongHashMap recordingIdToStartPosition = positionExtractor.recordingIdToStartPosition();
@@ -54,7 +63,14 @@ public final class ReplayIndexPositionScanner
 
                 final ReplayIndexExtractor.BoundaryPositionExtractor boundaryPositionExtractor =
                     new ReplayIndexExtractor.BoundaryPositionExtractor(false);
-                ReplayIndexExtractor.extract(file, boundaryPositionExtractor);
+                ReplayIndexExtractor.extract(
+                    headerFile,
+                    EngineConfiguration.DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
+                    EngineConfiguration.DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY,
+                    fixSessionId,
+                    streamId,
+                    logFileDir.getPath(),
+                    boundaryPositionExtractor);
                 final Long2LongHashMap recordingIdToMaxPosition = boundaryPositionExtractor.recordingIdToPosition();
                 System.out.println("boundaryPositionExtractor = " + recordingIdToMaxPosition);
 
