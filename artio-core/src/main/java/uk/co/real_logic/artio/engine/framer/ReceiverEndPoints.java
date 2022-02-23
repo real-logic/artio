@@ -32,6 +32,11 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class ReceiverEndPoints extends TransportPoller
 {
+    public static final String ARTIO_ITERATION_THRESHOLD_PROP_NAME = "fix.core.iteration.threshold";
+
+    public static final int ARTIO_ITERATION_THRESHOLD = Integer.getInteger(
+        ARTIO_ITERATION_THRESHOLD_PROP_NAME, ITERATION_THRESHOLD_DEFAULT);
+
     private final ErrorHandler errorHandler;
 
     // Authentication flow requires periodic polling of the receiver end points until the authentication is
@@ -105,6 +110,11 @@ class ReceiverEndPoints extends TransportPoller
             this.endPoints = ArrayUtil.remove(endPoints, index);
 
             addToRequiredPollingEndpoints(endPoint);
+
+            if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+            {
+                System.out.println("receiverEndPointPollingRequired: " + connectionId + " @ " + System.nanoTime());
+            }
         }
         else
         {
@@ -123,6 +133,11 @@ class ReceiverEndPoints extends TransportPoller
             final ReceiverEndPoint endPoint = requiredPollingEndPoints[index];
             this.requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, index);
             addToNormalEndpoints(endPoint);
+
+            if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+            {
+                System.out.println("receiverEndPointPollingOptional: " + connectionId + " @ " + System.nanoTime());
+            }
         }
         else
         {
@@ -217,7 +232,7 @@ class ReceiverEndPoints extends TransportPoller
         int bytesReceived = 0;
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int numEndPoints = endPoints.length;
-        final int threshold = ITERATION_THRESHOLD - numRequiredPollingEndPoints;
+        final int threshold = ARTIO_ITERATION_THRESHOLD - numRequiredPollingEndPoints;
         if (numEndPoints <= threshold)
         {
             bytesReceived = pollArray(bytesReceived, endPoints, numEndPoints);

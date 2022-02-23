@@ -310,14 +310,12 @@ abstract class GatewaySessions
                     checkedOnAuthenticationResult();
                     return onSendingRejectMessage();
 
-                case LINGERING_REJECT_MESSAGE:
-                    return false;
-
                 case INDEXER_CATCHUP:
                     onIndexerCatchup();
                     return false;
 
                 case PENDING:
+                case LINGERING_REJECT_MESSAGE:
                 default:
                     return false;
             }
