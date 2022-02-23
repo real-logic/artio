@@ -283,6 +283,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             }
             else
             {
+                final long rejectStartInNs = System.nanoTime();
                 int offset = this.pendingAcceptorLogonMsgOffset;
                 int length = this.pendingAcceptorLogonMsgLength;
                 DirectBuffer buffer = this.buffer;
@@ -292,6 +293,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 offset = 0;
                 buffer = passwordCleaner.cleanedBuffer();
                 length = passwordCleaner.cleanedLength();
+
+                final long afterPasswordCleanInNs = System.nanoTime();
 
                 // No need to save this sequenceIndex update as we are at a point where a genuine session doesn't exist
                 sequenceIndex++;
@@ -311,12 +314,34 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
                 if (Pressure.isBackPressured(position))
                 {
+                    // TODO: re-add to required polling at this point.
+                    if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+                    {
+                        System.out.println("Backpressured when enqueuing reject");
+                    }
                     return 1;
                 }
+
+                final long afterSaveInNs = System.nanoTime();
 
                 DebugLogger.logFixMessage(FIX_MESSAGE, LOGON_MESSAGE_TYPE, "Auth Reject ", buffer, offset, length);
 
                 completeDisconnect(pendingAcceptorLogon.reason());
+
+                final long afterDisconnectInNs = System.nanoTime();
+
+                if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+                {
+                    final long passwordCleanInNs = afterPasswordCleanInNs - rejectStartInNs;
+                    final long saveInNs = afterSaveInNs - afterPasswordCleanInNs;
+                    final long disconnectInNs = afterDisconnectInNs - afterSaveInNs;
+                    System.out.println("FixReceiverEndPoint.pollPendingLogon: " +
+                        connectionId +
+                        ", passwordCleanInNs = " + passwordCleanInNs +
+                        ", saveInNs = " + saveInNs +
+                        ", disconnectInNs = " + disconnectInNs +
+                        " @ " + rejectStartInNs);
+                }
             }
         }
 
