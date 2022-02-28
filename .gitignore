@@ -67,3 +67,6 @@ artio-ilink3-codecs/src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.
 artio-system-tests/generated/
 
 artio-system-tests/src/perf/java/br/
+benchmark-client-archive/
+latencies.csv
+latencies.png
