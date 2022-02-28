@@ -16,15 +16,23 @@
 package uk.co.real_logic.artio.system_benchmarks;
 
 import io.aeron.driver.MediaDriver;
-import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.builder.LogoutEncoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.LibraryConnectHandler;
+import uk.co.real_logic.artio.validation.AuthenticationProxy;
+import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
-import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.artio.system_benchmarks.BenchmarkConfiguration.*;
@@ -49,7 +57,6 @@ public final class FixBenchmarkServer
 
                 if (notConnected && library.isConnected())
                 {
-                    System.out.println("Connected");
                     break;
                 }
             }
@@ -72,21 +79,16 @@ public final class FixBenchmarkServer
 
     private static EngineConfiguration engineConfiguration()
     {
-        final String acceptorLogs = "acceptor_logs";
-        final File dir = new File(acceptorLogs);
-        if (dir.exists())
-        {
-            IoUtil.delete(dir, false);
-        }
-
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.printAeronStreamIdentifiers(true);
-        configuration.authenticationStrategy((logon) -> !REJECT_LOGON);
+
+        configuration.authenticationStrategy(new BenchmarkAuthenticationStrategy());
 
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
-            .logFileDir(acceptorLogs)
+            .deleteLogFileDirOnStart(true)
+            .logFileDir("acceptor_logs")
             .logInboundMessages(LOG_INBOUND_MESSAGES)
             .logOutboundMessages(LOG_OUTBOUND_MESSAGES)
             .framerIdleStrategy(idleStrategy());
@@ -100,7 +102,53 @@ public final class FixBenchmarkServer
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
             .sessionAcquireHandler((session, acquiredInfo) -> new BenchmarkSessionHandler())
-            .sessionExistsHandler(new AcquiringSessionExistsHandler(true));
+            .sessionExistsHandler(new AcquiringSessionExistsHandler(true))
+            .libraryConnectHandler(new LibraryConnectHandler()
+            {
+                public void onConnect(final FixLibrary library)
+                {
+                    System.out.println("Library: onConnect");
+                }
+
+                public void onDisconnect(final FixLibrary library)
+                {
+                    System.out.println("Library: onDisconnect");
+                }
+            });
     }
 
+    private static class BenchmarkAuthenticationStrategy implements AuthenticationStrategy
+    {
+        private static final byte[] INVALID_PASSWORD = "Invalid Password".getBytes(StandardCharsets.US_ASCII);
+        private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
+        public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
+        {
+            final int length = VALID_PASSWORD_CHARS.length;
+            final boolean validPassword = logon.hasPassword() &&
+                logon.passwordLength() == length &&
+                CodecUtil.equals(logon.password(), VALID_PASSWORD_CHARS, length);
+
+            // Simulate the delay of talking to a logon service
+            scheduledExecutorService.schedule(() ->
+            {
+                if (validPassword)
+                {
+                    authProxy.accept();
+                }
+                else
+                {
+                    final LogoutEncoder logout = new LogoutEncoder();
+                    logout.text(INVALID_PASSWORD);
+                    authProxy.reject(logout, LOGOUT_LINGER_TIMEOUT);
+                }
+            }, 20L, TimeUnit.MILLISECONDS);
+        }
+
+        public boolean authenticate(final AbstractLogonDecoder logon)
+        {
+            // Unused
+            return true;
+        }
+    }
 }

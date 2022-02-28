@@ -66,3 +66,7 @@ client-aeron/
 artio-ilink3-codecs/src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml
 artio-system-tests/generated/
 
+benchmark-client-archive/
+latencies.csv
+latencies.png
+
