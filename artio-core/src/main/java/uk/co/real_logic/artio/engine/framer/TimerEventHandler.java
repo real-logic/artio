@@ -35,6 +35,11 @@ final class TimerEventHandler implements DeadlineTimerWheel.TimerHandler
 
     public boolean onTimerExpiry(final TimeUnit timeUnit, final long now, final long timerId)
     {
+        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+        {
+            System.out.println("TimerEventHandler.onTimerExpiry");
+        }
+
         final PendingAcceptorLogon pendingAcceptorLogon = timerIdToPendingAcceptorLogons.get(timerId);
         if (pendingAcceptorLogon == null)
         {
@@ -49,6 +54,11 @@ final class TimerEventHandler implements DeadlineTimerWheel.TimerHandler
 
     public void startLingering(final long timerId, final PendingAcceptorLogon pendingAcceptorLogon)
     {
+        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+        {
+            System.out.println("TimerEventHandler.startLingering: " + timerId + ", connectionId=" +
+                pendingAcceptorLogon.receiverEndPoint.connectionId);
+        }
         timerIdToPendingAcceptorLogons.put(timerId, pendingAcceptorLogon);
     }
 }
