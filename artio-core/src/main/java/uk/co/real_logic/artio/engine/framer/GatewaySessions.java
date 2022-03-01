@@ -461,6 +461,10 @@ abstract class GatewaySessions
 
         public void onLingerTimeout()
         {
+            if (GatewaySessions.TEMPORARY_LINGER_TIMING)
+            {
+                System.out.println("PendingAcceptorLogon.onLingerTimeout: " + receiverEndPoint.connectionId);
+            }
             setState(AuthenticationState.REJECTED);
             final ReceiverEndPoint receiverEndPoint = this.receiverEndPoint;
             receiverEndPoint.poll();
