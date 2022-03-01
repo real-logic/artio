@@ -369,6 +369,25 @@ public final class TestFixConnection implements AutoCloseable
         send(offset, length);
     }
 
+    public void awaitDisconnect()
+    {
+        try
+        {
+            final int read = socket.read(readBuffer);
+            if (read > 0)
+            {
+                awaitDisconnect();
+            }
+        }
+        catch (final IOException e)
+        {
+            if (socket.isConnected())
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+        }
+    }
+
     private void send(final int offset, final int length)
     {
         try

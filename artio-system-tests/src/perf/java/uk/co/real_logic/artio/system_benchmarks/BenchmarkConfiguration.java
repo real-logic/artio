@@ -39,8 +39,8 @@ public final class BenchmarkConfiguration
     public static final int MAX_MESSAGES_IN_FLIGHT = Integer.getInteger("fix.benchmark.max_messages_in_flight", 20);
     public static final int SEND_RATE_PER_SECOND = Integer.getInteger("fix.benchmark.send_rate_sec", 1_000);
     public static final int NUMBER_OF_SESSIONS = Integer.getInteger("fix.benchmark.num_sessions", 25);
-    public static final long LOGOUT_LINGER_TIMEOUT = Long.getLong(
-        "fix.benchmark.logout_linger_timeout", TimeUnit.SECONDS.toNanos(2));
+    public static final long LOGOUT_LINGER_TIMEOUT_IN_MS = Long.getLong(
+        "fix.benchmark.logout_linger_timeout", TimeUnit.SECONDS.toMillis(2));
     public static final String VALID_PASSWORD = "password";
     public static final char[] VALID_PASSWORD_CHARS = VALID_PASSWORD.toCharArray();
 
