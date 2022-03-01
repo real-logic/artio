@@ -37,7 +37,6 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.concurrent.TimeUnit;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;

@@ -60,7 +60,7 @@ class ReceiverEndPoints extends TransportPoller
         }
         else
         {
-            addToNormalEndpoints(endPoint);
+            addToNormalEndpoints(endPoint, true);
         }
     }
 
@@ -69,12 +69,15 @@ class ReceiverEndPoints extends TransportPoller
         requiredPollingEndPoints = ArrayUtil.add(requiredPollingEndPoints, endPoint);
     }
 
-    private void addToNormalEndpoints(final ReceiverEndPoint endPoint)
+    private void addToNormalEndpoints(final ReceiverEndPoint endPoint, final boolean register)
     {
         try
         {
             endPoints = ArrayUtil.add(endPoints, endPoint);
-            endPoint.register(selector);
+            if (register)
+            {
+                endPoint.register(selector);
+            }
         }
         catch (final IOException ex)
         {
@@ -110,11 +113,6 @@ class ReceiverEndPoints extends TransportPoller
             this.endPoints = ArrayUtil.remove(endPoints, index);
 
             addToRequiredPollingEndpoints(endPoint);
-
-            if (GatewaySessions.TEMPORARY_LINGER_TIMING)
-            {
-                System.out.println("receiverEndPointPollingRequired: " + connectionId + " @ " + System.nanoTime());
-            }
         }
         else
         {
@@ -124,7 +122,7 @@ class ReceiverEndPoints extends TransportPoller
         }
     }
 
-    void receiverEndPointPollingOptional(final long connectionId)
+    void receiverEndPointPollingOptional(final long connectionId, final boolean register)
     {
         final ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
         final int index = findEndPoint(connectionId, requiredPollingEndPoints);
@@ -132,12 +130,7 @@ class ReceiverEndPoints extends TransportPoller
         {
             final ReceiverEndPoint endPoint = requiredPollingEndPoints[index];
             this.requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, index);
-            addToNormalEndpoints(endPoint);
-
-            if (GatewaySessions.TEMPORARY_LINGER_TIMING)
-            {
-                System.out.println("receiverEndPointPollingOptional: " + connectionId + " @ " + System.nanoTime());
-            }
+            addToNormalEndpoints(endPoint, register);
         }
         else
         {
@@ -201,12 +194,6 @@ class ReceiverEndPoints extends TransportPoller
             {
                 if (backpressuredEndPoint.retryFrameMessages())
                 {
-                    if (GatewaySessions.TEMPORARY_LINGER_TIMING)
-                    {
-                        System.out.println("no longer backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
-                            " @ " + System.nanoTime());
-                    }
-
                     this.backpressuredEndPoint = null;
 
                     bytesReceived += pollNormalEndPoints(numRequiredPollingEndPoints);
@@ -255,12 +242,6 @@ class ReceiverEndPoints extends TransportPoller
                     final int polledBytes = endPoint.poll();
                     if (polledBytes < 0)
                     {
-                        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
-                        {
-                            System.out.println("backpressuredEndPoint: " + backpressuredEndPoint.connectionId() +
-                                " @ " + System.nanoTime());
-                        }
-
                         backpressuredEndPoint = endPoint;
                         bytesReceived -= polledBytes;
                         break;

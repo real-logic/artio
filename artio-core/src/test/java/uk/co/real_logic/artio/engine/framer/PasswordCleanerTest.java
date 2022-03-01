@@ -28,8 +28,6 @@ import static org.junit.Assert.*;
 @RunWith(Parameterized.class)
 public class PasswordCleanerTest
 {
-    // TODO: checksums?
-
     private static final String EXAMPLE_LOGON =
         "8=FIX.4.4\0019=099\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\00198=0\001108=10\001141=N\001553=bob\001554=Uv1aegoh\00110=062\001";

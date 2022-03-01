@@ -49,6 +49,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     private static final long AUTHENTICATION_TIMEOUT_IN_MS = 500L;
     private final ControllableAuthenticationStrategy auth = new ControllableAuthenticationStrategy();
 
+    private long initiateTimeoutInMs = TEST_REPLY_TIMEOUT_IN_MS;
+
     @Before
     public void launch()
     {
@@ -89,7 +91,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.reject();
 
-        assertDisconnectRejected(reply);
+        assertDisconnectRejected(reply, true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -98,11 +100,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         // We run this test twice to ensure that there's no state that persisted over reconnects
         // Which was an observed bug in Artio 0.117.
 
-        rejectLogonWithCustomReject();
+        rejectLogonWithCustomReject(LINGER_TIMEOUT_IN_MS);
 
         auth.reset();
 
-        rejectLogonWithCustomReject();
+        rejectLogonWithCustomReject(LINGER_TIMEOUT_IN_MS);
 
         final EngineConfiguration config = initiatingEngine.configuration();
         final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
@@ -114,19 +116,33 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    private void rejectLogonWithCustomReject()
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldBeAbleToRejectLogonsWithCustomMessagesEarlyDisconnect()
+    {
+        // Perform an early disconnect from the initiator side
+
+        initiateTimeoutInMs = 200;
+
+        rejectLogonWithCustomReject(LINGER_TIMEOUT_IN_MS * 2);
+    }
+
+    private void rejectLogonWithCustomReject(final long lingerTimeoutInMs)
     {
         final Reply<Session> reply = acquireExecutingAuthProxy();
 
         final RejectEncoder rejectEncoder = newRejectEncoder();
 
         final long startTime = System.currentTimeMillis();
-        auth.reject(rejectEncoder, LINGER_TIMEOUT_IN_MS);
+        auth.reject(rejectEncoder, lingerTimeoutInMs);
 
-        assertDisconnectRejected(reply);
-        final long rejectTime = System.currentTimeMillis() - startTime;
-        assertThat(rejectTime, greaterThanOrEqualTo(LINGER_TIMEOUT_IN_MS));
-        assertThat(rejectTime, lessThan(2 * LINGER_TIMEOUT_IN_MS));
+        final boolean acceptorDisconnect = initiateTimeoutInMs > lingerTimeoutInMs;
+        assertDisconnectRejected(reply, acceptorDisconnect);
+        if (acceptorDisconnect)
+        {
+            final long rejectTime = System.currentTimeMillis() - startTime;
+            assertThat(rejectTime, greaterThanOrEqualTo(lingerTimeoutInMs));
+            assertThat(rejectTime, lessThan(2 * lingerTimeoutInMs));
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS, expected = NullPointerException.class)
@@ -172,7 +188,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.reject(invalidEncoder, 0);
 
-        assertDisconnectRejected(reply);
+        assertDisconnectRejected(reply, true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -182,7 +198,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         final Reply<Session> reply = acquireAuthProxy();
 
-        assertDisconnectRejected(reply);
+        assertDisconnectRejected(reply, true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -232,7 +248,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     {
         final long start = System.currentTimeMillis();
         final Reply<Session> reply = acquireExecutingAuthProxy();
-        assertDisconnectRejected(reply);
+        assertDisconnectRejected(reply, true);
         final long duration = System.currentTimeMillis() - start;
         assertThat(duration, is(greaterThanOrEqualTo(AUTHENTICATION_TIMEOUT_IN_MS)));
         assertThat(duration, is(lessThan(TEST_REPLY_TIMEOUT_IN_MS)));
@@ -315,11 +331,15 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         return rejectEncoder;
     }
 
-    private void assertDisconnectRejected(final Reply<Session> reply)
+    private void assertDisconnectRejected(final Reply<Session> reply, final boolean acceptorDisconnect)
     {
         testSystem.awaitReply(reply);
-        assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
-        assertThat(reply.error().getMessage(), containsString("UNABLE_TO_LOGON: Disconnected before session active"));
+        if (acceptorDisconnect)
+        {
+            assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
+            assertThat(reply.error().getMessage(),
+                containsString("UNABLE_TO_LOGON: Disconnected before session active"));
+        }
     }
 
     private Reply<Session> acquireExecutingAuthProxy()
@@ -333,7 +353,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
     private Reply<Session> acquireAuthProxy()
     {
-        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID,
+            initiateTimeoutInMs);
 
         assertEventuallyTrue("failed to receive auth proxy", () ->
         {
