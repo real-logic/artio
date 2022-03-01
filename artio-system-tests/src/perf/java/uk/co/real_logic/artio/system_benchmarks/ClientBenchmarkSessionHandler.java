@@ -188,7 +188,7 @@ public final class ClientBenchmarkSessionHandler implements SessionHandler
             for (int i = 0; i < MESSAGES_EXCHANGED; i++)
             {
                 final long sendTimeInNs = SEND_TIMES_IN_NS[i];
-                csv.println(TimeUnit.NANOSECONDS.toSeconds(sendTimeInNs) + ", " + LATENCIES_IN_NS[i]);
+                csv.println(sendTimeInNs + ", " + LATENCIES_IN_NS[i]);
             }
             csv.flush();
         }
