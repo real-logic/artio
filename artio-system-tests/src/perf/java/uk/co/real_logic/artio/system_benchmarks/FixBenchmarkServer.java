@@ -140,7 +140,7 @@ public final class FixBenchmarkServer
                 {
                     final LogoutEncoder logout = new LogoutEncoder();
                     logout.text(INVALID_PASSWORD);
-                    authProxy.reject(logout, LOGOUT_LINGER_TIMEOUT);
+                    authProxy.reject(logout, TimeUnit.NANOSECONDS.toMillis(LOGOUT_LINGER_TIMEOUT));
                 }
             }, 20L, TimeUnit.MILLISECONDS);
         }
