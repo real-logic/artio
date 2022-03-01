@@ -9,6 +9,8 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
+import static uk.co.real_logic.artio.system_benchmarks.BenchmarkConfiguration.BAD_LOGON_NO_LINGER;
+
 public class JustLogonClient
 {
     public static void main(final String[] args) throws IOException
@@ -33,7 +35,7 @@ public class JustLogonClient
                 System.out.println(logout);
 
                 // Linger connection for maximum amount of time possible
-                if (badLogon)
+                if (badLogon && !BAD_LOGON_NO_LINGER)
                 {
                     testFixConnection.awaitDisconnect();
                 }
