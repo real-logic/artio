@@ -9,12 +9,12 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
-import static uk.co.real_logic.artio.system_benchmarks.BenchmarkConfiguration.LOGOUT_LINGER_TIMEOUT;
-
 public class JustLogonClient
 {
     public static void main(final String[] args) throws IOException
     {
+        int logonCount = 0;
+
         while (true)
         {
             System.out.println("Attempting logon:");
@@ -35,12 +35,13 @@ public class JustLogonClient
                 // Linger connection for maximum amount of time possible
                 if (badLogon)
                 {
-                    LockSupport.parkNanos(LOGOUT_LINGER_TIMEOUT);
+                    testFixConnection.awaitDisconnect();
                 }
             }
-            System.out.println("Disconnected");
+            logonCount++;
+            System.out.println("Disconnected: " + logonCount);
 
-            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
+            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
         }
     }
 }
