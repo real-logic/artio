@@ -405,25 +405,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return outboundSlowPeeker;
     }
 
-    private long lastTimeInNs = 0;
-
     public int doWork() throws Exception
     {
         final long timeInNs = clock.nanoTime();
         final long timeInMs = epochClock.time();
-        if (GatewaySessions.TEMPORARY_LINGER_TIMING)
-        {
-            final long lastTimeInNs = this.lastTimeInNs;
-            if (lastTimeInNs != 0)
-            {
-                final long deltaInNs = timeInNs - lastTimeInNs;
-                if (deltaInNs > 5_000_000)
-                {
-                    System.out.println("last Framer.doWork() >5ms: " + deltaInNs + "ns @ " + timeInNs);
-                }
-            }
-            this.lastTimeInNs = timeInNs;
-        }
 
         fixSenderEndPoints.timeInMs(timeInMs);
 
@@ -1243,7 +1228,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long timerId = timerWheel.scheduleTimer(lingerExpiryTimeInMs);
         timerEventHandler.startLingering(timerId, pendingAcceptorLogon);
-        receiverEndPoints.receiverEndPointPollingOptional(pendingAcceptorLogon.connectionId());
+
+        // NB: at this point we don't register the REP on the selector, TCP and NIO are the villains of this story
+        // if we register then a counter-party disconnecting the connection before the end of the linger would result
+        // selector events and in repeat pending logon polling and latency. If we get a selector event in this
+        // case it would either be a read or a disconnect - but Nio doesn't distinguish between these two things,
+        // So either we allow a counter-party that spams on logon to cause a latency blip by reading these events
+        // or a counter-party that disconnects to cause a latency blip by reading the logout.
+        receiverEndPoints.receiverEndPointPollingOptional(
+            pendingAcceptorLogon.connectionId(), false);
     }
 
     private final class ILink3LookupConnectOperation implements Continuation
@@ -3410,7 +3403,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void receiverEndPointPollingOptional(final long connectionId)
     {
-        receiverEndPoints.receiverEndPointPollingOptional(connectionId);
+        receiverEndPoints.receiverEndPointPollingOptional(connectionId, true);
     }
 
     void receiverEndPointPollingRequired(final ReceiverEndPoint receiverEndPoint)

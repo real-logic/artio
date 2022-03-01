@@ -168,12 +168,19 @@ public final class SystemTestUtil
         final String senderCompId,
         final String targetCompId)
     {
+        return initiate(library, port, senderCompId, targetCompId, TEST_REPLY_TIMEOUT_IN_MS);
+    }
+
+    static Reply<Session> initiate(
+        final FixLibrary library, final int port, final String senderCompId, final String targetCompId,
+        final long timeoutInMs)
+    {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
             .senderCompId(senderCompId)
             .targetCompId(targetCompId)
-            .timeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .timeoutInMs(timeoutInMs)
             .build();
 
         return library.initiate(config);
