@@ -36,6 +36,7 @@ public final class BenchmarkConfiguration
     public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
     public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 50_000);
     public static final boolean BAD_LOGON = Boolean.getBoolean("fix.benchmark.bad_logon");
+    public static final boolean BAD_LOGON_NO_LINGER = Boolean.getBoolean("fix.benchmark.bad_logon_no_linger");
     public static final int MAX_MESSAGES_IN_FLIGHT = Integer.getInteger("fix.benchmark.max_messages_in_flight", 20);
     public static final int SEND_RATE_PER_SECOND = Integer.getInteger("fix.benchmark.send_rate_sec", 1_000);
     public static final int NUMBER_OF_SESSIONS = Integer.getInteger("fix.benchmark.num_sessions", 25);
