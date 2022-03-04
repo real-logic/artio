@@ -461,6 +461,12 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 establishRejectCode = EstablishRejectCode.UNNEGOTIATED;
                 break;
 
+            case VER_ID_ENDED:
+                isNegotiate = identification.fromNegotiate();
+                negotiationRejectCode = NegotiationRejectCode.DUPLICATE_ID;
+                establishRejectCode = EstablishRejectCode.UNNEGOTIATED;
+                break;
+
             default:
                 throw new IllegalArgumentException("Invalid reject reason: " + rejectReason);
         }

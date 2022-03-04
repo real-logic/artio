@@ -292,14 +292,15 @@ public class AbstractBinaryEntryPointSystemTest
         else
         {
             testSystem.await("connection doesn't exist", connectionExistsHandler::invoked);
+            testSystem.await("not authenticated", () -> fixPAuthenticationStrategy.lastSessionId() != null);
 
             lastAuthStrategySessionIs(client);
 
             assertEquals(client.sessionId(), connectionExistsHandler.lastSurrogateSessionId());
             final BinaryEntryPointContext id =
                 (BinaryEntryPointContext)connectionExistsHandler.lastIdentification();
-            assertEquals(client.sessionId(), id.sessionID());
-            assertEquals("sessionVerID", client.sessionVerID(), id.sessionVerID());
+            assertEquals("wrong sessionId", client.sessionId(), id.sessionID());
+            assertEquals("wrong sessionVerID", client.sessionVerID(), id.sessionVerID());
             final Reply<SessionReplyStatus> reply = connectionExistsHandler.lastReply();
 
             testSystem.awaitCompletedReply(reply);
@@ -313,8 +314,8 @@ public class AbstractBinaryEntryPointSystemTest
     {
         final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPAuthenticationStrategy.lastSessionId();
         assertNotNull(context);
-        assertEquals(client.sessionId(), context.sessionID());
-        assertEquals(client.sessionVerID(), context.sessionVerID());
+        assertEquals("wrong sessionId", client.sessionId(), context.sessionID());
+        assertEquals("wrong sessionVerID", client.sessionVerID(), context.sessionVerID());
     }
 
     void clientTerminatesSession(final BinaryEntryPointClient client)

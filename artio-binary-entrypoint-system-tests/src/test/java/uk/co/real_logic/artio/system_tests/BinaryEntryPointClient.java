@@ -54,6 +54,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public static final int CL_ORD_ID = 1;
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
     public static final long SECURITY_ID = 2;
+    public static final int INITIAL_SESSION_VER_ID = 1;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointProtocol.loadSbeIr());
 
@@ -73,7 +74,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     private int skipTemplateId = NOT_SKIPPING;
     private int sessionId = SESSION_ID;
-    private long sessionVerID = 1;
+    private long sessionVerID = INITIAL_SESSION_VER_ID;
     private long negotiateTimestampInNs;
     private long establishTimestampInNs;
     private long retransmitRequestTimestampInNs;

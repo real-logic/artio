@@ -151,7 +151,7 @@ public final class ILink3Context implements FixPContext
         return connectUuid;
     }
 
-    public FixPFirstMessageResponse checkAccept(final FixPContext context)
+    public FixPFirstMessageResponse checkAccept(final FixPContext context, final boolean ignoreFromNegotiate)
     {
         throw new UnsupportedOperationException();
     }

@@ -91,11 +91,18 @@ public class BinaryEntryPointContext implements FixPContext
     /**
      * {@inheritDoc}
      */
-    public FixPFirstMessageResponse checkAccept(final FixPContext fixPContext)
+    public FixPFirstMessageResponse checkAccept(final FixPContext fixPContext, final boolean ignoreFromNegotiate)
     {
         if (fixPContext == null)
         {
-            return checkFirstConnect();
+            if (ignoreFromNegotiate)
+            {
+                return OK;
+            }
+            else
+            {
+                return checkFirstConnect();
+            }
         }
 
         validateType(fixPContext);
@@ -108,22 +115,30 @@ public class BinaryEntryPointContext implements FixPContext
 
         offset = oldContext.offset();
 
-        // negotiations should increment the session ver id
-        if (fromNegotiate)
+        if (ignoreFromNegotiate)
         {
-            return sessionVerID > oldContext.sessionVerID ? OK : NEGOTIATE_DUPLICATE_ID;
+            // cannot re-started an ended session
+            return oldContext.ended ? VER_ID_ENDED : OK;
         }
-        // establish messages shouldn't
         else
         {
-            // Continue the same sequence
-            if (oldContext.sessionVerID == sessionVerID)
+            // negotiations should increment the session ver id
+            if (fromNegotiate)
             {
-                // cannot re-restablish an ended session
-                return oldContext.ended ? ESTABLISH_UNNEGOTIATED : OK;
+                return sessionVerID > oldContext.sessionVerID ? OK : NEGOTIATE_DUPLICATE_ID;
             }
+            // establish messages shouldn't
+            else
+            {
+                // Continue the same sequence
+                if (oldContext.sessionVerID == sessionVerID)
+                {
+                    // cannot re-restablish an ended session
+                    return oldContext.ended ? VER_ID_ENDED : OK;
+                }
 
-            return ESTABLISH_UNNEGOTIATED;
+                return ESTABLISH_UNNEGOTIATED;
+            }
         }
     }
 

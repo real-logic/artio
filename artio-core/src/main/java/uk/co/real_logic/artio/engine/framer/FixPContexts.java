@@ -192,7 +192,7 @@ public class FixPContexts implements SessionContexts
     }
 
     public FixPFirstMessageResponse onAcceptorLogon(
-        final long sessionId, final FixPContext context, final long connectionId)
+        final long sessionId, final FixPContext context, final long connectionId, final boolean ignoreFromNegotiate)
     {
         final long duplicateConnection = authenticatedSessionIdToConnectionId.get(sessionId);
         final FixPKey key = context.key();
@@ -201,7 +201,7 @@ public class FixPContexts implements SessionContexts
         {
             authenticatedSessionIdToConnectionId.put(sessionId, connectionId);
 
-            final FixPFirstMessageResponse rejectReason = context.checkAccept(oldContext);
+            final FixPFirstMessageResponse rejectReason = context.checkAccept(oldContext, ignoreFromNegotiate);
             if (rejectReason == FixPFirstMessageResponse.OK)
             {
                 if (oldContext == null)

@@ -35,9 +35,10 @@ public interface FixPContext
      * Invoked when an acceptor reconnects.
      *
      * @param oldContext the FixPContext from the previous connect
+     * @param ignoreFromNegotiate do not perform validation about whether this is a negotiate or establish message
      * @return a response that might be a reason to reject this connection or OK if there is no error.
      */
-    FixPFirstMessageResponse checkAccept(FixPContext oldContext);
+    FixPFirstMessageResponse checkAccept(FixPContext oldContext, boolean ignoreFromNegotiate);
 
     int compareVersion(FixPContext oldContext);
 

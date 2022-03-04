@@ -2737,8 +2737,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 final long sessionId = fixPParser.sessionId(srcBuffer, srcOffset);
                 final FixPContext context = fixPParser.lookupContext(srcBuffer, srcOffset, srcLength);
+
+                // In the case of creating a follower session: we want to be a bit more lenient with this validation
+                // If the application uses a context that is pretending to be an Establish but it's the first time
+                // We don't care, so just pretend it's a Negotiate.
                 final FixPFirstMessageResponse resp = fixPContexts.onAcceptorLogon(
-                    sessionId, context, NO_CONNECTION_ID);
+                    sessionId, context, NO_CONNECTION_ID, true);
 
                 // Duplicate negotiate here means we've already got this session so we just return it.
                 if (resp == FixPFirstMessageResponse.OK || resp == NEGOTIATE_DUPLICATE_ID)
@@ -2753,8 +2757,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 }
                 else
                 {
-                    saveError(INVALID_CONFIGURATION, libraryId, correlationId,
-                        "Engine is not configured to accept FIXP protocol: " + fixPProtocolType);
+                    saveError(UNABLE_TO_LOGON, libraryId, correlationId, "Failed with error: " + resp);
                 }
             }
         }

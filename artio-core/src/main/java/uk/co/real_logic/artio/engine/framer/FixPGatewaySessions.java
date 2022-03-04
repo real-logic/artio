@@ -138,7 +138,7 @@ public class FixPGatewaySessions extends GatewaySessions
             this.fixPProxy = fixPProxy;
 
             final FixPFirstMessageResponse rejectReason = fixPContexts.onAcceptorLogon(
-                sessionId, identification, connectionId);
+                sessionId, identification, connectionId, false);
             if (rejectReason == FixPFirstMessageResponse.OK)
             {
                 authenticate(connectionId);

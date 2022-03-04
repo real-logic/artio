@@ -1272,7 +1272,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldCreateFollowerSessionsWhenSessionAlreadyExists() throws IOException
+    public void shouldCreateFollowerSessionsWhenSessionAlreadyExistsWhenLoggedIn() throws IOException
     {
         setupArtio();
 
@@ -1281,22 +1281,12 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         final BinaryEntryPointContext context;
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            context = new BinaryEntryPointContext(
-                client.sessionId(),
-                client.sessionVerID(),
-                System.nanoTime(),
-                client.sessionVerID(),
-                true);
+            context = newContext();
 
             createFollowerSession(context);
 
             // cannot use a different session ver id when logged in
-            contextHigherVersion = new BinaryEntryPointContext(
-                client.sessionId(),
-                client.sessionVerID() + 1,
-                System.nanoTime(),
-                client.sessionVerID(),
-                true);
+            contextHigherVersion = newContext(INITIAL_SESSION_VER_ID + 1, true);
             final Reply<Long> reply = library.followerFixPSession(contextHigherVersion, TEST_TIMEOUT_IN_MS);
             testSystem.awaitErroredReply(reply, containsString(
                 "currently connected with a different session version"));
@@ -1304,12 +1294,47 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             clientTerminatesSession(client);
         }
         assertOnlyOneFixPSession();
+    }
 
-        // When not logged in
-        createFollowerSession(context);
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldCreateFollowerSessionsWhenSessionAlreadyExistsWhenNotLoggedIn() throws IOException
+    {
+        setupArtio();
+
+        checkFollowerSessionIsConnectable(newContext(INITIAL_SESSION_VER_ID - 1, true));
+        fixPAuthenticationStrategy.resetLastSessionId();
+        connectionExistsHandler.reset();
+
+        createFollowerSession(newContext(INITIAL_SESSION_VER_ID, true));
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.sessionVerID(INITIAL_SESSION_VER_ID + 1);
+            establishNewConnection(client);
+            clientTerminatesSession(client);
+        }
+
         assertOnlyOneFixPSession();
+    }
 
-        createFollowerSession(contextHigherVersion);
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldCreateFollowerSessionsWhenSessionAlreadyExistsWhenNotLoggedInNotNegotiate() throws IOException
+    {
+        setupArtio();
+
+        checkFollowerSessionIsConnectable(newContext(INITIAL_SESSION_VER_ID - 1, false));
+
+        checkFollowerSessionIsConnectable(newContext(INITIAL_SESSION_VER_ID - 1, false));
+    }
+
+    private void checkFollowerSessionIsConnectable(final BinaryEntryPointContext context) throws IOException
+    {
+        createFollowerSession(context);
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            clientTerminatesSession(client);
+        }
+
         assertOnlyOneFixPSession();
     }
 
@@ -1319,6 +1344,21 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertThat(fixPSessions, hasSize(1));
         final FixPSessionInfo sessionInfo = fixPSessions.get(0);
         assertEquals(new BinaryEntryPointKey(SESSION_ID), sessionInfo.key());
+    }
+
+    private BinaryEntryPointContext newContext()
+    {
+        return newContext(INITIAL_SESSION_VER_ID, true);
+    }
+
+    private BinaryEntryPointContext newContext(final int sessionVerId, final boolean fromNegotiate)
+    {
+        return new BinaryEntryPointContext(
+            SESSION_ID,
+            sessionVerId,
+            nanoClock.nanoTime(),
+            FIRM_ID,
+            fromNegotiate);
     }
 
     private int offlineSessionWithRetransmittableMessage()

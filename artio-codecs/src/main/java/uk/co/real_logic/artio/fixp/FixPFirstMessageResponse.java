@@ -52,4 +52,9 @@ public enum FixPFirstMessageResponse
      * An establish message has been rejected due the session not having been negotiated yet.
      */
     ESTABLISH_UNNEGOTIATED,
+
+    /**
+     * Session ver id has been ended through the normal protocol, so can't continue.
+     */
+    VER_ID_ENDED,
 }

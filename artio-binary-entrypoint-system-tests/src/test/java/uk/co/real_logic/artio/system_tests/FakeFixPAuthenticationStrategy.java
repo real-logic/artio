@@ -56,4 +56,9 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
     {
         return lastSessionId;
     }
+
+    public void resetLastSessionId()
+    {
+        lastSessionId = null;
+    }
 }
