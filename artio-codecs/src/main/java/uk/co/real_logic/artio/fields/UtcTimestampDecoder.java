@@ -22,7 +22,7 @@ import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcDateOnlyDecoder.LENGTH;
 
 /**
- * Parser for Fix's UTC timestamps - see http://fixwiki.org/fixwiki/UTCTimestampDataType for details
+ * Parser for Fix's UTC timestamps.
  * <p>
  * Equivalent to a Java format string of "yyyyMMdd-HH:mm:ss[.SSS]". The builtin parsers could cope with
  * this situation, but allocate and perform poorly.

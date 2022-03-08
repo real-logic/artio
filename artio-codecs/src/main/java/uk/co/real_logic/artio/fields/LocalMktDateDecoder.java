@@ -22,7 +22,17 @@ import static uk.co.real_logic.artio.fields.CalendricalUtil.getValidInt;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.toEpochDay;
 
 /**
- * Equivalent to parsing a Java format string of "yyyyMMdd", allocation free.
+ * An encoder for FIX's Local Market Date data types. This an allocation free class for encoding specific data types,
+ * with better performance characteristics than using a Java {@link java.time.LocalDate}. Local here means defined in
+ * terms of the timezone of the market.
+ * <p>
+ * The encoded message format is equivalent to encoding a Java format string of "yyyyMMdd". The decoder and encoder
+ * convert into "epoch days" - the epoch here where days are 0 is 1970-01-01.
+ * <p>
+ * Valid values: YYYY = 0000-9999, MM = 01-12, DD = 01-31.
+ * <p>
+ * See {@link LocalMktDateEncoder} for how to encode this data type, see {@link UtcTimestampDecoder} for UTC
+ * timestamps.
  */
 public final class LocalMktDateDecoder
 {
@@ -32,10 +42,23 @@ public final class LocalMktDateDecoder
 
     private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
+    /**
+     * Decode a FIX local mkt date value from a <code>byte[]</code> into an epoch days int value.
+     *
+     * @param bytes a byte array of length 8 or more containing the data to decode.
+     * @return the number of days since 1970-01-01 in the local timezone.
+     */
     public int decode(final byte[] bytes)
     {
+        if (bytes.length < LENGTH)
+        {
+            throw new IllegalArgumentException(
+                "note enough data, needs " + LENGTH + " bytes, but has " + bytes.length);
+        }
+
+        final AsciiBuffer buffer = this.buffer;
         buffer.wrap(bytes);
-        return decode(buffer, 0, 1);
+        return decode(buffer, 0, LENGTH);
     }
 
     /**
@@ -44,7 +67,7 @@ public final class LocalMktDateDecoder
      * @param timestamp the buffer containing the FIX local mkt date value
      * @param offset the position in the buffer where the value starts
      * @param length the length of the value in bytes
-     * @return an int representing the number of days since the beginning of the epoch in the local timezone.
+     * @return the number of days since 1970-01-01 in the local timezone.
      */
     public static int decode(final AsciiBuffer timestamp, final int offset, final int length)
     {

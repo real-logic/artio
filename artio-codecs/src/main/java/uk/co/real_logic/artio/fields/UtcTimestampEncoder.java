@@ -22,6 +22,9 @@ import java.util.concurrent.TimeUnit;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.*;
 
+/**
+ * An encoder for FIX's Utc timestamp data types. See {@link UtcTimestampDecoder} for details of the format.
+ */
 public final class UtcTimestampEncoder
 {
 

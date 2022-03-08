@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -23,13 +22,17 @@ import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.LocalMktDateDecoderValidCasesTest.toLocalDay;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Parameterized.class)
 public class LocalMktDateEncoderValidCasesTest
 {
+    private final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(new byte[LocalMktDateEncoder.LENGTH]);
+
     private final String timestamp;
+    private final int localDays;
 
     @Parameters(name = "{0}")
     public static Iterable<Object> data()
@@ -40,16 +43,23 @@ public class LocalMktDateEncoderValidCasesTest
     public LocalMktDateEncoderValidCasesTest(final String timestamp)
     {
         this.timestamp = timestamp;
+        localDays = toLocalDay(timestamp);
     }
 
     @Test
     public void canParseTimestamp()
     {
-        final int localDays = toLocalDay(timestamp);
-
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LocalMktDateEncoder.LENGTH]);
-        final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(buffer);
         LocalMktDateEncoder.encode(localDays, timestampBytes, 0);
+
+        assertThat(timestampBytes, sequenceEqualsAscii(timestamp, 0, LocalMktDateEncoder.LENGTH));
+    }
+
+    @Test
+    public void canParseTimestampFromByteArray()
+    {
+        final LocalMktDateEncoder encoder = new LocalMktDateEncoder();
+        final int length = encoder.encode(localDays, timestampBytes.byteArray());
+        assertEquals(LocalMktDateEncoder.LENGTH, length);
 
         assertThat(timestampBytes, sequenceEqualsAscii(timestamp, 0, LocalMktDateEncoder.LENGTH));
     }

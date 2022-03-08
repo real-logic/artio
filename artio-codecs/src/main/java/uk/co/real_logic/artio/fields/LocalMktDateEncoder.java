@@ -15,11 +15,12 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 /**
- * Equivalent to encoding a Java format string of "yyyyMMdd", allocation free.
+ * An encoder for FIX's Local Market Date data types. See {@link LocalMktDateDecoder} for details of the format.
+ *
+ * See {@link UtcTimestampEncoder} for UTC Timestamps.
  */
 public final class LocalMktDateEncoder
 {
@@ -27,23 +28,38 @@ public final class LocalMktDateEncoder
     public static final int MIN_EPOCH_DAYS = LocalMktDateDecoder.MIN_EPOCH_DAYS;
     public static final int MAX_EPOCH_DAYS = LocalMktDateDecoder.MAX_EPOCH_DAYS;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
+    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer();
 
+    /**
+     * Encode a FIX Local Market Date value to a <code>byte[]</code>.
+     *
+     * @param localEpochDays the number of days since 1970-01-01 in the local timezone.
+     * @param bytes a byte[] to encode the data into.
+     * @return the length of the data encoded (always 8)
+     */
     public int encode(final int localEpochDays, final byte[] bytes)
     {
-        buffer.wrap(bytes);
+        final MutableAsciiBuffer flyweight = this.flyweight;
+        flyweight.wrap(bytes);
         return encode(localEpochDays, flyweight, 0);
     }
 
-    public static int encode(final int localEpochDays, final MutableAsciiBuffer string, final int offset)
+    /**
+     * Encode a FIX Local Market Date value to a {@link MutableAsciiBuffer}.
+     *
+     * @param localEpochDays the number of days since 1970-01-01 in the local timezone.
+     * @param buffer a {@link MutableAsciiBuffer} to encode the data into.
+     * @param offset the offset to start within buffer
+     * @return the length of the data encoded (always 8)
+     */
+    public static int encode(final int localEpochDays, final MutableAsciiBuffer buffer, final int offset)
     {
         if (localEpochDays < MIN_EPOCH_DAYS || localEpochDays > MAX_EPOCH_DAYS)
         {
             throw new IllegalArgumentException(localEpochDays + " is outside of the valid range for this encoder");
         }
 
-        CalendricalUtil.encodeDate(localEpochDays, string, offset);
+        CalendricalUtil.encodeDate(localEpochDays, buffer, offset);
 
         return LENGTH;
     }
