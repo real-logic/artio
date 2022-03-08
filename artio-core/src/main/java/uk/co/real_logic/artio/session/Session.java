@@ -900,16 +900,26 @@ public class Session
      * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
      *                                          received.
      * @return the position in the stream that corresponds to the end of this message.
+     * @throws IllegalArgumentException if one of the received or sent sequence numbers is reset without the other
+     *                                  being.
      */
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber,
         final int nextReceivedMessageSequenceNumber)
     {
+        final boolean resetsSentSequenceNumbers = resetsSentSequenceNumbers(nextSentMessageSequenceNumber);
+        final boolean resetReceivedSequenceNumbers =
+            nextReceivedMessageSequenceNumber < this.lastReceivedMsgSeqNum + 1;
+        if (resetsSentSequenceNumbers != resetReceivedSequenceNumbers)
+        {
+            throw new IllegalArgumentException("Cannot reset received but not sent sequence numbers");
+        }
+
         final long position = trySendSequenceReset(nextSentMessageSequenceNumber);
         if (position >= 0)
         {
             final int newLastReceivedMessageSequenceNumber = nextReceivedMessageSequenceNumber - 1;
-            // Do not reset the sequence index at this point
+            // Do not reset the sequence index at this point, as it will have been done by the sent case.
             lastReceivedMsgSeqNumOnly(newLastReceivedMessageSequenceNumber);
 
             if (redact(NO_REQUIRED_POSITION))
