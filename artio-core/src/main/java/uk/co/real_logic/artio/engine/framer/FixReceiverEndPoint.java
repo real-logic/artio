@@ -135,6 +135,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private static final int UNKNOWN_INDEX_BACKPRESSURED = -2;
 
+    private static final int PASSWORD_CLEANED = 0;
+
     static class FixReceiverEndPointFormatters
     {
         private final CharFormatter noProxyProtocol = new CharFormatter("No proxy protocol usage for connId=%s");
@@ -283,47 +285,53 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             }
             else
             {
-                int offset = this.pendingAcceptorLogonMsgOffset;
-                int length = this.pendingAcceptorLogonMsgLength;
-                DirectBuffer buffer = this.buffer;
-
-                passwordCleaner.clean(buffer, offset, length);
-
-                offset = 0;
-                buffer = passwordCleaner.cleanedBuffer();
-                length = passwordCleaner.cleanedLength();
-
-                final long afterPasswordCleanInNs = System.nanoTime();
-
-                // No need to save this sequenceIndex update as we are at a point where a genuine session doesn't exist
-                sequenceIndex++;
-
-                final long position = publication.saveMessage(
-                    buffer,
-                    offset,
-                    length,
-                    libraryId,
-                    LOGON_MESSAGE_TYPE,
-                    sessionId,
-                    sequenceIndex,
-                    connectionId,
-                    AUTH_REJECT,
-                    0,
-                    lastReadTimestampInNs);
-
-                if (Pressure.isBackPressured(position))
-                {
-                    // This gets retried by the TimerEventHandler due to not being disconnected
-                    return 1;
-                }
-
-                DebugLogger.logFixMessage(FIX_MESSAGE, LOGON_MESSAGE_TYPE, "Auth Reject ", buffer, offset, length);
-
                 completeDisconnect(pendingAcceptorLogon.reason());
             }
         }
 
         return 1;
+    }
+
+    boolean sendRejectedPendingLogon()
+    {
+        final int pendingAcceptorLogonMsgLength = this.pendingAcceptorLogonMsgLength;
+        final PasswordCleaner passwordCleaner = this.passwordCleaner;
+
+        if (pendingAcceptorLogonMsgLength != PASSWORD_CLEANED)
+        {
+            passwordCleaner.clean(buffer, pendingAcceptorLogonMsgOffset, pendingAcceptorLogonMsgLength);
+
+            // No need to save this sequenceIndex update as we are at a point where a genuine session doesn't exist
+            sequenceIndex++;
+
+            this.pendingAcceptorLogonMsgLength = PASSWORD_CLEANED;
+        }
+
+        final DirectBuffer buffer = passwordCleaner.cleanedBuffer();
+        final int length = passwordCleaner.cleanedLength();
+
+        final long position = publication.saveMessage(
+            buffer,
+            0,
+            length,
+            libraryId,
+            LOGON_MESSAGE_TYPE,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            AUTH_REJECT,
+            0,
+            lastReadTimestampInNs);
+
+        if (Pressure.isBackPressured(position))
+        {
+            // This gets retried by the TimerEventHandler due to not being disconnected
+            return false;
+        }
+
+        DebugLogger.logFixMessage(FIX_MESSAGE, LOGON_MESSAGE_TYPE, "Auth Reject ", buffer, 0, length);
+
+        return true;
     }
 
     private int sendInitialLoginMessage()

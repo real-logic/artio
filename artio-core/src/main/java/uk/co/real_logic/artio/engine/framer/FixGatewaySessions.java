@@ -54,6 +54,7 @@ import java.util.function.Function;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.FixContexts.DUPLICATE_SESSION;
@@ -282,8 +283,6 @@ public class FixGatewaySessions extends GatewaySessions
         private Encoder encoder;
         private Class<? extends FixDictionary> fixDictionaryClass;
         private long rejectEncodeResult;
-        private long authenticateAsyncStartInNs;
-        private long authenticateAsyncBlockingTimeInNs;
 
         FixPendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -343,9 +342,7 @@ public class FixGatewaySessions extends GatewaySessions
         {
             try
             {
-                authenticateAsyncStartInNs = System.nanoTime();
                 authenticationStrategy.authenticateAsync(logon, this);
-                this.authenticateAsyncBlockingTimeInNs = System.nanoTime() - authenticateAsyncStartInNs;
             }
             catch (final Throwable throwable)
             {
@@ -448,7 +445,7 @@ public class FixGatewaySessions extends GatewaySessions
             this.encoder = encoder;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.lingerTimeoutInMs = lingerTimeoutInMs;
-            setState(AuthenticationState.ENCODING_REJECT_MESSAGE);
+            setState(AuthenticationState.SAVING_REJECTED_LOGON_WITH_REPLY);
         }
 
         protected void encodeRejectMessage()
@@ -474,19 +471,26 @@ public class FixGatewaySessions extends GatewaySessions
             final int offset = Encoder.offset(rejectEncodeResult);
             final int length = Encoder.length(rejectEncodeResult);
 
+            final long messageType = encoder.messageType();
             final long position = outboundPublication.saveMessage(
                 rejectAsciiBuffer,
                 offset,
                 length,
                 ENGINE_LIBRARY_ID,
-                encoder.messageType(),
+                messageType,
                 Session.UNKNOWN,
                 0,
                 connectionId,
                 MessageStatus.OK,
                 1);
 
-            return Pressure.isBackPressured(position) ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
+            final boolean backPressured = Pressure.isBackPressured(position);
+            if (!backPressured)
+            {
+                DebugLogger.logFixMessage(
+                    FIX_MESSAGE, messageType, "Auth Reject Reply: ", rejectAsciiBuffer, offset, length);
+            }
+            return backPressured ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
         }
 
         public void reject()

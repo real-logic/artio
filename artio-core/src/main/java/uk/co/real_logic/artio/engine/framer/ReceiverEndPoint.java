@@ -192,6 +192,8 @@ public abstract class ReceiverEndPoint
 
     abstract void removeEndpointFromFramer();
 
+    abstract boolean sendRejectedPendingLogon();
+
     void disconnectEndpoint(final DisconnectReason reason)
     {
         framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));

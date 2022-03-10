@@ -39,10 +39,7 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.library.TestHelper;
-import uk.co.real_logic.artio.messages.MetaDataStatus;
-import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
-import uk.co.real_logic.artio.messages.SessionReplyStatus;
-import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
@@ -50,6 +47,7 @@ import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -607,9 +605,51 @@ public class AbstractGatewayToGatewaySystemTest
 
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final IntHashSet queryStreamIds)
     {
-        final List<String> messages = new ArrayList<>();
+        return getFromArchive(configuration, queryStreamIds)
+            .stream().map(ArchiveEntry::body).collect(Collectors.toList());
+    }
+
+    static class ArchiveEntry
+    {
+        private final MessageStatus status;
+        private final String body;
+
+        ArchiveEntry(final MessageStatus status, final String body)
+        {
+            this.status = status;
+            this.body = body;
+        }
+
+        public String body()
+        {
+            return body;
+        }
+
+        public MessageStatus status()
+        {
+            return status;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ArchiveEntry{" +
+                "status=" + status +
+                ", body='" + body + '\'' +
+                '}';
+        }
+    }
+
+    List<ArchiveEntry> getFromArchive(
+        final EngineConfiguration configuration,
+        final IntHashSet queryStreamIds)
+    {
+        final List<ArchiveEntry> messages = new ArrayList<>();
         final FixMessageConsumer fixMessageConsumer =
-            (message, buffer, offset, length, header) -> messages.add(message.body());
+            (message, buffer, offset, length, header) ->
+            messages.add(new ArchiveEntry(
+            message.status(),
+            message.body()));
 
         SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds, fixMessageConsumer, null, false);
 

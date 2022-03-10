@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.collections.IntHashSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,6 +28,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
@@ -36,6 +38,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
@@ -92,6 +95,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.reject();
 
         assertDisconnectRejected(reply, true);
+
+        assertOnlyLogonInArchive();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -106,14 +111,13 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         rejectLogonWithCustomReject(LINGER_TIMEOUT_IN_MS);
 
-        final EngineConfiguration config = initiatingEngine.configuration();
-        final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
-        assertThat(messages, hasSize(2));
-        for (final String rejectMessage : messages)
-        {
-            assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
-            assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
-        }
+        final List<ArchiveEntry> entries = scanArchiveForEntries(4);
+
+        assertContainsRejectedLogon(entries.get(0));
+        assertRejectReply(entries.get(1));
+
+        assertContainsRejectedLogon(entries.get(2));
+        assertRejectReply(entries.get(3));
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -124,6 +128,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         initiateTimeoutInMs = 200;
 
         rejectLogonWithCustomReject(LINGER_TIMEOUT_IN_MS * 2);
+
+        assertLogonAndRejectInArchive();
     }
 
     private void rejectLogonWithCustomReject(final long lingerTimeoutInMs)
@@ -159,6 +165,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             // Test optimisation.
             auth.reject();
         }
+
+        assertOnlyLogonInArchive();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS, expected = IllegalArgumentException.class)
@@ -177,6 +185,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             // Test optimisation.
             auth.reject();
         }
+
+        assertOnlyLogonInArchive();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -189,6 +199,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.reject(invalidEncoder, 0);
 
         assertDisconnectRejected(reply, true);
+
+        assertOnlyLogonInArchive();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -199,6 +211,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         final Reply<Session> reply = acquireAuthProxy();
 
         assertDisconnectRejected(reply, true);
+
+        assertOnlyLogonInArchive();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -241,6 +255,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
+
+        scanArchiveForEntries(4);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -296,11 +312,43 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         completeFailedSession(invalidReply);
 
-        final List<String> messagesFromArchive = getMessagesFromArchive(
-            acceptingEngine.configuration(), DEFAULT_OUTBOUND_LIBRARY_STREAM);
-        assertThat(messagesFromArchive, hasSize(1));
-        final String rejectMessage = messagesFromArchive.get(0);
-        assertThat(rejectMessage, containsString("35=3\00149=acceptor"));
+        assertLogonAndRejectInArchive();
+    }
+
+    private void assertOnlyLogonInArchive()
+    {
+        assertContainsRejectedLogon(scanArchiveForEntries(1).get(0));
+    }
+
+    private void assertLogonAndRejectInArchive()
+    {
+        final List<ArchiveEntry> entries = scanArchiveForEntries(2);
+        assertContainsRejectedLogon(entries.get(0));
+        assertRejectReply(entries.get(1));
+    }
+
+    private List<ArchiveEntry> scanArchiveForEntries(final int size)
+    {
+        final IntHashSet queryStreamIds = new IntHashSet();
+        queryStreamIds.add(DEFAULT_OUTBOUND_LIBRARY_STREAM);
+        queryStreamIds.add(DEFAULT_INBOUND_LIBRARY_STREAM);
+        final List<ArchiveEntry> entries = getFromArchive(acceptingEngine.configuration(), queryStreamIds);
+        assertThat(entries, hasSize(size));
+        return entries;
+    }
+
+    private void assertRejectReply(final ArchiveEntry reply)
+    {
+        assertEquals(reply.toString(), MessageStatus.OK, reply.status());
+        assertThat(reply.body(), containsString("35=3\00149=acceptor"));
+        assertThat(reply.body(), containsString("372=A\00158=Invalid Logon"));
+    }
+
+    private void assertContainsRejectedLogon(final ArchiveEntry logon)
+    {
+        assertEquals(MessageStatus.AUTH_REJECT, logon.status());
+        assertThat(logon.body(), containsString("35=A\00149=initiator"));
+        assertThat(logon.body(), containsString("554=***")); // password is erased
     }
 
     private void notifyAuthStrategyUpon(final Runnable disconnector, final DisconnectReason reason)

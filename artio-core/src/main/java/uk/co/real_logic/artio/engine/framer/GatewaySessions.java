@@ -228,13 +228,28 @@ abstract class GatewaySessions
 
     enum AuthenticationState
     {
+        /** Initial State -> AUTHENTICATED, SAVING_REJECTED_LOGON_WITH_REPLY */
         PENDING,
+
+        /** -> INDEXER_CATCHUP, ACCEPTED */
         AUTHENTICATED,
+        /** -> ACCEPTED */
         INDEXER_CATCHUP,
+        /** Terminal State */
         ACCEPTED,
+
+        /** -> ENCODING_REJECT_MESSAGE */
+        SAVING_REJECTED_LOGON_WITH_REPLY,
+        /** -> SENDING_REJECT_MESSAGE */
         ENCODING_REJECT_MESSAGE,
+        /** -> LINGERING_REJECT_MESSAGE */
         SENDING_REJECT_MESSAGE,
+        /** -> REJECTED */
         LINGERING_REJECT_MESSAGE,
+
+        /** -> REJECTED */
+        SAVING_REJECTED_LOGON_NO_REPLY,
+        /** Terminal State */
         REJECTED
     }
 
@@ -341,12 +356,21 @@ abstract class GatewaySessions
                     onAuthenticated();
                     return false;
 
-                case ACCEPTED:
-                    return true;
-
-                case REJECTED:
+                case SAVING_REJECTED_LOGON_NO_REPLY:
                     checkedOnAuthenticationResult();
-                    return true;
+                    final boolean sentRejectedPendingLogon = receiverEndPoint.sendRejectedPendingLogon();
+                    if (sentRejectedPendingLogon)
+                    {
+                        setState(AuthenticationState.REJECTED);
+                    }
+                    return sentRejectedPendingLogon;
+
+                case SAVING_REJECTED_LOGON_WITH_REPLY:
+                    if (receiverEndPoint.sendRejectedPendingLogon())
+                    {
+                        setState(AuthenticationState.ENCODING_REJECT_MESSAGE);
+                    }
+                    return false;
 
                 case ENCODING_REJECT_MESSAGE:
                     checkedOnAuthenticationResult();
@@ -359,6 +383,10 @@ abstract class GatewaySessions
                 case INDEXER_CATCHUP:
                     onIndexerCatchup();
                     return false;
+
+                case ACCEPTED:
+                case REJECTED:
+                    return true;
 
                 case PENDING:
                 case LINGERING_REJECT_MESSAGE:
@@ -409,7 +437,7 @@ abstract class GatewaySessions
                 case DISCONNECTED:
                 default:
                     // The TCP Connection has disconnected, therefore we consider this complete.
-                    state = AuthenticationState.REJECTED;
+                    setState(AuthenticationState.SAVING_REJECTED_LOGON_NO_REPLY);
                     return true;
             }
         }
@@ -433,7 +461,7 @@ abstract class GatewaySessions
             validateState();
 
             this.reason = reason;
-            this.setState(AuthenticationState.REJECTED);
+            this.setState(AuthenticationState.SAVING_REJECTED_LOGON_NO_REPLY);
         }
 
         public boolean isAccepted()

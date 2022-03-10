@@ -310,5 +310,10 @@ abstract class FixPReceiverEndPoint extends ReceiverEndPoint
         this.fixPGatewaySession = fixPGatewaySession;
     }
 
+    boolean sendRejectedPendingLogon()
+    {
+        return true;
+    }
+
     abstract void trackDisconnect();
 }
