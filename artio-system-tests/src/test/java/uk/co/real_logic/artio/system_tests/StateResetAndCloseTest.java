@@ -55,6 +55,27 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         shouldPerformEndOfDayOperation(false);
     }
 
+    // Reproduces a case where a library reconnect, continuing a previous recording
+    @Test
+    public void shouldResetStateEvenWithALibraryReconnect()
+    {
+        deleteLogs();
+        mediaDriver = launchMediaDriver();
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        acquireAcceptingSession();
+
+        messagesCanBeExchanged();
+
+        testSystem.remove(acceptingLibrary);
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        testSystem.add(acceptingLibrary);
+        awaitLibraryCount(acceptingEngine, testSystem, 2);
+
+        testSystem.awaitBlocking(() -> acceptingEngine.close());
+        acceptingEngine.resetState(null);
+    }
+
     private void shouldPerformEndOfDayOperation(final boolean libraryOwnsSession)
     {
         deleteLogs();
@@ -128,7 +149,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 
         final Reply<Session> reply = connectPersistentSessions(
             initiatorInitialSentSequenceNumber, initialReceivedSequenceNumber, false);
-        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
+        assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
     }
 }

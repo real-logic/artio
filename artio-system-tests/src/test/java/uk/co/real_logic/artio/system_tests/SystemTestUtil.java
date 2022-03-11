@@ -443,9 +443,14 @@ public final class SystemTestUtil
 
     public static void awaitLibraryDisconnect(final FixEngine engine, final TestSystem testSystem)
     {
+        awaitLibraryCount(engine, testSystem, 1);
+    }
+
+    public static void awaitLibraryCount(final FixEngine engine, final TestSystem testSystem, final int count)
+    {
         assertEventuallyTrue(
             () -> "libraries haven't disconnected yet",
-            () -> libraries(engine, testSystem).size() == 1,
+            () -> libraries(engine, testSystem).size() == count,
             AWAIT_TIMEOUT_IN_MS,
             () ->
             {

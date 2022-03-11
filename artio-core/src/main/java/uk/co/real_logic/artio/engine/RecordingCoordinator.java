@@ -28,6 +28,7 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
+import org.agrona.collections.MutableLong;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
@@ -52,11 +53,13 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.LongConsumer;
 
+import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.CommonContext.MTU_LENGTH_PARAM_NAME;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static io.aeron.archive.codecs.SourceLocation.LOCAL;
 import static io.aeron.archive.codecs.SourceLocation.REMOTE;
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.driver.Configuration.publicationReservedSessionIdHigh;
 import static io.aeron.driver.Configuration.publicationReservedSessionIdLow;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
@@ -94,7 +97,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     private final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
 
     private final SourceLocation outboundLocation;
-    private final LongHashSet trackedRegistrationIds = new LongHashSet();
+    private final MutableLong registrationId = new MutableLong(NULL_VALUE);
+    private final Long2LongHashMap trackedRegistrationIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
     private final Aeron aeron;
     private final AeronArchive archive;
     private final String channel;
@@ -289,9 +293,10 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         try
         {
             final String recordingChannel = ChannelUri.addSessionId(channel, sessionId);
+            final long recordingId = libraryExtendPosition.recordingId;
             final long registrationId = archive.extendRecording(
-                libraryExtendPosition.recordingId, recordingChannel, streamId, LOCAL);
-            trackedRegistrationIds.add(registrationId);
+                recordingId, recordingChannel, streamId, LOCAL);
+            trackedRegistrationIdToRecordingId.put(registrationId, recordingId);
         }
         catch (final ArchiveException e)
         {
@@ -411,14 +416,14 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         if (recordingAlreadyStarted(sessionId))
         {
+            // Can happen when a library reconnects, the registration id will already be stored
             return true;
         }
 
         try
         {
             final String channel = ChannelUri.addSessionId(this.channel, sessionId);
-            final long registrationId = archive.startRecording(channel, streamId, local);
-            trackedRegistrationIds.add(registrationId);
+            registrationId.set(archive.startRecording(channel, streamId, local));
 
             return true;
         }
@@ -432,7 +437,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     private boolean recordingAlreadyStarted(final int sessionId)
     {
-        return RecordingPos.findCounterIdBySession(counters, sessionId) != Aeron.NULL_VALUE;
+        return RecordingPos.findCounterIdBySession(counters, sessionId) != NULL_VALUE;
     }
 
     // awaits the recording start and saves the file
@@ -441,6 +446,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         final long recordingId = lookup.getRecordingId(sessionId);
         recordingIds.add(recordingId);
+        final long registrationId = this.registrationId.get();
+        if (registrationId != NULL_VALUE)
+        {
+            trackedRegistrationIdToRecordingId.put(registrationId, recordingId);
+            this.registrationId.set(NULL_VALUE);
+        }
 
         saveRecordingIdsFile();
 
@@ -524,11 +535,23 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     private void shutdownArchiver()
     {
-        final LongHashSet.LongIterator it = trackedRegistrationIds.iterator();
+        final Long2LongHashMap.EntryIterator it = trackedRegistrationIdToRecordingId.entrySet().iterator();
+
         while (it.hasNext())
         {
-            final long registrationId = it.nextValue();
+            it.next();
+            final long registrationId = it.getLongKey();
+            final long recordingId = it.getLongValue();
+            final int counterId = RecordingPos.findCounterIdByRecording(counters, recordingId);
             archive.stopRecording(registrationId);
+            if (counterId != NULL_COUNTER_ID)
+            {
+                while (RecordingPos.isActive(counters, counterId, recordingId))
+                {
+                    idleStrategy.idle();
+                }
+                idleStrategy.reset();
+            }
         }
 
         if (configuration.logAnyMessages())
@@ -572,6 +595,15 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             }
 
             return false;
+        }
+
+        public String toString()
+        {
+            return "CompletingRecording{" +
+                "completedPosition=" + completedPosition +
+                ", recordingId=" + recordingId +
+                ", counterId=" + counterId +
+                '}';
         }
     }
 

@@ -18,8 +18,11 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
+import uk.co.real_logic.artio.DebugLogger;
 
 import java.io.File;
+
+import static uk.co.real_logic.artio.LogTag.ARCHIVE_SCAN;
 
 class ResetArchiveState
 {
@@ -63,6 +66,17 @@ class ResetArchiveState
         recordingCoordinator.forEachRecording(recordingId ->
         {
             final long startPosition = archive.getStartPosition(recordingId);
+            // If we hit some error case where
+            if (archive.getStopPosition(recordingId) != AeronArchive.NULL_POSITION)
+            {
+                final boolean tryStop = archive.tryStopRecordingByIdentity(recordingId);
+
+                if (DebugLogger.isEnabled(ARCHIVE_SCAN))
+                {
+                    DebugLogger.log(ARCHIVE_SCAN, "Recording " + recordingId + " not stopped, stopping " +
+                        (tryStop ? "succeeded" : "failed"));
+                }
+            }
             archive.truncateRecording(recordingId, startPosition);
         });
     }
