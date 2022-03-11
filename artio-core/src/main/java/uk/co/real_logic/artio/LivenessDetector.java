@@ -51,14 +51,14 @@ public final class LivenessDetector
     private int state;
 
     public static LivenessDetector forEngine(
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
         final int libraryId,
         final long replyTimeoutInMs,
         final long timeInMs,
         final EpochNanoClock clock)
     {
         final LivenessDetector detector = new LivenessDetector(
-            publication, libraryId, replyTimeoutInMs, CONNECTED, NONE, clock);
+            inboundPublication, libraryId, replyTimeoutInMs, CONNECTED, NONE, clock);
         detector.latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
         detector.heartbeat(timeInMs);
         return detector;

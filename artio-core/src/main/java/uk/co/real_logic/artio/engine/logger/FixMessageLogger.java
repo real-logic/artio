@@ -395,5 +395,10 @@ public class FixMessageLogger implements Agent
         {
             subscription.close();
         }
+
+        public boolean isComplete()
+        {
+            return false;
+        }
     }
 }

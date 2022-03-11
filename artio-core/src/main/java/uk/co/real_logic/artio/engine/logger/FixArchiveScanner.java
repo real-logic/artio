@@ -259,7 +259,11 @@ public class FixArchiveScanner implements AutoCloseable
     {
         if (DEBUG_LOG_ARCHIVE_SCAN)
         {
-            DebugLogger.log(ARCHIVE_SCAN, "checking index,follow=" + follow + ",logFileDir=" + logFileDir);
+            DebugLogger.log(ARCHIVE_SCAN,
+                "checking index,follow=" +
+                follow +
+                ",logFileDir=" + logFileDir +
+                ",queryStreamIds=" + queryStreamIds);
         }
 
         // Don't support scan + continuous update query for now
@@ -467,7 +471,7 @@ public class FixArchiveScanner implements AutoCloseable
             this.archiveLocation = archiveLocation;
         }
 
-        boolean isComplete()
+        public boolean isComplete()
         {
             return stopPosition != NULL_POSITION && image == null && archiveLocation == null;
         }

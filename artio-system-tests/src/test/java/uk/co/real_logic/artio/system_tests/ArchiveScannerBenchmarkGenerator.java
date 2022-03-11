@@ -15,39 +15,74 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
+import java.util.List;
 
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 /**
  * Makes a big archive example for {@link ArchiveScannerBenchmark}.
  */
-public class ArchiveScannerBenchmarkGenerator extends ArchiveScannerIntegrationTest
+public final class ArchiveScannerBenchmarkGenerator
 {
     static final int SEND_BATCH = 5_000;
 
     public static void main(final String[] args)
     {
-        new ArchiveScannerBenchmarkGenerator().setupBenchmark();
+        new ArchiveScannerBenchmarkGenerator(false, true).setupBenchmark();
     }
+
+    private ArchiveScannerBenchmarkGenerator(final boolean connectOtherSessions, final boolean onlySendMessages)
+    {
+        this.connectOtherSessions = connectOtherSessions;
+        this.onlySendMessages = onlySendMessages;
+    }
+
+    // Reuse infrastructure from IT
+    private final ArchiveScannerIntegrationTest test = new ArchiveScannerIntegrationTest();
+
+    private final boolean connectOtherSessions;
+    private final boolean onlySendMessages;
+
+    private ReportFactory reportFactory;
 
     private void setupBenchmark()
     {
         System.out.println("Running in: " + new File(".").getAbsolutePath());
 
-        launch();
+        test.launch();
+
+        test.acquireAcceptingSession();
 
         try
         {
             final int otherSessionCount = 4;
             final int initialSuffix = 2;
             final Session[] sessions = new Session[otherSessionCount];
-            for (int i = 0; i < otherSessionCount; i++)
+
+            if (connectOtherSessions)
             {
-                sessions[i] = completeConnectSessions(initiate(
-                    initiatingLibrary, port, INITIATOR_ID + (i + initialSuffix), ACCEPTOR_ID));
+                for (int i = 0; i < otherSessionCount; i++)
+                {
+                    sessions[i] = test.completeConnectSessions(initiate(
+                        test.initiatingLibrary, test.port, initiatorCompId(initialSuffix, i), ACCEPTOR_ID));
+                }
+            }
+            else // Just create them
+            {
+                for (int i = 0; i < otherSessionCount; i++)
+                {
+                    final HeaderEncoder headerEncoder = new HeaderEncoder()
+                        .senderCompID(ACCEPTOR_ID)
+                        .targetCompID(initiatorCompId(initialSuffix, i));
+
+                    test.testSystem.awaitCompletedReply(
+                        test.acceptingLibrary.followerSession(headerEncoder, 10_000));
+                }
             }
 
             for (int i = 0; i < 900; i++)
@@ -57,16 +92,19 @@ public class ArchiveScannerBenchmarkGenerator extends ArchiveScannerIntegrationT
                 System.out.println(i);
             }
 
-            final long start = nanoClock.nanoTime();
+            final long start = test.nanoClock.nanoTime();
 
-            for (int i = 0; i < otherSessionCount; i++)
+            if (connectOtherSessions)
             {
-                exchangeMessages(SEND_BATCH, sessions[i]);
+                for (int i = 0; i < otherSessionCount; i++)
+                {
+                    exchangeMessages(SEND_BATCH, sessions[i]);
+                }
             }
 
             exchangeMessages(SEND_BATCH);
 
-            final long end = nanoClock.nanoTime();
+            final long end = test.nanoClock.nanoTime();
 
             for (int i = 0; i < 900; i++)
             {
@@ -78,32 +116,59 @@ public class ArchiveScannerBenchmarkGenerator extends ArchiveScannerIntegrationT
             System.out.println("start = " + start);
             System.out.println("end = " + end);
 
-            System.out.println("mediaDriver = " + mediaDriver.mediaDriver().aeronDirectoryName());
-            final File archiveDir = mediaDriver.archive().context().archiveDir();
+            System.out.println("mediaDriver = " + test.mediaDriver.mediaDriver().aeronDirectoryName());
+            final File archiveDir = test.mediaDriver.archive().context().archiveDir();
             System.out.println("mediaDriver.archive().context().archiveDir() = " + archiveDir);
-            System.out.println("acceptingEngine = " + acceptingEngine.configuration().logFileDir());
+            System.out.println("acceptingEngine = " + test.acceptingEngine.configuration().logFileDir());
             System.out.println("new File(\".\") = " + new File(".").getAbsolutePath());
         }
         finally
         {
-            close();
+            test.close();
         }
+    }
+
+    private String initiatorCompId(final int initialSuffix, final int i)
+    {
+        return INITIATOR_ID + (i + initialSuffix);
     }
 
     private void exchangeMessages(final int n)
     {
-        exchangeMessages(n, initiatingSession);
+        exchangeMessages(n, test.initiatingSession);
     }
 
-    private void exchangeMessages(final int n, final Session session)
+    private void exchangeMessages(final int n, final Session initSession)
     {
-        String testReqID = null;
-        for (int i = 0; i < n; i++)
+        final List<FixMessage> receivedMessages = test.initiatingOtfAcceptor.messages();
+        receivedMessages.clear();
+
+        if (onlySendMessages)
         {
-            testReqID = testReqId();
-            sendTestRequest(testSystem, session, testReqID);
+            ReportFactory reportFactory = this.reportFactory;
+            if (reportFactory == null)
+            {
+                reportFactory = this.reportFactory = new ReportFactory();
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                reportFactory.sendReport(test.testSystem, test.acceptingSession, Side.SELL);
+            }
+
+            test.testSystem.await("Failed to receive messages", () -> receivedMessages.size() >= n);
         }
-        assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
-        initiatingOtfAcceptor.messages().clear();
+        else
+        {
+            String testReqID = null;
+            for (int i = 0; i < n; i++)
+            {
+                testReqID = testReqId();
+                sendTestRequest(test.testSystem, initSession, testReqID);
+            }
+            assertReceivedSingleHeartbeat(test.testSystem, test.initiatingOtfAcceptor, testReqID);
+        }
+
+        receivedMessages.clear();
     }
 }

@@ -152,7 +152,7 @@ public class StreamTimestampZipper
         owner.nothingBuffered();
     }
 
-    private void compact()
+    private boolean compact()
     {
         if (reorderBufferOffset > compactionSize)
         {
@@ -164,7 +164,7 @@ public class StreamTimestampZipper
                 // No compaction possible
                 if (offset == reorderBufferOffset)
                 {
-                    return;
+                    return false;
                 }
 
                 final int length = position.length;
@@ -174,6 +174,8 @@ public class StreamTimestampZipper
             }
             this.reorderBufferOffset = reorderBufferOffset;
         }
+
+        return true;
     }
 
     public int bufferPosition()
@@ -268,6 +270,7 @@ public class StreamTimestampZipper
         private final Poller poller;
         private long minBufferedTimestamp = NOTHING_BUFFERED;
         private long maxHandledTimestamp;
+        private boolean isDrained = false;
 
         StreamPoller(final Poller poller)
         {
@@ -322,15 +325,42 @@ public class StreamTimestampZipper
         {
             poller.close();
         }
+
+        boolean isDrained(final ArrayList<BufferedPosition> positions)
+        {
+            if (isDrained)
+            {
+                return true;
+            }
+
+            if (!poller.isComplete())
+            {
+                return false;
+            }
+
+            final int size = positions.size();
+            for (int i = 0; i < size; i++)
+            {
+                if (positions.get(i).owner == this)
+                {
+                    return false;
+                }
+            }
+
+            isDrained = true;
+            return true;
+        }
     }
 
-    private static long findMinLowWaterMark(final StreamPoller[] pollers, final StreamPoller owner)
+    private long findMinLowWaterMark(final StreamPoller[] pollers, final StreamPoller owner)
     {
         long timestampLowWaterMark = Long.MAX_VALUE;
         for (int i = 0; i < pollers.length; i++)
         {
             final StreamPoller poller = pollers[i];
-            if (poller != owner)
+            // If the poller has already complete, then there's definitely no more messages from it, so we can
+            // just ignore its timestamp
+            if (poller != owner && !poller.isDrained(positions))
             {
                 timestampLowWaterMark = min(timestampLowWaterMark, poller.timestampLowWaterMark());
             }
@@ -397,8 +427,8 @@ public class StreamTimestampZipper
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
                 replayerTimestamp.wrap(buffer, offset, blockLength, version);
-                final long timestamp = replayerTimestamp.timestamp();
-                owner.handledTimestamp(timestamp);
+                final long timestampInNs = replayerTimestamp.timestamp();
+                owner.handledTimestamp(timestampInNs);
             }
             else if (templateId == ApplicationHeartbeatDecoder.TEMPLATE_ID)
             {
@@ -490,5 +520,7 @@ public class StreamTimestampZipper
         int streamId();
 
         void close();
+
+        boolean isComplete();
     }
 }

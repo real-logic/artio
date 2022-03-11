@@ -17,7 +17,9 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.CommonContext;
 import io.aeron.archive.ArchivingMediaDriver;
+import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
+import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -26,6 +28,7 @@ import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicate;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,6 +52,11 @@ public class ArchiveScannerBenchmark
         final boolean enableIndexScan = Boolean.parseBoolean(args[2]);
         final boolean includePredicate = Boolean.parseBoolean(args[3]);
         final int totalRuns = Integer.parseInt(args[4]);
+        final boolean logProgress = args.length >= 6 && Boolean.parseBoolean(args[5]);
+
+        System.out.println("start = " + start + ", end = " + end + ", enableIndexScan = " + enableIndexScan +
+            ", includePredicate = " + includePredicate + ", totalRuns = " + totalRuns + ", logProgress = " +
+            logProgress);
 
         final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(CommonContext.getAeronDirectoryName())
@@ -63,17 +71,51 @@ public class ArchiveScannerBenchmark
             {
                 final IntHashSet queryStreamIds = new IntHashSet();
                 queryStreamIds.add(CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM);
+                queryStreamIds.add(CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM);
 
                 final List<String> messages = new ArrayList<>();
                 final FixMessageConsumer fixMessageConsumer =
-                    (message, buffer, offset, length, header) -> messages.add(message.body());
+                    new FixMessageConsumer()
+                    {
+                        private boolean seenMessage = false;
+
+                        public void onMessage(
+                            final FixMessageDecoder message,
+                            final DirectBuffer buffer,
+                            final int offset,
+                            final int length,
+                            final ArtioLogHeader header)
+                        {
+                            final String body = message.body();
+                            messages.add(body);
+
+                            if (logProgress)
+                            {
+                                if (!seenMessage)
+                                {
+                                    System.out.println("First message: " + body);
+                                    seenMessage = true;
+                                }
+
+
+                                final int size = messages.size();
+                                if ((size % 1000) == 0)
+                                {
+                                    System.out.println("messages.size() = " + size);
+                                }
+                            }
+                        }
+                    };
 
                 final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
-                final FixMessagePredicate timeFilter = FixMessagePredicates.between(start, end + 1);
                 final Predicate<SessionHeaderDecoder> sessionFilter = targetCompIdOf(INITIATOR_ID)
                     .or(senderCompIdOf(ACCEPTOR_ID));
-                final FixMessagePredicate predicate = whereHeader(fixDictionary, sessionFilter)
-                    .and(timeFilter);
+                FixMessagePredicate predicate = whereHeader(fixDictionary, sessionFilter);
+
+                if (end != 0)
+                {
+                    predicate = predicate.and(FixMessagePredicates.between(start, end + 1));
+                }
 
                 final long scanStart = System.nanoTime();
                 final FixMessageConsumer consumer = includePredicate ?
