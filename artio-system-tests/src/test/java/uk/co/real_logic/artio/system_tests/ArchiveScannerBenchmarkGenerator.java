@@ -29,15 +29,21 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
  */
 public final class ArchiveScannerBenchmarkGenerator
 {
-    static final int SEND_BATCH = 5_000;
 
     public static void main(final String[] args)
     {
-        new ArchiveScannerBenchmarkGenerator(false, true).setupBenchmark();
+        new ArchiveScannerBenchmarkGenerator(9_000, 5_000, false, true)
+            .setupBenchmark();
     }
 
-    private ArchiveScannerBenchmarkGenerator(final boolean connectOtherSessions, final boolean onlySendMessages)
+    private ArchiveScannerBenchmarkGenerator(
+        final int edgeBatchMultiplier,
+        final int sendBatch,
+        final boolean connectOtherSessions,
+        final boolean onlySendMessages)
     {
+        this.edgeBatchMultiplier = edgeBatchMultiplier;
+        this.sendBatch = sendBatch;
         this.connectOtherSessions = connectOtherSessions;
         this.onlySendMessages = onlySendMessages;
     }
@@ -45,6 +51,8 @@ public final class ArchiveScannerBenchmarkGenerator
     // Reuse infrastructure from IT
     private final ArchiveScannerIntegrationTest test = new ArchiveScannerIntegrationTest();
 
+    private final int edgeBatchMultiplier;
+    private final int sendBatch;
     private final boolean connectOtherSessions;
     private final boolean onlySendMessages;
 
@@ -87,7 +95,7 @@ public final class ArchiveScannerBenchmarkGenerator
 
             for (int i = 0; i < 900; i++)
             {
-                exchangeMessages(SEND_BATCH);
+                exchangeMessages(sendBatch);
 
                 System.out.println(i);
             }
@@ -98,17 +106,17 @@ public final class ArchiveScannerBenchmarkGenerator
             {
                 for (int i = 0; i < otherSessionCount; i++)
                 {
-                    exchangeMessages(SEND_BATCH, sessions[i]);
+                    exchangeMessages(sendBatch, sessions[i]);
                 }
             }
 
-            exchangeMessages(SEND_BATCH);
+            exchangeMessages(sendBatch);
 
             final long end = test.nanoClock.nanoTime();
 
-            for (int i = 0; i < 900; i++)
+            for (int i = 0; i < edgeBatchMultiplier; i++)
             {
-                exchangeMessages(SEND_BATCH);
+                exchangeMessages(sendBatch);
 
                 System.out.println(i);
             }

@@ -18,10 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
@@ -29,20 +31,23 @@ import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicate;
 import uk.co.real_logic.artio.engine.logger.FixMessagePredicates;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchiveScannerBenchmark
 {
+    private static int messageCount;
+    private static final Int2IntHashMap STREAM_ID_TO_LAST_SEQ_NUM = new Int2IntHashMap(MISSING_INT);
+
     public static void main(final String[] args)
     {
         System.out.println("Running in: " + new File(".").getAbsolutePath());
@@ -73,40 +78,6 @@ public class ArchiveScannerBenchmark
                 queryStreamIds.add(CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM);
                 queryStreamIds.add(CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM);
 
-                final List<String> messages = new ArrayList<>();
-                final FixMessageConsumer fixMessageConsumer =
-                    new FixMessageConsumer()
-                    {
-                        private boolean seenMessage = false;
-
-                        public void onMessage(
-                            final FixMessageDecoder message,
-                            final DirectBuffer buffer,
-                            final int offset,
-                            final int length,
-                            final ArtioLogHeader header)
-                        {
-                            final String body = message.body();
-                            messages.add(body);
-
-                            if (logProgress)
-                            {
-                                if (!seenMessage)
-                                {
-                                    System.out.println("First message: " + body);
-                                    seenMessage = true;
-                                }
-
-
-                                final int size = messages.size();
-                                if ((size % 1000) == 0)
-                                {
-                                    System.out.println("messages.size() = " + size);
-                                }
-                            }
-                        }
-                    };
-
                 final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
                 final Predicate<SessionHeaderDecoder> sessionFilter = targetCompIdOf(INITIATOR_ID)
                     .or(senderCompIdOf(ACCEPTOR_ID));
@@ -116,6 +87,8 @@ public class ArchiveScannerBenchmark
                 {
                     predicate = predicate.and(FixMessagePredicates.between(start, end + 1));
                 }
+
+                final FixMessageConsumer fixMessageConsumer = new BenchmarkMessageConsumer(logProgress);
 
                 final long scanStart = System.nanoTime();
                 final FixMessageConsumer consumer = includePredicate ?
@@ -130,7 +103,63 @@ public class ArchiveScannerBenchmark
 
                 final long scanEnd = System.nanoTime();
                 System.out.println("message scan time = " + TimeUnit.NANOSECONDS.toMillis(scanEnd - scanStart));
-                System.out.println("messages = " + messages.size());
+                System.out.println("messages = " + messageCount);
+            }
+        }
+    }
+
+    private static class BenchmarkMessageConsumer implements FixMessageConsumer
+    {
+        private final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+        private final HeaderDecoder headerDecoder = new HeaderDecoder();
+
+        private final boolean logProgress;
+
+        private boolean seenMessage = false;
+
+        BenchmarkMessageConsumer(final boolean logProgress)
+        {
+            this.logProgress = logProgress;
+        }
+
+        public void onMessage(
+            final FixMessageDecoder message,
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final ArtioLogHeader header)
+        {
+            messageCount++;
+
+            if (logProgress)
+            {
+                final int messageOffset = message.limit() + FixMessageDecoder.bodyHeaderLength();
+                final int bodyLength = message.bodyLength();
+
+                final int streamId = header.streamId();
+
+                if (!seenMessage)
+                {
+                    System.out.println("First message: " + message.body());
+                    seenMessage = true;
+                }
+
+                asciiBuffer.wrap(buffer);
+                headerDecoder.decode(asciiBuffer, messageOffset, bodyLength);
+                final int msgSeqNum = headerDecoder.msgSeqNum();
+                final int lastSeqNum = STREAM_ID_TO_LAST_SEQ_NUM.get(streamId);
+                if (lastSeqNum != MISSING_INT && lastSeqNum != msgSeqNum - 1)
+                {
+                    System.out.println("Out of order sequence number: lastSeqNum=" + lastSeqNum +
+                        ",msgSeqNum=" + msgSeqNum + ",streamId=" + streamId);
+                }
+                STREAM_ID_TO_LAST_SEQ_NUM.put(streamId, msgSeqNum);
+
+                final int size = messageCount;
+                if ((size % 1000) == 0)
+                {
+                    System.out.println("messageCount = " + size);
+                }
             }
         }
     }
