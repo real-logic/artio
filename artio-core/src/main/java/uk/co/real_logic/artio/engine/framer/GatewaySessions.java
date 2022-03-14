@@ -49,8 +49,6 @@ abstract class GatewaySessions
     protected final SequenceNumberIndexReader sentSequenceNumberIndex;
     protected final SequenceNumberIndexReader receivedSequenceNumberIndex;
     protected ErrorHandler errorHandler;
-    protected ByteBuffer rejectEncodeBuffer;
-    protected MutableAsciiBuffer rejectAsciiBuffer;
 
     GatewaySessions(
         final EpochClock epochClock,
@@ -276,6 +274,8 @@ abstract class GatewaySessions
         protected long requiredPosition = NO_REQUIRED_POSITION;
         protected long lingerTimeoutInMs;
         protected long lingerExpiryTimeInMs;
+        protected ByteBuffer rejectEncodeBuffer;
+        protected MutableAsciiBuffer rejectAsciiBuffer;
 
         PendingAcceptorLogon(
             final GatewaySession gatewaySession,
