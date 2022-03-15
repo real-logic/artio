@@ -111,6 +111,7 @@ public class StreamTimestampZipper
             if (timestamp <= timestampLowWaterMark)
             {
                 owner.handledTimestamp(timestamp);
+                owner.elementsInBuffer--;
                 logEntryHandler.owner = owner;
                 logEntryHandler.onBufferedMessage(position.offset, position.length);
                 read++;
@@ -271,6 +272,7 @@ public class StreamTimestampZipper
         private long minBufferedTimestamp = NOTHING_BUFFERED;
         private long maxHandledTimestamp;
         private boolean isDrained = false;
+        private int elementsInBuffer = 0;
 
         StreamPoller(final Poller poller)
         {
@@ -318,6 +320,8 @@ public class StreamTimestampZipper
         {
             return "StreamPoller{" +
                 "header=" + header +
+                ", isDrained=" + isDrained +
+                ", poller=" + poller +
                 '}';
         }
 
@@ -326,7 +330,7 @@ public class StreamTimestampZipper
             poller.close();
         }
 
-        boolean isDrained(final ArrayList<BufferedPosition> positions)
+        boolean isDrained()
         {
             if (isDrained)
             {
@@ -338,13 +342,9 @@ public class StreamTimestampZipper
                 return false;
             }
 
-            final int size = positions.size();
-            for (int i = 0; i < size; i++)
+            if (elementsInBuffer > 0)
             {
-                if (positions.get(i).owner == this)
-                {
-                    return false;
-                }
+                return false;
             }
 
             isDrained = true;
@@ -360,7 +360,7 @@ public class StreamTimestampZipper
             final StreamPoller poller = pollers[i];
             // If the poller has already complete, then there's definitely no more messages from it, so we can
             // just ignore its timestamp
-            if (poller != owner && !poller.isDrained(positions))
+            if (poller != owner && !poller.isDrained())
             {
                 timestampLowWaterMark = min(timestampLowWaterMark, poller.timestampLowWaterMark());
             }
@@ -464,6 +464,7 @@ public class StreamTimestampZipper
             final DirectBuffer buffer, final int start, final int length, final long timestamp)
         {
             owner.bufferedTimestamp(timestamp);
+            owner.elementsInBuffer++;
             reorderBuffer.putBytes(reorderBufferOffset, buffer, start, length);
             positions.add(new BufferedPosition(owner, timestamp, reorderBufferOffset, length));
             reorderBufferOffset += length;

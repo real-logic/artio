@@ -29,6 +29,12 @@ abstract class CompositeFixMessagePredicate implements FixMessagePredicate
         this.right = right;
     }
 
+    public void reset()
+    {
+        left.reset();
+        right.reset();
+    }
+
     public FixMessagePredicate left()
     {
         return left;

@@ -71,6 +71,12 @@ public final class FixMessagePredicates
             this.predicate = predicate;
         }
 
+        public void reset()
+        {
+            consumer.reset();
+            predicate.reset();
+        }
+
         public void onMessage(
             final FixMessageDecoder message,
             final DirectBuffer buffer,
@@ -253,7 +259,8 @@ public final class FixMessagePredicates
             senderCompId,
             HeaderField.SENDER_COMP_ID,
             SessionHeaderDecoder::senderCompID,
-            SessionHeaderDecoder::senderCompIDLength);
+            SessionHeaderDecoder::senderCompIDLength,
+            true);
     }
 
     public static Predicate<SessionHeaderDecoder> targetCompIdOf(final String targetCompId)
@@ -262,30 +269,31 @@ public final class FixMessagePredicates
             targetCompId,
             HeaderField.TARGET_COMP_ID,
             SessionHeaderDecoder::targetCompID,
-            SessionHeaderDecoder::targetCompIDLength);
+            SessionHeaderDecoder::targetCompIDLength,
+            true);
     }
 
     public static Predicate<SessionHeaderDecoder> senderSubIdOf(final String senderSubId)
     {
-        return headerMatches(
+        return headerMatchesConsistent(
             senderSubId, SessionHeaderDecoder::senderSubID, SessionHeaderDecoder::senderSubIDLength);
     }
 
     public static Predicate<SessionHeaderDecoder> targetSubIdOf(final String targetSubId)
     {
-        return headerMatches(
+        return headerMatchesConsistent(
             targetSubId, SessionHeaderDecoder::targetSubID, SessionHeaderDecoder::targetSubIDLength);
     }
 
     public static Predicate<SessionHeaderDecoder> senderLocationIdOf(final String senderLocationId)
     {
-        return headerMatches(
+        return headerMatchesConsistent(
             senderLocationId, SessionHeaderDecoder::senderLocationID, SessionHeaderDecoder::senderLocationIDLength);
     }
 
     public static Predicate<SessionHeaderDecoder> targetLocationIdOf(final String targetLocationId)
     {
-        return headerMatches(
+        return headerMatchesConsistent(
             targetLocationId, SessionHeaderDecoder::targetLocationID, SessionHeaderDecoder::targetLocationIDLength);
     }
 
@@ -294,19 +302,106 @@ public final class FixMessagePredicates
         final Function<SessionHeaderDecoder, char[]> charExtractor,
         final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
     {
-        return headerMatches(value, HeaderField.NOT_OPTIMISED, charExtractor, lengthExtractor);
+        return headerMatches(value, HeaderField.NOT_OPTIMISED, charExtractor, lengthExtractor, false);
+    }
+
+    private static Predicate<SessionHeaderDecoder> headerMatchesConsistent(
+        final String value,
+        final Function<SessionHeaderDecoder, char[]> charExtractor,
+        final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
+    {
+        return headerMatches(value, HeaderField.NOT_OPTIMISED, charExtractor, lengthExtractor, true);
     }
 
     private static Predicate<SessionHeaderDecoder> headerMatches(
         final String value,
         final HeaderField headerField,
         final Function<SessionHeaderDecoder, char[]> charExtractor,
-        final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
+        final ToIntFunction<SessionHeaderDecoder> lengthExtractor,
+        final boolean sessionConsistent)
     {
-        return new HeaderMatches(value, headerField, charExtractor, lengthExtractor);
+        return new HeaderMatches(value, headerField, sessionConsistent, charExtractor, lengthExtractor);
     }
 
-    static class HeaderMatches implements Predicate<SessionHeaderDecoder>
+    abstract static class HeaderPredicate implements Predicate<SessionHeaderDecoder>
+    {
+        private final boolean sessionConsistent;
+
+        protected HeaderPredicate(final boolean sessionConsistent)
+        {
+            this.sessionConsistent = sessionConsistent;
+        }
+
+        public Predicate<SessionHeaderDecoder> and(final Predicate<? super SessionHeaderDecoder> other)
+        {
+            if (other instanceof HeaderPredicate)
+            {
+                return new CompositeHeaderPredicate(this, (HeaderPredicate)other)
+                {
+                    public boolean test(final SessionHeaderDecoder sessionHeaderDecoder)
+                    {
+                        return left.test(sessionHeaderDecoder) && right.test(sessionHeaderDecoder);
+                    }
+                };
+            }
+            else
+            {
+                return Predicate.super.and(other);
+            }
+        }
+
+        public Predicate<SessionHeaderDecoder> or(final Predicate<? super SessionHeaderDecoder> other)
+        {
+            if (other instanceof HeaderPredicate)
+            {
+                return new CompositeHeaderPredicate(this, (HeaderPredicate)other)
+                {
+                    public boolean test(final SessionHeaderDecoder sessionHeaderDecoder)
+                    {
+                        return left.test(sessionHeaderDecoder) || right.test(sessionHeaderDecoder);
+                    }
+                };
+            }
+            else
+            {
+                return Predicate.super.or(other);
+            }
+        }
+
+        public Predicate<SessionHeaderDecoder> negate()
+        {
+            final HeaderPredicate delegate = this;
+            return new HeaderPredicate(delegate.sessionConsistent)
+            {
+                @Override
+                public boolean test(final SessionHeaderDecoder sessionHeaderDecoder)
+                {
+                    return !delegate.test(sessionHeaderDecoder);
+                }
+            };
+        }
+
+        public boolean isSessionConsistent()
+        {
+            return sessionConsistent;
+        }
+    }
+
+    abstract static class CompositeHeaderPredicate extends HeaderPredicate
+    {
+        final HeaderPredicate left;
+        final HeaderPredicate right;
+
+        CompositeHeaderPredicate(final HeaderPredicate left, final HeaderPredicate right)
+        {
+            super(left.isSessionConsistent() && right.isSessionConsistent());
+            this.left = left;
+            this.right = right;
+        }
+
+    }
+
+    static class HeaderMatches extends HeaderPredicate
     {
         final char[] expectedChars;
         final HeaderField headerField;
@@ -318,9 +413,11 @@ public final class FixMessagePredicates
         HeaderMatches(
             final String value,
             final HeaderField headerField,
+            final boolean sessionConsistent,
             final Function<SessionHeaderDecoder, char[]> charExtractor,
             final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
         {
+            super(sessionConsistent);
             expectedChars = value.toCharArray();
 
             this.value = value;
@@ -341,6 +438,13 @@ public final class FixMessagePredicates
         final FixDictionary fixDictionary,
         final Predicate<SessionHeaderDecoder> matches)
     {
+        if (matches instanceof HeaderPredicate)
+        {
+            if (((HeaderPredicate)matches).isSessionConsistent())
+            {
+                return new SessionConsistentWhereHeader(fixDictionary, matches);
+            }
+        }
         return new WhereHeader(fixDictionary, matches);
     }
 
@@ -348,30 +452,75 @@ public final class FixMessagePredicates
     {
         private final Predicate<SessionHeaderDecoder> matches;
         private final SessionHeaderDecoder header;
-        private final ExpandableArrayBuffer buffer;
         private final AsciiBuffer asciiBuffer;
 
         WhereHeader(final FixDictionary fixDictionary, final Predicate<SessionHeaderDecoder> matches)
         {
             header = fixDictionary.makeHeaderDecoder();
             this.matches = matches;
-            buffer = new ExpandableArrayBuffer(1024);
             asciiBuffer = new MutableAsciiBuffer();
         }
 
         public boolean test(final FixMessageDecoder message)
         {
+            final DirectBuffer buffer = message.buffer();
             final int length = message.bodyLength();
-            buffer.checkLimit(length);
-            message.getBody(buffer, 0, length);
+            final int bodyOffset = message.limit() + FixMessageDecoder.bodyHeaderLength();
             asciiBuffer.wrap(buffer);
-            header.decode(asciiBuffer, 0, length);
+            header.decode(asciiBuffer, bodyOffset, length);
             return matches.test(header);
         }
 
         public Predicate<SessionHeaderDecoder> matches()
         {
             return matches;
+        }
+    }
+
+    // Applies a WhereHeader and caches the session ids
+    static class SessionConsistentWhereHeader extends WhereHeader
+    {
+        private final LongHashSet matchingIds = new LongHashSet();
+        private final LongHashSet rejectedIds = new LongHashSet();
+
+        SessionConsistentWhereHeader(
+            final FixDictionary fixDictionary, final Predicate<SessionHeaderDecoder> matches)
+        {
+            super(fixDictionary, matches);
+        }
+
+        public void reset()
+        {
+            matchingIds.clear();
+            rejectedIds.clear();
+        }
+
+        public boolean test(final FixMessageDecoder message)
+        {
+            final LongHashSet matchingIds = this.matchingIds;
+            final LongHashSet rejectedIds = this.rejectedIds;
+
+            final long sessionId = message.session();
+            if (matchingIds.contains(sessionId))
+            {
+                return true;
+            }
+
+            if (rejectedIds.contains(sessionId))
+            {
+                return false;
+            }
+
+            final boolean result = super.test(message);
+            if (result)
+            {
+                matchingIds.add(sessionId);
+            }
+            else
+            {
+                rejectedIds.add(sessionId);
+            }
+            return result;
         }
     }
 

@@ -42,7 +42,7 @@ import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuratio
  */
 public class FixArchiveScanner implements AutoCloseable
 {
-    private static final int FRAGMENT_LIMIT = 10;
+    public static final int DEFAULT_FRAGMENT_LIMIT = 10000;
 
     static final boolean DEBUG_LOG_ARCHIVE_SCAN = DebugLogger.isEnabled(ARCHIVE_SCAN);
 
@@ -50,6 +50,7 @@ public class FixArchiveScanner implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final IdleStrategy idleStrategy;
     private final int compactionSize;
+    private final int fragmentLimit;
 
     private final String logFileDir;
 
@@ -57,6 +58,7 @@ public class FixArchiveScanner implements AutoCloseable
 
     public static class Configuration
     {
+        private int fragmentLimit = DEFAULT_FRAGMENT_LIMIT;
         private String aeronDirectoryName;
         private IdleStrategy idleStrategy;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
@@ -98,6 +100,21 @@ public class FixArchiveScanner implements AutoCloseable
         public int compactionSize()
         {
             return compactionSize;
+        }
+
+        /**
+         * Sets the fragment limit for polling different images when archive scanning.
+         *
+         * @param fragmentLimit the fragment limit
+         */
+        public void fragmentLimit(final int fragmentLimit)
+        {
+            this.fragmentLimit = fragmentLimit;
+        }
+
+        public int fragmentLimit()
+        {
+            return fragmentLimit;
         }
 
         /**
@@ -153,6 +170,7 @@ public class FixArchiveScanner implements AutoCloseable
 
         this.idleStrategy = configuration.idleStrategy();
         compactionSize = configuration.compactionSize;
+        fragmentLimit = configuration.fragmentLimit;
 
         final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(configuration.aeronDirectoryName());
         aeron = Aeron.connect(aeronContext);
@@ -201,6 +219,11 @@ public class FixArchiveScanner implements AutoCloseable
         final boolean follow,
         final int archiveScannerStreamId)
     {
+        if (fixHandler != null)
+        {
+            fixHandler.reset();
+        }
+
         final Long2ObjectHashMap<PositionRange> recordingIdToPositionRange =
             scanIndexIfPossible(fixHandler, follow, queryStreamIds);
 
@@ -510,7 +533,7 @@ public class FixArchiveScanner implements AutoCloseable
                 }
                 else
                 {
-                    return image.poll(fragmentAssembler, FRAGMENT_LIMIT);
+                    return image.poll(fragmentAssembler, fragmentLimit);
                 }
             }
         }

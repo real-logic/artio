@@ -48,4 +48,11 @@ public interface FixMessageConsumer
         int offset,
         int length,
         ArtioLogHeader header);
+
+    /**
+     * Invoked when a scan begins, can be used to reset any internal state.
+     */
+    default void reset()
+    {
+    }
 }

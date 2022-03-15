@@ -20,12 +20,21 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 /**
  * A criteria for filtering fix messages.
  *
+ * Predicates should not be shared between different concurrent calls to <code>scan()</code>.
+ *
  * @see FixMessagePredicates for different useful implementations
  */
 @FunctionalInterface
 public interface FixMessagePredicate
 {
     boolean test(FixMessageDecoder message);
+
+    /**
+     * Invoked when a scan begins, can be used to reset any internal state.
+     */
+    default void reset()
+    {
+    }
 
     default FixMessagePredicate and(final FixMessagePredicate other)
     {
