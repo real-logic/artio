@@ -273,6 +273,10 @@ public class FixArchiveScanner implements AutoCloseable
                 lookupArchiveLocations(
                     id, follow, aeronChannel, recordingIdToPositionRange)
                     .stream()
+                    // filter out empty streams as
+                    // 1) they are empty - we don't need to poll them
+                    // 2) we use empty length later within polling as a test for polling being finished
+                    .filter(archiveLocation -> archiveLocation.length() != 0L)
                     .map(archiveLocation -> new RecordingPoller(replaySubscription, id, archiveLocation)))
             .toArray(RecordingPoller[]::new);
     }
