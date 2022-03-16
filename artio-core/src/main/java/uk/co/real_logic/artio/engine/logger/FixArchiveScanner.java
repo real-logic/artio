@@ -64,6 +64,7 @@ public class FixArchiveScanner implements AutoCloseable
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
         private String logFileDir;
         private boolean enableIndexScan;
+        private AeronArchive.Context archiveContext;
 
         public Configuration()
         {
@@ -155,6 +156,21 @@ public class FixArchiveScanner implements AutoCloseable
             return enableIndexScan;
         }
 
+        /**
+         * Sets the context to be used to create the Aeron Archiver that this backs onto.
+         *
+         * NB: this archiver will be given ownership of an Aeron instance, so a custom Aeron instance
+         * shouldn't be set on the archive context.
+         *
+         * @param archiveContext the context to use to create the aeron archiver.
+         * @return this
+         */
+        public Configuration archiveContext(final AeronArchive.Context archiveContext)
+        {
+            this.archiveContext = archiveContext;
+            return this;
+        }
+
         private void conclude()
         {
             if (enableIndexScan && logFileDir == null)
@@ -174,7 +190,14 @@ public class FixArchiveScanner implements AutoCloseable
 
         final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(configuration.aeronDirectoryName());
         aeron = Aeron.connect(aeronContext);
-        aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron).ownsAeronClient(true));
+
+        AeronArchive.Context archiveContext = configuration.archiveContext;
+        if (archiveContext == null)
+        {
+            archiveContext = new AeronArchive.Context();
+        }
+        // Context closes Aeron instance if this fails to connect.
+        aeronArchive = AeronArchive.connect(archiveContext.aeron(aeron).ownsAeronClient(true));
 
         final String logFileDir = configuration.logFileDir();
         final boolean enableIndexScan = configuration.enableIndexScan();
