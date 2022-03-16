@@ -19,6 +19,8 @@ import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
+
 class SlowPeeker extends BlockablePosition
 {
     final Image normalImage;
@@ -33,6 +35,9 @@ class SlowPeeker extends BlockablePosition
 
     int peek(final ControlledFragmentHandler handler)
     {
+        final boolean replayStream = peekImage.subscription() != null &&
+            peekImage.subscription().streamId() == DEFAULT_OUTBOUND_REPLAY_STREAM;
+
         blockPosition = DID_NOT_BLOCK;
         final long initialPosition = peekImage.position();
         final long normalImagePosition = normalImage.position();
@@ -44,6 +49,13 @@ class SlowPeeker extends BlockablePosition
         if (!peekImage.isClosed())
         {
             final long blockPosition = this.blockPosition;
+            if (replayStream && delta > 0)
+            {
+                System.out.println("***** initialPosition=" + initialPosition +
+                    ", normalImagePosition=" + normalImagePosition +
+                    ", resultingPosition=" + resultingPosition +
+                    ", blockPosition=" + blockPosition);
+            }
             if (blockPosition != DID_NOT_BLOCK) // lgtm [java/constant-comparison]
             {
                 peekImage.position(blockPosition);

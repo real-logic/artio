@@ -451,7 +451,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replayPaused)
         {
-            return blockPositionFixMessage(header, length, outboundTracker);
+            return blockPositionFixMessage(header, length, outboundTracker, true);
         }
 
         return attemptSlowMessage(
@@ -494,7 +494,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (partiallySentOtherStream(tracker))
         {
-            return blockPositionFixMessage(header, length, tracker);
+            return blockPositionFixMessage(header, length, tracker, true);
         }
 
         try
@@ -503,7 +503,7 @@ class FixSenderEndPoint extends SenderEndPoint
             final int remainingLength;
             final int bytesPreviouslySent;
 
-            // You've complete the stream and there's another message in between.
+            // You've completed the stream and there's another message in between.
             if (sentPosition < startOfMessage)
             {
                 remainingLength = bodyLength;
@@ -525,6 +525,12 @@ class FixSenderEndPoint extends SenderEndPoint
             ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
+            if (written < 0)
+            {
+                System.out.println("***** " + connectionId + " channel.write returned: " + written);
+
+                throw new IOException("Disconnected");
+            }
             bytesInBuffer.getAndAddOrdered(-written);
 
             updateSendingTimeoutTimeInMs(timeInMs, written);
@@ -532,7 +538,7 @@ class FixSenderEndPoint extends SenderEndPoint
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 tracker.sentPosition = (position - remainingLength) + written;
-                return blockPositionFixMessage(header, length, tracker);
+                return blockPositionFixMessage(header, length, tracker, true);
             }
             else
             {
@@ -562,7 +568,8 @@ class FixSenderEndPoint extends SenderEndPoint
     }
 
     private Action blockPositionFixMessage(
-        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker)
+        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker,
+        final boolean partiallySentOther)
     {
         final BlockablePosition blockablePosition = tracker.blockablePosition;
 
@@ -583,6 +590,16 @@ class FixSenderEndPoint extends SenderEndPoint
 
         blockablePosition.blockPosition(messageStartPosition);
         tracker.skipPosition = messagePosition;
+
+        if (tracker == replayTracker)
+        {
+            System.out.println("***** replay blockPositionFixMessage: " + connectionId +
+                ", messageStartPosition=" + messageStartPosition +
+                ", unfragmented=" + ((header.flags() & UNFRAGMENTED) == UNFRAGMENTED) +
+                ", messagePosition=" + messagePosition +
+                ", partiallySentOther=" + partiallySentOther);
+        }
+
         return Action.CONTINUE;
     }
 
@@ -653,12 +670,12 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public Action onReplayComplete(final long correlationId, final boolean slow)
     {
-        // We don't do a slow check here because you may catchup during the replay if you only became replay slow
+        // We don't do a slow check here because you may catch up during the replay if you only became replay slow
         // and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
         // duplicates
 
         final StreamTracker replayTracker = this.replayTracker;
-        if (correlationId == replayInFlight && // dedup by checking the correlation id
+        if (correlationId == replayInFlight && // deduplicate by checking the correlation id
             !replayTracker.partiallySentMessage &&
             replayTracker.skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
