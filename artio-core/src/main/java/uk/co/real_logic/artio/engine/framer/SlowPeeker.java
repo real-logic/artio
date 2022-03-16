@@ -74,7 +74,7 @@ class SlowPeeker extends BlockablePosition
             {
                 // Closed handled below,
                 // Position definitely valid
-                if (delta > 0 || initialPosition >= normalImagePosition)
+                if (delta > 0 || (initialPosition >= normalImagePosition && initialPosition > 0))
                 {
                     System.out.println("***** initialPosition=" + initialPosition +
                         ", normalImagePosition=" + normalImagePosition +
