@@ -246,6 +246,7 @@ public class CommonConfiguration
     public static final int DEFAULT_SESSION_BUFFER_SIZE = 16 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
+    public static final int NO_FORCED_HEARTBEAT_INTERVAL = -1;
 
     public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
@@ -292,6 +293,7 @@ public class CommonConfiguration
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
     private boolean backpressureMessagesDuringReplay = true;
     private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
+    private int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -325,6 +327,22 @@ public class CommonConfiguration
     public CommonConfiguration defaultHeartbeatIntervalInS(final int value)
     {
         defaultHeartbeatIntervalInS = value;
+        return this;
+    }
+
+    /**
+     * Set an interval for heartbeats, forcing an override of the logon message. This configuration option is useful
+     * for testing the behaviour of other client's heartbeat behaviour, or for working around buggy counter-parties.
+     * If you want to mostly disable heartbeats in order to test counter-parties then this can be set to a very long
+     * time period, for example a week (604800 seconds).
+     *
+     * @param forcedHeartbeatIntervalInS the interval for heartbeats, forcing an override of the logon message.
+     *                                  Specified in seconds.
+     * @return this
+     */
+    public CommonConfiguration forcedHeartbeatIntervalInS(final int forcedHeartbeatIntervalInS)
+    {
+        this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
         return this;
     }
 
@@ -787,6 +805,11 @@ public class CommonConfiguration
     public int defaultHeartbeatIntervalInS()
     {
         return defaultHeartbeatIntervalInS;
+    }
+
+    public int forcedHeartbeatIntervalInS()
+    {
+        return forcedHeartbeatIntervalInS;
     }
 
     public long reasonableTransmissionTimeInMs()

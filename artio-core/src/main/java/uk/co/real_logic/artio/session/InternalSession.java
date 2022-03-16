@@ -70,7 +70,8 @@ public class InternalSession extends Session implements AutoCloseable
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType,
         final boolean backpressureMessagesDuringReplay,
-        final ResendRequestController resendRequestController)
+        final ResendRequestController resendRequestController,
+        final int forcedHeartbeatIntervalInS)
     {
         super(
             heartbeatIntervalInS,
@@ -95,7 +96,8 @@ public class InternalSession extends Session implements AutoCloseable
             epochFractionClock,
             connectionType,
             backpressureMessagesDuringReplay,
-            resendRequestController);
+            resendRequestController,
+            forcedHeartbeatIntervalInS);
     }
 
     public int poll(final long timeInNs)

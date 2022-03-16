@@ -2186,7 +2186,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             messageInfo,
             epochFractionClock,
             configuration.backpressureMessagesDuringReplay(),
-            configuration.resendRequestController());
+            configuration.resendRequestController(),
+            configuration.forcedHeartbeatIntervalInS());
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -2261,7 +2262,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             messageInfo,
             epochFractionClock,
             configuration.backpressureMessagesDuringReplay(),
-            configuration.resendRequestController());
+            configuration.resendRequestController(),
+            configuration.forcedHeartbeatIntervalInS());
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;

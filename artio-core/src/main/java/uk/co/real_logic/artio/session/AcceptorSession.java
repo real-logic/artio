@@ -48,7 +48,8 @@ public class AcceptorSession extends InternalSession
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
         final boolean backpressureMessagesDuringReplay,
-        final ResendRequestController resendRequestController)
+        final ResendRequestController resendRequestController,
+        final int forcedHeartbeatIntervalInS)
     {
         super(
             defaultInterval,
@@ -73,6 +74,7 @@ public class AcceptorSession extends InternalSession
             epochFractionClock,
             ConnectionType.ACCEPTOR,
             backpressureMessagesDuringReplay,
-            resendRequestController);
+            resendRequestController,
+            forcedHeartbeatIntervalInS);
     }
 }

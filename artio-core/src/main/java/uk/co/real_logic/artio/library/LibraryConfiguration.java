@@ -315,6 +315,24 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration defaultHeartbeatIntervalInS(final int value)
+    {
+        super.defaultHeartbeatIntervalInS(value);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public LibraryConfiguration forcedHeartbeatIntervalInS(final int value)
+    {
+        super.forcedHeartbeatIntervalInS(value);
+        return this;
+    }
+
     // ------------------------
     // END INHERITED SETTERS
     // ------------------------

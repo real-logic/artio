@@ -23,8 +23,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_RESEND_REQUEST_CONTROLLER;
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
+import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -33,9 +32,10 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private final InitiatorSession session;
+
+    protected Session newSession()
     {
-        session = new InitiatorSession(HEARTBEAT_INTERVAL_IN_S,
+        final InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL_IN_S,
             CONNECTION_ID,
             fakeClock,
             nanoClock,
@@ -58,21 +58,23 @@ public class InitiatorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock,
             true,
-            DEFAULT_RESEND_REQUEST_CONTROLLER);
+            DEFAULT_RESEND_REQUEST_CONTROLLER,
+            forcedHeartbeatIntervalInS);
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);
+        return session;
     }
 
     @Test
     public void shouldInitiallyBeConnected()
     {
-        assertEquals(CONNECTED, session.state());
+        assertEquals(CONNECTED, session().state());
     }
 
     @Test
     public void shouldActivateUponLogonResponse()
     {
-        session.state(SENT_LOGON);
+        session().state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
 
@@ -86,23 +88,23 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldAttemptLogonWhenConnected()
     {
-        session.id(SESSION_ID);
-        session.poll(0);
+        session().id(SESSION_ID);
+        session().poll(0);
 
         verifyLogon();
 
-        assertEquals(1, session.lastSentMsgSeqNum());
+        assertEquals(1, session().lastSentMsgSeqNum());
     }
 
     @Test
     public void shouldAttemptLogonOnlyOnce()
     {
-        session.id(SESSION_ID);
-        session.poll(0);
+        session().id(SESSION_ID);
+        session().poll(0);
 
-        session.poll(10_000_000);
+        session().poll(10_000_000);
 
-        session.poll(20_000_000);
+        session().poll(20_000_000);
 
         verifyLogon();
     }
@@ -110,7 +112,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldNotifyGatewayWhenLoggedIn()
     {
-        session.state(SENT_LOGON);
+        session().state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
 
@@ -121,7 +123,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldNotifyGatewayWhenLoggedInOnce()
     {
-        session.state(SENT_LOGON);
+        session().state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
 
@@ -146,12 +148,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     protected void readyForLogon()
     {
-        session.state(SENT_LOGON);
-    }
-
-    protected Session session()
-    {
-        return session;
+        session().state(SENT_LOGON);
     }
 
     private void assertHasLogonTime()

@@ -33,9 +33,7 @@ import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private final AcceptorSession session = newAcceptorSession();
-
-    private AcceptorSession newAcceptorSession()
+    protected AcceptorSession newSession()
     {
         final AcceptorSession acceptorSession = new AcceptorSession(
             HEARTBEAT_INTERVAL_IN_S,
@@ -59,7 +57,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock,
             true,
-            DEFAULT_RESEND_REQUEST_CONTROLLER);
+            DEFAULT_RESEND_REQUEST_CONTROLLER,
+            forcedHeartbeatIntervalInS);
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(fixSessionOwner);
         return acceptorSession;
@@ -78,7 +77,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldInitiallyBeConnected()
     {
-        assertEquals(CONNECTED, session.state());
+        assertEquals(CONNECTED, session().state());
     }
 
     @Test
@@ -134,11 +133,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
     protected void readyForLogon()
     {
         // Deliberately blank
-    }
-
-    protected Session session()
-    {
-        return session;
     }
 
     private void verifyLogon()

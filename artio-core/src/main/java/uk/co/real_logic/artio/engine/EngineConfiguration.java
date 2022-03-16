@@ -1176,6 +1176,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
+    public EngineConfiguration forcedHeartbeatIntervalInS(final int value)
+    {
+        super.forcedHeartbeatIntervalInS(value);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         super.sessionIdStrategy(sessionIdStrategy);

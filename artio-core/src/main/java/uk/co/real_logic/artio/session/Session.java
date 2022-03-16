@@ -51,6 +51,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.*;
+import static uk.co.real_logic.artio.CommonConfiguration.NO_FORCED_HEARTBEAT_INTERVAL;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -123,6 +124,7 @@ public class Session
     private boolean backpressuredOutboundValidResendRequest = false;
     private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
     private final ResendRequestController resendRequestController;
+    private final int forcedHeartbeatIntervalInS;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
 
@@ -213,10 +215,12 @@ public class Session
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType,
         final boolean backpressureMessagesDuringReplay,
-        final ResendRequestController resendRequestController)
+        final ResendRequestController resendRequestController,
+        final int forcedHeartbeatIntervalInS)
     {
         this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
         this.resendRequestController = resendRequestController;
+        this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -2290,7 +2294,9 @@ public class Session
 
     void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInNs = SECONDS.toNanos(heartbeatIntervalInS);
+        this.heartbeatIntervalInNs = SECONDS.toNanos(
+            forcedHeartbeatIntervalInS != NO_FORCED_HEARTBEAT_INTERVAL ? forcedHeartbeatIntervalInS :
+            heartbeatIntervalInS);
 
         final long timeInNs = timeInNs();
         incNextReceivedInboundMessageTime(timeInNs);

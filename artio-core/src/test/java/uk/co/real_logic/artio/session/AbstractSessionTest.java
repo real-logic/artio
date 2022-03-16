@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -49,6 +48,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
+import static uk.co.real_logic.artio.CommonConfiguration.NO_FORCED_HEARTBEAT_INTERVAL;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
@@ -90,6 +90,8 @@ public abstract class AbstractSessionTest
     ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
     TestRequestEncoder testRequest = new TestRequestEncoder();
     FixSessionOwner fixSessionOwner = mock(FixSessionOwner.class);
+    int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
+    Session session;
 
     AbstractSessionTest()
     {
@@ -122,12 +124,6 @@ public abstract class AbstractSessionTest
     FixDictionary makeDictionary()
     {
         return FixDictionary.of(FixDictionary.findDefault());
-    }
-
-    @Before
-    public void shouldSetupDictionary()
-    {
-        verify(sessionProxy).fixDictionary(any());
     }
 
     @Test
@@ -1029,6 +1025,24 @@ public abstract class AbstractSessionTest
         assertNotEquals(timeAsString1, timeAsString2); // make sure time has moved forward
     }
 
+    @Test
+    public void shouldTakeForcedConfigurationIntoAccount()
+    {
+        forcedHeartbeatIntervalInS = 5;
+        assertForcedHeartbeatInterval();
+
+        onLogon(1);
+        assertForcedHeartbeatInterval();
+
+        session().heartbeatIntervalInS(3);
+        assertForcedHeartbeatInterval();
+    }
+
+    private void assertForcedHeartbeatInterval()
+    {
+        assertEquals(5_000, session().heartbeatIntervalInMs());
+    }
+
     private void verifySendingTimeAccuracyLogout()
     {
         verify(sessionProxy, times(1)).sendLogout(3, SEQUENCE_INDEX,
@@ -1267,7 +1281,19 @@ public abstract class AbstractSessionTest
         session().poll(nanoClock.nanoTime());
     }
 
-    protected abstract Session session();
+    protected abstract Session newSession();
+
+    protected Session session()
+    {
+        if (session == null)
+        {
+            session = newSession();
+
+            verify(sessionProxy).fixDictionary(any());
+        }
+
+        return session;
+    }
 
     protected void verifyNotifiesLoginListener()
     {
