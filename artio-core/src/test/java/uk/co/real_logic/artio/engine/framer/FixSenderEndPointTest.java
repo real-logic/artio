@@ -43,6 +43,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.framer.FixSenderEndPoint.START_REPLAY_LENGTH;
+import static uk.co.real_logic.artio.engine.framer.FixSenderEndPoint.TOTAL_START_REPLAY_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
@@ -478,7 +479,7 @@ public class FixSenderEndPointTest
 
         // Replayer wins the race and we try to start replaying whilst there are FIX messages on the outbound path
         endPoint.onStartReplay(REPLAY_CORRELATION_ID, startReplayPosition, false);
-        verifyBlocksReplayAt(startReplayPosition - START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH);
         assertBytesInBuffer(START_REPLAY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
@@ -486,7 +487,7 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, startReplayPosition);
-        verifyBlocksReplayAt(startReplayPosition - START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(1, replayMsgPosition);
@@ -550,7 +551,7 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(startingBytesInBuffer + BODY_LENGTH);
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
-        verifyBlocksReplayAt(msgPosition - START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(msgPosition - TOTAL_START_REPLAY_LENGTH);
         assertBytesInBuffer(startingBytesInBuffer + START_REPLAY_LENGTH + BODY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);

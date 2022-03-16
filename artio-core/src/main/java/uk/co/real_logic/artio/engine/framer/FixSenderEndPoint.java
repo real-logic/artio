@@ -50,6 +50,8 @@ class FixSenderEndPoint extends SenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
+    // Need to give Aeron the start position of the previous message, so include the DHF, naturally term aligned
+    static final int TOTAL_START_REPLAY_LENGTH = START_REPLAY_LENGTH + DataHeaderFlyweight.HEADER_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
     public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
@@ -451,7 +453,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replayPaused)
         {
-            return blockPositionFixMessage(header, length, outboundTracker, true);
+            return blockPositionFixMessage(header, length, outboundTracker, false);
         }
 
         return attemptSlowMessage(
@@ -538,7 +540,7 @@ class FixSenderEndPoint extends SenderEndPoint
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 tracker.sentPosition = (position - remainingLength) + written;
-                return blockPositionFixMessage(header, length, tracker, true);
+                return blockPositionFixMessage(header, length, tracker, false);
             }
             else
             {
@@ -595,7 +597,7 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             System.out.println("***** replay blockPositionFixMessage: " + connectionId +
                 ", messageStartPosition=" + messageStartPosition +
-                ", unfragmented=" + ((header.flags() & UNFRAGMENTED) == UNFRAGMENTED) +
+                ", un-fragmented=" + ((header.flags() & UNFRAGMENTED) == UNFRAGMENTED) +
                 ", messagePosition=" + messagePosition +
                 ", partiallySentOther=" + partiallySentOther);
         }
@@ -778,8 +780,13 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         final StreamTracker replayTracker = this.replayTracker;
         final boolean slowBecauseOfNormalStream = replayTracker.sentPosition == 0;
-        final long msgStartPosition = msgPosition - START_REPLAY_LENGTH;
+        final long msgStartPosition = msgPosition - TOTAL_START_REPLAY_LENGTH;
         blockPositionOther(msgStartPosition, msgPosition, replayTracker);
+
+        System.out.println("***** blockStartReplay: slow=" + slow +
+            ", slowBecauseOfNormalStream=" + slowBecauseOfNormalStream +
+            ", msgPosition=" + msgPosition +
+            ", blockPosition=" + msgStartPosition);
 
         if (!slow)
         {

@@ -17,7 +17,9 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
+import org.agrona.DirectBuffer;
 
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
 
@@ -33,29 +35,61 @@ class SlowPeeker extends BlockablePosition
         this.normalImage = normalImage;
     }
 
+    private boolean didntContinue;
+
+    private ControlledFragmentHandler delegate;
+    private ControlledFragmentHandler loggingHandler = new ControlledFragmentHandler()
+    {
+        public Action onFragment(
+            final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            final Action action = delegate.onFragment(buffer, offset, length, header);
+            if (action != Action.CONTINUE)
+            {
+                didntContinue = true;
+            }
+            return action;
+        }
+    };
+
     int peek(final ControlledFragmentHandler handler)
     {
         final boolean replayStream = peekImage.subscription() != null &&
             peekImage.subscription().streamId() == DEFAULT_OUTBOUND_REPLAY_STREAM;
 
         blockPosition = DID_NOT_BLOCK;
+        didntContinue = false;
+        delegate = handler;
         final long initialPosition = peekImage.position();
         final long normalImagePosition = normalImage.position();
 
         final long resultingPosition = peekImage.controlledPeek(
-            initialPosition, handler, normalImagePosition);
+            initialPosition, loggingHandler, normalImagePosition);
 
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
         {
             final long blockPosition = this.blockPosition;
-            if (replayStream && delta > 0)
+            if (replayStream)
             {
-                System.out.println("***** initialPosition=" + initialPosition +
-                    ", normalImagePosition=" + normalImagePosition +
-                    ", resultingPosition=" + resultingPosition +
-                    ", blockPosition=" + blockPosition);
+                // Closed handled below,
+                // Position definitely valid
+                if (delta > 0 || initialPosition >= normalImagePosition)
+                {
+                    System.out.println("***** initialPosition=" + initialPosition +
+                        ", normalImagePosition=" + normalImagePosition +
+                        ", resultingPosition=" + resultingPosition +
+                        ", blockPosition=" + blockPosition +
+                        ", sessionId=" + peekImage.sessionId());
+                }
+                else
+                {
+                    System.out.println("didntContinue = " + didntContinue);
+                    // Only other option is the fragment length being 0, which means we're in
+                    // a totally screwed position
+                }
             }
+
             if (blockPosition != DID_NOT_BLOCK) // lgtm [java/constant-comparison]
             {
                 peekImage.position(blockPosition);
@@ -69,6 +103,7 @@ class SlowPeeker extends BlockablePosition
         }
         else
         {
+            System.out.println("***** PeekImage closed");
             return 0;
         }
     }
