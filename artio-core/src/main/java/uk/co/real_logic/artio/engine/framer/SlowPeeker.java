@@ -74,17 +74,15 @@ class SlowPeeker extends BlockablePosition
             {
                 // Closed handled below,
                 // Position definitely valid
-                if (delta > 0 || (initialPosition >= normalImagePosition && initialPosition > 0))
+                if (delta > 0 || didntContinue)
                 {
                     System.out.println("***** initialPosition=" + initialPosition +
                         ", normalImagePosition=" + normalImagePosition +
                         ", resultingPosition=" + resultingPosition +
                         ", blockPosition=" + blockPosition +
-                        ", sessionId=" + peekImage.sessionId());
-                }
-                else
-                {
-                    System.out.println("didntContinue = " + didntContinue);
+                        ", sessionId=" + peekImage.sessionId() +
+                        ", didntContinue=" + didntContinue);
+
                     // Only other option is the fragment length being 0, which means we're in
                     // a totally screwed position
                 }
