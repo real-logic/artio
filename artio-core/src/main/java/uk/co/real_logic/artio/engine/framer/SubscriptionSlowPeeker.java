@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 
 import java.util.function.IntFunction;
@@ -28,11 +29,14 @@ class SubscriptionSlowPeeker
     private final Subscription normalSubscription;
     private final Int2ObjectHashMap<LibrarySlowPeeker> sessionIdToImagePeeker = new Int2ObjectHashMap<>();
     private final IntFunction<LibrarySlowPeeker> newLibraryPeeker = this::newLibraryPeeker;
+    private final ErrorHandler errorHandler;
 
-    SubscriptionSlowPeeker(final Subscription peekSubscription, final Subscription normalSubscription)
+    SubscriptionSlowPeeker(
+        final Subscription peekSubscription, final Subscription normalSubscription, final ErrorHandler errorHandler)
     {
         this.peekSubscription = peekSubscription;
         this.normalSubscription = normalSubscription;
+        this.errorHandler = errorHandler;
     }
 
     int peek(final ControlledFragmentHandler handler)
@@ -67,16 +71,16 @@ class SubscriptionSlowPeeker
             return null;
         }
 
-        return new LibrarySlowPeeker(peekImage, normalImage);
+        return new LibrarySlowPeeker(peekImage, normalImage, errorHandler);
     }
 
     class LibrarySlowPeeker extends SlowPeeker
     {
         private int libraries;
 
-        LibrarySlowPeeker(final Image peekImage, final Image normalImage)
+        LibrarySlowPeeker(final Image peekImage, final Image normalImage, final ErrorHandler errorHandler)
         {
-            super(peekImage, normalImage);
+            super(peekImage, normalImage, errorHandler);
         }
 
         void addLibrary()

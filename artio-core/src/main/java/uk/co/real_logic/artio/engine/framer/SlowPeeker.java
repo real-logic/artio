@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
 
@@ -28,9 +29,9 @@ class SlowPeeker extends BlockablePosition
     final Image normalImage;
     final Image peekImage;
 
-    SlowPeeker(final Image peekImage, final Image normalImage)
+    SlowPeeker(final Image peekImage, final Image normalImage, final ErrorHandler errorHandler)
     {
-        super(peekImage.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
+        super(peekImage.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH, errorHandler);
         this.peekImage = peekImage;
         this.normalImage = normalImage;
     }
@@ -38,7 +39,7 @@ class SlowPeeker extends BlockablePosition
     private boolean didntContinue;
 
     private ControlledFragmentHandler delegate;
-    private ControlledFragmentHandler loggingHandler = new ControlledFragmentHandler()
+    private final ControlledFragmentHandler loggingHandler = new ControlledFragmentHandler()
     {
         public Action onFragment(
             final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -57,11 +58,12 @@ class SlowPeeker extends BlockablePosition
         final boolean replayStream = peekImage.subscription() != null &&
             peekImage.subscription().streamId() == DEFAULT_OUTBOUND_REPLAY_STREAM;
 
-        blockPosition = DID_NOT_BLOCK;
-        didntContinue = false;
-        delegate = handler;
         final long initialPosition = peekImage.position();
         final long normalImagePosition = normalImage.position();
+
+        startPeek(initialPosition, normalImagePosition);
+        didntContinue = false;
+        delegate = handler;
 
         final long resultingPosition = peekImage.controlledPeek(
             initialPosition, loggingHandler, normalImagePosition);
@@ -69,7 +71,7 @@ class SlowPeeker extends BlockablePosition
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
         {
-            final long blockPosition = this.blockPosition;
+            final long blockPosition = blockPosition();
             if (replayStream)
             {
                 // Closed handled below,
