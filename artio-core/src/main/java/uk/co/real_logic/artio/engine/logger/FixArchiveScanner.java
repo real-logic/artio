@@ -107,10 +107,12 @@ public class FixArchiveScanner implements AutoCloseable
          * Sets the fragment limit for polling different images when archive scanning.
          *
          * @param fragmentLimit the fragment limit
+         * @return this
          */
-        public void fragmentLimit(final int fragmentLimit)
+        public Configuration fragmentLimit(final int fragmentLimit)
         {
             this.fragmentLimit = fragmentLimit;
+            return this;
         }
 
         public int fragmentLimit()
