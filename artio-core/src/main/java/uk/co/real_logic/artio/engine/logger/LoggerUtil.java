@@ -31,6 +31,13 @@ public final class LoggerUtil
     {
         if (file.exists())
         {
+            final long fileLength = file.length();
+            if (fileLength < size)
+            {
+                throw new IllegalArgumentException("Invalid file size: " +
+                    file.getAbsolutePath() + " size=" + size + ", fileLength=" + fileLength);
+            }
+
             return IoUtil.mapExistingFile(file, file.getName());
         }
         else

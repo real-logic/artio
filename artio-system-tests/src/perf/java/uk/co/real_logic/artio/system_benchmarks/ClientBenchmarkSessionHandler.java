@@ -137,7 +137,7 @@ public final class ClientBenchmarkSessionHandler implements SessionHandler
             .clOrdID(CL_ORD_ID_BUFFER, clOrdIdEncodedLength)
             .transactTime(transactTime.buffer(), transactTimeLength);
 
-        final long nanoTime = System.nanoTime(); /*epochNanoClock.nanoTime();*/
+        final long nanoTime = System.nanoTime();
         if (Pressure.isBackPressured(session.trySend(newOrderSingle)))
         {
             return false;

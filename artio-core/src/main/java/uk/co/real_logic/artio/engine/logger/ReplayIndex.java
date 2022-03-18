@@ -21,7 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.collections.Long2ObjectCache;
+import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -73,7 +73,7 @@ public class ReplayIndex implements Index, RedactHandler
 
     private final FixPSequenceIndexer fixPSequenceIndexer;
 
-    private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
+    private final Long2ObjectHashMap<SessionIndex> fixSessionIdToIndex;
 
     private final String logFileDir;
     private final int requiredStreamId;
@@ -129,7 +129,7 @@ public class ReplayIndex implements Index, RedactHandler
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
         checkIndexRecordCapacity(indexFileCapacity);
-        fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
+        fixSessionIdToIndex = new Long2ObjectHashMap<>();
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
             positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup, indexChecksumEnabled);
@@ -407,6 +407,7 @@ public class ReplayIndex implements Index, RedactHandler
         Exceptions.closeAll(
             timeIndex,
             positionWriter);
+        fixSessionIdToIndex.values().forEach(SessionIndex::close);
         fixSessionIdToIndex.clear();
         IoUtil.unmap(positionBuffer.byteBuffer());
     }
@@ -462,20 +463,6 @@ public class ReplayIndex implements Index, RedactHandler
                 // Reset the positions in order to avoid wraps at the start.
                 final long resetPosition = beginChange(headerBuffer);
                 endChangeOrdered(headerBuffer, resetPosition);
-
-                for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
-                {
-                    final File file = replayIndexSegmentFile(fixSessionId, segmentIndex);
-                    if (file.exists())
-                    {
-                        final long fileLength = file.length();
-                        if (fileLength != segmentSize)
-                        {
-                            throw new IllegalArgumentException("Invalid segment file size: " +
-                                file.getAbsolutePath() + " segmentSize=" + segmentSize + ", fileLength=" + fileLength);
-                        }
-                    }
-                }
             }
         }
 
