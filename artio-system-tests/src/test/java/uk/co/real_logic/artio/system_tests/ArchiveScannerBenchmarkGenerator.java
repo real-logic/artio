@@ -32,7 +32,7 @@ public final class ArchiveScannerBenchmarkGenerator
 
     public static void main(final String[] args)
     {
-        new ArchiveScannerBenchmarkGenerator(9_000, 5_000, false, true)
+        new ArchiveScannerBenchmarkGenerator(9_000, 15_000, false, true)
             .setupBenchmark();
     }
 
@@ -93,11 +93,9 @@ public final class ArchiveScannerBenchmarkGenerator
                 }
             }
 
-            for (int i = 0; i < 900; i++)
+            for (int i = 0; i < edgeBatchMultiplier; i++)
             {
-                exchangeMessages(sendBatch);
-
-                System.out.println(i);
+                exchangeMessages(sendBatch, i);
             }
 
             final long start = test.nanoClock.nanoTime();
@@ -110,15 +108,13 @@ public final class ArchiveScannerBenchmarkGenerator
                 }
             }
 
-            exchangeMessages(sendBatch);
+            exchangeMessages(sendBatch, -1);
 
             final long end = test.nanoClock.nanoTime();
 
             for (int i = 0; i < edgeBatchMultiplier; i++)
             {
-                exchangeMessages(sendBatch);
-
-                System.out.println(i);
+                exchangeMessages(sendBatch, i);
             }
 
             System.out.println("start = " + start);
@@ -141,9 +137,21 @@ public final class ArchiveScannerBenchmarkGenerator
         return INITIATOR_ID + (i + initialSuffix);
     }
 
-    private void exchangeMessages(final int n)
+    private void exchangeMessages(final int n, final int i)
     {
+        final long start = test.nanoClock.nanoTime();
         exchangeMessages(n, test.initiatingSession);
+        final long timeTaken = test.nanoClock.nanoTime() - start;
+
+        System.out.print(i + ", timeTakenInNs=" + timeTaken);
+        if (reportFactory != null)
+        {
+            System.out.println(", sendBackpressures=" + reportFactory.pollSendBackpressures());
+        }
+        else
+        {
+            System.out.println();
+        }
     }
 
     private void exchangeMessages(final int n, final Session initSession)

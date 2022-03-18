@@ -24,7 +24,6 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
@@ -75,7 +74,22 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public int doWork()
     {
-        return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
+        return subscription.controlledPoll(this, LIMIT) + pollIndexes();
+    }
+
+    private int pollIndexes()
+    {
+        int total = 0;
+
+        final List<Index> indices = this.indices;
+        final int size = indices.size();
+        for (int i = 0; i < size; i++)
+        {
+            final Index value = indices.get(i);
+            total += value.doWork();
+        }
+
+        return total;
     }
 
     public void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)

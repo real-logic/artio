@@ -121,6 +121,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
     private boolean hasSavedRecordSinceFileUpdate = false;
 
     public SequenceNumberIndexWriter(
+        final SequenceNumberExtractor sequenceNumberExtractor,
         final AtomicBuffer inMemoryBuffer,
         final MappedFile indexFile,
         final ErrorHandler errorHandler,
@@ -131,8 +132,10 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         final String metaDataDir,
         final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType,
-        final boolean sent)
+        final boolean sent,
+        final boolean indexChecksumEnabled)
     {
+        this.sequenceNumberExtractor = sequenceNumberExtractor;
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
@@ -148,12 +151,12 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         writablePath = writeableFile.toPath();
         passingPlacePath = passingFile(indexFilePath).toPath();
         writableFile = MappedFile.map(writeableFile, fileCapacity);
-        sequenceNumberExtractor = new SequenceNumberExtractor();
 
         // TODO: Fsync parent directory
         indexedPositionsOffset = positionTableOffset(fileCapacity);
         checksumFramer = new ChecksumFramer(
-            inMemoryBuffer, indexedPositionsOffset, errorHandler, 0, "SequenceNumberIndex");
+            inMemoryBuffer, indexedPositionsOffset, errorHandler, 0, "SequenceNumberIndex",
+            indexChecksumEnabled);
         try
         {
             initialiseBuffer();
@@ -164,7 +167,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
                     errorHandler,
                     indexedPositionsOffset,
                     "SequenceNumberIndex",
-                    recordingIdLookup);
+                    recordingIdLookup, indexChecksumEnabled);
             }
             else
             {
@@ -288,7 +291,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    if (!onFixMessage(buffer, offset, actingBlockLength, version, endPosition))
+                    if (!onFixMessage(buffer, offset, actingBlockLength, version, aeronSessionId, endPosition))
                     {
                         return;
                     }
@@ -466,6 +469,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         final int start,
         final int actingBlockLength,
         final int version,
+        final long aeronSessionId,
         final long messagePosition)
     {
         int offset = start;
@@ -510,7 +514,8 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         }
 
         offset += FixMessageDecoder.bodyHeaderLength();
-        final int msgSeqNum = sequenceNumberExtractor.extract(buffer, offset, messageFrame.bodyLength());
+        final int msgSeqNum = sequenceNumberExtractor.extractCached(
+            buffer, offset, messageFrame.bodyLength(), aeronSessionId, messagePosition);
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
         {
             final int position = saveRecord(msgSeqNum, sessionId, messagePosition, NO_REQUIRED_POSITION, false);

@@ -49,6 +49,8 @@ public class EngineContext implements AutoCloseable
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
+    private final SequenceNumberExtractor sentSequenceNumberExtractor = new SequenceNumberExtractor();
+    private final SequenceNumberExtractor recvSequenceNumberExtractor = new SequenceNumberExtractor();
 
     private final EpochNanoClock clock;
     private final EngineConfiguration configuration;
@@ -101,7 +103,9 @@ public class EngineContext implements AutoCloseable
             final EpochClock epochClock = new SystemEpochClock();
             final Long2LongHashMap connectionIdToFixPSessionId = new Long2LongHashMap(UNK_SESSION);
             final FixPProtocolType fixPProtocolType = configuration.supportedFixPProtocolType();
+            final boolean indexChecksumEnabled = configuration.indexChecksumEnabled();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
+                sentSequenceNumberExtractor,
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
@@ -112,8 +116,9 @@ public class EngineContext implements AutoCloseable
                 configuration.logFileDir(),
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                true);
+                true, indexChecksumEnabled);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
+                recvSequenceNumberExtractor,
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
@@ -124,7 +129,7 @@ public class EngineContext implements AutoCloseable
                 null,
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                false);
+                false, indexChecksumEnabled);
 
             newStreams();
             newArchivingAgent();
@@ -171,9 +176,12 @@ public class EngineContext implements AutoCloseable
         final int streamId,
         final RecordingIdLookup recordingIdLookup,
         final Long2LongHashMap connectionIdToILinkUuid,
-        final SequenceNumberIndexReader reader)
+        final SequenceNumberIndexReader reader,
+        final SequenceNumberExtractor sequenceNumberExtractor,
+        final boolean indexChecksumEnabled)
     {
         return new ReplayIndex(
+            sequenceNumberExtractor,
             logFileDir,
             streamId,
             configuration.replayIndexFileRecordCapacity(),
@@ -188,7 +196,7 @@ public class EngineContext implements AutoCloseable
             configuration.supportedFixPProtocolType(),
             reader,
             configuration.timeIndexReplayFlushIntervalInNs(),
-            streamId == configuration.outboundLibraryStream());
+            streamId == configuration.outboundLibraryStream(), indexChecksumEnabled);
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -251,6 +259,7 @@ public class EngineContext implements AutoCloseable
             final int cacheSetSize = configuration.loggerCacheSetSize();
             final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
+            final boolean indexChecksumEnabled = configuration.indexChecksumEnabled();
 
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
             final List<Index> inboundIndices = new ArrayList<>();
@@ -263,7 +272,8 @@ public class EngineContext implements AutoCloseable
                     configuration.inboundLibraryStream(),
                     recordingCoordinator.indexerInboundRecordingIdLookup(),
                     connectionIdToILinkUuid,
-                    receivedSequenceNumberIndex.reader());
+                    receivedSequenceNumberIndex.reader(),
+                    recvSequenceNumberExtractor, indexChecksumEnabled);
                 inboundIndices.add(inboundReplayIndex);
             }
             inboundIndices.add(receivedSequenceNumberIndex);
@@ -285,7 +295,8 @@ public class EngineContext implements AutoCloseable
                     configuration.outboundLibraryStream(),
                     recordingCoordinator.indexerOutboundRecordingIdLookup(),
                     connectionIdToILinkUuid,
-                    sentSequenceNumberIndex.reader());
+                    sentSequenceNumberIndex.reader(),
+                    sentSequenceNumberExtractor, indexChecksumEnabled);
                 outboundIndices.add(outboundReplayIndex);
             }
             outboundIndices.add(sentSequenceNumberIndex);

@@ -286,6 +286,7 @@ public final class SystemTestUtil
         return configuration
             .bindTo("localhost", port)
             .libraryAeronChannel(IPC_CHANNEL)
+            .replayIndexFileRecordCapacity(33554432)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler())

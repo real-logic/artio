@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_CHECKSUM_ENABLED;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
@@ -165,6 +166,6 @@ public class IndexedPositionTest
     private IndexedPositionWriter newWriter()
     {
         return new IndexedPositionWriter(buffer, errorHandler, 0, "IndexedPosition",
-            null);
+            null, DEFAULT_INDEX_CHECKSUM_ENABLED);
     }
 }

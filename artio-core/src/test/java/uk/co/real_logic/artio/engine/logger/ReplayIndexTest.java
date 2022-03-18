@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -99,6 +100,7 @@ public class ReplayIndexTest extends AbstractLogTest
     private void newReplayIndex()
     {
         replayIndex = new ReplayIndex(
+            new SequenceNumberExtractor(),
             DEFAULT_LOG_FILE_DIR,
             STREAM_ID,
             DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
@@ -113,7 +115,8 @@ public class ReplayIndexTest extends AbstractLogTest
             FixPProtocolType.ILINK_3,
             mock(SequenceNumberIndexReader.class),
             DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS,
-            true);
+            true,
+            DEFAULT_INDEX_CHECKSUM_ENABLED);
     }
 
     private Aeron aeron()

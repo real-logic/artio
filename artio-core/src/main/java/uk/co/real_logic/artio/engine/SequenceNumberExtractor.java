@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.Publication;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
@@ -36,6 +37,9 @@ public class SequenceNumberExtractor
     private int sequenceNumber;
     private int newSequenceNumber;
 
+    private long aeronSessionId;
+    private long position = Publication.NOT_CONNECTED;
+
     public SequenceNumberExtractor()
     {
     }
@@ -49,6 +53,26 @@ public class SequenceNumberExtractor
 
         parser.onMessage(buffer, offset, length);
 
+        return pickSequenceNumber();
+    }
+
+    public int extractCached(
+        final DirectBuffer buffer, final int offset, final int length, final long aeronSessId, final long position)
+    {
+        if (aeronSessId == this.aeronSessionId && position == this.position)
+        {
+            return pickSequenceNumber();
+        }
+        else
+        {
+            this.aeronSessionId = aeronSessId;
+            this.position = position;
+            return extract(buffer, offset, length);
+        }
+    }
+
+    private int pickSequenceNumber()
+    {
         return newSequenceNumber != NO_SEQUENCE_NUMBER ? newSequenceNumber : sequenceNumber;
     }
 

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_benchmarks;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.builder.LogoutEncoder;
@@ -43,7 +45,7 @@ public final class FixBenchmarkServer
     {
         final EngineConfiguration configuration = engineConfiguration();
 
-        try (MediaDriver mediaDriver = newMediaDriver();
+        try (ArchivingMediaDriver mediaDriver = newMediaDriver();
             FixEngine engine = FixEngine.launch(configuration);
             FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
@@ -68,13 +70,19 @@ public final class FixBenchmarkServer
         }
     }
 
-    private static MediaDriver newMediaDriver()
+    private static ArchivingMediaDriver newMediaDriver()
     {
         final MediaDriver.Context context = new MediaDriver.Context()
-            .dirDeleteOnStart(true)
-            .publicationTermBufferLength(128 * 1024 * 1024);
+            .dirDeleteOnStart(true)/*
+            .publicationTermBufferLength(128 * 1024 * 1024)*/;
 
-        return MediaDriver.launch(context);
+        final Archive.Context archiveCtx = new Archive.Context()
+            .deleteArchiveOnStart(true)
+            .archiveDirectoryName("benchmark-server");
+
+        archiveCtx.segmentFileLength(context.ipcTermBufferLength());
+
+        return ArchivingMediaDriver.launch(context, archiveCtx);
     }
 
     private static EngineConfiguration engineConfiguration()
@@ -88,7 +96,7 @@ public final class FixBenchmarkServer
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
             .deleteLogFileDirOnStart(true)
-            .logFileDir("acceptor_logs")
+            .logFileDir("benchmark-server-logs")
             .logInboundMessages(LOG_INBOUND_MESSAGES)
             .logOutboundMessages(LOG_OUTBOUND_MESSAGES)
             .framerIdleStrategy(idleStrategy());

@@ -62,12 +62,8 @@ class SessionOwnershipTracker
     boolean messageFromWrongLibrary(final long sessionId, final int libraryId)
     {
         final long expectedLibraryId = sessionIdToLibraryId.get(sessionId);
-        final boolean missing = expectedLibraryId != MISSING_SESSION &&
+        return expectedLibraryId != MISSING_SESSION &&
             libraryId != expectedLibraryId && libraryId != ENGINE_LIBRARY_ID;
-//        System.out.println("missing = " + missing + ", expectedLibraryId = " + expectedLibraryId + ", libraryId = " +
-//        libraryId + ", sessionId = " + sessionId);
-//        System.out.println("sessionIdToLibraryId = " + sessionIdToLibraryId + ", " + redactHandler);
-        return missing;
     }
 }
 

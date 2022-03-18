@@ -95,6 +95,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String REPLAY_INDEX_RECORD_CAPACITY_PROP = "logging.index.records";
 
     /**
+     * Property name for enabling or disabling checksum calculation for index files
+     */
+    public static final String INDEX_CHECKSUM_ENABLED_PROP = "logging.checksum.enabled";
+
+    /**
      * Deprecated property name for size of logging index files. Do not use this, set
      * {@link #REPLAY_INDEX_RECORD_CAPACITY_PROP} instead.
      */
@@ -198,6 +203,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS = 5;
     public static final long DEFAULT_DUPLICATE_ENGINE_TIMEOUT_IN_MS = SECONDS.toMillis(10);
     public static final int NO_THROTTLE_WINDOW = MISSING_INT;
+    public static final boolean DEFAULT_INDEX_CHECKSUM_ENABLED = true;
 
     public static final long MAX_COD_TIMEOUT_IN_NS = 60_000_000_000L;
     public static final long MAX_COD_TIMEOUT_IN_MS = 60_000L;
@@ -267,6 +273,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     private int noLogonDisconnectTimeoutInMs =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS);
+    private boolean indexChecksumEnabled = getBoolean(INDEX_CHECKSUM_ENABLED_PROP, DEFAULT_INDEX_CHECKSUM_ENABLED);
 
     private String libraryAeronChannel = null;
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = DefaultTcpChannelSupplier::new;
@@ -1147,6 +1154,19 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Allows disabling of the checksum calculation and validation of index files. Note: this does not affect the
+     * checksum calculation for AeronArchiver - only artio itself.
+     *
+     * @param indexChecksumEnabled true to enable, false to disable
+     * @return this
+     */
+    public EngineConfiguration indexChecksumEnabled(final boolean indexChecksumEnabled)
+    {
+        this.indexChecksumEnabled = indexChecksumEnabled;
+        return this;
+    }
+
     // ---------------------
     // END SETTERS
     // ---------------------
@@ -1847,6 +1867,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long timeIndexReplayFlushIntervalInNs()
     {
         return timeIndexReplayFlushIntervalInNs;
+    }
+
+    public boolean indexChecksumEnabled()
+    {
+        return indexChecksumEnabled;
     }
 
     // ---------------------

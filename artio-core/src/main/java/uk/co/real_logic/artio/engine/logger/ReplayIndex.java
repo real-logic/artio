@@ -89,6 +89,7 @@ public class ReplayIndex implements Index, RedactHandler
     private final SessionOwnershipTracker sessTracker;
 
     public ReplayIndex(
+        final SequenceNumberExtractor sequenceNumberExtractor,
         final String logFileDir,
         final int requiredStreamId,
         final int indexFileCapacity,
@@ -103,8 +104,10 @@ public class ReplayIndex implements Index, RedactHandler
         final FixPProtocolType fixPProtocolType,
         final SequenceNumberIndexReader reader,
         final long timeIndexReplayFlushIntervalInNs,
-        final boolean sent)
+        final boolean sent,
+        final boolean indexChecksumEnabled)
     {
+        this.sequenceNumberExtractor = sequenceNumberExtractor;
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
@@ -125,12 +128,11 @@ public class ReplayIndex implements Index, RedactHandler
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
                 onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
-        sequenceNumberExtractor = new SequenceNumberExtractor();
         checkIndexRecordCapacity(indexFileCapacity);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
-            positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup);
+            positionBuffer, errorHandler, 0, replayPositionPath, recordingIdLookup, indexChecksumEnabled);
         positionReader = new IndexedPositionReader(positionBuffer);
         timeIndex = new TimeIndexWriter(
             logFileDir, requiredStreamId, timeIndexReplayFlushIntervalInNs, errorHandler);
@@ -331,8 +333,8 @@ public class ReplayIndex implements Index, RedactHandler
             offset += bodyHeaderLength();
 
             final long fixSessionId = messageFrame.session();
-            sequenceNumberExtractor.extract(
-                srcBuffer, offset, messageFrame.bodyLength());
+            sequenceNumberExtractor.extractCached(
+                srcBuffer, offset, messageFrame.bodyLength(), header.sessionId(), endPosition);
             int sequenceNumber = sequenceNumberExtractor.sequenceNumber();
             final int newSequenceNumber = sequenceNumberExtractor.newSequenceNumber();
             final int sequenceIndex = messageFrame.sequenceIndex();

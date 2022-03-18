@@ -16,12 +16,15 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.ErrorHandler;
+import org.agrona.collections.ArrayListUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionDecoder;
 import uk.co.real_logic.artio.storage.messages.IndexedPositionEncoder;
+
+import java.util.ArrayList;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
@@ -47,20 +50,22 @@ class IndexedPositionWriter implements AutoCloseable
     private final ErrorHandler errorHandler;
     private final RecordingIdLookup recordingIdLookup;
     private final ChecksumFramer checksumFramer;
-    private final Long2LongHashMap recheckSessions = new Long2LongHashMap(MISSING_RECORD);
+    // Iterated repeatedly in a loop, but only modified occasionally
+    private final ArrayList<CheckPosition> recheckSessions = new ArrayList<>();
 
     IndexedPositionWriter(
         final AtomicBuffer buffer,
         final ErrorHandler errorHandler,
         final int errorReportingOffset,
         final String fileName,
-        final RecordingIdLookup recordingIdLookup)
+        final RecordingIdLookup recordingIdLookup,
+        final boolean indexChecksumEnabled)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
         checksumFramer = new ChecksumFramer(
-            buffer, buffer.capacity(), errorHandler, errorReportingOffset, fileName);
+            buffer, buffer.capacity(), errorHandler, errorReportingOffset, fileName, indexChecksumEnabled);
         setupHeader();
         initialiseOffsets();
     }
@@ -176,10 +181,37 @@ class IndexedPositionWriter implements AutoCloseable
 
     public void trackPosition(final int aeronSessionId, final long endPosition)
     {
-        recheckSessions.remove(aeronSessionId);
-        if (!checkPosition(aeronSessionId, endPosition))
+        final boolean indexedUpTo = checkPosition(aeronSessionId, endPosition);
+
+        final ArrayList<CheckPosition> recheckSessions = this.recheckSessions;
+        int pos = MISSING_RECORD;
+        for (int i = 0; i < recheckSessions.size(); i++)
         {
-            recheckSessions.put(aeronSessionId, endPosition);
+            if (recheckSessions.get(i).aeronSessionId == aeronSessionId)
+            {
+                pos = i;
+                break;
+            }
+        }
+
+        if (indexedUpTo)
+        {
+            // Indexed and we have record, so we can just scrub it.
+            if (pos != MISSING_RECORD)
+            {
+                ArrayListUtil.fastUnorderedRemove(recheckSessions, pos);
+            }
+        }
+        else
+        {
+            if (pos != MISSING_RECORD)
+            {
+                recheckSessions.get(pos).endPosition = endPosition;
+            }
+            else
+            {
+                recheckSessions.add(new CheckPosition(aeronSessionId, endPosition));
+            }
         }
     }
 
@@ -197,15 +229,15 @@ class IndexedPositionWriter implements AutoCloseable
     public int checkRecordings()
     {
         int work = 0;
-        final Long2LongHashMap.EntryIterator it = recheckSessions.entrySet().iterator();
-        while (it.hasNext())
+        final ArrayList<CheckPosition> recheckSessions = this.recheckSessions;
+        int size = recheckSessions.size();
+        for (int i = 0; i < size; i++)
         {
-            it.next();
-            final int aeronSessionId = (int)it.getLongKey();
-            final long endPosition = it.getLongValue();
-            if (checkPosition(aeronSessionId, endPosition))
+            final CheckPosition checkPosition = recheckSessions.get(i);
+            if (checkPosition(checkPosition.aeronSessionId, checkPosition.endPosition))
             {
-                it.remove();
+                ArrayListUtil.fastUnorderedRemove(recheckSessions, i);
+                size--;
                 work++;
             }
         }
@@ -240,5 +272,17 @@ class IndexedPositionWriter implements AutoCloseable
 
         // For other messages block until the recording id is setup.
         indexedUpTo(aeronSessionId, recordingId, endPosition);
+    }
+
+    static final class CheckPosition
+    {
+        final int aeronSessionId;
+        long endPosition;
+
+        CheckPosition(final int aeronSessionId, final long endPosition)
+        {
+            this.aeronSessionId = aeronSessionId;
+            this.endPosition = endPosition;
+        }
     }
 }

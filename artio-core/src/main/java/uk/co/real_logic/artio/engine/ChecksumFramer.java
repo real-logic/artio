@@ -31,13 +31,15 @@ public class ChecksumFramer extends SectorFramer
     private final int errorReportingOffset;
     private final ChecksumConsumer validateChecksumFunc;
     private final String fileName;
+    private final boolean indexChecksumEnabled;
 
     public ChecksumFramer(
         final AtomicBuffer buffer,
         final int capacity,
         final ErrorHandler errorHandler,
         final int errorReportingOffset,
-        final String fileName)
+        final String fileName,
+        final boolean indexChecksumEnabled)
     {
         super(capacity);
         this.buffer = buffer;
@@ -45,17 +47,24 @@ public class ChecksumFramer extends SectorFramer
         this.errorHandler = errorHandler;
         this.errorReportingOffset = errorReportingOffset;
         this.fileName = fileName;
+        this.indexChecksumEnabled = indexChecksumEnabled;
         validateChecksumFunc = this::validateChecksum;
     }
 
     public void validateCheckSums()
     {
-        withChecksums(validateChecksumFunc);
+        if (indexChecksumEnabled)
+        {
+            withChecksums(validateChecksumFunc);
+        }
     }
 
     public void updateChecksums()
     {
-        withChecksums(saveChecksumFunc);
+        if (indexChecksumEnabled)
+        {
+            withChecksums(saveChecksumFunc);
+        }
     }
 
     private void validateChecksum(final int checksumOffset, final int calculatedChecksum)

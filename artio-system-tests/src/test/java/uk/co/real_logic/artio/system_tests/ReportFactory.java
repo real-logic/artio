@@ -40,6 +40,7 @@ public class ReportFactory
     private final UtcTimestampEncoder timestamp = new UtcTimestampEncoder();
 
     private PossDupOption possDupFlag = PossDupOption.MISSING_FIELD;
+    private int sendBackpressures = 0;
 
     public Action trySendReportAct(final Session session, final Side side)
     {
@@ -52,7 +53,19 @@ public class ReportFactory
     {
         setupReport(side, session.lastSentMsgSeqNum());
 
-        return session.trySend(executionReport);
+        final long position = session.trySend(executionReport);
+        if (Pressure.isBackPressured(position))
+        {
+            sendBackpressures++;
+        }
+        return position;
+    }
+
+    public int pollSendBackpressures()
+    {
+        final int sendBackpressures = this.sendBackpressures;
+        this.sendBackpressures = 0;
+        return sendBackpressures;
     }
 
     public long sendReport(final TestSystem testSystem, final Session session, final Side side)

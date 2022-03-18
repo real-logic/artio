@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.artio.system_benchmarks.BenchmarkConfiguration.*;
@@ -45,9 +47,13 @@ public class ConcurrentLatencyAtRateClient
 
     public static final String AERON_DIRECTORY_NAME = "/dev/shm/benchmark-client";
     public static final String AERON_ARCHIVE_DIRECTORY_NAME = "benchmark-client-archive";
+    public static final String RECORDING_EVENTS_CHANNEL = "aeron:udp?endpoint=localhost:9030";
 
     public static void main(final String[] args) throws InterruptedException
     {
+        System.setProperty(CONTROL_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:9010");
+        System.setProperty(CONTROL_RESPONSE_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:9020");
+
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
             .dirDeleteOnStart(true)
@@ -57,6 +63,7 @@ public class ConcurrentLatencyAtRateClient
             .threadingMode(ArchiveThreadingMode.SHARED)
             .deleteArchiveOnStart(true)
             .aeronDirectoryName(AERON_DIRECTORY_NAME)
+            .recordingEventsChannel(RECORDING_EVENTS_CHANNEL)
             .archiveDirectoryName(AERON_ARCHIVE_DIRECTORY_NAME);
 
         final ClientBenchmarkSessionHandler[] sessionHandlers = new ClientBenchmarkSessionHandler[NUMBER_OF_SESSIONS];
@@ -211,7 +218,9 @@ public class ConcurrentLatencyAtRateClient
         configuration.printAeronStreamIdentifiers(true);
 
         configuration.aeronContext().aeronDirectoryName(AERON_DIRECTORY_NAME);
-        configuration.aeronArchiveContext().aeronDirectoryName(AERON_DIRECTORY_NAME);
+        configuration.aeronArchiveContext()
+            .aeronDirectoryName(AERON_DIRECTORY_NAME)
+            .recordingEventsChannel(RECORDING_EVENTS_CHANNEL);
 
         return configuration
             .epochNanoClock(epochNanoClock)

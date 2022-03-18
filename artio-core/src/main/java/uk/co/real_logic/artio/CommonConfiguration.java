@@ -131,6 +131,17 @@ public class CommonConfiguration
     protected ThreadFactory threadFactory;
     private int fixPAcceptedSessionMaxRetransmissionRange = NO_FIXP_MAX_RETRANSMISSION_RANGE;
 
+    public static boolean getBoolean(final String propertyName, final boolean defaultValue)
+    {
+        final String propertyValue = getProperty(propertyName);
+        if (propertyValue == null)
+        {
+            return defaultValue;
+        }
+
+        return Boolean.parseBoolean(propertyValue);
+    }
+
     public static void validateTimeout(final long timeoutInMs)
     {
         if (timeoutInMs <= 0)

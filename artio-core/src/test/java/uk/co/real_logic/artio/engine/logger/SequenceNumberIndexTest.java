@@ -40,6 +40,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.MappedFile;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -57,6 +58,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_CHECKSUM_ENABLED;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -450,10 +452,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
+        return new SequenceNumberIndexWriter(new SequenceNumberExtractor(),
+            inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
             DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null,
             new Long2LongHashMap(UNK_SESSION),
-            FixPProtocolType.ILINK_3, true);
+            FixPProtocolType.ILINK_3, true, DEFAULT_INDEX_CHECKSUM_ENABLED);
     }
 
     private MappedFile newIndexFile()
