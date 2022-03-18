@@ -72,7 +72,7 @@ class SlowPeeker extends BlockablePosition
         if (!peekImage.isClosed())
         {
             final long blockPosition = blockPosition();
-            if (replayStream)
+            /*if (replayStream)
             {
                 // Closed handled below,
                 // Position definitely valid
@@ -88,7 +88,7 @@ class SlowPeeker extends BlockablePosition
                     // Only other option is the fragment length being 0, which means we're in
                     // a totally screwed position
                 }
-            }
+            }*/
 
             if (blockPosition != DID_NOT_BLOCK) // lgtm [java/constant-comparison]
             {
@@ -103,7 +103,7 @@ class SlowPeeker extends BlockablePosition
         }
         else
         {
-            System.out.println("***** PeekImage closed");
+//            System.out.println("***** PeekImage closed");
             return 0;
         }
     }

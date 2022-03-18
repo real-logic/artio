@@ -21,10 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.StartReplayDecoder;
-import uk.co.real_logic.artio.messages.ThrottleRejectDecoder;
+import uk.co.real_logic.artio.messages.*;
 
 import java.util.function.LongToIntFunction;
 
@@ -38,6 +35,7 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final StartReplayDecoder startReplay = new StartReplayDecoder();
+    private final ValidResendRequestDecoder validResendRequestDecoder = new ValidResendRequestDecoder();
     private final ThrottleRejectDecoder throttleReject = new ThrottleRejectDecoder();
     private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
@@ -236,6 +234,16 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             final long connectionId = startReplay.connection();
             final long correlationId = startReplay.correlationId();
             onStartReplay(connectionId, correlationId, header.position(), true);
+        }
+        else if (templateId == ValidResendRequestDecoder.TEMPLATE_ID)
+        {
+            offset += HEADER_LENGTH;
+            final int version = messageHeader.version();
+            validResendRequestDecoder.wrap(buffer, offset, messageHeader.blockLength(), version);
+
+            final long connectionId = validResendRequestDecoder.connection();
+            final long correlationId = validResendRequestDecoder.correlationId();
+            onValidResendRequest(connectionId, correlationId, true);
         }
 
         return CONTINUE;

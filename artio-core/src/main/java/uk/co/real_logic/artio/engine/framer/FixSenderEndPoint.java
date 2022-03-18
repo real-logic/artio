@@ -703,7 +703,11 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onValidResendRequest(final long correlationId, final boolean slow)
     {
-        if (isSlowConsumer())
+        final boolean slowConsumer = isSlowConsumer();
+        System.out.println("***** FixSenderEndPoint.onValidResendRequest: correlationId=" + correlationId +
+            ", slow=" + slow + ", replayQueue=" + replayQueue);
+
+        if (slowConsumer)
         {
             if (slow)
             {
@@ -736,7 +740,13 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
     {
-        if (slow == isSlowConsumer())
+        final boolean slowConsumer = isSlowConsumer();
+
+        System.out.println("***** FixSenderEndPoint.onStartReplay: correlationId=" + correlationId +
+            ", msgPosition=" + msgPosition + ", slow=" + slow + ", replayQueue=" + replayQueue +
+            ", slowConsumer=" + slowConsumer);
+
+        if (slow == slowConsumer)
         {
             checkStartReplay(correlationId, msgPosition, slow);
         }
@@ -760,7 +770,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replay == correlationId)
         {
-
             replayInFlight = replay;
             replayTracker.skipPosition = Long.MAX_VALUE;
             replayQueue.removeLong();
@@ -820,6 +829,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
     private void replayPaused(final boolean replayPaused)
     {
+        System.out.println("***** FixSenderEndPoint.replayPaused: " + replayPaused);
         this.replayPaused = replayPaused;
         if (replayPaused)
         {
