@@ -288,13 +288,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
-        this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription);
+        this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription, errorHandler);
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
 
-        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
+        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage, errorHandler);
         if (endPointFactory != null)
         {
             endPointFactory.replaySlowPeeker(replaySlowPeeker);

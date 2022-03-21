@@ -50,6 +50,8 @@ class FixSenderEndPoint extends SenderEndPoint
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
+    // Need to give Aeron the start position of the previous message, so include the DHF, naturally term aligned
+    static final int TOTAL_START_REPLAY_LENGTH = START_REPLAY_LENGTH + DataHeaderFlyweight.HEADER_LENGTH;
     private static final int REPLAY_MESSAGE = -1;
     public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
@@ -451,7 +453,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replayPaused)
         {
-            return blockPositionFixMessage(header, length, outboundTracker);
+            return blockPositionFixMessage(header, length, outboundTracker, false);
         }
 
         return attemptSlowMessage(
@@ -494,7 +496,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (partiallySentOtherStream(tracker))
         {
-            return blockPositionFixMessage(header, length, tracker);
+            return blockPositionFixMessage(header, length, tracker, true);
         }
 
         try
@@ -503,7 +505,7 @@ class FixSenderEndPoint extends SenderEndPoint
             final int remainingLength;
             final int bytesPreviouslySent;
 
-            // You've complete the stream and there's another message in between.
+            // You've completed the stream and there's another message in between.
             if (sentPosition < startOfMessage)
             {
                 remainingLength = bodyLength;
@@ -525,6 +527,11 @@ class FixSenderEndPoint extends SenderEndPoint
             ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
+            if (written < 0)
+            {
+                // normalise the negative return and the exceptional path
+                throw new IOException("Disconnected " + connectionId + ", written=" + written);
+            }
             bytesInBuffer.getAndAddOrdered(-written);
 
             updateSendingTimeoutTimeInMs(timeInMs, written);
@@ -532,7 +539,7 @@ class FixSenderEndPoint extends SenderEndPoint
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 tracker.sentPosition = (position - remainingLength) + written;
-                return blockPositionFixMessage(header, length, tracker);
+                return blockPositionFixMessage(header, length, tracker, false);
             }
             else
             {
@@ -562,7 +569,8 @@ class FixSenderEndPoint extends SenderEndPoint
     }
 
     private Action blockPositionFixMessage(
-        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker)
+        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker,
+        final boolean partiallySentOther)
     {
         final BlockablePosition blockablePosition = tracker.blockablePosition;
 
@@ -653,12 +661,12 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public Action onReplayComplete(final long correlationId, final boolean slow)
     {
-        // We don't do a slow check here because you may catchup during the replay if you only became replay slow
+        // We don't do a slow check here because you may catch up during the replay if you only became replay slow
         // and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
         // duplicates
 
         final StreamTracker replayTracker = this.replayTracker;
-        if (correlationId == replayInFlight && // dedup by checking the correlation id
+        if (correlationId == replayInFlight && // deduplicate by checking the correlation id
             !replayTracker.partiallySentMessage &&
             replayTracker.skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
@@ -741,7 +749,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (replay == correlationId)
         {
-
             replayInFlight = replay;
             replayTracker.skipPosition = Long.MAX_VALUE;
             replayQueue.removeLong();
@@ -761,7 +768,7 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         final StreamTracker replayTracker = this.replayTracker;
         final boolean slowBecauseOfNormalStream = replayTracker.sentPosition == 0;
-        final long msgStartPosition = msgPosition - START_REPLAY_LENGTH;
+        final long msgStartPosition = msgPosition - TOTAL_START_REPLAY_LENGTH;
         blockPositionOther(msgStartPosition, msgPosition, replayTracker);
 
         if (!slow)
