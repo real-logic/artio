@@ -49,7 +49,7 @@ public interface SessionInfo
     CompositeKey sessionKey();
 
     /**
-     * Get the sesssion sequence index or {@link #UNKNOWN_SEQUENCE_INDEX}
+     * Get the session sequence index or {@link #UNKNOWN_SEQUENCE_INDEX}
      * if the session hasn't completed its logon yet.
      *
      * @return the sequenceIndex
