@@ -77,7 +77,7 @@ public class ReplayIndex implements Index, RedactHandler
 
     private final String logFileDir;
     private final int requiredStreamId;
-    private final int indexFileSize;
+    private final long indexFileSize;
     private final int segmentSize;
     private final int segmentSizeBitShift;
     private final int segmentCount;
@@ -109,7 +109,7 @@ public class ReplayIndex implements Index, RedactHandler
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
-        this.segmentSize = ReplayIndexDescriptor.capacityToBytes(indexSegmentCapacity);
+        this.segmentSize = ReplayIndexDescriptor.capacityToBytesInt(indexSegmentCapacity);
         this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
         this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
         this.bufferFactory = bufferFactory;
@@ -137,6 +137,15 @@ public class ReplayIndex implements Index, RedactHandler
     }
 
     private void checkPowerOfTwo(final String name, final int value)
+    {
+        if (!BitUtil.isPowerOfTwo(value))
+        {
+            throw new IllegalStateException(
+                "segmentCount must be a positive power of 2: " + name + "=" + value);
+        }
+    }
+
+    private void checkPowerOfTwo(final String name, final long value)
     {
         if (!BitUtil.isPowerOfTwo(value))
         {

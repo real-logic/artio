@@ -351,8 +351,8 @@ public final class ReplayIndexExtractor
         final String logFileDir,
         final ReplayIndexHandler handler)
     {
-        final int indexFileSize = capacityToBytes(indexFileCapacity);
-        final int segmentSize = capacityToBytes(indexSegmentCapacity);
+        final long indexFileSize = capacityToBytes(indexFileCapacity);
+        final int segmentSize = capacityToBytesInt(indexSegmentCapacity);
         final int segmentCount = segmentCount(indexFileCapacity, indexSegmentCapacity);
         final UnsafeBuffer[] segmentBuffers = new UnsafeBuffer[segmentCount];
         final int segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
@@ -409,7 +409,7 @@ public final class ReplayIndexExtractor
         final long position,
         final int segmentSizeBitShift,
         final UnsafeBuffer[] segmentBuffers,
-        final int indexFileSize,
+        final long indexFileSize,
         final long fixSessionId,
         final int streamId, final String logFileDir)
     {

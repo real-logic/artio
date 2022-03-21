@@ -64,7 +64,7 @@ public class ReplayQuery implements AutoCloseable
     private final int segmentSize;
     private final int segmentSizeBitShift;
     private final int segmentCount;
-    private final int indexFileSize;
+    private final long indexFileSize;
 
     private Subscription replaySubscription;
 
@@ -90,7 +90,7 @@ public class ReplayQuery implements AutoCloseable
         this.archiveReplayStream = archiveReplayStream;
 
         this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
-        this.segmentSize = ReplayIndexDescriptor.capacityToBytes(indexSegmentCapacity);
+        this.segmentSize = ReplayIndexDescriptor.capacityToBytesInt(indexSegmentCapacity);
         this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
         this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
 
@@ -190,7 +190,7 @@ public class ReplayQuery implements AutoCloseable
             final ReplayIndexRecordDecoder indexRecord = ReplayQuery.this.indexRecord;
             final IdleStrategy idleStrategy = ReplayQuery.this.idleStrategy;
             final UnsafeBuffer headerBuffer = this.headerBuffer;
-            final int indexFileSize = ReplayQuery.this.indexFileSize;
+            final long indexFileSize = ReplayQuery.this.indexFileSize;
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
 
@@ -280,7 +280,7 @@ public class ReplayQuery implements AutoCloseable
             final long position,
             final int segmentSizeBitShift,
             final UnsafeBuffer[] segmentBuffers,
-            final int indexFileSize)
+            final long indexFileSize)
         {
             final int segmentIndex = ReplayIndexDescriptor.segmentIndex(position, segmentSizeBitShift, indexFileSize);
             UnsafeBuffer segmentBuffer = segmentBuffers[segmentIndex];
@@ -381,7 +381,7 @@ public class ReplayQuery implements AutoCloseable
         public Long2LongHashMap queryStartPositions()
         {
             final UnsafeBuffer headerBuffer = this.headerBuffer;
-            final int indexFileSize = ReplayQuery.this.indexFileSize;
+            final long indexFileSize = ReplayQuery.this.indexFileSize;
             final ReplayIndexRecordDecoder indexRecord = ReplayQuery.this.indexRecord;
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;

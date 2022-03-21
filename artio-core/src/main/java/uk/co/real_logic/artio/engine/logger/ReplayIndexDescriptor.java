@@ -42,6 +42,8 @@ public final class ReplayIndexDescriptor
         }
     }
 
+    public static final int MAX_FILE_SEGMENT_CAPACITY = Integer.MAX_VALUE / RECORD_LENGTH;
+
     static File replayIndexHeaderFile(final String logFileDir, final long fixSessionId, final int streamId)
     {
         return new File(logFileDir + File.separator + "replay-index-" + fixSessionId + "-" + streamId + "-header");
@@ -124,13 +126,13 @@ public final class ReplayIndexDescriptor
         return buffer.getLong(BEGIN_CHANGE_OFFSET);
     }
 
-    static int offsetInSegment(final long changePosition, final int capacity)
+    static int offsetInSegment(final long changePosition, final long capacity)
     {
         // changePosition % capacity = changePosition & (capacity - 1)
-        return ((int)changePosition & (capacity - 1));
+        return (int)(changePosition & (capacity - 1));
     }
 
-    public static int segmentIndex(final long position, final int segmentSizeBitShift, final int indexFileSize)
+    public static int segmentIndex(final long position, final int segmentSizeBitShift, final long indexFileSize)
     {
         // position % indexFileSize
         final long offsetWithinRing = position & (indexFileSize - 1);
@@ -148,7 +150,12 @@ public final class ReplayIndexDescriptor
         }
     }
 
-    public static int capacityToBytes(final int indexSegmentCapacity)
+    public static long capacityToBytes(final int indexSegmentCapacity)
+    {
+        return (long)indexSegmentCapacity * (long)RECORD_LENGTH;
+    }
+
+    public static int capacityToBytesInt(final int indexSegmentCapacity)
     {
         return indexSegmentCapacity * RECORD_LENGTH;
     }

@@ -65,6 +65,7 @@ import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOU
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.HEADER_FILE_SIZE;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.MAX_FILE_SEGMENT_CAPACITY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.FixPProtocolType.ILINK_3;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
@@ -457,11 +458,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * If this isn't a power of two, then the next positive power of two will be used.
      *
      * @param indexSegmentCapacityInRecords the capacity of an individual segment file
+     * @throws IllegalArgumentException if the capacity is outside of the supported range
      * @return this
      */
     public EngineConfiguration replayIndexSegmentRecordCapacity(final int indexSegmentCapacityInRecords)
     {
         this.replayIndexSegmentRecordCapacity = findNextPositivePowerOfTwo(indexSegmentCapacityInRecords);
+        if (replayIndexSegmentRecordCapacity > MAX_FILE_SEGMENT_CAPACITY || replayIndexSegmentRecordCapacity < 0)
+        {
+            throw new IllegalArgumentException("replayIndexSegmentRecordCapacity cannot be > " +
+                MAX_FILE_SEGMENT_CAPACITY + " or < 0 but is set to " + indexSegmentCapacityInRecords);
+        }
         return this;
     }
 
