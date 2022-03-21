@@ -140,7 +140,7 @@ public class PossDupEnabler
                     newLength,
                     metaDataAdjustment))
                 {
-                    return commit(messageType);
+                    return commit(messageType, metaDataAdjustment);
                 }
                 else
                 {
@@ -158,7 +158,8 @@ public class PossDupEnabler
         {
             final int possDupSrcOffset = possDupFinder.possDupOffset();
             return enablePossDupFlagSameLength(
-                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, possDupSrcOffset, messageType);
+                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, possDupSrcOffset, messageType,
+                metaDataAdjustment);
         }
 
         return CONTINUE;
@@ -178,7 +179,8 @@ public class PossDupEnabler
         final int srcOffset,
         final int srcLength,
         final int possDupSrcOffset,
-        final long messageType)
+        final long messageType,
+        final int metaDataAdjustment)
     {
         // Poss Dup flag is already set in the src message and orig sending time is present.
         if (!claim(srcLength))
@@ -204,7 +206,7 @@ public class PossDupEnabler
             final int beforeChecksum = srcToClaim(possDupFinder.checkSumOffset(), srcOffset, writeOffset) - 4;
             updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
 
-            return commit(messageType);
+            return commit(messageType, metaDataAdjustment);
         }
         catch (final Exception ex)
         {
@@ -242,8 +244,9 @@ public class PossDupEnabler
         }
     }
 
-    private Action commit(final long messageType)
+    private Action commit(final long messageType, final int metaDataAdjustment)
     {
+        final int adjustedFrameLength = FRAME_LENGTH + metaDataAdjustment;
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
@@ -254,8 +257,8 @@ public class PossDupEnabler
                 messageType,
                 "Resending: ",
                 fragmentedMessageBuffer,
-                fragmentOffset + FRAME_LENGTH,
-                fragmentedMessageLength - FRAME_LENGTH);
+                fragmentOffset + adjustedFrameLength,
+                fragmentedMessageLength - adjustedFrameLength);
 
             while (fragmentedMessageLength > 0)
             {
@@ -302,8 +305,8 @@ public class PossDupEnabler
                 messageType,
                 "Resending: ",
                 buffer,
-                offset + FRAME_LENGTH,
-                bufferClaim.length() - FRAME_LENGTH);
+                offset + adjustedFrameLength,
+                bufferClaim.length() - adjustedFrameLength);
 
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();

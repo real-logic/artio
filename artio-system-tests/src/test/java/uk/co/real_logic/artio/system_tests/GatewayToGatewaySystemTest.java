@@ -18,9 +18,14 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.Aeron;
 import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.theories.DataPoint;
+import org.junit.experimental.theories.Theories;
+import org.junit.experimental.theories.Theory;
+import org.junit.runner.RunWith;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
@@ -37,9 +42,11 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -63,9 +70,18 @@ import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceN
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
+@RunWith(Theories.class)
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final String NEW_PASSWORD = "ABCDEF";
+
+    @DataPoint
+    public static final boolean METADATA_ON = true;
+
+    @DataPoint
+    public static final boolean METADATA_OFF = false;
+
+    private boolean testWithMetaData = METADATA_OFF;
 
     @Before
     public void launch()
@@ -98,17 +114,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messageTimingHandler.verifyConsecutiveSequenceNumbers(2);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldProcessResendRequests()
+    @Theory
+    public void shouldProcessResendRequests(final boolean testWithMetaData)
     {
+        this.testWithMetaData = testWithMetaData;
+
         final String testReqID = "AAA";
 
         gatewayProcessesResendRequests(testReqID);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldEnsureThatSequenceNumberAfterResendRequest()
+    @Theory
+    public void shouldEnsureThatSequenceNumberAfterResendRequest(final boolean testWithMetaData)
     {
+        this.testWithMetaData = testWithMetaData;
+
         final String testReqID = "AAA";
         acquireAcceptingSession();
 
@@ -162,9 +182,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void gatewayProcessesResendRequestsOfFragmentedMessages()
+    @Theory
+    public void gatewayProcessesResendRequestsOfFragmentedMessages(final boolean testWithMetaData)
     {
+        this.testWithMetaData = testWithMetaData;
+
         final String testReqID = largeTestReqId();
 
         gatewayProcessesResendRequests(testReqID);
@@ -211,7 +233,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         exampleMessage.testReqID(testReqID);
-        testSystem.awaitSend("Failed to send message", () -> fromSession.trySend(exampleMessage));
+        final LongSupplier sender;
+        if (testWithMetaData)
+        {
+            final UnsafeBuffer metaDataBuffer = new UnsafeBuffer("NOOdasdsadsa".getBytes(StandardCharsets.US_ASCII));
+            sender = () -> fromSession.trySend(exampleMessage, metaDataBuffer, 0);
+        }
+        else
+        {
+            sender = () -> fromSession.trySend(exampleMessage);
+        }
+        testSystem.awaitSend("Failed to send message", sender);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
