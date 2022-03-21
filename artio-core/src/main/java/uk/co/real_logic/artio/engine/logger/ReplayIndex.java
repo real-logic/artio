@@ -94,8 +94,6 @@ public class ReplayIndex implements Index, RedactHandler
         final int requiredStreamId,
         final int indexFileCapacity,
         final int indexSegmentCapacity,
-        final int cacheNumSets,
-        final int cacheSetSize,
         final BufferFactory bufferFactory,
         final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler,

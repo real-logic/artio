@@ -105,8 +105,6 @@ public class ReplayIndexTest extends AbstractLogTest
             STREAM_ID,
             DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
             DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY,
-            DEFAULT_LOGGER_CACHE_NUM_SETS,
-            DEFAULT_LOGGER_CACHE_SET_SIZE,
             newBufferFactory,
             replayPositionBuffer,
             errorHandler,

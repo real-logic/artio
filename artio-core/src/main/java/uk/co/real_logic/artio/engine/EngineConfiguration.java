@@ -21,6 +21,7 @@ import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.Verify;
 import org.agrona.collections.IntHashSet;
+import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
@@ -478,15 +479,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the set size of the logger's caches.
+     * Sets the set size of the logger's caches. This is currently only used by the ReplayQuery size. See
+     * {@link Long2ObjectCache} for guidance on how to adjust the number of sets and the set size.
      * <p>
-     * The logging and archival mechanism
-     * has several caches of open memory mapped files which it stores streams of messages
-     * into. This and {@link #loggerCacheNumSets} controls the size of those caches.
-     * Should be increased if you see files being opened/closed in that area too frequently.
+     * The ReplayQuery class has a caches of open memory mapped files which it queries
+     * into. Replay queries are used by Artio in response to FIX resend requests, the memory mapped files themselves
+     * are cached between resend requests since it's often the case that a few FIX sessions are often responsible for
+     * most resend requests.
      * <p>
-     * {@link org.agrona.collections.Int2ObjectCache} explains the difference between set size
-     * and num sets.
+     * This and {@link #loggerCacheNumSets} controls the size of those caches.
+     * The {@link #loggerCacheNumSets} should be increased if you see files being opened/closed in that area too
+     * frequently.
      *
      * @param loggerCacheSetSize the set size of the logger's caches.
      * @return this

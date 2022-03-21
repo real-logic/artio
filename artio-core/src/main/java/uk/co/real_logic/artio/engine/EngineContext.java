@@ -170,8 +170,6 @@ public class EngineContext implements AutoCloseable
     }
 
     private ReplayIndex newReplayIndex(
-        final int cacheSetSize,
-        final int cacheNumSets,
         final String logFileDir,
         final int streamId,
         final RecordingIdLookup recordingIdLookup,
@@ -186,8 +184,6 @@ public class EngineContext implements AutoCloseable
             streamId,
             configuration.replayIndexFileRecordCapacity(),
             configuration.replayIndexSegmentRecordCapacity(),
-            cacheNumSets,
-            cacheSetSize,
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId, configuration.replayPositionBufferSize()),
             errorHandler,
@@ -256,8 +252,6 @@ public class EngineContext implements AutoCloseable
 
         try
         {
-            final int cacheSetSize = configuration.loggerCacheSetSize();
-            final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
             final boolean indexChecksumEnabled = configuration.indexChecksumEnabled();
 
@@ -266,8 +260,6 @@ public class EngineContext implements AutoCloseable
             if (configuration.logInboundMessages())
             {
                 inboundReplayIndex = newReplayIndex(
-                    cacheSetSize,
-                    cacheNumSets,
                     logFileDir,
                     configuration.inboundLibraryStream(),
                     recordingCoordinator.indexerInboundRecordingIdLookup(),
@@ -289,8 +281,6 @@ public class EngineContext implements AutoCloseable
             if (configuration.logOutboundMessages())
             {
                 outboundReplayIndex = newReplayIndex(
-                    cacheSetSize,
-                    cacheNumSets,
                     logFileDir,
                     configuration.outboundLibraryStream(),
                     recordingCoordinator.indexerOutboundRecordingIdLookup(),
