@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
+import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -33,12 +34,14 @@ import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    protected AcceptorSession newSession()
+    protected InternalSession newSession()
     {
-        final AcceptorSession acceptorSession = new AcceptorSession(
+        final InternalSession acceptorSession = new InternalSession(
             HEARTBEAT_INTERVAL_IN_S,
             CONNECTION_ID,
             nanoClock,
+            CONNECTED,
+            false,
             sessionProxy,
             mock(GatewayPublication.class),
             mockPublication,
@@ -49,13 +52,13 @@ public class AcceptorSessionTest extends AbstractSessionTest
             LIBRARY_ID,
             1,
             SEQUENCE_INDEX,
-            CONNECTED,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             SessionCustomisationStrategy.none(),
             messageInfo,
             fakeEpochFractionClock,
+            ConnectionType.ACCEPTOR,
             true,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS);

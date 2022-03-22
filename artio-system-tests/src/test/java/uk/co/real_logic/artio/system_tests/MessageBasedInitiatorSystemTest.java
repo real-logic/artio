@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -54,6 +55,8 @@ import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.createFollowerSession;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
@@ -449,6 +452,28 @@ public class MessageBasedInitiatorSystemTest
 
             // logon=4,logout=5, no more messages sent after logout
             assertEquals(5, session.lastSentMsgSeqNum());
+        }
+    }
+
+    @Test
+    public void shouldInitiateConnectionAfterRequestSession() throws IOException
+    {
+        final SessionWriter sessionWriter = createFollowerSession(
+            TEST_TIMEOUT_IN_MS, testSystem, library, ACCEPTOR_ID, INITIATOR_ID);
+        final long sessionId = sessionWriter.id();
+
+        final Session session = acquireSession(handler, library, sessionId, testSystem);
+        assertNotNull(session);
+
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+
+            connection.logon(false);
+
+            final Session session1 = lookupSession();
+            assertSame(session1, session1);
+            assertEquals(sessionId, session1.id());
         }
     }
 

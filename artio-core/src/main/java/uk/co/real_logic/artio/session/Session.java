@@ -191,12 +191,15 @@ public class Session
     CancelOnDisconnectOption cancelOnDisconnectOption;
 
     private boolean replaying = false;
+    protected ConnectionType connectionType;
+    private final boolean initiatorResetSeqNum;
 
     Session(
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochNanoClock clock,
         final SessionState state,
+        final boolean initiatorResetSeqNum,
         final SessionProxy proxy,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
@@ -218,9 +221,6 @@ public class Session
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS)
     {
-        this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
-        this.resendRequestController = resendRequestController;
-        this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(outboundPublication, "outboundPublication");
@@ -228,7 +228,12 @@ public class Session
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
         Verify.notNull(messageInfo, "messageInfo");
         Verify.notNull(epochFractionClock, "epochFractionClock");
+        Verify.notNull(connectionType, "connectionType");
 
+        this.initiatorResetSeqNum = initiatorResetSeqNum;
+        this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
+        this.resendRequestController = resendRequestController;
+        this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
         this.messageInfo = messageInfo;
         this.proxy = proxy;
         this.connectionId = connectionId;
@@ -245,6 +250,7 @@ public class Session
         this.clock = clock;
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
+        this.connectionType = connectionType;
 
         // If we're an offline session that has never been corrected then we need to set the initial sequence index.
         if (state == DISCONNECTED && sequenceIndex == UNKNOWN_SEQUENCE_INDEX)
@@ -1062,7 +1068,7 @@ public class Session
 
     public boolean isAcceptor()
     {
-        return false;
+        return connectionType == ConnectionType.ACCEPTOR;
     }
 
     /**
@@ -1665,12 +1671,20 @@ public class Session
 
     protected Action respondToLogon(final int heartbeatInterval)
     {
-        return replyToLogon(heartbeatInterval);
+        if (connectionType == ConnectionType.ACCEPTOR)
+        {
+            return replyToLogon(heartbeatInterval);
+        }
+        else
+        {
+            // Initiator sends its logon first, so has no need to reply
+            return null;
+        }
     }
 
     protected SessionState initialState()
     {
-        return SessionState.CONNECTED;
+        return connectionType == ConnectionType.ACCEPTOR ? SessionState.CONNECTED : SessionState.SENT_LOGON;
     }
 
     // Always resets the sequence number to 1
@@ -2418,25 +2432,28 @@ public class Session
     {
         final short state = state().value();
 
+        final ConnectionType connectionType = this.connectionType;
+        int actions = connectionType == ConnectionType.INITIATOR ? initiatorPoll() : 0;
+
         switch (state)
         {
             case DISCONNECTING_VALUE:
             {
-                return onDisconnecting();
+                return actions + onDisconnecting();
             }
 
             case LOGGING_OUT_VALUE:
             {
                 startLogout();
 
-                return 1;
+                return actions + 1;
             }
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
                 logoutAndDisconnect(APPLICATION_DISCONNECT);
 
-                return 1;
+                return actions + 1;
             }
 
             case AWAITING_LOGOUT_VALUE:
@@ -2449,18 +2466,17 @@ public class Session
                     }
                 }
 
-                return 1;
+                return actions + 1;
             }
 
             case DISCONNECTED_VALUE:
             case DISABLED_VALUE:
             {
-                return 0;
+                return actions;
             }
 
             default:
             {
-                int actions = 0;
                 final boolean isActive = state == ACTIVE_VALUE;
                 if (isActive && timeInNs >= nextRequiredHeartbeatTimeInNs)
                 {
@@ -2502,6 +2518,33 @@ public class Session
                 return actions;
             }
         }
+    }
+
+
+    private int initiatorPoll()
+    {
+        int actions = 0;
+        if (state() == SessionState.CONNECTED && id() != UNKNOWN)
+        {
+            state(SessionState.SENT_LOGON);
+            final int heartbeatIntervalInS = (int)(heartbeatIntervalInMs() / 1000);
+            final int sentSeqNum = initiatorResetSeqNum ? 1 : newSentSeqNum();
+            final long position = proxy.sendLogon(sentSeqNum, heartbeatIntervalInS,
+                username(),
+                password(),
+                initiatorResetSeqNum,
+                sequenceIndex(),
+                lastMsgSeqNumProcessed(),
+                cancelOnDisconnectOption,
+                getCancelOnDisconnectTimeoutWindowInMs());
+            if (position >= 0)
+            {
+                lastSentMsgSeqNum(sentSeqNum);
+            }
+            actions++;
+        }
+
+        return actions;
     }
 
     private int onDisconnecting()

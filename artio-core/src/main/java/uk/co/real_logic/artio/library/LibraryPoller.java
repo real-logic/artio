@@ -1127,8 +1127,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String address)
     {
         final InternalSession[] sessions = this.sessions;
-        for (final InternalSession session : sessions)
+        for (int i = 0, sessionsLength = sessions.length; i < sessionsLength; i++)
         {
+            final InternalSession session = sessions[i];
             if (session.id() == sessionId)
             {
                 DebugLogger.log(FIX_CONNECTION, reconnectFormatter, connectionId, libraryId, sessionId);
@@ -1141,7 +1142,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     enableLastMsgSeqNumProcessed,
                     fixDictionary,
                     address,
-                    fixCounters);
+                    fixCounters,
+                    connectionType);
+
                 return session;
             }
         }
@@ -1161,7 +1164,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     enableLastMsgSeqNumProcessed,
                     fixDictionary,
                     address,
-                    fixCounters);
+                    fixCounters,
+                    connectionType);
             }
             return session;
         }
@@ -2145,7 +2149,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         connectionIdToSession.put(connectionId, subscriber);
     }
 
-    private InitiatorSession newInitiatorSession(
+    private InternalSession newInitiatorSession(
         final long connectionId,
         final int initialSentSequenceNumber,
         final int initialReceivedSequenceNumber,
@@ -2162,11 +2166,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
         final SessionProxy sessionProxy = sessionProxy(connectionId);
 
-        final InitiatorSession session = new InitiatorSession(
+        final InternalSession session = new InternalSession(
             defaultInterval,
             connectionId,
-            epochClock,
             configuration.epochNanoClock(),
+            state,
+            resetSeqNum,
             sessionProxy,
             inboundPublication,
             outboundPublication,
@@ -2177,14 +2182,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             initialSentSequenceNumber,
             sequenceIndex,
-            state,
-            resetSeqNum,
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
             epochFractionClock,
+            ConnectionType.INITIATOR,
             configuration.backpressureMessagesDuringReplay(),
             configuration.resendRequestController(),
             configuration.forcedHeartbeatIntervalInS());
@@ -2240,10 +2244,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId, sessionId);
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
 
-        final InternalSession session = new AcceptorSession(
+        final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
             connectionId,
             configuration.epochNanoClock(),
+            state,
+            false,
             sessionProxy(connectionId),
             inboundPublication,
             outboundPublication,
@@ -2254,13 +2260,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             1,
             sequenceIndex,
-            state,
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy(),
             messageInfo,
             epochFractionClock,
+            ConnectionType.ACCEPTOR,
             configuration.backpressureMessagesDuringReplay(),
             configuration.resendRequestController(),
             configuration.forcedHeartbeatIntervalInS());

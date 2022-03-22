@@ -172,6 +172,7 @@ public class FixGatewaySessions extends GatewaySessions
             connectionId,
             clock,
             state,
+            false,
             proxy,
             inboundPublication,
             outboundPublication,

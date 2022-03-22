@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -35,10 +36,11 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     protected Session newSession()
     {
-        final InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL_IN_S,
+        final InternalSession session = new InternalSession(HEARTBEAT_INTERVAL_IN_S,
             CONNECTION_ID,
-            fakeClock,
             nanoClock,
+            CONNECTED,
+            false,
             sessionProxy,
             mock(GatewayPublication.class),
             mockPublication,
@@ -49,14 +51,13 @@ public class InitiatorSessionTest extends AbstractSessionTest
             LIBRARY_ID,
             1,
             SEQUENCE_INDEX,
-            CONNECTED,
-            false,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             false,
             SessionCustomisationStrategy.none(),
             messageInfo,
             fakeEpochFractionClock,
+            ConnectionType.INITIATOR,
             true,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS);

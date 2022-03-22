@@ -52,6 +52,7 @@ public class InternalSession extends Session implements AutoCloseable
         final long connectionId,
         final EpochNanoClock clock,
         final SessionState state,
+        final boolean initiatorResetSeqNum,
         final SessionProxy proxy,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
@@ -78,6 +79,7 @@ public class InternalSession extends Session implements AutoCloseable
             connectionId,
             clock,
             state,
+            initiatorResetSeqNum,
             proxy,
             inboundPublication,
             outboundPublication,
@@ -262,7 +264,8 @@ public class InternalSession extends Session implements AutoCloseable
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary,
         final String address,
-        final FixCounters counters)
+        final FixCounters counters,
+        final ConnectionType connectionType)
     {
         connectionId(connectionId);
         state(sessionState);
@@ -273,6 +276,7 @@ public class InternalSession extends Session implements AutoCloseable
         address(address);
         refreshSequenceNumberCounters(counters);
         awaitingLogonReply(false);
+        this.connectionType = connectionType;
     }
 
     public void lastReceivedMsgSeqNumOnly(final int value)
@@ -373,5 +377,10 @@ public class InternalSession extends Session implements AutoCloseable
         {
             onStartLogout();
         }
+    }
+
+    public ConnectionType connectionType()
+    {
+        return connectionType;
     }
 }

@@ -786,12 +786,19 @@ public class AbstractGatewayToGatewaySystemTest
 
     SessionWriter createFollowerSession(final long timeoutInMs)
     {
+        return createFollowerSession(timeoutInMs, testSystem, acceptingLibrary, INITIATOR_ID, ACCEPTOR_ID);
+    }
+
+    static SessionWriter createFollowerSession(
+        final long timeoutInMs, final TestSystem testSystem, final FixLibrary library, final String sender,
+        final String target)
+    {
         final HeaderEncoder headerEncoder = new HeaderEncoder()
-            .senderCompID(INITIATOR_ID)
-            .targetCompID(ACCEPTOR_ID);
+            .senderCompID(sender)
+            .targetCompID(target);
 
         final Reply<SessionWriter> followerSession = testSystem.awaitCompletedReply(
-            acceptingLibrary.followerSession(headerEncoder, timeoutInMs));
+            library.followerSession(headerEncoder, timeoutInMs));
         return followerSession.resultIfPresent();
     }
 
