@@ -60,6 +60,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.engine.logger.FixMessageConsumerValidator.validateFixMessageConsumer;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -649,7 +650,7 @@ public class AbstractGatewayToGatewaySystemTest
             (message, buffer, offset, length, header) ->
             messages.add(new ArchiveEntry(
             message.status(),
-            message.body()));
+            validateFixMessageConsumer(message, buffer, offset, length)));
 
         SystemTestUtil.getMessagesFromArchive(configuration, queryStreamIds, fixMessageConsumer, null, false);
 

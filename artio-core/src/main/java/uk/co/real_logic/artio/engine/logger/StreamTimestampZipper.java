@@ -29,8 +29,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static java.lang.Math.min;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 
 public class StreamTimestampZipper
 {
@@ -401,6 +400,7 @@ public class StreamTimestampZipper
             {
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
+                final FixMessageDecoder fixMessage = this.fixMessage;
                 fixMessage.wrap(buffer, offset, blockLength, version);
 
                 if (version >= metaDataSinceVersion())
@@ -415,7 +415,7 @@ public class StreamTimestampZipper
                 if (timestamp <= maxTimestampToHandle)
                 {
                     owner.handledTimestamp(timestamp);
-                    fixHandler.onMessage(fixMessage, buffer, offset, length, owner.header);
+                    onFixMessage(offset, buffer, fixMessage);
                 }
                 else
                 {
@@ -491,6 +491,7 @@ public class StreamTimestampZipper
             {
                 offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
+                final FixMessageDecoder fixMessage = this.fixMessage;
                 fixMessage.wrap(buffer, offset, blockLength, version);
 
                 if (version >= metaDataSinceVersion())
@@ -499,7 +500,7 @@ public class StreamTimestampZipper
                     fixMessage.skipMetaData();
                 }
 
-                fixHandler.onMessage(fixMessage, buffer, offset, length, owner.header);
+                onFixMessage(offset, buffer, fixMessage);
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID)
             {
@@ -511,6 +512,13 @@ public class StreamTimestampZipper
 
                 fixPHandler.onMessage(fixpMessage, buffer, offset, owner.header);
             }
+        }
+
+        private void onFixMessage(final int offset, final DirectBuffer buffer, final FixMessageDecoder fixMessage)
+        {
+            final int messageLength = fixMessage.bodyLength();
+            fixHandler.onMessage(fixMessage, buffer,
+                offset + FixMessageDecoder.BLOCK_LENGTH + bodyHeaderLength(), messageLength, owner.header);
         }
     }
 

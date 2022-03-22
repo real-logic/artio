@@ -36,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.engine.logger.FixMessageConsumerValidator.validateFixMessageConsumer;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -154,7 +155,8 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
 
         final List<String> messages = new ArrayList<>();
         final FixMessageConsumer fixMessageConsumer =
-            (message, buffer, offset, length, header) -> messages.add(message.body());
+            (message, buffer, offset, length, header) ->
+            messages.add(validateFixMessageConsumer(message, buffer, offset, length));
 
         final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
         final FixMessagePredicate timeFilter = FixMessagePredicates.between(start, end + 1);

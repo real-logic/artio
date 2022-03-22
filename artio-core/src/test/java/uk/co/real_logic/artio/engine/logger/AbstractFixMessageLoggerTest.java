@@ -47,6 +47,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
+import static uk.co.real_logic.artio.engine.logger.FixMessageConsumerValidator.validateFixMessageConsumer;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 
 public abstract class AbstractFixMessageLoggerTest
@@ -68,7 +69,7 @@ public abstract class AbstractFixMessageLoggerTest
 
         timestamps.add(timestamp);
 
-        final String body = message.body().trim();
+        final String body = validateFixMessageConsumer(message, buffer, offset, length).trim();
         final long messageNumber = Long.parseLong(body);
         assertEquals(timestamp, messageNumber);
         streamIds.add(header.streamId());
