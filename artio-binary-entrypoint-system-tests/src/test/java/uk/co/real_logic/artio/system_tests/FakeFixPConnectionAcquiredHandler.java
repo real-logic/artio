@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.library.FixPConnectionAcquiredHandler;
@@ -25,6 +26,7 @@ public class FakeFixPConnectionAcquiredHandler implements FixPConnectionAcquired
 
     private boolean invoked = false;
     private FixPConnection connection;
+    private long sessionVerIdAtAcquire;
 
     public FakeFixPConnectionAcquiredHandler(final FakeBinaryEntrypointConnectionHandler connectionHandler)
     {
@@ -35,7 +37,17 @@ public class FakeFixPConnectionAcquiredHandler implements FixPConnectionAcquired
     {
         invoked = true;
         this.connection = connection;
+        if (connection instanceof BinaryEntryPointConnection)
+        {
+            final BinaryEntryPointConnection binaryEntryPointConnection = (BinaryEntryPointConnection)connection;
+            sessionVerIdAtAcquire = binaryEntryPointConnection.sessionVerId();
+        }
         return connectionHandler;
+    }
+
+    public long sessionVerIdAtAcquire()
+    {
+        return sessionVerIdAtAcquire;
     }
 
     public boolean invoked()

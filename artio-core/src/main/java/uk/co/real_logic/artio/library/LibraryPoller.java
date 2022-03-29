@@ -1953,7 +1953,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 }
                 connection.onOfflineReconnect(connectionId, context);
 
-                handleFixPConnection(connectionId, offline, buffer, offset, connection);
+                return handleFixPConnection(connectionId, offline, buffer, offset, connection);
             }
             else
             {
@@ -2014,29 +2014,34 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return null;
     }
 
-    private void handleFixPConnection(
+    private Action handleFixPConnection(
         final long connectionId,
         final boolean offline,
         final DirectBuffer buffer,
         final int offset,
         final InternalFixPConnection connection)
     {
+        final FixPSubscription subscription = new FixPSubscription(
+            fixPProtocol.makeParser(connection), connection);
+
+        final Action action = subscription.onMessage(buffer, offset);
+        if (action == ABORT)
+        {
+            return ABORT;
+        }
+
         final FixPConnectionHandler handler = configuration
             .fixPConnectionAcquiredHandler()
             .onConnectionAcquired(connection);
 
         connection.handler(handler);
 
-        final FixPSubscription subscription = new FixPSubscription(
-            fixPProtocol.makeParser(connection), connection);
-
-        // TODO
-        subscription.onMessage(buffer, offset);
-
         if (!offline)
         {
             connectionIdToFixPSubscription.put(connectionId, subscription);
         }
+
+        return action;
     }
 
     public Action onThrottleNotification(

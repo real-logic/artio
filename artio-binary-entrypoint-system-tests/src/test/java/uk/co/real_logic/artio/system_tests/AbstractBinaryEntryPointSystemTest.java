@@ -269,6 +269,7 @@ public class AbstractBinaryEntryPointSystemTest
         acquireConnection(connectionAcquiredHandler);
         assertEquals(client.sessionId(), connection.sessionId());
         assertEquals(client.sessionVerID(), connection.sessionVerId());
+        assertEquals(client.sessionVerID(), connectionAcquiredHandler.sessionVerIdAtAcquire());
         assertEquals(FixPConnection.State.ESTABLISHED, connection.state());
     }
 

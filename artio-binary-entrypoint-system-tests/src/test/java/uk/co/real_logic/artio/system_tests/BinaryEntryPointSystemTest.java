@@ -1204,6 +1204,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertNextSequenceNumbers(2, 2);
         assertEquals(sessionId, connection.sessionId());
         assertEquals(1, connection.sessionVerId());
+        assertEquals(1, connectionAcquiredHandler.sessionVerIdAtAcquire());
 
         connectionAcquiredHandler.reset();
 
@@ -1384,6 +1385,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertNextSequenceNumbers(1, 1);
         assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(sessionVerID, connection.sessionVerId());
+        assertEquals(sessionVerID, connectionAcquiredHandler.sessionVerIdAtAcquire());
 
         final long msgPos = sendExecutionReportNew(connection, CL_ORD_ID, SECURITY_ID, false);
         final ReadablePosition pos = testSystem.awaitCompletedReply(
