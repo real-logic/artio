@@ -991,8 +991,7 @@ public class Session
     {
         if (position >= 0)
         {
-            sequenceIndex++;
-            lastSequenceResetTimeInNs(messageTimeInNs);
+            nextSequenceIndex(messageTimeInNs);
         }
     }
 
@@ -1150,6 +1149,13 @@ public class Session
         return lastSequenceResetTimeInNs;
     }
 
+    /**
+     * Deprecated because this is an unreliable and error prone way of setting sequence numbers that doesn't persist
+     * over restarts. Please consider using {@link #trySendSequenceReset(int)} instead.
+     *
+     * @param lastSentMsgSeqNum the new value to set for the lastSentMsgSeqNum.
+     * @return the lastSentMsgSeqNum
+     */
     public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
     {
         this.lastSentMsgSeqNum = lastSentMsgSeqNum;

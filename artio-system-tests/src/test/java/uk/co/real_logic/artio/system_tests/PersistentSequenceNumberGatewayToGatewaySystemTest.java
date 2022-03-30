@@ -41,10 +41,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.MonitoringAgentFactory.consumeDistinctErrors;
@@ -531,6 +531,64 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     public void shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceResetHighInitiator()
     {
         shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset(10, 10);
+    }
+
+    // Reproduction of a client bug
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldStoreAndForwardMessagesWithSequenceReset2()
+    {
+        final int firstReportSeqNum = 2;
+        final int secondReportSeqNum = 101;
+
+        launch(this::nothing);
+        final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
+
+        // Client connects for the first time.
+        connectPersistingSessions(1, false);
+
+        // Artio sends an Execution Report.
+        final ReportFactory factory = new ReportFactory();
+        factory.sendReport(testSystem, acceptingSession, Side.BUY);
+        assertEquals(firstReportSeqNum, acceptingSession.lastSentMsgSeqNum());
+
+        // Client TCP disconnects.
+        testSystem.awaitRequestDisconnect(initiatingSession);
+        assertSessionsDisconnected();
+        initiatingSession = null;
+        acceptingSession = null;
+        acquireAcceptingSession();
+        assertOfflineSession(acceptingSession.id(), acceptingSession);
+
+        // Outbound sequence is set to 100.
+        testSystem.awaitSend(() -> acceptingSession.trySendSequenceReset(secondReportSeqNum));
+
+        // Artio sends another Execution Report.
+        final long position = factory.sendReport(testSystem, acceptingSession, Side.BUY);
+        testSystem.awaitPosition(positionCounter, position);
+        assertEquals(secondReportSeqNum, acceptingSession.lastSentMsgSeqNum());
+
+        // Client connects again.
+        clearMessages();
+        onAcquireSession = this::nothing;
+        connectPersistingSessions(2, 1, false);
+
+        // Client asks for a resend from 1 to 0.
+        assertReceivedReplayedReport(firstReportSeqNum);
+        assertReceivedReplaySequenceReset(firstReportSeqNum, secondReportSeqNum);
+        assertReceivedReplayedReport(secondReportSeqNum);
+    }
+
+    private void assertReceivedReplaySequenceReset(final int firstReportSeqNum, final int secondReportSeqNum)
+    {
+        final Predicate<FixMessage> p = msg -> msg.messageSequenceNumber() == firstReportSeqNum + 1;
+        final FixMessage gapFillMessage =
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR, p);
+        final String msg = gapFillMessage.toString();
+
+        assertEquals(msg, "Y", gapFillMessage.possDup());
+
+        final int newSeqNo = Integer.parseInt(gapFillMessage.get(Constants.NEW_SEQ_NO));
+        assertThat(msg, newSeqNo, equalTo(secondReportSeqNum));
     }
 
     private void shouldStoreAndForwardMessagesSentOfflineWithFollowerSessionAndSequenceReset(

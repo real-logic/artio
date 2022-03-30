@@ -31,7 +31,6 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersReader;
 import org.agrona.concurrent.status.UnsafeBufferPosition;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
@@ -1703,7 +1702,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (!online)
         {
-            checkOfflineSequenceReset(sessionId, messageType, buffer, offset, length);
+            checkOfflineSequenceReset(sessionId, messageType, buffer, offset, length, sequenceIndex);
         }
 
         sendTimer.recordSince(now);
@@ -1720,7 +1719,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     private void checkOfflineSequenceReset(
-        final long sessionId, final long messageType, final DirectBuffer buffer, final int offset, final int length)
+        final long sessionId, final long messageType, final DirectBuffer buffer, final int offset, final int length,
+        final int sequenceIndex)
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
@@ -1739,14 +1739,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
-                final AbstractSequenceResetDecoder decoder = acceptorFixDictionaryLookup.lookupSequenceResetDecoder(
-                    context.lastFixDictionary());
-                asciiBuffer.wrap(buffer);
-                decoder.decode(asciiBuffer, offset, length);
-                if (!decoder.hasGapFillFlag() || !decoder.gapFillFlag())
-                {
-                    context.onSequenceReset(clock.nanoTime());
-                }
+                context.onSequenceIndex(clock.nanoTime(), sequenceIndex);
             }
         }
     }
