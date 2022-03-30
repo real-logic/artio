@@ -44,4 +44,17 @@ public interface ResendRequestController
         AbstractResendRequestDecoder resendRequest,
         int correctedEndSeqNo,
         ResendRequestResponse response);
+
+    /**
+     * This method is invoked when a Session identifies that a resend is complete. It is invoked on the thread
+     * that the Library is polled on that owns the Session in question.
+     *
+     * @param session the session on which resend is complete.
+     * @param remainingReplaysInFlight the number of remaining replays in flight for this Session after the completion of this
+     *                        replay.
+     */
+    default void onResendComplete(Session session, final int remainingReplaysInFlight)
+    {
+        // default and empty for backwards compatibility reasons.
+    }
 }

@@ -20,6 +20,7 @@ import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
+import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.theories.DataPoint;
@@ -178,6 +179,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 assertNull("Detected Error", acceptingOtfAcceptor.lastError());
                 assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
             });
+        assertResendsCompleted(2, hasItems(1, 0));
 
         assertSequenceIndicesAre(0);
     }
@@ -198,6 +200,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FixMessage message = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
+        assertEquals(0, fakeResendRequestController.completeCount());
+
         final int sequenceNumber = acceptorSendsResendRequest(message.messageSequenceNumber());
 
         final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_MESSAGE_AS_STR, false);
@@ -208,6 +212,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FixMessage nextMessage = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
         assertEquals(sequenceNumber + 1, nextMessage.messageSequenceNumber());
+
+        assertResendsCompleted(1, hasItems(0));
+    }
+
+    private void assertResendsCompleted(final int count, final Matcher<Iterable<Integer>> items)
+    {
+        testSystem.await("ResendRequestController not notified ",
+            () -> fakeResendRequestController.completeCount() == count);
+        assertThat(fakeResendRequestController.seenReplaysInFlight(), items);
     }
 
     private FixMessage exchangeExampleMessageFromInitiatorToAcceptor(final String testReqID)
@@ -291,6 +304,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             {
                 testSystem.poll();
 
+                // Send a reject instead of a resend
                 final List<FixMessage> reject = acceptingOtfAcceptor.receivedMessage("3").collect(toList());
                 assertThat(reject, hasSize(1));
 

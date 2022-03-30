@@ -190,7 +190,7 @@ public class Session
     private boolean isSlowConsumer;
     CancelOnDisconnectOption cancelOnDisconnectOption;
 
-    private boolean replaying = false;
+    private int replaysInFlight = 0;
     protected ConnectionType connectionType;
     private final boolean initiatorResetSeqNum;
 
@@ -694,7 +694,7 @@ public class Session
 
     private boolean replayBackpressure()
     {
-        return backpressureMessagesDuringReplay && replaying;
+        return backpressureMessagesDuringReplay && isReplaying();
     }
 
     /**
@@ -1100,7 +1100,7 @@ public class Session
         state(DISCONNECTED);
         address("", Session.UNKNOWN);
         connectionId(NO_CONNECTION_ID);
-        replaying = false;
+        replaysInFlight = 0;
 
         cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
     }
@@ -1166,7 +1166,7 @@ public class Session
      */
     public boolean isReplaying()
     {
-        return replaying;
+        return replaysInFlight > 0;
     }
 
     public String toString()
@@ -2146,7 +2146,7 @@ public class Session
             }
 
             backpressuredResendRequestResponse = false;
-            replaying = true;
+            replaysInFlight++;
             return CONTINUE;
         }
         else
@@ -2755,6 +2755,10 @@ public class Session
 
     void onReplayComplete()
     {
-        replaying = false;
+        if (isConnected())
+        {
+            replaysInFlight--;
+        }
+        resendRequestController.onResendComplete(this, replaysInFlight);
     }
 }

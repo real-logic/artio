@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.builder.RejectEncoder;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
@@ -32,6 +33,7 @@ public class FakeResendRequestController implements ResendRequestController
     private boolean resend = true;
 
     private int callCount = 0;
+    private IntArrayList seenReplaysInFlight = new IntArrayList();
     private boolean customResend = false;
     private int maxResends = Integer.MAX_VALUE;
 
@@ -69,6 +71,12 @@ public class FakeResendRequestController implements ResendRequestController
         }
     }
 
+    public void onResendComplete(final Session session, final int remainingReplaysInFlight)
+    {
+        assertNotNull(session);
+        seenReplaysInFlight.add(remainingReplaysInFlight);
+    }
+
     public void resend(final boolean resend)
     {
         this.resend = resend;
@@ -87,6 +95,16 @@ public class FakeResendRequestController implements ResendRequestController
     public int callCount()
     {
         return callCount;
+    }
+
+    public int completeCount()
+    {
+        return seenReplaysInFlight.size();
+    }
+
+    public IntArrayList seenReplaysInFlight()
+    {
+        return seenReplaysInFlight;
     }
 
     public void customResend(final boolean customResend)
