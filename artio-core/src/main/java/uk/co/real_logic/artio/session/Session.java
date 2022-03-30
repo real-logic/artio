@@ -2755,7 +2755,9 @@ public class Session
 
     void onReplayComplete()
     {
-        if (isConnected())
+        // replaysInFlight gets reset to 0 when a disconnect happens, stop this from racing with a replay complete
+        // message
+        if (replaysInFlight > 0)
         {
             replaysInFlight--;
         }
