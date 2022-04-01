@@ -37,6 +37,7 @@ public class StreamTimestampZipper
     private static final ReverseTimestampComparator REVERSE_TIMESTAMP_COMPARATOR = new ReverseTimestampComparator();
     private static final OffsetComparator OFFSET_COMPARATOR = new OffsetComparator();
 
+    private final int maximumBufferSize;
     private final int compactionSize;
     private final StreamPoller[] pollers;
     private final FragmentAssembler fragmentAssembler;
@@ -52,9 +53,11 @@ public class StreamTimestampZipper
         final FixMessageConsumer fixMessageConsumer,
         final FixPMessageConsumer fixPMessageConsumer,
         final int compactionSize,
+        final int maximumBufferSize,
         final boolean lazilyCompact,
         final Poller... pollers)
     {
+        this.maximumBufferSize = maximumBufferSize;
         this.lazilyCompact = lazilyCompact;
         this.compactionSize = compactionSize;
         this.pollers = new StreamPoller[pollers.length];
@@ -188,7 +191,7 @@ public class StreamTimestampZipper
         return reorderBuffer.capacity();
     }
 
-    public void onClose()
+    private void dumpBuffer()
     {
         final LogEntryHandler logEntryHandler = this.logEntryHandler;
         final List<BufferedPosition> positions = this.positions;
@@ -204,7 +207,16 @@ public class StreamTimestampZipper
         }
 
         positions.clear();
+        for (final StreamPoller poller : pollers)
+        {
+            poller.elementsInBuffer = 0;
+        }
         reorderBufferOffset = 0;
+    }
+
+    public void onClose()
+    {
+        dumpBuffer();
 
         for (final StreamPoller poller : pollers)
         {
@@ -463,6 +475,11 @@ public class StreamTimestampZipper
         private void putBufferedMessage(
             final DirectBuffer buffer, final int start, final int length, final long timestamp)
         {
+            if (reorderBufferOffset + length > maximumBufferSize)
+            {
+                dumpBuffer();
+            }
+
             owner.bufferedTimestamp(timestamp);
             owner.elementsInBuffer++;
             reorderBuffer.putBytes(reorderBufferOffset, buffer, start, length);

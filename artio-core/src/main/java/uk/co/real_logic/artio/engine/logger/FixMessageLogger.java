@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.agrona.LangUtil;
 import org.agrona.Verify;
 import org.agrona.concurrent.Agent;
@@ -48,6 +49,7 @@ public class FixMessageLogger implements Agent
     public static class Configuration
     {
         public static final int DEFAULT_COMPACTION_SIZE = 256 * 1024 * 1024;
+        public static final int DEFAULT_MAXIMUM_BUFFER_SIZE = ExpandableArrayBuffer.MAX_ARRAY_LENGTH - 1;
 
         private FixMessageConsumer fixMessageConsumer;
         private Aeron.Context context;
@@ -58,6 +60,7 @@ public class FixMessageLogger implements Agent
         private int outboundStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
         private int outboundReplayStreamId = DEFAULT_OUTBOUND_REPLAY_STREAM;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
+        public int maximumBufferSize = DEFAULT_MAXIMUM_BUFFER_SIZE;
         private FixPMessageConsumer fixPMessageConsumer;
 
         /**
@@ -212,18 +215,32 @@ public class FixMessageLogger implements Agent
          */
         public Configuration compactionSize(final int compactionSize)
         {
-            if (compactionSize <= 0)
-            {
-                throw new IllegalArgumentException("Compaction size must be positive, but is: " + compactionSize);
-            }
+            validateCompactionSize(compactionSize);
 
             this.compactionSize = compactionSize;
+            return this;
+        }
+
+        /**
+         * Sets the maximum size that the internal reorder buffer can grow to. If this is exceeded then all the
+         * messages within the reorder buffer are simply dumped out in their current order.
+         *
+         * @param maximumBufferSize the maximum reorder buffer size in bytes
+         * @return this
+         */
+        public Configuration maximumBufferSize(final int maximumBufferSize)
+        {
+            validateMaximumBufferSize(maximumBufferSize);
+
+            this.maximumBufferSize = maximumBufferSize;
             return this;
         }
 
         void conclude()
         {
             Verify.notNull(fixMessageConsumer, "fixMessageConsumer");
+
+            validateMaxAndCompactionSize(maximumBufferSize, compactionSize);
 
             if (aeron == null)
             {
@@ -233,6 +250,32 @@ public class FixMessageLogger implements Agent
                 }
 
                 aeron = Aeron.connect(context);
+            }
+        }
+
+        public static void validateMaxAndCompactionSize(final int maximumBufferSize, final int compactionSize)
+        {
+            if (maximumBufferSize < compactionSize)
+            {
+                throw new IllegalArgumentException(
+                    "maximumBufferSize (" + maximumBufferSize + ") cannot be less than the compactionSize (" +
+                        compactionSize + ")");
+            }
+        }
+
+        public static void validateMaximumBufferSize(final int maximumBufferSize)
+        {
+            if (maximumBufferSize <= 0)
+            {
+                throw new IllegalArgumentException("maximumBufferSize must be positive, but is: " + maximumBufferSize);
+            }
+        }
+
+        public static void validateCompactionSize(final int compactionSize)
+        {
+            if (compactionSize <= 0)
+            {
+                throw new IllegalArgumentException("Compaction size must be positive, but is: " + compactionSize);
             }
         }
     }
@@ -324,7 +367,7 @@ public class FixMessageLogger implements Agent
             configuration.fixMessageConsumer,
             configuration.fixPMessageConsumer,
             configuration.compactionSize,
-            false,
+            configuration.maximumBufferSize, false,
             pollers);
     }
 

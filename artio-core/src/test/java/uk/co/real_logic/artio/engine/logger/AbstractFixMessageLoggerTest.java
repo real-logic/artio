@@ -63,7 +63,7 @@ public abstract class AbstractFixMessageLoggerTest
     final LongArrayList timestamps = new LongArrayList();
     final IntArrayList streamIds = new IntArrayList();
 
-    private final FixMessageConsumer fixConsumer = (message, buffer, offset, length, header) ->
+    final FixMessageConsumer fixConsumer = (message, buffer, offset, length, header) ->
     {
         final long timestamp = message.timestamp();
 
@@ -75,14 +75,14 @@ public abstract class AbstractFixMessageLoggerTest
         streamIds.add(header.streamId());
     };
 
-    private String libraryChannel;
-    private MediaDriver mediaDriver;
-    private Aeron aeron;
-    private FixMessageLogger logger;
+    String libraryChannel;
+    MediaDriver mediaDriver;
+    Aeron aeron;
+    FixMessageLogger logger;
 
-    private GatewayPublication inboundPublication;
-    private GatewayPublication outboundPublication;
-    private ExclusivePublication replayPublication;
+    GatewayPublication inboundPublication;
+    GatewayPublication outboundPublication;
+    ExclusivePublication replayPublication;
 
     void setup(final FixPMessageConsumer fixPMessageConsumer)
     {
@@ -94,6 +94,7 @@ public abstract class AbstractFixMessageLoggerTest
             .fixMessageConsumer(fixConsumer)
             .fixPMessageConsumer(fixPMessageConsumer)
             .compactionSize(compactionSize)
+            .maximumBufferSize(10_000)
             .libraryAeronChannel(libraryChannel);
         logger = new FixMessageLogger(config);
 
@@ -228,16 +229,16 @@ public abstract class AbstractFixMessageLoggerTest
         assertThat(timestamps, contains(1603800578520566892L, 1603800581079423921L, 1603800586520278849L));
     }
 
-    private void assertEventuallyReceives(final int messageCount)
+    void assertEventuallyReceives(final int messageCount)
     {
         assertEventuallyTrue(
             () -> "Failed to receive a message: " + timestamps,
             () ->
             {
                 logger.doWork();
-                return timestamps.size() == messageCount;
+                return timestamps.size() >= messageCount;
             },
-            1000,
+            10_000,
             () ->
             {
             });
@@ -275,7 +276,7 @@ public abstract class AbstractFixMessageLoggerTest
 
     abstract void onMessage(GatewayPublication inboundPublication, long timestamp);
 
-    private void onReplayerTimestamp(final ExclusivePublication replayStream, final long timestampInNs)
+    void onReplayerTimestamp(final ExclusivePublication replayStream, final long timestampInNs)
     {
         final UnsafeBuffer timestampBuffer = new UnsafeBuffer(new byte[
             ENCODED_LENGTH + ReplayerTimestampDecoder.BLOCK_LENGTH]);

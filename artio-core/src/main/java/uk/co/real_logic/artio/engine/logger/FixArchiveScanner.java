@@ -31,7 +31,7 @@ import java.util.List;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static uk.co.real_logic.artio.LogTag.ARCHIVE_SCAN;
-import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
+import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.*;
 
 /**
  * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
@@ -50,6 +50,7 @@ public class FixArchiveScanner implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final IdleStrategy idleStrategy;
     private final int compactionSize;
+    private final int maximumBufferSize;
     private final int fragmentLimit;
 
     private final String logFileDir;
@@ -62,6 +63,7 @@ public class FixArchiveScanner implements AutoCloseable
         private String aeronDirectoryName;
         private IdleStrategy idleStrategy;
         private int compactionSize = DEFAULT_COMPACTION_SIZE;
+        public int maximumBufferSize = DEFAULT_MAXIMUM_BUFFER_SIZE;
         private String logFileDir;
         private boolean enableIndexScan;
         private AeronArchive.Context archiveContext;
@@ -92,8 +94,17 @@ public class FixArchiveScanner implements AutoCloseable
             return idleStrategy;
         }
 
+        /**
+         * See {@link uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration#compactionSize(int)}.
+         *
+         * @param compactionSize the compaction size of the buffer in bytes.
+         * @return this
+         * @throws IllegalArgumentException
+         */
         public Configuration compactionSize(final int compactionSize)
         {
+            validateCompactionSize(compactionSize);
+
             this.compactionSize = compactionSize;
             return this;
         }
@@ -101,6 +112,25 @@ public class FixArchiveScanner implements AutoCloseable
         public int compactionSize()
         {
             return compactionSize;
+        }
+
+        /**
+         * See {@link uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration#maximumBufferSize(int)}.
+         *
+         * @param maximumBufferSize the maximum reorder buffer size in bytes
+         * @return this
+         */
+        public Configuration maximumBufferSize(final int maximumBufferSize)
+        {
+            validateMaximumBufferSize(maximumBufferSize);
+
+            this.maximumBufferSize = maximumBufferSize;
+            return this;
+        }
+
+        public int maximumBufferSize()
+        {
+            return maximumBufferSize;
         }
 
         /**
@@ -179,6 +209,8 @@ public class FixArchiveScanner implements AutoCloseable
             {
                 throw new IllegalArgumentException("Please configure a logFileDir if you want to enable index scan");
             }
+
+            validateMaxAndCompactionSize(maximumBufferSize, compactionSize);
         }
     }
 
@@ -188,6 +220,7 @@ public class FixArchiveScanner implements AutoCloseable
 
         this.idleStrategy = configuration.idleStrategy();
         compactionSize = configuration.compactionSize;
+        maximumBufferSize = configuration.maximumBufferSize;
         fragmentLimit = configuration.fragmentLimit;
 
         final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(configuration.aeronDirectoryName());
@@ -263,7 +296,7 @@ public class FixArchiveScanner implements AutoCloseable
             }
 
             final StreamTimestampZipper timestampZipper = new StreamTimestampZipper(
-                fixHandler, fixPHandler, compactionSize, !follow, pollers);
+                fixHandler, fixPHandler, compactionSize, maximumBufferSize, !follow, pollers);
 
             while (true)
             {

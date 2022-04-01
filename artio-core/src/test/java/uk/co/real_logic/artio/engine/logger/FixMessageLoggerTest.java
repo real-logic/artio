@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
+import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -59,5 +60,27 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
             MessageStatus.OK,
             (int)timestamp,
             timestamp));
+    }
+
+    @Test
+    public void shouldForciblyDumpMessagesRatherThanOom()
+    {
+        // If we hit the maximum buffer size then we should just dump the messages to the handler rather than OOM.
+
+        final int dumpCount = 109;
+        for (int i = 0; i <= dumpCount + 1; i++)
+        {
+            onMessage(inboundPublication, i);
+            logger.doWork();
+        }
+
+        assertEventuallyReceives(dumpCount);
+        timestamps.clear();
+
+        // A messages arriving later are still received
+        onMessage(inboundPublication, dumpCount + 2);
+        onMessage(outboundPublication, dumpCount + 3);
+        onReplayerTimestamp(replayPublication, dumpCount + 4);
+        assertEventuallyReceives(2);
     }
 }
