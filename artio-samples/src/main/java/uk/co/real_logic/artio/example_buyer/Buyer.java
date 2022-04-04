@@ -50,7 +50,6 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
         this.library = library;
     }
 
-    @Override
     public void onDisconnect(final FixLibrary library)
     {
         System.out.println("Library Disconnected");

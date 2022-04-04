@@ -56,6 +56,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.CommonConfiguration.*;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -550,7 +551,7 @@ public final class SystemTestUtil
             () ->
             {
                 testSystem.poll();
-                return session.state() == DISCONNECTED;
+                return session.state() == DISCONNECTED && session.connectionId() == NO_CONNECTION_ID;
             });
     }
 

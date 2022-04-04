@@ -305,6 +305,7 @@ public class MessageBasedInitiatorSystemTest
 
             testSystem.awaitCompletedReply(sessionReply);
         }
+        assertSessionDisconnected(testSystem, sessionReply.resultIfPresent());
 
         verifyNoInteractions(errorHandler);
     }
