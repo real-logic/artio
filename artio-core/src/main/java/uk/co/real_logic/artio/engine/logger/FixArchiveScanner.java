@@ -99,7 +99,7 @@ public class FixArchiveScanner implements AutoCloseable
          *
          * @param compactionSize the compaction size of the buffer in bytes.
          * @return this
-         * @throws IllegalArgumentException
+         * @throws IllegalArgumentException if compaction size is invalid.
          */
         public Configuration compactionSize(final int compactionSize)
         {
