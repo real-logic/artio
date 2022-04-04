@@ -49,7 +49,8 @@ public class FixMessageLogger implements Agent
     public static class Configuration
     {
         public static final int DEFAULT_COMPACTION_SIZE = 256 * 1024 * 1024;
-        public static final int DEFAULT_MAXIMUM_BUFFER_SIZE = ExpandableArrayBuffer.MAX_ARRAY_LENGTH - 1;
+        public static final int MAXIMUM_MAXIMUM_BUFFER_SIZE = ExpandableArrayBuffer.MAX_ARRAY_LENGTH - 1;
+        public static final int DEFAULT_MAXIMUM_BUFFER_SIZE = ExpandableArrayBuffer.MAX_ARRAY_LENGTH / 2;
 
         private FixMessageConsumer fixMessageConsumer;
         private Aeron.Context context;
@@ -268,6 +269,12 @@ public class FixMessageLogger implements Agent
             if (maximumBufferSize <= 0)
             {
                 throw new IllegalArgumentException("maximumBufferSize must be positive, but is: " + maximumBufferSize);
+            }
+
+            if (maximumBufferSize > MAXIMUM_MAXIMUM_BUFFER_SIZE)
+            {
+                throw new IllegalArgumentException("maximumBufferSize must be <= " + MAXIMUM_MAXIMUM_BUFFER_SIZE +
+                    ", but is: " + maximumBufferSize);
             }
         }
 

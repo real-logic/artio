@@ -173,7 +173,10 @@ public class StreamTimestampZipper
                 final int length = position.length;
                 position.offset = reorderBufferOffset;
                 reorderBuffer.putBytes(reorderBufferOffset, reorderBuffer, offset, length);
-                reorderBufferOffset += length;
+
+                final int newReorderBufferOffset = reorderBufferOffset + length;
+                validateReorderBufferOffset(length, reorderBufferOffset, newReorderBufferOffset);
+                reorderBufferOffset = newReorderBufferOffset;
             }
             this.reorderBufferOffset = reorderBufferOffset;
         }
@@ -480,11 +483,15 @@ public class StreamTimestampZipper
                 dumpBuffer();
             }
 
+            final int reorderBufferOffset = StreamTimestampZipper.this.reorderBufferOffset;
             owner.bufferedTimestamp(timestamp);
             owner.elementsInBuffer++;
             reorderBuffer.putBytes(reorderBufferOffset, buffer, start, length);
             positions.add(new BufferedPosition(owner, timestamp, reorderBufferOffset, length));
-            reorderBufferOffset += length;
+
+            final int newReorderBufferOffset = reorderBufferOffset + length;
+            StreamTimestampZipper.this.reorderBufferOffset = newReorderBufferOffset;
+            validateReorderBufferOffset(length, reorderBufferOffset, newReorderBufferOffset);
         }
 
         void reset(final long minOtherTimestamp, final StreamPoller owner)
@@ -536,6 +543,16 @@ public class StreamTimestampZipper
             final int messageLength = fixMessage.bodyLength();
             fixHandler.onMessage(fixMessage, buffer,
                 offset + FixMessageDecoder.BLOCK_LENGTH + bodyHeaderLength(), messageLength, owner.header);
+        }
+    }
+
+    private static void validateReorderBufferOffset(
+        final int length, final int reorderBufferOffset, final int newReorderBufferOffset)
+    {
+        if (newReorderBufferOffset < 0)
+        {
+            throw new IllegalStateException("Detected negative newReorderBufferOffset: " +
+                newReorderBufferOffset + ", reorderBufferOffset=" + reorderBufferOffset + ", length=" + length);
         }
     }
 
