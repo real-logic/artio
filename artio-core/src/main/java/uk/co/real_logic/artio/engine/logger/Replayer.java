@@ -370,26 +370,9 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
         if (sessionCodecs != null)
         {
-            if (sendStartReplay)
+            if (trySendStartReplay(sessionId, connectionId, correlationId))
             {
-                final long position = publication.tryClaim(START_REPLAY_LENGTH, bufferClaim);
-                if (Pressure.isBackPressured(position))
-                {
-                    return null;
-                }
-
-                final MutableDirectBuffer buffer = bufferClaim.buffer();
-                final int offset = bufferClaim.offset();
-
-                startReplayEncoder
-                    .wrapAndApplyHeader(buffer, offset, messageHeaderEncoder)
-                    .session(sessionId)
-                    .connection(connectionId)
-                    .correlationId(correlationId);
-
-                DebugLogger.logSbeMessage(REPLAY, startReplayEncoder);
-
-                bufferClaim.commit();
+                return null;
             }
 
             final FixReplayerSession fixReplayerSession = processFixResendRequest(
@@ -425,6 +408,32 @@ public class Replayer implements Agent, ControlledFragmentHandler
         }
 
         throw new IllegalStateException("Unknown session: sessionId=" + sessionId + ",connectionId=" + connectionId);
+    }
+
+    private boolean trySendStartReplay(final long sessionId, final long connectionId, final long correlationId)
+    {
+        if (sendStartReplay)
+        {
+            final long position = publication.tryClaim(START_REPLAY_LENGTH, bufferClaim);
+            if (Pressure.isBackPressured(position))
+            {
+                return true;
+            }
+
+            final MutableDirectBuffer buffer = bufferClaim.buffer();
+            final int offset = bufferClaim.offset();
+
+            startReplayEncoder
+                .wrapAndApplyHeader(buffer, offset, messageHeaderEncoder)
+                .session(sessionId)
+                .connection(connectionId)
+                .correlationId(correlationId);
+
+            DebugLogger.logSbeMessage(REPLAY, startReplayEncoder);
+
+            bufferClaim.commit();
+        }
+        return false;
     }
 
     private FixReplayerSession processFixResendRequest(

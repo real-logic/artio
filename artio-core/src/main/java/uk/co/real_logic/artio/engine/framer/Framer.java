@@ -77,6 +77,8 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.FixContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.engine.framer.FixGatewaySession.adjustLastSequenceNumber;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.FOR_NEXT_SESSION_VERSION;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.NOT_FOR_NEXT_SESSION_VERSION;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID_BAD_VER;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
@@ -1715,6 +1717,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         fixSenderEndPoints.onValidResendRequest(connection, correlationId, false);
 
+        fixPSenderEndPoints.onValidResendRequest(connection, correlationId);
+
         return CONTINUE;
     }
 
@@ -2268,6 +2272,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long sessionId = gatewaySession.sessionId();
 
+            final long lastConnectPayload = gatewaySession.hasUnsentMessagesAtNegotiate() ?
+                FOR_NEXT_SESSION_VERSION : NOT_FOR_NEXT_SESSION_VERSION;
+
             return inboundPublication.saveManageFixPConnection(
                 libraryInfo.libraryId(),
                 correlationId,
@@ -2276,7 +2283,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.protocolType(),
                 receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
                 sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId),
-                0,
+                lastConnectPayload,
                 gatewaySession.firstMessage(),
                 offline);
         }
@@ -3837,7 +3844,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         public Action onReplayComplete(final long connectionId, final long correlationId)
         {
             final Action action = fixSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
-            if (action != ABORT)
+            if (action != ABORT && !slow)
             {
                 return fixPSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
             }

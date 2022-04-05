@@ -41,6 +41,7 @@ class FixPSequenceIndexer
     private final FixPMessageDecoder fixPMessage = new FixPMessageDecoder();
     private final ILinkConnectDecoder iLinkConnect = new ILinkConnectDecoder();
     private final InboundFixPConnectDecoder inboundFixPConnect = new InboundFixPConnectDecoder();
+    private final FollowerSessionRequestDecoder followerSessionRequest = new FollowerSessionRequestDecoder();
 
     private AbstractFixPSequenceExtractor sequenceExtractor;
     private boolean attemptedProtocolInit = false;
@@ -76,13 +77,12 @@ class FixPSequenceIndexer
             final int actingBlockLength = messageHeader.blockLength();
             final int version = messageHeader.version();
             final int templateId = messageHeader.templateId();
+            final int totalLength = BitUtil.align(srcLength, FRAME_ALIGNMENT);
 
             switch (templateId)
             {
                 case FixPMessageDecoder.TEMPLATE_ID:
                 {
-                    final int totalLength = BitUtil.align(srcLength, FRAME_ALIGNMENT);
-
                     onFixPMessage(
                         buffer, endPosition, offset, actingBlockLength, version, totalLength, header.sessionId());
                     break;
@@ -99,6 +99,20 @@ class FixPSequenceIndexer
                 {
                     inboundFixPConnect.wrap(buffer, offset, actingBlockLength, version);
                     connectionIdToFixPSessionId.put(inboundFixPConnect.connection(), inboundFixPConnect.sessionId());
+                    break;
+                }
+
+                case FollowerSessionRequestDecoder.TEMPLATE_ID:
+                {
+                    followerSessionRequest.wrap(buffer, offset, actingBlockLength, version);
+                    if (followerSessionRequest.protocolType() == this.fixPProtocolType)
+                    {
+                        if (!lazyLoadSequenceExtractor(true))
+                        {
+                            sequenceExtractor.onFollowerSessionRequest(
+                                followerSessionRequest, endPosition, totalLength, header.sessionId());
+                        }
+                    }
                     break;
                 }
             }

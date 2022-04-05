@@ -178,4 +178,9 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
         }
         return 1;
     }
+
+    public boolean hasUnsentMessagesAtNegotiate()
+    {
+        return context.hasUnsentMessagesAtNegotiate();
+    }
 }

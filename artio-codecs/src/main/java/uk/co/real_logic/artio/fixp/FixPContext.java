@@ -81,4 +81,6 @@ public interface FixPContext
     void onInitiatorDisconnect();
 
     long surrogateSessionId();
+
+    boolean hasUnsentMessagesAtNegotiate();
 }

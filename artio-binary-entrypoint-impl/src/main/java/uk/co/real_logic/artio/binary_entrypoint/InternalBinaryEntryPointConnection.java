@@ -44,7 +44,9 @@ import static uk.co.real_logic.artio.CommonConfiguration.NO_FIXP_MAX_RETRANSMISS
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.MAX_COD_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.FOR_NEXT_SESSION_VERSION;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
+import static uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor.FORCE_START_REPLAY_CORR_ID;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 
 /**
@@ -57,7 +59,6 @@ class InternalBinaryEntryPointConnection
     private static final int THROTTLE_REASON = 99;
 
     private final BinaryEntryPointProxy proxy;
-    private final BinaryEntryPointContext context;
     private final long maxFixPKeepaliveTimeoutInMs;
     private final int maxRetransmissionRange;
     private final CancelOnDisconnect cancelOnDisconnect;
@@ -70,8 +71,11 @@ class InternalBinaryEntryPointConnection
     private long codTimeoutWindowInMs;
     // true iff we've sent a redact then got back-pressured sending a message after
     private boolean suppressRedactResend = false;
+    private boolean suppressInboundValidResend = false;
     private boolean suppressRetransmissionResend = false;
     private boolean replaying = false;
+    private BinaryEntryPointContext context;
+    private boolean retransmitOfflineNextSessionMessages = false;
 
     InternalBinaryEntryPointConnection(
         final BinaryEntryPointProtocol protocol,
@@ -141,6 +145,7 @@ class InternalBinaryEntryPointConnection
 
         nextRecvSeqNo(adjustSeqNo(lastReceivedSequenceNumber));
         nextSentSeqNo(adjustSeqNo(lastSentSequenceNumber));
+        retransmitOfflineNextSessionMessages = lastConnectPayload == FOR_NEXT_SESSION_VERSION;
         cancelOnDisconnect = new CancelOnDisconnect(
             configuration.epochNanoClock(),
             true,
@@ -274,9 +279,15 @@ class InternalBinaryEntryPointConnection
         return replaying;
     }
 
-    protected void onOfflineReconnect(final long connectionId, final FixPContext context)
+    protected void onOfflineReconnect(final long connectionId, final FixPContext fixPContext)
     {
-        initialState((BinaryEntryPointContext)context);
+        final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPContext;
+
+        retransmitOfflineNextSessionMessages = sessionVerId == NEXT_SESSION_VERSION_ID;
+
+        this.context = context;
+        sessionVerId = context.sessionVerID();
+        initialState(context);
 
         this.connectionId = connectionId;
         proxy.ids(connectionId, sessionId);
@@ -312,7 +323,10 @@ class InternalBinaryEntryPointConnection
 
         // Reset sequence numbers upon successful negotiate
         nextRecvSeqNo = 1;
-        nextSentSeqNo = 1;
+        if (!retransmitOfflineNextSessionMessages)
+        {
+            nextSentSeqNo = 1;
+        }
 
         // Notify inbound sequence number index
         final long inboundPos = inboundPublication.saveRedactSequenceUpdate(
@@ -423,9 +437,17 @@ class InternalBinaryEntryPointConnection
 
         if (position > 0)
         {
+            if (retransmitOfflineNextSessionMessages)
+            {
+                if (!retransmitOfflineNextSessionMessages(sessionID))
+                {
+                    return ABORT;
+                }
+            }
+
             setupCancelOnDisconnect(cancelOnDisconnectType, codTimeoutWindow);
             this.nextRecvSeqNo = nextSeqNo;
-            this.suppressRedactResend = false;
+            suppressRedactResend = false;
 
             state(ESTABLISHED);
             return CONTINUE;
@@ -434,6 +456,43 @@ class InternalBinaryEntryPointConnection
         {
             return ABORT;
         }
+    }
+
+    private boolean retransmitOfflineNextSessionMessages(final long sessionID)
+    {
+        // Handle the retransmit of any messages written into an offline session that
+        // were supposed to be sent with the next connect
+
+        final long endSequenceNumber = nextSentSeqNo - 1;
+
+        if (!suppressInboundValidResend)
+        {
+            final long resendRequestPosition = saveValidResendRequest(
+                sessionID, 1, endSequenceNumber, NEXT_SESSION_VERSION_ID,
+                FORCE_START_REPLAY_CORR_ID);
+
+            if (Pressure.isBackPressured(resendRequestPosition))
+            {
+                return false;
+            }
+
+            suppressInboundValidResend = true;
+        }
+
+        final long outboundPosition = saveValidResendRequest(
+            outboundPublication, sessionID, 1, endSequenceNumber,
+            NEXT_SESSION_VERSION_ID, FORCE_START_REPLAY_CORR_ID);
+
+        if (Pressure.isBackPressured(outboundPosition))
+        {
+            return false;
+        }
+
+        replaying = true;
+        retransmitOfflineNextSessionMessages = false;
+        suppressInboundValidResend = false;
+
+        return true;
     }
 
     private void setupCancelOnDisconnect(
@@ -770,17 +829,7 @@ class InternalBinaryEntryPointConnection
             }
         }
 
-        final long position = inboundPublication.saveValidResendRequest(
-            sessionID,
-            connectionId,
-            fromSeqNo,
-            endSequenceNumber,
-            (int)sessionVerId, // TODO
-            0,
-            EMPTY_BUFFER,
-            0,
-            0);
-
+        final long position = saveValidResendRequest(sessionID, fromSeqNo, endSequenceNumber, sessionVerId, 0);
         // suppress if we've failed to send the resend request to the replayer as this will cause this handler to be
         // retried
         if (position < 0)
@@ -794,6 +843,37 @@ class InternalBinaryEntryPointConnection
             suppressRetransmissionResend = false;
             return CONTINUE;
         }
+    }
+
+    private long saveValidResendRequest(
+        final long sessionID,
+        final long fromSeqNo,
+        final long endSequenceNumber,
+        final long sessionVerId,
+        final int correlationId)
+    {
+        return saveValidResendRequest(
+            inboundPublication, sessionID, fromSeqNo, endSequenceNumber, sessionVerId, correlationId);
+    }
+
+    private long saveValidResendRequest(
+        final GatewayPublication publication,
+        final long sessionID,
+        final long fromSeqNo,
+        final long endSequenceNumber,
+        final long sessionVerId,
+        final int correlationId)
+    {
+        return publication.saveValidResendRequest(
+            sessionID,
+            connectionId,
+            fromSeqNo,
+            endSequenceNumber,
+            (int)sessionVerId,
+            correlationId,
+            EMPTY_BUFFER,
+            0,
+            0);
     }
 
     private Action sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)

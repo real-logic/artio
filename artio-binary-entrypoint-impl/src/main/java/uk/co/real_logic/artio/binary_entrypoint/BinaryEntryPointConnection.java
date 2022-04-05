@@ -19,9 +19,11 @@ import b3.entrypoint.fixp.sbe.CancelOnDisconnectType;
 import b3.entrypoint.fixp.sbe.TerminationCode;
 import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
+import uk.co.real_logic.artio.session.Session;
 
 /**
  * Represents a Session Connection of the Binary Entrypoint protocol.
@@ -29,6 +31,12 @@ import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
  */
 public interface BinaryEntryPointConnection extends FixPConnection
 {
+    /**
+     * Can be used to create an offline context for a session where you don't know
+     * the session version id of the next logon.
+     */
+    long NEXT_SESSION_VERSION_ID = AbstractFixPSequenceExtractor.NEXT_SESSION_VERSION_ID;
+
     // -----------------------------------------------
     // Operations
     // -----------------------------------------------
@@ -110,4 +118,13 @@ public interface BinaryEntryPointConnection extends FixPConnection
      * @see uk.co.real_logic.artio.engine.EngineConfiguration#enableMessageThrottle(int, int)
      */
     Reply<ThrottleConfigurationStatus> throttleMessagesAt(int throttleWindowInMs, int throttleLimitOfMessages);
+
+    /**
+     * Gets whether a replay is currently happening or not.
+     *
+     * Similar semantics to {@link Session#isReplaying()}.
+     *
+     * @return true if a replay is currently happening.
+     */
+    boolean isReplaying();
 }

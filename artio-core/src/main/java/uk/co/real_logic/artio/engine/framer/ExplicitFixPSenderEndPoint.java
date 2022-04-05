@@ -96,4 +96,8 @@ class ExplicitFixPSenderEndPoint extends FixPSenderEndPoint
     {
         return true;
     }
+
+    public void onValidResendRequest(final long correlationId)
+    {
+    }
 }

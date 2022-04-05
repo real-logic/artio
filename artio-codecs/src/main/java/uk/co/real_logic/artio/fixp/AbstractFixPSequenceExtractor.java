@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.fixp;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.FollowerSessionRequestDecoder;
 
 /**
  * Class to implement by FIXP implementations in order to correctly index sequence numbers. Some FIXP protocols
@@ -28,6 +29,9 @@ import uk.co.real_logic.artio.messages.FixPMessageDecoder;
  */
 public abstract class AbstractFixPSequenceExtractor
 {
+    public static final long NEXT_SESSION_VERSION_ID = Long.MIN_VALUE;
+    public static final int FORCE_START_REPLAY_CORR_ID = -1;
+
     protected final FixPSequenceNumberHandler handler;
 
     protected AbstractFixPSequenceExtractor(
@@ -47,4 +51,10 @@ public abstract class AbstractFixPSequenceExtractor
 
     // Only here for implementations to update their internal state, does not need to invoke handler.
     public abstract void onRedactSequenceUpdate(long sessionId, int newSequenceNumber);
+
+    public abstract void onFollowerSessionRequest(
+        FollowerSessionRequestDecoder followerSessionRequest,
+        long endPosition,
+        int totalLength,
+        int aeronSessionId);
 }

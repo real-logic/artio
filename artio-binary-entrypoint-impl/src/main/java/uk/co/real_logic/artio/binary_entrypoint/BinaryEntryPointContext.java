@@ -21,10 +21,12 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol.unsupported;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor.NEXT_SESSION_VERSION_ID;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 
 public class BinaryEntryPointContext implements FixPContext
 {
+
     // persisted state
     private final long sessionID;
     private final long sessionVerID;
@@ -35,6 +37,7 @@ public class BinaryEntryPointContext implements FixPContext
     // Not persisted
     private final boolean fromNegotiate;
     private final BinaryEntryPointKey key;
+    private boolean hasUnsentMessagesAtNegotiate;
 
     private int offset = MISSING_INT;
 
@@ -52,7 +55,19 @@ public class BinaryEntryPointContext implements FixPContext
         this.fromNegotiate = fromNegotiate;
 
         ended = false;
+        hasUnsentMessagesAtNegotiate = sessionVerID == NEXT_SESSION_VERSION_ID;
         key = new BinaryEntryPointKey(sessionID);
+    }
+
+    public static BinaryEntryPointContext forNextSessionVerID(
+        final int sessionId, final long nanoTime, final int firmId)
+    {
+        return new BinaryEntryPointContext(
+            sessionId,
+            BinaryEntryPointConnection.NEXT_SESSION_VERSION_ID,
+            nanoTime,
+            firmId,
+            true);
     }
 
     public long sessionID()
@@ -123,15 +138,24 @@ public class BinaryEntryPointContext implements FixPContext
         else
         {
             // negotiations should increment the session ver id
+            final long oldSessionVerID = oldContext.sessionVerID;
             if (fromNegotiate)
             {
-                return sessionVerID > oldContext.sessionVerID ? OK : NEGOTIATE_DUPLICATE_ID;
+                if (sessionVerID > oldSessionVerID)
+                {
+                    // We only copy this once as they will be sent on the next logon and then become part of that
+                    // session version id form that point onwards
+                    hasUnsentMessagesAtNegotiate = oldSessionVerID == NEXT_SESSION_VERSION_ID;
+                    return OK;
+                }
+
+                return NEGOTIATE_DUPLICATE_ID;
             }
             // establish messages shouldn't
             else
             {
                 // Continue the same sequence
-                if (oldContext.sessionVerID == sessionVerID)
+                if (oldSessionVerID == sessionVerID)
                 {
                     // cannot re-restablish an ended session
                     return oldContext.ended ? VER_ID_ENDED : OK;
@@ -273,5 +297,10 @@ public class BinaryEntryPointContext implements FixPContext
             ", enteringFirm=" + enteringFirm +
             ", fromNegotiate=" + fromNegotiate +
             '}';
+    }
+
+    public boolean hasUnsentMessagesAtNegotiate()
+    {
+        return hasUnsentMessagesAtNegotiate;
     }
 }

@@ -43,8 +43,6 @@ class SessionOwnershipTracker
     {
         manageSession.wrap(buffer, offset, actingBlockLength, version);
         onManageSessionMessage();
-        // System.out.println("redactHandler = " + redactHandler + ", " + manageSession + ", sessionIdToLibraryId = " +
-        // sessionIdToLibraryId);
     }
 
     private void onManageSessionMessage()

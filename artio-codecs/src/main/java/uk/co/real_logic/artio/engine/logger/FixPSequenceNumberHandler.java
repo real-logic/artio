@@ -19,5 +19,5 @@ public interface FixPSequenceNumberHandler
 {
     void onSequenceNumber(
         int seqNum, long sessionId, int length, long endPosition, int aeronSessionId, boolean possRetrans,
-        long timestamp);
+        long timestamp, boolean forNextSession);
 }

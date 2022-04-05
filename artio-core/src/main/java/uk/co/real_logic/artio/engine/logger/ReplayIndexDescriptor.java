@@ -30,7 +30,11 @@ public final class ReplayIndexDescriptor
 {
     private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
-    public static final int HEADER_FILE_SIZE = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+    private static final int FOR_NEXT_SESSION_VERSION_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+    public static final int HEADER_FILE_SIZE = FOR_NEXT_SESSION_VERSION_OFFSET + BitUtil.SIZE_OF_BYTE;
+
+    public static final byte FOR_NEXT_SESSION_VERSION = 1;
+    public static final byte NOT_FOR_NEXT_SESSION_VERSION = 0;
 
     public static final int RECORD_LENGTH = 32;
     static
@@ -124,6 +128,17 @@ public final class ReplayIndexDescriptor
     static long beginChange(final AtomicBuffer buffer)
     {
         return buffer.getLong(BEGIN_CHANGE_OFFSET);
+    }
+
+    static boolean forNextSessionVersion(final AtomicBuffer buffer)
+    {
+        return buffer.getByte(FOR_NEXT_SESSION_VERSION_OFFSET) == FOR_NEXT_SESSION_VERSION;
+    }
+
+    static void forNextSessionVersion(final AtomicBuffer buffer, final boolean value)
+    {
+        final byte byteValue = value ? FOR_NEXT_SESSION_VERSION : NOT_FOR_NEXT_SESSION_VERSION;
+        buffer.putByte(FOR_NEXT_SESSION_VERSION_OFFSET, byteValue);
     }
 
     static int offsetInSegment(final long changePosition, final long capacity)

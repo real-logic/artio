@@ -149,6 +149,8 @@ public class AbstractBinaryEntryPointSystemTest
             .epochNanoClock(nanoClock)
             .senderMaxBytesInBuffer(senderMaxBytesInBuffer);
 
+        engineConfig.errorHandlerFactory(ffs -> Throwable::printStackTrace);
+
         if (!printErrors)
         {
             engineConfig

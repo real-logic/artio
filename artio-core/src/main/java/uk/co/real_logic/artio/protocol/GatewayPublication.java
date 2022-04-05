@@ -53,6 +53,8 @@ import static uk.co.real_logic.artio.messages.FixMessageEncoder.metaDataHeaderLe
  */
 public class GatewayPublication extends ClaimablePublication
 {
+    public static final long NO_REWRITE_SEQUENCE_NUMBER = 0;
+
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.metaDataHeaderLength() +
         FixMessageDecoder.bodyHeaderLength();
 

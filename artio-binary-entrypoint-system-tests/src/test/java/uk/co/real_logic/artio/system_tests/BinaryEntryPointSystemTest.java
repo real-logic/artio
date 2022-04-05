@@ -1231,7 +1231,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportCreatedOfflineSession() throws IOException
     {
-        final int sessionVerID = offlineSessionWithRetransmittableMessage();
+        final long sessionVerID = offlineSessionWithRetransmittableMessage();
 
         assertOnlyOneFixPSession();
 
@@ -1256,9 +1256,87 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionId() throws IOException
+    {
+        setupNextSessionVerID();
+
+        replayNextSessionVersionIdMessages();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestart()
+        throws IOException
+    {
+        setupNextSessionVerID();
+
+        restartArtio();
+
+        replayNextSessionVersionIdMessages();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestartExtended()
+        throws IOException
+    {
+        setupNextSessionVerID();
+
+        restartArtio();
+
+        setupNextSessionVerID(false, 2);
+
+        replayNextSessionVersionIdMessages(2);
+    }
+
+    private void replayNextSessionVersionIdMessages() throws IOException
+    {
+        replayNextSessionVersionIdMessages(1);
+    }
+
+    private void replayNextSessionVersionIdMessages(final int offlineMessages) throws IOException
+    {
+        final int otherClOrderID = offlineMessages + 1;
+        final long sessionVerID = 2;
+        reNegotiateWithVerId(sessionVerID, true, client ->
+        {
+            assertNextSequenceNumbers(1, offlineMessages + 1);
+            assertTrue("Not replaying", connection.isReplaying());
+
+            // Check that the other clOrdId comes in second
+            sendExecutionReportNew(connection, otherClOrderID, SECURITY_ID, false);
+
+            for (int i = 0; i < offlineMessages; i++)
+            {
+                client.readExecutionReportNew(i + 1);
+            }
+            client.readExecutionReportNew(otherClOrderID);
+            assertNextSequenceNumbers(1, offlineMessages + 2);
+            testSystem.await("Still replaying", () -> !connection.isReplaying());
+            clientTerminatesSession(client);
+        });
+    }
+
+    private void setupNextSessionVerID()
+    {
+        setupNextSessionVerID(true, CL_ORD_ID);
+    }
+
+    private void setupNextSessionVerID(final boolean firstTime, final int clOrdId)
+    {
+        // create session and acquire it
+        final BinaryEntryPointContext context = BinaryEntryPointContext.forNextSessionVerID(
+            SESSION_ID,
+            System.nanoTime(),
+            FIRM_ID);
+
+        offlineSessionWithRetransmittableMessage(context, firstTime, clOrdId);
+
+        assertOnlyOneFixPSession();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportRenegotiateOfCreatedOfflineSession() throws IOException
     {
-        int sessionVerID = offlineSessionWithRetransmittableMessage();
+        long sessionVerID = offlineSessionWithRetransmittableMessage();
 
         // re-negotiate and check sequence number, retransmit messages.
         sessionVerID++;
@@ -1362,10 +1440,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             fromNegotiate);
     }
 
-    private int offlineSessionWithRetransmittableMessage()
+    private long offlineSessionWithRetransmittableMessage()
     {
-        setupArtio();
-
         // create session and acquire it
         final int sessionVerID = 2;
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
@@ -1375,23 +1451,41 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             FIRM_ID,
             true);
 
-        createFollowerSession(context);
+        return offlineSessionWithRetransmittableMessage(context);
+    }
+
+    private long offlineSessionWithRetransmittableMessage(final BinaryEntryPointContext context)
+    {
+        return offlineSessionWithRetransmittableMessage(context, true, CL_ORD_ID);
+    }
+
+    private long offlineSessionWithRetransmittableMessage(
+        final BinaryEntryPointContext context, final boolean firstTime, final int clOrdId)
+    {
+        final long sessionVerID = context.sessionVerID();
+
+        if (firstTime)
+        {
+            setupArtio();
+
+            createFollowerSession(context);
+        }
 
         final Reply<SessionReplyStatus> sessionReply = requestSession(library, SESSION_ID);
         testSystem.awaitCompletedReply(sessionReply);
         assertEquals(SessionReplyStatus.OK, sessionReply.resultIfPresent());
         acquireConnection(connectionAcquiredHandler);
         assertEquals(FixPConnection.State.UNBOUND, connection.state());
-        assertNextSequenceNumbers(1, 1);
+        assertNextSequenceNumbers(1, clOrdId);
         assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(sessionVerID, connection.sessionVerId());
         assertEquals(sessionVerID, connectionAcquiredHandler.sessionVerIdAtAcquire());
 
-        final long msgPos = sendExecutionReportNew(connection, CL_ORD_ID, SECURITY_ID, false);
+        final long msgPos = sendExecutionReportNew(connection, clOrdId, SECURITY_ID, false);
         final ReadablePosition pos = testSystem.awaitCompletedReply(
             engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
         testSystem.awaitPosition(pos, msgPos);
-        assertNextSequenceNumbers(1, 2);
+        assertNextSequenceNumbers(1, clOrdId + 1);
 
         resetHandlers();
 
@@ -1685,7 +1779,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     private void reNegotiateWithVerId(
-        final int sessionVerID, final boolean offlineOwned, final Consumer<BinaryEntryPointClient> handler)
+        final long sessionVerID, final boolean offlineOwned, final Consumer<BinaryEntryPointClient> handler)
         throws IOException
     {
         resetHandlers();

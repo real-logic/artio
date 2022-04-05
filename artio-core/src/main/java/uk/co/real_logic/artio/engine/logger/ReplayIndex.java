@@ -124,8 +124,8 @@ public class ReplayIndex implements Index, RedactHandler
         sessTracker = new SessionOwnershipTracker(sent, this);
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
-            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp) ->
-                onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId));
+            (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp, forNextSession) ->
+                onFixPSequenceUpdate(sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, forNextSession));
         checkIndexRecordCapacity(indexFileCapacity);
         fixSessionIdToIndex = new Long2ObjectHashMap<>();
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
@@ -159,16 +159,65 @@ public class ReplayIndex implements Index, RedactHandler
         final long sessionId,
         final int messageSize,
         final long endPosition,
-        final int aeronSessionId)
+        final int aeronSessionId,
+        final boolean forNextSession)
     {
         if (sequenceNumber == 0)
         {
-            onResetSequenceNumber(sessionId);
+            onFixPResetSequenceNumber(sessionId, forNextSession);
         }
         else
         {
-            sessionIndex(sessionId)
+            final SessionIndex sessionIndex = sessionIndex(sessionId);
+            sessionIndex.checkForNextSession(forNextSession);
+            sessionIndex
                 .onRecord(endPosition, messageSize, sequenceNumber, 0, aeronSessionId, NULL_RECORDING_ID, 0);
+        }
+    }
+
+    private void onFixPResetSequenceNumber(final long sessionId, final boolean forNextSession)
+    {
+        final SessionIndex sessionIndex = fixSessionIdToIndex.get(sessionId);
+        if (sessionIndex != null)
+        {
+            if (forNextSessionVersion(sessionIndex.headerBuffer))
+            {
+                flipNextSession(forNextSession, sessionIndex.headerBuffer);
+                return;
+            }
+        }
+        else
+        {
+            // This session isn't in the cache
+            final File headerFile = replayIndexHeaderFile(sessionId);
+            if (headerFile.exists())
+            {
+                final UnsafeBuffer headerBuffer = mapUnsafeBuffer(HEADER_FILE_SIZE, headerFile);
+                try
+                {
+                    if (forNextSessionVersion(headerBuffer))
+                    {
+                        flipNextSession(forNextSession, headerBuffer);
+                        return;
+                    }
+                }
+                finally
+                {
+                    IoUtil.unmap(headerBuffer.byteBuffer());
+                }
+            }
+        }
+
+        onResetSequenceNumber(sessionId);
+    }
+
+    private void flipNextSession(final boolean forNextSession, final UnsafeBuffer headerBuffer)
+    {
+        if (!forNextSession)
+        {
+            // We've logged back in after ForNextSessionVerId messages have been written into the index,
+            // So we need to reset this flag to indicate that future messages aren't like that
+            notForNextSession(headerBuffer);
         }
     }
 
@@ -268,6 +317,7 @@ public class ReplayIndex implements Index, RedactHandler
 
                 case FixPMessageDecoder.TEMPLATE_ID:
                 case ILinkConnectDecoder.TEMPLATE_ID:
+                case FollowerSessionRequestDecoder.TEMPLATE_ID:
                     fixPSequenceIndexer.onFragment(srcBuffer, srcOffset, srcLength, header);
                     break;
 
@@ -464,6 +514,7 @@ public class ReplayIndex implements Index, RedactHandler
                     .templateId(replayIndexRecord.sbeTemplateId())
                     .schemaId(replayIndexRecord.sbeSchemaId())
                     .version(replayIndexRecord.sbeSchemaVersion());
+                notForNextSession(headerBuffer);
             }
             else
             {
@@ -471,11 +522,6 @@ public class ReplayIndex implements Index, RedactHandler
                 final long resetPosition = beginChange(headerBuffer);
                 endChangeOrdered(headerBuffer, resetPosition);
             }
-        }
-
-        private UnsafeBuffer mapUnsafeBuffer(final int size, final File replayIndexFile)
-        {
-            return new UnsafeBuffer(bufferFactory.map(replayIndexFile, size));
         }
 
         void onRecord(
@@ -547,6 +593,19 @@ public class ReplayIndex implements Index, RedactHandler
         {
             ReplayIndexDescriptor.unmapBuffers(headerBuffer, segmentBuffers);
         }
+
+        public void checkForNextSession(final boolean forNextSession)
+        {
+            if (forNextSession && !forNextSessionVersion(headerBuffer))
+            {
+                forNextSessionVersion(headerBuffer, true);
+            }
+        }
+    }
+
+    static void notForNextSession(final UnsafeBuffer headerBuffer)
+    {
+        forNextSessionVersion(headerBuffer, false);
     }
 
     private File replayIndexHeaderFile(final long fixSessionId)
@@ -565,5 +624,10 @@ public class ReplayIndex implements Index, RedactHandler
         {
             errorHandler.onError(new IOException("Unable to delete replay index file: " + replayIndexFile));
         }
+    }
+
+    private UnsafeBuffer mapUnsafeBuffer(final int size, final File replayIndexFile)
+    {
+        return new UnsafeBuffer(bufferFactory.map(replayIndexFile, size));
     }
 }

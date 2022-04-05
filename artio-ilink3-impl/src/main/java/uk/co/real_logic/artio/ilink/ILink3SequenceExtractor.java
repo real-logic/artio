@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
 import uk.co.real_logic.artio.fixp.AbstractFixPOffsets;
 import uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.FollowerSessionRequestDecoder;
 
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.BOOLEAN_FLAG_TRUE;
 import static uk.co.real_logic.artio.fixp.AbstractFixPParser.FIXP_MESSAGE_HEADER_LENGTH;
@@ -56,11 +57,20 @@ class ILink3SequenceExtractor extends AbstractFixPSequenceExtractor
         final int seqNum = offsets.seqNum(templateId, buffer, messageOffset);
         if (seqNum != AbstractFixPOffsets.MISSING_OFFSET)
         {
-            handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans, timestamp);
+            handler.onSequenceNumber(seqNum, uuid, totalLength, endPosition, aeronSessionId, possRetrans, timestamp,
+                false);
         }
     }
 
     public void onRedactSequenceUpdate(final long sessionId, final int newSequenceNumber)
+    {
+    }
+
+    public void onFollowerSessionRequest(
+        final FollowerSessionRequestDecoder followerSessionRequest,
+        final long endPosition,
+        final int totalLength,
+        final int aeronSessionId)
     {
     }
 }

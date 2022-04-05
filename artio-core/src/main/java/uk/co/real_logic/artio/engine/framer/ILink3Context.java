@@ -214,4 +214,9 @@ public final class ILink3Context implements FixPContext
     {
         return connectUuid;
     }
+
+    public boolean hasUnsentMessagesAtNegotiate()
+    {
+        return false;
+    }
 }

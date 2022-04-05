@@ -28,6 +28,7 @@ import java.io.IOException;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.templateId;
+import static uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor.FORCE_START_REPLAY_CORR_ID;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.readSofhMessageSize;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
@@ -83,6 +84,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             }
 
             final int totalWritten = writeBuffer(directBuffer, offset, messageSize);
+
             if (totalWritten < messageSize)
             {
                 this.reattemptBytesWritten = totalWritten;
@@ -112,7 +114,6 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 
         return CONTINUE;
     }
-
 
     public Action onReplayComplete(final long correlationId, final boolean slow)
     {
@@ -216,6 +217,16 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             requiresReattempting = false;
         }
         return caughtUp;
+    }
+
+    public void onValidResendRequest(final long correlationId)
+    {
+        // We do a Fake replay of messages to support the next session version id feature
+        // This doesn't send a retransmit FIXP message so we internally trigger that state
+        if (correlationId == FORCE_START_REPLAY_CORR_ID)
+        {
+            retransmitting = true;
+        }
     }
 
     static class ReattemptState
