@@ -34,8 +34,21 @@ public interface FixPConnectionHandler
 {
     /**
      * Callback for receiving business messages.
-     *  @param connection the connection receiving this message
-     * @param templateId the templateId of the iLink3 SBE message that you have received.
+     *
+     * Note that the offset provided here is for the SBE message itself and doesn't include the header, but a user
+     * of this API can always assume that the header of the message exists before the message itself. So for example
+     * if you want to take the offset and length of the SBE message, including its MessageHeader and Simple Open
+     * Framing Header then you could do the following calculation on the offset and length parameters.
+     *
+     * <code>
+     *     final int encodedLength = b3.entrypoint.fixp.sbe.MessageHeaderDecoder.ENCODED_LENGTH +
+     *         uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
+     *     offset -= encodedLength;
+     *     length += encodedLength;
+     * </code>
+     *
+     * @param connection the connection receiving this message
+     * @param templateId the templateId of the SBE message that you have received.
      * @param buffer the buffer containing the message.
      * @param offset the offset within the buffer at which your message starts.
      * @param blockLength the blockLength of the received message.
