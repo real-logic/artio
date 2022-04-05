@@ -20,11 +20,14 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 abstract class ReplayerSession implements ControlledFragmentHandler
 {
@@ -132,12 +135,16 @@ abstract class ReplayerSession implements ControlledFragmentHandler
     {
         if (claimBuffer(REPLAY_COMPLETE_LEN, 0))
         {
-            replayer.replayCompleteEncoder.wrapAndApplyHeader(
+            final ReplayCompleteEncoder replayComplete = replayer.replayCompleteEncoder;
+            replayComplete.wrapAndApplyHeader(
                 bufferClaim.buffer(),
                 bufferClaim.offset(),
                 replayer.messageHeaderEncoder)
+                .libraryId(ENGINE_LIBRARY_ID)
                 .connection(connectionId)
                 .correlationId(correlationId);
+
+            DebugLogger.logSbeMessage(LogTag.REPLAY, replayComplete);
 
             bufferClaim.commit();
 

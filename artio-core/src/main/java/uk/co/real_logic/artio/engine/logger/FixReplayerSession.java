@@ -40,8 +40,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.REPLAY;
-import static uk.co.real_logic.artio.LogTag.REPLAY_ATTEMPT;
+import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -139,7 +138,7 @@ class FixReplayerSession extends ReplayerSession
 
     MessageTracker messageTracker()
     {
-        return new FixMessageTracker(REPLAY, this, sessionId);
+        return new FixMessageTracker(REPLAY_MESSAGE, this, sessionId);
     }
 
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)

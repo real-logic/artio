@@ -20,6 +20,8 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
@@ -81,6 +83,8 @@ public class SenderEndPoint implements AutoCloseable
             .connection(connectionId)
             .libraryId(libraryId)
             .correlationId(correlationId);
+
+        DebugLogger.logSbeMessage(LogTag.REPLAY, replayComplete);
 
         bufferClaim.commit();
 

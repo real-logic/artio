@@ -380,11 +380,15 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
                 final MutableDirectBuffer buffer = bufferClaim.buffer();
                 final int offset = bufferClaim.offset();
+
                 startReplayEncoder
                     .wrapAndApplyHeader(buffer, offset, messageHeaderEncoder)
                     .session(sessionId)
                     .connection(connectionId)
                     .correlationId(correlationId);
+
+                DebugLogger.logSbeMessage(REPLAY, startReplayEncoder);
+
                 bufferClaim.commit();
             }
 

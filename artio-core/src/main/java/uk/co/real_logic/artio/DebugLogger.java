@@ -143,6 +143,16 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final ReplayCompleteEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
         final SeqIndexSyncEncoder encoder)
     {
         if (isEnabled(tag))
@@ -499,6 +509,16 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final StartReplayEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
         final long messageType,
         final ThrottleNotificationEncoder encoder)
     {
@@ -811,6 +831,10 @@ public final class DebugLogger
         private final DisconnectDecoder disconnect = new DisconnectDecoder();
         private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
 
+        // Replayer
+        private final StartReplayDecoder startReplay = new StartReplayDecoder();
+        private final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
+
         private final StringBuilder builder = new StringBuilder();
 
         private byte[] bytes = new byte[0];
@@ -825,6 +849,30 @@ public final class DebugLogger
             final String threadName = threadName();
             isThreadEnabled = DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
             appender = APPENDER.makeLocalAppender();
+        }
+
+        public void logSbeMessage(final LogTag tag, final StartReplayEncoder encoder)
+        {
+            appendStart();
+            startReplay.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                RedactSequenceUpdateEncoder.BLOCK_LENGTH,
+                RedactSequenceUpdateEncoder.SCHEMA_VERSION);
+            startReplay.appendTo(builder);
+            finish(tag);
+        }
+
+        public void logSbeMessage(final LogTag tag, final ReplayCompleteEncoder encoder)
+        {
+            appendStart();
+            replayComplete.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                RedactSequenceUpdateEncoder.BLOCK_LENGTH,
+                RedactSequenceUpdateEncoder.SCHEMA_VERSION);
+            replayComplete.appendTo(builder);
+            finish(tag);
         }
 
         public void logSbeMessage(final LogTag tag, final RedactSequenceUpdateEncoder encoder)

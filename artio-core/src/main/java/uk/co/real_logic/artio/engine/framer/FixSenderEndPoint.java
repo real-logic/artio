@@ -24,6 +24,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongArrayQueue;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -48,6 +49,8 @@ import static uk.co.real_logic.artio.session.Session.NO_REPLAY_CORRELATION_ID;
 
 class FixSenderEndPoint extends SenderEndPoint
 {
+    private static final boolean IS_REPLAY_LOG_TAG_ENABLED = DebugLogger.isEnabled(LogTag.REPLAY);
+
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
     // Need to give Aeron the start position of the previous message, so include the DHF, naturally term aligned
@@ -802,6 +805,12 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         if (this.replayPaused != replayPaused)
         {
+            if (IS_REPLAY_LOG_TAG_ENABLED)
+            {
+                DebugLogger.log(LogTag.REPLAY, "connId=" + connectionId + ", sessId=" + sessionId +
+                    ", replayPaused=" + replayPaused);
+            }
+
             this.replayPaused = replayPaused;
             if (replayPaused)
             {
