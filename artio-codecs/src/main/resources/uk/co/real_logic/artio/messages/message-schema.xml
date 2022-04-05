@@ -126,6 +126,8 @@
                         description="Disconnected due to a sender or target comp id field missing from the Logon message" sinceVersion="15">22</validValue>
             <validValue name="CALLBACK_EXCEPTION"
                         description="Disconnected due to an exception being thrown by a callback from application code. Exception will be passed to the application's ErrorHandler unless it is in response to an initiate() call in which case it will be given to the reply." sinceVersion="19">23</validValue>
+            <validValue name="REPLAY_BACK_PRESSURE_DISCONNECT"
+                        description="We disconnected because an inbound message timeout whilst a replay was going on">24</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"

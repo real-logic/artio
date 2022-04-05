@@ -21,6 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.ExpandableDirectByteBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import java.io.IOException;
 
@@ -158,6 +159,11 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             bytesInBuffer.setOrdered(bufferUsage);
         }
         buffer.putBytes(reattemptOffset, srcBuffer, srcOffst, messageSize);
+    }
+
+    private void removeEndpoint(final DisconnectReason reason)
+    {
+        framer.onDisconnect(libraryId, connectionId, reason);
     }
 
     private ReattemptState reattemptState(final boolean retransmit)

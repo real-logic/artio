@@ -367,6 +367,7 @@ public class AbstractGatewayToGatewaySystemTest
         while (session.trySend(resendRequest) < 0)
         {
             Thread.yield();
+            testSystem.poll();
         }
     }
 

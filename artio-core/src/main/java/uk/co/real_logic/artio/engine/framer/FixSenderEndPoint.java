@@ -363,7 +363,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
         if (bytesInBuffer > maxBytesInBuffer)
         {
-            removeEndpoint(SLOW_CONSUMER);
+            disconnectEndpoint(SLOW_CONSUMER);
         }
 
         this.bytesInBuffer.setOrdered(bytesInBuffer);
@@ -384,14 +384,11 @@ class FixSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
-        if (written > 0)
-        {
-            ByteBufferUtil.position(buffer, offset);
-            DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
-            updateSendingTimeoutTimeInMs(timeInMs, written);
+        ByteBufferUtil.position(buffer, offset);
+        DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
+        updateSendingTimeoutTimeInMs(timeInMs, written);
 
-            buffer.limit(startLimit).position(startPosition);
-        }
+        buffer.limit(startLimit).position(startPosition);
 
         return written;
     }
@@ -408,7 +405,7 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         errorHandler.onError(new Exception(String.format(
             "Exception reported for sessionId=%d,connectionId=%d", sessionId, connectionId), ex));
-        removeEndpoint(EXCEPTION);
+        disconnectEndpoint(EXCEPTION);
     }
 
     private void becomeSlowConsumer(
@@ -527,11 +524,6 @@ class FixSenderEndPoint extends SenderEndPoint
             ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
-            if (written < 0)
-            {
-                // normalise the negative return and the exceptional path
-                throw new IOException("Disconnected " + connectionId + ", written=" + written);
-            }
             bytesInBuffer.getAndAddOrdered(-written);
 
             updateSendingTimeoutTimeInMs(timeInMs, written);
@@ -651,12 +643,17 @@ class FixSenderEndPoint extends SenderEndPoint
                 sessionId,
                 timeInMs,
                 sendingTimeoutTimeInMs - slowConsumerTimeoutInMs)));
-            removeEndpoint(SLOW_CONSUMER);
+            disconnectEndpoint(SLOW_CONSUMER);
 
             return true;
         }
 
         return false;
+    }
+
+    private void disconnectEndpoint(final DisconnectReason reason)
+    {
+        receiverEndPoint.completeDisconnect(reason);
     }
 
     public Action onReplayComplete(final long correlationId, final boolean slow)
@@ -803,14 +800,17 @@ class FixSenderEndPoint extends SenderEndPoint
 
     private void replayPaused(final boolean replayPaused)
     {
-        this.replayPaused = replayPaused;
-        if (replayPaused)
+        if (this.replayPaused != replayPaused)
         {
-            receiverEndPoint.pause();
-        }
-        else
-        {
-            receiverEndPoint.play();
+            this.replayPaused = replayPaused;
+            if (replayPaused)
+            {
+                receiverEndPoint.pause();
+            }
+            else
+            {
+                receiverEndPoint.play();
+            }
         }
     }
 
@@ -827,5 +827,14 @@ class FixSenderEndPoint extends SenderEndPoint
     public LongArrayQueue queuedReplay()
     {
         return replayQueue;
+    }
+
+    public String toString()
+    {
+        return "FixSenderEndPoint{" +
+            "connectionId=" + connectionId +
+            ", sessionId=" + sessionId +
+            ", sessionKey=" + sessionKey +
+            "} " + super.toString();
     }
 }

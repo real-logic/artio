@@ -79,7 +79,7 @@ public class FixSenderEndPointTest
     private final ExclusivePublication inboundPublication = mock(ExclusivePublication.class);
     private final UnsafeBuffer inboundBuffer = new UnsafeBuffer(new byte[INBOUND_BUFFER_LEN]);
     private final Header header = mock(Header.class);
-
+    private final FixReceiverEndPoint receiverEndPoint = mock(FixReceiverEndPoint.class);
     private final FixSenderEndPoint endPoint = new FixSenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
@@ -97,7 +97,7 @@ public class FixSenderEndPointTest
         senderSequenceNumber,
         messageTimingHandler,
         DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
-        mock(FixReceiverEndPoint.class));
+        receiverEndPoint);
 
     @Before
     public void setup()
@@ -671,7 +671,7 @@ public class FixSenderEndPointTest
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
     {
-        verify(framer, times).onDisconnect(LIBRARY_ID, CONNECTION_ID, SLOW_CONSUMER);
+        verify(receiverEndPoint, times).completeDisconnect(SLOW_CONSUMER);
     }
 
     private void byteBufferWritten()

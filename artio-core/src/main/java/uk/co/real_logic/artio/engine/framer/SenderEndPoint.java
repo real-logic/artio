@@ -21,7 +21,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
@@ -111,11 +110,6 @@ public class SenderEndPoint implements AutoCloseable
     protected void sendSlowStatus(final boolean hasBecomeSlow)
     {
         framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
-    }
-
-    protected void removeEndpoint(final DisconnectReason reason)
-    {
-        framer.onDisconnect(libraryId, connectionId, reason);
     }
 
     public void close()

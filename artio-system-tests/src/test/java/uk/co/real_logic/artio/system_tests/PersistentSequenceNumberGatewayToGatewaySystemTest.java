@@ -379,6 +379,52 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertThat(errorCounter.lastObservationCount(), lessThan(messageCount * 5));
     }
 
+    @Test(timeout = 50_000)
+    public void shouldDetectDisconnectDuringReplay()
+    {
+        printErrorMessages = false;
+
+        launch(this::nothing);
+
+        connectPersistingSessions();
+        final ReportFactory reportFactory = new ReportFactory();
+        final int messageCount = 2_000;
+        for (int i = 0; i < messageCount; i++)
+        {
+            reportFactory.sendReport(testSystem, acceptingSession, Side.BUY);
+        }
+        testSystem.await("Failed to receive execution reports",
+            () -> initiatingOtfAcceptor.receivedMessage(EXECUTION_REPORT_MESSAGE_AS_STR).count() == messageCount);
+
+        for (int i = 0; i < 3; i++)
+        {
+            testSystem.awaitSend(initiatingSession::requestDisconnect);
+            assertSessionsDisconnected();
+            clearMessages();
+            initiatingSession = null;
+            acceptingSession = null;
+            acceptingHandler.clearSessionExistsInfos();
+            connectPersistingSessions();
+
+            assertFalse(acceptingSession.isReplaying());
+            sendResendRequest(1, 0, initiatingOtfAcceptor, initiatingSession);
+            testSystem.await("", acceptingSession::isReplaying);
+
+            // Pause for a little bit to test out race with replaying
+            testSystem.awaitBlocking(() ->
+            {
+                try
+                {
+                    Thread.sleep(100);
+                }
+                catch (final InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectIncorrectInitiatorSequenceNumber()
     {

@@ -45,9 +45,16 @@ public class TcpChannel implements AutoCloseable
         return socketChannel.register(sel, ops, att);
     }
 
+    // Any subclass should maintain the API that negative numbers of bytes are never returned
     public int write(final ByteBuffer src) throws IOException
     {
-        return socketChannel.write(src);
+        final int written = socketChannel.write(src);
+        if (written < 0)
+        {
+            // normalise the negative return and the exceptional path
+            throw new IOException("Disconnected " + remoteAddress + ", written=" + written);
+        }
+        return written;
     }
 
     public int read(final ByteBuffer dst) throws IOException

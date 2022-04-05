@@ -2507,15 +2507,24 @@ public class Session
                         // Drop when back pressured: retried on duty cycle
                         startLogout();
                     }
-                    else if (isActive && !replayBackpressure())
+                    else if (isActive)
                     {
-                        final int sentSeqNum = newSentSeqNum();
-                        if (proxy.sendTestRequest(
-                            sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
+                        if (replayBackpressure())
                         {
-                            lastSentMsgSeqNum(sentSeqNum);
-                            awaitingHeartbeat = true;
+                            // If we're currently replay back-pressured it's not safe to send a
+                            requestDisconnect(REPLAY_BACK_PRESSURE_DISCONNECT);
                             incNextReceivedInboundMessageTime(timeInNs);
+                        }
+                        else
+                        {
+                            final int sentSeqNum = newSentSeqNum();
+                            if (proxy.sendTestRequest(
+                                sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
+                            {
+                                lastSentMsgSeqNum(sentSeqNum);
+                                awaitingHeartbeat = true;
+                                incNextReceivedInboundMessageTime(timeInNs);
+                            }
                         }
                     }
                     actions++;
