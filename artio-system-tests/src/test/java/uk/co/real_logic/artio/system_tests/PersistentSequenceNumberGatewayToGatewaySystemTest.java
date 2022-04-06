@@ -323,6 +323,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldNotAllowResendRequestSpamming()
     {
+        errorCounter.containsString("Ignore resend request for sessionId");
+
         printErrorMessages = false;
 
         launch(this::nothing);
@@ -363,20 +365,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         testSystem.removeOperation(replayCountChecker);
         replayCountChecker.assertBelowThreshold();
 
-        // Give the system some time to process and suppress resend requests.
-        testSystem.awaitBlocking(() ->
-        {
-            try
-            {
-                Thread.sleep(200);
-            }
-            catch (final InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-        });
-
-        assertThat(errorCounter.lastObservationCount(), lessThan(messageCount * 5));
+        testSystem.await("Failed to suppress resend requests", () -> errorCounter.lastObservationCount() > 0);
     }
 
     @Test(timeout = 50_000)

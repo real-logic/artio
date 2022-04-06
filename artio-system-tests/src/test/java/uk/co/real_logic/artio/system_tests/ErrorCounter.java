@@ -19,6 +19,8 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 
 public class ErrorCounter implements ErrorConsumer
 {
+    private String containsString;
+
     private int lastObservationCount;
 
     public void accept(
@@ -27,11 +29,19 @@ public class ErrorCounter implements ErrorConsumer
         final long lastObservationTimestamp,
         final String encodedException)
     {
-        lastObservationCount = observationCount;
+        if (containsString == null || encodedException.contains(containsString))
+        {
+            lastObservationCount = observationCount;
+        }
     }
 
     public int lastObservationCount()
     {
         return lastObservationCount;
+    }
+
+    public void containsString(final String containsString)
+    {
+        this.containsString = containsString;
     }
 }
