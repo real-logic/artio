@@ -42,4 +42,6 @@ public interface FixSessionOwner
 
     Reply<ThrottleConfigurationStatus> messageThrottle(
         long sessionId, int throttleWindowInMs, int throttleLimitOfMessages);
+
+    long inboundMessagePosition();
 }

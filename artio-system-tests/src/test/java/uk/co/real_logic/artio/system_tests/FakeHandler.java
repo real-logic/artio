@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
@@ -71,6 +72,7 @@ public class FakeHandler
     private int timedOutLibraryId;
     private Session timedOutSession;
     private boolean spamLogonMessages = false;
+    private Consumer<Session> onDisconnectCallback;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -98,6 +100,11 @@ public class FakeHandler
     public void spamLogonMessages()
     {
         spamLogonMessages = true;
+    }
+
+    public void onDisconnectCallback(final Consumer<Session> onDisconnectCallback)
+    {
+        this.onDisconnectCallback = onDisconnectCallback;
     }
 
     // ----------- EVENTS -----------
@@ -176,6 +183,10 @@ public class FakeHandler
     {
         sessions.remove(session);
         hasDisconnected = true;
+        if (onDisconnectCallback != null)
+        {
+            onDisconnectCallback.accept(session);
+        }
         return CONTINUE;
     }
 

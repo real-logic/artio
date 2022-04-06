@@ -932,9 +932,10 @@ public class Session
             // Do not reset the sequence index at this point, as it will have been done by the sent case.
             lastReceivedMsgSeqNumOnly(newLastReceivedMessageSequenceNumber);
 
-            if (redact(NO_REQUIRED_POSITION))
+            final long redactPositon = fixSessionOwner.inboundMessagePosition();
+            if (redact(redactPositon))
             {
-                fixSessionOwner.enqueueTask(() -> redact(NO_REQUIRED_POSITION));
+                fixSessionOwner.enqueueTask(() -> redact(redactPositon));
             }
         }
         return position;
@@ -1116,6 +1117,11 @@ public class Session
      */
     public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
     {
+        if (lastReceivedMsgSeqNum == 103)
+        {
+//            Exceptions.printStackTrace();
+        }
+
         if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
             nextSequenceIndex(clock.nanoTime());

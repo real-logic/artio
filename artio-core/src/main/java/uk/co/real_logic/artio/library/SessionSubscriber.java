@@ -23,12 +23,17 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
-import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.session.FixSessionOwner;
+import uk.co.real_logic.artio.session.InternalSession;
+import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionParser;
 import uk.co.real_logic.artio.timing.Timer;
 
 import java.util.function.BooleanSupplier;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
 class SessionSubscriber implements AutoCloseable, FixSessionOwner
@@ -45,6 +50,7 @@ class SessionSubscriber implements AutoCloseable, FixSessionOwner
     private SessionHandler handler;
     private InitiateSessionReply initiateSessionReply;
     private boolean userAbortedLastMessage = false;
+    private long lastReceivedPosition = NO_REQUIRED_POSITION;
 
     SessionSubscriber(
         final OnMessageInfo info,
@@ -122,6 +128,8 @@ class SessionSubscriber implements AutoCloseable, FixSessionOwner
                         {
                             return ABORT;
                         }
+
+                        lastReceivedPosition = position;
 
                         final Action handlerAction = handler.onMessage(
                             buffer,
@@ -245,6 +253,11 @@ class SessionSubscriber implements AutoCloseable, FixSessionOwner
             sessionId,
             throttleWindowInMs,
             throttleLimitOfMessages);
+    }
+
+    public long inboundMessagePosition()
+    {
+        return lastReceivedPosition;
     }
 
     public void enqueueTask(final BooleanSupplier task)

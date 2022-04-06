@@ -158,6 +158,7 @@ public class ReplayQuery implements AutoCloseable
     {
         private final long fixSessionId;
 
+        private final File headerFile;
         private final UnsafeBuffer headerBuffer;
         private final UnsafeBuffer[] segmentBuffers;
 
@@ -167,8 +168,8 @@ public class ReplayQuery implements AutoCloseable
         SessionQuery(final long fixSessionId)
         {
             segmentBuffers = new UnsafeBuffer[segmentCount];
-            headerBuffer = new UnsafeBuffer(indexBufferFactory.map(replayIndexHeaderFile(
-                logFileDir, fixSessionId, requiredStreamId)));
+            headerFile = replayIndexHeaderFile(logFileDir, fixSessionId, requiredStreamId);
+            headerBuffer = new UnsafeBuffer(indexBufferFactory.map(headerFile));
             this.fixSessionId = fixSessionId;
 
             messageFrameHeader.wrap(headerBuffer, 0);
@@ -380,6 +381,15 @@ public class ReplayQuery implements AutoCloseable
 
         public Long2LongHashMap queryStartPositions()
         {
+            final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
+
+            // If we detect a delete-based-reset of this replay query from the replay indexer then clean ourselves up
+            if (!headerFile.exists())
+            {
+                fixSessionToIndex.remove(fixSessionId);
+                return recordingIdToStartPosition;
+            }
+
             final UnsafeBuffer headerBuffer = this.headerBuffer;
             final long indexFileSize = ReplayQuery.this.indexFileSize;
             final ReplayIndexRecordDecoder indexRecord = ReplayQuery.this.indexRecord;
@@ -393,7 +403,6 @@ public class ReplayQuery implements AutoCloseable
             long iteratorPosition = getIteratorPosition();
             long stopIteratingPosition = iteratorPosition + indexFileSize;
 
-            final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
             int highestSequenceIndex = 0;
 
             while (iteratorPosition != stopIteratingPosition)

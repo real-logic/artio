@@ -24,7 +24,6 @@ import org.agrona.LangUtil;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -94,7 +93,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
     private final RandomAccessFile metaDataFile;
     private final SequenceNumberIndexReader reader;
     private byte[] metaDataWriteBuffer = new byte[0];
-    private final Long2ObjectHashMap<LongHashSet> sessionIdToRedactPositions = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<Long2LongHashMap> sessionIdToRedactPositions = new Long2ObjectHashMap<>();
 
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private FramerContext framerContext;
@@ -419,18 +418,18 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
     }
 
     private boolean onThrottle(
-        final long position, final long sessionId, final int sequenceNumber, final int libraryId)
+        final long position, final long sessionId, final int msgSequenceNumber, final int libraryId)
     {
         if (sessionOwnershipTracker.messageFromWrongLibrary(sessionId, libraryId))
         {
             return false;
         }
 
-        if (checkRedactPosition(position, sessionId))
+        int sequenceNumber = checkRedactPosition(position, sessionId);
+        if (sequenceNumber == NO_SEQUENCE_NUMBER)
         {
-            return false;
+            sequenceNumber = msgSequenceNumber;
         }
-
         saveRecord(
             sequenceNumber,
             sessionId,
@@ -501,10 +500,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         }
 
         final long sessionId = messageFrame.session();
-        if (checkRedactPosition(messagePosition, sessionId))
-        {
-            return false;
-        }
+        final int redactSequenceNumber = checkRedactPosition(messagePosition, sessionId);
 
         final int libraryId = messageFrame.libraryId();
 
@@ -514,8 +510,18 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         }
 
         offset += FixMessageDecoder.bodyHeaderLength();
-        final int msgSeqNum = sequenceNumberExtractor.extractCached(
-            buffer, offset, messageFrame.bodyLength(), aeronSessionId, messagePosition);
+
+        final int msgSeqNum;
+        if (redactSequenceNumber == NO_SEQUENCE_NUMBER)
+        {
+            msgSeqNum = sequenceNumberExtractor.extractCached(
+                buffer, offset, messageFrame.bodyLength(), aeronSessionId, messagePosition);
+        }
+        else
+        {
+            msgSeqNum = redactSequenceNumber;
+        }
+
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
         {
             final int position = saveRecord(msgSeqNum, sessionId, messagePosition, NO_REQUIRED_POSITION, false);
@@ -527,21 +533,22 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         return true;
     }
 
-    private boolean checkRedactPosition(final long messagePosition, final long sessionId)
+    private int checkRedactPosition(final long messagePosition, final long sessionId)
     {
-        final LongHashSet redactPositions = sessionIdToRedactPositions.get(sessionId);
-        if (redactPositions != null)
+        final Long2LongHashMap redactPositionToSeqNum = sessionIdToRedactPositions.get(sessionId);
+        if (redactPositionToSeqNum != null)
         {
-            if (redactPositions.remove(messagePosition))
+            final int newSequenceNumber = (int)redactPositionToSeqNum.remove(messagePosition);
+            if (newSequenceNumber != NO_SEQUENCE_NUMBER)
             {
-                if (redactPositions.isEmpty())
+                if (redactPositionToSeqNum.isEmpty())
                 {
                     sessionIdToRedactPositions.remove(sessionId);
                 }
-                return true;
+                return newSequenceNumber;
             }
         }
-        return false;
+        return NO_SEQUENCE_NUMBER;
     }
 
     private void resizeMetaDataBuffer(final int metaDataLength)
@@ -923,9 +930,9 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
             {
                 // We've not processed the message that needs redacting yet, so keep track that we need to
                 // redact this message when it arrives.
-                final LongHashSet redactPositions = sessionIdToRedactPositions.computeIfAbsent(
-                    sessionId, ignore -> new LongHashSet());
-                redactPositions.add(requiredPosition);
+                final Long2LongHashMap redactPositionToSeqNum = sessionIdToRedactPositions.computeIfAbsent(
+                    sessionId, ignore -> new Long2LongHashMap(NO_SEQUENCE_NUMBER));
+                redactPositionToSeqNum.put(requiredPosition, newSequenceNumber);
                 return;
             }
         }
