@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.LogTag.STATE_CLEANUP;
 
 /**
  * PruneOperation is sent to the replayer in order to find the outbound replay query positions.
- * Then it get's sent to the Framer to query the inbound replay positions, then it delegates to
+ * Then it gets sent to the Framer to query the inbound replay positions, then it delegates to
  * aeron archiver to prune the archive
  */
 public class PruneOperation
