@@ -320,7 +320,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(4, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test(timeout = LONG_TEST_TIMEOUT_IN_MS)
     public void shouldNotAllowResendRequestSpamming()
     {
         errorCounter.containsString("Ignore resend request for sessionId");
