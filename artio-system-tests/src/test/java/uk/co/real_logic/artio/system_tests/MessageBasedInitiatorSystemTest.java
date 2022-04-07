@@ -15,10 +15,13 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.Aeron;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
+import org.agrona.concurrent.status.CountersReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -45,11 +48,13 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.FixCounters.FixCountersId.RECV_MSG_SEQ_NO_TYPE_ID;
+import static uk.co.real_logic.artio.FixCounters.lookupCounterIds;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -57,9 +62,9 @@ import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.createFollowerSession;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 // For reproducing error scenarios when initiating a connection
 public class MessageBasedInitiatorSystemTest
@@ -478,6 +483,36 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotLeakCountersIfDisconnectedBeforeLogonCompleteInSoleLibraryMode() throws IOException
+    {
+        // Replicates a client issue, note that we only close the counters when we're
+        initiatorFailsToConnect();
+
+        initiatorFailsToConnect();
+
+        initiatorFailsToConnect();
+
+        try (Aeron aeron = Aeron.connect(engine.configuration().aeronContextClone()))
+        {
+            final CountersReader countersReader = aeron.countersReader();
+            final IntHashSet ids = lookupCounterIds(RECV_MSG_SEQ_NO_TYPE_ID, countersReader, label -> true);
+            assertThat(ids.toString(), ids, hasSize(1));
+        }
+    }
+
+    private void initiatorFailsToConnect() throws IOException
+    {
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+        }
+
+        final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
+        assertEquals(ERRORED, reply.state());
+        assertThat(reply.error().toString(), containsString("UNABLE_TO_LOGON"));
+    }
+
     private Session completeLogon()
     {
         return testSystem.awaitCompletedReply(sessionReply).resultIfPresent();
@@ -567,14 +602,8 @@ public class MessageBasedInitiatorSystemTest
 
     private void sendLogonToAcceptor(final FixConnection connection)
     {
-        assertEventuallyTrue(
-            "Never sent logon", () ->
-            {
-                polled += library.poll(LIBRARY_LIMIT);
-                return polled > 2;
-            });
-
-        connection.readLogon();
+        //noinspection Convert2MethodRef
+        testSystem.awaitBlocking(() -> connection.readLogon());
     }
 
     @After

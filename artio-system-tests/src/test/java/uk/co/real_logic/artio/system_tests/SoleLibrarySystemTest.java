@@ -37,7 +37,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-
     private void launch()
     {
         launch(true);
@@ -70,9 +69,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     {
         launch();
 
-        connectSessions();
-
-        acceptingSession = acceptingHandler.lastSession();
+        connectAndAcquire();
         assertNotNull("should automatically receive the session upon logon In SOLE_LIBRARY mode",
             acceptingSession);
         assertEquals(ACTIVE, acceptingSession.state());
@@ -88,8 +85,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     {
         launch();
 
-        connectSessions();
-        acceptingSession = acceptingHandler.lastSession();
+        connectAndAcquire();
         disconnectSessions();
         assertThat(acceptingLibrary.sessions(), hasItem(acceptingSession));
         final long sessionId = acceptingSession.id();
@@ -108,14 +104,19 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(ACTIVE, acceptingSession.state());
     }
 
+    private void connectAndAcquire()
+    {
+        connectSessions();
+        acceptingSession = acceptingHandler.lastSession();
+    }
+
     // Replicates a bug reported in issue #361 where reconnecting initiators can't reconnect.
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldAllowReonnectingInitiatorsToReconnect()
     {
         launch();
 
-        connectSessions();
-        acceptingSession = acceptingHandler.lastSession();
+        connectAndAcquire();
         messagesCanBeExchanged();
         disconnectSessions();
 
@@ -130,8 +131,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest
         launch(false);
 
-        connectSessions();
-        acceptingSession = acceptingHandler.lastSession();
+        connectAndAcquire();
         acceptingMessagesCanBeExchanged();
 
         // timeout initiatingLibrary

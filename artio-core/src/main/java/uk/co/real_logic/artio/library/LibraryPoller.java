@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.*;
+import io.aeron.ChannelUri;
+import io.aeron.CommonContext;
+import io.aeron.ControlledFragmentAssembler;
+import io.aeron.Subscription;
 import io.aeron.exceptions.RegistrationException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -50,10 +53,7 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -67,7 +67,7 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
+import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
@@ -1229,48 +1229,42 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             return CONTINUE;
         }
 
-        final boolean soleLibraryMode = initialAcceptedSessionOwner == SOLE_LIBRARY;
-        if (soleLibraryMode)
+        final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+        if (subscriber != null)
         {
-            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-            if (subscriber != null)
+            final InternalSession session = subscriber.session();
+            // Must check the state before calling subscriber.onDisconnect()
+            final boolean isPendingInitiator = session.state() == SessionState.SENT_LOGON;
+            final Action action = subscriber.onDisconnect(libraryId, reason);
+            if (action != ABORT)
             {
-                return subscriber.onDisconnect(libraryId, reason);
-            }
-            else
-            {
-                // FIXP doesn't behave any differently.
-                return onFixPDisconnect(connectionId, reason);
-            }
-        }
-        else
-        {
-            final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-            if (subscriber != null)
-            {
-                final Action action = subscriber.onDisconnect(libraryId, reason);
-                if (action == ABORT)
+                // In sole library mode the library retains ownership of sessions that are disconnected.
+                final boolean isEngineOwned = initialAcceptedSessionOwner == ENGINE;
+                if (isPendingInitiator)
                 {
-                    // If we abort the action then we should ensure that it can be processed when
-                    // re-run.
-                    connectionIdToSession.put(connectionId, subscriber);
-                }
-                else
-                {
-                    final InternalSession session = subscriber.session();
-                    session.close();
-                    // session will be in either pendingInitiatorSessions or sessions
                     pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
+
+                    if (!isEngineOwned)
+                    {
+                        sessions = ArrayUtil.add(sessions, session);
+                    }
+                }
+
+                connectionIdToSession.remove(connectionId);
+
+                if (isEngineOwned)
+                {
+                    session.close();
                     sessions = ArrayUtil.remove(sessions, session);
                     cacheSession(session);
                 }
+            }
 
-                return action;
-            }
-            else
-            {
-                onFixPDisconnect(connectionId, reason);
-            }
+            return action;
+        }
+        else
+        {
+            onFixPDisconnect(connectionId, reason);
         }
 
         return CONTINUE;
