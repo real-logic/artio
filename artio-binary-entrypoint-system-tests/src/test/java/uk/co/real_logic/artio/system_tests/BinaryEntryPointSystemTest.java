@@ -1299,7 +1299,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         reNegotiateWithVerId(sessionVerID, true, client ->
         {
             assertNextSequenceNumbers(1, offlineMessages + 1);
-            assertTrue("Not replaying", connection.isReplaying());
 
             // Check that the other clOrdId comes in second
             sendExecutionReportNew(connection, otherClOrderID, SECURITY_ID, false);
