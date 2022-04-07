@@ -1117,11 +1117,6 @@ public class Session
      */
     public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
     {
-        if (lastReceivedMsgSeqNum == 103)
-        {
-//            Exceptions.printStackTrace();
-        }
-
         if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
             nextSequenceIndex(clock.nanoTime());

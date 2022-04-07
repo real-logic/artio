@@ -222,7 +222,7 @@ public class FixLibrary extends GatewayProcess
      * <p>
      * Note: the list is unmodifiable.
      *
-     * @return a list of tthe initiator sessions that are currently pending.
+     * @return a list of the initiator sessions that are currently pending.
      */
     public List<Session> pendingInitiatorSessions()
     {
@@ -350,7 +350,7 @@ public class FixLibrary extends GatewayProcess
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param resendFromSequenceIndex the index of the sequence within which the resendFromSequenceNumber
-     *                      refers. if you wish to use the curren sequence (ie all messages since the latest logon
+     *                      refers. if you wish to use the current sequence (ie all messages since the latest logon
      *                      then you can use {@link FixLibrary#CURRENT_SEQUENCE}.If you don't care about message replay
      *                      then use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
@@ -423,7 +423,7 @@ public class FixLibrary extends GatewayProcess
      *
      * @param context the context that uniquely identifies the connection
      * @param testTimeoutInMs the timeout required for this operation.
-     * @return the sessionId that can be used to request the offline sesion object using {@link #requestSession(long, int, int, long)}.
+     * @return the sessionId that can be used to request the offline session object using {@link #requestSession(long, int, int, long)}.
      * @throws IllegalArgumentException if the {@link uk.co.real_logic.artio.fixp.FixPProtocol} of the context is
      * different to the established protocol within the library.
      */
