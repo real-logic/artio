@@ -108,6 +108,43 @@ public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
         assertThat(segments3 + " < " + segments2, segments3.size(), lessThan(segments2.size()));
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldPurgeSegmentsBeforeLastResetWhilstSessionConnected()
+    {
+        // Test a reproduction of a spotted bug, performing a pruneArchive() twice caused the first index positions
+        // to be cached even after a reset of the sequence indices.
+
+        launch();
+        initiateSession();
+        acceptSession();
+        final Set<String> segments1 = getArchiveSegments();
+
+        pruneArchive();
+
+        // generate enough data to move at least to the second segment
+        for (int i = 0; i < 1000; i++)
+        {
+            messagesCanBeExchanged();
+        }
+
+        // verify we now have more segments
+        final Set<String> segments2 = getArchiveSegments();
+        assertThat(segments1 + " < " + segments2, segments1.size(), lessThan(segments2.size()));
+
+        logoutInitiatingSession();
+        assertSessionsDisconnected();
+        resetInitiatingSession();
+        resetAcceptingSession();
+
+        initiateSession();
+        acceptSession();
+
+        // the only session has been reset, so pruning should be able to delete some segments
+        pruneArchive();
+        final Set<String> segments3 = getArchiveSegments();
+        assertThat(segments3 + " < " + segments2, segments3.size(), lessThan(segments2.size()));
+    }
+
     private void launch()
     {
         deleteLogs();
