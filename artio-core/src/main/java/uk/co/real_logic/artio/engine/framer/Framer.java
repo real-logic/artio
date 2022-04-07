@@ -1240,6 +1240,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pendingAcceptorLogon.connectionId(), false);
     }
 
+    void onResetReplayQuery(final long fixSessionId)
+    {
+        inboundMessages.onReset(fixSessionId);
+    }
+
     private final class ILink3LookupConnectOperation implements Continuation
     {
         private final int libraryId;

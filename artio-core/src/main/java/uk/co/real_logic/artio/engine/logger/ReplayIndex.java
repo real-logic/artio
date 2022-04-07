@@ -79,6 +79,7 @@ public class ReplayIndex implements Index, RedactHandler
     private final int requiredStreamId;
     private final long indexFileSize;
     private final int segmentSize;
+    private final ReplayEvictionHandler evictionHandler;
     private final int segmentSizeBitShift;
     private final int segmentCount;
     private final BufferFactory bufferFactory;
@@ -103,13 +104,15 @@ public class ReplayIndex implements Index, RedactHandler
         final SequenceNumberIndexReader reader,
         final long timeIndexReplayFlushIntervalInNs,
         final boolean sent,
-        final boolean indexChecksumEnabled)
+        final boolean indexChecksumEnabled,
+        final ReplayEvictionHandler evictionHandler)
     {
         this.sequenceNumberExtractor = sequenceNumberExtractor;
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
         this.segmentSize = ReplayIndexDescriptor.capacityToBytesInt(indexSegmentCapacity);
+        this.evictionHandler = evictionHandler;
         this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
         this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
         this.bufferFactory = bufferFactory;
@@ -429,9 +432,9 @@ public class ReplayIndex implements Index, RedactHandler
         }
     }
 
-    private void onResetSequenceNumber(final long sessionId)
+    private void onResetSequenceNumber(final long fixSessionId)
     {
-        final SessionIndex index = fixSessionIdToIndex.remove(sessionId);
+        final SessionIndex index = fixSessionIdToIndex.remove(fixSessionId);
 
         if (index != null)
         {
@@ -440,7 +443,8 @@ public class ReplayIndex implements Index, RedactHandler
         else
         {
             // File might be present but not within the cache.
-            final File replayIndexFile = replayIndexHeaderFile(sessionId);
+            evictionHandler.onReset(fixSessionId);
+            final File replayIndexFile = replayIndexHeaderFile(fixSessionId);
             if (replayIndexFile.exists())
             {
                 deleteFile(replayIndexFile);
@@ -579,6 +583,8 @@ public class ReplayIndex implements Index, RedactHandler
         void reset()
         {
             close();
+
+            evictionHandler.onReset(fixSessionId);
             deleteFile(headerFile);
             for (final File segmentFile: segmentBufferFiles)
             {
@@ -618,7 +624,7 @@ public class ReplayIndex implements Index, RedactHandler
         return ReplayIndexDescriptor.replayIndexSegmentFile(logFileDir, fixSessionId, requiredStreamId, segmentIndex);
     }
 
-    private void deleteFile(final File replayIndexFile)
+    void deleteFile(final File replayIndexFile)
     {
         if (!replayIndexFile.delete())
         {

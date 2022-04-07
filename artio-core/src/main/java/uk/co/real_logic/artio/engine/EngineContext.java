@@ -65,6 +65,9 @@ public class EngineContext implements AutoCloseable
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
 
+    private final ReplayEvictionHandler inboundEvictionHandler;
+    private final ReplayEvictionHandler outboundEvictionHandler;
+
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
 
@@ -95,6 +98,8 @@ public class EngineContext implements AutoCloseable
         this.aeronArchive = aeronArchive;
         this.recordingCoordinator = recordingCoordinator;
 
+        inboundEvictionHandler = new ReplayEvictionHandler(errorHandler);
+        outboundEvictionHandler = new ReplayEvictionHandler(errorHandler);
         replayerCommandQueue = new ReplayerCommandQueue(configuration.framerIdleStrategy());
         senderSequenceNumbers = new SenderSequenceNumbers(replayerCommandQueue);
 
@@ -176,7 +181,8 @@ public class EngineContext implements AutoCloseable
         final Long2LongHashMap connectionIdToILinkUuid,
         final SequenceNumberIndexReader reader,
         final SequenceNumberExtractor sequenceNumberExtractor,
-        final boolean indexChecksumEnabled)
+        final boolean indexChecksumEnabled,
+        final ReplayEvictionHandler evictionHandler)
     {
         return new ReplayIndex(
             sequenceNumberExtractor,
@@ -192,7 +198,9 @@ public class EngineContext implements AutoCloseable
             configuration.supportedFixPProtocolType(),
             reader,
             configuration.timeIndexReplayFlushIntervalInNs(),
-            streamId == configuration.outboundLibraryStream(), indexChecksumEnabled);
+            streamId == configuration.outboundLibraryStream(),
+            indexChecksumEnabled,
+            evictionHandler);
     }
 
     private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -265,7 +273,9 @@ public class EngineContext implements AutoCloseable
                     recordingCoordinator.indexerInboundRecordingIdLookup(),
                     connectionIdToILinkUuid,
                     receivedSequenceNumberIndex.reader(),
-                    recvSequenceNumberExtractor, indexChecksumEnabled);
+                    recvSequenceNumberExtractor,
+                    indexChecksumEnabled,
+                    inboundEvictionHandler);
                 inboundIndices.add(inboundReplayIndex);
             }
             inboundIndices.add(receivedSequenceNumberIndex);
@@ -286,7 +296,9 @@ public class EngineContext implements AutoCloseable
                     recordingCoordinator.indexerOutboundRecordingIdLookup(),
                     connectionIdToILinkUuid,
                     sentSequenceNumberIndex.reader(),
-                    sentSequenceNumberExtractor, indexChecksumEnabled);
+                    sentSequenceNumberExtractor,
+                    indexChecksumEnabled,
+                    outboundEvictionHandler);
                 outboundIndices.add(outboundReplayIndex);
             }
             outboundIndices.add(sentSequenceNumberIndex);
@@ -323,6 +335,7 @@ public class EngineContext implements AutoCloseable
         {
             outboundReplayQuery = newReplayQuery(
                 configuration.archiverIdleStrategy(), configuration.outboundLibraryStream());
+            outboundEvictionHandler.replayQuery(outboundReplayQuery);
             replayer = newReplayer(replayPublication, outboundReplayQuery);
         }
         else
@@ -385,15 +398,24 @@ public class EngineContext implements AutoCloseable
         return subscription;
     }
 
-    public ReplayQuery inboundReplayQuery()
+    public ReplayQuery inboundReplayQuery(final boolean replayerThread)
     {
         if (!configuration.logInboundMessages())
         {
             return null;
         }
 
-        return newReplayQuery(
+        final ReplayQuery replayQuery = newReplayQuery(
             configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
+        if (replayerThread)
+        {
+            inboundEvictionHandler.replayQuery(replayQuery);
+        }
+        else
+        {
+            inboundEvictionHandler.framerReplayQuery(replayQuery);
+        }
+        return replayQuery;
     }
 
     public GatewayPublication inboundPublication()
@@ -433,6 +455,8 @@ public class EngineContext implements AutoCloseable
     {
         this.framerContext = framerContext;
         sentSequenceNumberIndex.framerContext(framerContext);
+        inboundEvictionHandler.framerContext(framerContext);
+        outboundEvictionHandler.framerContext(framerContext);
     }
 
     public Reply<Long2LongHashMap> pruneArchive(final Exception exception)
@@ -444,7 +468,7 @@ public class EngineContext implements AutoCloseable
     {
         if (pruneInboundReplayQuery == null)
         {
-            pruneInboundReplayQuery = inboundReplayQuery();
+            pruneInboundReplayQuery = inboundReplayQuery(true);
         }
 
         final PruneOperation operation = new PruneOperation(

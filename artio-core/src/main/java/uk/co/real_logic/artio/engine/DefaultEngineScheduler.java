@@ -79,6 +79,11 @@ public class DefaultEngineScheduler implements EngineScheduler
         Exceptions.closeAll(framerRunner, archivingRunner, recordingCoordinator, monitoringRunner);
     }
 
+    public int pollFramer()
+    {
+        return 0;
+    }
+
     public void configure(final Aeron.Context aeronContext)
     {
     }

@@ -37,6 +37,8 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
 public class LowResourceEngineScheduler implements EngineScheduler
 {
     private AgentRunner runner;
+    private ErrorHandler errorHandler;
+    private Agent framer;
     private RecordingCoordinator recordingCoordinator;
 
     public LowResourceEngineScheduler()
@@ -52,6 +54,8 @@ public class LowResourceEngineScheduler implements EngineScheduler
         final Agent conductorAgent,
         final RecordingCoordinator recordingCoordinator)
     {
+        this.errorHandler = errorHandler;
+        this.framer = framer;
         this.recordingCoordinator = recordingCoordinator;
 
         if (runner != null)
@@ -78,6 +82,31 @@ public class LowResourceEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(runner);
 
         CloseHelper.close(runner);
+    }
+
+    public int pollFramer()
+    {
+        if (framer != null)
+        {
+            try
+            {
+                return framer.doWork();
+            }
+            catch (final Throwable e)
+            {
+                if (errorHandler != null)
+                {
+                    errorHandler.onError(e);
+                }
+                else
+                {
+                    // Should never happen, but best to be defensive
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return 0;
     }
 
     public void configure(final Aeron.Context aeronContext)

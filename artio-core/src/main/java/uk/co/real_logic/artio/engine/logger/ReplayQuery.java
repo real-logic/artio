@@ -154,6 +154,11 @@ public class ReplayQuery implements AutoCloseable
         CloseHelper.close(replaySubscription);
     }
 
+    public void onReset(final long fixSessionId)
+    {
+        fixSessionToIndex.remove(fixSessionId);
+    }
+
     private final class SessionQuery implements AutoCloseable
     {
         private final long fixSessionId;
@@ -382,13 +387,6 @@ public class ReplayQuery implements AutoCloseable
         public Long2LongHashMap queryStartPositions()
         {
             final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
-
-            // If we detect a delete-based-reset of this replay query from the replay indexer then clean ourselves up
-            if (!headerFile.exists())
-            {
-                fixSessionToIndex.remove(fixSessionId);
-                return recordingIdToStartPosition;
-            }
 
             final UnsafeBuffer headerBuffer = this.headerBuffer;
             final long indexFileSize = ReplayQuery.this.indexFileSize;

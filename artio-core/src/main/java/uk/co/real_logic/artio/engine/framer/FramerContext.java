@@ -158,7 +158,7 @@ public class FramerContext
                 "outboundSlowSubscription", null),
             replayImage,
             slowReplayImage,
-            engineContext.inboundReplayQuery(),
+            engineContext.inboundReplayQuery(false),
             outboundPublication,
             inboundPublication,
             this.adminCommands,
@@ -369,5 +369,28 @@ public class FramerContext
         }
 
         return null;
+    }
+
+    // Called on replayer thread
+    public void resetOutboundReplayQuery(final long fixSessionId)
+    {
+        final ResetReplayQueryCommand command = new ResetReplayQueryCommand(fixSessionId);
+
+        final IdleStrategy idleStrategy = configuration.archiverIdleStrategy();
+        // Need to poll the scheduler here in case we're in low resource mode where this blocking poll will
+        // block the framer thread
+        final EngineScheduler scheduler = configuration.scheduler();
+
+        while (!adminCommands.offer(command))
+        {
+            idleStrategy.idle(scheduler.pollFramer());
+        }
+        idleStrategy.reset();
+
+        while (!command.isDone())
+        {
+            idleStrategy.idle(scheduler.pollFramer());
+        }
+        idleStrategy.reset();
     }
 }

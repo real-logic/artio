@@ -90,6 +90,11 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         Exceptions.closeAll(framerInvoker, recordingCoordinator, archivingRunner, monitoringRunner);
     }
 
+    public int pollFramer()
+    {
+        return 0;
+    }
+
     public void configure(final Aeron.Context aeronContext)
     {
     }

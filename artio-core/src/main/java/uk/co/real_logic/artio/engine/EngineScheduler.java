@@ -50,6 +50,8 @@ public interface EngineScheduler extends AutoCloseable
      */
     void close();
 
+    int pollFramer();
+
     /**
      * Used to configure the aeron context object. This can be hooked in order to
      * switch the Aeron Client into Invoking mode, or inject a Media Driver

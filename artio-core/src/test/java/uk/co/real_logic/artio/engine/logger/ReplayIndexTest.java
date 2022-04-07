@@ -114,7 +114,8 @@ public class ReplayIndexTest extends AbstractLogTest
             mock(SequenceNumberIndexReader.class),
             DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS,
             true,
-            DEFAULT_INDEX_CHECKSUM_ENABLED);
+            DEFAULT_INDEX_CHECKSUM_ENABLED,
+            new ReplayEvictionHandler(errorHandler));
     }
 
     private Aeron aeron()
