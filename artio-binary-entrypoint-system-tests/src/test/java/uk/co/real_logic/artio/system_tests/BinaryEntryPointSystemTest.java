@@ -1310,6 +1310,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readExecutionReportNew(otherClOrderID);
             assertNextSequenceNumbers(1, offlineMessages + 2);
             testSystem.await("Still replaying", () -> !connection.isReplaying());
+            client.skipTemplateId(ExecutionReport_NewEncoder.TEMPLATE_ID);
             clientTerminatesSession(client);
         });
     }
