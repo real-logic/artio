@@ -148,10 +148,10 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             return TARGET_COMP_ID;
         }
 
-        final boolean hasSenderSubID = header.hasSenderSubID();
-        if (!(hasSenderSubID && CodecUtil.equals(key.localSubID, header.senderSubID(), header.senderSubIDLength())))
+        final boolean hasTargetSubID = header.hasTargetSubID();
+        if (!(hasTargetSubID && CodecUtil.equals(key.localSubID, header.targetSubID(), header.targetSubIDLength())))
         {
-            return SENDER_SUB_ID;
+            return TARGET_SUB_ID;
         }
 
         return 0;
