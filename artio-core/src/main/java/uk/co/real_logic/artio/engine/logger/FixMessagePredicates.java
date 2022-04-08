@@ -430,6 +430,10 @@ public final class FixMessagePredicates
         {
             final char[] actualChars = charExtractor.apply(header);
             final int length = lengthExtractor.applyAsInt(header);
+            if (length != expectedChars.length)
+            {
+                return false;
+            }
             return CodecUtil.equals(actualChars, expectedChars, length);
         }
     }

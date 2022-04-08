@@ -76,6 +76,7 @@ public class FixMessagePredicateTest
         encoder.body(HEADER_EG);
 
         assertTargetCompId("accept", false);
+        assertTargetCompId("acceptor2", false);
     }
 
     private void assertTargetCompId(final String targetCompIdOf, final boolean expected)
