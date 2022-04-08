@@ -53,6 +53,13 @@ public class CodecUtilTest
     }
 
     @Test
+    public void shouldCheckOffsetAndLength()
+    {
+        assertFalse(CodecUtil.equals("aaaa".toCharArray(), "aaaa".toCharArray(), 3, 0, 2));
+        assertFalse(CodecUtil.equals("aaaa".toCharArray(), "aaaa".toCharArray(), 0, 3, 2));
+    }
+
+    @Test
     public void testHashCodeWithOffset()
     {
         final int firstHash = CodecUtil.hashCode("zyxabc".toCharArray(), 0, 3);

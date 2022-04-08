@@ -148,7 +148,7 @@ public final class CodecUtil
         final int expectedOffset,
         final int length)
     {
-        if (value.length < length || expected.length < length)
+        if (value.length < offset + length || expected.length < expectedOffset + length)
         {
             return false;
         }
