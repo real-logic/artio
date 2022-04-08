@@ -164,8 +164,20 @@ public final class CodecUtil
         return true;
     }
 
+    /**
+     * Compares first {@code length} characters of {@code value} with all {@code expected} characters.
+     *
+     * @param value    the array containing the actual value, might be longer than the value itself
+     * @param expected the array containing the expected value, both equal in length
+     * @param length   the length of the actual value
+     * @return true if the actual value is equal to the expected one
+     */
     public static boolean equals(final char[] value, final char[] expected, final int length)
     {
+        if (length != expected.length)
+        {
+            return false;
+        }
         return equals(value, expected, 0, 0, length);
     }
 

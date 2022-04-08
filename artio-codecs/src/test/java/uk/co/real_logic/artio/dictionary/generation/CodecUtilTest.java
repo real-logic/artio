@@ -23,6 +23,16 @@ public class CodecUtilTest
 {
 
     @Test
+    public void testSimpleEquals()
+    {
+        assertTrue(CodecUtil.equals("abc".toCharArray(), "abc".toCharArray(), 3));
+        assertTrue(CodecUtil.equals("abcd".toCharArray(), "abc".toCharArray(), 3));
+        assertFalse(CodecUtil.equals("abc".toCharArray(), "abx".toCharArray(), 3));
+        assertFalse(CodecUtil.equals("abc".toCharArray(), "abc".toCharArray(), 2));
+        assertFalse(CodecUtil.equals("abcd".toCharArray(), "abc".toCharArray(), 4));
+    }
+
+    @Test
     public void shouldCheckSubsectionOfCharArrays()
     {
         assertTrue(CodecUtil.equals("abc".toCharArray(), "abc    ".toCharArray(), 0, 0, 3));

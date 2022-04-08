@@ -100,7 +100,7 @@ public class ExchangeSessionHandler implements SessionHandler
 
     private boolean validOrder()
     {
-        if (!CodecUtil.equals(VALID_SYMBOL, newOrderSingle.symbol(), newOrderSingle.symbolLength()))
+        if (!CodecUtil.equals(newOrderSingle.symbol(), VALID_SYMBOL, newOrderSingle.symbolLength()))
         {
             return false;
         }

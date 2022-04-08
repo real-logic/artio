@@ -35,7 +35,7 @@ final class TargetCompIdValidationStrategy implements MessageValidationStrategy
 
     public boolean validate(final SessionHeaderDecoder header)
     {
-        return CodecUtil.equals(gatewayCompId, header.targetCompID(), header.targetCompIDLength());
+        return CodecUtil.equals(header.targetCompID(), gatewayCompId, header.targetCompIDLength());
     }
 
     public int invalidTagId()

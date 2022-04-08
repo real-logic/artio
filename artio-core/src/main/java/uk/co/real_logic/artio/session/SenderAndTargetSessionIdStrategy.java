@@ -133,12 +133,12 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     {
         final CompositeKeyImpl key = (CompositeKeyImpl)compositeKey;
 
-        if (!CodecUtil.equals(key.remoteCompID, header.senderCompID(), header.senderCompIDLength()))
+        if (!CodecUtil.equals(header.senderCompID(), key.remoteCompID, header.senderCompIDLength()))
         {
             return SENDER_COMP_ID;
         }
 
-        if (!CodecUtil.equals(key.localCompID, header.targetCompID(), header.targetCompIDLength()))
+        if (!CodecUtil.equals(header.targetCompID(), key.localCompID, header.targetCompIDLength()))
         {
             return TARGET_COMP_ID;
         }
