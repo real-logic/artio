@@ -66,6 +66,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
     private final Function<FixDictionary, UserRequestExtractor> newUserRequestExtractor =
         dictionary -> new UserRequestExtractor(dictionary, errorHandler);
+    private final InternalSession.Formatters formatters = new InternalSession.Formatters();
 
     private final EpochFractionClock epochFractionClock;
     private final SessionIdStrategy sessionIdStrategy;
@@ -193,7 +194,8 @@ public class FixGatewaySessions extends GatewaySessions
             gatewaySession.connectionType(),
             backpressureMessagesDuringReplay,
             resendRequestController,
-            forcedHeartbeatIntervalInS);
+            forcedHeartbeatIntervalInS,
+            formatters);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());

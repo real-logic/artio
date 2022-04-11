@@ -87,17 +87,17 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final CharFormatter receivedResendFormatter = new CharFormatter(
-        "Received Resend Request for inclusive range: [%s, %s]");
+        "Received Resend Request for inclusive range: [%s, %s] connId=%s");
     private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
-        "Not processing Resend Request for %s because it has already disconnected");
+        "Not processing Resend Request for connId=%s because it has already disconnected");
 
     // For FixReplayerSession, safe to share rather than allocate for each FixReplayerSession
     final CharFormatter completeNotRecentFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
-        "endSeqNo=%s beginSeqNo=%s expectedCount=%s");
+        "endSeqNo=%s beginSeqNo=%s expectedCount=%s connId=%s");
     final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
-        "beginGapFillSeqNum=%s, newSequenceNumber=%s");
+        "beginGapFillSeqNum=%s, newSequenceNumber=%s connId=%s");
 
     // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
@@ -387,7 +387,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
             DebugLogger.log(REPLAY,
                 receivedResendFormatter,
                 beginSeqNo,
-                endSeqNo);
+                endSeqNo,
+                connectionId);
 
             final AtomicCounter bytesInBuffer = senderSequenceNumbers.bytesInBufferCounter(connectionId);
             if (bytesInBuffer == null)
@@ -455,7 +456,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         DebugLogger.log(REPLAY,
             receivedResendFormatter,
             beginSeqNo,
-            endSeqNo);
+            endSeqNo,
+            connectionId);
 
         final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
         resendRequest.reset();

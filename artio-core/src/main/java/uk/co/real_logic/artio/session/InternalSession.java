@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.EpochFractionClock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -46,6 +47,12 @@ public class InternalSession extends Session implements AutoCloseable
     public static final int INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM = 0;
     public static final int INITIAL_END_OF_RESEND_REQUEST_RANGE = 0;
     public static final boolean INITIAL_AWAITING_HEARTBEAT = false;
+
+    public static class Formatters
+    {
+        final CharFormatter replayComplete = new CharFormatter(
+            "Sess.replayComplete: replaysInFlight=%s,conn=%s");
+    }
 
     public InternalSession(
         final int heartbeatIntervalInS,
@@ -72,7 +79,8 @@ public class InternalSession extends Session implements AutoCloseable
         final ConnectionType connectionType,
         final boolean backpressureMessagesDuringReplay,
         final ResendRequestController resendRequestController,
-        final int forcedHeartbeatIntervalInS)
+        final int forcedHeartbeatIntervalInS,
+        final Formatters formatters)
     {
         super(
             heartbeatIntervalInS,
@@ -99,7 +107,8 @@ public class InternalSession extends Session implements AutoCloseable
             connectionType,
             backpressureMessagesDuringReplay,
             resendRequestController,
-            forcedHeartbeatIntervalInS);
+            forcedHeartbeatIntervalInS,
+            formatters);
     }
 
     public int poll(final long timeInNs)

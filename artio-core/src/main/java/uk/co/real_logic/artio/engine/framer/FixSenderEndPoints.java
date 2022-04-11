@@ -20,17 +20,24 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
 
 class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+
+    final CharFormatter missReplayComplete = new CharFormatter(
+        "SEPs.missReplayComplete, connId=%s, corrId=%s, slow=%s");
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
@@ -255,6 +262,14 @@ class FixSenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         if (senderEndPoint != null)
         {
             return senderEndPoint.onReplayComplete(correlationId, slow);
+        }
+        else
+        {
+            if (IS_REPLAY_LOG_TAG_ENABLED)
+            {
+                DebugLogger.log(LogTag.REPLAY, missReplayComplete.clear().with(connectionId).with(correlationId)
+                    .with(slow));
+            }
         }
         return CONTINUE;
     }

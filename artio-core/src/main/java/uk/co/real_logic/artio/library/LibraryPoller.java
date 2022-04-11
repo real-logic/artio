@@ -221,6 +221,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     };
 
+    private final InternalSession.Formatters formatters = new InternalSession.Formatters();
+
     LibraryPoller(
         final LibraryConfiguration configuration,
         final LibraryTimers timers,
@@ -2187,7 +2189,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             ConnectionType.INITIATOR,
             configuration.backpressureMessagesDuringReplay(),
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS());
+            configuration.forcedHeartbeatIntervalInS(),
+            formatters);
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -2265,7 +2268,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             ConnectionType.ACCEPTOR,
             configuration.backpressureMessagesDuringReplay(),
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS());
+            configuration.forcedHeartbeatIntervalInS(), formatters);
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;

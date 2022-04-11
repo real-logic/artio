@@ -97,7 +97,8 @@ public class FixSenderEndPointTest
         senderSequenceNumber,
         messageTimingHandler,
         DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
-        receiverEndPoint);
+        receiverEndPoint,
+        new FixSenderEndPoint.Formatters());
 
     @Before
     public void setup()

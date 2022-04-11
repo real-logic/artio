@@ -52,8 +52,10 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.*;
 import static uk.co.real_logic.artio.CommonConfiguration.NO_FORCED_HEARTBEAT_INTERVAL;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
@@ -127,6 +129,7 @@ public class Session
     private final int forcedHeartbeatIntervalInS;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
+    private final Formatters formatters;
 
     private boolean backpressureMessagesDuringReplay;
     private CompositeKey sessionKey;
@@ -219,7 +222,8 @@ public class Session
         final ConnectionType connectionType,
         final boolean backpressureMessagesDuringReplay,
         final ResendRequestController resendRequestController,
-        final int forcedHeartbeatIntervalInS)
+        final int forcedHeartbeatIntervalInS,
+        final Formatters formatters)
     {
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -229,6 +233,7 @@ public class Session
         Verify.notNull(messageInfo, "messageInfo");
         Verify.notNull(epochFractionClock, "epochFractionClock");
         Verify.notNull(connectionType, "connectionType");
+        Verify.notNull(formatters, "formatters");
 
         this.initiatorResetSeqNum = initiatorResetSeqNum;
         this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
@@ -251,6 +256,7 @@ public class Session
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
         this.connectionType = connectionType;
+        this.formatters = formatters;
 
         // If we're an offline session that has never been corrected then we need to set the initial sequence index.
         if (state == DISCONNECTED && sequenceIndex == UNKNOWN_SEQUENCE_INDEX)
@@ -2771,6 +2777,11 @@ public class Session
 
     void onReplayComplete()
     {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(REPLAY, formatters.replayComplete.clear().with(replaysInFlight).with(connectionId));
+        }
+
         // replaysInFlight gets reset to 0 when a disconnect happens, stop this from racing with a replay complete
         // message
         if (replaysInFlight > 0)

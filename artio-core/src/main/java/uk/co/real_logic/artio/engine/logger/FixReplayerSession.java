@@ -40,6 +40,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
@@ -417,13 +418,13 @@ class FixReplayerSession extends ReplayerSession
             {
                 final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
 
-                DebugLogger.log(
-                    REPLAY,
-                    replayer.completeReplayGapfillFormatter,
-                    action.name(),
-                    replayedMessages,
-                    beginGapFillSeqNum,
-                    newSequenceNumber);
+                if (IS_REPLAY_LOG_TAG_ENABLED)
+                {
+                    DebugLogger.log(
+                        REPLAY,
+                        replayer.completeReplayGapfillFormatter.clear().with(action.name()).with(replayedMessages)
+                        .with(beginGapFillSeqNum).with(newSequenceNumber).with(connectionId));
+                }
 
                 return action != ABORT;
             }
@@ -435,13 +436,14 @@ class FixReplayerSession extends ReplayerSession
 
             // We know precisely what number to gap fill up to.
             final int expectedCount = endSeqNo - beginSeqNo + 1;
-            DebugLogger.log(
-                REPLAY,
-                replayer.completeNotRecentFormatter,
-                replayedMessages,
-                endSeqNo,
-                beginSeqNo,
-                expectedCount);
+
+            if (IS_REPLAY_LOG_TAG_ENABLED)
+            {
+                DebugLogger.log(
+                    REPLAY,
+                    replayer.completeNotRecentFormatter.clear().with(replayedMessages).with(endSeqNo).with(beginSeqNo)
+                    .with(expectedCount).with(connectionId));
+            }
 
             if (replayedMessages != expectedCount)
             {

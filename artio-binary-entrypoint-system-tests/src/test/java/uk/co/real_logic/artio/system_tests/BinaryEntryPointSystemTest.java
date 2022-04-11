@@ -21,6 +21,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
@@ -1255,6 +1256,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
+    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionId() throws IOException
     {
@@ -1263,6 +1265,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         replayNextSessionVersionIdMessages();
     }
 
+    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestart()
         throws IOException
@@ -1274,6 +1277,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         replayNextSessionVersionIdMessages();
     }
 
+    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestartExtended()
         throws IOException
@@ -1303,6 +1307,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             // Check that the other clOrdId comes in second
             sendExecutionReportNew(connection, otherClOrderID, SECURITY_ID, false);
 
+            client.skipTemplateId(NegotiateResponseDecoder.TEMPLATE_ID);
             for (int i = 0; i < offlineMessages; i++)
             {
                 client.readExecutionReportNew(i + 1);

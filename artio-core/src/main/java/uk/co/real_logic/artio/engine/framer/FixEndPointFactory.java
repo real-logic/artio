@@ -25,8 +25,9 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 class FixEndPointFactory
 {
-    private final FixReceiverEndPoint.FixReceiverEndPointFormatters formatters =
+    private final FixReceiverEndPoint.FixReceiverEndPointFormatters receiverFormatters =
         new FixReceiverEndPoint.FixReceiverEndPointFormatters();
+    private final FixSenderEndPoint.Formatters senderFormatters = new FixSenderEndPoint.Formatters();
 
     private final EngineConfiguration configuration;
     private final FixContexts fixContexts;
@@ -82,7 +83,7 @@ class FixEndPointFactory
             gatewaySessions,
             configuration.epochNanoClock(),
             framer.acceptorFixDictionaryLookup(),
-            formatters,
+            receiverFormatters,
             configuration.throttleWindowInMs(),
             configuration.throttleLimitOfMessages());
     }
@@ -114,7 +115,8 @@ class FixEndPointFactory
             senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer),
             messageTimingHandler,
             configuration.maxConcurrentSessionReplays(),
-            receiverEndPoint);
+            receiverEndPoint,
+            senderFormatters);
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

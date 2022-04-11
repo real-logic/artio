@@ -34,12 +34,14 @@ import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static io.aeron.logbuffer.FrameDescriptor.UNFRAGMENTED;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
@@ -49,7 +51,13 @@ import static uk.co.real_logic.artio.session.Session.NO_REPLAY_CORRELATION_ID;
 
 class FixSenderEndPoint extends SenderEndPoint
 {
-    private static final boolean IS_REPLAY_LOG_TAG_ENABLED = DebugLogger.isEnabled(LogTag.REPLAY);
+    static class Formatters
+    {
+        final CharFormatter replayPaused = new CharFormatter("connId=%s, sessId=%s, replayPaused=%s");
+        final CharFormatter replayComplete = new CharFormatter(
+            "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
+            " skipPosition=%s");
+    }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
@@ -67,6 +75,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private final MessageTimingHandler messageTimingHandler;
     private final FixReceiverEndPoint receiverEndPoint;
     private final LongArrayQueue replayQueue;
+    private final Formatters formatters;
 
     private long sessionId;
     private long sendingTimeoutTimeInMs;
@@ -95,7 +104,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final SenderSequenceNumber senderSequenceNumber,
         final MessageTimingHandler messageTimingHandler,
         final int maxConcurrentSessionReplays,
-        final FixReceiverEndPoint receiverEndPoint)
+        final FixReceiverEndPoint receiverEndPoint,
+        final Formatters formatters)
     {
         super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
             framer);
@@ -109,6 +119,7 @@ class FixSenderEndPoint extends SenderEndPoint
         replayTracker = new StreamTracker(replayBlockablePosition);
         this.messageTimingHandler = messageTimingHandler;
         this.receiverEndPoint = receiverEndPoint;
+        this.formatters = formatters;
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
         replayQueue = new LongArrayQueue(
             Math.max(LongArrayQueue.MIN_CAPACITY, maxConcurrentSessionReplays), NO_REPLAY_CORRELATION_ID);
@@ -666,13 +677,24 @@ class FixSenderEndPoint extends SenderEndPoint
         // duplicates
 
         final StreamTracker replayTracker = this.replayTracker;
+        final long replayInFlight = this.replayInFlight;
+        final boolean partiallySentMessage = replayTracker.partiallySentMessage;
+        final long skipPosition = replayTracker.skipPosition;
+
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.replayComplete.clear().with(connectionId).with(correlationId).with(slow)
+                .with(replayInFlight).with(partiallySentMessage).with(skipPosition));
+        }
+
         if (correlationId == replayInFlight && // deduplicate by checking the correlation id
-            !replayTracker.partiallySentMessage &&
-            replayTracker.skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
+            !partiallySentMessage &&
+            skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
             replayPaused(false);
 
-            replayInFlight = NO_REPLAY_CORRELATION_ID;
+            this.replayInFlight = NO_REPLAY_CORRELATION_ID;
             return super.onReplayComplete(correlationId, slow);
         }
 
@@ -734,8 +756,8 @@ class FixSenderEndPoint extends SenderEndPoint
     private void checkStartReplay(
         final long correlationId, final long msgPosition, final boolean slow)
     {
-        final long replay = replayQueue.peekLong();
-        if (replay == NO_REPLAY_CORRELATION_ID)
+        final long nextReplayCorrelationId = replayQueue.peekLong();
+        if (nextReplayCorrelationId == NO_REPLAY_CORRELATION_ID)
         {
             blockStartReplay(msgPosition, slow);
             return;
@@ -744,14 +766,15 @@ class FixSenderEndPoint extends SenderEndPoint
         if (replayInFlight != NO_REPLAY_CORRELATION_ID)
         {
             errorHandler.onError(new IllegalStateException("invariant fail: replayInFlight = " + replayInFlight +
-                " when trying to process " + correlationId));
+                " when trying to process " + correlationId + ", slow = " + slow + ",connectionId=" + connectionId));
         }
 
-        if (replay == correlationId)
+        if (nextReplayCorrelationId == correlationId)
         {
-            replayInFlight = replay;
+            replayInFlight = nextReplayCorrelationId;
             replayTracker.skipPosition = Long.MAX_VALUE;
             replayQueue.removeLong();
+
             if (slow)
             {
                 dropFurtherBehind(-START_REPLAY_LENGTH);
@@ -759,8 +782,16 @@ class FixSenderEndPoint extends SenderEndPoint
         }
         else
         {
-            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, replay = " + replay +
-                " when trying to process " + correlationId));
+            if (slow && (correlationId < nextReplayCorrelationId))
+            {
+                // We're just seeing the same message that we've already processed before on a controlledPeek of the
+                // slow stream, which can give us messages twice.
+                return;
+            }
+
+            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, replay = " +
+                nextReplayCorrelationId + " when trying to process " + correlationId + ", slow = " + slow +
+                ",connectionId=" + connectionId));
         }
     }
 
@@ -807,8 +838,8 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             if (IS_REPLAY_LOG_TAG_ENABLED)
             {
-                DebugLogger.log(LogTag.REPLAY, "connId=" + connectionId + ", sessId=" + sessionId +
-                    ", replayPaused=" + replayPaused);
+                DebugLogger.log(LogTag.REPLAY,
+                    formatters.replayPaused.clear().with(connectionId).with(sessionId).with(replayPaused));
             }
 
             this.replayPaused = replayPaused;
