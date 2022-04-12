@@ -59,6 +59,8 @@ class FixSenderEndPoint extends SenderEndPoint
             " skipPosition=%s");
         final CharFormatter validResendRequest = new CharFormatter(
             "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s");
+        final CharFormatter checkStartReplay = new CharFormatter(
+            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -757,6 +759,12 @@ class FixSenderEndPoint extends SenderEndPoint
     private void checkStartReplay(
         final long correlationId, final long msgPosition, final boolean slow)
     {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY, formatters.checkStartReplay.clear()
+                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString()));
+        }
+
         final long nextReplayCorrelationId = replayQueue.peekLong();
         if (nextReplayCorrelationId == NO_REPLAY_CORRELATION_ID)
         {
