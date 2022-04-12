@@ -57,6 +57,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final CharFormatter replayComplete = new CharFormatter(
             "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
             " skipPosition=%s");
+        final CharFormatter validResendRequest = new CharFormatter(
+            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -714,21 +716,20 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onValidResendRequest(final long correlationId, final boolean slow)
     {
-        if (isSlowConsumer())
+        final long replayInFlight = this.replayInFlight;
+        final LongArrayQueue replayQueue = this.replayQueue;
+
+        if (IS_REPLAY_LOG_TAG_ENABLED)
         {
-            if (slow)
-            {
-                replayQueue.addLong(correlationId);
-            }
+            DebugLogger.log(LogTag.REPLAY, formatters.validResendRequest.clear()
+                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString()));
         }
-        else
+
+        // Can potentially flip from slow to normal, so instead of checking
+        // that slow == isSlowConsumer() we just add and dedup
+        if (!contains(replayQueue, correlationId) && correlationId > replayInFlight)
         {
-            // Can potentially flip from slow to normal at the end of a replay, so instead of checking
-            // that slow == isSlowConsumer() we just add and dedup
-            if (!contains(replayQueue, correlationId))
-            {
-                replayQueue.addLong(correlationId);
-            }
+            replayQueue.addLong(correlationId);
         }
     }
 
@@ -789,8 +790,8 @@ class FixSenderEndPoint extends SenderEndPoint
                 return;
             }
 
-            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, replay = " +
-                nextReplayCorrelationId + " when trying to process " + correlationId + ", slow = " + slow +
+            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, next replay = " +
+                nextReplayCorrelationId + " when received event for " + correlationId + ", slow = " + slow +
                 ",connectionId=" + connectionId));
         }
     }
