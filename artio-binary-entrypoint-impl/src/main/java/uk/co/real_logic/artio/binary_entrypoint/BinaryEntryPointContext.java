@@ -60,7 +60,7 @@ public class BinaryEntryPointContext implements FixPContext
     }
 
     public static BinaryEntryPointContext forNextSessionVerID(
-        final int sessionId, final long nanoTime, final int firmId)
+        final long sessionId, final long nanoTime, final long firmId)
     {
         return new BinaryEntryPointContext(
             sessionId,
