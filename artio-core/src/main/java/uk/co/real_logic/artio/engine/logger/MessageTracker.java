@@ -29,6 +29,7 @@ public abstract class MessageTracker implements ControlledFragmentHandler
     final LogTag logTag;
     final ControlledFragmentHandler messageHandler;
 
+    int maxCount;
     int count;
 
     MessageTracker(final LogTag logTag, final ControlledFragmentHandler messageHandler)
@@ -37,8 +38,9 @@ public abstract class MessageTracker implements ControlledFragmentHandler
         this.messageHandler = messageHandler;
     }
 
-    void reset()
+    void reset(final int maxCount)
     {
-        count = 0;
+        this.maxCount = maxCount;
+        this.count = 0;
     }
 }

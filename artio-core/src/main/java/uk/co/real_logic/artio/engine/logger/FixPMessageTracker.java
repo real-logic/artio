@@ -19,16 +19,22 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.LogTag;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import uk.co.real_logic.artio.messages.FixPMessageDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class BinaryMessageTracker extends MessageTracker
+public class FixPMessageTracker extends MessageTracker
 {
-    public BinaryMessageTracker(final ControlledFragmentHandler messageHandler)
+    private final AbstractFixPParser fixPParser;
+
+    public FixPMessageTracker(final ControlledFragmentHandler messageHandler, final AbstractFixPParser fixPParser)
     {
         super(LogTag.REPLAY, messageHandler);
+        this.fixPParser = fixPParser;
     }
 
     public Action onFragment(
@@ -36,8 +42,21 @@ public class BinaryMessageTracker extends MessageTracker
     {
         messageHeaderDecoder.wrap(buffer, offset);
 
-        if (messageHeaderDecoder.templateId() == FixPMessageDecoder.TEMPLATE_ID)
+        final int templateId = messageHeaderDecoder.templateId();
+        if (templateId == FixPMessageDecoder.TEMPLATE_ID)
         {
+            // NB: we can aggregate contiguous ranges of business messages and we ignore session messages when indexing
+            // So we need to filter out the session messages here on replay.
+
+            final int encoderOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
+            final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
+                FixPMessageDecoder.BLOCK_LENGTH;
+            final boolean retransmittedMessage = fixPParser.isRetransmittedMessage(buffer, headerOffset);
+            if (!retransmittedMessage || count >= maxCount)
+            {
+                return CONTINUE;
+            }
+
             final Action action = messageHandler.onFragment(buffer, offset, length, header);
             if (action != ABORT)
             {

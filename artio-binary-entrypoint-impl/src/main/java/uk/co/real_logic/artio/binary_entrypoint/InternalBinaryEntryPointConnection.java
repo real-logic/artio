@@ -439,9 +439,18 @@ class InternalBinaryEntryPointConnection
         {
             if (retransmitOfflineNextSessionMessages)
             {
-                if (!retransmitOfflineNextSessionMessages(sessionID))
+                if (nextSentSeqNo > 1)
                 {
-                    return ABORT;
+                    if (!retransmitOfflineNextSessionMessages(sessionID))
+                    {
+                        return ABORT;
+                    }
+                }
+                else
+                {
+                    // If no offline messages were sent whilst the next session version id was used then we don't need
+                    // to retransmit anything.
+                    retransmitOfflineNextSessionMessages = false;
                 }
             }
 

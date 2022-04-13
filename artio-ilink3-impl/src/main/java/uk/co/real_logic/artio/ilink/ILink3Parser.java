@@ -286,4 +286,9 @@ public class ILink3Parser extends AbstractFixPParser
     {
         return Retransmission509Decoder.TEMPLATE_ID;
     }
+
+    public boolean isRetransmittedMessage(final DirectBuffer buffer, final int offset)
+    {
+        return true;
+    }
 }

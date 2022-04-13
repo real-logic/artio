@@ -32,7 +32,7 @@ import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 class BinaryEntryPointSequenceExtractor extends AbstractFixPSequenceExtractor
 {
-    private static final int LOWEST_APP_TEMPLATE_ID = SimpleNewOrderDecoder.TEMPLATE_ID;
+    static final int LOWEST_APP_TEMPLATE_ID = SimpleNewOrderDecoder.TEMPLATE_ID;
 
     private final Long2ObjectHashMap<Info> sessionIdToInfo = new Long2ObjectHashMap<>();
     private final LongFunction<Info> onNewConnectionFunc = this::onNewConnection;

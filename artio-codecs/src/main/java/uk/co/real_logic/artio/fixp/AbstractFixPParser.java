@@ -46,4 +46,6 @@ public abstract class AbstractFixPParser
 
     public abstract int retransmissionTemplateId();
 
+    public abstract boolean isRetransmittedMessage(DirectBuffer buffer, int offset);
+
 }

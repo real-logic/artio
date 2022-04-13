@@ -230,6 +230,7 @@ public class ReplayOperation
             final long length = recordingRange.length;
             final long endPosition = beginPosition + length;
             final long recordingId = recordingRange.recordingId;
+            final int count = recordingRange.count;
 
             if (archivingNotComplete(endPosition, recordingId))
             {
@@ -254,7 +255,7 @@ public class ReplayOperation
                     archiveReplayStream);
                 aeronSessionId = (int)replaySessionId;
 
-                messageTracker.reset();
+                messageTracker.reset(count);
 
                 // reset the image if the new recordingRange requires it
                 if (image != null && aeronSessionId != image.sessionId())

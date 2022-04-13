@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader;
 import java.util.function.Consumer;
 
 import static uk.co.real_logic.artio.LogTag.FIXP_SESSION;
+import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointSequenceExtractor.LOWEST_APP_TEMPLATE_ID;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.SOFH_LENGTH;
 
 public class BinaryEntryPointParser extends AbstractFixPParser
@@ -274,5 +275,10 @@ public class BinaryEntryPointParser extends AbstractFixPParser
     public int retransmissionTemplateId()
     {
         return RetransmissionDecoder.TEMPLATE_ID;
+    }
+
+    public boolean isRetransmittedMessage(final DirectBuffer buffer, final int offset)
+    {
+        return templateId(buffer, offset) >= LOWEST_APP_TEMPLATE_ID;
     }
 }

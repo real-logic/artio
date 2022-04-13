@@ -21,7 +21,6 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongArrayList;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
@@ -1256,7 +1255,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionId() throws IOException
     {
@@ -1265,7 +1263,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         replayNextSessionVersionIdMessages();
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestart()
         throws IOException
@@ -1277,7 +1274,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         replayNextSessionVersionIdMessages();
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAfterRestartExtended()
         throws IOException
@@ -1289,6 +1285,35 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         setupNextSessionVerID(false, 2);
 
         replayNextSessionVersionIdMessages(2);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportNegotiationOfCreatedOfflineSessionWithNextSessionVersionIdAndNoMessages()
+        throws IOException
+    {
+        // create session and acquire it
+        final BinaryEntryPointContext context = nextSessionVerIDContext();
+
+        offlineSession(context, true, CL_ORD_ID);
+        assertOnlyOneFixPSession();
+
+        final long sessionVerID = 2;
+        reNegotiateWithVerId(sessionVerID, true, client ->
+        {
+            assertNextSequenceNumbers(1, 1);
+
+            exchangeOrderAndReportNew(client);
+            assertNextSequenceNumbers(2, 2);
+            clientTerminatesSession(client);
+        });
+    }
+
+    private BinaryEntryPointContext nextSessionVerIDContext()
+    {
+        return BinaryEntryPointContext.forNextSessionVerID(
+            SESSION_ID,
+            System.nanoTime(),
+            FIRM_ID);
     }
 
     private void replayNextSessionVersionIdMessages() throws IOException
@@ -1315,7 +1340,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readExecutionReportNew(otherClOrderID);
             assertNextSequenceNumbers(1, offlineMessages + 2);
             testSystem.await("Still replaying", () -> !connection.isReplaying());
-            client.skipTemplateId(ExecutionReport_NewEncoder.TEMPLATE_ID);
             clientTerminatesSession(client);
         });
     }
@@ -1328,10 +1352,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     private void setupNextSessionVerID(final boolean firstTime, final int clOrdId)
     {
         // create session and acquire it
-        final BinaryEntryPointContext context = BinaryEntryPointContext.forNextSessionVerID(
-            SESSION_ID,
-            System.nanoTime(),
-            FIRM_ID);
+        final BinaryEntryPointContext context = nextSessionVerIDContext();
 
         offlineSessionWithRetransmittableMessage(context, firstTime, clOrdId);
 
@@ -1467,6 +1488,21 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     private long offlineSessionWithRetransmittableMessage(
         final BinaryEntryPointContext context, final boolean firstTime, final int clOrdId)
     {
+        final long sessionVerID = offlineSession(context, firstTime, clOrdId);
+
+        final long msgPos = sendExecutionReportNew(connection, clOrdId, SECURITY_ID, false);
+        final ReadablePosition pos = testSystem.awaitCompletedReply(
+            engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
+        testSystem.awaitPosition(pos, msgPos);
+        assertNextSequenceNumbers(1, clOrdId + 1);
+
+        resetHandlers();
+
+        return sessionVerID;
+    }
+
+    private long offlineSession(final BinaryEntryPointContext context, final boolean firstTime, final int clOrdId)
+    {
         final long sessionVerID = context.sessionVerID();
 
         if (firstTime)
@@ -1485,15 +1521,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(sessionVerID, connection.sessionVerId());
         assertEquals(sessionVerID, connectionAcquiredHandler.sessionVerIdAtAcquire());
-
-        final long msgPos = sendExecutionReportNew(connection, clOrdId, SECURITY_ID, false);
-        final ReadablePosition pos = testSystem.awaitCompletedReply(
-            engine.libraryIndexedPosition(library.libraryId())).resultIfPresent();
-        testSystem.awaitPosition(pos, msgPos);
-        assertNextSequenceNumbers(1, clOrdId + 1);
-
-        resetHandlers();
-
         return sessionVerID;
     }
 

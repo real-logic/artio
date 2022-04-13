@@ -98,7 +98,7 @@ public class FixPReplayerSession extends ReplayerSession
 
     MessageTracker messageTracker()
     {
-        return new BinaryMessageTracker(this);
+        return new FixPMessageTracker(this, binaryParser);
     }
 
     public boolean attemptReplay()
