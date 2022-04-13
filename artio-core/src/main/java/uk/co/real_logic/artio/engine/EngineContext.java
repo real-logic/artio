@@ -336,7 +336,15 @@ public class EngineContext implements AutoCloseable
             outboundReplayQuery = newReplayQuery(
                 configuration.archiverIdleStrategy(), configuration.outboundLibraryStream());
             outboundEvictionHandler.replayQuery(outboundReplayQuery);
-            replayer = newReplayer(replayPublication, outboundReplayQuery);
+            try
+            {
+                replayer = newReplayer(replayPublication, outboundReplayQuery);
+            }
+            catch (final Throwable e)
+            {
+                outboundReplayQuery.close();
+                throw e;
+            }
         }
         else
         {

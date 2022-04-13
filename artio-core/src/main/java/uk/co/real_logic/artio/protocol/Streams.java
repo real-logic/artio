@@ -18,11 +18,14 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
+
+import java.nio.file.NoSuchFileException;
 
 public final class Streams
 {
@@ -75,8 +78,31 @@ public final class Streams
 
     public Subscription subscription(final String name)
     {
-        final Subscription subscription = aeron.addSubscription(aeronChannel, streamId);
-        StreamInformation.print(name, subscription, printAeronStreamIdentifiers);
-        return subscription;
+        while (true)
+        {
+            try
+            {
+                final Subscription subscription = aeron.addSubscription(aeronChannel, streamId);
+                StreamInformation.print(name, subscription, printAeronStreamIdentifiers);
+                return subscription;
+            }
+            // Catch and retry, this has only ever been seen in a CI system with a virtual file-system where the
+            // created file doesn't appear in the virtual file system
+            catch (final Exception e)
+            {
+                // Thrown by the underlying
+                //noinspection ConstantConditions
+                if (e instanceof NoSuchFileException)
+                {
+                    final NoSuchFileException noSuchFileException = (NoSuchFileException)e;
+                    if (noSuchFileException.getMessage().contains(".logbuffer"))
+                    {
+                        continue;
+                    }
+                }
+
+                LangUtil.rethrowUnchecked(e);
+            }
+        }
     }
 }
