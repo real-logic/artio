@@ -225,12 +225,12 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
             print(unsafeReadBuffer, "> ");
 
-            final int decodedTemplateId = messageDecoder.sbeTemplateId();
-            if (decodedTemplateId != templateId)
+            final int expectedDecodeTemplateId = messageDecoder.sbeTemplateId();
+            if (expectedDecodeTemplateId != templateId)
             {
                 final StringBuilder sb = new StringBuilder("invalid template id: ");
                 jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
-                assertEquals(sb.toString(), decodedTemplateId, templateId);
+                assertEquals(sb.toString(), expectedDecodeTemplateId, templateId);
             }
 
             if (totalLength != read)

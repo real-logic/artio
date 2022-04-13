@@ -64,7 +64,8 @@ public class FixPReplayerSession extends ReplayerSession
 
     public FixPReplayerSession(
         final long connectionId,
-        final long correlationId, final BufferClaim bufferClaim,
+        final long correlationId,
+        final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final int maxClaimAttempts,
         final ExclusivePublication publication,
@@ -98,7 +99,7 @@ public class FixPReplayerSession extends ReplayerSession
 
     MessageTracker messageTracker()
     {
-        return new FixPMessageTracker(this, binaryParser);
+        return new FixPMessageTracker(this, binaryParser, (endSeqNo - beginSeqNo) + 1);
     }
 
     public boolean attemptReplay()

@@ -30,11 +30,16 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 public class FixPMessageTracker extends MessageTracker
 {
     private final AbstractFixPParser fixPParser;
+    private int totalMessages;
 
-    public FixPMessageTracker(final ControlledFragmentHandler messageHandler, final AbstractFixPParser fixPParser)
+    public FixPMessageTracker(
+        final ControlledFragmentHandler messageHandler,
+        final AbstractFixPParser fixPParser,
+        final int totalMessages)
     {
         super(LogTag.REPLAY, messageHandler);
         this.fixPParser = fixPParser;
+        this.totalMessages = totalMessages;
     }
 
     public Action onFragment(
@@ -52,7 +57,7 @@ public class FixPMessageTracker extends MessageTracker
             final int headerOffset = encoderOffset + SimpleOpenFramingHeader.SOFH_LENGTH +
                 FixPMessageDecoder.BLOCK_LENGTH;
             final boolean retransmittedMessage = fixPParser.isRetransmittedMessage(buffer, headerOffset);
-            if (!retransmittedMessage || count >= maxCount)
+            if (!retransmittedMessage || count >= maxCount || totalMessages <= 0)
             {
                 return CONTINUE;
             }
@@ -60,6 +65,7 @@ public class FixPMessageTracker extends MessageTracker
             final Action action = messageHandler.onFragment(buffer, offset, length, header);
             if (action != ABORT)
             {
+                totalMessages--;
                 count++;
             }
 

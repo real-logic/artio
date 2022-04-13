@@ -1332,7 +1332,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             // Check that the other clOrdId comes in second
             sendExecutionReportNew(connection, otherClOrderID, SECURITY_ID, false);
 
-            client.skipTemplateId(NegotiateResponseDecoder.TEMPLATE_ID);
             for (int i = 0; i < offlineMessages; i++)
             {
                 client.readExecutionReportNew(i + 1);
