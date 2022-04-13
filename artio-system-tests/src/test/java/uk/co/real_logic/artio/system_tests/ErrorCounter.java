@@ -21,7 +21,7 @@ public class ErrorCounter implements ErrorConsumer
 {
     private String containsString;
 
-    private int lastObservationCount;
+    private volatile int lastObservationCount;
 
     public void accept(
         final int observationCount,

@@ -359,13 +359,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             sendResendRequest(2, 0, initiatingOtfAcceptor, initiatingSession);
         }
 
+        testSystem.await("Failed to suppress resend requests", () -> errorCounter.lastObservationCount() > 0);
+
         testSystem.awaitSend("Failed to requestDisconnect", () -> initiatingSession.requestDisconnect());
         assertSessionDisconnected(acceptingSession);
 
         testSystem.removeOperation(replayCountChecker);
         replayCountChecker.assertBelowThreshold();
-
-        testSystem.await("Failed to suppress resend requests", () -> errorCounter.lastObservationCount() > 0);
     }
 
     @Test(timeout = 50_000)
