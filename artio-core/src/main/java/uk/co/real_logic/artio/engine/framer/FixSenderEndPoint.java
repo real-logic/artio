@@ -56,11 +56,11 @@ class FixSenderEndPoint extends SenderEndPoint
         final CharFormatter replayPaused = new CharFormatter("connId=%s, sessId=%s, replayPaused=%s");
         final CharFormatter replayComplete = new CharFormatter(
             "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
-            " skipPosition=%s");
+            " skipPosition=%s, lastProc=%s");
         final CharFormatter validResendRequest = new CharFormatter(
-            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s");
+            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
         final CharFormatter checkStartReplay = new CharFormatter(
-            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s");
+            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -89,6 +89,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private FixDictionary fixDictionary;
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
+    private long lastProcessedReplay;
     private long replayInFlight;
 
     FixSenderEndPoint(
@@ -676,8 +677,8 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public Action onReplayComplete(final long correlationId, final boolean slow)
     {
-        // We don't do a slow check here because you may catch up during the replay if you only became replay slow
-        // and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
+        // We don't do a normal slow check here because you may catch up during the replay if you only became replay
+        // slow and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
         // duplicates
 
         final StreamTracker replayTracker = this.replayTracker;
@@ -689,7 +690,8 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             DebugLogger.log(LogTag.REPLAY,
                 formatters.replayComplete.clear().with(connectionId).with(correlationId).with(slow)
-                .with(replayInFlight).with(partiallySentMessage).with(skipPosition));
+                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(lastProcessedReplay));
+            System.out.println(replayTracker.blockablePosition.blockPosition());
         }
 
         if (correlationId == replayInFlight && // deduplicate by checking the correlation id
@@ -698,6 +700,7 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             replayPaused(false);
 
+            this.lastProcessedReplay = replayInFlight;
             this.replayInFlight = NO_REPLAY_CORRELATION_ID;
             return super.onReplayComplete(correlationId, slow);
         }
@@ -718,13 +721,20 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onValidResendRequest(final long correlationId, final boolean slow)
     {
+        // We can end up seeing this message again if we're in slow-consumer mode and start re-scanning the messages.
+        if (correlationId <= lastProcessedReplay)
+        {
+            return;
+        }
+
         final long replayInFlight = this.replayInFlight;
         final LongArrayQueue replayQueue = this.replayQueue;
 
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY, formatters.validResendRequest.clear()
-                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString()));
+                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
+                .with(lastProcessedReplay));
         }
 
         // Can potentially flip from slow to normal, so instead of checking
@@ -750,9 +760,14 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
     {
-        if (slow == isSlowConsumer())
+        final boolean slowConsumer = isSlowConsumer();
+        if (slow == slowConsumer)
         {
             checkStartReplay(correlationId, msgPosition, slow);
+        }
+        else if (!slow)
+        {
+            dropFurtherBehind(START_REPLAY_LENGTH);
         }
     }
 
@@ -762,7 +777,14 @@ class FixSenderEndPoint extends SenderEndPoint
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY, formatters.checkStartReplay.clear()
-                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString()));
+                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
+                .with(lastProcessedReplay));
+        }
+
+        // We've already seen this message if it's slow.
+        if (replayInFlight == correlationId)
+        {
+            return;
         }
 
         final long nextReplayCorrelationId = replayQueue.peekLong();
@@ -807,7 +829,6 @@ class FixSenderEndPoint extends SenderEndPoint
     private void blockStartReplay(final long msgPosition, final boolean slow)
     {
         final StreamTracker replayTracker = this.replayTracker;
-        final boolean slowBecauseOfNormalStream = replayTracker.sentPosition == 0;
         final long msgStartPosition = msgPosition - TOTAL_START_REPLAY_LENGTH;
         blockPositionOther(msgStartPosition, msgPosition, replayTracker);
 
@@ -817,11 +838,6 @@ class FixSenderEndPoint extends SenderEndPoint
             bytesInBuffer.setOrdered(START_REPLAY_LENGTH);
             replayTracker.sentPosition = msgStartPosition;
             sendSlowStatus(true);
-        }
-        else if (slowBecauseOfNormalStream)
-        {
-            // if slow due to us, we've already seen this message and added it to the bytes in buffer total
-            bytesInBuffer.getAndAddOrdered(START_REPLAY_LENGTH);
         }
     }
 
