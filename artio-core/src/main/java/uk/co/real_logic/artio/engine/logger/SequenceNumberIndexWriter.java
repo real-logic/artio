@@ -26,7 +26,6 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
-import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
