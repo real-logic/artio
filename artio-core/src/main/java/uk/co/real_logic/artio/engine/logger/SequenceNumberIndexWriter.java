@@ -26,6 +26,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
@@ -374,15 +375,12 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
 
     public void onRedact(final long sessionId, final int lastSequenceNumber)
     {
-
         // Cover the case where the engine has acquired a session from a library and we've already indexed a message
         // that was from the wrong library
         final int lastKnownSequenceNumber = reader.lastKnownSequenceNumber(sessionId);
 
         if (lastKnownSequenceNumber > lastSequenceNumber && lastSequenceNumber != 0)
         {
-            /*System.out.println("SequenceNumberIndexWriter.onManageSessionMessage, lastKnownSequenceNumber = " +
-                lastKnownSequenceNumber + ", lastSequenceNumber = " + lastSequenceNumber);*/
             onRedactSequenceUpdate(lastSequenceNumber, sessionId, NO_REQUIRED_POSITION);
         }
     }

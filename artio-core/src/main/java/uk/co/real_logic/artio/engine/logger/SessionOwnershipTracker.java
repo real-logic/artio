@@ -49,10 +49,6 @@ class SessionOwnershipTracker
     {
         final int libraryId = manageSession.libraryId();
         final long sessionId = manageSession.session();
-        final int lastSequenceNumber = sent ? manageSession.lastSentSequenceNumber() :
-            manageSession.lastReceivedSequenceNumber();
-
-        redactHandler.onRedact(sessionId, lastSequenceNumber);
 
         sessionIdToLibraryId.put(sessionId, libraryId);
     }

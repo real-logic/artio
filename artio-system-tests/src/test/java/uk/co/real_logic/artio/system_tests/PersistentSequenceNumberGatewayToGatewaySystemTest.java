@@ -385,19 +385,23 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         testSystem.await("Failed to receive execution reports",
             () -> initiatingOtfAcceptor.receivedMessage(EXECUTION_REPORT_MESSAGE_AS_STR).count() == messageCount);
 
+        final ReadablePosition initReadablePosition = testSystem.libraryPosition(initiatingEngine, initiatingLibrary);
+
         for (int i = 0; i < 3; i++)
         {
-            testSystem.awaitSend(initiatingSession::requestDisconnect);
+            final long position = testSystem.awaitSend(initiatingSession::requestDisconnect);
             assertSessionsDisconnected();
             clearMessages();
             initiatingSession = null;
             acceptingSession = null;
             acceptingHandler.clearSessionExistsInfos();
+            testSystem.awaitPosition(initReadablePosition, position);
+
             connectPersistingSessions();
 
             assertFalse(acceptingSession.isReplaying());
             sendResendRequest(1, 0, initiatingOtfAcceptor, initiatingSession);
-            testSystem.await("", acceptingSession::isReplaying);
+            testSystem.await("failed to start replaying", acceptingSession::isReplaying);
 
             // Pause for a little bit to test out race with replaying
             testSystem.awaitBlocking(() ->

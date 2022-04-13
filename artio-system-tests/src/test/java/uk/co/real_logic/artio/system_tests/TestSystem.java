@@ -90,8 +90,6 @@ public class TestSystem
         }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
         operations.forEach(Runnable::run);
-
-        LockSupport.parkNanos(10);
     }
 
     public void addOperation(final Runnable operation)
