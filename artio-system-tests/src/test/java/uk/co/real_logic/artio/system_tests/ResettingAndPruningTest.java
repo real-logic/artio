@@ -1,6 +1,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.concurrent.status.ReadablePosition;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.OrdType;
 import uk.co.real_logic.artio.Reply;
@@ -27,6 +28,7 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INIT
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
+@Ignore
 public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
 {
     private long resetPosition = 0;
