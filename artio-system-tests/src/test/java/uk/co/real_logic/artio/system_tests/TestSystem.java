@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
@@ -89,6 +90,8 @@ public class TestSystem
         }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
         operations.forEach(Runnable::run);
+
+        LockSupport.parkNanos(10);
     }
 
     public void addOperation(final Runnable operation)
