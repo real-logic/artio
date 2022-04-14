@@ -114,6 +114,13 @@ allprojects {
         mavenCentral()
     }
 
+    configurations.all {
+        resolutionStrategy {
+            failOnVersionConflict()
+            force "org.agrona:agrona:${agronaVersion}"
+        }
+    }
+
     tasks.withType(Sign) {
         onlyIf { isReleaseVersion }
     }
