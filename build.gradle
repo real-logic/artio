@@ -38,9 +38,9 @@ def mockitoVersion = '4.4.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.35'
 
-def aeronVersion = '1.37.0'
-def agronaVersion = '1.14.0'
-def sbeVersion = '1.25.1'
+def agronaVersion = '1.15.1'
+def sbeVersion = '1.25.3'
+def aeronVersion = '1.38.1'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
