@@ -51,6 +51,10 @@ public class ReplayOperation
         ", length=%s" +
         ", count=%s" +
         "}"));
+    private static final ThreadLocal<CharFormatter> START_REPLAY_FORMATTER =
+        ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Start Replay: " +
+        "replaySessionId=%s" +
+        ", count=%s"));
     private static final ThreadLocal<CharFormatter> POLLING_REPLAY_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s"));
     private static final ThreadLocal<CharFormatter> FINISHED_FORMATTER =
@@ -77,6 +81,7 @@ public class ReplayOperation
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
     private final int archiveReplayStream;
+    private final boolean logTagEnabled;
     private final LogTag logTag;
     private final CountersReader countersReader;
     private final Subscription subscription;
@@ -120,6 +125,8 @@ public class ReplayOperation
         final Aeron aeron = aeronArchive.context().aeron();
         countersReader = aeron.countersReader();
         this.subscription = subscription;
+
+        logTagEnabled = DebugLogger.isEnabled(logTag);
     }
 
     /**
@@ -257,6 +264,8 @@ public class ReplayOperation
 
                 messageTracker.reset(count);
 
+                logStart(count);
+
                 // reset the image if the new recordingRange requires it
                 if (image != null && aeronSessionId != image.sessionId())
                 {
@@ -273,14 +282,7 @@ public class ReplayOperation
 
         if (image == null)
         {
-            if (IS_REPLAY_ATTEMPT_ENABLED)
-            {
-                DebugLogger.log(LogTag.REPLAY_ATTEMPT, "Acquiring Replay Image");
-            }
-
-            image = subscription.imageBySessionId(aeronSessionId);
-
-            return false;
+            return attemptAcquireImage();
         }
         else
         {
@@ -310,6 +312,34 @@ public class ReplayOperation
             {
                 return onReachedMessageReplayCount(messageTrackerCount, recordingRangeCount);
             }
+        }
+    }
+
+    private boolean attemptAcquireImage()
+    {
+        if (IS_REPLAY_ATTEMPT_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY_ATTEMPT, "Acquiring Replay Image");
+        }
+
+        image = subscription.imageBySessionId(aeronSessionId);
+
+        if (image != null && logTagEnabled)
+        {
+            DebugLogger.log(logTag, "ReplayOperation : Found image");
+        }
+
+        return false;
+    }
+
+    private void logStart(final int count)
+    {
+        if (logTagEnabled)
+        {
+            DebugLogger.log(logTag, ReplayOperation.START_REPLAY_FORMATTER.get()
+                .clear()
+                .with(aeronSessionId)
+                .with(count));
         }
     }
 
