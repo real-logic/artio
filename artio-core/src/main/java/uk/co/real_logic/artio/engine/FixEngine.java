@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.artio.engine;
 
-import io.aeron.*;
+import io.aeron.ExclusivePublication;
+import io.aeron.Image;
+import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
@@ -295,7 +297,7 @@ public final class FixEngine extends GatewayProcess
 
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
-            init(configuration);
+            init(configuration, ENGINE_LIBRARY_ID);
             timers = new EngineTimers(configuration.epochNanoClock(), fixCounters.negativeTimestamps());
             final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
             final AeronArchive aeronArchive =

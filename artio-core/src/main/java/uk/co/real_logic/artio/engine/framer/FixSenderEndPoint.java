@@ -56,7 +56,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final CharFormatter replayPaused = new CharFormatter("connId=%s, sessId=%s, replayPaused=%s");
         final CharFormatter replayComplete = new CharFormatter(
             "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
-            " skipPosition=%s, lastProc=%s");
+            " skipPosition=%s, lastProc=%s, queue=%s");
         final CharFormatter validResendRequest = new CharFormatter(
             "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
         final CharFormatter checkStartReplay = new CharFormatter(
@@ -600,17 +600,17 @@ class FixSenderEndPoint extends SenderEndPoint
         final long messagePosition = header.position();
         final long messageStartPosition = messagePosition - alignedLength;
 
-        blockablePosition.blockPosition(messageStartPosition);
+        blockablePosition.blockPosition(messageStartPosition, true);
         tracker.skipPosition = messagePosition;
         return Action.CONTINUE;
     }
 
     private void blockPositionOther(
-        final long messageStartPosition, final long messagePosition, final StreamTracker tracker)
+        final long messageStartPosition, final long messagePosition, final StreamTracker tracker, final boolean slow)
     {
         // Assumes non-fragmented message
         final BlockablePosition blockablePosition = tracker.blockablePosition;
-        blockablePosition.blockPosition(messageStartPosition);
+        blockablePosition.blockPosition(messageStartPosition, slow);
         tracker.skipPosition = messagePosition;
     }
 
@@ -690,8 +690,8 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             DebugLogger.log(LogTag.REPLAY,
                 formatters.replayComplete.clear().with(connectionId).with(correlationId).with(slow)
-                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(lastProcessedReplay));
-            System.out.println(replayTracker.blockablePosition.blockPosition());
+                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(lastProcessedReplay)
+                .with(replayQueue.toString()));
         }
 
         if (correlationId == replayInFlight && // deduplicate by checking the correlation id
@@ -830,7 +830,7 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         final StreamTracker replayTracker = this.replayTracker;
         final long msgStartPosition = msgPosition - TOTAL_START_REPLAY_LENGTH;
-        blockPositionOther(msgStartPosition, msgPosition, replayTracker);
+        blockPositionOther(msgStartPosition, msgPosition, replayTracker, slow);
 
         if (!slow)
         {

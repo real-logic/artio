@@ -515,6 +515,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         replayComplete.wrap(buffer, offset, blockLength, version);
         final long connection = replayComplete.connection();
         final int libraryId = replayComplete.libraryId();
+        final long correlationId = replayComplete.correlationId();
         final Action action = handler.onApplicationHeartbeat(libraryId, ReplayCompleteDecoder.TEMPLATE_ID, 0);
 
         if (ABORT == action)
@@ -522,7 +523,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             return action;
         }
 
-        return handler.onReplayComplete(libraryId, connection);
+        return handler.onReplayComplete(libraryId, connection, correlationId);
     }
 
     private Action onInboundFixPConnect(

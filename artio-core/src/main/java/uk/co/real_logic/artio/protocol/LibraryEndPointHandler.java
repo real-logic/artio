@@ -111,7 +111,7 @@ public interface LibraryEndPointHandler
         int libraryId, long correlationId, int newSessionId, long stopPosition, int initialTermId,
         int termBufferLength, int mtuLength);
 
-    Action onReplayComplete(int libraryId, long connection);
+    Action onReplayComplete(int libraryId, long connection, long correlationId);
 
     Action onInboundFixPConnect(
         long connection,

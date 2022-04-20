@@ -2775,11 +2775,12 @@ public class Session
         this.isSlowConsumer = hasBecomeSlow;
     }
 
-    void onReplayComplete()
+    void onReplayComplete(final long correlationId)
     {
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
-            DebugLogger.log(REPLAY, formatters.replayComplete.clear().with(replaysInFlight).with(connectionId));
+            DebugLogger.log(REPLAY, formatters.replayComplete.clear().with(replaysInFlight).with(connectionId)
+                .with(correlationId));
         }
 
         // replaysInFlight gets reset to 0 when a disconnect happens, stop this from racing with a replay complete

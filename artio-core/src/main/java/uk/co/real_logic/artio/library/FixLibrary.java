@@ -79,7 +79,7 @@ public class FixLibrary extends GatewayProcess
         try
         {
             scheduler.configure(configuration.aeronContext());
-            init(configuration);
+            init(configuration, configuration.libraryId());
             final LibraryTimers timers = new LibraryTimers(
                 configuration.epochNanoClock(), fixCounters.negativeTimestamps());
             initMonitoringAgent(timers.all(), configuration, null, null);

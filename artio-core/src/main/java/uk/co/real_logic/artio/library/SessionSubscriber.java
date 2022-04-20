@@ -308,8 +308,8 @@ class SessionSubscriber implements AutoCloseable, FixSessionOwner
         );
     }
 
-    void onReplayComplete()
+    void onReplayComplete(final long correlationId)
     {
-        session.onReplayComplete();
+        session.onReplayComplete(correlationId);
     }
 }

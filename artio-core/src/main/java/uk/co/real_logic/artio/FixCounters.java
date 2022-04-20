@@ -92,21 +92,21 @@ public class FixCounters implements AutoCloseable
         return counterIds;
     }
 
-    FixCounters(final Aeron aeron, final boolean isEngine)
+    FixCounters(final Aeron aeron, final boolean isEngine, final int libraryId)
     {
         this.aeron = aeron;
         aeron.addUnavailableCounterHandler((countersReader, registrationId, counterId) ->
             counters.removeIf(counter -> counter.id() == counterId));
         failedInboundPublications = newCounter(FAILED_INBOUND_TYPE_ID.id(),
-                "Failed offer to inbound publication");
+                "Failed offer to inbound publication " + libraryId);
         failedOutboundPublications = newCounter(FAILED_OUTBOUND_TYPE_ID.id(),
-                "Failed offer to outbound publication");
+                "Failed offer to outbound publication " + libraryId);
         failedReplayPublications = newCounter(FAILED_REPLAY_TYPE_ID.id(),
-                "Failed offer to replay publication");
+                "Failed offer to replay publication " + libraryId);
         failedAdminReplyPublications = newCounter(FAILED_ADMIN_REPLY_TYPE_ID.id(),
-            "Failed offer to admin reply publication");
+            "Failed offer to admin reply publication " + libraryId);
 
-        negativeTimestamps = newCounter(NEGATIVE_TIMESTAMP_TYPE_ID.id(), "negative timestamps");
+        negativeTimestamps = newCounter(NEGATIVE_TIMESTAMP_TYPE_ID.id(), "negative timestamps " + libraryId);
 
         if (isEngine)
         {

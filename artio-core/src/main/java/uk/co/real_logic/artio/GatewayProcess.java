@@ -48,11 +48,11 @@ public abstract class GatewayProcess implements AutoCloseable
     protected Aeron aeron;
     protected Agent monitoringAgent;
 
-    protected void init(final CommonConfiguration configuration)
+    protected void init(final CommonConfiguration configuration, final int libraryId)
     {
         this.configuration = configuration;
         initMonitoring(configuration);
-        initAeron(configuration);
+        initAeron(configuration, libraryId);
     }
 
     protected abstract boolean shouldRethrowExceptionInErrorHandler();
@@ -74,12 +74,12 @@ public abstract class GatewayProcess implements AutoCloseable
         return invoker.agent();
     }
 
-    protected void initAeron(final CommonConfiguration configuration)
+    protected void initAeron(final CommonConfiguration configuration, final int libraryId)
     {
         final Aeron.Context context = configureAeronContext(configuration);
         aeron = Aeron.connect(context);
         CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
-        fixCounters = new FixCounters(aeron, this instanceof FixEngine);
+        fixCounters = new FixCounters(aeron, this instanceof FixEngine, libraryId);
     }
 
     protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)

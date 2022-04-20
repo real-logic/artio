@@ -51,7 +51,7 @@ public class InternalSession extends Session implements AutoCloseable
     public static class Formatters
     {
         final CharFormatter replayComplete = new CharFormatter(
-            "Sess.replayComplete: replaysInFlight=%s,conn=%s");
+            "Sess.replayComplete: replaysInFlight=%s,conn=%s,corr=%s");
     }
 
     public InternalSession(
@@ -369,9 +369,9 @@ public class InternalSession extends Session implements AutoCloseable
         return super.requestDisconnect(reason);
     }
 
-    public void onReplayComplete()
+    public void onReplayComplete(final long correlationId)
     {
-        super.onReplayComplete();
+        super.onReplayComplete(correlationId);
     }
 
     public void onSessionWriterLogout()

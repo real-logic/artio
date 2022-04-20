@@ -1858,14 +1858,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return Action.CONTINUE;
     }
 
-    public Action onReplayComplete(final int libraryId, final long connection)
+    public Action onReplayComplete(final int libraryId, final long connection, final long correlationId)
     {
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber sessionSubscriber = connectionIdToSession.get(connection);
             if (sessionSubscriber != null)
             {
-                sessionSubscriber.onReplayComplete();
+                sessionSubscriber.onReplayComplete(correlationId);
             }
             else
             {

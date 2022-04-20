@@ -353,7 +353,7 @@ public class FixSenderEndPointTest
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
-        verifyBlocksReplayAt(BEGIN_POSITION);
+        verifyBlocksReplayAt(BEGIN_POSITION, true);
 
         onSlowStreamReplayComplete();
         assertReplayPaused();
@@ -483,7 +483,7 @@ public class FixSenderEndPointTest
 
         // Replayer wins the race and we try to start replaying whilst there are FIX messages on the outbound path
         endPoint.onStartReplay(REPLAY_CORRELATION_ID, startReplayPosition, false);
-        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH, false);
         assertBytesInBuffer(START_REPLAY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
@@ -491,7 +491,7 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(START_REPLAY_LENGTH + BODY_LENGTH);
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, startReplayPosition);
-        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(startReplayPosition - TOTAL_START_REPLAY_LENGTH, true);
 
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(1, replayMsgPosition);
@@ -556,7 +556,7 @@ public class FixSenderEndPointTest
         assertBytesInBuffer(startingBytesInBuffer + START_REPLAY_LENGTH + BODY_LENGTH);
 
         onSlowStartReplay(REPLAY_CORRELATION_ID, msgPosition);
-        verifyBlocksReplayAt(msgPosition - TOTAL_START_REPLAY_LENGTH);
+        verifyBlocksReplayAt(msgPosition - TOTAL_START_REPLAY_LENGTH, true);
         assertBytesInBuffer(startingBytesInBuffer + START_REPLAY_LENGTH + BODY_LENGTH);
 
         channelWillWrite(BODY_LENGTH);
@@ -770,28 +770,28 @@ public class FixSenderEndPointTest
 
     private void verifyDoesNotBlock()
     {
-        verify(libraryBlockablePosition, never()).blockPosition(anyLong());
+        verify(libraryBlockablePosition, never()).blockPosition(anyLong(), anyBoolean());
         verifyDoesNotBlockReplay();
     }
 
     private void verifyDoesNotBlockReplay()
     {
-        verify(replayBlockablePosition, never()).blockPosition(anyLong());
+        verify(replayBlockablePosition, never()).blockPosition(anyLong(), anyBoolean());
     }
 
     private void verifyBlocksLibraryAt(final long position)
     {
-        verifyBlocksAt(position, libraryBlockablePosition);
+        verifyBlocksAt(position, libraryBlockablePosition, true);
     }
 
-    private void verifyBlocksReplayAt(final long position)
+    private void verifyBlocksReplayAt(final long position, final boolean slow)
     {
-        verifyBlocksAt(position, replayBlockablePosition);
+        verifyBlocksAt(position, replayBlockablePosition, slow);
     }
 
-    private void verifyBlocksAt(final long position, final BlockablePosition blockablePosition)
+    private void verifyBlocksAt(final long position, final BlockablePosition blockablePosition, final boolean slow)
     {
-        verify(blockablePosition).blockPosition(position);
+        verify(blockablePosition).blockPosition(position, slow);
         reset(blockablePosition);
     }
 
