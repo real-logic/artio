@@ -74,7 +74,6 @@ public final class RecordingRange
         }
     }
 
-    @Override
     public String toString()
     {
         return "RecordingRange{" +

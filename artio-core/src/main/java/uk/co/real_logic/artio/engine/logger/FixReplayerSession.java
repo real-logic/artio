@@ -364,7 +364,7 @@ class FixReplayerSession extends ReplayerSession
         }
         else
         {
-            DebugLogger.log(REPLAY, "Back pressured trying to sendFixMessage");
+            DebugLogger.log(REPLAY_ATTEMPT, "Back pressured trying to sendFixMessage");
 
             return ABORT;
         }

@@ -86,8 +86,11 @@ public class FramerContext
             configuration.epochNanoClock());
 
         this.inboundPublication = engineContext.inboundPublication();
-        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy,
-            outboundLibraryStreams.dataPublication("outboundPublication"));
+        final ExclusivePublication outboundDataPublication = outboundLibraryStreams.dataPublication(
+            "outboundPublication");
+//        validateMaxBytesInBuffer(outboundDataPublication, configuration);
+
+        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, outboundDataPublication);
 
         final Subscription adminEngineSubscription = newAdminEngineSubscription(aeron);
         final AdminReplyPublication adminReplyPublication = newAdminReplyPublication(aeron, fixCounters, idleStrategy);
@@ -106,7 +109,7 @@ public class FramerContext
             gatewaySessions = new FixPGatewaySessions(
                 epochClock,
                 inboundPublication,
-                outboundPublication,
+                this.outboundPublication,
                 errorHandler,
                 sentSequenceNumberIndex,
                 receivedSequenceNumberIndex,
@@ -119,7 +122,7 @@ public class FramerContext
             gatewaySessions = new FixGatewaySessions(
                 epochClock,
                 inboundPublication,
-                outboundPublication,
+                this.outboundPublication,
                 sessionIdStrategy,
                 configuration.sessionCustomisationStrategy(),
                 fixCounters,
@@ -159,7 +162,7 @@ public class FramerContext
             replayImage,
             slowReplayImage,
             engineContext.inboundReplayQuery(false),
-            outboundPublication,
+            this.outboundPublication,
             inboundPublication,
             this.adminCommands,
             sessionIdStrategy,
@@ -179,6 +182,32 @@ public class FramerContext
             engineContext.outboundIndexRegistrationId(),
             fixCounters,
             engineContext.senderSequenceNumbers());
+    }
+
+    private void validateMaxBytesInBuffer(
+        final ExclusivePublication outboundDataPublication, final EngineConfiguration configuration)
+    {
+        final int termBufferLength = outboundDataPublication.termBufferLength();
+        validateMaxBytesInBuffer(termBufferLength, null, configuration.senderMaxBytesInBuffer());
+    }
+
+    public static void validateMaxBytesInBuffer(
+        final int termBufferLength, final ErrorHandler errorHandler, final int senderMaxBytesInBuffer)
+    {
+        if (senderMaxBytesInBuffer > (4 * termBufferLength))
+        {
+            final IllegalStateException e = new IllegalStateException(
+                "EngineConfiguration.senderMaxBytesInBuffer(" + senderMaxBytesInBuffer + ") should not be set to > " +
+                "4 * termBufferLength(" + termBufferLength + ")");
+            if (errorHandler == null)
+            {
+                throw e;
+            }
+            else
+            {
+                errorHandler.onError(e);
+            }
+        }
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)

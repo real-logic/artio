@@ -402,6 +402,7 @@ public class EngineContext implements AutoCloseable
             configuration.outboundLibraryStream(),
             null,
             unavailableImageHandler);
+
         StreamInformation.print(name, subscription, configuration);
         return subscription;
     }

@@ -80,6 +80,8 @@ public class CommonConfiguration
      * Property name for the flag to enable or disable debug logging
      */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
+
+    public static final String DEBUG_BLOCK_SAMPLE_THRESHOLD_PROPERTY = "fix.core.debug.block_sample_threshold";
     /**
      * Property name for the flag to specify a subset of message types to debug print, this can be used in
      * conjunction with the FIX_MESSAGE logtag. Note: this message type filter only applies to valid fix messages.
@@ -160,10 +162,12 @@ public class CommonConfiguration
      * These are static final fields in order to give the optimiser more scope
      */
     public static final boolean DEBUG_PRINT_MESSAGES;
+    public static final int DEBUG_BLOCK_SAMPLE_THRESHOLD;
     public static final LongHashSet DEBUG_PRINT_MESSAGE_TYPES;
     public static final Set<LogTag> DEBUG_TAGS;
     public static final String DEBUG_PRINT_THREAD;
     public static final byte DEFAULT_DEBUG_LOGGING_SEPARATOR = '\001';
+    public static final int DEFAULT_DEBUG_BLOCK_SAMPLE_THRESHOLD = 10_000;
     public static final byte DEBUG_LOGGING_SEPARATOR;
 
     static
@@ -200,6 +204,8 @@ public class CommonConfiguration
         DEBUG_PRINT_THREAD = debugPrintThreadValue == null ? null : debugPrintThreadValue + " : ";
         DEBUG_PRINT_MESSAGES = debugPrintMessages;
         DEBUG_TAGS = debugTags;
+        DEBUG_BLOCK_SAMPLE_THRESHOLD = Integer.getInteger(
+            DEBUG_BLOCK_SAMPLE_THRESHOLD_PROPERTY, DEFAULT_DEBUG_BLOCK_SAMPLE_THRESHOLD);
 
         final String loggingSeparator = getProperty(LOGGING_SEPARATOR_PROPERTY);
         DEBUG_LOGGING_SEPARATOR =

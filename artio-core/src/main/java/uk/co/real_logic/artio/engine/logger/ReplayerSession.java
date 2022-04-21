@@ -94,6 +94,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
             sequenceIndex,
             REPLAY,
             messageTracker());
+        replayOperation.ids(connectionId, correlationId);
     }
 
     abstract MessageTracker messageTracker();

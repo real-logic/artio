@@ -20,6 +20,8 @@ import org.agrona.concurrent.Agent;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -112,6 +114,15 @@ public final class Exceptions
             System.out.println(Thread.currentThread().getName());
             ex.printStackTrace(System.out);
         }
+    }
+
+    public static String getStackTrace()
+    {
+        final StringWriter sw = new StringWriter();
+        final PrintWriter pw = new PrintWriter(sw);
+        new Exception().printStackTrace(pw);
+        pw.flush();
+        return sw.toString();
     }
 
     public static void printStackTracesForAllThreads()

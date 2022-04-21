@@ -376,4 +376,9 @@ public class TestSystem
     {
         return awaitCompletedReply(engine.libraries()).resultIfPresent();
     }
+
+    public void awaitReplayComplete(final Session session)
+    {
+        await("Replay never finished", () -> !session.isReplaying());
+    }
 }

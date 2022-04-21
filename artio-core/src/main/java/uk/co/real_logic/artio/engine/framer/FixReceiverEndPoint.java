@@ -1055,6 +1055,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         isPaused = false;
     }
 
+    boolean isPaused()
+    {
+        return isPaused;
+    }
+
     String address()
     {
         return address;

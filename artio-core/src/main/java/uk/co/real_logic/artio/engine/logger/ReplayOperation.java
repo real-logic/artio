@@ -50,28 +50,28 @@ public class ReplayOperation
         ", position=%s" +
         ", length=%s" +
         ", count=%s" +
-        "}"));
+        "}, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> START_REPLAY_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter("ReplayOperation : Start Replay: " +
-        "replaySessionId=%s" +
-        ", count=%s"));
+        "replaySessionId=%s, count=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> POLLING_REPLAY_FORMATTER =
-        ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s"));
+        ThreadLocal.withInitial(() -> new CharFormatter("Polling Replay Image pos=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> FINISHED_FORMATTER =
-        ThreadLocal.withInitial(() -> new CharFormatter("Finished with Image @ pos=%s, closed=%s, eos=%s"));
+        ThreadLocal.withInitial(() -> new CharFormatter(
+        "Finished with Image @ pos=%s, closed=%s, eos=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> MESSAGE_REPLAY_COUNT_FORMATTER =
         ThreadLocal.withInitial(() -> new CharFormatter(
-        "Finished with messageTrackerCount=%s, recordingRangeCount=%s"));
+        "Finished with messageTrackerCount=%s, recordingRangeCount=%s, conn=%s, corr=%s"));
 
     // Closing state formatters:
     private static final ThreadLocal<CharFormatter> INIT_CLOSING_FORMATTER = ThreadLocal.withInitial(
-        () -> new CharFormatter("ReplayOperation:INIT_CLOSING - stopReplay id=%s"));
+        () -> new CharFormatter("ReplayOperation:INIT_CLOSING - stopReplay id=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> FIND_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(
-        () -> new CharFormatter("ReplayOperation:FIND_IMAGE_CLOSING: - id=%s,image=%s"));
+        () -> new CharFormatter("ReplayOperation:FIND_IMAGE_CLOSING: - id=%s,image=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> POLL_IMAGE_CLOSING_FORMATTER = ThreadLocal.withInitial(
-        () -> new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s"));
+        () -> new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s, conn=%s, corr=%s"));
     private static final ThreadLocal<CharFormatter> CLOSED_FORMATTER = ThreadLocal.withInitial(
-        () -> new CharFormatter("ReplayOperation:CLOSED - id=%s"));
+        () -> new CharFormatter("ReplayOperation:CLOSED - id=%s, conn=%s, corr=%s"));
     private static final boolean IS_REPLAY_ATTEMPT_ENABLED = DebugLogger.isEnabled(LogTag.REPLAY_ATTEMPT);
 
     private final MessageTracker messageTracker;
@@ -92,6 +92,14 @@ public class ReplayOperation
     private long replaySessionId;
     private int aeronSessionId;
     private Image image;
+    private long connectionId;
+    private long correlationId;
+
+    public void ids(final long connectionId, final long correlationId)
+    {
+        this.connectionId = connectionId;
+        this.correlationId = correlationId;
+    }
 
     private enum State
     {
@@ -155,7 +163,10 @@ public class ReplayOperation
             {
                 if (replaySessionId != 0)
                 {
-                    DebugLogger.log(logTag, INIT_CLOSING_FORMATTER.get(), replaySessionId);
+                    DebugLogger.log(logTag, INIT_CLOSING_FORMATTER.get().clear()
+                        .with(replaySessionId)
+                        .with(connectionId)
+                        .with(correlationId));
                     try
                     {
                         aeronArchive.stopReplay(replaySessionId);
@@ -188,7 +199,11 @@ public class ReplayOperation
                 // order for it's underlying buffers to be released.
                 image = subscription.imageBySessionId(aeronSessionId);
                 final int logId = image == null ? 0 : aeronSessionId;
-                DebugLogger.log(logTag, FIND_IMAGE_CLOSING_FORMATTER.get(), replaySessionId, logId);
+                DebugLogger.log(logTag, FIND_IMAGE_CLOSING_FORMATTER.get().clear()
+                    .with(replaySessionId)
+                    .with(logId)
+                    .with(connectionId)
+                    .with(correlationId));
                 if (image == null)
                 {
                     return false;
@@ -200,7 +215,11 @@ public class ReplayOperation
 
             case POLL_IMAGE_CLOSING:
             {
-                DebugLogger.log(logTag, POLL_IMAGE_CLOSING_FORMATTER.get(), replaySessionId);
+                DebugLogger.log(logTag, POLL_IMAGE_CLOSING_FORMATTER.get().clear()
+                    .with(replaySessionId)
+                    .with(connectionId)
+                    .with(correlationId));
+
                 while (!(null == image || image.isClosed() || image.isEndOfStream()))
                 {
                     image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
@@ -218,7 +237,10 @@ public class ReplayOperation
 
     private void logClosed()
     {
-        DebugLogger.log(logTag, CLOSED_FORMATTER.get(), replaySessionId);
+        DebugLogger.log(logTag, CLOSED_FORMATTER.get().clear()
+            .with(replaySessionId)
+            .with(connectionId)
+            .with(correlationId));
     }
 
     private boolean attemptReplay()
@@ -288,7 +310,10 @@ public class ReplayOperation
         {
             if (IS_REPLAY_ATTEMPT_ENABLED)
             {
-                DebugLogger.log(LogTag.REPLAY_ATTEMPT, POLLING_REPLAY_FORMATTER.get().clear().with(image.position()));
+                DebugLogger.log(LogTag.REPLAY_ATTEMPT, POLLING_REPLAY_FORMATTER.get().clear()
+                    .with(image.position())
+                    .with(connectionId)
+                    .with(correlationId));
             }
 
             image.controlledPoll(assembler, Integer.MAX_VALUE);
@@ -339,7 +364,9 @@ public class ReplayOperation
             DebugLogger.log(logTag, ReplayOperation.START_REPLAY_FORMATTER.get()
                 .clear()
                 .with(aeronSessionId)
-                .with(count));
+                .with(count)
+                .with(connectionId)
+                .with(correlationId));
         }
     }
 
@@ -356,17 +383,19 @@ public class ReplayOperation
                 .with(recordingRange.sessionId)
                 .with(recordingRange.position)
                 .with(recordingRange.length)
-                .with(recordingRange.count));
+                .with(recordingRange.count)
+                .with(connectionId)
+                .with(correlationId));
         }
     }
 
     private boolean onReachedMessageReplayCount(final int messageTrackerCount, final int recordingRangeCount)
     {
-        DebugLogger.log(
-            logTag,
-            MESSAGE_REPLAY_COUNT_FORMATTER.get(),
-            messageTrackerCount,
-            recordingRangeCount);
+        DebugLogger.log(logTag, MESSAGE_REPLAY_COUNT_FORMATTER.get().clear()
+            .with(messageTrackerCount)
+            .with(recordingRangeCount)
+            .with(connectionId)
+            .with(correlationId));
 
         replayedMessages += recordingRangeCount;
         recordingRange = null;
@@ -379,7 +408,11 @@ public class ReplayOperation
         if (DebugLogger.isEnabled(logTag))
         {
             DebugLogger.log(logTag, FINISHED_FORMATTER.get().clear()
-                .with(image.position()).with(closed).with(endOfStream));
+                .with(image.position())
+                .with(closed)
+                .with(endOfStream)
+                .with(connectionId)
+                .with(correlationId));
         }
 
         aeronSessionId = 0;

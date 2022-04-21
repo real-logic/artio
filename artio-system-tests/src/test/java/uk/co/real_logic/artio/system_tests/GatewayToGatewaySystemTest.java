@@ -1074,6 +1074,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCombineGapFilledReplays()
     {
+        acquireAcceptingSession();
+
         messagesCanBeExchanged();
 
         messagesCanBeExchanged();
@@ -1092,6 +1094,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         clearMessages();
 
+        testSystem.awaitReplayComplete(acceptingSession);
         messagesCanBeExchanged();
     }
 

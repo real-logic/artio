@@ -461,23 +461,32 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             logon(connection);
             testSystem.poll();
 
-            assertMessagesRejectedAboveThrottleRate(connection, THROTTLE_MSG_LIMIT, 2, 4, 1);
+            session = acquireSession();
 
-            testSystem.awaitBlocking(MessageBasedAcceptorSystemTest::sleepThrottleWindow);
+            testSystem.awaitBlocking(() ->
+                assertMessagesRejectedAboveThrottleRate(connection, THROTTLE_MSG_LIMIT, 2, 4, 1));
 
-            final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
-            assertEquals(10, abc.header().msgSeqNum());
+            testSystem.awaitBlocking(() ->
+            {
+                sleepThrottleWindow();
 
-            // Test that resend requests work with throttle rejection
-            connection.sendResendRequest(4, 5);
-            assertReadsBusinessReject(connection, 4, 6, true, THROTTLE_MSG_LIMIT);
-            assertReadsBusinessReject(connection, 5, 7, true, THROTTLE_MSG_LIMIT);
-            final HeartbeatDecoder def = connection.exchangeTestRequestHeartbeat("DEF");
-            assertEquals(11, def.header().msgSeqNum());
-            testSystem.poll();
+                final HeartbeatDecoder abc = connection.exchangeTestRequestHeartbeat("ABC");
+                assertEquals(10, abc.header().msgSeqNum());
+
+                // Test that resend requests work with throttle rejection
+                connection.sendResendRequest(4, 5);
+                assertReadsBusinessReject(connection, 4, 6, true, THROTTLE_MSG_LIMIT);
+                assertReadsBusinessReject(connection, 5, 7, true, THROTTLE_MSG_LIMIT);
+            });
+
+            testSystem.awaitReplayComplete(session);
+            testSystem.awaitBlocking(() ->
+            {
+                final HeartbeatDecoder def = connection.exchangeTestRequestHeartbeat("DEF");
+                assertEquals(11, def.header().msgSeqNum());
+            });
 
             // Reset the throttle rate
-            session = acquireSession();
             final Reply<ThrottleConfigurationStatus> reply = testSystem.awaitCompletedReply(session.throttleMessagesAt(
                 TEST_THROTTLE_WINDOW_IN_MS, RESET_THROTTLE_MSG_LIMIT));
             assertEquals(reply.toString(), OK, reply.resultIfPresent());

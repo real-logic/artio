@@ -93,16 +93,27 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRoundTripMessagesViaExternalSystem()
     {
+        shouldRoundTripMessagesViaExternalSystem(true);
+    }
+
+    private void shouldRoundTripMessagesViaExternalSystem(final boolean sendHeartbeat)
+    {
         connectSessions();
 
         awaitForwardingOfAcceptingSession();
 
         assertNotNull(acceptingSessionWriter);
 
-        messagesCanBeExchanged();
+        if (sendHeartbeat)
+        {
+            messagesCanBeExchanged();
+        }
 
         assertEquals(1, sessionProxyRequests);
-        assertEquals(1, fakeSessionProxy.sentHeartbeats);
+        if (sendHeartbeat)
+        {
+            assertEquals(1, fakeSessionProxy.sentHeartbeats);
+        }
         assertEquals(1, fakeSessionProxy.sentLogons);
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
@@ -135,12 +146,14 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         fakeSessionProxy.sequenceNumberAdjustment = 1;
 
-        shouldRoundTripMessagesViaExternalSystem();
+        shouldRoundTripMessagesViaExternalSystem(false);
 
         assertEquals(acceptingSession.id(), writerSessionId);
 
-        final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(3, 1);
+        final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(2, 1);
         assertEquals("Y", resentNewOrderSingle.possDup());
+
+        messagesCanBeExchanged();
 
         // Check we can continue to use the session writer after session reconnected.
         assertEquals(acceptingSession.connectionId(), sessionWriter.connectionId());

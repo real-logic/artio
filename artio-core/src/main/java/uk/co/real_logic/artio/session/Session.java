@@ -1319,10 +1319,18 @@ public class Session
     {
         if (msgSeqNo == MISSING_INT)
         {
-            final int sentSeqNum = newSentSeqNum();
-            return checkPositionAndDisconnect(
-                proxy.sendReceivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed),
-                MSG_SEQ_NO_MISSING);
+            if (replayBackpressure())
+            {
+                requestDisconnect();
+                return CONTINUE;
+            }
+            else
+            {
+                final int sentSeqNum = newSentSeqNum();
+                return checkPositionAndDisconnect(
+                    proxy.sendReceivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed),
+                    MSG_SEQ_NO_MISSING);
+            }
         }
 
         if (CODEC_VALIDATION_ENABLED)
@@ -1496,19 +1504,31 @@ public class Session
             endSeqNo = closedResendInterval ? receivedMsgSeqNo : 0;
         }
 
-        final long position = proxy.sendResendRequest(
-            newSentSeqNum(),
-            expectedSeqNo,
-            endSeqNo,
-            sequenceIndex(),
-            lastMsgSeqNumProcessed);
-
-        if (position > 0 && chunkedResend)
+        if (replayBackpressure())
         {
-            lastResendChunkMsgSeqNum = cappedEndSeqNo;
-        }
+            if (chunkedResend)
+            {
+                lastResendChunkMsgSeqNum = cappedEndSeqNo;
+            }
 
-        return position;
+            return 1;
+        }
+        else
+        {
+            final long position = proxy.sendResendRequest(
+                newSentSeqNum(),
+                expectedSeqNo,
+                endSeqNo,
+                sequenceIndex(),
+                lastMsgSeqNumProcessed);
+
+            if (position > 0 && chunkedResend)
+            {
+                lastResendChunkMsgSeqNum = cappedEndSeqNo;
+            }
+
+            return position;
+        }
     }
 
     private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo, final long position)
@@ -1518,10 +1538,19 @@ public class Session
             return ABORT;
         }
 
-        return checkPositionAndDisconnect(
-            proxy.sendLowSequenceNumberLogout(
-                newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex(), lastMsgSeqNumProcessed),
-            MSG_SEQ_NO_TOO_LOW);
+        if (replayBackpressure())
+        {
+            // poll retries
+            requestDisconnect();
+            return CONTINUE;
+        }
+        else
+        {
+            return checkPositionAndDisconnect(
+                proxy.sendLowSequenceNumberLogout(
+                    newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex(), lastMsgSeqNumProcessed),
+                MSG_SEQ_NO_TOO_LOW);
+        }
     }
 
     // true if needs backpressure / retry
@@ -1844,6 +1873,12 @@ public class Session
         {
             messageInfo.isValid(false);
 
+            if (replayBackpressure())
+            {
+                requestDisconnect(NEGATIVE_HEARTBEAT_INTERVAL);
+                return CONTINUE;
+            }
+
             return checkPositionAndDisconnect(
                 proxy.sendNegativeHeartbeatLogout(newSentSeqNum(), sequenceIndex(), lastMsgSeqNumProcessed),
                 NEGATIVE_HEARTBEAT_INTERVAL);
@@ -1896,7 +1931,7 @@ public class Session
 
         cancelOnDisconnect.checkCancelOnDisconnectLogout(timeInNs);
 
-        if (state() == AWAITING_LOGOUT)
+        if (state() == AWAITING_LOGOUT || replayBackpressure())
         {
             requestDisconnect(LOGOUT);
         }
@@ -1921,6 +1956,11 @@ public class Session
         final SessionState state = this.state;
         if (msgSeqNo == expectedReceivedSeqNum() && state != DISCONNECTED && state != DISABLED)
         {
+            if (replayBackpressure())
+            {
+                return CONTINUE;
+            }
+
             final int sentSeqNum = newSentSeqNum();
             final long sentPosition = proxy.sendHeartbeat(
                 sentSeqNum, testReqId, testReqIdLength, sequenceIndex(), lastMsgSeqNumProcessed);
@@ -1977,15 +2017,18 @@ public class Session
                 return ABORT;
             }
 
-            return checkPosition(proxy.sendReject(
-                newSentSeqNum(),
-                receivedMsgSeqNo,
-                NEW_SEQ_NO,
-                SEQUENCE_RESET_MESSAGE_TYPE_CHARS,
-                SEQUENCE_RESET_MESSAGE_TYPE_CHARS.length,
-                RejectReason.VALUE_IS_INCORRECT.representation(),
-                sequenceIndex(),
-                lastMsgSeqNumProcessed));
+            if (!replayBackpressure())
+            {
+                return checkPosition(proxy.sendReject(
+                    newSentSeqNum(),
+                    receivedMsgSeqNo,
+                    NEW_SEQ_NO,
+                    SEQUENCE_RESET_MESSAGE_TYPE_CHARS,
+                    SEQUENCE_RESET_MESSAGE_TYPE_CHARS.length,
+                    RejectReason.VALUE_IS_INCORRECT.representation(),
+                    sequenceIndex(),
+                    lastMsgSeqNumProcessed));
+            }
         }
 
         return CONTINUE;
@@ -2270,7 +2313,7 @@ public class Session
         final boolean isValid = CodecUtil.equals(value, beginString, length);
         if (!isValid)
         {
-            if (!isLogon)
+            if (!isLogon && !replayBackpressure())
             {
                 final int sentMsgSeqNum = newSentSeqNum();
                 final long position = proxy.sendIncorrectBeginStringLogout(
@@ -2385,22 +2428,31 @@ public class Session
     {
         messageInfo.isValid(false);
 
-        final Action action = checkPosition(proxy.sendReject(
-            newSentSeqNum(),
-            refSeqNum,
-            refTagId,
-            refMsgType,
-            refMsgTypeLength,
-            rejectReason,
-            sequenceIndex(),
-            lastMsgSeqNumProcessed));
-
-        if (action != ABORT)
+        if (replayBackpressure())
         {
             incReceivedSeqNum();
-        }
 
-        return action;
+            return CONTINUE;
+        }
+        else
+        {
+            final Action action = checkPosition(proxy.sendReject(
+                newSentSeqNum(),
+                refSeqNum,
+                refTagId,
+                refMsgType,
+                refMsgTypeLength,
+                rejectReason,
+                sequenceIndex(),
+                lastMsgSeqNumProcessed));
+
+            if (action != ABORT)
+            {
+                incReceivedSeqNum();
+            }
+
+            return action;
+        }
     }
 
     Action onHeartbeat(

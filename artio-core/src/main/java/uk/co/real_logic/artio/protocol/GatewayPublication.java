@@ -1384,7 +1384,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, validResendRequest);
+        logSbeMessage(REPLAY, validResendRequest);
 
         return position;
     }

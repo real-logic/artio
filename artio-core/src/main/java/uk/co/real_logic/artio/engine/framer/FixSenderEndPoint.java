@@ -54,6 +54,7 @@ class FixSenderEndPoint extends SenderEndPoint
     static class Formatters
     {
         final CharFormatter replayPaused = new CharFormatter("connId=%s, sessId=%s, replayPaused=%s");
+        final CharFormatter recvPaused = new CharFormatter("connId=%s, sessId=%s, recvPaused=%s");
         final CharFormatter replayComplete = new CharFormatter(
             "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
             " skipPosition=%s, lastProc=%s, queue=%s");
@@ -699,6 +700,7 @@ class FixSenderEndPoint extends SenderEndPoint
             skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
         {
             replayPaused(false);
+            receiverPaused(false);
 
             this.lastProcessedReplay = replayInFlight;
             this.replayInFlight = NO_REPLAY_CORRELATION_ID;
@@ -721,6 +723,11 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onValidResendRequest(final long correlationId, final boolean slow)
     {
+        if (!slow)
+        {
+            receiverPaused(true);
+        }
+
         // We can end up seeing this message again if we're in slow-consumer mode and start re-scanning the messages.
         if (correlationId <= lastProcessedReplay)
         {
@@ -739,7 +746,7 @@ class FixSenderEndPoint extends SenderEndPoint
 
         // Can potentially flip from slow to normal, so instead of checking
         // that slow == isSlowConsumer() we just add and dedup
-        if (!contains(replayQueue, correlationId) && correlationId > replayInFlight)
+        if (correlationId > replayInFlight && !contains(replayQueue, correlationId))
         {
             replayQueue.addLong(correlationId);
         }
@@ -760,6 +767,11 @@ class FixSenderEndPoint extends SenderEndPoint
 
     public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
     {
+        if (!slow)
+        {
+            receiverPaused(true);
+        }
+
         final boolean slowConsumer = isSlowConsumer();
         if (slow == slowConsumer)
         {
@@ -868,7 +880,23 @@ class FixSenderEndPoint extends SenderEndPoint
             }
 
             this.replayPaused = replayPaused;
-            if (replayPaused)
+        }
+    }
+
+    // We try to pause the receiver endpoint as soon as possible when we hit a replay.
+    private void receiverPaused(final boolean receiverPaused)
+    {
+        final FixReceiverEndPoint receiverEndPoint = this.receiverEndPoint;
+
+        if (receiverEndPoint.isPaused() != receiverPaused)
+        {
+            if (IS_REPLAY_LOG_TAG_ENABLED)
+            {
+                DebugLogger.log(LogTag.REPLAY,
+                    formatters.recvPaused.clear().with(connectionId).with(sessionId).with(receiverPaused));
+            }
+
+            if (receiverPaused)
             {
                 receiverEndPoint.pause();
             }

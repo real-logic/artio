@@ -30,13 +30,18 @@ class SubscriptionSlowPeeker
     private final Int2ObjectHashMap<LibrarySlowPeeker> sessionIdToImagePeeker = new Int2ObjectHashMap<>();
     private final IntFunction<LibrarySlowPeeker> newLibraryPeeker = this::newLibraryPeeker;
     private final ErrorHandler errorHandler;
+    private int senderMaxBytesInBuffer;
 
     SubscriptionSlowPeeker(
-        final Subscription peekSubscription, final Subscription normalSubscription, final ErrorHandler errorHandler)
+        final Subscription peekSubscription,
+        final Subscription normalSubscription,
+        final ErrorHandler errorHandler,
+        final int senderMaxBytesInBuffer)
     {
         this.peekSubscription = peekSubscription;
         this.normalSubscription = normalSubscription;
         this.errorHandler = errorHandler;
+        this.senderMaxBytesInBuffer = senderMaxBytesInBuffer;
     }
 
     int peek(final ControlledFragmentHandler handler)
@@ -70,6 +75,8 @@ class SubscriptionSlowPeeker
         {
             return null;
         }
+
+//        FramerContext.validateMaxBytesInBuffer(normalImage.termBufferLength(), errorHandler, senderMaxBytesInBuffer);
 
         return new LibrarySlowPeeker(peekImage, normalImage, errorHandler);
     }

@@ -1,17 +1,25 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
+import static uk.co.real_logic.artio.CommonConfiguration.DEBUG_BLOCK_SAMPLE_THRESHOLD;
+import static uk.co.real_logic.artio.LogTag.BLOCK_SAMPLING;
 
 /**
  * Parent of the different peekers, that lets you control/block a position.
  */
-class BlockablePosition
+abstract class BlockablePosition
 {
+    private static final boolean IS_BLOCK_SAMPLING_ENABLED = DebugLogger.isEnabled(BLOCK_SAMPLING);
+
     static final int DID_NOT_BLOCK = 0;
 
     private final ErrorHandler errorHandler;
+    private final CharFormatter blockSampleFormatter;
 
     final int maxPayload;
 
@@ -19,10 +27,16 @@ class BlockablePosition
     private long minPosition;
     private long maxPosition;
 
+    private long lastBlockPosition;
+    private long blockSampleCount;
+
     BlockablePosition(final int maxPayload, final ErrorHandler errorHandler)
     {
         this.maxPayload = maxPayload;
         this.errorHandler = errorHandler;
+
+        blockSampleFormatter = IS_BLOCK_SAMPLING_ENABLED ?
+            new CharFormatter("pos=%s, peekId=%s, trace=%s") : null;
     }
 
     void blockPosition(final long blockPosition, final boolean slow)
@@ -35,6 +49,27 @@ class BlockablePosition
         if (validPosition(blockPosition, slow) && this.blockPosition == DID_NOT_BLOCK)
         {
             this.blockPosition = blockPosition;
+
+            if (IS_BLOCK_SAMPLING_ENABLED && blockPosition != DID_NOT_BLOCK)
+            {
+                if (blockPosition == lastBlockPosition)
+                {
+                    blockSampleCount++;
+
+                    if (blockSampleCount == DEBUG_BLOCK_SAMPLE_THRESHOLD)
+                    {
+                        DebugLogger.log(BLOCK_SAMPLING, blockSampleFormatter.clear()
+                            .with(blockPosition)
+                            .with(peekSessionId())
+                            .with(Exceptions.getStackTrace()));
+                    }
+                }
+                else
+                {
+                    lastBlockPosition = blockPosition;
+                    blockSampleCount = 0;
+                }
+            }
         }
     }
 
@@ -78,5 +113,7 @@ class BlockablePosition
         this.minPosition = minPosition;
         this.maxPosition = maxPosition;
     }
+
+    protected abstract int peekSessionId();
 
 }

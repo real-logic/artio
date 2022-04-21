@@ -63,4 +63,9 @@ class SlowPeeker extends BlockablePosition
             return 0;
         }
     }
+
+    protected int peekSessionId()
+    {
+        return peekImage.sessionId();
+    }
 }
