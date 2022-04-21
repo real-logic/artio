@@ -89,7 +89,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Before
     public void setUp()
     {
-        mediaDriver = launchMediaDriver();
+        mediaDriver = launchMediaDriver(4 * 1024 * 1024);
         aeronArchive = AeronArchive.connect();
         aeron = aeronArchive.context().aeron();
 

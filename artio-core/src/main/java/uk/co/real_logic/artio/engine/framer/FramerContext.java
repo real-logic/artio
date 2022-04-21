@@ -88,7 +88,7 @@ public class FramerContext
         this.inboundPublication = engineContext.inboundPublication();
         final ExclusivePublication outboundDataPublication = outboundLibraryStreams.dataPublication(
             "outboundPublication");
-//        validateMaxBytesInBuffer(outboundDataPublication, configuration);
+        validateMaxBytesInBuffer(outboundDataPublication, configuration);
 
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, outboundDataPublication);
 

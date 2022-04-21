@@ -39,7 +39,7 @@ public final class TestFixtures
     private static final int HIGH_PORT = 99999;
 
     public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
-    public static final int TERM_BUFFER_LENGTH = 4 * 1024 * 1024;
+    public static final int TERM_BUFFER_LENGTH = 16 * 1024 * 1024;
 
     private static int port = LOW_PORT;
 

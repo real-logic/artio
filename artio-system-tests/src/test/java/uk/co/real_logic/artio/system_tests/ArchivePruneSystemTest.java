@@ -44,14 +44,23 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    public static final int MAX_BYTES_IN_BUFFER = TERM_MIN_LENGTH / 4;
+
     @Before
     public void launch()
     {
         mediaDriver = launchMediaDriver(TERM_MIN_LENGTH);
 
-        newAcceptingEngine(true);
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
+            .deleteLogFileDirOnStart(true);
+        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        acceptingConfig.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
+        acceptingEngine = FixEngine.launch(acceptingConfig);
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort, nanoClock);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingConfig.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         newAcceptingLibrary();
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
@@ -70,6 +79,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(deleteLogFileDirOnStart);
         acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        acceptingConfig.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         acceptingEngine = FixEngine.launch(acceptingConfig);
     }
 

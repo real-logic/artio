@@ -76,7 +76,7 @@ class SubscriptionSlowPeeker
             return null;
         }
 
-//        FramerContext.validateMaxBytesInBuffer(normalImage.termBufferLength(), errorHandler, senderMaxBytesInBuffer);
+        FramerContext.validateMaxBytesInBuffer(normalImage.termBufferLength(), errorHandler, senderMaxBytesInBuffer);
 
         return new LibrarySlowPeeker(peekImage, normalImage, errorHandler);
     }
