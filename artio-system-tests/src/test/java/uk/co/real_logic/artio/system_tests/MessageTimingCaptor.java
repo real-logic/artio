@@ -60,6 +60,7 @@ public class MessageTimingCaptor implements MessageTimingHandler
 
     public synchronized void verifyConsecutiveSequenceNumbers(final int lastSentMsgSeqNum)
     {
+        System.out.println("sequenceNumbers = " + sequenceNumbers);
         assertThat(sequenceNumbers.toString(), sequenceNumbers, hasSize(lastSentMsgSeqNum));
         for (int i = 0; i < lastSentMsgSeqNum; i++)
         {

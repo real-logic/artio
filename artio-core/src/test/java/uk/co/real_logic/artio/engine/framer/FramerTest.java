@@ -38,7 +38,6 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
-import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
@@ -114,9 +113,7 @@ public class FramerTest
     private final FixGatewaySession gatewaySession = mock(FixGatewaySession.class);
     private final InternalSession session = mock(InternalSession.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
-    private final Subscription outboundSlowSubscription = mock(Subscription.class);
     private final Image replayImage = mock(Image.class);
-    private final Image replaySlowImage = mock(Image.class);
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final CompositeKey sessionKey = SessionIdStrategy
@@ -150,15 +147,13 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(outboundSlowSubscription.hasNoImages()).thenReturn(false);
-        when(outboundSlowSubscription.imageBySessionId(anyInt())).thenReturn(peekImage);
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(normalImage);
 
         when(mockEndPointFactory.receiverEndPoint(
             any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any(), any()))
+        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then((inv) -> connectionId.getValue());
@@ -181,9 +176,7 @@ public class FramerTest
             mock(AdminReplyPublication.class),
             mockEndPointFactory,
             outboundLibrarySubscription,
-            outboundSlowSubscription,
             replayImage,
-            replaySlowImage,
             replayQuery,
             mock(GatewayPublication.class),
             inboundPublication,
@@ -198,13 +191,13 @@ public class FramerTest
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
             finalImagePositions,
-            mock(AgentInvoker.class),
             mock(RecordingCoordinator.class),
             mock(FixPContexts.class),
             mock(CountersReader.class),
             1,
             mock(FixCounters.class),
-            mock(SenderSequenceNumbers.class));
+            mock(SenderSequenceNumbers.class),
+            mock(AgentInvoker.class));
 
         when(fixContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,
@@ -822,7 +815,6 @@ public class FramerTest
             anyInt(),
             anyInt(),
             any(),
-            any(),
             any());
     }
 
@@ -1001,7 +993,7 @@ public class FramerTest
             notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer));
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer), any());
+            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer), any());
     }
 
     private void verifyLibraryTimeout()

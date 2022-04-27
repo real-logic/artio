@@ -68,7 +68,7 @@ public class SenderEndPoint implements AutoCloseable
         this.framer = framer;
     }
 
-    public Action onReplayComplete(final long correlationId, final boolean slow)
+    public Action onReplayComplete(final long correlationId)
     {
         final BufferClaim bufferClaim = this.bufferClaim;
         final long position = inboundPublication.tryClaim(REPLAY_COMPLETE_LENGTH, bufferClaim);
@@ -106,13 +106,9 @@ public class SenderEndPoint implements AutoCloseable
         return connectionId;
     }
 
-    protected void becomeNormalConsumer()
-    {
-        sendSlowStatus(false);
-    }
-
     protected void sendSlowStatus(final boolean hasBecomeSlow)
     {
+//        System.out.println("SenderEndPoint.sendSlowStatus " + hasBecomeSlow);
         framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
     }
 

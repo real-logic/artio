@@ -120,7 +120,6 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
     void manage(
         final SessionParser sessionParser,
         final InternalSession session,
-        final BlockablePosition blockablePosition,
         final DirectSessionProxy proxy)
     {
         lastLibraryId = libraryId;
@@ -132,16 +131,15 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         if (receiverEndPoint != null)
         {
             receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
-            senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
+            senderEndPoint.libraryId(ENGINE_LIBRARY_ID);
         }
     }
 
     // sets management to a library and also cleans up locally associated session.
     void handoverManagementTo(
-        final int libraryId,
-        final BlockablePosition blockablePosition)
+        final int libraryId)
     {
-        setManagementTo(libraryId, blockablePosition);
+        setManagementTo(libraryId);
 
         sessionParser = null;
         context.updateAndSaveFrom(session);
@@ -150,14 +148,14 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
         proxy = null;
     }
 
-    void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
+    void setManagementTo(final int libraryId)
     {
         libraryId(libraryId);
         if (receiverEndPoint != null)
         {
             receiverEndPoint.libraryId(libraryId);
             receiverEndPoint.pause();
-            senderEndPoint.libraryId(libraryId, blockablePosition);
+            senderEndPoint.libraryId(libraryId);
         }
     }
 

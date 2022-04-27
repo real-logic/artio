@@ -147,8 +147,7 @@ public class FixGatewaySessions extends GatewaySessions
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final String username,
-        final String password,
-        final BlockablePosition engineBlockablePosition)
+        final String password)
     {
         final long sessionId = gatewaySession.sessionId();
         final long connectionId = gatewaySession.connectionId();
@@ -215,7 +214,7 @@ public class FixGatewaySessions extends GatewaySessions
         {
             sessions.add(gatewaySession);
         }
-        gatewaySession.manage(sessionParser, session, engineBlockablePosition, proxy);
+        gatewaySession.manage(sessionParser, session, proxy);
 
         if (DebugLogger.isEnabled(FIX_CONNECTION))
         {

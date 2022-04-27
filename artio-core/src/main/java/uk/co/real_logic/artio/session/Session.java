@@ -2200,9 +2200,9 @@ public class Session
 
     private boolean saveValidResendRequest(
         final int beginSeqNum, final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength,
-        final int correctedEndSeqNo, final long correlationId, final GatewayPublication inboundPublication)
+        final int correctedEndSeqNo, final long correlationId, final GatewayPublication publication)
     {
-        return Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
+        return Pressure.isBackPressured(publication.saveValidResendRequest(
             id,
             connectionId,
             beginSeqNum,

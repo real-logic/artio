@@ -114,13 +114,13 @@ public class AbstractGatewayToGatewaySystemTest
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
-        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+//        acceptingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         acceptingConfig.messageTimingHandler(messageTimingHandler);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(true);
-        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+//        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
