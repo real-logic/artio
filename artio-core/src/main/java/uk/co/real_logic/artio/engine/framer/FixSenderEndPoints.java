@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -80,14 +79,13 @@ class FixSenderEndPoints implements AutoCloseable
         final int offset,
         final int length,
         final int sequenceNumber,
-        final Header header,
         final int metaDataLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onOutboundMessage(
-                libraryId, buffer, offset, length, sequenceNumber, header, timeInMs, metaDataLength);
+                libraryId, buffer, offset, length, sequenceNumber, timeInMs, metaDataLength);
             return true;
         }
 
@@ -102,15 +100,14 @@ class FixSenderEndPoints implements AutoCloseable
         final int sequenceNumber,
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
-        final int businessRejectRefIDLength,
-        final Header header)
+        final int businessRejectRefIDLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onThrottleReject(
                 libraryId, refMsgType, refSeqNum, sequenceNumber,
-                businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength, header,
+                businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength,
                 timeInMs);
         }
 
@@ -118,12 +115,12 @@ class FixSenderEndPoints implements AutoCloseable
     }
 
     Action onReplayMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final Header header)
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onReplayMessage(buffer, offset, length, timeInMs, header);
+            return endPoint.onReplayMessage(buffer, offset, length, timeInMs);
         }
         else
         {
@@ -178,12 +175,12 @@ class FixSenderEndPoints implements AutoCloseable
         this.timeInMs = timeInMs;
     }
 
-    int checkTimeouts(final long timeInMs)
+    int poll(final long timeInMs)
     {
         int count = 0;
         for (final FixSenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
         {
-            if (senderEndPoint.checkTimeouts(timeInMs))
+            if (senderEndPoint.poll(timeInMs))
             {
                 count++;
             }

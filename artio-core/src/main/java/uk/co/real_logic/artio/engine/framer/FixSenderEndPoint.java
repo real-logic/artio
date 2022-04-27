@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -51,15 +50,14 @@ import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessReje
 class FixSenderEndPoint extends SenderEndPoint
 {
     private static final int ENQ_MSG = 1;
-    private static final int ENQ_MESSAGE_BLOCK_LEN = SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT;
-
     private static final int ENQ_REPLAY_COMPLETE = 2;
-    private static final int ENQ_REPLAY_COMPLETE_LEN = SIZE_OF_INT + SIZE_OF_LONG;
     private static final int ENQ_START_REPLAY = 3;
-    private static final int ENQ_START_REPLAY_LEN = ENQ_REPLAY_COMPLETE_LEN;
+
+    static final int ENQ_REPLAY_COMPLETE_LEN = SIZE_OF_INT + SIZE_OF_LONG;
+    static final int ENQ_START_REPLAY_LEN = ENQ_REPLAY_COMPLETE_LEN;
+    static final int ENQ_MESSAGE_BLOCK_LEN = SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT;
 
     protected static final int NO_REATTEMPT = 0;
-
 
     static class Formatters
     {
@@ -97,7 +95,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private final ReattemptState replayBuffer = new ReattemptState();
 
     private boolean replaying;
-    private boolean requiresReattempting;
+    private boolean requiresRetry;
     private int reattemptBytesWritten = NO_REATTEMPT;
 
     FixSenderEndPoint(
@@ -138,7 +136,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final int offset,
         final int bodyLength,
         final int sequenceNumber,
-        final Header header,
         final long timeInMs,
         final int metaDataLength)
     {
@@ -161,7 +158,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
-        final Header header,
         final long timeInMs)
     {
         if (isWrongLibraryId(libraryId))
@@ -190,7 +186,6 @@ class FixSenderEndPoint extends SenderEndPoint
             throttleRejectBuilder.offset(),
             throttleRejectBuilder.length(),
             sequenceNumber,
-            header,
             timeInMs,
             0);
     }
@@ -277,6 +272,7 @@ class FixSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
 
         final int written = channel.write(buffer);
+//        System.out.println("written = " + written);
         ByteBufferUtil.position(buffer, offset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
@@ -331,7 +327,7 @@ class FixSenderEndPoint extends SenderEndPoint
     {
         final ReattemptState reattemptState = enqueue(ENQ_REPLAY_COMPLETE_LEN, true);
 
-        int reattemptOffset = reattemptState.usage;
+        int reattemptOffset = reattemptState.usage - ENQ_REPLAY_COMPLETE_LEN;
         final ExpandableDirectByteBuffer buffer = reattemptState.buffer();
 
         buffer.putInt(reattemptOffset, messageType);
@@ -342,12 +338,11 @@ class FixSenderEndPoint extends SenderEndPoint
 
     private ReattemptState enqueue(final int length, final boolean replay)
     {
-//        System.out.println("FixSenderEndPoint.enqueue, length = " + length + ", replay = " + replay);
         // we only need re-attempting when we've got messages buffered for the current state
         final boolean currentStream = replay == replaying;
-        if (!requiresReattempting && currentStream)
+        if (!requiresRetry && currentStream)
         {
-            requiresReattempting = true;
+            requiresRetry = true;
             sendSlowStatus(true);
         }
 
@@ -359,17 +354,12 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             if (bufferUsage > maxBytesInBuffer)
             {
-                removeEndpoint(SLOW_CONSUMER);
+                disconnectEndpoint(SLOW_CONSUMER);
             }
 
             bytesInBuffer.setOrdered(bufferUsage);
         }
         return reattemptState;
-    }
-
-    private void removeEndpoint(final DisconnectReason reason)
-    {
-        framer.onDisconnect(libraryId, connectionId, reason);
     }
 
     private ReattemptState reattemptState(final boolean replay)
@@ -395,7 +385,9 @@ class FixSenderEndPoint extends SenderEndPoint
             try
             {
                 final int enqueueType = buffer.getInt(offset);
-//                System.out.println("enqueueType = " + enqueueType + ", offset = " + offset);
+//                System.out.println("enqueueType = " + enqueueType + ", offset = " + offset + ", replay = " + replay);
+//                System.out.println("reattemptState.buffer = " + reattemptState.buffer);
+//                System.out.println();
                 if (enqueueType == ENQ_MSG)
                 {
                     final int sequenceNumberOffset = offset + SIZE_OF_INT;
@@ -458,7 +450,6 @@ class FixSenderEndPoint extends SenderEndPoint
             }
             catch (final Throwable e)
             {
-                e.printStackTrace();
                 onError(e);
                 return true;
             }
@@ -506,10 +497,22 @@ class FixSenderEndPoint extends SenderEndPoint
         final boolean caughtUp = processReattemptBuffer(replaying);
         if (caughtUp)
         {
-            if (requiresReattempting)
+            if (requiresRetry)
             {
-                requiresReattempting = false;
-                sendSlowStatus(false);
+                // Do we need to try the other queue?
+                final boolean other = !replaying;
+                final ReattemptState reattemptState = reattemptState(other);
+                final int usage = reattemptState.usage;
+                if (usage == 0)
+                {
+                    requiresRetry = false;
+                    sendSlowStatus(false);
+                }
+                else
+                {
+                    this.replaying = !replaying;
+                    bytesInBuffer.setOrdered(usage);
+                }
             }
         }
         return caughtUp;
@@ -519,8 +522,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final DirectBuffer directBuffer,
         final int offset,
         final int bodyLength,
-        final long timeInMs,
-        final Header header)
+        final long timeInMs)
     {
         onMessage(directBuffer, offset, bodyLength, 0, 0, timeInMs, true);
 
@@ -580,7 +582,7 @@ class FixSenderEndPoint extends SenderEndPoint
         return sessionId;
     }
 
-    boolean checkTimeouts(final long timeInMs)
+    boolean poll(final long timeInMs)
     {
         reattempt();
 
@@ -662,7 +664,7 @@ class FixSenderEndPoint extends SenderEndPoint
         }
 
         // We start the replay with this message, rather than VRR because it doesn't race with replay complete.
-        if (replaying)
+        if (replaying || requiresRetry)
         {
             // Always goes on the replaying buffer
             enqueueStartReplay(correlationId);
@@ -682,6 +684,21 @@ class FixSenderEndPoint extends SenderEndPoint
             "} " + super.toString();
     }
 
+    boolean isReplaying()
+    {
+        return replaying;
+    }
+
+    boolean requiresReattempting()
+    {
+        return requiresRetry;
+    }
+
+    int reattemptBytesWritten()
+    {
+        return reattemptBytesWritten;
+    }
+
     static class ReattemptState
     {
         ExpandableDirectByteBuffer buffer;
@@ -693,9 +710,13 @@ class FixSenderEndPoint extends SenderEndPoint
             if (buffer == null)
             {
                 buffer = this.buffer = new ExpandableDirectByteBuffer();
+//                System.out.println("buffer = " + buffer);
             }
 
+//            System.out.println("usage = " + usage);
+//            System.out.println("before checkLimit buffer = " + buffer);
             buffer.checkLimit(usage);
+//            System.out.println("after checkLimit buffer = " + buffer);
 
             return buffer;
         }

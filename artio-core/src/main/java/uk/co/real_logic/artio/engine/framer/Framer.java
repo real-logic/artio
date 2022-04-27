@@ -143,7 +143,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final CountersReader countersReader;
     private final long outboundIndexRegistrationId;
     private final SenderSequenceNumbers senderSequenceNumbers;
-    private final AgentInvoker conductorAgentInvoker;
     private final FixCounters fixCounters;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
@@ -254,7 +253,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.countersReader = countersReader;
         this.outboundIndexRegistrationId = outboundIndexRegistrationId;
         this.senderSequenceNumbers = senderSequenceNumbers;
-        this.conductorAgentInvoker = conductorAgentInvoker;
         this.fixPSenderEndPoints = new FixPSenderEndPoints();
         this.removeILink3SenderEndPoints = fixPSenderEndPoints::removeConnection;
         this.recordingCoordinator = recordingCoordinator;
@@ -308,7 +306,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final Header header,
                     final int metaDataLength)
                 {
-                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, header);
+                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length);
                 }
 
                 public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -363,7 +361,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollNewConnections(timeInMs) +
             pollLibraries(timeInMs) +
             gatewaySessions.pollSessions(timeInMs, timeInNs) +
-            fixSenderEndPoints.checkTimeouts(timeInMs) +
+            fixSenderEndPoints.poll(timeInMs) +
             adminCommands.drain(onAdminCommand) +
             checkDutyCycle(timeInMs);
     }
@@ -923,8 +921,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sequenceNumber,
             businessRejectRefIDBuffer,
             businessRejectRefIDOffset,
-            businessRejectRefIDLength,
-            header);
+            businessRejectRefIDLength
+        );
     }
 
     public Action onThrottleConfiguration(
@@ -1642,7 +1640,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long now = outboundTimer.recordSince(timestamp);
 
         final boolean online = fixSenderEndPoints.onMessage(
-            libraryId, connectionId, buffer, offset, length, sequenceNumber, header, metaDataLength);
+            libraryId, connectionId, buffer, offset, length, sequenceNumber, metaDataLength);
 
         if (!online)
         {
