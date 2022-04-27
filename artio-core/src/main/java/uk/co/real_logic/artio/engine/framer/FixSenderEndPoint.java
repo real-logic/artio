@@ -22,6 +22,7 @@ import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongArrayQueue;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
@@ -57,11 +58,11 @@ class FixSenderEndPoint extends SenderEndPoint
         final CharFormatter recvPaused = new CharFormatter("connId=%s, sessId=%s, recvPaused=%s");
         final CharFormatter replayComplete = new CharFormatter(
             "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
-            " skipPosition=%s, lastProc=%s, queue=%s");
+            " skipPosition=%s, proc=%s, queue=%s");
         final CharFormatter validResendRequest = new CharFormatter(
-            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
+            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, proc=%s");
         final CharFormatter checkStartReplay = new CharFormatter(
-            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
+            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, proc=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -82,6 +83,8 @@ class FixSenderEndPoint extends SenderEndPoint
     private final LongArrayQueue replayQueue;
     private final Formatters formatters;
 
+    private final LongHashSet processedReplays = new LongHashSet();
+
     private long sessionId;
     private long sendingTimeoutTimeInMs;
     private boolean replayPaused;
@@ -90,7 +93,6 @@ class FixSenderEndPoint extends SenderEndPoint
     private FixDictionary fixDictionary;
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
-    private long lastProcessedReplay;
     private long replayInFlight;
 
     FixSenderEndPoint(
@@ -691,7 +693,7 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             DebugLogger.log(LogTag.REPLAY,
                 formatters.replayComplete.clear().with(connectionId).with(correlationId).with(slow)
-                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(lastProcessedReplay)
+                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(processedReplays.toString())
                 .with(replayQueue.toString()));
         }
 
@@ -702,7 +704,7 @@ class FixSenderEndPoint extends SenderEndPoint
             replayPaused(false);
             receiverPaused(false);
 
-            this.lastProcessedReplay = replayInFlight;
+            this.processedReplays.add(replayInFlight);
             this.replayInFlight = NO_REPLAY_CORRELATION_ID;
             return super.onReplayComplete(correlationId, slow);
         }
@@ -728,21 +730,21 @@ class FixSenderEndPoint extends SenderEndPoint
             receiverPaused(true);
         }
 
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY, formatters.validResendRequest.clear()
+                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
+                .with(processedReplays.toString()));
+        }
+
         // We can end up seeing this message again if we're in slow-consumer mode and start re-scanning the messages.
-        if (correlationId <= lastProcessedReplay)
+        if (processedReplays.contains(correlationId))
         {
             return;
         }
 
         final long replayInFlight = this.replayInFlight;
         final LongArrayQueue replayQueue = this.replayQueue;
-
-        if (IS_REPLAY_LOG_TAG_ENABLED)
-        {
-            DebugLogger.log(LogTag.REPLAY, formatters.validResendRequest.clear()
-                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
-                .with(lastProcessedReplay));
-        }
 
         // Can potentially flip from slow to normal, so instead of checking
         // that slow == isSlowConsumer() we just add and dedup
@@ -790,11 +792,11 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             DebugLogger.log(LogTag.REPLAY, formatters.checkStartReplay.clear()
                 .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
-                .with(lastProcessedReplay));
+                .with(processedReplays.toString()));
         }
 
         // We've already seen this message if it's slow.
-        if (replayInFlight == correlationId)
+        if (replayInFlight == correlationId || processedReplays.contains(correlationId))
         {
             return;
         }
