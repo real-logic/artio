@@ -59,6 +59,28 @@ class FixSenderEndPoint extends SenderEndPoint
 
     protected static final int NO_REATTEMPT = 0;
 
+    private void replaying(final boolean replaying)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.replaying.clear().with(connectionId).with(replaying));
+        }
+
+        this.replaying = replaying;
+    }
+
+    private void requiresRetry(final boolean requiresRetry)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.requiresRetry.clear().with(connectionId).with(requiresRetry));
+        }
+
+        this.requiresRetry = requiresRetry;
+    }
+
     static class Formatters
     {
         final CharFormatter replayComplete = new CharFormatter(
@@ -67,6 +89,10 @@ class FixSenderEndPoint extends SenderEndPoint
             "SEP.validResendRequest, connId=%s, corrId=%s");
         final CharFormatter checkStartReplay = new CharFormatter(
             "SEP.onStartReplay, connId=%s, corrId=%s");
+        final CharFormatter replaying = new CharFormatter(
+            "SEP.replaying, connId=%s, replay=%s");
+        final CharFormatter requiresRetry = new CharFormatter(
+            "SEP.requiresRetry, connId=%s, retry=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -342,7 +368,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final boolean currentStream = replay == replaying;
         if (!requiresRetry && currentStream)
         {
-            requiresRetry = true;
+            requiresRetry(true);
             sendSlowStatus(true);
         }
 
@@ -429,7 +455,7 @@ class FixSenderEndPoint extends SenderEndPoint
                         // If not then we end the replay, otherwise we keep replaying
                         if (buffer.getInt(endOfReplayEntry) != ENQ_START_REPLAY)
                         {
-                            replaying = false;
+                            replaying(false);
                             reattemptState.shuffleWritten(endOfReplayEntry);
                             bytesInBuffer.setOrdered(normalBuffer.usage);
                             return true;
@@ -505,12 +531,12 @@ class FixSenderEndPoint extends SenderEndPoint
                 final int usage = reattemptState.usage;
                 if (usage == 0)
                 {
-                    requiresRetry = false;
+                    requiresRetry(false);
                     sendSlowStatus(false);
                 }
                 else
                 {
-                    this.replaying = !replaying;
+                    this.replaying(!replaying);
                     bytesInBuffer.setOrdered(usage);
                 }
             }
@@ -617,7 +643,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (!replaying || !reattempt(true))
         {
-//            System.out.println("FixSenderEndPoint.onReplayComplete enqueued " + replaying);
             enqueueReplayComplete(correlationId);
             return CONTINUE;
         }
@@ -625,11 +650,10 @@ class FixSenderEndPoint extends SenderEndPoint
         final Action action = super.onReplayComplete(correlationId);
         if (action == ABORT)
         {
-//            System.out.println("FixSenderEndPoint.onReplayComplete, action = " + action);
             enqueueReplayComplete(correlationId);
         }
 
-        replaying = false;
+        replaying(false);
         return CONTINUE;
     }
 
@@ -671,7 +695,7 @@ class FixSenderEndPoint extends SenderEndPoint
         }
         else
         {
-            replaying = true;
+            replaying(true);
         }
     }
 

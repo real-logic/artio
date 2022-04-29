@@ -108,7 +108,6 @@ public class SenderEndPoint implements AutoCloseable
 
     protected void sendSlowStatus(final boolean hasBecomeSlow)
     {
-//        System.out.println("SenderEndPoint.sendSlowStatus " + hasBecomeSlow);
         framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
     }
 
