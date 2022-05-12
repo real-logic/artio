@@ -253,7 +253,7 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             final int metaDataOffset = offset - FixMessageDecoder.bodyHeaderLength() - metaDataLength;
 
-            if ((replaying && !replay) || (!replaying && replay) || reattemptBytesWritten > 0)
+            if ((replaying && !replay) || (!replaying && replay) || requiresRetry)
             {
                 enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
                 return;
@@ -298,7 +298,6 @@ class FixSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
 
         final int written = channel.write(buffer);
-//        System.out.println("written = " + written);
         ByteBufferUtil.position(buffer, offset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
@@ -316,10 +315,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
         int reattemptOffset = reattemptState.usage - totalLength;
         final ExpandableDirectByteBuffer buffer = reattemptState.buffer();
-
-        /*System.out.println("FixSenderEndPoint.enqueueMessage" + ", sequenceNumber = " + sequenceNumber +
-            ", metaDataLength = " + metaDataLength +
-            ", reattemptOffset = " + reattemptOffset);*/
 
         buffer.putInt(reattemptOffset, ENQ_MSG);
         reattemptOffset += SIZE_OF_INT;
@@ -398,8 +393,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final ReattemptState reattemptState = reattemptState(replay);
         final ExpandableDirectByteBuffer buffer = reattemptState.buffer;
         final int reattemptBufferUsage = reattemptState.usage;
-//        System.out.println("FixSenderEndPoint.processReattemptBuffer, reattemptBufferUsage = " +
-//        reattemptBufferUsage);
         if (reattemptBufferUsage == 0)
         {
             return true;
@@ -411,14 +404,10 @@ class FixSenderEndPoint extends SenderEndPoint
             try
             {
                 final int enqueueType = buffer.getInt(offset);
-//                System.out.println("enqueueType = " + enqueueType + ", offset = " + offset + ", replay = " + replay);
-//                System.out.println("reattemptState.buffer = " + reattemptState.buffer);
-//                System.out.println();
                 if (enqueueType == ENQ_MSG)
                 {
                     final int sequenceNumberOffset = offset + SIZE_OF_INT;
                     final int sequenceNumber = buffer.getInt(sequenceNumberOffset);
-//                    System.out.println("sequenceNumber = " + sequenceNumber);
 
                     final int bodyLengthOffset = sequenceNumberOffset + SIZE_OF_INT;
                     final int bodyLength = buffer.getInt(bodyLengthOffset);
@@ -733,13 +722,9 @@ class FixSenderEndPoint extends SenderEndPoint
             if (buffer == null)
             {
                 buffer = this.buffer = new ExpandableDirectByteBuffer();
-//                System.out.println("buffer = " + buffer);
             }
 
-//            System.out.println("usage = " + usage);
-//            System.out.println("before checkLimit buffer = " + buffer);
             buffer.checkLimit(usage);
-//            System.out.println("after checkLimit buffer = " + buffer);
 
             return buffer;
         }
