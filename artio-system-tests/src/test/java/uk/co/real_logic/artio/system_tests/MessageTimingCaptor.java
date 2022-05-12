@@ -64,7 +64,11 @@ public class MessageTimingCaptor implements MessageTimingHandler
         for (int i = 0; i < lastSentMsgSeqNum; i++)
         {
             final long sequenceNumber = sequenceNumbers.getLong(i);
-            assertEquals(i + 1L, sequenceNumber);
+            final long expectedSequenceNumber = i + 1L;
+            if (expectedSequenceNumber != sequenceNumber)
+            {
+                assertEquals(sequenceNumbers.toString(), expectedSequenceNumber, sequenceNumber);
+            }
         }
     }
 

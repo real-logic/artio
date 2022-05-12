@@ -519,7 +519,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
     private boolean reattempt(final boolean replaying)
     {
-//        System.out.println("FixSenderEndPoint.reattempt");
         final boolean caughtUp = processReattemptBuffer(replaying);
         if (caughtUp)
         {
