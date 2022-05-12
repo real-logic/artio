@@ -38,8 +38,6 @@ class FixEndPointFactory
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final MessageTimingHandler messageTimingHandler;
 
-    private SlowPeeker replaySlowPeeker;
-
     FixEndPointFactory(
         final EngineConfiguration configuration,
         final FixContexts fixContexts,
@@ -92,7 +90,6 @@ class FixEndPointFactory
         final TcpChannel channel,
         final long connectionId,
         final int libraryId,
-        final BlockablePosition libraryBlockablePosition,
         final Framer framer,
         final FixReceiverEndPoint receiverEndPoint)
     {
@@ -101,9 +98,7 @@ class FixEndPointFactory
         return new FixSenderEndPoint(
             connectionId,
             libraryId,
-            libraryBlockablePosition,
             inboundLibraryPublication.dataPublication(),
-            replaySlowPeeker,
             channel,
             bytesInBuffer,
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
@@ -117,10 +112,5 @@ class FixEndPointFactory
             configuration.maxConcurrentSessionReplays(),
             receiverEndPoint,
             senderFormatters);
-    }
-
-    void replaySlowPeeker(final SlowPeeker replaySlowPeeker)
-    {
-        this.replaySlowPeeker = replaySlowPeeker;
     }
 }

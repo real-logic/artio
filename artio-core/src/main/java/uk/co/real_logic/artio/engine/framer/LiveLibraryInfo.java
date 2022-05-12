@@ -19,7 +19,6 @@ import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,7 +32,6 @@ final class LiveLibraryInfo implements LibraryInfo
     private final String libraryName;
     private final LivenessDetector livenessDetector;
     private final int aeronSessionId;
-    private final LibrarySlowPeeker librarySlowPeeker;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<ConnectedSessionInfo> unmodifiableFixSessions;
     private final List<FixPConnectedSessionInfo> unmodifiableFixPConnections;
@@ -47,14 +45,12 @@ final class LiveLibraryInfo implements LibraryInfo
         final String libraryName,
         final LivenessDetector livenessDetector,
         final int aeronSessionId,
-        final LibrarySlowPeeker librarySlowPeeker,
         final boolean isFixP)
     {
         this.libraryId = libraryId;
         this.libraryName = libraryName;
         this.livenessDetector = livenessDetector;
         this.aeronSessionId = aeronSessionId;
-        this.librarySlowPeeker = librarySlowPeeker;
 
         if (isFixP)
         {
@@ -172,11 +168,6 @@ final class LiveLibraryInfo implements LibraryInfo
         return acquireAtPosition;
     }
 
-    LibrarySlowPeeker librarySlowPeeker()
-    {
-        return librarySlowPeeker;
-    }
-
     public boolean equals(final Object o)
     {
         if (this == o)
@@ -196,11 +187,6 @@ final class LiveLibraryInfo implements LibraryInfo
     public int hashCode()
     {
         return libraryId;
-    }
-
-    void releaseSlowPeeker()
-    {
-        librarySlowPeeker.removeLibrary();
     }
 
     void connectionStartsConnecting(final long correlationId, final ConnectingSession connectingSession)

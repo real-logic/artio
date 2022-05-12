@@ -46,7 +46,6 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
-import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
@@ -131,7 +130,6 @@ public class Session
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
 
-    private boolean backpressureMessagesDuringReplay;
     private CompositeKey sessionKey;
     private SessionState state;
     private String beginString;
@@ -236,7 +234,6 @@ public class Session
         Verify.notNull(formatters, "formatters");
 
         this.initiatorResetSeqNum = initiatorResetSeqNum;
-        this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
         this.resendRequestController = resendRequestController;
         this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
         this.messageInfo = messageInfo;
@@ -683,11 +680,6 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (replayBackpressure())
-        {
-            return BACK_PRESSURED;
-        }
-
         final int sentSeqNum = prepare(encoder.header());
 
         final long result = encoder.encode(asciiBuffer, 0);
@@ -696,11 +688,6 @@ public class Session
         final long type = encoder.messageType();
 
         return trySend(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
-    }
-
-    private boolean replayBackpressure()
-    {
-        return backpressureMessagesDuringReplay && isReplaying();
     }
 
     /**
@@ -783,11 +770,6 @@ public class Session
     {
         validateCanSendMessage();
 
-        if (replayBackpressure())
-        {
-            return BACK_PRESSURED;
-        }
-
         final long position = outboundPublication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
             metaDataBuffer, metaDataUpdateOffset);
@@ -866,11 +848,6 @@ public class Session
     public long trySendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        if (replayBackpressure())
-        {
-            return BACK_PRESSURED;
-        }
-
         final boolean resetsSequenceNumbers = resetsSentSequenceNumbers(nextSentMessageSequenceNumber);
         final int newSequenceIndex = sequenceIndex() + (resetsSequenceNumbers ? 1 : 0);
         final long position = proxy.sendSequenceReset(
@@ -1023,11 +1000,6 @@ public class Session
      */
     public long tryResetSequenceNumbers()
     {
-        if (replayBackpressure())
-        {
-            return BACK_PRESSURED;
-        }
-
         if (state == DISCONNECTED)
         {
             return trySendSequenceReset(1, 1);
@@ -2176,17 +2148,7 @@ public class Session
 
     private Action sendCustomReject(final int oldLastReceivedMsgSeqNum, final AbstractRejectEncoder rejectEncoder)
     {
-        final boolean oldBackpressureMessagesDuringReplay = this.backpressureMessagesDuringReplay;
-        final long rejectPosition;
-        try
-        {
-            backpressureMessagesDuringReplay = false;
-            rejectPosition = trySend(rejectEncoder);
-        }
-        finally
-        {
-            backpressureMessagesDuringReplay = oldBackpressureMessagesDuringReplay;
-        }
+        final long rejectPosition = trySend(rejectEncoder);
 
         backpressuredResendRequestResponse = Pressure.isBackPressured(rejectPosition);
         if (backpressuredResendRequestResponse)
@@ -2200,9 +2162,9 @@ public class Session
 
     private boolean saveValidResendRequest(
         final int beginSeqNum, final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength,
-        final int correctedEndSeqNo, final long correlationId, final GatewayPublication inboundPublication)
+        final int correctedEndSeqNo, final long correlationId, final GatewayPublication publication)
     {
-        return Pressure.isBackPressured(inboundPublication.saveValidResendRequest(
+        return Pressure.isBackPressured(publication.saveValidResendRequest(
             id,
             connectionId,
             beginSeqNum,
@@ -2300,11 +2262,6 @@ public class Session
 
     private long trySendLogout()
     {
-        if (replayBackpressure())
-        {
-            return BACK_PRESSURED;
-        }
-
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
             proxy.sendLogout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed) :
@@ -2493,14 +2450,11 @@ public class Session
                 final boolean isActive = state == ACTIVE_VALUE;
                 if (isActive && timeInNs >= nextRequiredHeartbeatTimeInNs)
                 {
-                    if (!replayBackpressure())
-                    {
-                        // Drop when back pressured: retried on duty cycle
-                        final int sentSeqNum = newSentSeqNum();
-                        final long position = proxy.sendHeartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
-                        lastSentMsgSeqNum(sentSeqNum, position);
-                        actions++;
-                    }
+                    // Drop when back pressured: retried on duty cycle
+                    final int sentSeqNum = newSentSeqNum();
+                    final long position = proxy.sendHeartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+                    lastSentMsgSeqNum(sentSeqNum, position);
+                    actions++;
                 }
 
                 if (timeInNs >= nextRequiredInboundMessageTimeInNs)
@@ -2516,22 +2470,13 @@ public class Session
                     }
                     else if (isActive)
                     {
-                        if (replayBackpressure())
+                        final int sentSeqNum = newSentSeqNum();
+                        if (proxy.sendTestRequest(
+                            sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
                         {
-                            // If we're currently replay back-pressured it's not safe to send a
-                            requestDisconnect(REPLAY_BACK_PRESSURE_DISCONNECT);
+                            lastSentMsgSeqNum(sentSeqNum);
+                            awaitingHeartbeat = true;
                             incNextReceivedInboundMessageTime(timeInNs);
-                        }
-                        else
-                        {
-                            final int sentSeqNum = newSentSeqNum();
-                            if (proxy.sendTestRequest(
-                                sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
-                            {
-                                lastSentMsgSeqNum(sentSeqNum);
-                                awaitingHeartbeat = true;
-                                incNextReceivedInboundMessageTime(timeInNs);
-                            }
                         }
                     }
                     actions++;

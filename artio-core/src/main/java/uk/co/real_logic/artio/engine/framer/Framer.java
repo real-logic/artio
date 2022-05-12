@@ -35,7 +35,6 @@ import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.GatewaySessions.PendingAcceptorLogon;
-import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -137,11 +136,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final ControlledFragmentHandler librarySubscriber;
     private final ControlledFragmentHandler replaySubscriber;
-    private final ControlledFragmentHandler replaySlowSubscriber;
     private final AdminEngineProtocolSubscription adminEngineProtocolSubscription;
     private final Subscription adminEngineSubscription;
     private final ReceiverEndPoints receiverEndPoints;
-    private final ControlledFragmentAssembler senderEndPointAssembler;
     private final FixSenderEndPoints fixSenderEndPoints;
     private final CountersReader countersReader;
     private final long outboundIndexRegistrationId;
@@ -153,10 +150,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final AdminReplyPublication adminReplyPublication;
     private final FixEndPointFactory endPointFactory;
     private final Subscription librarySubscription;
-    private final SubscriptionSlowPeeker librarySlowPeeker;
     private final Image replayImage;
-    private final SlowPeeker replaySlowPeeker;
-    private final BlockablePosition engineBlockablePosition;
     private final GatewayPublication inboundPublication;
     private final String agentNamePrefix;
     private final CompletionPosition inboundCompletionPosition;
@@ -177,7 +171,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
-    private final AgentInvoker conductorAgentInvoker;
     private final RecordingCoordinator recordingCoordinator;
     private final boolean soleLibraryMode;
     private final InitialAcceptedSessionOwner initialAcceptedSessionOwner;
@@ -185,7 +178,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final LongHashSet requestAllSessionSeenSessions = new LongHashSet();
     private final CancelOnDisconnectFinder cancelOnDisconnectFinder = new CancelOnDisconnectFinder();
     private final Image outboundEngineImage;
-    private final Image outboundEngineSlowImage;
     private final boolean acceptsFixP;
     private final FixPContexts fixPContexts;
     private final long replyTimeoutInNs;
@@ -216,9 +208,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final AdminReplyPublication adminReplyPublication,
         final FixEndPointFactory endPointFactory,
         final Subscription librarySubscription,
-        final Subscription slowSubscription,
         final Image replayImage,
-        final Image replaySlowImage,
         final ReplayQuery inboundMessages,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
@@ -233,13 +223,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompletionPosition inboundCompletionPosition,
         final CompletionPosition outboundLibraryCompletionPosition,
         final FinalImagePositions finalImagePositions,
-        final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator,
         final FixPContexts fixPContexts,
         final CountersReader countersReader,
         final long outboundIndexRegistrationId,
         final FixCounters fixCounters,
-        final SenderSequenceNumbers senderSequenceNumbers)
+        final SenderSequenceNumbers senderSequenceNumbers,
+        final AgentInvoker conductorAgentInvoker)
     {
         this.epochClock = epochClock;
         this.clock = configuration.epochNanoClock();
@@ -265,9 +255,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixPSenderEndPoints = new FixPSenderEndPoints();
         this.removeILink3SenderEndPoints = fixPSenderEndPoints::removeConnection;
-        this.conductorAgentInvoker = conductorAgentInvoker;
         this.recordingCoordinator = recordingCoordinator;
-        this.senderEndPointAssembler = new ControlledFragmentAssembler(fixSenderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
         this.fixContexts = fixContexts;
         this.adminCommands = adminCommands;
@@ -289,19 +277,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
-        this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription, errorHandler);
-
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
 
-        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage, errorHandler);
-        if (endPointFactory != null)
-        {
-            endPointFactory.replaySlowPeeker(replaySlowPeeker);
-        }
-
-        engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
         librarySubscriber = new ControlledFragmentAssembler(
             ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
             0,
@@ -327,7 +306,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final Header header,
                     final int metaDataLength)
                 {
-                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, header);
+                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length);
                 }
 
                 public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -345,65 +324,25 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             0,
             true);
 
-        replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(
-            new ProtocolHandler()
-            {
-                public Action onMessage(
-                    final DirectBuffer buffer,
-                    final int offset,
-                    final int length,
-                    final int libraryId,
-                    final long connectionId,
-                    final long sessionId,
-                    final int sequenceIndex,
-                    final long messageType,
-                    final long timestamp,
-                    final MessageStatus status,
-                    final int sequenceNumber,
-                    final Header header,
-                    final int metaDataLength)
-                {
-                    return fixSenderEndPoints.onSlowReplayMessage(
-                        connectionId, buffer, offset, length, header, metaDataLength);
-                }
-
-                public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-                {
-                    // Should never be replayed.
-                    return Action.CONTINUE;
-                }
-
-                public Action onFixPMessage(final long connectionId, final DirectBuffer buffer, final int offset)
-                {
-                    return CONTINUE;
-                }
-            },
-            new ReplayProtocolSubscription(new FramerReplayProtocolHandler(true))), 0, true);
         adminEngineProtocolSubscription = new AdminEngineProtocolSubscription(this);
 
         channelSupplier = configuration.channelSupplier();
         shouldBind = configuration.bindAtStartup();
-        outboundEngineImage = librarySubscription.imageBySessionId(outboundPublication.sessionId());
-        outboundEngineSlowImage = slowSubscription.imageBySessionId(outboundPublication.sessionId());
-        timerWheel = new DeadlineTimerWheel(
-            MILLISECONDS, epochClock.time(), 128, 512);
-    }
 
-    private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
-    {
-        final int outboundSessionId = outboundPublication.sessionId();
-        LibrarySlowPeeker outboundSlowPeeker;
-        while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
+        Image image = null;
+        while (image == null)
         {
+            image = librarySubscription.imageBySessionId(outboundPublication.sessionId());
             if (conductorAgentInvoker != null)
             {
                 conductorAgentInvoker.invoke();
             }
-
             Thread.yield();
         }
 
-        return outboundSlowPeeker;
+        this.outboundEngineImage = image;
+        timerWheel = new DeadlineTimerWheel(
+            MILLISECONDS, epochClock.time(), 128, 512);
     }
 
     public int doWork() throws Exception
@@ -422,7 +361,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollNewConnections(timeInMs) +
             pollLibraries(timeInMs) +
             gatewaySessions.pollSessions(timeInMs, timeInNs) +
-            fixSenderEndPoints.checkTimeouts(timeInMs) +
+            fixSenderEndPoints.poll(timeInMs) +
             adminCommands.drain(onAdminCommand) +
             checkDutyCycle(timeInMs);
     }
@@ -475,15 +414,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replayImage.controlledPoll(replaySubscriber, replayFragmentLimit) +
-            replaySlowPeeker.peek(replaySlowSubscriber);
+        return replayImage.controlledPoll(replaySubscriber, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
     {
         return fixPSenderEndPoints.reattempt() +
             librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit) +
-            librarySlowPeeker.peek(senderEndPointAssembler) +
             adminEngineSubscription.poll(adminEngineProtocolSubscription, outboundLibraryFragmentLimit);
     }
 
@@ -516,7 +453,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
         }
 
-        library.releaseSlowPeeker();
         tryAcquireLibrarySessions(library);
         saveLibraryTimeout(library);
         disconnectILinkConnections(library);
@@ -628,8 +564,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     sentSequenceNumber,
                     receivedSequenceNumber,
                     session.username(),
-                    session.password(),
-                    engineBlockablePosition);
+                    session.password());
 
                 schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
 
@@ -986,8 +921,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sequenceNumber,
             businessRejectRefIDBuffer,
             businessRejectRefIDOffset,
-            businessRejectRefIDLength,
-            header);
+            businessRejectRefIDLength
+        );
     }
 
     public Action onThrottleConfiguration(
@@ -1705,7 +1640,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long now = outboundTimer.recordSince(timestamp);
 
         final boolean online = fixSenderEndPoints.onMessage(
-            libraryId, connectionId, buffer, offset, length, sequenceNumber, header, metaDataLength);
+            libraryId, connectionId, buffer, offset, length, sequenceNumber, metaDataLength);
 
         if (!online)
         {
@@ -1720,7 +1655,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public Action onValidResendRequest(
         final long session, final long connection, final long correlationId, final Header header)
     {
-        fixSenderEndPoints.onValidResendRequest(connection, correlationId, false);
+        fixSenderEndPoints.onValidResendRequest(connection, correlationId);
 
         fixPSenderEndPoints.onValidResendRequest(connection, correlationId);
 
@@ -1780,9 +1715,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this);
         receiverEndPoints.add(receiverEndPoint);
 
-        final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);
         final FixSenderEndPoint senderEndPoint = endPointFactory.senderEndPoint(
-            channel, connectionId, libraryId, libraryBlockablePosition, this, receiverEndPoint);
+            channel, connectionId, libraryId, this, receiverEndPoint);
         fixSenderEndPoints.add(senderEndPoint);
 
         final FixGatewaySession gatewaySession = new FixGatewaySession(
@@ -1804,18 +1738,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         receiverEndPoint.gatewaySession(gatewaySession);
 
         return gatewaySession;
-    }
-
-    private BlockablePosition getLibraryBlockablePosition(final int libraryId)
-    {
-        if (libraryId == ENGINE_LIBRARY_ID)
-        {
-            return engineBlockablePosition;
-        }
-        else
-        {
-            return idToLibrary.get(libraryId).librarySlowPeeker();
-        }
     }
 
     public Action onRequestDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -1916,14 +1838,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 epochClock.time(),
                 clock);
 
-            final LibrarySlowPeeker librarySlowPeeker = this.librarySlowPeeker.addLibrary(aeronSessionId);
-            if (librarySlowPeeker == null)
-            {
-                return BACK_PRESSURED;
-            }
-
             final LiveLibraryInfo library = new LiveLibraryInfo(
-                libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker,
+                libraryId, libraryName, livenessDetector, aeronSessionId,
                 gatewaySessions instanceof FixPGatewaySessions);
             idToLibrary.put(libraryId, library);
 
@@ -2063,8 +1979,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     lastSentSequenceNumber,
                     lastReceivedSequenceNumber,
                     username,
-                    password,
-                    engineBlockablePosition);
+                    password);
 
                 schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
             }
@@ -2386,13 +2301,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             // If there's still a message that was sent by the session when it was managed by the FixEngine
             // then wait for it to be sent.
-            if (outboundEngineImage.position() < gatewaySession.lastSentPosition() ||
-                outboundEngineSlowImage.position() < gatewaySession.lastSentPosition())
+            if (outboundEngineImage.position() < gatewaySession.lastSentPosition())
             {
                 return BACK_PRESSURED;
             }
 
-            gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+            gatewaySession.handoverManagementTo(libraryId);
             // only capture sequences after receiver has been stopped
             lastRecvSeqNum = session.lastReceivedMsgSeqNum();
             lastSentSeqNum = session.lastSentMsgSeqNum();
@@ -3062,8 +2976,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 UNK_SESSION,
                 UNK_SESSION,
                 null,
-                null,
-                engineBlockablePosition);
+                null);
         }
 
         return false;
@@ -3152,7 +3065,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
 
                 final int libraryId = libraryInfo.libraryId();
-                gatewaySession.setManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+                gatewaySession.setManagementTo(libraryId);
                 libraryInfo.addSession(gatewaySession);
 
                 handoverNewConnectionToLibrary(
@@ -3859,7 +3772,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         public Action onStartReplay(
             final long session, final long connection, final long correlationId, final long position)
         {
-            fixSenderEndPoints.onStartReplay(connection, correlationId, position, slow);
+            fixSenderEndPoints.onStartReplay(connection, correlationId, slow);
 
             return CONTINUE;
         }

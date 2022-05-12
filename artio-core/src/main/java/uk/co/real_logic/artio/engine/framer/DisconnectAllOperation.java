@@ -71,6 +71,7 @@ class DisconnectAllOperation implements Continuation
             {
                 return logOutGatewaySessions();
             }
+
             case AWAITING_DISCONNECTS:
             {
                 return awaitDisconnects();

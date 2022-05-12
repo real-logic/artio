@@ -115,7 +115,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         return CONTINUE;
     }
 
-    public Action onReplayComplete(final long correlationId, final boolean slow)
+    public Action onReplayComplete(final long correlationId)
     {
         if (!retransmitting)
         {
@@ -131,7 +131,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 
         processReattemptBuffer(false);
 
-        return super.onReplayComplete(correlationId, slow);
+        return super.onReplayComplete(correlationId);
     }
 
     void enqueue(final DirectBuffer srcBuffer, final int srcOffst, final int messageSize, final boolean retransmit)

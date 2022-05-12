@@ -65,7 +65,6 @@ public class FramerContext
         final EngineContext engineContext,
         final ErrorHandler errorHandler,
         final Image replayImage,
-        final Image slowReplayImage,
         final EngineTimers timers,
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator,
@@ -154,10 +153,7 @@ public class FramerContext
             endPointFactory,
             engineContext.outboundLibrarySubscription(
                 "outboundLibrarySubscription", finalImagePositions),
-            engineContext.outboundLibrarySubscription(
-                "outboundSlowSubscription", null),
             replayImage,
-            slowReplayImage,
             engineContext.inboundReplayQuery(false),
             outboundPublication,
             inboundPublication,
@@ -172,13 +168,13 @@ public class FramerContext
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),
             finalImagePositions,
-            conductorAgentInvoker,
             recordingCoordinator,
             fixPContexts,
             aeron.countersReader(),
             engineContext.outboundIndexRegistrationId(),
             fixCounters,
-            engineContext.senderSequenceNumbers());
+            engineContext.senderSequenceNumbers(),
+            conductorAgentInvoker);
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)

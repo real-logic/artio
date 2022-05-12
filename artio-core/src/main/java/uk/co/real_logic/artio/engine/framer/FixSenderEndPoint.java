@@ -17,11 +17,10 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongArrayQueue;
+import org.agrona.ExpandableDirectByteBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
@@ -30,7 +29,6 @@ import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.MessageTimingHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
-import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.CompositeKey;
@@ -39,65 +37,97 @@ import uk.co.real_logic.artio.util.CharFormatter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static io.aeron.logbuffer.FrameDescriptor.UNFRAGMENTED;
+import static org.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
-import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
-import static uk.co.real_logic.artio.session.Session.NO_REPLAY_CORRELATION_ID;
 
 class FixSenderEndPoint extends SenderEndPoint
 {
+    private static final int ENQ_MSG = 1;
+    private static final int ENQ_REPLAY_COMPLETE = 2;
+    private static final int ENQ_START_REPLAY = 3;
+
+    static final int ENQ_REPLAY_COMPLETE_LEN = SIZE_OF_INT + SIZE_OF_LONG;
+    static final int ENQ_START_REPLAY_LEN = ENQ_REPLAY_COMPLETE_LEN;
+    static final int ENQ_MESSAGE_BLOCK_LEN = SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT + SIZE_OF_INT;
+
+    protected static final int NO_REATTEMPT = 0;
+
+    private void replaying(final boolean replaying)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.replaying.clear().with(connectionId).with(replaying));
+        }
+
+        this.replaying = replaying;
+    }
+
+    private void requiresRetry(final boolean requiresRetry)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.requiresRetry.clear().with(connectionId).with(requiresRetry));
+        }
+
+        this.requiresRetry = requiresRetry;
+    }
+
     static class Formatters
     {
-        final CharFormatter replayPaused = new CharFormatter("connId=%s, sessId=%s, replayPaused=%s");
         final CharFormatter replayComplete = new CharFormatter(
-            "SEP.replayComplete, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, partiallySent=%s," +
-            " skipPosition=%s, lastProc=%s, queue=%s");
+            "SEP.replayComplete, connId=%s, corrId=%s");
         final CharFormatter validResendRequest = new CharFormatter(
-            "SEP.validResendRequest, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
+            "SEP.validResendRequest, connId=%s, corrId=%s");
         final CharFormatter checkStartReplay = new CharFormatter(
-            "SEP.checkStartReplay, connId=%s, corrId=%s, slow=%s, replayInFlight=%s, queue=%s, lastProc=%s");
+            "SEP.onStartReplay, connId=%s, corrId=%s");
+        final CharFormatter replaying = new CharFormatter(
+            "SEP.replaying, connId=%s, replay=%s");
+        final CharFormatter requiresRetry = new CharFormatter(
+            "SEP.requiresRetry, connId=%s, retry=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int START_REPLAY_LENGTH = HEADER_LENGTH + StartReplayDecoder.BLOCK_LENGTH;
     // Need to give Aeron the start position of the previous message, so include the DHF, naturally term aligned
     static final int TOTAL_START_REPLAY_LENGTH = START_REPLAY_LENGTH + DataHeaderFlyweight.HEADER_LENGTH;
-    private static final int REPLAY_MESSAGE = -1;
     public static final int THROTTLE_BUSINESS_REJECT_REASON = 99;
 
     private final long connectionId;
     private final AtomicCounter invalidLibraryAttempts;
     private final long slowConsumerTimeoutInMs;
-    private final StreamTracker outboundTracker;
-    private final StreamTracker replayTracker;
     private final SenderSequenceNumber senderSequenceNumber;
     private final MessageTimingHandler messageTimingHandler;
     private final FixReceiverEndPoint receiverEndPoint;
-    private final LongArrayQueue replayQueue;
     private final Formatters formatters;
 
     private long sessionId;
     private long sendingTimeoutTimeInMs;
-    private boolean replayPaused;
 
     private FixThrottleRejectBuilder throttleRejectBuilder;
     private FixDictionary fixDictionary;
     private CompositeKey sessionKey;
     private EngineConfiguration configuration;
-    private long lastProcessedReplay;
-    private long replayInFlight;
+
+    private final ReattemptState normalBuffer = new ReattemptState();
+    private final ReattemptState replayBuffer = new ReattemptState();
+
+    private boolean replaying;
+    private boolean requiresRetry;
+    private int reattemptBytesWritten = NO_REATTEMPT;
 
     FixSenderEndPoint(
         final long connectionId,
         final int libraryId,
-        final BlockablePosition outboundBlockablePosition,
         final ExclusivePublication inboundPublication,
-        final BlockablePosition replayBlockablePosition,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
@@ -120,14 +150,10 @@ class FixSenderEndPoint extends SenderEndPoint
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
         this.senderSequenceNumber = senderSequenceNumber;
 
-        outboundTracker = new StreamTracker(outboundBlockablePosition);
-        replayTracker = new StreamTracker(replayBlockablePosition);
         this.messageTimingHandler = messageTimingHandler;
         this.receiverEndPoint = receiverEndPoint;
         this.formatters = formatters;
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
-        replayQueue = new LongArrayQueue(
-            Math.max(LongArrayQueue.MIN_CAPACITY, maxConcurrentSessionReplays), NO_REPLAY_CORRELATION_ID);
     }
 
     void onOutboundMessage(
@@ -136,7 +162,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final int offset,
         final int bodyLength,
         final int sequenceNumber,
-        final Header header,
         final long timeInMs,
         final int metaDataLength)
     {
@@ -146,21 +171,7 @@ class FixSenderEndPoint extends SenderEndPoint
             return;
         }
 
-        if (replayPaused)
-        {
-            dropFurtherBehind(bodyLength);
-
-            return;
-        }
-
-        final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
-        if (attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, header, outboundTracker) &&
-            messageTimingHandler != null)
-        {
-            final int metaDataOffset = offset - FixMessageDecoder.bodyHeaderLength() - metaDataLength;
-
-            messageTimingHandler.onMessage(sequenceNumber, connectionId, directBuffer, metaDataOffset, metaDataLength);
-        }
+        onMessage(directBuffer, offset, bodyLength, metaDataLength, sequenceNumber, timeInMs, false);
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
     }
@@ -173,7 +184,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
-        final Header header,
         final long timeInMs)
     {
         if (isWrongLibraryId(libraryId))
@@ -202,69 +212,8 @@ class FixSenderEndPoint extends SenderEndPoint
             throttleRejectBuilder.offset(),
             throttleRejectBuilder.length(),
             sequenceNumber,
-            header,
             timeInMs,
             0);
-    }
-
-    public Action onSlowThrottleReject(
-        final int libraryId,
-        final long refMsgType,
-        final int refSeqNum,
-        final int sequenceNumber,
-        final DirectBuffer businessRejectRefIDBuffer,
-        final int businessRejectRefIDOffset,
-        final int businessRejectRefIDLength,
-        final Header header,
-        final long timeInMs)
-    {
-        if (isWrongLibraryId(libraryId))
-        {
-            invalidLibraryAttempts.increment();
-            return CONTINUE;
-        }
-
-        // We hoist these next two steps early on this path to avoid building the throttle reject
-        if (!isSlowConsumer())
-        {
-            return CONTINUE;
-        }
-
-        // Skip all messages beyond the skip position, since this endpoint has been blocked but others
-        // Scanning forward.
-        final long skipPosition = outboundTracker.skipPosition;
-        final long position = header.position();
-        if (position > skipPosition)
-        {
-            return CONTINUE;
-        }
-
-        final FixThrottleRejectBuilder throttleRejectBuilder = throttleRejectBuilder();
-        if (!throttleRejectBuilder.build(
-            refMsgType,
-            refSeqNum,
-            sequenceNumber,
-            businessRejectRefIDBuffer,
-            businessRejectRefIDOffset,
-            businessRejectRefIDLength,
-            false))
-        {
-            // failed to build reject due to configuration error
-            return CONTINUE;
-        }
-
-        // fake the data offset after header position in order to make it look like a normally framed FIX message.
-        final int fakeOffsetAfterHeader = throttleRejectBuilder.offset() - FRAME_SIZE;
-        return attemptSlowMessage(
-            throttleRejectBuilder.buffer(),
-            fakeOffsetAfterHeader,
-            throttleRejectLength(businessRejectRefIDLength),
-            header,
-            throttleRejectBuilder.length(),
-            timeInMs,
-            outboundTracker,
-            0,
-            sequenceNumber);
     }
 
     private FixThrottleRejectBuilder throttleRejectBuilder()
@@ -296,120 +245,314 @@ class FixSenderEndPoint extends SenderEndPoint
         return ThrottleRejectDecoder.BLOCK_LENGTH + businessRejectRefIDHeaderLength() + businessRejectRefIDLength;
     }
 
-    Action onReplayMessage(
-        final DirectBuffer directBuffer,
-        final int offset,
-        final int bodyLength,
-        final long timeInMs,
-        final Header header)
+    public void onMessage(
+        final DirectBuffer directBuffer, final int offset, final int bodyLength, final int metaDataLength,
+        final int seqNum, final long timeInMs, final boolean replay)
     {
-        if (!isSlowConsumer())
-        {
-            replayPaused(true);
-        }
-
-        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, header, replayTracker);
-
-        return CONTINUE;
-    }
-
-    Action onSlowReplayMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int bodyLength,
-        final long timeInMs,
-        final Header header,
-        final int metaDataLength)
-    {
-        if (replayInFlight == NO_REPLAY_CORRELATION_ID)
-        {
-            // Invariant: already blocked here by start replay message, skip this message until ready to send replay
-            return CONTINUE;
-        }
-
-        if (!outboundTracker.partiallySentMessage)
-        {
-            replayPaused(true);
-        }
-
-        final int totalFrameSize = FRAME_SIZE + metaDataLength;
-        final int offsetAfterHeader = offset - totalFrameSize;
-        final int length = bodyLength + totalFrameSize;
-
-        return attemptSlowMessage(buffer, offsetAfterHeader, length, header, bodyLength, timeInMs, replayTracker,
-            metaDataLength, REPLAY_MESSAGE);
-    }
-
-    private boolean attemptFramedMessage(
-        final DirectBuffer directBuffer,
-        final int offset,
-        final int bodyLength,
-        final long timeInMs,
-        final Header header,
-        final StreamTracker tracker)
-    {
-        if (isSlowConsumer())
-        {
-            dropFurtherBehind(bodyLength);
-
-            return false;
-        }
-
         try
         {
-            final int written = writeFramedMessage(directBuffer, offset, bodyLength, timeInMs);
+            final int metaDataOffset = offset - FixMessageDecoder.bodyHeaderLength() - metaDataLength;
 
-            if (written != bodyLength)
+            if ((replaying && !replay) || (!replaying && replay) || reattemptBytesWritten > 0)
             {
-                becomeSlowConsumer(written, bodyLength, header, tracker);
+                enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
+                return;
+            }
+
+            final int written = writeBuffer(directBuffer, offset, bodyLength);
+            final int totalWritten = reattemptBytesWritten + written;
+
+            if (totalWritten < bodyLength)
+            {
+                reattemptBytesWritten = totalWritten;
+                enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
             }
             else
             {
-                tracker.sentPosition = header.position();
-                return true;
+                reattemptBytesWritten = NO_REATTEMPT;
+
+                final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
+                if (messageTimingHandler != null && !replay)
+                {
+                    messageTimingHandler.onMessage(
+                        seqNum, connectionId, directBuffer, metaDataOffset, metaDataLength);
+                }
             }
-        }
-        catch (final IOException ex)
-        {
-            onError(ex);
-        }
 
-        return false;
+            updateSendingTimeoutTimeInMs(timeInMs, written);
+        }
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+        }
     }
 
-    private void dropFurtherBehind(final int bodyLength)
-    {
-        final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
-        if (bytesInBuffer > maxBytesInBuffer)
-        {
-            disconnectEndpoint(SLOW_CONSUMER);
-        }
-
-        this.bytesInBuffer.setOrdered(bytesInBuffer);
-    }
-
-    private int writeFramedMessage(
-        final DirectBuffer directBuffer,
-        final int offset,
-        final int length,
-        final long timeInMs)
-        throws IOException
+    private int writeBuffer(
+        final DirectBuffer directBuffer, final int offset, final int messageSize) throws IOException
     {
         final ByteBuffer buffer = directBuffer.byteBuffer();
         final int startLimit = buffer.limit();
         final int startPosition = buffer.position();
 
-        ByteBufferUtil.limit(buffer, offset + length);
-        ByteBufferUtil.position(buffer, offset);
+        ByteBufferUtil.limit(buffer, offset + messageSize);
+        ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
 
         final int written = channel.write(buffer);
+//        System.out.println("written = " + written);
         ByteBufferUtil.position(buffer, offset);
-        DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
-        updateSendingTimeoutTimeInMs(timeInMs, written);
+        DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
         buffer.limit(startLimit).position(startPosition);
 
         return written;
+    }
+
+    private void enqueueMessage(
+        final DirectBuffer srcBuffer, final int srcOffst, final int bodyLength,
+        final int metaDataOffset, final int metaDataLength, final int sequenceNumber, final boolean replay)
+    {
+        final int totalLength = ENQ_MESSAGE_BLOCK_LEN + bodyLength + metaDataLength;
+        final ReattemptState reattemptState = enqueue(totalLength, replay);
+
+        int reattemptOffset = reattemptState.usage - totalLength;
+        final ExpandableDirectByteBuffer buffer = reattemptState.buffer();
+
+        /*System.out.println("FixSenderEndPoint.enqueueMessage" + ", sequenceNumber = " + sequenceNumber +
+            ", metaDataLength = " + metaDataLength +
+            ", reattemptOffset = " + reattemptOffset);*/
+
+        buffer.putInt(reattemptOffset, ENQ_MSG);
+        reattemptOffset += SIZE_OF_INT;
+
+        buffer.putInt(reattemptOffset, sequenceNumber);
+        reattemptOffset += SIZE_OF_INT;
+
+        buffer.putInt(reattemptOffset, bodyLength);
+        reattemptOffset += SIZE_OF_INT;
+
+        buffer.putBytes(reattemptOffset, srcBuffer, srcOffst, bodyLength);
+        reattemptOffset += bodyLength;
+
+        buffer.putInt(reattemptOffset, metaDataLength);
+        reattemptOffset += SIZE_OF_INT;
+
+        buffer.putBytes(reattemptOffset, srcBuffer, metaDataOffset, metaDataLength);
+    }
+
+    private void enqueueReplayComplete(final long correlationId)
+    {
+        enqueueCorrelation(correlationId, ENQ_REPLAY_COMPLETE);
+    }
+
+    private void enqueueStartReplay(final long correlationId)
+    {
+        enqueueCorrelation(correlationId, ENQ_START_REPLAY);
+    }
+
+    private void enqueueCorrelation(final long correlationId, final int messageType)
+    {
+        final ReattemptState reattemptState = enqueue(ENQ_REPLAY_COMPLETE_LEN, true);
+
+        int reattemptOffset = reattemptState.usage - ENQ_REPLAY_COMPLETE_LEN;
+        final ExpandableDirectByteBuffer buffer = reattemptState.buffer();
+
+        buffer.putInt(reattemptOffset, messageType);
+        reattemptOffset += SIZE_OF_INT;
+
+        buffer.putLong(reattemptOffset, correlationId);
+    }
+
+    private ReattemptState enqueue(final int length, final boolean replay)
+    {
+        // we only need re-attempting when we've got messages buffered for the current state
+        final boolean currentStream = replay == replaying;
+        if (!requiresRetry && currentStream)
+        {
+            requiresRetry(true);
+            sendSlowStatus(true);
+        }
+
+        final ReattemptState reattemptState = reattemptState(replay);
+
+        final int bufferUsage = reattemptState.usage + length;
+        reattemptState.usage = bufferUsage;
+        if (currentStream)
+        {
+            if (bufferUsage > maxBytesInBuffer)
+            {
+                disconnectEndpoint(SLOW_CONSUMER);
+            }
+
+            bytesInBuffer.setOrdered(bufferUsage);
+        }
+        return reattemptState;
+    }
+
+    private ReattemptState reattemptState(final boolean replay)
+    {
+        return replay ? replayBuffer : normalBuffer;
+    }
+
+    private boolean processReattemptBuffer(final boolean replay)
+    {
+        final ReattemptState reattemptState = reattemptState(replay);
+        final ExpandableDirectByteBuffer buffer = reattemptState.buffer;
+        final int reattemptBufferUsage = reattemptState.usage;
+//        System.out.println("FixSenderEndPoint.processReattemptBuffer, reattemptBufferUsage = " +
+//        reattemptBufferUsage);
+        if (reattemptBufferUsage == 0)
+        {
+            return true;
+        }
+
+        int offset = 0;
+        while (offset < reattemptBufferUsage)
+        {
+            try
+            {
+                final int enqueueType = buffer.getInt(offset);
+//                System.out.println("enqueueType = " + enqueueType + ", offset = " + offset + ", replay = " + replay);
+//                System.out.println("reattemptState.buffer = " + reattemptState.buffer);
+//                System.out.println();
+                if (enqueueType == ENQ_MSG)
+                {
+                    final int sequenceNumberOffset = offset + SIZE_OF_INT;
+                    final int sequenceNumber = buffer.getInt(sequenceNumberOffset);
+//                    System.out.println("sequenceNumber = " + sequenceNumber);
+
+                    final int bodyLengthOffset = sequenceNumberOffset + SIZE_OF_INT;
+                    final int bodyLength = buffer.getInt(bodyLengthOffset);
+
+                    final int bodyOffset = bodyLengthOffset + SIZE_OF_INT;
+                    final int written = writeBuffer(buffer, bodyOffset, bodyLength);
+                    final int totalWritten = written + reattemptBytesWritten;
+                    if (totalWritten < bodyLength)
+                    {
+                        this.reattemptBytesWritten = totalWritten;
+                        break;
+                    }
+                    else
+                    {
+                        offset = onProcessMsgComplete(
+                            replay, buffer, offset, sequenceNumber, bodyLength, bodyOffset, totalWritten);
+                    }
+                }
+                else if (enqueueType == ENQ_REPLAY_COMPLETE)
+                {
+                    final int idOffset = offset + SIZE_OF_INT;
+                    final long correlationId = buffer.getLong(idOffset);
+                    this.reattemptBytesWritten = NO_REATTEMPT;
+                    if (super.onReplayComplete(correlationId) == ABORT)
+                    {
+                        break; // leave it in the buffer
+                    }
+                    else
+                    {
+                        // Complete
+                        final int endOfReplayEntry = idOffset + SIZE_OF_LONG;
+
+                        // peek the next message to see if we need to continue replaying
+                        // If not then we end the replay, otherwise we keep replaying
+                        if (buffer.getInt(endOfReplayEntry) != ENQ_START_REPLAY)
+                        {
+                            replaying(false);
+                            reattemptState.shuffleWritten(endOfReplayEntry);
+                            bytesInBuffer.setOrdered(normalBuffer.usage);
+                            return true;
+                        }
+                    }
+                }
+                else if (enqueueType == ENQ_START_REPLAY)
+                {
+                    // We just ensure that we're still replaying and skip these messages
+                    offset += ENQ_START_REPLAY_LEN;
+                }
+                else
+                {
+                    throw new IllegalStateException(
+                        "enqueueType = " + enqueueType + ", usage = " + reattemptState.usage + ", offset = " + offset +
+                        ", replay = " + replay);
+                }
+            }
+            catch (final Throwable e)
+            {
+                onError(e);
+                return true;
+            }
+        }
+
+        final int usage = reattemptState.shuffleWritten(offset);
+        bytesInBuffer.setOrdered(usage);
+        return usage == 0;
+    }
+
+    private int onProcessMsgComplete(
+        final boolean replay,
+        final ExpandableDirectByteBuffer buffer,
+        final int offset,
+        final int sequenceNumber,
+        final int bodyLength,
+        final int bodyOffset,
+        final int totalWritten)
+    {
+        final int metaDataLengthOffset = bodyOffset + bodyLength;
+        final int metaDataLength = buffer.getInt(metaDataLengthOffset);
+
+        final int metaDataOffset = metaDataLengthOffset + SIZE_OF_INT;
+
+        final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
+        if (messageTimingHandler != null && !replay)
+        {
+            messageTimingHandler.onMessage(
+                sequenceNumber, connectionId, buffer, metaDataOffset, metaDataLength);
+        }
+
+        this.reattemptBytesWritten = NO_REATTEMPT;
+
+        return offset + ENQ_MESSAGE_BLOCK_LEN + totalWritten + metaDataLength;
+    }
+
+    public boolean reattempt()
+    {
+        return reattempt(replaying);
+    }
+
+    private boolean reattempt(final boolean replaying)
+    {
+//        System.out.println("FixSenderEndPoint.reattempt");
+        final boolean caughtUp = processReattemptBuffer(replaying);
+        if (caughtUp)
+        {
+            if (requiresRetry)
+            {
+                // Do we need to try the other queue?
+                final boolean other = !replaying;
+                final ReattemptState reattemptState = reattemptState(other);
+                final int usage = reattemptState.usage;
+                if (usage == 0)
+                {
+                    requiresRetry(false);
+                    sendSlowStatus(false);
+                }
+                else
+                {
+                    this.replaying(!replaying);
+                    bytesInBuffer.setOrdered(usage);
+                }
+            }
+        }
+        return caughtUp;
+    }
+
+    Action onReplayMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int bodyLength,
+        final long timeInMs)
+    {
+        onMessage(directBuffer, offset, bodyLength, 0, 0, timeInMs, true);
+
+        return CONTINUE;
     }
 
     private void updateSendingTimeoutTimeInMs(final long timeInMs, final int written)
@@ -420,27 +563,11 @@ class FixSenderEndPoint extends SenderEndPoint
         }
     }
 
-    private void onError(final Exception ex)
+    private void onError(final Throwable ex)
     {
         errorHandler.onError(new Exception(String.format(
             "Exception reported for sessionId=%d,connectionId=%d", sessionId, connectionId), ex));
         disconnectEndpoint(EXCEPTION);
-    }
-
-    private void becomeSlowConsumer(
-        final int written, final int bodyLength, final Header header, final StreamTracker tracker)
-    {
-        final int remainingBytes = bodyLength - written;
-        bytesInBuffer.setOrdered(remainingBytes);
-        sendSlowStatus(true);
-        tracker.sentPosition = header.position() - remainingBytes;
-        tracker.partiallySentMessage = true;
-    }
-
-    public void libraryId(final int libraryId, final BlockablePosition blockablePosition)
-    {
-        libraryId(libraryId);
-        this.outboundTracker.blockablePosition = blockablePosition;
     }
 
     public void close()
@@ -448,177 +575,6 @@ class FixSenderEndPoint extends SenderEndPoint
         senderSequenceNumber.close();
         invalidLibraryAttempts.close();
         super.close();
-    }
-
-    Action onSlowOutboundMessage(
-        final DirectBuffer directBuffer,
-        final int offsetAfterHeader,
-        final int length,
-        final Header header,
-        final int bodyLength,
-        final int libraryId,
-        final long timeInMs,
-        final int metaDataLength,
-        final int sequenceNumber)
-    {
-        if (isWrongLibraryId(libraryId))
-        {
-            invalidLibraryAttempts.increment();
-            return CONTINUE;
-        }
-
-        if (replayPaused)
-        {
-            return blockPositionFixMessage(header, length, outboundTracker, false);
-        }
-
-        return attemptSlowMessage(
-            directBuffer, offsetAfterHeader, length, header, bodyLength, timeInMs, outboundTracker, metaDataLength,
-            sequenceNumber);
-    }
-
-    private Action attemptSlowMessage(
-        final DirectBuffer directBuffer,
-        final int offsetAfterHeader,
-        final int length,
-        final Header header,
-        final int bodyLength,
-        final long timeInMs,
-        final StreamTracker tracker,
-        final int metaDataLength,
-        final int sequenceNumber)
-    {
-        if (!isSlowConsumer())
-        {
-            return CONTINUE;
-        }
-
-        // Skip all messages beyond the skip position, since this endpoint has been blocked but others
-        // Scanning forward.
-        final long skipPosition = tracker.skipPosition;
-        final long position = header.position();
-        if (position > skipPosition)
-        {
-            return CONTINUE;
-        }
-
-        // Skip messages where the end point has become a slow consumer, but
-        // the slow consumer stream hasn't polled up to update with the regular stream
-        final long sentPosition = tracker.sentPosition;
-        if (position <= sentPosition)
-        {
-            return CONTINUE;
-        }
-
-        if (partiallySentOtherStream(tracker))
-        {
-            return blockPositionFixMessage(header, length, tracker, true);
-        }
-
-        try
-        {
-            final long startOfMessage = position - length;
-            final int remainingLength;
-            final int bytesPreviouslySent;
-
-            // You've completed the stream and there's another message in between.
-            if (sentPosition < startOfMessage)
-            {
-                remainingLength = bodyLength;
-                bytesPreviouslySent = 0;
-            }
-            else
-            {
-                remainingLength = (int)(position - sentPosition);
-                bytesPreviouslySent = bodyLength - remainingLength;
-            }
-
-            final int metaDataOffset = offsetAfterHeader + FixMessageEncoder.BLOCK_LENGTH +
-                FixMessageDecoder.metaDataHeaderLength();
-            final int dataOffset = metaDataOffset + FixMessageDecoder.bodyHeaderLength() + metaDataLength +
-                bytesPreviouslySent;
-            final ByteBuffer buffer = directBuffer.byteBuffer();
-
-            ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
-            ByteBufferUtil.position(buffer, dataOffset);
-
-            final int written = channel.write(buffer);
-            bytesInBuffer.getAndAddOrdered(-written);
-
-            updateSendingTimeoutTimeInMs(timeInMs, written);
-
-            if (bodyLength > (written + bytesPreviouslySent))
-            {
-                tracker.sentPosition = (position - remainingLength) + written;
-                return blockPositionFixMessage(header, length, tracker, false);
-            }
-            else
-            {
-                tracker.sentPosition = position;
-                tracker.partiallySentMessage = false;
-                tracker.skipPosition = Long.MAX_VALUE;
-
-                final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
-                if (sequenceNumber != REPLAY_MESSAGE && messageTimingHandler != null)
-                {
-                    messageTimingHandler.onMessage(
-                        sequenceNumber, connectionId, directBuffer, metaDataOffset, metaDataLength);
-                }
-
-                if (!isSlowConsumer())
-                {
-                    becomeNormalConsumer();
-                }
-            }
-        }
-        catch (final IOException ex)
-        {
-            onError(ex);
-        }
-
-        return CONTINUE;
-    }
-
-    private Action blockPositionFixMessage(
-        final Header header, final int fragLengthWithoutHeader, final StreamTracker tracker,
-        final boolean partiallySentOther)
-    {
-        final BlockablePosition blockablePosition = tracker.blockablePosition;
-
-        final int aeronHeaderLength;
-        if ((header.flags() & UNFRAGMENTED) == UNFRAGMENTED)
-        {
-            aeronHeaderLength = DataHeaderFlyweight.HEADER_LENGTH;
-        }
-        else
-        {
-            final int fragmentCount = fragLengthWithoutHeader / blockablePosition.maxPayload + 1;
-            aeronHeaderLength = fragmentCount * DataHeaderFlyweight.HEADER_LENGTH;
-        }
-        final int frameLength = aeronHeaderLength + fragLengthWithoutHeader + HEADER_LENGTH;
-        final int alignedLength = ArchiveDescriptor.alignTerm(frameLength);
-        final long messagePosition = header.position();
-        final long messageStartPosition = messagePosition - alignedLength;
-
-        blockablePosition.blockPosition(messageStartPosition, true);
-        tracker.skipPosition = messagePosition;
-        return Action.CONTINUE;
-    }
-
-    private void blockPositionOther(
-        final long messageStartPosition, final long messagePosition, final StreamTracker tracker, final boolean slow)
-    {
-        // Assumes non-fragmented message
-        final BlockablePosition blockablePosition = tracker.blockablePosition;
-        blockablePosition.blockPosition(messageStartPosition, slow);
-        tracker.skipPosition = messagePosition;
-    }
-
-    private boolean partiallySentOtherStream(final StreamTracker tracker)
-    {
-        return tracker == outboundTracker ?
-            replayTracker.partiallySentMessage :
-            outboundTracker.partiallySentMessage;
     }
 
     private boolean isWrongLibraryId(final int libraryId)
@@ -652,8 +608,10 @@ class FixSenderEndPoint extends SenderEndPoint
         return sessionId;
     }
 
-    boolean checkTimeouts(final long timeInMs)
+    boolean poll(final long timeInMs)
     {
+        reattempt();
+
         if (isSlowConsumer() && timeInMs > sendingTimeoutTimeInMs)
         {
             errorHandler.onError(new IllegalStateException(String.format(
@@ -675,36 +633,27 @@ class FixSenderEndPoint extends SenderEndPoint
         receiverEndPoint.completeDisconnect(reason);
     }
 
-    public Action onReplayComplete(final long correlationId, final boolean slow)
+    public Action onReplayComplete(final long correlationId)
     {
-        // We don't do a normal slow check here because you may catch up during the replay if you only became replay
-        // slow and thus miss your slow replay complete message, just check the correlation ids below in order to avoid
-        // duplicates
-
-        final StreamTracker replayTracker = this.replayTracker;
-        final long replayInFlight = this.replayInFlight;
-        final boolean partiallySentMessage = replayTracker.partiallySentMessage;
-        final long skipPosition = replayTracker.skipPosition;
-
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY,
-                formatters.replayComplete.clear().with(connectionId).with(correlationId).with(slow)
-                .with(replayInFlight).with(partiallySentMessage).with(skipPosition).with(lastProcessedReplay)
-                .with(replayQueue.toString()));
+                formatters.replayComplete.clear().with(connectionId).with(correlationId));
         }
 
-        if (correlationId == replayInFlight && // deduplicate by checking the correlation id
-            !partiallySentMessage &&
-            skipPosition == Long.MAX_VALUE) // check we don't have a replay still in progress
+        if (!replaying || !reattempt(true))
         {
-            replayPaused(false);
-
-            this.lastProcessedReplay = replayInFlight;
-            this.replayInFlight = NO_REPLAY_CORRELATION_ID;
-            return super.onReplayComplete(correlationId, slow);
+            enqueueReplayComplete(correlationId);
+            return CONTINUE;
         }
 
+        final Action action = super.onReplayComplete(correlationId);
+        if (action == ABORT)
+        {
+            enqueueReplayComplete(correlationId);
+        }
+
+        replaying(false);
         return CONTINUE;
     }
 
@@ -719,179 +668,35 @@ class FixSenderEndPoint extends SenderEndPoint
         this.configuration = configuration;
     }
 
-    public void onValidResendRequest(final long correlationId, final boolean slow)
+    // Received on outbound publication when a replay starts
+    public void onValidResendRequest(final long correlationId)
     {
-        // We can end up seeing this message again if we're in slow-consumer mode and start re-scanning the messages.
-        if (correlationId <= lastProcessedReplay)
-        {
-            return;
-        }
-
-        final long replayInFlight = this.replayInFlight;
-        final LongArrayQueue replayQueue = this.replayQueue;
-
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY, formatters.validResendRequest.clear()
-                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
-                .with(lastProcessedReplay));
-        }
-
-        // Can potentially flip from slow to normal, so instead of checking
-        // that slow == isSlowConsumer() we just add and dedup
-        if (!contains(replayQueue, correlationId) && correlationId > replayInFlight)
-        {
-            replayQueue.addLong(correlationId);
+                .with(connectionId).with(correlationId));
         }
     }
 
-    private boolean contains(final LongArrayQueue replayQueue, final long correlationId)
-    {
-        final LongArrayQueue.LongIterator it = replayQueue.iterator();
-        while (it.hasNext())
-        {
-            if (it.nextValue() == correlationId)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void onStartReplay(final long correlationId, final long msgPosition, final boolean slow)
-    {
-        final boolean slowConsumer = isSlowConsumer();
-        if (slow == slowConsumer)
-        {
-            checkStartReplay(correlationId, msgPosition, slow);
-        }
-        else if (!slow)
-        {
-            dropFurtherBehind(START_REPLAY_LENGTH);
-        }
-    }
-
-    private void checkStartReplay(
-        final long correlationId, final long msgPosition, final boolean slow)
+    // Receive from replayer
+    public void onStartReplay(final long correlationId)
     {
         if (IS_REPLAY_LOG_TAG_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY, formatters.checkStartReplay.clear()
-                .with(connectionId).with(correlationId).with(slow).with(replayInFlight).with(replayQueue.toString())
-                .with(lastProcessedReplay));
+                .with(connectionId).with(correlationId));
         }
 
-        // We've already seen this message if it's slow.
-        if (replayInFlight == correlationId)
+        // We start the replay with this message, rather than VRR because it doesn't race with replay complete.
+        if (replaying || requiresRetry)
         {
-            return;
-        }
-
-        final long nextReplayCorrelationId = replayQueue.peekLong();
-        if (nextReplayCorrelationId == NO_REPLAY_CORRELATION_ID)
-        {
-            blockStartReplay(msgPosition, slow);
-            return;
-        }
-
-        if (replayInFlight != NO_REPLAY_CORRELATION_ID)
-        {
-            errorHandler.onError(new IllegalStateException("invariant fail: replayInFlight = " + replayInFlight +
-                " when trying to process " + correlationId + ", slow = " + slow + ",connectionId=" + connectionId));
-        }
-
-        if (nextReplayCorrelationId == correlationId)
-        {
-            replayInFlight = nextReplayCorrelationId;
-            replayTracker.skipPosition = Long.MAX_VALUE;
-            replayQueue.removeLong();
-
-            if (slow)
-            {
-                dropFurtherBehind(-START_REPLAY_LENGTH);
-            }
+            // Always goes on the replaying buffer
+            enqueueStartReplay(correlationId);
         }
         else
         {
-            if (slow && (correlationId < nextReplayCorrelationId))
-            {
-                // We're just seeing the same message that we've already processed before on a controlledPeek of the
-                // slow stream, which can give us messages twice.
-                return;
-            }
-
-            errorHandler.onError(new IllegalStateException("invariant fail: concurrent replays, next replay = " +
-                nextReplayCorrelationId + " when received event for " + correlationId + ", slow = " + slow +
-                ",connectionId=" + connectionId));
+            replaying(true);
         }
-    }
-
-    private void blockStartReplay(final long msgPosition, final boolean slow)
-    {
-        final StreamTracker replayTracker = this.replayTracker;
-        final long msgStartPosition = msgPosition - TOTAL_START_REPLAY_LENGTH;
-        blockPositionOther(msgStartPosition, msgPosition, replayTracker, slow);
-
-        if (!slow)
-        {
-            // become slow consumer
-            bytesInBuffer.setOrdered(START_REPLAY_LENGTH);
-            replayTracker.sentPosition = msgStartPosition;
-            sendSlowStatus(true);
-        }
-    }
-
-    // Struct for tracking the slow state of the replay and outbound streams
-    static class StreamTracker
-    {
-        // All messages with a position < sentPosition have been sent.
-        private long sentPosition;
-        // Any messages with a position > skipPosition should be skipped
-        private long skipPosition = Long.MAX_VALUE;
-        private boolean partiallySentMessage = false;
-        private BlockablePosition blockablePosition;
-
-        StreamTracker(final BlockablePosition blockablePosition)
-        {
-            this.blockablePosition = blockablePosition;
-        }
-    }
-
-    private void replayPaused(final boolean replayPaused)
-    {
-        if (this.replayPaused != replayPaused)
-        {
-            if (IS_REPLAY_LOG_TAG_ENABLED)
-            {
-                DebugLogger.log(LogTag.REPLAY,
-                    formatters.replayPaused.clear().with(connectionId).with(sessionId).with(replayPaused));
-            }
-
-            this.replayPaused = replayPaused;
-            if (replayPaused)
-            {
-                receiverEndPoint.pause();
-            }
-            else
-            {
-                receiverEndPoint.play();
-            }
-        }
-    }
-
-    boolean replayPaused()
-    {
-        return replayPaused;
-    }
-
-    public long replayInFlight()
-    {
-        return replayInFlight;
-    }
-
-    public LongArrayQueue queuedReplay()
-    {
-        return replayQueue;
     }
 
     public String toString()
@@ -901,5 +706,55 @@ class FixSenderEndPoint extends SenderEndPoint
             ", sessionId=" + sessionId +
             ", sessionKey=" + sessionKey +
             "} " + super.toString();
+    }
+
+    boolean isReplaying()
+    {
+        return replaying;
+    }
+
+    boolean requiresReattempting()
+    {
+        return requiresRetry;
+    }
+
+    int reattemptBytesWritten()
+    {
+        return reattemptBytesWritten;
+    }
+
+    static class ReattemptState
+    {
+        ExpandableDirectByteBuffer buffer;
+        int usage;
+
+        ExpandableDirectByteBuffer buffer()
+        {
+            ExpandableDirectByteBuffer buffer = this.buffer;
+            if (buffer == null)
+            {
+                buffer = this.buffer = new ExpandableDirectByteBuffer();
+//                System.out.println("buffer = " + buffer);
+            }
+
+//            System.out.println("usage = " + usage);
+//            System.out.println("before checkLimit buffer = " + buffer);
+            buffer.checkLimit(usage);
+//            System.out.println("after checkLimit buffer = " + buffer);
+
+            return buffer;
+        }
+
+        int shuffleWritten(final int written)
+        {
+            int usage = this.usage;
+            if (written > 0)
+            {
+                usage -= written;
+                buffer.putBytes(0, buffer, written, usage);
+                this.usage = usage;
+            }
+            return usage;
+        }
     }
 }
