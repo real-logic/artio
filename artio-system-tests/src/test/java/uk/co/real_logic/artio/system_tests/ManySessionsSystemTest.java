@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
@@ -79,9 +78,14 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldConnectManySessions()
     {
-        final Reply<Session>[] replies = IntStream.range(0, NUMBER_OF_SESSIONS)
-            .mapToObj(i -> initiate(initiatingLibrary, port, initId(i), accId(i)))
-            .toArray(Reply[]::new);
+        final long timeoutInMs = 5 * TEST_REPLY_TIMEOUT_IN_MS;
+
+        final Reply<Session>[] replies = new Reply[NUMBER_OF_SESSIONS];
+        for (int i = 0; i < NUMBER_OF_SESSIONS; i++)
+        {
+            replies[i] = initiate(initiatingLibrary, port, initId(i), accId(i), timeoutInMs);
+            testSystem.poll();
+        }
 
         testSystem.awaitCompletedReplies(replies);
 

@@ -287,7 +287,8 @@ public class AbstractGatewayToGatewaySystemTest
     void connectSessions()
     {
         connectTimeRange = new TimeRange(nanoClock);
-        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply = initiate(
+            initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID, TEST_REPLY_TIMEOUT_IN_MS);
         completeConnectInitiatingSession(reply);
         connectTimeRange.end();
     }

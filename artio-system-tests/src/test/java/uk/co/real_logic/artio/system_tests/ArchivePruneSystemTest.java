@@ -44,9 +44,13 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private boolean saveOnShutdownTesting = true;
+
     @Before
     public void launch()
     {
+        deleteLogs();
+
         mediaDriver = launchMediaDriver(TERM_MIN_LENGTH);
 
         newAcceptingEngine(true);
@@ -164,6 +168,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
     public void shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbersProcessTerminated()
     {
         RecordingCoordinator.saveOnShutdownTesting(false);
+        saveOnShutdownTesting = false;
         try
         {
             shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbers();
@@ -226,6 +231,14 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
 
             // Ensure that the recordings have been extended
             final Long2LongHashMap endRecordingIdToStartPos = getRecordingStartPos(archive);
+
+            if (!saveOnShutdownTesting)
+            {
+                // If we didn't save the file it's reasonable to continue to operate the prune but have extra
+                // unknown recordings
+                endRecordingIdToStartPos.keySet().retainAll(prunedRecordingIdToStartPos.keySet());
+            }
+
             assertEquals(prunedRecordingIdToStartPos, endRecordingIdToStartPos);
         }
     }
