@@ -300,15 +300,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * {@inheritDoc}
      */
-    public LibraryConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
-    {
-        super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public LibraryConfiguration resendRequestController(final ResendRequestController resendRequestController)
     {
         super.resendRequestController(resendRequestController);

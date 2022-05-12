@@ -58,7 +58,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock,
             ConnectionType.INITIATOR,
-            true,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
             new InternalSession.Formatters());

@@ -85,7 +85,6 @@ public class FixGatewaySessions extends GatewaySessions
     private final EpochNanoClock clock;
     private final EpochFractionFormat epochFractionPrecision;
     private final UtcTimestampEncoder sendingTimeEncoder;
-    private final boolean backpressureMessagesDuringReplay;
     private final ResendRequestController resendRequestController;
     private final int forcedHeartbeatIntervalInS;
 
@@ -127,7 +126,6 @@ public class FixGatewaySessions extends GatewaySessions
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.epochNanoClock();
-        this.backpressureMessagesDuringReplay = configuration.backpressureMessagesDuringReplay();
         this.fixContexts = fixContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.epochFractionPrecision = epochFractionPrecision;
@@ -191,7 +189,6 @@ public class FixGatewaySessions extends GatewaySessions
             messageInfo,
             epochFractionClock,
             gatewaySession.connectionType(),
-            backpressureMessagesDuringReplay,
             resendRequestController,
             forcedHeartbeatIntervalInS,
             formatters);

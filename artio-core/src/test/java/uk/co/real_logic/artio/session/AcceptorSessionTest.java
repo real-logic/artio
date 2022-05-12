@@ -59,7 +59,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
             messageInfo,
             fakeEpochFractionClock,
             ConnectionType.ACCEPTOR,
-            true,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
             new InternalSession.Formatters());

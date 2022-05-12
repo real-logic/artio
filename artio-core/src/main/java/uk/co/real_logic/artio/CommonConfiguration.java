@@ -27,7 +27,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.errors.DistinctErrorLog;
 import org.agrona.concurrent.errors.ErrorConsumer;
-import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.session.ResendRequestController;
@@ -302,7 +301,6 @@ public class CommonConfiguration
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
     private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
-    private boolean backpressureMessagesDuringReplay = true;
     private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
     private int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
 
@@ -762,31 +760,6 @@ public class CommonConfiguration
     }
 
     /**
-     * Configures whether <code>Session.trySend()</code> methods such as
-     * {@link uk.co.real_logic.artio.session.Session#trySend(Encoder)} backpressure attempts to write FIX messages
-     * whilst a replay is in progress. Defaults to <code>true</code>.
-     *
-     * Artio can disconnect slow consumer FIX sessions in
-     * <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">certain
-     * situations</a>. This is a particularly high risk event if an Artio user attempts to write messages to a FIX
-     * session, whilst simultaneously a replay is going on. Artio's replay mechanism takes account of the backpressure
-     * rates in order to avoid triggering a slow-consumer disconnect whilst a replay is in progress. Setting this
-     * option to true (the default) ensures that a slow-consumer disconnect won't happen during a replay.
-     *
-     * An alternative perspective of back-pressure in an Artio system is that if a slow consumer cannot read messages
-     * sent in response to a resend request whilst FIX messages are being written into the queue then it should trigger
-     * a slow consumer disconnect as expected. Setting this configuration option to false results in this behaviour.
-     *
-     * @param backpressureMessagesDuringReplay true if you want to apply back-pressure to libraries during replay.
-     * @return this
-     */
-    public CommonConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
-    {
-        this.backpressureMessagesDuringReplay = backpressureMessagesDuringReplay;
-        return this;
-    }
-
-    /**
      * Configures how a resend request is responded to. We default to responding to any valid resend request. See
      * Javadoc on {@link ResendRequestController} for details of how to implement it.
      *
@@ -951,11 +924,6 @@ public class CommonConfiguration
     public int fixPAcceptedSessionMaxRetransmissionRange()
     {
         return fixPAcceptedSessionMaxRetransmissionRange;
-    }
-
-    public boolean backpressureMessagesDuringReplay()
-    {
-        return backpressureMessagesDuringReplay;
     }
 
     public ResendRequestController resendRequestController()

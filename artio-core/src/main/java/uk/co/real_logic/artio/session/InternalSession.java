@@ -77,7 +77,6 @@ public class InternalSession extends Session implements AutoCloseable
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType,
-        final boolean backpressureMessagesDuringReplay,
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
         final Formatters formatters)
@@ -105,7 +104,6 @@ public class InternalSession extends Session implements AutoCloseable
             messageInfo,
             epochFractionClock,
             connectionType,
-            backpressureMessagesDuringReplay,
             resendRequestController,
             forcedHeartbeatIntervalInS,
             formatters);

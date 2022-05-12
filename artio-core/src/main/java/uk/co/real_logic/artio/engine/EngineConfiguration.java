@@ -1492,15 +1492,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public EngineConfiguration backpressureMessagesDuringReplay(final boolean backpressureMessagesDuringReplay)
-    {
-        super.backpressureMessagesDuringReplay(backpressureMessagesDuringReplay);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public EngineConfiguration resendRequestController(final ResendRequestController resendRequestController)
     {
         super.resendRequestController(resendRequestController);

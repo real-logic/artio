@@ -218,7 +218,6 @@ public class Session
         final OnMessageInfo messageInfo,
         final EpochFractionClock epochFractionClock,
         final ConnectionType connectionType,
-        final boolean backpressureMessagesDuringReplay,
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
         final Formatters formatters)
