@@ -1377,9 +1377,9 @@ class DecoderGenerator extends Generator
     {
         return entry.required() ? "" : String.format(
           "        if (!has%s)\n" +
-            "        {\n" +
-            "        return view.wrap(buffer, 0, 0);\n" +
-            "        }\n\n",
+          "        {\n" +
+          "            return view.wrap(buffer, 0, 0);\n" +
+          "        }\n\n",
           entry.name());
     }
 
