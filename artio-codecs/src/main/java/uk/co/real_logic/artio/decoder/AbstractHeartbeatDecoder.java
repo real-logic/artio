@@ -28,5 +28,5 @@ public interface AbstractHeartbeatDecoder extends Decoder
 
     String testReqIDAsString();
 
-    void testReqID(AsciiSequenceView view);
+    AsciiSequenceView testReqID(AsciiSequenceView view);
 }

@@ -28,5 +28,5 @@ public interface AbstractLogoutDecoder extends Decoder
 
     String textAsString();
 
-    void text(AsciiSequenceView view);
+    AsciiSequenceView text(AsciiSequenceView view);
 }

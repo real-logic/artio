@@ -875,7 +875,7 @@ class DecoderGenerator extends Generator
             String.format("    public int %1$sLength();\n", fieldName) : "";
 
         final String stringAsciiView = type.isStringBased() ?
-            String.format("    public void %1$s(AsciiSequenceView view);\n", fieldName) : "";
+            String.format("    public AsciiSequenceView %1$s(AsciiSequenceView view);\n", fieldName) : "";
 
         final String optional = !entry.required() ?
             String.format("    public boolean has%1$s();\n", name) : "";
@@ -1024,7 +1024,7 @@ class DecoderGenerator extends Generator
                         "    {\n" +
                         "        throw new UnsupportedOperationException();\n" +
                         "    }\n\n" +
-                        "    public void %1$s(final AsciiSequenceView view)\n" +
+                        "    public AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
                         "    {\n" +
                         "        throw new UnsupportedOperationException();\n" +
                         "    }\n\n",
@@ -1287,10 +1287,10 @@ class DecoderGenerator extends Generator
             "    {\n" +
             "        return %3$s;\n" +
             "    }\n\n" +
-            "    public void %1$s(final AsciiSequenceView view)\n" +
+            "    public AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
             "    {\n" +
             "%2$s" +
-            "        view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
+            "        return view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
             "    }\n\n",
             fieldName,
             optionalCheck,
