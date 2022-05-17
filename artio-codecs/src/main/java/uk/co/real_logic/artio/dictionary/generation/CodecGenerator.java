@@ -178,6 +178,7 @@ public final class CodecGenerator
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
             false,
+            configuration.wrapEmptyBuffer(),
             codecRejectUnknownEnumValueEnabled).generate();
 
         new PrinterGenerator(dictionary, decoderPackage, decoderOutput).generate();
@@ -198,6 +199,7 @@ public final class CodecGenerator
                 RejectUnknownField.class,
                 RejectUnknownEnumValue.class,
                 true,
+                configuration.wrapEmptyBuffer(),
                 codecRejectUnknownEnumValueEnabled).generate();
         }
     }

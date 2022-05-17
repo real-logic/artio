@@ -44,6 +44,14 @@ public final class CodecConfiguration
      * </pre>
      */
     public static final String FIX_CODECS_ALLOW_DUPLICATE_FIELDS_PROPERTY = "fix.codecs.allow_duplicate_fields";
+
+    /**
+     * Boolean system property to avoid throwing when an optional string field is unset.
+     * <p>
+     * This is useful to call getters accepting an {@link org.agrona.AsciiSequenceView}
+     * without checking whether the field is set.
+     */
+    public static final String WRAP_EMPTY_BUFFER = "fix.codecs.wrap_empty_buffer";
     public static final String PARENT_PACKAGE_PROPERTY = "fix.codecs.parent_package";
     public static final String FLYWEIGHTS_ENABLED_PROPERTY = "fix.codecs.flyweight";
     public static final String REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "reject.unknown.enum.value";
@@ -52,6 +60,7 @@ public final class CodecConfiguration
 
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
+    private boolean wrapEmptyBuffer = Boolean.getBoolean(WRAP_EMPTY_BUFFER);
     private SharedCodecConfiguration sharedCodecConfiguration;
 
     private String codecRejectUnknownEnumValueEnabled;
@@ -98,6 +107,18 @@ public final class CodecConfiguration
     public CodecConfiguration flyweightsEnabled(final boolean flyweightsEnabled)
     {
         this.flyweightsEnabled = flyweightsEnabled;
+        return this;
+    }
+
+    /**
+     * Suppresses checks for the presence of optional string fields (i.e. no exception is
+     * thrown when unset, instead the AsciiSequenceView wraps an empty buffer).
+     *
+     * Defaults to the value of {@link #WRAP_EMPTY_BUFFER} system property.
+     */
+    public CodecConfiguration wrapEmptyBuffer(final boolean wrapEmptyBuffer)
+    {
+        this.wrapEmptyBuffer = wrapEmptyBuffer;
         return this;
     }
 
@@ -200,6 +221,10 @@ public final class CodecConfiguration
     boolean flyweightsEnabled()
     {
         return flyweightsEnabled;
+    }
+
+    boolean wrapEmptyBuffer() {
+        return wrapEmptyBuffer;
     }
 
     String codecRejectUnknownEnumValueEnabled()
