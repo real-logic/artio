@@ -1096,7 +1096,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldCleanupAeronResourcesUponDisconnectDuringResend() throws IOException
+    public void shouldCleanupAeronResourcesUponDisconnectDuringResend()
     {
         // Test reproduces a race within the cleanup of the ReplayOperation
         messagesCanBeExchanged();

@@ -88,6 +88,7 @@ public class ReplayOperation
 
     // fields reset for each recordingRange
     private int replayedMessages = 0;
+    private long endPosition;
     private RecordingRange recordingRange;
     private long replaySessionId;
     private int aeronSessionId;
@@ -200,11 +201,34 @@ public class ReplayOperation
 
             case POLL_IMAGE_CLOSING:
             {
+                // Attempt to poll the image to the end where possible
                 DebugLogger.log(logTag, POLL_IMAGE_CLOSING_FORMATTER.get(), replaySessionId);
-                while (!(null == image || image.isClosed() || image.isEndOfStream()))
+                if (image != null)
                 {
-                    image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
+                    if (!(image.isClosed() || image.isEndOfStream()))
+                    {
+                        // Try to skip as far ahead as possible
+                        final int termLengthMask = image.termBufferLength() - 1;
+                        final long currentPosition = image.position();
+                        final long limit = (currentPosition - (currentPosition & termLengthMask)) + termLengthMask + 1;
+                        final long pos = Math.min(limit, endPosition);
+                        try
+                        {
+                            image.position(pos);
+                        }
+                        catch (final Throwable e)
+                        {
+                            errorHandler.onError(e);
+                        }
+                        image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
+                    }
+
+                    if (!(image.isClosed() || image.isEndOfStream()))
+                    {
+                        return false;
+                    }
                 }
+
                 logClosed();
                 state = State.CLOSED;
                 return true;
@@ -235,7 +259,7 @@ public class ReplayOperation
             logRange();
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
-            final long endPosition = beginPosition + length;
+            endPosition = beginPosition + length;
             final long recordingId = recordingRange.recordingId;
             final int count = recordingRange.count;
 
