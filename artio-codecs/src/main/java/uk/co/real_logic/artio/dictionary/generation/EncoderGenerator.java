@@ -22,6 +22,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
@@ -39,6 +40,7 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.enumName;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.GENERATED_ANNOTATION;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.ENCODER_OPTIONAL_SESSION_FIELDS;
@@ -196,6 +198,7 @@ class EncoderGenerator extends Generator
                 {
                     out.append(importFor("uk.co.real_logic.artio.builder.Abstract" + className));
                 }
+                out.append(importFor(Generated.class));
 
                 generateImports(
                     "Encoder",
@@ -339,7 +342,9 @@ class EncoderGenerator extends Generator
             extendsClause = "";
         }
         return String.format(
-            "\n\npublic %3$s%4$sclass %1$s%5$s%2$s\n" +
+            "\n" +
+            GENERATED_ANNOTATION +
+            "public %3$s%4$sclass %1$s%5$s%2$s\n" +
             "{\n",
             className,
             interfaceList,

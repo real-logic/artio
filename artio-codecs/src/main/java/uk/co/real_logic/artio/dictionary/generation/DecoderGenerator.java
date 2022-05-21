@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.builder.CommonDecoderImpl;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
@@ -74,8 +75,10 @@ class DecoderGenerator extends Generator
 
     // Has to be generated everytime since HeaderDecoder and TrailerDecoder are generated.
     private static final String MESSAGE_DECODER =
-        "import uk.co.real_logic.artio.builder.Decoder;\n" +
+        importFor(Decoder.class) +
+        importFor(Generated.class) +
         "\n" +
+        GENERATED_ANNOTATION +
         "public interface MessageDecoder extends Decoder\n" +
         "{\n" +
         "    HeaderDecoder header();\n" +
@@ -176,6 +179,7 @@ class DecoderGenerator extends Generator
                     out.append(importFor(SessionHeaderDecoder.class));
                 }
                 out.append(importFor(AsciiNumberFormatException.class));
+                out.append(importFor(Generated.class));
 
                 generateImports(out, type);
 
@@ -298,7 +302,9 @@ class DecoderGenerator extends Generator
             extendsClause = "CommonDecoderImpl";
         }
         return String.format(
-            "\n\npublic %3$s%4$sclass %1$s extends %5$s%2$s\n" +
+            "\n" +
+            GENERATED_ANNOTATION +
+            "public %3$s%4$sclass %1$s extends %5$s%2$s\n" +
             "{\n",
             className,
             interfaceList,
@@ -790,9 +796,12 @@ class DecoderGenerator extends Generator
                 out.append(importFor(AsciiNumberFormatException.class));
                 generateImports(out, AggregateType.COMPONENT);
                 importEncoders(component, out);
+                out.append(importFor(Generated.class));
 
                 out.append(String.format(
-                    "\npublic interface %1$s %2$s\n" +
+                    "\n" +
+                    GENERATED_ANNOTATION +
+                    "public interface %1$s %2$s\n" +
                     "{\n\n",
                     className,
                     interfaceExtension));
@@ -1146,6 +1155,7 @@ class DecoderGenerator extends Generator
         if (sharedParent)
         {
             out.append(String.format(
+                "    " + GENERATED_ANNOTATION +
                 "    public abstract class %1$s<T extends %2$s> implements Iterable<T>, java.util.Iterator<T>\n" +
                 "    {\n" +
                 "        private final %3$s parent;\n" +
@@ -1223,6 +1233,7 @@ class DecoderGenerator extends Generator
     {
         final String parentDecoderName = decoderClassName(currentAggregate());
         out.append(String.format(
+            "    " + GENERATED_ANNOTATION +
             "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
             "    {\n" +
             "        private final %3$s parent;\n" +

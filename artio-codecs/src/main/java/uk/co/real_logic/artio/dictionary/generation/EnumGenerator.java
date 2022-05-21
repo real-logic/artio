@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.builder.IntRepresentable;
 import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.CharArrayMap;
 import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
@@ -143,6 +144,8 @@ final class EnumGenerator
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
                 out.append(interfaceToImport);
+                out.append(importFor(Generated.class));
+                out.append("\n" + GENERATED_ANNOTATION);
                 out.append(generateEnumDeclaration(enumName, interfaceToImplement));
 
                 out.append(generateEnumValues(valuesWithSentinels, type));

@@ -35,9 +35,11 @@ import uk.co.real_logic.artio.decoder.AbstractTestRequestDecoder;
 import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.Aggregate;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.GENERATED_ANNOTATION;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 
@@ -149,7 +151,9 @@ class FixDictionaryGenerator
 
                 out.append(importFor(SessionHeaderDecoder.class));
                 out.append(importFor(decoderPackage + ".HeaderDecoder"));
+                out.append(importFor(Generated.class));
 
+                out.append("\n" + GENERATED_ANNOTATION);
                 out.append(sb.toString());
             }
             catch (final IOException e)
