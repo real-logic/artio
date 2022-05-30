@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 
@@ -25,6 +26,7 @@ import java.util.Collection;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.addField;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.GENERATED_ANNOTATION;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 
@@ -73,6 +75,8 @@ class ConstantGenerator
             out.append(fileHeader(builderPackage));
             out.append(importFor(IntHashSet.class));
             out.append(importFor(CharArraySet.class));
+            out.append(importFor(Generated.class));
+            out.append("\n" + GENERATED_ANNOTATION);
             out.append(body);
             out.append(generateVersion());
             out.append(generateMessageTypes());

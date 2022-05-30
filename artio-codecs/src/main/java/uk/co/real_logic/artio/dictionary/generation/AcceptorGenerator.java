@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.generation.OutputManager;
+import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Message;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.decoderClassName;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.GENERATED_ANNOTATION;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -123,8 +125,10 @@ class AcceptorGenerator
     private void generateAcceptorClass(final Writer acceptorOutput) throws IOException
     {
         acceptorOutput.append(fileHeader(packageName));
+        acceptorOutput.append(importFor(Generated.class));
         acceptorOutput.append(
             "\n" +
+            GENERATED_ANNOTATION +
             "public interface " + DICTIONARY_ACCEPTOR + "\n" +
             "{\n"
         );
@@ -133,8 +137,10 @@ class AcceptorGenerator
     private void generateDefaultAcceptorClass(final Writer acceptorOutput) throws IOException
     {
         acceptorOutput.append(fileHeader(packageName));
+        acceptorOutput.append(importFor(Generated.class));
         acceptorOutput.append(
             "\n" +
+            GENERATED_ANNOTATION +
             "public class " + DEFAULT_DICTIONARY_ACCEPTOR + " implements " + DICTIONARY_ACCEPTOR + "\n" +
             "{\n"
         );
@@ -220,8 +226,10 @@ class AcceptorGenerator
     {
         decoderOutput.append(fileHeader(packageName));
         decoderOutput.append(importFor(AsciiBuffer.class));
+        decoderOutput.append(importFor(Generated.class));
         decoderOutput.append(
             "\n" +
+            GENERATED_ANNOTATION +
             "public final class " + DICTIONARY_DECODER + "\n" +
             "{\n\n" +
             "    private final " + DICTIONARY_ACCEPTOR + " acceptor;\n\n");
