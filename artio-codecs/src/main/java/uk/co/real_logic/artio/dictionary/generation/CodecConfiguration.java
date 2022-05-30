@@ -115,6 +115,9 @@ public final class CodecConfiguration
      * thrown when unset, instead the AsciiSequenceView wraps an empty buffer).
      *
      * Defaults to the value of {@link #WRAP_EMPTY_BUFFER} system property.
+     *
+     * @param wrapEmptyBuffer true to suppress check of optional strings, false to keep checking (default)
+     * @return this
      */
     public CodecConfiguration wrapEmptyBuffer(final boolean wrapEmptyBuffer)
     {
@@ -223,7 +226,8 @@ public final class CodecConfiguration
         return flyweightsEnabled;
     }
 
-    boolean wrapEmptyBuffer() {
+    boolean wrapEmptyBuffer()
+    {
         return wrapEmptyBuffer;
     }
 
