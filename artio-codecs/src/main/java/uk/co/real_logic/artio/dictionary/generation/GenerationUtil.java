@@ -29,6 +29,7 @@ public final class GenerationUtil
     public static final int MESSAGE_TYPE_BITSHIFT = 8;
 
     public static final String INDENT = "    ";
+    public static final String GENERATED_ANNOTATION = "@Generated(\"uk.co.real_logic.artio\")\n";
 
     private GenerationUtil()
     {
