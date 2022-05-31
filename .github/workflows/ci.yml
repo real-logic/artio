@@ -11,6 +11,9 @@ on:
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Java ${{ matrix.java }} (${{ matrix.os }})
