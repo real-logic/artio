@@ -59,28 +59,6 @@ class FixSenderEndPoint extends SenderEndPoint
 
     protected static final int NO_REATTEMPT = 0;
 
-    private void replaying(final boolean replaying)
-    {
-        if (IS_REPLAY_LOG_TAG_ENABLED)
-        {
-            DebugLogger.log(LogTag.REPLAY,
-                formatters.replaying.clear().with(connectionId).with(replaying));
-        }
-
-        this.replaying = replaying;
-    }
-
-    private void requiresRetry(final boolean requiresRetry)
-    {
-        if (IS_REPLAY_LOG_TAG_ENABLED)
-        {
-            DebugLogger.log(LogTag.REPLAY,
-                formatters.requiresRetry.clear().with(connectionId).with(requiresRetry));
-        }
-
-        this.requiresRetry = requiresRetry;
-    }
-
     static class Formatters
     {
         final CharFormatter replayComplete = new CharFormatter(
@@ -121,6 +99,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private final ReattemptState replayBuffer = new ReattemptState();
 
     private boolean replaying;
+    private long replayCorrelationId;
     private boolean requiresRetry;
     private int reattemptBytesWritten = NO_REATTEMPT;
 
@@ -259,6 +238,13 @@ class FixSenderEndPoint extends SenderEndPoint
                 return;
             }
 
+            if (checkLastReplayedMessage(seqNum, replay))
+            {
+                // back-pressure and retry the message sending.
+                enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
+                return;
+            }
+
             final int written = writeBuffer(directBuffer, offset, bodyLength);
             final int totalWritten = reattemptBytesWritten + written;
 
@@ -285,6 +271,17 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             errorHandler.onError(e);
         }
+    }
+
+    // return true iff back-pressured and needs retrying
+    private boolean checkLastReplayedMessage(final int seqNum, final boolean replay)
+    {
+        if (replay && seqNum != NOT_LAST_REPLAY_MSG)
+        {
+            return super.onReplayComplete(replayCorrelationId) == ABORT;
+        }
+
+        return false;
     }
 
     private int writeBuffer(
@@ -409,6 +406,18 @@ class FixSenderEndPoint extends SenderEndPoint
                     final int sequenceNumberOffset = offset + SIZE_OF_INT;
                     final int sequenceNumber = buffer.getInt(sequenceNumberOffset);
 
+                    if (checkLastReplayedMessage(sequenceNumber, replay))
+                    {
+                        // back-pressure and retry
+                        this.reattemptBytesWritten = 0;
+                        break;
+                    }
+                    else if (replay)
+                    {
+                        // if we re-try sending the message then we don't want to retry this
+                        buffer.putInt(sequenceNumberOffset, NOT_LAST_REPLAY_MSG);
+                    }
+
                     final int bodyLengthOffset = sequenceNumberOffset + SIZE_OF_INT;
                     final int bodyLength = buffer.getInt(bodyLengthOffset);
 
@@ -444,7 +453,7 @@ class FixSenderEndPoint extends SenderEndPoint
                         // If not then we end the replay, otherwise we keep replaying
                         if (buffer.getInt(endOfReplayEntry) != ENQ_START_REPLAY)
                         {
-                            replaying(false);
+                            replaying(false, correlationId);
                             reattemptState.shuffleWritten(endOfReplayEntry);
                             bytesInBuffer.setOrdered(normalBuffer.usage);
                             return true;
@@ -524,7 +533,7 @@ class FixSenderEndPoint extends SenderEndPoint
                 }
                 else
                 {
-                    this.replaying(!replaying);
+                    this.replaying(!replaying, replayCorrelationId);
                     bytesInBuffer.setOrdered(usage);
                 }
             }
@@ -536,9 +545,10 @@ class FixSenderEndPoint extends SenderEndPoint
         final DirectBuffer directBuffer,
         final int offset,
         final int bodyLength,
-        final long timeInMs)
+        final long timeInMs,
+        final int sequenceNumber)
     {
-        onMessage(directBuffer, offset, bodyLength, 0, 0, timeInMs, true);
+        onMessage(directBuffer, offset, bodyLength, 0, sequenceNumber, timeInMs, true);
 
         return CONTINUE;
     }
@@ -635,13 +645,7 @@ class FixSenderEndPoint extends SenderEndPoint
             return CONTINUE;
         }
 
-        final Action action = super.onReplayComplete(correlationId);
-        if (action == ABORT)
-        {
-            enqueueReplayComplete(correlationId);
-        }
-
-        replaying(false);
+        replaying(false, correlationId);
         return CONTINUE;
     }
 
@@ -683,8 +687,31 @@ class FixSenderEndPoint extends SenderEndPoint
         }
         else
         {
-            replaying(true);
+            replaying(true, correlationId);
         }
+    }
+
+    private void replaying(final boolean replaying, final long correlationId)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.replaying.clear().with(connectionId).with(replaying));
+        }
+
+        this.replaying = replaying;
+        this.replayCorrelationId = correlationId;
+    }
+
+    private void requiresRetry(final boolean requiresRetry)
+    {
+        if (IS_REPLAY_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPLAY,
+                formatters.requiresRetry.clear().with(connectionId).with(requiresRetry));
+        }
+
+        this.requiresRetry = requiresRetry;
     }
 
     public String toString()

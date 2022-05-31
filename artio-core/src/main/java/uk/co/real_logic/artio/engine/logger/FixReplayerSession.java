@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.engine.framer.SenderEndPoint.NOT_LAST_REPLAY_MSG;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
@@ -80,6 +81,7 @@ class FixReplayerSession extends ReplayerSession
     private final FixThrottleRejectBuilder throttleRejectBuilder;
 
     private int lastSeqNo;
+    private int headerSeqNum;
 
     private int beginGapFillSeqNum = NONE;
 
@@ -147,7 +149,8 @@ class FixReplayerSession extends ReplayerSession
         final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         FIX_MESSAGE_ENCODER
             .wrap(buffer, frameOffset)
-            .connection(connectionId);
+            .connection(connectionId)
+            .sequenceNumber(headerSeqNum);
     }
 
     private void onException(final Throwable e)
@@ -237,7 +240,7 @@ class FixReplayerSession extends ReplayerSession
             {
                 if (beginGapFillSeqNum != NONE)
                 {
-                    sendGapFill(beginGapFillSeqNum, msgSeqNum);
+                    sendGapFill(beginGapFillSeqNum, msgSeqNum, false);
                 }
                 else if (msgSeqNum > lastSeqNo + 1)
                 {
@@ -247,9 +250,10 @@ class FixReplayerSession extends ReplayerSession
                         // size the gap-fill at the beginning of the resend-request can hit this condition.
                         lastSeqNo = 1;
                     }
-                    sendGapFill(lastSeqNo, msgSeqNum);
+                    sendGapFill(lastSeqNo, msgSeqNum, false);
                 }
 
+                headerSeqNum = msgSeqNum == endSeqNo ? msgSeqNum : NOT_LAST_REPLAY_MSG;
                 final Action action = possDupEnabler.enablePossDupFlag(
                     srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment, messageType);
                 if (action != ABORT)
@@ -288,11 +292,11 @@ class FixReplayerSession extends ReplayerSession
         {
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFill(beginGapFillSeqNum, msgSeqNum);
+                sendGapFill(beginGapFillSeqNum, msgSeqNum, false);
             }
             else if (msgSeqNum > lastSeqNo + 1)
             {
-                sendGapFill(lastSeqNo, msgSeqNum);
+                sendGapFill(lastSeqNo, msgSeqNum, false);
             }
 
             final int businessRejectRefIDOffset = THROTTLE_REJECT.limit() +
@@ -310,7 +314,8 @@ class FixReplayerSession extends ReplayerSession
                 throttleRejectBuilder.buffer(),
                 throttleRejectBuilder.offset(),
                 throttleRejectBuilder.length(),
-                BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE);
+                BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE,
+                NOT_LAST_REPLAY_MSG);
             if (action == CONTINUE)
             {
                 lastSeqNo = msgSeqNum;
@@ -319,14 +324,16 @@ class FixReplayerSession extends ReplayerSession
         }
     }
 
-    private Action sendGapFill(final int msgSeqNo, final int newSeqNo)
+    private Action sendGapFill(final int msgSeqNo, final int newSeqNo, final boolean lastMessage)
     {
         final long result = gapFillEncoder.encode(msgSeqNo, newSeqNo);
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
         final MutableAsciiBuffer buffer = gapFillEncoder.buffer();
+        final int sequenceNumber = lastMessage ? msgSeqNo : NOT_LAST_REPLAY_MSG;
 
-        final Action action = sendFixMessage(buffer, gapFillOffset, gapFillLength, SEQUENCE_RESET_MESSAGE_TYPE);
+        final Action action = sendFixMessage(buffer, gapFillOffset, gapFillLength, SEQUENCE_RESET_MESSAGE_TYPE,
+            sequenceNumber);
         if (action == CONTINUE)
         {
             this.beginGapFillSeqNum = NONE;
@@ -335,7 +342,8 @@ class FixReplayerSession extends ReplayerSession
     }
 
     private Action sendFixMessage(
-        final MutableAsciiBuffer fixBuffer, final int fixOffset, final int fixLength, final long messageType)
+        final MutableAsciiBuffer fixBuffer, final int fixOffset, final int fixLength, final long messageType,
+        final int sequenceNumber)
     {
         if (claimBuffer(
             MESSAGE_FRAME_BLOCK_LENGTH + fixLength + metaDataHeaderLength(), fixLength))
@@ -345,13 +353,14 @@ class FixReplayerSession extends ReplayerSession
 
             FIX_MESSAGE_ENCODER
                 .wrapAndApplyHeader(destBuffer, destOffset, replayer.messageHeaderEncoder)
-                .libraryId(ENGINE_LIBRARY_ID)
-                .messageType(messageType)
                 .session(this.sessionId)
-                .sequenceIndex(this.sequenceIndex)
                 .connection(this.connectionId)
                 .timestamp(clock.nanoTime())
                 .status(MessageStatus.OK)
+                .libraryId(ENGINE_LIBRARY_ID)
+                .sequenceIndex(this.sequenceIndex)
+                .sequenceNumber(sequenceNumber)
+                .messageType(messageType)
                 .putMetaData(NO_BYTES, 0, 0)
                 .putBody(fixBuffer, fixOffset, fixLength);
 
@@ -416,7 +425,7 @@ class FixReplayerSession extends ReplayerSession
             final int newSequenceNumber = endSeqNo + 1;
             if (newSequenceNumber > beginGapFillSeqNum)
             {
-                final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
+                final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber, true);
 
                 if (IS_REPLAY_LOG_TAG_ENABLED)
                 {
@@ -449,7 +458,7 @@ class FixReplayerSession extends ReplayerSession
             {
                 if (replayedMessages == 0)
                 {
-                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1, true);
                     if (action == ABORT)
                     {
                         return false;

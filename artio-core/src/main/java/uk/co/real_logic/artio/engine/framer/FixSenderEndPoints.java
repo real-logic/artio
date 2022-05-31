@@ -115,12 +115,13 @@ class FixSenderEndPoints implements AutoCloseable
     }
 
     Action onReplayMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length)
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length,
+        final int sequenceNumber)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onReplayMessage(buffer, offset, length, timeInMs);
+            return endPoint.onReplayMessage(buffer, offset, length, timeInMs, sequenceNumber);
         }
         else
         {

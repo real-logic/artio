@@ -306,7 +306,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final Header header,
                     final int metaDataLength)
                 {
-                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length);
+                    return fixSenderEndPoints.onReplayMessage(connectionId, buffer, offset, length, sequenceNumber);
                 }
 
                 public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

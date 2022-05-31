@@ -611,6 +611,7 @@
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
         <field name="metaDataUpdateOffset" id="13" type="int32" />
         <!-- only visible outbound -->
+        <!-- This is set to 0 for resent messages, except for the last message in a replay where it's the seqnum -->
         <field name="sequenceNumber" id="9" type="int32" />
         <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
         <data name="metaData" id="12" type="Utf8String"  sinceVersion="6"/>

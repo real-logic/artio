@@ -376,4 +376,14 @@ public class TestSystem
     {
         return awaitCompletedReply(engine.libraries()).resultIfPresent();
     }
+
+    public void awaitIsReplaying(final Session session)
+    {
+        await("Failed to start replaying", session::isReplaying);
+    }
+
+    public void awaitNotReplaying(final Session session)
+    {
+        await("Failed to stop replaying", () -> !session.isReplaying());
+    }
 }

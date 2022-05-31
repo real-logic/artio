@@ -34,6 +34,8 @@ public class SenderEndPoint implements AutoCloseable
     private static final int REPLAY_COMPLETE_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
 
+    public static final int NOT_LAST_REPLAY_MSG = 0;
+
     private final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
     private final ReplayCompleteEncoder replayComplete = new ReplayCompleteEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();

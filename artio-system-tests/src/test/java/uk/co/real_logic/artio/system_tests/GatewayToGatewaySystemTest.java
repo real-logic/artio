@@ -66,6 +66,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.FakeResendRequestController.CUSTOM_MESSAGE;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
@@ -1098,6 +1099,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCleanupAeronResourcesUponDisconnectDuringResend()
     {
+        acquireAcceptingSession();
+
         // Test reproduces a race within the cleanup of the ReplayOperation
         messagesCanBeExchanged();
 
@@ -1117,6 +1120,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sleep(1_000);
 
         testSystem.await("Failed to cleanup resources", () -> remainingFileCount() == 31);
+
+        assertEquals(DISCONNECTED, acceptingSession.state());
+        assertFalse(acceptingSession.isReplaying());
     }
 
     private long remainingFileCount()
@@ -1156,6 +1162,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         testSystem.send(initiatingSession, resendRequest);
 
+        testSystem.awaitIsReplaying(acceptingSession);
+
         final FixMessage gapFill = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
         assertEquals(1, gapFill.messageSequenceNumber());
         assertEquals(4, Integer.parseInt(gapFill.get(NEW_SEQ_NO)));
@@ -1168,6 +1176,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         clearMessages();
 
         messagesCanBeExchanged();
+
+        testSystem.awaitNotReplaying(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

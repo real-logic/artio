@@ -373,7 +373,7 @@ public class FixSenderEndPointTest
 
     private void onReplayMessage(final long timeInMs)
     {
-        assertEquals(CONTINUE, endPoint.onReplayMessage(buffer, MSG_OFFSET, BODY_LENGTH, timeInMs));
+        assertEquals(CONTINUE, endPoint.onReplayMessage(buffer, MSG_OFFSET, BODY_LENGTH, timeInMs, 0));
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
