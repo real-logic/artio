@@ -726,7 +726,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     Reply<?> resetSequenceNumber(final long sessionId)
     {
-        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+        return testSystem.awaitReply(testSystem.startResetSequenceNumber(acceptingEngine, sessionId));
     }
 
     void assertInitSeqNum(

@@ -182,12 +182,12 @@ public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
 
     private void resetAcceptingSession()
     {
-        testSystem.awaitReply(acceptingEngine.resetSequenceNumber(acceptingSession.id()));
+        testSystem.resetSequenceNumber(acceptingEngine, acceptingSession.id());
     }
 
     private void resetInitiatingSession()
     {
-        testSystem.awaitReply(initiatingEngine.resetSequenceNumber(initiatingSession.id()));
+        testSystem.resetSequenceNumber(initiatingEngine, initiatingSession.id());
     }
 
     private void pruneArchive()

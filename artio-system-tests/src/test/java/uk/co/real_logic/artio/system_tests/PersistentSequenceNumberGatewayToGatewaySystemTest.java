@@ -815,9 +815,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void resetSequenceNumbers()
     {
-        testSystem.awaitCompletedReplies(
-            initiatingEngine.resetSequenceNumber(initiatingSession.id()),
-            acceptingEngine.resetSequenceNumber(acceptingSession.id()));
+        testSystem.resetSequenceNumber(initiatingEngine, initiatingSession.id());
+        testSystem.resetSequenceNumber(acceptingEngine, acceptingSession.id());
     }
 
     @SuppressWarnings("deprecation")

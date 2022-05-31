@@ -294,8 +294,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
 
         writeMetaDataThenDisconnect();
 
-        final Reply<?> reply = acceptingEngine.resetSequenceNumber(META_DATA_SESSION_ID);
-        testSystem.awaitCompletedReplies(reply);
+        testSystem.resetSequenceNumber(acceptingEngine, META_DATA_SESSION_ID);
 
         assertNoMetaData();
 

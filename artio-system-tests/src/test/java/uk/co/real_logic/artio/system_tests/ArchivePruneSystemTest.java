@@ -16,14 +16,12 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.client.AeronArchive;
-import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
-import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
@@ -308,10 +306,6 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         final long sessionId = acceptingSession.id();
         acceptingSession = null;
 
-        final Reply<?> reply = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        if (reply.hasErrored())
-        {
-            LangUtil.rethrowUnchecked(reply.error());
-        }
+        testSystem.resetSequenceNumber(acceptingEngine, sessionId);
     }
 }

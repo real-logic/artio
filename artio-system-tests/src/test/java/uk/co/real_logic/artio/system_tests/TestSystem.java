@@ -155,6 +155,7 @@ public class TestSystem
     {
         for (final Reply<?> reply : replies)
         {
+            assertNotNull(reply);
             awaitReply(reply);
             assertEquals(reply.toString(), COMPLETED, reply.state());
         }
@@ -162,6 +163,7 @@ public class TestSystem
 
     public <T> Reply<T> awaitReply(final Reply<T> reply)
     {
+        assertNotNull(reply);
         assertEventuallyTrue(
             () -> "No reply from: " + reply,
             () ->
@@ -385,5 +387,19 @@ public class TestSystem
     public void awaitNotReplaying(final Session session)
     {
         await("Failed to stop replaying", () -> !session.isReplaying());
+    }
+
+    public Reply<?> resetSequenceNumber(final FixEngine engine, final long sessionId)
+    {
+        final Reply<?> reply = startResetSequenceNumber(engine, sessionId);
+        awaitCompletedReply(reply);
+        return reply;
+    }
+
+    public Reply<?> startResetSequenceNumber(final FixEngine engine, final long sessionId)
+    {
+        return awaitNotNull(
+            "Timed out whilst attempting resetSequenceNumber",
+            () -> engine.resetSequenceNumber(sessionId));
     }
 }
