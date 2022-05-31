@@ -440,24 +440,18 @@ class FixSenderEndPoint extends SenderEndPoint
                     final int idOffset = offset + SIZE_OF_INT;
                     final long correlationId = buffer.getLong(idOffset);
                     this.reattemptBytesWritten = NO_REATTEMPT;
-                    if (super.onReplayComplete(correlationId) == ABORT)
-                    {
-                        break; // leave it in the buffer
-                    }
-                    else
-                    {
-                        // Complete
-                        final int endOfReplayEntry = idOffset + SIZE_OF_LONG;
 
-                        // peek the next message to see if we need to continue replaying
-                        // If not then we end the replay, otherwise we keep replaying
-                        if (buffer.getInt(endOfReplayEntry) != ENQ_START_REPLAY)
-                        {
-                            replaying(false, correlationId);
-                            reattemptState.shuffleWritten(endOfReplayEntry);
-                            bytesInBuffer.setOrdered(normalBuffer.usage);
-                            return true;
-                        }
+                    // Complete
+                    final int endOfReplayEntry = idOffset + SIZE_OF_LONG;
+
+                    // peek the next message to see if we need to continue replaying
+                    // If not then we end the replay, otherwise we keep replaying
+                    if (buffer.getInt(endOfReplayEntry) != ENQ_START_REPLAY)
+                    {
+                        replaying(false, correlationId);
+                        reattemptState.shuffleWritten(endOfReplayEntry);
+                        bytesInBuffer.setOrdered(normalBuffer.usage);
+                        return true;
                     }
                 }
                 else if (enqueueType == ENQ_START_REPLAY)
@@ -639,13 +633,17 @@ class FixSenderEndPoint extends SenderEndPoint
                 formatters.replayComplete.clear().with(connectionId).with(correlationId));
         }
 
-        if (!replaying || !reattempt(true))
+        // can receive this when we're not replaying, but if we've already detected the end
+        // of the current replay then replayCorrelationId = correlationId
+        if ((!replaying && replayCorrelationId != correlationId) || !reattempt(true))
         {
             enqueueReplayComplete(correlationId);
-            return CONTINUE;
+        }
+        else
+        {
+            replaying(false, correlationId);
         }
 
-        replaying(false, correlationId);
         return CONTINUE;
     }
 
@@ -728,7 +726,7 @@ class FixSenderEndPoint extends SenderEndPoint
         return replaying;
     }
 
-    boolean requiresReattempting()
+    boolean requiresRetry()
     {
         return requiresRetry;
     }

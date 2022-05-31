@@ -411,12 +411,12 @@ public class FixSenderEndPointTest
 
     private void assertRequiresReattempting()
     {
-        assertTrue("not requiresReattempting", endPoint.requiresReattempting());
+        assertTrue("not requiresReattempting", endPoint.requiresRetry());
     }
 
     private void assertDoesNotRequireReattempting()
     {
-        assertFalse("requiresReattempting", endPoint.requiresReattempting());
+        assertFalse("requiresReattempting", endPoint.requiresRetry());
     }
 
     private void becomeSlowConsumer()
