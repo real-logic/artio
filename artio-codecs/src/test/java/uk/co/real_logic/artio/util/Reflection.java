@@ -251,7 +251,7 @@ public final class Reflection
     public static AsciiSequenceView getAsciiSequenceView(final Object value, final String name) throws Exception
     {
         final AsciiSequenceView view = new AsciiSequenceView();
-        return (AsciiSequenceView) value.getClass()
+        return (AsciiSequenceView)value.getClass()
                 .getMethod(name, AsciiSequenceView.class)
                 .invoke(value, view);
     }

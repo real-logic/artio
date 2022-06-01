@@ -58,11 +58,11 @@ public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
         final Decoder decoderWithoutValidation = decodeHeartbeatWithoutValidation(INVALID_FLOAT_VALUE_MESSAGE);
 
         // generated with wrapEmptyBuffer=true
-        AsciiSequenceView view = getAsciiSequenceView(decoderWithoutValidation, "testReqID");
+        final AsciiSequenceView view = getAsciiSequenceView(decoderWithoutValidation, "testReqID");
         assertEquals(0, view.length());
 
         // generated with wrapEmptyBuffer=false
         assertTargetThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
-          "No value for optional field: TestReqID");
+            "No value for optional field: TestReqID");
     }
 }
