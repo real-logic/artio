@@ -85,13 +85,13 @@ public abstract class AbstractDecoderGeneratorTest
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
         final Map<String, CharSequence> sourcesWithValidation = generateSources(
-            true, false, true, flyweightStringsEnabled);
+            true, false, true, flyweightStringsEnabled, false);
         final Map<String, CharSequence> sourcesWithNoEnumValueValidation = generateSources(
-            true, false, false, flyweightStringsEnabled);
+            true, false, false, flyweightStringsEnabled, false);
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
-            false, false, true, flyweightStringsEnabled);
+            false, false, true, flyweightStringsEnabled, true);
         final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
-            true, true, true, flyweightStringsEnabled);
+            true, true, true, flyweightStringsEnabled, false);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -116,7 +116,7 @@ public abstract class AbstractDecoderGeneratorTest
 
     private static Map<String, CharSequence> generateSources(
         final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
-        final boolean flyweightStringsEnabled)
+        final boolean flyweightStringsEnabled, final boolean wrapEmptyBuffer)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
@@ -130,7 +130,8 @@ public abstract class AbstractDecoderGeneratorTest
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
             outputManager, validationClass, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled, String.valueOf(rejectingUnknownEnumValue));
+            rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer,
+            String.valueOf(rejectingUnknownEnumValue));
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
             RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);

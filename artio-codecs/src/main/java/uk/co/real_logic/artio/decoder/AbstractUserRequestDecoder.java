@@ -28,7 +28,7 @@ public interface AbstractUserRequestDecoder extends Decoder
 
     String passwordAsString();
 
-    void password(AsciiSequenceView view);
+    AsciiSequenceView password(AsciiSequenceView view);
 
     char[] newPassword();
 
@@ -38,5 +38,5 @@ public interface AbstractUserRequestDecoder extends Decoder
 
     String newPasswordAsString();
 
-    void newPassword(AsciiSequenceView view);
+    AsciiSequenceView newPassword(AsciiSequenceView view);
 }

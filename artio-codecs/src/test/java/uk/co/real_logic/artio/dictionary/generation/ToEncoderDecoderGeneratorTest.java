@@ -93,7 +93,7 @@ public class ToEncoderDecoderGeneratorTest
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, TEST_PACKAGE, outputManager, ValidationOn.class,
-            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, flyweightStringsEnabled,
+            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, flyweightStringsEnabled, false,
             RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,

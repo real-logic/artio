@@ -32,7 +32,7 @@ public interface AbstractLogonDecoder extends Decoder
 
     String usernameAsString();
 
-    void username(AsciiSequenceView view);
+    AsciiSequenceView username(AsciiSequenceView view);
 
     boolean supportsPassword();
 
@@ -44,7 +44,7 @@ public interface AbstractLogonDecoder extends Decoder
 
     String passwordAsString();
 
-    void password(AsciiSequenceView view);
+    AsciiSequenceView password(AsciiSequenceView view);
 
     boolean hasResetSeqNumFlag();
 

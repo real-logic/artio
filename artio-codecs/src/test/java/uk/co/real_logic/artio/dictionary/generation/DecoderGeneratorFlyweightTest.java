@@ -15,13 +15,15 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 
-import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INVALID_FLOAT_VALUE_MESSAGE;
-import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INVALID_INT_VALUE_MESSAGE;
+import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.util.CustomMatchers.assertTargetThrows;
+import static uk.co.real_logic.artio.util.Reflection.getAsciiSequenceView;
 
 public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
 {
@@ -47,5 +49,20 @@ public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
 
         assertTargetThrows(() -> getFloatField(decoder), NumberFormatException.class,
             "'A' isn't a valid digit @ 39 tag=117");
+    }
+
+    @Test
+    public void shouldNotThrowWhenAccessingUnsetString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_FLOAT_VALUE_MESSAGE);
+        final Decoder decoderWithoutValidation = decodeHeartbeatWithoutValidation(INVALID_FLOAT_VALUE_MESSAGE);
+
+        // generated with wrapEmptyBuffer=true
+        final AsciiSequenceView view = getAsciiSequenceView(decoderWithoutValidation, "testReqID");
+        assertEquals(0, view.length());
+
+        // generated with wrapEmptyBuffer=false
+        assertTargetThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
+            "No value for optional field: TestReqID");
     }
 }

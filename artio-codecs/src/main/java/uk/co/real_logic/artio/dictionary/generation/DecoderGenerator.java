@@ -115,6 +115,10 @@ class DecoderGenerator extends Generator
 
     private final int initialBufferSize;
     private final String encoderPackage;
+    /**
+     * Wrap empty buffer instead of throwing an exception if an optional string is unset.
+     */
+    private final boolean wrapEmptyBuffer;
 
     DecoderGenerator(
         final Dictionary dictionary,
@@ -127,12 +131,14 @@ class DecoderGenerator extends Generator
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
+        final boolean wrapEmptyBuffer,
         final String codecRejectUnknownEnumValueEnabled)
     {
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
             rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled);
         this.initialBufferSize = initialBufferSize;
         this.encoderPackage = encoderPackage;
+        this.wrapEmptyBuffer = wrapEmptyBuffer;
     }
 
     public void generate()
@@ -884,7 +890,7 @@ class DecoderGenerator extends Generator
             String.format("    public int %1$sLength();\n", fieldName) : "";
 
         final String stringAsciiView = type.isStringBased() ?
-            String.format("    public void %1$s(AsciiSequenceView view);\n", fieldName) : "";
+            String.format("    public AsciiSequenceView %1$s(AsciiSequenceView view);\n", fieldName) : "";
 
         final String optional = !entry.required() ?
             String.format("    public boolean has%1$s();\n", name) : "";
@@ -1033,7 +1039,7 @@ class DecoderGenerator extends Generator
                         "    {\n" +
                         "        throw new UnsupportedOperationException();\n" +
                         "    }\n\n" +
-                        "    public void %1$s(final AsciiSequenceView view)\n" +
+                        "    public AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
                         "    {\n" +
                         "        throw new UnsupportedOperationException();\n" +
                         "    }\n\n",
@@ -1298,13 +1304,13 @@ class DecoderGenerator extends Generator
             "    {\n" +
             "        return %3$s;\n" +
             "    }\n\n" +
-            "    public void %1$s(final AsciiSequenceView view)\n" +
+            "    public AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
             "    {\n" +
             "%2$s" +
-            "        view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
+            "        return view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
             "    }\n\n",
             fieldName,
-            optionalCheck,
+            wrapEmptyBuffer ? wrapEmptyBuffer(entry) : optionalCheck,
             asStringBody) : "";
 
         // Need to keep offset and length split due to the abject fail that is the DATA type.
@@ -1376,6 +1382,16 @@ class DecoderGenerator extends Generator
             enumDecoder,
             flyweightsEnabled ? lazyInitialisation : "",
             scope);
+    }
+
+    private String wrapEmptyBuffer(final Entry entry)
+    {
+        return entry.required() ? "" : String.format(
+          "        if (!has%s)\n" +
+          "        {\n" +
+          "            return view.wrap(buffer, 0, 0);\n" +
+          "        }\n\n",
+          entry.name());
     }
 
     private String generateAsStringBody(final Entry entry, final String name, final String fieldName)
