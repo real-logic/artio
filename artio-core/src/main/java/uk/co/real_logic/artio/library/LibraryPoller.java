@@ -1073,7 +1073,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 session.lastReceivedMsgSeqNumOnly(lastRecvSeqNum);
             }
-            session.lastSentMsgSeqNum(lastSentSeqNum);
+            setupAcceptorSentSequenceNumber(lastSentSeqNum, sequenceIndex, session);
         }
 
         final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
@@ -1113,6 +1113,27 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             connectionId, sessionId, lastSentSeqNum, lastRecvSeqNum);
     }
 
+    private void setupAcceptorSentSequenceNumber(
+        final int lastSentSeqNum, final int sequenceIndex, final InternalSession session)
+    {
+        final int sessionLastSentMsgSeqNum = session.lastSentMsgSeqNum();
+        if (wasOfflineReconnect && sessionLastSentMsgSeqNum > lastSentSeqNum &&
+            offlineSequenceIndex == sequenceIndex)
+        {
+            // Offline sessions can send messages constantly, we want to avoid racing this thread's sequence
+            // number update with the indexer, which could potentially be behind. We use the sequence index
+            // to avoid clobbered a deliberate reset on logon
+            session.lastSentMsgSeqNum(sessionLastSentMsgSeqNum);
+        }
+        else
+        {
+            session.lastSentMsgSeqNum(lastSentSeqNum);
+        }
+    }
+
+    private boolean wasOfflineReconnect;
+    private int offlineSequenceIndex;
+
     // Either a reconnect of an offline session, or the cache.
     private InternalSession checkReconnect(
         final long sessionId,
@@ -1125,6 +1146,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final ConnectionType connectionType,
         final String address)
     {
+        wasOfflineReconnect = false;
+        offlineSequenceIndex = 0;
+
         final InternalSession[] sessions = this.sessions;
         for (int i = 0, sessionsLength = sessions.length; i < sessionsLength; i++)
         {
@@ -1132,6 +1156,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (session.id() == sessionId)
             {
                 DebugLogger.log(FIX_CONNECTION, reconnectFormatter, connectionId, libraryId, sessionId);
+
+                wasOfflineReconnect = true;
+                offlineSequenceIndex = session.sequenceIndex();
 
                 session.onReconnect(
                     connectionId,

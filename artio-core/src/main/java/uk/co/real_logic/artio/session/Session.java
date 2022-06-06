@@ -129,6 +129,7 @@ public class Session
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
+    private final boolean initiatorResetSeqNum;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -193,7 +194,6 @@ public class Session
 
     private int replaysInFlight = 0;
     protected ConnectionType connectionType;
-    private final boolean initiatorResetSeqNum;
 
     Session(
         final int heartbeatIntervalInS,
@@ -2485,7 +2485,6 @@ public class Session
             }
         }
     }
-
 
     private int initiatorPoll()
     {

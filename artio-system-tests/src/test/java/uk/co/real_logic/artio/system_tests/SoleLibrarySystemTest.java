@@ -102,6 +102,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
         connectSessions();
         assertEquals(ACTIVE, acceptingSession.state());
+        assertEquals(1, acceptingSession.lastSentMsgSeqNum());
     }
 
     private void connectAndAcquire()

@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
 
@@ -729,6 +730,57 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         setupHeader(seqNum, encoder.header());
         testSystem.awaitSend("failed to send", () -> sessionWriter.send(encoder, seqNum));
+    }
+
+    class AttemptSend implements Runnable
+    {
+        final ReportFactory factory = new ReportFactory();
+
+        boolean firstConnect = true;
+        int lastSentMsgSeqNum = 0;
+        int lastSentMsgSeqNumAfterLogon = 0;
+
+        public void run()
+        {
+            if (acceptingSession.state() == SessionState.DISCONNECTED)
+            {
+                if (factory.trySendReport(acceptingSession, Side.BUY) > 0)
+                {
+                    lastSentMsgSeqNum = acceptingSession.lastSentMsgSeqNum();
+                }
+            }
+            else if (firstConnect)
+            {
+                lastSentMsgSeqNumAfterLogon = acceptingSession.lastSentMsgSeqNum();
+                firstConnect = false;
+            }
+        }
+
+        public void validate()
+        {
+            assertThat(lastSentMsgSeqNumAfterLogon, greaterThan(lastSentMsgSeqNum));
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotRaceOfflineMessagesWithLogon()
+    {
+        launch(this::nothing);
+        connectPersistingSessions();
+
+        disconnectSessions();
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        acquireAcceptingSession();
+
+        final AttemptSend attemptSend = new AttemptSend();
+        testSystem.addOperation(attemptSend);
+        connectPersistingSessionsWithoutAcquiring();
+        testSystem.removeOperation(attemptSend);
+        attemptSend.validate();
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

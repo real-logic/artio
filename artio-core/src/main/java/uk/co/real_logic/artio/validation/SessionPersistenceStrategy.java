@@ -21,7 +21,7 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQU
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
 
 /**
- * Determines whether a session should be replicated or not.
+ * Determines whether a session should reset it's sequence numbers on logon or not.
  */
 @FunctionalInterface
 public interface SessionPersistenceStrategy
