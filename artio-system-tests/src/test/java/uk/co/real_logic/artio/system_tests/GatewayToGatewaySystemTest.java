@@ -20,7 +20,6 @@ import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
-import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.theories.DataPoint;
@@ -215,13 +214,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(sequenceNumber + 1, nextMessage.messageSequenceNumber());
 
         assertResendsCompleted(1, hasItems(0));
-    }
-
-    private void assertResendsCompleted(final int count, final Matcher<Iterable<Integer>> items)
-    {
-        testSystem.await("ResendRequestController not notified ",
-            () -> fakeResendRequestController.completeCount() == count);
-        assertThat(fakeResendRequestController.seenReplaysInFlight(), items);
     }
 
     private FixMessage exchangeExampleMessageFromInitiatorToAcceptor(final String testReqID)

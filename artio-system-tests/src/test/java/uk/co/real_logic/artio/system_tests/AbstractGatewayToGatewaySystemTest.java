@@ -23,6 +23,7 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
@@ -254,11 +255,6 @@ public class AbstractGatewayToGatewaySystemTest
     }
 
     void assertNotSession(final FakeHandler sessionHandler, final Session session)
-    {
-        assertThat(sessionHandler.sessions(), not(hasItem(session)));
-    }
-
-    void assertHasSession(final FakeHandler sessionHandler, final Session session)
     {
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
@@ -841,6 +837,13 @@ public class AbstractGatewayToGatewaySystemTest
                 e.printStackTrace();
             }
         });
+    }
+
+    void assertResendsCompleted(final int count, final Matcher<Iterable<Integer>> items)
+    {
+        testSystem.await("ResendRequestController not notified ",
+            () -> fakeResendRequestController.completeCount() == count);
+        assertThat(fakeResendRequestController.seenReplaysInFlight(), items);
     }
 
 }

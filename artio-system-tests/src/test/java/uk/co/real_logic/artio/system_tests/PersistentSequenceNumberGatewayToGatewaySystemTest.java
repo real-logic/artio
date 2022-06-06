@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.collections.IntArrayList;
 import org.agrona.concurrent.status.ReadablePosition;
+import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -57,6 +58,7 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acquireSession;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -138,11 +140,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCopeWithCatchupReplayOfMissingMessages()
     {
-        duringRestart = () ->
-        {
-            dirsDeleteOnStart = false;
-            deleteAcceptorLogs();
-        };
+        deleteAcceptorLogsDuringRestart();
 
         onAcquireSession = () -> assertReplyStatusWhenReplayRequested(OK);
 
@@ -154,6 +152,61 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(1, 0);
     }
 
+    private void deleteAcceptorLogsDuringRestart()
+    {
+        duringRestart = () ->
+        {
+            dirsDeleteOnStart = false;
+            deleteAcceptorLogs();
+        };
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldCopeWithResendRequestOfMissingMessages()
+    {
+        printErrorMessages = false;
+
+        // Trigger a situation where a resend request is sent to the acceptor for messages
+        // That aren't in its archive to hit a "missing messages" scenario
+
+        beforeReconnect = () ->
+        {
+            final long acceptingId = acceptingSession.id();
+
+            acceptingSession = SystemTestUtil.acquireSession(
+                acceptingHandler, acceptingLibrary, acceptingId, testSystem);
+            assertOfflineSession(acceptingId, acceptingSession);
+
+            // reset the sequence number to a higher number
+            final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
+            final ReportFactory factory = new ReportFactory();
+            factory.sendReport(testSystem, acceptingSession, Side.BUY); // 4
+            acceptingSession.lastSentMsgSeqNum(7);
+            final long position = factory.sendReport(testSystem, acceptingSession, Side.BUY); // 8
+
+            testSystem.awaitPosition(positionCounter, position);
+
+            onAcquireSession = this::nothing;
+        };
+
+        exchangeMessagesAroundARestart(4, 9, 4, 9);
+
+        sendResendRequestFromInit(4, 6);
+        receivesGapfill(initiatingOtfAcceptor, equalTo(7));
+        assertResendsCompleted(1, hasItems(0));
+    }
+
+    private void receivesGapfill(final FakeOtfAcceptor initiatingOtfAcceptor, final Matcher<Integer> newSeqNoMatcher)
+    {
+        final FixMessage gapFillMessage =
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
+        final int newSeqNo = Integer.parseInt(gapFillMessage.get(Constants.NEW_SEQ_NO));
+        final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
+
+        assertEquals("Y", gapFillFlag);
+        assertThat(newSeqNo, newSeqNoMatcher);
+    }
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldCopeWithResendRequestOfMissingMessagesWithHighInitialSequenceNumberSet()
     {
@@ -163,13 +216,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             HIGH_INITIAL_SEQUENCE_NUMBER,
             5);
 
-        final FixMessage gapFillMessage =
-            testSystem.awaitMessageOf(acceptingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
-        final int newSeqNo = Integer.parseInt(gapFillMessage.get(Constants.NEW_SEQ_NO));
-        final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
-
-        assertEquals("Y", gapFillFlag);
-        assertThat(newSeqNo, greaterThan(HIGH_INITIAL_SEQUENCE_NUMBER));
+        receivesGapfill(acceptingOtfAcceptor, greaterThan(HIGH_INITIAL_SEQUENCE_NUMBER));
 
         // Test that we don't accidentally send another resend request
         // Reproduction of reported bug
@@ -182,12 +229,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
-        resendRequest.beginSeqNo(1).endSeqNo(1);
-
-        initiatingOtfAcceptor.messages().clear();
-
-        testSystem.send(initiatingSession, resendRequest);
+        sendResendRequestFromInit(1, 1);
 
         final FixMessage message = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
@@ -197,6 +239,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSequenceIndicesAre(0);
         assertLastLogonEquals(4, 0);
+    }
+
+    private void sendResendRequestFromInit(final int beginSeqNo, final int endSeqNo)
+    {
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+        resendRequest.beginSeqNo(beginSeqNo).endSeqNo(endSeqNo);
+
+        initiatingOtfAcceptor.messages().clear();
+
+        testSystem.send(initiatingSession, resendRequest);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -835,6 +887,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         config.sessionPersistenceStrategy(alwaysPersistent());
+        config.resendRequestController(fakeResendRequestController);
         if (!printErrorMessages)
         {
             config.monitoringAgentFactory(consumeDistinctErrors(errorCounter));
@@ -850,7 +903,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
 
-        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler, nanoClock).scheduler(libraryScheduler));
+        acceptingLibrary = connect(
+            acceptingLibraryConfig(acceptingHandler, nanoClock)
+                .scheduler(libraryScheduler)
+                .resendRequestController(fakeResendRequestController));
 
         initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock)
             .scheduler(libraryScheduler));

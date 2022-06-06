@@ -251,7 +251,9 @@ class FixSenderEndPoint extends SenderEndPoint
             if (totalWritten < bodyLength)
             {
                 reattemptBytesWritten = totalWritten;
-                enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
+                // set seqNum to 0 in order to avoid duplicate replayComplete sends
+                final int enqSeqNum = replay ? NOT_LAST_REPLAY_MSG : seqNum;
+                enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, enqSeqNum, replay);
             }
             else
             {

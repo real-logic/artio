@@ -502,7 +502,7 @@ public class ReplayerTest extends AbstractLogTest
 
             final int srcLength = onExampleMessage(endSeqNo);
 
-            assertResentGapFillThenMessage(BEGIN_SEQ_NO, offset, srcLength, times(3));
+            assertResentGapFillThenMessage(2, offset, srcLength, times(3));
 
             return true;
         });

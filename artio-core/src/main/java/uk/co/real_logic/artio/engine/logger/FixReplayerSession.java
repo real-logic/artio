@@ -230,7 +230,7 @@ class FixReplayerSession extends ReplayerSession
             {
                 if (beginGapFillSeqNum == NONE)
                 {
-                    beginGapFillSeqNum = lastSeqNo + 1;
+                    beginGapFillSeqNum(lastSeqNo + 1);
                 }
 
                 lastSeqNo = msgSeqNum;
@@ -282,7 +282,7 @@ class FixReplayerSession extends ReplayerSession
         {
             if (beginGapFillSeqNum == NONE)
             {
-                beginGapFillSeqNum = lastSeqNo + 1;
+                beginGapFillSeqNum(lastSeqNo + 1);
             }
 
             lastSeqNo = msgSeqNum;
@@ -336,7 +336,7 @@ class FixReplayerSession extends ReplayerSession
             sequenceNumber);
         if (action == CONTINUE)
         {
-            this.beginGapFillSeqNum = NONE;
+            this.beginGapFillSeqNum(NONE);
         }
         return action;
     }
@@ -420,9 +420,9 @@ class FixReplayerSession extends ReplayerSession
 
         // If the last N messages were admin messages then we need to send a gapfill
         // after the replay query has run.
+        final int newSequenceNumber = endSeqNo + 1;
         if (beginGapFillSeqNum != NONE)
         {
-            final int newSequenceNumber = endSeqNo + 1;
             if (newSequenceNumber > beginGapFillSeqNum)
             {
                 final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber, true);
@@ -456,9 +456,9 @@ class FixReplayerSession extends ReplayerSession
 
             if (replayedMessages != expectedCount)
             {
-                if (replayedMessages == 0)
+                if (lastSeqNo < endSeqNo)
                 {
-                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1, true);
+                    final Action action = sendGapFill(lastSeqNo + 1, newSequenceNumber, true);
                     if (action == ABORT)
                     {
                         return false;
@@ -466,8 +466,9 @@ class FixReplayerSession extends ReplayerSession
                 }
 
                 onIllegalState(
-                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                    message, replayedMessages, expectedCount);
+                    "[%s] Error in resend request, count(%d) < expectedCount (%d), newSequenceNumber(%d), " +
+                    "endSeqNo(%d)",
+                    message, replayedMessages, expectedCount, newSequenceNumber, endSeqNo);
             }
         }
 
@@ -496,5 +497,10 @@ class FixReplayerSession extends ReplayerSession
             ", sessionId=" + sessionId +
             ", sequenceIndex=" + sequenceIndex +
             '}';
+    }
+
+    public void beginGapFillSeqNum(final int beginGapFillSeqNum)
+    {
+        this.beginGapFillSeqNum = beginGapFillSeqNum;
     }
 }
