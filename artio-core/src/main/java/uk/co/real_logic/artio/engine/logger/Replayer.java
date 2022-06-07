@@ -18,22 +18,18 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;
@@ -63,7 +59,7 @@ import static uk.co.real_logic.artio.util.MessageTypeEncoding.packAllMessageType
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-public class Replayer implements Agent, ControlledFragmentHandler
+public class Replayer extends AbstractReplayer
 {
     public static final int MOST_RECENT_MESSAGE = 0;
 
@@ -71,33 +67,16 @@ public class Replayer implements Agent, ControlledFragmentHandler
         ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     static final int SIZE_OF_LENGTH_FIELD = FixMessageDecoder.bodyHeaderLength();
 
-    private static final int POLL_LIMIT = 10;
-    static final int START_REPLAY_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + StartReplayEncoder.BLOCK_LENGTH;
-
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final BufferClaim bufferClaim;
-
-    // Safe to share between multiple ReplayerSession instances due to single threaded nature of the Replayer
-    final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
-    final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
-    final ReplayCompleteEncoder replayCompleteEncoder = new ReplayCompleteEncoder();
-
     // FIX specific state.
     private final LongHashSet gapFillMessageTypes;
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final CharFormatter receivedResendFormatter = new CharFormatter(
         "Received Resend Request for inclusive range: [%s, %s] connId=%s");
-    private final CharFormatter alreadyDisconnectedFormatter = new CharFormatter(
-        "Not processing Resend Request for connId=%s because it has already disconnected");
 
     // For FixReplayerSession, safe to share rather than allocate for each FixReplayerSession
     final CharFormatter completeNotRecentFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
         "endSeqNo=%s beginSeqNo=%s expectedCount=%s connId=%s");
-    final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
-        "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
-        "beginGapFillSeqNum=%s, newSequenceNumber=%s connId=%s");
 
     // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
@@ -115,11 +94,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
 
     private final List<ReplayChannel> closingChannels = new ArrayList<>();
     private final Long2ObjectHashMap<ReplayChannel> connectionIdToReplayerChannel = new Long2ObjectHashMap<>();
-    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
-    private final StartReplayEncoder startReplayEncoder = new StartReplayEncoder();
 
     private final int maxBytesInBuffer;
     private final ReplayerCommandQueue replayerCommandQueue;
@@ -128,7 +104,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final EpochNanoClock clock;
     private final EngineConfiguration configuration;
     private final ReplayQuery outboundReplayQuery;
-    private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
@@ -136,10 +111,7 @@ public class Replayer implements Agent, ControlledFragmentHandler
     private final String agentNamePrefix;
     private final ReplayHandler replayHandler;
     private final FixPRetransmitHandler fixPRetransmitHandler;
-    private final SenderSequenceNumbers senderSequenceNumbers;
     private final UtcTimestampEncoder utcTimestampEncoder;
-
-    private boolean sendStartReplay = true;
 
     public Replayer(
         final ReplayQuery outboundReplayQuery,
@@ -165,9 +137,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final FixPProtocolType fixPProtocolType,
         final EngineConfiguration configuration)
     {
+        super(publication, fixSessionCodecsFactory, bufferClaim, senderSequenceNumbers);
         this.outboundReplayQuery = outboundReplayQuery;
-        this.publication = publication;
-        this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
         this.errorHandler = errorHandler;
         this.maxClaimAttempts = maxClaimAttempts;
@@ -176,7 +147,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
         this.gapfillOnRetransmitILinkTemplateIds = gapfillOnRetransmitILinkTemplateIds;
         this.replayHandler = replayHandler;
         this.fixPRetransmitHandler = fixPRetransmitHandler;
-        this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.replayerCommandQueue = replayerCommandQueue;
@@ -298,12 +268,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         final int sequenceIndex,
         final AsciiBuffer asciiBuffer)
     {
-        if (senderSequenceNumbers.hasDisconnected(connectionId))
+        if (checkDisconnected(connectionId))
         {
-            DebugLogger.log(REPLAY,
-                alreadyDisconnectedFormatter,
-                connectionId);
-
             return CONTINUE;
         }
 
@@ -409,32 +375,6 @@ public class Replayer implements Agent, ControlledFragmentHandler
         }
 
         throw new IllegalStateException("Unknown session: sessionId=" + sessionId + ",connectionId=" + connectionId);
-    }
-
-    private boolean trySendStartReplay(final long sessionId, final long connectionId, final long correlationId)
-    {
-        if (sendStartReplay)
-        {
-            final long position = publication.tryClaim(START_REPLAY_LENGTH, bufferClaim);
-            if (Pressure.isBackPressured(position))
-            {
-                return true;
-            }
-
-            final MutableDirectBuffer buffer = bufferClaim.buffer();
-            final int offset = bufferClaim.offset();
-
-            startReplayEncoder
-                .wrapAndApplyHeader(buffer, offset, messageHeaderEncoder)
-                .session(sessionId)
-                .connection(connectionId)
-                .correlationId(correlationId);
-
-            DebugLogger.logSbeMessage(REPLAY, startReplayEncoder);
-
-            bufferClaim.commit();
-        }
-        return false;
     }
 
     private FixReplayerSession processFixResendRequest(
@@ -573,8 +513,8 @@ public class Replayer implements Agent, ControlledFragmentHandler
         connectionIdToReplayerChannel.clear();
         currentReplayCount.set(0);
         currentReplayCount.close();
-        publication.close();
         outboundReplayQuery.close();
+        super.onClose();
     }
 
     public String roleName()

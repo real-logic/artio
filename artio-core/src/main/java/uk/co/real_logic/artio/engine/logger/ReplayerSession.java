@@ -20,19 +20,12 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 
 import static uk.co.real_logic.artio.LogTag.REPLAY;
-import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 abstract class ReplayerSession implements ControlledFragmentHandler
 {
-    private static final int REPLAY_COMPLETE_LEN =
-        MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH;
     private final int maxClaimAttempts;
     private final IdleStrategy idleStrategy;
 
@@ -133,27 +126,7 @@ abstract class ReplayerSession implements ControlledFragmentHandler
 
     boolean sendCompleteMessage()
     {
-        if (claimBuffer(REPLAY_COMPLETE_LEN, 0))
-        {
-            final ReplayCompleteEncoder replayComplete = replayer.replayCompleteEncoder;
-            replayComplete.wrapAndApplyHeader(
-                bufferClaim.buffer(),
-                bufferClaim.offset(),
-                replayer.messageHeaderEncoder)
-                .libraryId(ENGINE_LIBRARY_ID)
-                .connection(connectionId)
-                .correlationId(correlationId);
-
-            DebugLogger.logSbeMessage(LogTag.REPLAY, replayComplete);
-
-            bufferClaim.commit();
-
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return replayer.sendCompleteMessage(connectionId, correlationId);
     }
 
     abstract boolean attemptReplay();

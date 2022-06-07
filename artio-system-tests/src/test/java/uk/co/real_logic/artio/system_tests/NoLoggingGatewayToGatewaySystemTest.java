@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -41,7 +42,8 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .logInboundMessages(false)
             .logOutboundMessages(false)
-            .deleteLogFileDirOnStart(true));
+            .deleteLogFileDirOnStart(true)
+            .resendRequestController(fakeResendRequestController));
 
         initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort, nanoClock)
             .logInboundMessages(false)
@@ -49,6 +51,7 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
             .deleteLogFileDirOnStart(true));
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
+        acceptingLibraryConfig.resendRequestController(fakeResendRequestController);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
@@ -155,6 +158,9 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
                     .receivedReplayGapFill(1, 3)
                     .count());
             }, 5000);
+
+        assertResendsCompleted(1, hasItems(0));
+        messagesCanBeExchanged();
     }
 
     private void engineShouldManageSession(
