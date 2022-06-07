@@ -107,7 +107,7 @@ public final class Timing
         }
         while (System.currentTimeMillis() < endTime);
 
-        final AssertionError error = new AssertionError(message);
+        final AssertionError error = new AssertionError(message.get());
         error.addSuppressed(lastThrowable);
         throw error;
     }

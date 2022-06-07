@@ -22,7 +22,9 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -133,6 +135,26 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
 
         // Ensure that messages can be exchanged after the acquisition.
         acceptingMessagesCanBeExchanged();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void resendRequestsShouldGetGapFilled()
+    {
+        acquireAcceptingSession();
+
+        messagesCanBeExchanged();
+
+        sendResendRequest(1, 0, initiatingOtfAcceptor, initiatingSession);
+
+        assertEventuallyTrue(() -> "Failed to receive gap fill: " + initiatingOtfAcceptor.messages(),
+            () ->
+            {
+                testSystem.poll();
+
+                assertEquals(1, initiatingOtfAcceptor
+                    .receivedReplayGapFill(1, 3)
+                    .count());
+            }, 5000);
     }
 
     private void engineShouldManageSession(
