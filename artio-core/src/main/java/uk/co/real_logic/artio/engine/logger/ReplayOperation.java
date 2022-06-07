@@ -208,17 +208,21 @@ public class ReplayOperation
                     if (!(image.isClosed() || image.isEndOfStream()))
                     {
                         // Try to skip as far ahead as possible
-                        final int termLengthMask = image.termBufferLength() - 1;
                         final long currentPosition = image.position();
-                        final long limit = (currentPosition - (currentPosition & termLengthMask)) + termLengthMask + 1;
-                        final long pos = Math.min(limit, endPosition);
-                        try
+                        if (endPosition > currentPosition)
                         {
-                            image.position(pos);
-                        }
-                        catch (final Throwable e)
-                        {
-                            errorHandler.onError(e);
+                            final int termLengthMask = image.termBufferLength() - 1;
+                            final long limit =
+                                (currentPosition - (currentPosition & termLengthMask)) + termLengthMask + 1;
+                            final long pos = Math.min(limit, endPosition);
+                            try
+                            {
+                                image.position(pos);
+                            }
+                            catch (final Throwable e)
+                            {
+                                errorHandler.onError(e);
+                            }
                         }
                         image.poll(EMPTY_FRAGMENT_HANDLER, Integer.MAX_VALUE);
                     }
