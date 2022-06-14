@@ -62,12 +62,14 @@ public abstract class AbstractFixMessageLoggerTest
     final EpochNanoClock clock = new OffsetEpochNanoClock();
     final LongArrayList timestamps = new LongArrayList();
     final IntArrayList streamIds = new IntArrayList();
+    final IntArrayList sequenceNumbers = new IntArrayList();
 
     final FixMessageConsumer fixConsumer = (message, buffer, offset, length, header) ->
     {
         final long timestamp = message.timestamp();
 
         timestamps.add(timestamp);
+        sequenceNumbers.add(message.sequenceNumber());
 
         final String body = validateFixMessageConsumer(message, buffer, offset, length).trim();
         final long messageNumber = Long.parseLong(body);
@@ -274,7 +276,7 @@ public abstract class AbstractFixMessageLoggerTest
             });
     }
 
-    abstract void onMessage(GatewayPublication inboundPublication, long timestamp);
+    abstract long onMessage(GatewayPublication inboundPublication, long timestamp);
 
     void onReplayerTimestamp(final ExclusivePublication replayStream, final long timestampInNs)
     {
@@ -289,14 +291,14 @@ public abstract class AbstractFixMessageLoggerTest
         untilComplete(() -> replayStream.offer(timestampBuffer));
     }
 
-    protected void untilComplete(final LongSupplier op)
+    protected long untilComplete(final LongSupplier op)
     {
         while (true)
         {
             final long position = op.getAsLong();
             if (position > 0)
             {
-                return;
+                return position;
             }
             Thread.yield();
         }

@@ -40,7 +40,7 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
         setup(iLinkMessageConsumer);
     }
 
-    void onMessage(final GatewayPublication publication, final long timestamp)
+    long onMessage(final GatewayPublication publication, final long timestamp)
     {
         final Ilink3Protocol protocol = new Ilink3Protocol();
         final ILink3Proxy proxy = new ILink3Proxy(
@@ -79,5 +79,6 @@ public class ILink3MessageLoggerTest extends AbstractFixMessageLoggerTest
         executionReportStatus.stopPx().mantissa(2);
 
         proxy.commit();
+        return timestamp;
     }
 }

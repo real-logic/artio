@@ -26,6 +26,8 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.stream.Collectors.joining;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 
 public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
 {
@@ -45,10 +47,16 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
         setup(null);
     }
 
-    void onMessage(final GatewayPublication inboundPublication, final long timestamp)
+    long onMessage(final GatewayPublication publication, final long timestamp)
+    {
+        return onMessage(publication, timestamp, (int)timestamp);
+    }
+
+    private long onMessage(
+        final GatewayPublication publication, final long timestamp, final int sequenceNumber)
     {
         fakeMessageBuffer.putLongAscii(0, timestamp);
-        untilComplete(() -> inboundPublication.saveMessage(
+        return untilComplete(() -> publication.saveMessage(
             fakeMessageBuffer,
             0,
             fakeMessageBuffer.capacity(),
@@ -58,7 +66,7 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
             SEQUENCE_INDEX,
             CONNECTION_ID,
             MessageStatus.OK,
-            (int)timestamp,
+            sequenceNumber,
             timestamp));
     }
 
@@ -82,5 +90,22 @@ public class FixMessageLoggerTest extends AbstractFixMessageLoggerTest
         onMessage(outboundPublication, dumpCount + 3);
         onReplayerTimestamp(replayPublication, dumpCount + 4);
         assertEventuallyReceives(2);
+    }
+
+    @Test
+    public void shouldNotReorderMessagesWithinABufferWithEqualTimestamps()
+    {
+        onMessage(inboundPublication, 1, 1);
+        onMessage(inboundPublication, 1, 2);
+
+        logger.doWork();
+
+        onMessage(outboundPublication, 3, 1);
+
+        onReplayerTimestamp(replayPublication, 4);
+
+        assertEventuallyReceives(2);
+        assertThat(timestamps, contains(1L, 1L));
+        assertThat(sequenceNumbers, contains(1, 2));
     }
 }

@@ -34,7 +34,8 @@ import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 public class StreamTimestampZipper
 {
     private static final TimestampComparator TIMESTAMP_COMPARATOR = new TimestampComparator();
-    private static final ReverseTimestampComparator REVERSE_TIMESTAMP_COMPARATOR = new ReverseTimestampComparator();
+    private static final UnstableReverseTimestampComparator REVERSE_TIMESTAMP_COMPARATOR =
+        new UnstableReverseTimestampComparator();
     private static final OffsetComparator OFFSET_COMPARATOR = new OffsetComparator();
 
     private final int maximumBufferSize;
@@ -261,11 +262,20 @@ public class StreamTimestampZipper
         }
     }
 
-    static class ReverseTimestampComparator implements Comparator<BufferedPosition>
+    static class UnstableReverseTimestampComparator implements Comparator<BufferedPosition>
     {
         public int compare(final BufferedPosition o1, final BufferedPosition o2)
         {
-            return Long.compare(o2.timestamp, o1.timestamp);
+            final int timestampCompare = Long.compare(o2.timestamp, o1.timestamp);
+
+            // When we have two messages with an equal timestamp we don't want to have a stable sort, we want it to
+            // reverse the origin positions, so we then compare based upon the offset of the positions.
+            if (timestampCompare == 0)
+            {
+                return Long.compare(o2.offset, o1.offset);
+            }
+
+            return timestampCompare;
         }
     }
 
