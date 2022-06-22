@@ -587,7 +587,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        assertState(LOGGING_OUT);
+        assertState(LOGGING_OUT_AND_DISCONNECTING);
 
         poll();
 

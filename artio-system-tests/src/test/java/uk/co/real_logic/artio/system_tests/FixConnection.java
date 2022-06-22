@@ -244,19 +244,19 @@ public final class FixConnection implements AutoCloseable
         logon(resetSeqNumFlag, 30);
     }
 
-    public void logon(final boolean resetSeqNumFlag, final int heartBtInt)
+    public void logon(final boolean resetSeqNumFlag, final int heartBtIntInS)
     {
-        logon(resetSeqNumFlag, heartBtInt, false);
+        logon(resetSeqNumFlag, heartBtIntInS, false);
     }
 
-    public void logon(final boolean resetSeqNumFlag, final int heartBtInt, final boolean possDupFlag)
+    public void logon(final boolean resetSeqNumFlag, final int heartBtIntInS, final boolean possDupFlag)
     {
         setupHeader(logon.header(), msgSeqNum++, possDupFlag);
 
         logon
             .resetSeqNumFlag(resetSeqNumFlag)
             .encryptMethod(0)
-            .heartBtInt(heartBtInt)
+            .heartBtInt(heartBtIntInS)
             .maxMessageSize(9999);
 
         send(logon);
@@ -333,7 +333,8 @@ public final class FixConnection implements AutoCloseable
 
             if (!decoder.validate())
             {
-                fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId());
+                fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId() +
+                    " msg = [" + ascii + "]");
             }
 
             // check MsgType in case we read an unexpected message, but with a compatible structure

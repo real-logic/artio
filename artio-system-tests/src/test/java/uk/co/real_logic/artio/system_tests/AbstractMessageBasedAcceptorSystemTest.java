@@ -78,6 +78,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
         configuration.messageValidationStrategy(MessageValidationStrategy.none());
         configuration.errorHandlerFactory(errorBuffer -> errorHandler);
+        configuration.reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs);
         library = connect(configuration);
         testSystem = new TestSystem(library);
     }

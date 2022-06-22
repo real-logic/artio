@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.concurrent.status.ReadablePosition;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import uk.co.real_logic.artio.Constants;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
@@ -36,6 +38,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
@@ -51,6 +54,7 @@ import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.LONG_TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.FixConnection.BUFFER_SIZE;
 import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
@@ -58,6 +62,9 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
+    private final int timeoutDisconnectHeartBtIntInS = 1;
+    private final long timeoutDisconnectHeartBtIntInMs = TimeUnit.SECONDS.toMillis(timeoutDisconnectHeartBtIntInS);
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldComplyWithLogonBasedSequenceNumberResetOn()
         throws IOException
@@ -593,18 +600,67 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
-            connection.logon(true, 1);
+            connection.logon(true, timeoutDisconnectHeartBtIntInS);
             final LogonDecoder logon = connection.readLogon();
             assertTrue(logon.resetSeqNumFlag());
 
-            connection.readHeartbeat();
-            final TestRequestDecoder testRequest = connection.readTestRequest();
-            assertEquals("TEST", testRequest.testReqIDAsString());
-
-            connection.readHeartbeat();
-            connection.readLogout();
-            assertFalse(connection.isConnected());
+            processTimeoutDisconnect(connection);
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSendLogoutOnTimeoutDisconnectSoleLibrary() throws IOException
+    {
+        reasonableTransmissionTimeInMs = 1;
+
+        setup(true, true, true, SOLE_LIBRARY);
+
+        setupLibrary();
+        testSystem.awaitTimeoutInMs(LONG_TEST_TIMEOUT_IN_MS);
+
+        final FakeDisconnectHandler onDisconnect = new FakeDisconnectHandler();
+        handler.onDisconnectCallback(onDisconnect);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            connection.logon(true, timeoutDisconnectHeartBtIntInS);
+            //noinspection Convert2MethodRef
+            final LogonDecoder logon = testSystem.awaitBlocking(() -> connection.readLogon());
+            assertTrue(logon.resetSeqNumFlag());
+
+            session = handler.lastSession();
+            assertNotNull(session);
+
+            final long logoutTimeInMs = testSystem.awaitBlocking(() -> processTimeoutDisconnect(connection));
+            SystemTestUtil.assertSessionDisconnected(testSystem, session);
+
+            assertPromptDisconnect(logoutTimeInMs, onDisconnect.timeInMs());
+            assertEquals(DisconnectReason.FIX_HEARTBEAT_TIMEOUT, onDisconnect.reason());
+        }
+    }
+
+    private long processTimeoutDisconnect(final FixConnection connection)
+    {
+        connection.readHeartbeat();
+        final TestRequestDecoder testRequest = connection.readTestRequest();
+        assertEquals("TEST", testRequest.testReqIDAsString());
+
+        connection.readHeartbeat();
+        connection.readLogout();
+        final long logoutTimeInMs = System.currentTimeMillis();
+
+        assertFalse(connection.isConnected());
+        final long disconnectTimeInMs = System.currentTimeMillis();
+
+        assertPromptDisconnect(logoutTimeInMs, disconnectTimeInMs);
+
+        return logoutTimeInMs;
+    }
+
+    private void assertPromptDisconnect(final long logoutTimeInMs, final long disconnectTimeInMs)
+    {
+        assertThat("Disconnect not prompt enough", (disconnectTimeInMs - logoutTimeInMs),
+            Matchers.lessThan(timeoutDisconnectHeartBtIntInMs));
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

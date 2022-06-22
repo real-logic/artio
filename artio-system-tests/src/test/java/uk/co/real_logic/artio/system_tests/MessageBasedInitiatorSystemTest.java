@@ -267,7 +267,7 @@ public class MessageBasedInitiatorSystemTest
             assertFalse(handler.hasDisconnected());
 
             final Session session = handler.lastSession();
-            assertThat(session.logoutAndDisconnect(), greaterThan(0L));
+            testSystem.awaitSend(session::logoutAndDisconnect);
 
             assertConnectionDisconnects(testSystem, connection);
 

@@ -2465,7 +2465,7 @@ public class Session
                         //considered lost and corrective action be initiated".
 
                         // Drop when back pressured: retried on duty cycle
-                        startLogout();
+                        logoutAndDisconnect(DisconnectReason.FIX_HEARTBEAT_TIMEOUT);
                     }
                     else if (isActive)
                     {

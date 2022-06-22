@@ -40,7 +40,7 @@ public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
 
         final ReadablePosition initPosition = testSystem.libraryPosition(initiatingEngine, initiatingLibrary);
 
-        initiatingHandler.onDisconnectCallback(session ->
+        initiatingHandler.onDisconnectCallback((session, reason) ->
         {
             resetPosition = session.trySendSequenceReset(1, 1);
             assertTrue(resetPosition > 0);

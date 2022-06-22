@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="23"
+                   version="24"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -128,6 +128,8 @@
                         description="Disconnected due to an exception being thrown by a callback from application code. Exception will be passed to the application's ErrorHandler unless it is in response to an initiate() call in which case it will be given to the reply." sinceVersion="19">23</validValue>
             <validValue name="REPLAY_BACK_PRESSURE_DISCONNECT"
                         description="We disconnected because an inbound message timeout whilst a replay was going on">24</validValue>
+            <validValue name="FIX_HEARTBEAT_TIMEOUT"
+                        description="Regular Fix heartbeat timeout">25</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
