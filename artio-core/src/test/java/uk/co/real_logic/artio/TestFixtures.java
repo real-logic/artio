@@ -35,6 +35,9 @@ import static io.aeron.driver.ThreadingMode.SHARED;
 
 public final class TestFixtures
 {
+    // Allow slower timeouts in to accommodate CI servers
+    public static final boolean IN_CI = System.getProperty("fix.core.ci") != null;
+
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
 

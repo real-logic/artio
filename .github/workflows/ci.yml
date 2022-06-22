@@ -9,7 +9,7 @@ on:
       - master
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP -Dfix.core.ci=true"
 
 permissions:
   contents: read

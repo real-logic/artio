@@ -27,12 +27,13 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 
 import static java.util.Collections.singletonList;
+import static uk.co.real_logic.artio.TestFixtures.IN_CI;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final int DRIVER_TIMEOUT_MS = 1000;
+    private static final int DRIVER_TIMEOUT_MS = IN_CI ? 10_000 : 1000;
 
     @Before
     public void launch()

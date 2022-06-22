@@ -170,6 +170,7 @@ subprojects {
         systemProperties(
             'fix.core.close_checker': 'true',
             'fix.core.debug': System.getProperty("fix.core.debug"),
+            'fix.core.ci': System.getProperty("fix.core.ci"),
             'aeron.dir.warn.if.exists': 'false',
             'aeron.use.windows.high.res.timer': 'true',
             'aeron.term.buffer.sparse.file': 'true',
