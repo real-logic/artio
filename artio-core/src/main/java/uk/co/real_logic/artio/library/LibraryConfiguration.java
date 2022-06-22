@@ -324,6 +324,15 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public CommonConfiguration disableHeartbeatRepliesToTestRequests(
+        final boolean disableHeartbeatRepliesToTestRequests)
+    {
+        return super.disableHeartbeatRepliesToTestRequests(disableHeartbeatRepliesToTestRequests);
+    }
+
     // ------------------------
     // END INHERITED SETTERS
     // ------------------------

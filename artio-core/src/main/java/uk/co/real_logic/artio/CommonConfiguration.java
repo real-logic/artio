@@ -303,6 +303,7 @@ public class CommonConfiguration
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
     private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
     private int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
+    private boolean disableHeartbeatRepliesToTestRequests = false;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -352,6 +353,20 @@ public class CommonConfiguration
     public CommonConfiguration forcedHeartbeatIntervalInS(final int forcedHeartbeatIntervalInS)
     {
         this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
+        return this;
+    }
+
+    /**
+     * Disables heartbeats in response to test requests. This configuration option is useful
+     * for testing the behaviour of other client's heartbeat behaviour or simulating disconnects.
+     *
+     * @param disableHeartbeatRepliesToTestRequests true to disable, false (the default) to respond to test requests.
+     * @return this
+     */
+    public CommonConfiguration disableHeartbeatRepliesToTestRequests(
+        final boolean disableHeartbeatRepliesToTestRequests)
+    {
+        this.disableHeartbeatRepliesToTestRequests = disableHeartbeatRepliesToTestRequests;
         return this;
     }
 
@@ -794,6 +809,11 @@ public class CommonConfiguration
     public int forcedHeartbeatIntervalInS()
     {
         return forcedHeartbeatIntervalInS;
+    }
+
+    public boolean disableHeartbeatRepliesToTestRequests()
+    {
+        return disableHeartbeatRepliesToTestRequests;
     }
 
     public long reasonableTransmissionTimeInMs()

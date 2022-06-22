@@ -60,6 +60,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             ConnectionType.INITIATOR,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
+            disableHeartbeatRepliesToTestRequests,
             new InternalSession.Formatters());
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);

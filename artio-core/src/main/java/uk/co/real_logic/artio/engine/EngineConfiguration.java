@@ -1215,6 +1215,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
+    public CommonConfiguration disableHeartbeatRepliesToTestRequests(
+        final boolean disableHeartbeatRepliesToTestRequests)
+    {
+        return super.disableHeartbeatRepliesToTestRequests(disableHeartbeatRepliesToTestRequests);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         super.sessionIdStrategy(sessionIdStrategy);

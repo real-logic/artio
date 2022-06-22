@@ -87,6 +87,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final UtcTimestampEncoder sendingTimeEncoder;
     private final ResendRequestController resendRequestController;
     private final int forcedHeartbeatIntervalInS;
+    private final boolean disableHeartbeatRepliesToTestRequests;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -133,6 +134,7 @@ public class FixGatewaySessions extends GatewaySessions
             epochFractionPrecision);
         this.resendRequestController = configuration.resendRequestController();
         this.forcedHeartbeatIntervalInS = configuration.forcedHeartbeatIntervalInS();
+        this.disableHeartbeatRepliesToTestRequests = configuration.disableHeartbeatRepliesToTestRequests();
 
         sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
@@ -191,6 +193,7 @@ public class FixGatewaySessions extends GatewaySessions
             gatewaySession.connectionType(),
             resendRequestController,
             forcedHeartbeatIntervalInS,
+            disableHeartbeatRepliesToTestRequests,
             formatters);
 
         session.awaitingResend(awaitingResend);

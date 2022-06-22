@@ -74,6 +74,8 @@ public abstract class AbstractSessionTest
 
     private static final char[] MSG_TYPE_CHARS = "D".toCharArray();
 
+    final char[] testReqId = "ABC".toCharArray();
+
     static final long POSITION = 1024;
 
     OnMessageInfo messageInfo = mock(OnMessageInfo.class);
@@ -91,6 +93,7 @@ public abstract class AbstractSessionTest
     TestRequestEncoder testRequest = new TestRequestEncoder();
     FixSessionOwner fixSessionOwner = mock(FixSessionOwner.class);
     int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
+    boolean disableHeartbeatRepliesToTestRequests = false;
     Session session;
 
     AbstractSessionTest()
@@ -381,15 +384,29 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldReplyToTestRequestsWithAHeartbeat()
     {
-        final char[] testReqId = "ABC".toCharArray();
-        final int testReqIdLength = testReqId.length;
-
-        session().id(SESSION_ID);
-
-        session().onTestRequest(1, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false, false, POSITION);
+        receiveTestRequest();
 
         verify(sessionProxy).sendHeartbeat(
-            1, testReqId, testReqIdLength, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+            1, testReqId, testReqId.length, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+    }
+
+    @Test
+    public void shouldReplyToTestRequestsWithAHeartbeatOnlyWhenConfigured()
+    {
+        disableHeartbeatRepliesToTestRequests = true;
+
+        receiveTestRequest();
+
+        verifyNoFurtherMessages();
+    }
+
+    private void receiveTestRequest()
+    {
+        final Session session = session();
+
+        session.id(SESSION_ID);
+        session.state(ACTIVE);
+        session.onTestRequest(1, testReqId, testReqId.length, sendingTime(), UNKNOWN, false, false, POSITION);
     }
 
     @Test

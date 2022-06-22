@@ -79,6 +79,7 @@ public class InternalSession extends Session implements AutoCloseable
         final ConnectionType connectionType,
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
+        final boolean disableHeartbeatRepliesToTestRequests,
         final Formatters formatters)
     {
         super(
@@ -106,6 +107,7 @@ public class InternalSession extends Session implements AutoCloseable
             connectionType,
             resendRequestController,
             forcedHeartbeatIntervalInS,
+            disableHeartbeatRepliesToTestRequests,
             formatters);
     }
 

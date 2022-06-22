@@ -2215,7 +2215,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochFractionClock,
             ConnectionType.INITIATOR,
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS(),
+            configuration.forcedHeartbeatIntervalInS(), configuration.disableHeartbeatRepliesToTestRequests(),
             formatters);
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
@@ -2293,7 +2293,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochFractionClock,
             ConnectionType.ACCEPTOR,
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS(), formatters);
+            configuration.forcedHeartbeatIntervalInS(), configuration.disableHeartbeatRepliesToTestRequests(),
+            formatters);
         session.fixDictionary(fixDictionary);
         session.address(address);
         return session;

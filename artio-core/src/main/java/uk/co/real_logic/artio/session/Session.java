@@ -126,6 +126,7 @@ public class Session
     private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
     private final ResendRequestController resendRequestController;
     private final int forcedHeartbeatIntervalInS;
+    private final boolean disableHeartbeatRepliesToTestRequests;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
@@ -220,6 +221,7 @@ public class Session
         final ConnectionType connectionType,
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
+        final boolean disableHeartbeatRepliesToTestRequests,
         final Formatters formatters)
     {
         Verify.notNull(state, "session state");
@@ -235,6 +237,7 @@ public class Session
         this.initiatorResetSeqNum = initiatorResetSeqNum;
         this.resendRequestController = resendRequestController;
         this.forcedHeartbeatIntervalInS = forcedHeartbeatIntervalInS;
+        this.disableHeartbeatRepliesToTestRequests = disableHeartbeatRepliesToTestRequests;
         this.messageInfo = messageInfo;
         this.proxy = proxy;
         this.connectionId = connectionId;
@@ -1890,7 +1893,8 @@ public class Session
         final long position)
     {
         final SessionState state = this.state;
-        if (msgSeqNo == expectedReceivedSeqNum() && state != DISCONNECTED && state != DISABLED)
+        if (msgSeqNo == expectedReceivedSeqNum() && state != DISCONNECTED && state != DISABLED &&
+            !disableHeartbeatRepliesToTestRequests)
         {
             final int sentSeqNum = newSentSeqNum();
             final long sentPosition = proxy.sendHeartbeat(

@@ -61,6 +61,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             ConnectionType.ACCEPTOR,
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
+            disableHeartbeatRepliesToTestRequests,
             new InternalSession.Formatters());
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(fixSessionOwner);
