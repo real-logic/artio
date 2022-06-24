@@ -59,7 +59,6 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acquireSession;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -371,6 +370,45 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // 5: logon, test-req/heartbeat, logout. logon 2, test-req/heartbeat 2
         assertSequenceFromInitToAcceptAt(5, 5);
         assertLastLogonEquals(4, 0);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void sequenceNumbersCanBeResetOnLogonWithoutARestart()
+    {
+        launch(this::nothing);
+        connectPersistingSessions();
+
+        assertSequenceIndicesAre(0);
+
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2, 2);
+
+        final long initiatedSessionId = initiatingSession.id();
+        final long acceptingSessionId = acceptingSession.id();
+
+        logoutInitiatingSession();
+        assertSessionsDisconnected();
+        assertInitiatingSequenceIndexIs(0);
+        assertAcceptingSessionHasSequenceIndex(0);
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, true);
+
+        assertEquals(initiatedSessionId, initiatingSession.id());
+        assertEquals(acceptingSessionId, acceptingSession.id());
+
+        acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
+        initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
+
+        // Sequence numbers reset, so the sequence index should increment
+        assertSequenceIndicesAre(1);
+        assertLastLogonEquals(1, 1);
+
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test(timeout = LONG_TEST_TIMEOUT_IN_MS)

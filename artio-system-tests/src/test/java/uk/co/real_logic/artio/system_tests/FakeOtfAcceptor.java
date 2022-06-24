@@ -181,9 +181,9 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         messages(hasSequenceIndex(sequenceIndex), (msg) -> true);
     }
 
-    void logonMessagesHaveSequenceNumbers(final int sequenceIndex)
+    void logonMessagesHaveSequenceNumbers(final int sequenceNumber)
     {
-        messages(hasMessageSequenceNumber(sequenceIndex), FixMessage::isLogon);
+        messages(hasMessageSequenceNumber(sequenceNumber), FixMessage::isLogon);
     }
 
     private void messages(final Matcher<FixMessage> matcher, final Predicate<? super FixMessage> predicate)
