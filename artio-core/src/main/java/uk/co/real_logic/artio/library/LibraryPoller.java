@@ -1057,6 +1057,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 session.lastSentMsgSeqNum(initialSentSequenceNumber - 1);
                 session.lastReceivedMsgSeqNumOnly(initialReceivedSequenceNumber - 1);
+                session.initiatorResetSeqNum(resetSeqNum);
             }
         }
         else

@@ -369,6 +369,11 @@ public class InternalSession extends Session implements AutoCloseable
         return super.requestDisconnect(reason);
     }
 
+    public void initiatorResetSeqNum(final boolean initiatorResetSeqNum)
+    {
+        super.initiatorResetSeqNum(initiatorResetSeqNum);
+    }
+
     public void onReplayComplete(final long correlationId)
     {
         super.onReplayComplete(correlationId);

@@ -130,7 +130,7 @@ public class Session
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
-    private final boolean initiatorResetSeqNum;
+    private boolean initiatorResetSeqNum;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -2720,6 +2720,11 @@ public class Session
     void isSlowConsumer(final boolean hasBecomeSlow)
     {
         this.isSlowConsumer = hasBecomeSlow;
+    }
+
+    void initiatorResetSeqNum(final boolean initiatorResetSeqNum)
+    {
+        this.initiatorResetSeqNum = initiatorResetSeqNum;
     }
 
     void onReplayComplete(final long correlationId)
