@@ -59,6 +59,8 @@ public class FramerContext
     private final FixContexts fixContexts;
     private final FixPContexts fixPContexts;
 
+    private volatile boolean startingClose = false;
+
     public FramerContext(
         final EngineConfiguration configuration,
         final FixCounters fixCounters,
@@ -273,6 +275,8 @@ public class FramerContext
         }
         idleStrategy.reset();
 
+        startingClose = true;
+
         while (!command.hasCompleted())
         {
             idleStrategy.idle();
@@ -370,6 +374,11 @@ public class FramerContext
     // Called on replayer thread
     public void resetOutboundReplayQuery(final long fixSessionId)
     {
+        if (startingClose)
+        {
+            return;
+        }
+
         final ResetReplayQueryCommand command = new ResetReplayQueryCommand(fixSessionId);
 
         final IdleStrategy idleStrategy = configuration.archiverIdleStrategy();
@@ -377,13 +386,13 @@ public class FramerContext
         // block the framer thread
         final EngineScheduler scheduler = configuration.scheduler();
 
-        while (!adminCommands.offer(command))
+        while (!adminCommands.offer(command) && !startingClose)
         {
             idleStrategy.idle(scheduler.pollFramer());
         }
         idleStrategy.reset();
 
-        while (!command.isDone())
+        while (!command.isDone() && !startingClose)
         {
             idleStrategy.idle(scheduler.pollFramer());
         }
