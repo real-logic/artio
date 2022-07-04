@@ -33,9 +33,6 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.lang.ref.WeakReference;
 
-import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
-import static uk.co.real_logic.artio.messages.SessionState.AWAITING_ASYNC_PROXY_LOGOUT;
-
 /**
  * Exposes Session methods to internal APIs that we don't want to expose to the outside world
  */
@@ -381,16 +378,7 @@ public class InternalSession extends Session implements AutoCloseable
 
     public void onSessionWriterLogout()
     {
-        // Your session has tried to write a logout response
-        // This is that message being round-tripped via the cluster
-        if (state() == AWAITING_ASYNC_PROXY_LOGOUT)
-        {
-            requestDisconnect(LOGOUT);
-        }
-        else
-        {
-            onStartLogout();
-        }
+        super.onSessionWriterLogout();
     }
 
     public ConnectionType connectionType()

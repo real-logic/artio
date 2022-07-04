@@ -594,6 +594,51 @@ public abstract class AbstractSessionTest
     }
 
     @Test
+    public void shouldLogoutAndDisconnectUponTimeoutOnlyOnce()
+    {
+        shouldSendTestRequestUponTimeout();
+
+        twoHeartBeatIntervalsPass();
+
+        poll();
+
+        assertState(DISCONNECTED);
+
+        poll();
+
+        verifyLogoutOnlyOnce();
+    }
+
+    @Test
+    public void shouldLogoutAndDisconnectUponTimeoutOnlyOnceWithCluster()
+    {
+        when(sessionProxy.isAsync()).thenReturn(true);
+
+        shouldSendTestRequestUponTimeout();
+
+        twoHeartBeatIntervalsPass();
+
+        poll();
+
+        // Initially we wait for the logout to be roundtripped via a cluster
+        assertState(AWAITING_ASYNC_PROXY_LOGOUT);
+
+        poll();
+
+        verifyLogoutOnlyOnce();
+
+        // Roundtrip completed, so we disconnect the session
+        session.onSessionWriterLogout();
+        assertState(DISCONNECTED);
+    }
+
+    private void verifyLogoutOnlyOnce()
+    {
+        verify(sessionProxy, times(1)).sendLogout(
+            anyInt(), eq(SEQUENCE_INDEX), eq(NO_LAST_MSG_SEQ_NUM_PROCESSED));
+    }
+
+    @Test
     public void shouldLogoutAndDisconnectUponTimeoutWhenBackPressured()
     {
         shouldSendTestRequestUponTimeout();

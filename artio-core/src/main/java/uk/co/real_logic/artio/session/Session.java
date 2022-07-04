@@ -89,6 +89,7 @@ public class Session
     static final short DISCONNECTING_VALUE = 8;
     static final short DISCONNECTED_VALUE = 9;
     static final short DISABLED_VALUE = 10;
+    static final short AWAITING_ASYNC_PROXY_LOGOUT_VALUE = 11;
 
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
@@ -514,6 +515,20 @@ public class Session
     {
         awaitingLogoutTimeoutInNs = timeInNs() + heartbeatIntervalInNs;
         state(AWAITING_LOGOUT);
+    }
+
+    void onSessionWriterLogout()
+    {
+        // Your session has tried to write a logout response
+        // This is that message being round-tripped via the cluster
+        if (state() == AWAITING_ASYNC_PROXY_LOGOUT)
+        {
+            requestDisconnect(LOGOUT);
+        }
+        else
+        {
+            onStartLogout();
+        }
     }
 
     /**
@@ -2444,6 +2459,8 @@ public class Session
 
             case DISCONNECTED_VALUE:
             case DISABLED_VALUE:
+            // Don't trigger repeated logout message sends whilst the logout is round-tripping the cluster
+            case AWAITING_ASYNC_PROXY_LOGOUT_VALUE:
             {
                 return actions;
             }
@@ -2470,6 +2487,7 @@ public class Session
 
                         // Drop when back pressured: retried on duty cycle
                         logoutAndDisconnect(DisconnectReason.FIX_HEARTBEAT_TIMEOUT);
+                        actions++;
                     }
                     else if (isActive)
                     {
