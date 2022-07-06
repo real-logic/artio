@@ -1,0 +1,12 @@
+# Helps IDEA users apply some of the formatting rules enforced by checkstyle
+
+root = true
+
+[*]
+
+[*.java]
+indent_size = 4
+ij_java_method_brace_style = next_line
+ij_java_block_brace_style = next_line
+ij_java_class_brace_style = next_line
+ij_java_space_after_type_cast = false

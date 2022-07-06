@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
+import uk.co.real_logic.artio.builder.CommonEncoderImpl;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.Generated;
@@ -207,7 +208,8 @@ class EncoderGenerator extends Generator
                     DirectBuffer.class,
                     MutableDirectBuffer.class,
                     UnsafeBuffer.class,
-                    AsciiSequenceView.class);
+                    AsciiSequenceView.class,
+                    CommonEncoderImpl.class);
                 generateAggregateClass(aggregate, aggregateType, className, out);
             });
     }
@@ -339,7 +341,7 @@ class EncoderGenerator extends Generator
         }
         else
         {
-            extendsClause = "";
+            extendsClause = " extends CommonEncoderImpl";
         }
         return String.format(
             "\n" +
@@ -364,6 +366,9 @@ class EncoderGenerator extends Generator
                 break;
             case HEADER:
                 additionalReset = "        beginStringAsCopy(DEFAULT_BEGIN_STRING, 0, DEFAULT_BEGIN_STRING.length);\n";
+                break;
+            case MESSAGE:
+                additionalReset = "        resetCustomTags();\n";
                 break;
             default:
                 additionalReset = "";
@@ -968,6 +973,13 @@ class EncoderGenerator extends Generator
         if (aggregateType == AggregateType.MESSAGE)
         {
             suffix =
+                "\n" +
+                "        if (customTagsLength > 0)\n" +
+                "        {\n" +
+                "            buffer.putBytes(position, customTagsBuffer, 0, customTagsLength);\n" +
+                "            position += customTagsLength;\n" +
+                "        }\n" +
+                "\n" +
                 "        position += trailer.startTrailer(buffer, position);\n" +
                 "\n" +
                 "        final int messageStart = header.finishHeader(buffer, bodyStart, position - bodyStart);\n" +

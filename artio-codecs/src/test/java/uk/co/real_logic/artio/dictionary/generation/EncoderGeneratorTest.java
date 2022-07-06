@@ -23,6 +23,7 @@ import org.hamcrest.Matcher;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
+import uk.co.real_logic.artio.builder.CommonEncoderImpl;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -696,6 +697,19 @@ public class EncoderGeneratorTest
         setSomeTimeField(encoder, 0);
 
         encoder.encode(buffer, 1);
+    }
+
+    @Test
+    public void shouldSetCustomTags() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+        setRequiredFields(encoder);
+        setupComponent(encoder);
+
+        ((CommonEncoderImpl)encoder).customTag(10100, 42);
+        ((CommonEncoderImpl)encoder).customTagAscii(10101, "foo");
+
+        assertEncodesTo(encoder, WITH_CUSTOM_TAGS);
     }
 
     @Test(expected = EncodingException.class)
