@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.framer.DefaultTcpChannel;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannel;
 
@@ -39,7 +40,7 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
 
     protected synchronized TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
-        final TcpChannel tcpChannel = new TcpChannel(channel);
+        final TcpChannel tcpChannel = new DefaultTcpChannel(channel);
         channels.add(tcpChannel);
         return tcpChannel;
     }

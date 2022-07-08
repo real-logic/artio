@@ -554,7 +554,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             }
         }
 
-        if (configuration.logAnyMessages())
+        if (configuration.requiresAeronArchive())
         {
             archive.close();
         }
@@ -625,6 +625,16 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     public RecordingIdLookup framerOutboundLookup()
     {
         return framerOutboundLookup;
+    }
+
+    public AeronArchive archive()
+    {
+        return archive;
+    }
+
+    public Aeron aeron()
+    {
+        return aeron;
     }
 
     static final class RecordingIds

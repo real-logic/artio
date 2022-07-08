@@ -315,6 +315,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
 
+    private ReproductionConfiguration reproductionConfiguration;
+
     // ---------------------
     // BEGIN SETTERS
     // ---------------------
@@ -1177,6 +1179,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration reproduceInbound(
+        final long startInNs, final long endInNs)
+    {
+        final EngineReproductionClock clock = new EngineReproductionClock(
+            startInNs);
+        epochNanoClock(clock);
+        this.reproductionConfiguration = new ReproductionConfiguration(
+            startInNs, endInNs, clock);
+        return this;
+    }
+
     // ---------------------
     // END SETTERS
     // ---------------------
@@ -1620,6 +1633,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logInboundMessages || logOutboundMessages;
     }
 
+    boolean isReproductionEnabled()
+    {
+        return reproductionConfiguration != null;
+    }
+
+    boolean requiresAeronArchive()
+    {
+        return logAnyMessages() || isReproductionEnabled();
+    }
+
     public boolean logAllMessages()
     {
         return logInboundMessages && logOutboundMessages;
@@ -1884,6 +1907,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return indexChecksumEnabled;
     }
 
+    // ignores bind operations
+    // ignores TcpChannelSupplier
+    // ignores the clock
+    // doesn't support initiated connections, only acceptor for now
+    // doesn't record the interaction
+    public ReproductionConfiguration reproductionConfiguration()
+    {
+        return reproductionConfiguration;
+    }
+
     // ---------------------
     // END GETTERS
     // ---------------------
@@ -1891,6 +1924,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration conclude()
     {
         super.conclude("engine");
+
+        if (reproductionConfiguration != null)
+        {
+            logInboundMessages(false);
+            logOutboundMessages(false);
+            bindAtStartup(false);
+        }
 
         if (libraryAeronChannel() == null)
         {

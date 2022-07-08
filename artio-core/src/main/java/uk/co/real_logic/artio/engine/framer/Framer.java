@@ -128,6 +128,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
+    private final ReproductionPoller reproductionPoller;
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock epochClock;
     private final EpochNanoClock clock;
@@ -326,8 +327,24 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         adminEngineProtocolSubscription = new AdminEngineProtocolSubscription(this);
 
-        channelSupplier = configuration.channelSupplier();
-        shouldBind = configuration.bindAtStartup();
+        final ReproductionConfiguration reproductionConfiguration = configuration.reproductionConfiguration();
+        final boolean isReproducing = reproductionConfiguration != null;
+
+        if (isReproducing)
+        {
+            channelSupplier = new ReproductionTcpChannelSupplier();
+            reproductionPoller = new ReproductionPoller(
+                reproductionConfiguration, channelSupplier, configuration.framerIdleStrategy(),
+                configuration.logFileDir(), recordingCoordinator.aeron(), recordingCoordinator.archive(),
+                configuration.libraryAeronChannel(), configuration.inboundLibraryStream());
+            shouldBind = false;
+        }
+        else
+        {
+            channelSupplier = configuration.channelSupplier();
+            reproductionPoller = null;
+            shouldBind = configuration.bindAtStartup();
+        }
 
         Image image = null;
         while (image == null)
@@ -713,26 +730,31 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void saveConnect(final TcpChannel channel, final long connectionId)
     {
         final String address = channel.remoteAddr();
-        // In this case the save connect is simply logged for posterities sake
-        // So in the back-pressure we should just drop it
-        final long position = inboundPublication.saveConnect(connectionId, address);
+        final long timeInNs = clock.nanoTime();
+        final long position = inboundPublication.saveConnect(connectionId, timeInNs, address);
         if (isBackPressured(position))
         {
-            errorHandler.onError(new IllegalStateException(
-                "Failed to log connect from " + address + " due to backpressure"));
+            schedule(() -> inboundPublication.saveConnect(connectionId, timeInNs, address));
         }
     }
 
     private long newConnectionId()
     {
-        long connectionId;
-        do
+        if (reproductionPoller != null)
         {
-            connectionId = this.nextConnectionId++;
+            return reproductionPoller.newConnectionId();
         }
-        while (connectionId == NO_CONNECTION_ID);
+        else
+        {
+            long connectionId;
+            do
+            {
+                connectionId = this.nextConnectionId++;
+            }
+            while (connectionId == NO_CONNECTION_ID);
 
-        return connectionId;
+            return connectionId;
+        }
     }
 
     public Action onInitiateILinkConnection(
@@ -1178,6 +1200,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     void onResetReplayQuery(final long fixSessionId)
     {
         inboundMessages.onReset(fixSessionId);
+    }
+
+    void onStartReproduction()
+    {
+        System.out.println("Framer.onStartReproduction");
+        reproductionPoller.start();
+        schedule(reproductionPoller);
     }
 
     private final class ILink3LookupConnectOperation implements Continuation

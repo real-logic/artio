@@ -537,7 +537,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveConnect(final long connectionId, final String address)
+    public long saveConnect(final long connectionId, final long timeInNs, final String address)
     {
         final byte[] addressBytes = bytes(address);
 
@@ -553,6 +553,7 @@ public class GatewayPublication extends ClaimablePublication
         connect
             .wrapAndApplyHeader(buffer, offset, header)
             .connection(connectionId)
+            .timestamp(timeInNs)
             .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();

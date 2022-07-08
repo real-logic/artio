@@ -24,15 +24,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
-public class TcpChannel implements AutoCloseable
+public abstract class TcpChannel implements AutoCloseable
 {
-    private final SocketChannel socketChannel;
-    private final String remoteAddress;
+    protected final String remoteAddress;
 
-    public TcpChannel(final SocketChannel socketChannel) throws IOException
+    public TcpChannel(final String remoteAddress) throws IOException
     {
-        this.socketChannel = socketChannel;
-        remoteAddress = socketChannel.getRemoteAddress().toString();
+        this.remoteAddress = remoteAddress;
     }
 
     public String remoteAddr()
@@ -40,40 +38,12 @@ public class TcpChannel implements AutoCloseable
         return remoteAddress;
     }
 
-    public SelectionKey register(final Selector sel, final int ops, final Object att) throws ClosedChannelException
-    {
-        return socketChannel.register(sel, ops, att);
-    }
+    public abstract SelectionKey register(final Selector sel, final int ops, final Object att) throws ClosedChannelException;
 
     // Any subclass should maintain the API that negative numbers of bytes are never returned
-    public int write(final ByteBuffer src) throws IOException
-    {
-        final int written = socketChannel.write(src);
-        if (written < 0)
-        {
-            // normalise the negative return and the exceptional path
-            throw new IOException("Disconnected " + remoteAddress + ", written=" + written);
-        }
-        return written;
-    }
+    public abstract int write(final ByteBuffer src) throws IOException;
 
-    public int read(final ByteBuffer dst) throws IOException
-    {
-        return socketChannel.read(dst);
-    }
+    public abstract int read(final ByteBuffer dst) throws IOException;
 
-    public void close()
-    {
-        if (socketChannel.isOpen())
-        {
-            try
-            {
-                socketChannel.close();
-            }
-            catch (final IOException ex)
-            {
-                LangUtil.rethrowUnchecked(ex);
-            }
-        }
-    }
+    public abstract void close();
 }

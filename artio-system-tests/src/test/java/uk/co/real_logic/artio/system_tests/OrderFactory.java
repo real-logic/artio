@@ -27,7 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 final class OrderFactory
 {
-    static void sendOrder(final Session session)
+    private static NewOrderSingleEncoder makeOrder()
     {
         final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
         final DecimalFloat price = new DecimalFloat(100);
@@ -46,7 +46,20 @@ final class OrderFactory
         newOrderSingle.instrument().symbol("MSFT");
         newOrderSingle.orderQtyData().orderQty(orderQty);
 
-        final long position = session.trySend(newOrderSingle);
+        return newOrderSingle;
+    }
+
+    static void sendOrder(final Session session)
+    {
+        final long position = session.trySend(makeOrder());
         assertThat(position, Matchers.greaterThan(0L));
+    }
+
+    static void sendOrder(final FixConnection connection)
+    {
+        final int msgSeqNum = connection.acquireMsgSeqNum();
+        final NewOrderSingleEncoder encoder = makeOrder();
+        connection.setupHeader(encoder.header(), msgSeqNum, false);
+        connection.send(encoder);
     }
 }

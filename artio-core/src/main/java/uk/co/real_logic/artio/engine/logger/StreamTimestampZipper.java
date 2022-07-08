@@ -31,7 +31,7 @@ import java.util.List;
 import static java.lang.Math.min;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 
-public class StreamTimestampZipper
+public class StreamTimestampZipper implements AutoCloseable
 {
     private static final TimestampComparator TIMESTAMP_COMPARATOR = new TimestampComparator();
     private static final UnstableReverseTimestampComparator REVERSE_TIMESTAMP_COMPARATOR =
@@ -72,7 +72,8 @@ public class StreamTimestampZipper
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
 
-    public int poll()
+    // TODO: need a way of getting the STZ to poll at most 1 event
+    public int poll(final int fragmentLimit)
     {
         int read = 0;
         final StreamPoller[] pollers = this.pollers;
@@ -218,7 +219,7 @@ public class StreamTimestampZipper
         reorderBufferOffset = 0;
     }
 
-    public void onClose()
+    public void close()
     {
         dumpBuffer();
 
@@ -399,8 +400,10 @@ public class StreamTimestampZipper
         private final FixPMessageDecoder fixpMessage = new FixPMessageDecoder();
         private final ReplayerTimestampDecoder replayerTimestamp = new ReplayerTimestampDecoder();
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
+        private final ConnectDecoder connect = new ConnectDecoder();
 
         private final FixMessageConsumer fixHandler;
+        private final ReproductionFixProtocolConsumer reproductionFixProtocolHandler;
         private final FixPMessageConsumer fixPHandler;
 
         StreamPoller owner;
@@ -409,6 +412,8 @@ public class StreamTimestampZipper
         LogEntryHandler(final FixMessageConsumer fixHandler, final FixPMessageConsumer fixPHandler)
         {
             this.fixHandler = fixHandler;
+            reproductionFixProtocolHandler = fixHandler instanceof  ReproductionFixProtocolConsumer ?
+                (ReproductionFixProtocolConsumer)fixHandler : null;
             this.fixPHandler = fixPHandler;
         }
 
@@ -461,7 +466,23 @@ public class StreamTimestampZipper
 
                 applicationHeartbeat.wrap(buffer, offset, blockLength, version);
                 final long timestampInNs = applicationHeartbeat.timestampInNs();
-                owner.handledTimestamp(timestampInNs);
+                final ReproductionFixProtocolConsumer reproductionHandler = this.reproductionFixProtocolHandler;
+                if (reproductionHandler != null)
+                {
+                    if (timestampInNs <= maxTimestampToHandle)
+                    {
+                        owner.handledTimestamp(timestampInNs);
+                        reproductionHandler.onApplicationHeartbeat(applicationHeartbeat, buffer, offset, length);
+                    }
+                    else
+                    {
+                        putBufferedMessage(buffer, start, length, timestampInNs);
+                    }
+                }
+                else
+                {
+                    owner.handledTimestamp(timestampInNs);
+                }
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID)
             {
@@ -481,6 +502,28 @@ public class StreamTimestampZipper
                 else
                 {
                     putBufferedMessage(buffer, start, length, timestamp);
+                }
+            }
+            else if (templateId == ConnectDecoder.TEMPLATE_ID)
+            {
+                final ReproductionFixProtocolConsumer reproductionHandler = this.reproductionFixProtocolHandler;
+                if (reproductionHandler != null)
+                {
+                    offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+                    connect.wrap(buffer, offset, blockLength, version);
+
+                    final long timestamp = connect.timestamp();
+
+                    if (timestamp <= maxTimestampToHandle)
+                    {
+                        owner.handledTimestamp(timestamp);
+                        reproductionHandler.onConnect(connect, buffer, start, length);
+                    }
+                    else
+                    {
+                        putBufferedMessage(buffer, start, length, timestamp);
+                    }
                 }
             }
         }
@@ -545,6 +588,14 @@ public class StreamTimestampZipper
                 offset += FixPMessageDecoder.BLOCK_LENGTH;
 
                 fixPHandler.onMessage(fixpMessage, buffer, offset, owner.header);
+            }
+            else if (templateId == ConnectDecoder.TEMPLATE_ID)
+            {
+                System.out.println("TODO: ConnectDecoder");
+            }
+            else if (templateId == ApplicationHeartbeatDecoder.TEMPLATE_ID)
+            {
+                System.out.println("TODO: ApplicationHeartbeatDecoder");
             }
         }
 

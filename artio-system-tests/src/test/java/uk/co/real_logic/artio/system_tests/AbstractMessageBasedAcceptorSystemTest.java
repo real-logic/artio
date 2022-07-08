@@ -22,7 +22,6 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -31,7 +30,6 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
-import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
@@ -76,8 +74,8 @@ public class AbstractMessageBasedAcceptorSystemTest
         otfAcceptor = new FakeOtfAcceptor();
         handler = new FakeHandler(otfAcceptor);
         final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
-        configuration.messageValidationStrategy(MessageValidationStrategy.none());
-        configuration.errorHandlerFactory(errorBuffer -> errorHandler);
+//        configuration.messageValidationStrategy(MessageValidationStrategy.none());
+//        configuration.errorHandlerFactory(errorBuffer -> errorHandler);
         configuration.reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs);
         library = connect(configuration);
         testSystem = new TestSystem(library);
@@ -107,10 +105,25 @@ public class AbstractMessageBasedAcceptorSystemTest
         final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
         final boolean enableThrottle)
     {
-        mediaDriver = launchMediaDriver();
+        setup(sequenceNumberReset, shouldBind, provideBindingAddress, initialAcceptedSessionOwner,
+            enableThrottle, false, 0L, 0L, true);
+    }
 
-        delete(ACCEPTOR_LOGS);
+    void setup(
+        final boolean sequenceNumberReset,
+        final boolean shouldBind,
+        final boolean provideBindingAddress,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner,
+        final boolean enableThrottle,
+        final boolean enableReproduction,
+        final long startInNs,
+        final long endInNs,
+        final boolean deleteLogsOnStart)
+    {
+        mediaDriver = launchMediaDriver(mediaDriverContext(TERM_BUFFER_LENGTH, deleteLogsOnStart));
+
         final EngineConfiguration config = new EngineConfiguration()
+            .deleteLogFileDirOnStart(deleteLogsOnStart)
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
@@ -137,10 +150,16 @@ public class AbstractMessageBasedAcceptorSystemTest
             config.bindTo("localhost", port);
         }
 
+        if (enableReproduction)
+        {
+            config.reproduceInbound(startInNs, endInNs);
+        }
+
         config.bindAtStartup(shouldBind);
 
         config
-            .monitoringAgentFactory(MonitoringAgentFactory.none())
+//            .monitoringAgentFactory(MonitoringAgentFactory.none())
+            .errorHandlerFactory(errorBuffer -> Throwable::printStackTrace)
             .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);
     }
@@ -170,6 +189,14 @@ public class AbstractMessageBasedAcceptorSystemTest
     @After
     public void tearDown()
     {
+        teardownArtio();
+
+        cleanupMediaDriver(mediaDriver);
+        verifyNoMoreInteractions(errorHandler);
+    }
+
+    void teardownArtio()
+    {
         if (testSystem == null)
         {
             close(engine);
@@ -180,9 +207,5 @@ public class AbstractMessageBasedAcceptorSystemTest
         }
 
         close(library);
-
-        cleanupMediaDriver(mediaDriver);
-
-        verifyNoMoreInteractions(errorHandler);
     }
 }

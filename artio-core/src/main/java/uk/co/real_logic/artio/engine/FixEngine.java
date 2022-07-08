@@ -301,7 +301,7 @@ public final class FixEngine extends GatewayProcess
             timers = new EngineTimers(configuration.epochNanoClock(), fixCounters.negativeTimestamps());
             final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
             final AeronArchive aeronArchive =
-                configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
+                configuration.requiresAeronArchive() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
             recordingCoordinator = new RecordingCoordinator(
                 aeron,
                 aeronArchive,
@@ -505,5 +505,16 @@ public final class FixEngine extends GatewayProcess
     protected boolean shouldRethrowExceptionInErrorHandler()
     {
         return false;
+    }
+
+    public void startReproduction()
+    {
+        if (configuration.reproductionConfiguration() == null)
+        {
+            throw new IllegalStateException(
+                "Engine must be configured to support reproduction");
+        }
+
+        framerContext.startReproduction();
     }
 }

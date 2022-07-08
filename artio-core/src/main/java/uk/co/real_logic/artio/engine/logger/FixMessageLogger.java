@@ -386,7 +386,7 @@ public class FixMessageLogger implements Agent
 
     public int doWork()
     {
-        return zipper.poll();
+        return zipper.poll(Integer.MAX_VALUE);
     }
 
     public void onClose()
@@ -397,7 +397,7 @@ public class FixMessageLogger implements Agent
 
             if (zipper != null)
             {
-                zipper.onClose();
+                zipper.close();
             }
 
             if (configuration.ownsAeronClient)

@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="24"
+                   version="25"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -405,6 +405,7 @@
 
     <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
         <field name="connection" id="1" type="ConnectionId"/>
+        <field name="timestamp" id="3" type="Timestamp"  sinceVersion="25"/>
         <data name="address" id="2" type="Utf8String"/>
     </sbe:message>
 

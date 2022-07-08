@@ -178,7 +178,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
 
     protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
-        return new TcpChannel(channel);
+        return new DefaultTcpChannel(channel);
     }
 
     public void stopConnecting(final InetSocketAddress address) throws IOException
