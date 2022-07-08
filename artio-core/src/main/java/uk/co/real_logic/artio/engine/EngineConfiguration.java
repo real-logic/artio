@@ -1633,7 +1633,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logInboundMessages || logOutboundMessages;
     }
 
-    boolean isReproductionEnabled()
+    public boolean isReproductionEnabled()
     {
         return reproductionConfiguration != null;
     }

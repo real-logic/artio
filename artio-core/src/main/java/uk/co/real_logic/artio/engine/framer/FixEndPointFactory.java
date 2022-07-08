@@ -66,24 +66,48 @@ class FixEndPointFactory
         final int libraryId,
         final Framer framer)
     {
-        return new FixReceiverEndPoint(
-            channel,
-            configuration.receiverBufferSize(),
-            inboundLibraryPublication,
-            connectionId,
-            sessionId,
-            sequenceIndex,
-            fixContexts,
-            fixCounters.messagesRead(connectionId, channel.remoteAddr()),
-            framer,
-            errorHandler,
-            libraryId,
-            gatewaySessions,
-            configuration.epochNanoClock(),
-            framer.acceptorFixDictionaryLookup(),
-            receiverFormatters,
-            configuration.throttleWindowInMs(),
-            configuration.throttleLimitOfMessages());
+        if (configuration.isReproductionEnabled())
+        {
+            return new ReproductionFixReceiverEndPoint(
+                channel,
+                configuration.receiverBufferSize(),
+                inboundLibraryPublication,
+                connectionId,
+                sessionId,
+                sequenceIndex,
+                fixContexts,
+                fixCounters.messagesRead(connectionId, channel.remoteAddr()),
+                framer,
+                errorHandler,
+                libraryId,
+                gatewaySessions,
+                configuration.epochNanoClock(),
+                framer.acceptorFixDictionaryLookup(),
+                receiverFormatters,
+                configuration.throttleWindowInMs(),
+                configuration.throttleLimitOfMessages());
+        }
+        else
+        {
+            return new FixReceiverEndPoint(
+                channel,
+                configuration.receiverBufferSize(),
+                inboundLibraryPublication,
+                connectionId,
+                sessionId,
+                sequenceIndex,
+                fixContexts,
+                fixCounters.messagesRead(connectionId, channel.remoteAddr()),
+                framer,
+                errorHandler,
+                libraryId,
+                gatewaySessions,
+                configuration.epochNanoClock(),
+                framer.acceptorFixDictionaryLookup(),
+                receiverFormatters,
+                configuration.throttleWindowInMs(),
+                configuration.throttleLimitOfMessages());
+        }
     }
 
     FixSenderEndPoint senderEndPoint(

@@ -155,10 +155,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
 
-    private FixGatewaySession gatewaySession;
+    protected FixGatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
-    private boolean isPaused = false;
+    protected boolean isPaused = false;
 
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
@@ -274,7 +274,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         }
     }
 
-    private int pollPendingLogon()
+    protected int pollPendingLogon()
     {
         // Retry-able under backpressure
         if (pendingAcceptorLogon.poll())
@@ -357,7 +357,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             this.sequenceIndex = sequenceIndex;
             pendingAcceptorLogon = null;
 
-            framer.receiverEndPointPollingOptional(connectionId);
+            if (!(this instanceof ReproductionFixReceiverEndPoint)) // TODO: better
+            {
+                // Keep polling in the reproduction case as we're stubbing the IO layer
+                framer.receiverEndPointPollingOptional(connectionId);
+            }
 
             // Move any data received after the logon message.
             offset += length;

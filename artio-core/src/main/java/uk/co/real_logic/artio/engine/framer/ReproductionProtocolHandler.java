@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.engine.logger.ReproductionFixProtocolConsumer;
 import uk.co.real_logic.artio.messages.ApplicationHeartbeatDecoder;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 
@@ -54,6 +55,12 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
     {
         System.out.println("ReproductionProtocolHandler.onMessage");
         clock.advanceTimeTo(message.timestamp());
+
+        final int initialOffset = message.initialOffset() - MessageHeaderDecoder.ENCODED_LENGTH;
+        final int fullLength = (offset + length) - initialOffset;
+        final int messageOffset = offset - initialOffset;
+        final long connectionId = message.connection();
+        tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, fullLength, messageOffset, length);
     }
 
     public void onConnect(

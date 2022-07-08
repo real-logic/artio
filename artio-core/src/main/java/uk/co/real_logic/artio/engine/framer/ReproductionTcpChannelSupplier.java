@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
 
 import java.io.IOException;
@@ -23,17 +26,22 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
-
-import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 
 // TODO: way of supplying connection ids
 public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 {
+    private long connectionId;
     private String address;
+
+    private final Long2ObjectHashMap<ReproductionTcpChannel> connectionIdToChannel = new Long2ObjectHashMap<>();
 
     class ReproductionTcpChannel extends TcpChannel
     {
+        private ReproductionFixReceiverEndPoint reproductionFixReceiverEndPoint;
+
+        private final ExpandableArrayBuffer reproductionBuffer = new ExpandableArrayBuffer();
+        private int length;
+
         public ReproductionTcpChannel() throws IOException
         {
             super(address);
@@ -53,11 +61,39 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 
         public int read(final ByteBuffer dst) throws IOException
         {
+            final int length = this.length;
+            if (length > 0)
+            {
+                System.out.println("'" + reproductionBuffer.getStringWithoutLengthAscii(0, length) + "'");
+                reproductionBuffer.getBytes(0, dst, length);
+                this.length = 0;
+                return length;
+            }
+
             return 0;
         }
 
         public void close()
         {
+        }
+
+        public void receiverEndPoint(final ReproductionFixReceiverEndPoint reproductionFixReceiverEndPoint)
+        {
+            this.reproductionFixReceiverEndPoint = reproductionFixReceiverEndPoint;
+        }
+
+        public boolean enqueueMessage(
+            final DirectBuffer buffer, final int initialOffset, final int fullLength, final int messageOffset,
+            final int length)
+        {
+            if (this.length != 0)
+            {
+                return false;
+            }
+
+            reproductionBuffer.putBytes(0, buffer, initialOffset + messageOffset, length);
+            this.length = length;
+            return true;
         }
     }
 
@@ -73,7 +109,9 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
     {
         if (address != null)
         {
-            handler.onNewChannel(timeInMs, new ReproductionTcpChannel());
+            final ReproductionTcpChannel channel = new ReproductionTcpChannel();
+            connectionIdToChannel.put(connectionId, channel);
+            handler.onNewChannel(timeInMs, channel);
             address = null;
         }
 
@@ -94,6 +132,24 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 
     public void enqueueConnect(final ConnectDecoder connectDecoder)
     {
+        connectionId = connectDecoder.connection();
         address = connectDecoder.address();
+    }
+
+    public boolean enqueueMessage(
+        final long connectionId,
+        final DirectBuffer buffer,
+        final int initialOffset,
+        final int fullLength,
+        final int messageOffset,
+        final int length)
+    {
+        final ReproductionTcpChannel channel = connectionIdToChannel.get(connectionId);
+        if (channel != null)
+        {
+            return channel.enqueueMessage(buffer, initialOffset, fullLength, messageOffset, length);
+        }
+
+        return false;
     }
 }

@@ -88,6 +88,7 @@ public class FixGatewaySessions extends GatewaySessions
     private final ResendRequestController resendRequestController;
     private final int forcedHeartbeatIntervalInS;
     private final boolean disableHeartbeatRepliesToTestRequests;
+    private final boolean isReproductionEnabled;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -124,6 +125,7 @@ public class FixGatewaySessions extends GatewaySessions
         this.sendingTimeWindowInMs = configuration.sendingTimeWindowInMs();
         this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
         this.logAllMessages = configuration.logAllMessages();
+        this.isReproductionEnabled = configuration.isReproductionEnabled();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.validateTimeStrictly = configuration.validateTimeStrictly();
         this.clock = configuration.epochNanoClock();
@@ -316,7 +318,7 @@ public class FixGatewaySessions extends GatewaySessions
             final boolean resetSequenceNumbersUponLogon = resetSequenceNumbersUponLogon(persistenceLevel);
             resetSeqNum = resetSequenceNumbersUponLogon || resetSeqNumFlag;
 
-            if (!resetSequenceNumbersUponLogon && !logAllMessages)
+            if (!resetSequenceNumbersUponLogon && (!logAllMessages && !isReproductionEnabled))
             {
                 onError(new IllegalStateException(
                     "Persistence Strategy specified INDEXED but " +
