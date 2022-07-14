@@ -190,7 +190,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
         {
             final int headerLength = MessageHeaderDecoder.ENCODED_LENGTH + SOFH_LENGTH;
             readBuffer.limit(headerLength);
-            final int readHeader = socket.read(readBuffer);
+            final int readHeader = readSocket();
             if (readHeader != headerLength)
             {
                 throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
@@ -207,7 +207,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
                 int readSkip = 0;
                 do
                 {
-                    readSkip += socket.read(readBuffer);
+                    readSkip += readSocket();
                 }
                 while (readSkip < (totalLength - readHeader));
 
@@ -220,7 +220,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
             final int expectedLength = messageOffset + messageDecoder.sbeBlockLength() + nonBlockLength;
             readBuffer.limit(expectedLength);
 
-            final int readBody = socket.read(readBuffer);
+            final int readBody = readSocket();
             final int read = readHeader + readBody;
 
             print(unsafeReadBuffer, "> ");
@@ -255,6 +255,16 @@ public final class BinaryEntryPointClient implements AutoCloseable
             LangUtil.rethrowUnchecked(e);
             return null;
         }
+    }
+
+    private int readSocket() throws IOException
+    {
+        final int read = socket.read(readBuffer);
+        if (read < 0)
+        {
+            throw new IllegalStateException("SOCKET CLOSED");
+        }
+        return read;
     }
 
     private void write()

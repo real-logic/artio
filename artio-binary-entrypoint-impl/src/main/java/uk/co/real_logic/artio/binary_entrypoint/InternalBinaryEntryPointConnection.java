@@ -60,6 +60,7 @@ class InternalBinaryEntryPointConnection
 
     private final BinaryEntryPointProxy proxy;
     private final long maxFixPKeepaliveTimeoutInMs;
+    private final long noEstablishFixPTimeoutInMs;
     private final int maxRetransmissionRange;
     private final CancelOnDisconnect cancelOnDisconnect;
 
@@ -133,12 +134,12 @@ class InternalBinaryEntryPointConnection
             dissector);
 
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
+        this.noEstablishFixPTimeoutInMs = configuration.noEstablishFixPTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
         initialState(context);
 
-        final long timeInMs = System.currentTimeMillis();
-        nextSendMessageTimeInMs = nextReceiveMessageTimeInMs = timeInMs + configuration.noEstablishFixPTimeoutInMs();
+        setupInitialSendAndReceiveTimers();
         // default this to the max to suppress accidentally sending sequence messages during the logon process
         requestedKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
         maxRetransmissionRange = configuration.fixPAcceptedSessionMaxRetransmissionRange();
@@ -152,6 +153,12 @@ class InternalBinaryEntryPointConnection
             deadlineInNs -> !Pressure.isBackPressured(outboundPublication.saveCancelOnDisconnectTrigger(
                 context.sessionID(), deadlineInNs)));
         cancelOnDisconnect.enqueueTask(owner::enqueueTask);
+    }
+
+    private void setupInitialSendAndReceiveTimers()
+    {
+        final long timeInMs = System.currentTimeMillis();
+        nextSendMessageTimeInMs = nextReceiveMessageTimeInMs = timeInMs + noEstablishFixPTimeoutInMs;
     }
 
     private void initialState(final BinaryEntryPointContext context)
@@ -291,6 +298,7 @@ class InternalBinaryEntryPointConnection
 
         this.connectionId = connectionId;
         proxy.ids(connectionId, sessionId);
+        setupInitialSendAndReceiveTimers();
     }
 
     public Action onNegotiate(
