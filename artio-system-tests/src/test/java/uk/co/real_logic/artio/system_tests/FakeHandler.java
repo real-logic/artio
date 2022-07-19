@@ -73,6 +73,7 @@ public class FakeHandler
     private Session timedOutSession;
     private boolean spamLogonMessages = false;
     private BiConsumer<Session, DisconnectReason> onDisconnectCallback;
+    private BiConsumer<Session, FixMessage> onMessageCallback;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -107,6 +108,11 @@ public class FakeHandler
         this.onDisconnectCallback = onDisconnectCallback;
     }
 
+    public void onMessageCallback(final BiConsumer<Session, FixMessage> onMessageCallback)
+    {
+        this.onMessageCallback = onMessageCallback;
+    }
+
     // ----------- EVENTS -----------
 
     public Action onMessage(
@@ -133,6 +139,11 @@ public class FakeHandler
             lastMessageBuffer.putBytes(0, buffer, offset, length);
             lastMessage.wrap(lastMessageBuffer);
             lastMessageLength = length;
+        }
+
+        if (onMessageCallback != null)
+        {
+            onMessageCallback.accept(session, parsedMessage);
         }
 
         return CONTINUE;

@@ -412,7 +412,7 @@ public class StreamTimestampZipper implements AutoCloseable
         LogEntryHandler(final FixMessageConsumer fixHandler, final FixPMessageConsumer fixPHandler)
         {
             this.fixHandler = fixHandler;
-            reproductionFixProtocolHandler = fixHandler instanceof  ReproductionFixProtocolConsumer ?
+            reproductionFixProtocolHandler = fixHandler instanceof ReproductionFixProtocolConsumer ?
                 (ReproductionFixProtocolConsumer)fixHandler : null;
             this.fixPHandler = fixPHandler;
         }
@@ -428,37 +428,11 @@ public class StreamTimestampZipper implements AutoCloseable
 
             if (templateId == FixMessageDecoder.TEMPLATE_ID)
             {
-                offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
-                final FixMessageDecoder fixMessage = this.fixMessage;
-                fixMessage.wrap(buffer, offset, blockLength, version);
-
-                if (version >= metaDataSinceVersion())
-                {
-                    offset += metaDataHeaderLength() + fixMessage.metaDataLength();
-                    fixMessage.skipMetaData();
-                }
-
-                final long timestamp = fixMessage.timestamp();
-
-                // hand off the first message you see, otherwise buffer it.
-                if (timestamp <= maxTimestampToHandle)
-                {
-                    owner.handledTimestamp(timestamp);
-                    onFixMessage(offset, buffer, fixMessage);
-                }
-                else
-                {
-                    putBufferedMessage(buffer, start, length, timestamp);
-                }
+                onFixMessage(buffer, start, length, offset, blockLength, version);
             }
             else if (templateId == ReplayerTimestampDecoder.TEMPLATE_ID)
             {
-                offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
-                replayerTimestamp.wrap(buffer, offset, blockLength, version);
-                final long timestampInNs = replayerTimestamp.timestamp();
-                owner.handledTimestamp(timestampInNs);
+                onReplayTimestamp(buffer, offset, blockLength, version);
             }
             else if (templateId == ApplicationHeartbeatDecoder.TEMPLATE_ID)
             {
@@ -525,6 +499,45 @@ public class StreamTimestampZipper implements AutoCloseable
                         putBufferedMessage(buffer, start, length, timestamp);
                     }
                 }
+            }
+        }
+
+        private void onReplayTimestamp(
+            final DirectBuffer buffer, final int start, final int blockLength, final int version)
+        {
+            final int offset = start + MessageHeaderDecoder.ENCODED_LENGTH;
+
+            replayerTimestamp.wrap(buffer, offset, blockLength, version);
+            final long timestampInNs = replayerTimestamp.timestamp();
+            owner.handledTimestamp(timestampInNs);
+        }
+
+        private void onFixMessage(
+            final DirectBuffer buffer,
+            final int start, final int length, final int prevOffset, final int blockLength, final int version)
+        {
+            int offset = prevOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+
+            final FixMessageDecoder fixMessage = this.fixMessage;
+            fixMessage.wrap(buffer, offset, blockLength, version);
+
+            if (version >= metaDataSinceVersion())
+            {
+                offset += metaDataHeaderLength() + fixMessage.metaDataLength();
+                fixMessage.skipMetaData();
+            }
+
+            final long timestamp = fixMessage.timestamp();
+
+            // hand off the first message you see, otherwise buffer it.
+            if (timestamp <= maxTimestampToHandle)
+            {
+                owner.handledTimestamp(timestamp);
+                onFixMessage(offset, buffer, fixMessage);
+            }
+            else
+            {
+                putBufferedMessage(buffer, start, length, timestamp);
             }
         }
 

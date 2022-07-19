@@ -18,16 +18,12 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.archive.client.AeronArchive;
-import jdk.internal.org.objectweb.asm.Handle;
-import org.agrona.CloseHelper;
+import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineReproductionClock;
 import uk.co.real_logic.artio.engine.ReproductionConfiguration;
-import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanningAgent;
-import uk.co.real_logic.artio.engine.logger.StreamTimestampZipper;
 
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_MAXIMUM_BUFFER_SIZE;
@@ -45,7 +41,17 @@ class ReproductionPoller implements Continuation
     private final IdleStrategy idleStrategy;
 
     // NB: we should never close this class as it closes the Archiver
+    private enum State
+    {
+        AWAITING_SCANNER,
+        POLLING,
+        COMPLETE
+    }
+
+    private State state = State.AWAITING_SCANNER;
     private FixArchiveScanningAgent archiveScanningAgent;
+    private StartReproduction startReproduction;
+    private Int2ObjectHashMap<LiveLibraryInfo> idToLibrary;
 
     ReproductionPoller(
         final ReproductionConfiguration configuration,
@@ -63,7 +69,8 @@ class ReproductionPoller implements Continuation
         clock = configuration.clock();
         protocolHandler = new ReproductionProtocolHandler(
             (ReproductionTcpChannelSupplier)channelSupplier,
-            clock);
+            clock,
+            this::onError);
         this.logFileDir = logFileDir;
         this.aeron = aeron;
         this.archive = archive;
@@ -71,26 +78,71 @@ class ReproductionPoller implements Continuation
         this.inboundLibraryStreamId = inboundLibraryStreamId;
     }
 
+    private void onError(final Throwable throwable)
+    {
+        throwable.printStackTrace();
+        startReproduction.onError(throwable);
+        state = State.COMPLETE;
+    }
+
     public long attempt()
     {
-        final FixArchiveScanningAgent archiveScanningAgent = this.archiveScanningAgent;
-        if (archiveScanningAgent != null)
+        switch (state)
         {
+            case AWAITING_SCANNER:
+                return Publication.BACK_PRESSURED;
+
+            case POLLING:
+                return poll();
+
+            case COMPLETE:
+            default:
+                return COMPLETE;
+        }
+    }
+
+    private long poll()
+    {
+        try
+        {
+            final FixArchiveScanningAgent archiveScanningAgent = this.archiveScanningAgent;
             System.out.println("polling underneath");
+            if (protocolHandler.operationInProgress())
+            {
+                System.out.println("Op in progress BP");
+
+                return Publication.BACK_PRESSURED;
+            }
+
             if (archiveScanningAgent.poll(1))
             {
-                // TODO: need a way of getting this event back to the user / API
-                System.out.println("We're done!");
-                this.archiveScanningAgent = null;
-                return COMPLETE;
+                startReproduction.onComplete();
+                return complete();
             }
+        }
+        catch (final Throwable e)
+        {
+            startReproduction.onError(e);
+            return complete();
         }
 
         return Publication.BACK_PRESSURED;
     }
 
-    void start()
+    private long complete()
     {
+        this.archiveScanningAgent = null;
+        this.state = State.COMPLETE;
+        return COMPLETE;
+    }
+
+    void start(final StartReproduction startReproduction, final Int2ObjectHashMap<LiveLibraryInfo> idToLibrary)
+    {
+        this.startReproduction = startReproduction;
+        this.idToLibrary = idToLibrary;
+
+        protocolHandler.idToLibrary(idToLibrary);
+
         final int reproductionStreamId = configuration.reproductionStreamId();
         archiveScanningAgent = new FixArchiveScanningAgent(
             idleStrategy,
@@ -106,6 +158,8 @@ class ReproductionPoller implements Continuation
 
         archiveScanningAgent.setup(
             aeronChannel, queryStreamIds, protocolHandler, null, false, reproductionStreamId);
+
+        state = State.POLLING;
     }
 
     long newConnectionId()

@@ -67,18 +67,7 @@ public final class LibraryConfiguration extends CommonConfiguration
 
     public static final SessionProxyFactory DEFAULT_SESSION_PROXY_FACTORY = DirectSessionProxy::new;
 
-    private final int libraryId;
-
-    {
-        int libraryId;
-        do
-        {
-            libraryId = ThreadLocalRandom.current().nextInt();
-        }
-        while (libraryId == ENGINE_LIBRARY_ID || libraryId < ENGINE_LIBRARY_ID);
-
-        this.libraryId = libraryId;
-    }
+    private int libraryId = ENGINE_LIBRARY_ID;
 
     private SessionAcquireHandler sessionAcquireHandler;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
@@ -165,6 +154,17 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration scheduler(final LibraryScheduler scheduler)
     {
         this.scheduler = scheduler;
+        return this;
+    }
+
+    public LibraryConfiguration libraryId(final int libraryId)
+    {
+        if (libraryId == ENGINE_LIBRARY_ID || libraryId < ENGINE_LIBRARY_ID)
+        {
+            throw new IllegalArgumentException("Invalid library id: " + libraryId);
+        }
+
+        this.libraryId = libraryId;
         return this;
     }
 
@@ -337,13 +337,25 @@ public final class LibraryConfiguration extends CommonConfiguration
     // END INHERITED SETTERS
     // ------------------------
 
-    void conclude()
+    LibraryConfiguration conclude()
     {
+        concludeLibraryId();
+
         super.conclude("library-" + libraryId());
 
         if (libraryAeronChannels.isEmpty())
         {
             throw new IllegalArgumentException("You must specify at least one channel to connect to");
+        }
+
+        return this;
+    }
+
+    private void concludeLibraryId()
+    {
+        while (libraryId == ENGINE_LIBRARY_ID || libraryId < ENGINE_LIBRARY_ID)
+        {
+            libraryId = ThreadLocalRandom.current().nextInt();
         }
     }
 

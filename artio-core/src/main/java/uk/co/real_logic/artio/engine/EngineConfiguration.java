@@ -316,6 +316,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
 
     private ReproductionConfiguration reproductionConfiguration;
+    private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
+    {
+    };
 
     // ---------------------
     // BEGIN SETTERS
@@ -1179,6 +1182,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration reproductionMessageHandler(
+        final ReproductionMessageHandler reproductionMessageHandler)
+    {
+        this.reproductionMessageHandler = reproductionMessageHandler;
+        return this;
+    }
+
     public EngineConfiguration reproduceInbound(
         final long startInNs, final long endInNs)
     {
@@ -1636,6 +1646,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean isReproductionEnabled()
     {
         return reproductionConfiguration != null;
+    }
+
+    public ReproductionMessageHandler reproductionMessageHandler()
+    {
+        return reproductionMessageHandler;
     }
 
     boolean requiresAeronArchive()

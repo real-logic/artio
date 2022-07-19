@@ -332,7 +332,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (isReproducing)
         {
-            channelSupplier = new ReproductionTcpChannelSupplier();
+            channelSupplier = new ReproductionTcpChannelSupplier(configuration.reproductionMessageHandler());
             reproductionPoller = new ReproductionPoller(
                 reproductionConfiguration, channelSupplier, configuration.framerIdleStrategy(),
                 configuration.logFileDir(), recordingCoordinator.aeron(), recordingCoordinator.archive(),
@@ -1202,10 +1202,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         inboundMessages.onReset(fixSessionId);
     }
 
-    void onStartReproduction()
+    void onStartReproduction(final StartReproduction startReproduction)
     {
         System.out.println("Framer.onStartReproduction");
-        reproductionPoller.start();
+        reproductionPoller.start(startReproduction, idToLibrary);
         schedule(reproductionPoller);
     }
 

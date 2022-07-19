@@ -507,7 +507,7 @@ public final class FixEngine extends GatewayProcess
         return false;
     }
 
-    public void startReproduction()
+    public Reply<?> startReproduction()
     {
         if (configuration.reproductionConfiguration() == null)
         {
@@ -515,6 +515,6 @@ public final class FixEngine extends GatewayProcess
                 "Engine must be configured to support reproduction");
         }
 
-        framerContext.startReproduction();
+        return framerContext.startReproduction();
     }
 }

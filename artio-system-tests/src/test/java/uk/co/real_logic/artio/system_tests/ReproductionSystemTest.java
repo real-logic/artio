@@ -16,71 +16,83 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
+    public static final int MESSAGES_SENT = 3;
+
+    static class StashingMessageHandler implements ReproductionMessageHandler
+    {
+        private final CopyOnWriteArrayList<String> messages = new CopyOnWriteArrayList<>();
+
+        public void onMessage(final long connectionId, final ByteBuffer bytes)
+        {
+            final byte[] stashed = new byte[bytes.remaining()];
+            bytes.get(stashed);
+            final String message = new String(stashed, StandardCharsets.US_ASCII);
+            System.out.println("message = " + message);
+            messages.add(message);
+        }
+
+        public List<String> messages()
+        {
+            return Collections.unmodifiableList(messages);
+        }
+    }
+
     @Test
     public void shouldReproduceMessageExchange() throws IOException
     {
         final ReportFactory reportFactory = new ReportFactory();
+        final List<FixMessage> originalReceivedMessages = new ArrayList<>();
+        final long[] sentPositions = new long[MESSAGES_SENT];
+        final List<String> sentMessages = new ArrayList<>();
 
-        final long startInNs;
-        final long endInNs;
-        try
-        {
-            setup(false, true);
-            setupLibrary();
-
-            startInNs = nanoClock.nanoTime();
-            try (final FixConnection connection = FixConnection.initiate(port))
-            {
-                logon(connection);
-
-                final Session session = acquireSession();
-
-                for (int i = 0; i < 3; i++)
-                {
-                    OrderFactory.sendOrder(connection);
-                    testSystem.awaitMessageOf(otfAcceptor, Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR);
-                    reportFactory.sendReport(testSystem, session, Side.SELL);
-                    otfAcceptor.messages().clear();
-                }
-
-                connection.readExecutionReport(2);
-                connection.readExecutionReport(3);
-                connection.readExecutionReport(4);
-
-                testSystem.awaitSend(session::startLogout);
-                connection.readLogout();
-                connection.logout();
-                assertSessionDisconnected(testSystem, session);
-            }
-
-            endInNs = nanoClock.nanoTime();
-        }
-        finally
-        {
-            teardownArtio();
-            mediaDriver.close();
-        }
+        final long startInNs = nanoClock.nanoTime();
+        createScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages);
+        final long endInNs = nanoClock.nanoTime();
 
         // TODO: logon and perform a replay
+
+        final StashingMessageHandler messageStash = new StashingMessageHandler();
+        reproductionMessageHandler = messageStash;
 
         setup(false, true, true, InitialAcceptedSessionOwner.ENGINE, false,
             true, startInNs, endInNs, false);
         setupLibrary();
 
-        engine.startReproduction();
+        // Reply to messages
+        handler.onMessageCallback((sess, fixMessage) ->
+        {
+            final int seqNum = fixMessage.messageSequenceNumber();
+            if (seqNum >= 2 && seqNum <= 4)
+            {
+                final long position = reportFactory.trySendReport(sess, Side.SELL);
+                System.out.println("position = " + position);
+                System.out.println("sentPositions = " + sentPositions[seqNum - 2]);
+            }
+        });
+
+        final Reply<?> startReply = engine.startReproduction();
 
         final Session session = acquireSession();
         assertEquals(1, session.id());
@@ -88,20 +100,73 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
         assertEquals(ACCEPTOR_ID, compositeKey.localCompId());
 
-        // TODO: how to sync the library ids?
+        System.out.println("ACQUIRED SESSION");
 
-        /*for (int i = 0; i < 3; i++)
+        testSystem.await("Haven't received messages", () ->
         {
-            testSystem.awaitMessageOf(otfAcceptor, Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR);
-            // TODO: check that these are identical to the original orders
-            reportFactory.sendReport(testSystem, session, Side.SELL);
-            otfAcceptor.messages().clear();
-        }*/
+            final List<FixMessage> messages = otfAcceptor.messages();
+            messages.removeIf(msg -> !NEW_ORDER_SINGLE_MESSAGE_AS_STR.equals(msg.msgType()));
+            return messages.size() >= originalReceivedMessages.size();
+        });
 
-        // TODO: check that our callback gets some reports and that they are identical?
-        // TODO: send some reports in response
+        System.out.println("Received messages");
+        assertEquals(originalReceivedMessages, otfAcceptor.messages());
+
+        final List<String> reproSentMessages = messageStash.messages();
+        testSystem.await("Failed to receive messages", () -> reproSentMessages.size() >= MESSAGES_SENT);
+        // TODO: get the clock wired in to the library
+//        assertEquals(sentMessages, reproSentMessages);
+
+        testSystem.awaitCompletedReply(startReply);
     }
 
-    // TODO: what we if we have a different number of libraries?
-    // TODO: maybe log what is changed in terms of library ids?
+    private void createScenario(
+        final ReportFactory reportFactory,
+        final List<FixMessage> originalReceivedMessages,
+        final long[] sentPositions,
+        final List<String> sentMessages) throws IOException
+    {
+        try
+        {
+            setup(false, true);
+            setupLibrary();
+
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                logon(connection);
+                sentMessages.add(connection.lastMessageAsString());
+
+                final Session session = acquireSession();
+
+                for (int i = 0; i < MESSAGES_SENT; i++)
+                {
+                    OrderFactory.sendOrder(connection);
+                    originalReceivedMessages.add(
+                        testSystem.awaitMessageOf(otfAcceptor, NEW_ORDER_SINGLE_MESSAGE_AS_STR));
+                    sentPositions[i] = reportFactory.sendReport(testSystem, session, Side.SELL);
+                    otfAcceptor.messages().clear();
+                }
+
+                connection.readExecutionReport(2);
+                sentMessages.add(connection.lastMessageAsString());
+                connection.readExecutionReport(3);
+                sentMessages.add(connection.lastMessageAsString());
+                connection.readExecutionReport(4);
+                sentMessages.add(connection.lastMessageAsString());
+
+                testSystem.awaitSend(session::startLogout);
+                connection.readLogout();
+                sentMessages.add(connection.lastMessageAsString());
+                connection.logout();
+                assertSessionDisconnected(testSystem, session);
+            }
+
+            libraryId = library.libraryId();
+        }
+        finally
+        {
+            teardownArtio();
+            closeMediaDriver(mediaDriver);
+        }
+    }
 }

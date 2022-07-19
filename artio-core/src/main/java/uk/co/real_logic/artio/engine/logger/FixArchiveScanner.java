@@ -15,21 +15,14 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.*;
+import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.IntHashSet;
-import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import static io.aeron.CommonContext.IPC_CHANNEL;
-import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static uk.co.real_logic.artio.LogTag.ARCHIVE_SCAN;
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.*;
 

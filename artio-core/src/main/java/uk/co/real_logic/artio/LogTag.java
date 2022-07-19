@@ -111,7 +111,9 @@ public enum LogTag
      * Prints out debug logging when using the {@link uk.co.real_logic.artio.engine.logger.FixArchiveScanner} and
      * associated {@link uk.co.real_logic.artio.engine.logger.FixArchivePrinter}
      */
-    ARCHIVE_SCAN;
+    ARCHIVE_SCAN,
+
+    REPRODUCTION;
 
     private final char[] logStr;
 

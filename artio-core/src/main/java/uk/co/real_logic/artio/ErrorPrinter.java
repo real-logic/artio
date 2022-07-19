@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.ErrorConsumer;
 import org.agrona.concurrent.errors.ErrorLogReader;
@@ -79,7 +80,18 @@ public class ErrorPrinter implements Agent
         int work = 0;
         if (aeronArchive != null)
         {
-            final String errorResponse = aeronArchive.pollForErrorResponse();
+            String errorResponse;
+
+            try
+            {
+                errorResponse = aeronArchive.pollForErrorResponse();
+            }
+            catch (final ArchiveException e)
+            {
+                // Suppress this
+                errorResponse = e.getMessage();
+            }
+
             if (errorResponse != null)
             {
                 System.err.println(errorResponse);

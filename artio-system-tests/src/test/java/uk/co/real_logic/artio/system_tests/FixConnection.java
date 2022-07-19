@@ -354,6 +354,7 @@ public final class FixConnection implements AutoCloseable
             readBuffer.clear();
             if (endOfMessage != -1)
             {
+                ascii = asciiReadBuffer.getAscii(OFFSET, endOfMessage);
                 bytesRemaining = bytesToParse - endOfMessage;
                 asciiReadBuffer.putBytes(0, asciiReadBuffer, endOfMessage, bytesRemaining);
             }
@@ -490,7 +491,7 @@ public final class FixConnection implements AutoCloseable
 
     public String lastMessageAsString()
     {
-        return asciiReadBuffer.getAscii(OFFSET, endOfMessage);
+        return ascii;
     }
 
     public String lastTotalBytesRead()

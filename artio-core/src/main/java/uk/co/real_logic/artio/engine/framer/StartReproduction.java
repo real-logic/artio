@@ -15,10 +15,42 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-class StartReproduction implements AdminCommand
+import uk.co.real_logic.artio.Reply;
+
+class StartReproduction implements AdminCommand, Reply<Void>
 {
+    private volatile State state = State.EXECUTING;
+
+    private Throwable error;
+
     public void execute(final Framer framer)
     {
-        framer.onStartReproduction();
+        framer.onStartReproduction(this);
+    }
+
+    public Throwable error()
+    {
+        return error;
+    }
+
+    public Void resultIfPresent()
+    {
+        return null;
+    }
+
+    public State state()
+    {
+        return state;
+    }
+
+    public void onComplete()
+    {
+        state = State.COMPLETED;
+    }
+
+    public void onError(final Throwable e)
+    {
+        this.error = e;
+        state = State.ERRORED;
     }
 }

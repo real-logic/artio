@@ -22,14 +22,17 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
+import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
@@ -38,6 +41,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
@@ -54,6 +58,8 @@ public class AbstractMessageBasedAcceptorSystemTest
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
 
     long reasonableTransmissionTimeInMs = CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
+    int libraryId = ENGINE_LIBRARY_ID;
+    ReproductionMessageHandler reproductionMessageHandler;
 
     AuthenticationStrategy optionalAuthStrategy;
     ArchivingMediaDriver mediaDriver;
@@ -74,9 +80,13 @@ public class AbstractMessageBasedAcceptorSystemTest
         otfAcceptor = new FakeOtfAcceptor();
         handler = new FakeHandler(otfAcceptor);
         final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
-//        configuration.messageValidationStrategy(MessageValidationStrategy.none());
-//        configuration.errorHandlerFactory(errorBuffer -> errorHandler);
+        configuration.messageValidationStrategy(MessageValidationStrategy.none());
+        configuration.errorHandlerFactory(errorBuffer -> errorHandler);
         configuration.reasonableTransmissionTimeInMs(reasonableTransmissionTimeInMs);
+        if (libraryId != ENGINE_LIBRARY_ID)
+        {
+            configuration.libraryId(libraryId);
+        }
         library = connect(configuration);
         testSystem = new TestSystem(library);
     }
@@ -157,8 +167,13 @@ public class AbstractMessageBasedAcceptorSystemTest
 
         config.bindAtStartup(shouldBind);
 
+        if (reproductionMessageHandler != null)
+        {
+            config.reproductionMessageHandler(reproductionMessageHandler);
+        }
+
         config
-//            .monitoringAgentFactory(MonitoringAgentFactory.none())
+            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .errorHandlerFactory(errorBuffer -> Throwable::printStackTrace)
             .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);

@@ -154,11 +154,12 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private final EpochNanoClock clock;
     private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final FixReceiverEndPointFormatters formatters;
+    private final boolean reproductionEnabled;
 
-    protected FixGatewaySession gatewaySession;
+    private FixGatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
-    protected boolean isPaused = false;
+    private boolean isPaused = false;
 
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
@@ -183,7 +184,8 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup,
         final FixReceiverEndPointFormatters formatters,
         final int throttleWindowInMs,
-        final int throttleLimitOfMessages)
+        final int throttleLimitOfMessages,
+        final boolean reproductionEnabled)
     {
         super(publication, channel, connectionId, bufferSize, errorHandler, framer, libraryId,
             throttleWindowInMs, throttleLimitOfMessages);
@@ -199,6 +201,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
         this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
+        this.reproductionEnabled = reproductionEnabled;
 
         address = channel.remoteAddr();
     }
@@ -274,7 +277,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         }
     }
 
-    protected int pollPendingLogon()
+    private int pollPendingLogon()
     {
         // Retry-able under backpressure
         if (pendingAcceptorLogon.poll())
@@ -357,7 +360,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             this.sequenceIndex = sequenceIndex;
             pendingAcceptorLogon = null;
 
-            if (!(this instanceof ReproductionFixReceiverEndPoint)) // TODO: better
+            if (!reproductionEnabled)
             {
                 // Keep polling in the reproduction case as we're stubbing the IO layer
                 framer.receiverEndPointPollingOptional(connectionId);

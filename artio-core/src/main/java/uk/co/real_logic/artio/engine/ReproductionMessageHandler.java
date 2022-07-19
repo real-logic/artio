@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.engine.logger;
+package uk.co.real_logic.artio.engine;
 
-import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.messages.ApplicationHeartbeatDecoder;
-import uk.co.real_logic.artio.messages.ConnectDecoder;
+import java.nio.ByteBuffer;
 
-public interface ReproductionFixProtocolConsumer extends FixMessageConsumer
+public interface ReproductionMessageHandler
 {
-    void onConnect(ConnectDecoder connectDecoder, DirectBuffer buffer, int start, int length);
-
-    void onApplicationHeartbeat(
-        ApplicationHeartbeatDecoder decoder, DirectBuffer buffer, int start, int length);
+    void onMessage(long connectionId, ByteBuffer bytes);
 }

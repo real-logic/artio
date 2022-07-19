@@ -399,12 +399,13 @@ public class FramerContext
         idleStrategy.reset();
     }
 
-    public void startReproduction()
+    public Reply<?> startReproduction()
     {
         final StartReproduction command = new StartReproduction();
         while (!offer(command) && !startingClose)
         {
             Thread.yield();
         }
+        return command;
     }
 }

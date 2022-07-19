@@ -15,14 +15,11 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import org.agrona.LangUtil;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 
 public abstract class TcpChannel implements AutoCloseable
 {
@@ -38,12 +35,13 @@ public abstract class TcpChannel implements AutoCloseable
         return remoteAddress;
     }
 
-    public abstract SelectionKey register(final Selector sel, final int ops, final Object att) throws ClosedChannelException;
+    public abstract SelectionKey register(Selector sel, int ops, Object att)
+        throws ClosedChannelException;
 
     // Any subclass should maintain the API that negative numbers of bytes are never returned
-    public abstract int write(final ByteBuffer src) throws IOException;
+    public abstract int write(ByteBuffer src) throws IOException;
 
-    public abstract int read(final ByteBuffer dst) throws IOException;
+    public abstract int read(ByteBuffer dst) throws IOException;
 
     public abstract void close();
 }

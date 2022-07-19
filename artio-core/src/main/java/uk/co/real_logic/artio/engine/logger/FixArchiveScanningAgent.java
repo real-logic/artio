@@ -145,9 +145,9 @@ public class FixArchiveScanningAgent implements AutoCloseable
         {
             DebugLogger.log(ARCHIVE_SCAN,
                 "checking index,follow=" +
-                    follow +
-                    ",logFileDir=" + logFileDir +
-                    ",queryStreamIds=" + queryStreamIds);
+                follow +
+                ",logFileDir=" + logFileDir +
+                ",queryStreamIds=" + queryStreamIds);
         }
 
         // Don't support scan + continuous update query for now
@@ -234,21 +234,9 @@ public class FixArchiveScanningAgent implements AutoCloseable
         aeronArchive.listRecordings(0,
             Integer.MAX_VALUE,
             (controlSessionId,
-             correlationId,
-             recordingId,
-             startTimestamp,
-             stopTimestamp,
-             startPosition,
-             stopPosition,
-             initialTermId,
-             segmentFileLength,
-             termBufferLength,
-             mtuLength,
-             sessionId,
-             streamId,
-             strippedChannel,
-             originalChannel,
-             sourceIdentity) ->
+            correlationId, recordingId, startTimestamp, stopTimestamp, startPosition, stopPosition,
+            initialTermId, segmentFileLength, termBufferLength, mtuLength, sessionId, streamId,
+            strippedChannel, originalChannel, sourceIdentity) ->
             {
                 final ChannelUri uri = ChannelUri.parse(strippedChannel);
                 uri.remove(CommonContext.SESSION_ID_PARAM_NAME);

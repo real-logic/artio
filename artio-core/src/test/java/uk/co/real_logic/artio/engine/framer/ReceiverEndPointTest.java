@@ -155,7 +155,8 @@ public class ReceiverEndPointTest
             new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()),
             new FixReceiverEndPoint.FixReceiverEndPointFormatters(),
             NO_THROTTLE_WINDOW,
-            NO_THROTTLE_WINDOW);
+            NO_THROTTLE_WINDOW,
+            false);
         endPoint.gatewaySession(gatewaySession);
     }
 

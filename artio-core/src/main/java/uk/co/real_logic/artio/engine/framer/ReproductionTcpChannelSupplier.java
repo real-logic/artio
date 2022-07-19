@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
 
 import java.io.IOException;
@@ -27,36 +28,52 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
-// TODO: way of supplying connection ids
 public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 {
+    private final Long2ObjectHashMap<ReproductionTcpChannel> connectionIdToChannel = new Long2ObjectHashMap<>();
+
+    private final ReproductionMessageHandler reproductionMessageHandler;
+
     private long connectionId;
     private String address;
+    private Runnable endOperation;
 
-    private final Long2ObjectHashMap<ReproductionTcpChannel> connectionIdToChannel = new Long2ObjectHashMap<>();
+    public ReproductionTcpChannelSupplier(
+        final ReproductionMessageHandler reproductionMessageHandler)
+    {
+        this.reproductionMessageHandler = reproductionMessageHandler;
+    }
+
+    public void registerEndOperation(final Runnable endOperation)
+    {
+        this.endOperation = endOperation;
+    }
 
     class ReproductionTcpChannel extends TcpChannel
     {
-        private ReproductionFixReceiverEndPoint reproductionFixReceiverEndPoint;
-
         private final ExpandableArrayBuffer reproductionBuffer = new ExpandableArrayBuffer();
+
+        private final long connectionId;
+
         private int length;
 
-        public ReproductionTcpChannel() throws IOException
+        ReproductionTcpChannel(final long connectionId) throws IOException
         {
             super(address);
+            this.connectionId = connectionId;
         }
 
-        public SelectionKey register(final Selector sel, final int ops, final Object att) throws ClosedChannelException
+        public SelectionKey register(final Selector sel, final int ops, final Object att)
+            throws ClosedChannelException
         {
-            // TODO: how much trouble will this being null cause me?
-            return null;
+            return null; // we null-check elsewhere so this is safe
         }
 
         public int write(final ByteBuffer src) throws IOException
         {
-            // TODO: get the length of the buffer
-            return src.remaining();
+            final int remaining = src.remaining();
+            reproductionMessageHandler.onMessage(connectionId, src);
+            return remaining;
         }
 
         public int read(final ByteBuffer dst) throws IOException
@@ -67,6 +84,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
                 System.out.println("'" + reproductionBuffer.getStringWithoutLengthAscii(0, length) + "'");
                 reproductionBuffer.getBytes(0, dst, length);
                 this.length = 0;
+                endOperation.run();
                 return length;
             }
 
@@ -75,11 +93,6 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 
         public void close()
         {
-        }
-
-        public void receiverEndPoint(final ReproductionFixReceiverEndPoint reproductionFixReceiverEndPoint)
-        {
-            this.reproductionFixReceiverEndPoint = reproductionFixReceiverEndPoint;
         }
 
         public boolean enqueueMessage(
@@ -109,7 +122,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
     {
         if (address != null)
         {
-            final ReproductionTcpChannel channel = new ReproductionTcpChannel();
+            final ReproductionTcpChannel channel = new ReproductionTcpChannel(connectionId);
             connectionIdToChannel.put(connectionId, channel);
             handler.onNewChannel(timeInMs, channel);
             address = null;
