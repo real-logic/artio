@@ -44,14 +44,17 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
 import static io.aeron.logbuffer.LogBufferDescriptor.TERM_MIN_LENGTH;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.library.LibraryConfiguration.NO_FIXP_MAX_RETRANSMISSION_RANGE;
@@ -1428,6 +1431,43 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         checkFollowerSessionIsConnectable(newContext(INITIAL_SESSION_VER_ID - 1, false));
 
         checkFollowerSessionIsConnectable(newContext(INITIAL_SESSION_VER_ID - 1, false));
+    }
+
+    // Reproduction of reported bug
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldReconnectOfflineSessionEvenAfterGatewayStartupPause() throws IOException
+    {
+        final int noLogonDisconnectInMs = 500;
+
+        setup();
+        setupJustArtio(
+            true,
+            noLogonDisconnectInMs,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE,
+            null,
+            false,
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
+
+        createFollowerSession(newContext(INITIAL_SESSION_VER_ID - 1, false));
+
+        final Reply<SessionReplyStatus> sessionReply = requestSession(library, SESSION_ID);
+        testSystem.awaitCompletedReply(sessionReply);
+        assertEquals(SessionReplyStatus.OK, sessionReply.resultIfPresent());
+
+        final long overTimeout = MILLISECONDS.toNanos(noLogonDisconnectInMs + 100);
+        testSystem.awaitBlocking(() -> LockSupport.parkNanos(overTimeout));
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            resetHandlers();
+            establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler, true);
+
+            client.writeNewOrderSingle(CL_ORD_ID);
+            client.readExecutionReportNew();
+            clientTerminatesSession(client);
+        }
+
+        assertOnlyOneFixPSession();
     }
 
     private void checkFollowerSessionIsConnectable(final BinaryEntryPointContext context) throws IOException

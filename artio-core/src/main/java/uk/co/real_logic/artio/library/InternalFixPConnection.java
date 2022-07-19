@@ -156,9 +156,9 @@ public abstract class InternalFixPConnection implements FixPConnection
         nextSentSeqNo--;
     }
 
-    // -----------------------------------------------
+    // --------------------------------------------------
     // Internal Methods below, not part of the public API
-    // -----------------------------------------------
+    // --------------------------------------------------
 
     protected void onReceivedMessage()
     {
