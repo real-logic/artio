@@ -42,6 +42,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
@@ -77,6 +78,14 @@ public class AbstractMessageBasedAcceptorSystemTest
 
     void setupLibrary()
     {
+        setupLibrary(false, 0, 0);
+    }
+
+    private void setupLibrary(
+        final boolean enableReproduction,
+        final long startInNs,
+        final long endInNs)
+    {
         otfAcceptor = new FakeOtfAcceptor();
         handler = new FakeHandler(otfAcceptor);
         final LibraryConfiguration configuration = acceptingLibraryConfig(handler, nanoClock);
@@ -87,6 +96,12 @@ public class AbstractMessageBasedAcceptorSystemTest
         {
             configuration.libraryId(libraryId);
         }
+
+        if (enableReproduction)
+        {
+            configuration.reproduceInbound(startInNs, endInNs);
+        }
+
         library = connect(configuration);
         testSystem = new TestSystem(library);
     }
@@ -173,7 +188,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         }
 
         config
-            .monitoringAgentFactory(MonitoringAgentFactory.none())
+//            .monitoringAgentFactory(MonitoringAgentFactory.none())
             .errorHandlerFactory(errorBuffer -> Throwable::printStackTrace)
             .defaultHeartbeatIntervalInS(1);
         engine = FixEngine.launch(config);
@@ -194,9 +209,15 @@ public class AbstractMessageBasedAcceptorSystemTest
 
     Session acquireSession()
     {
+        return acquireSession(NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    }
+
+    Session acquireSession(final int lastReceivedSequenceNumber, final int sequenceIndex)
+    {
         final long sessionId = handler.awaitSessionId(testSystem::poll);
         handler.clearSessionExistsInfos();
-        final Session session = SystemTestUtil.acquireSession(handler, library, sessionId, testSystem);
+        final Session session = SystemTestUtil.acquireSession(
+            handler, library, sessionId, testSystem, lastReceivedSequenceNumber, sequenceIndex);
         assertNotNull(session);
         return session;
     }

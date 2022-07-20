@@ -30,6 +30,7 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ErrorHandlerFactory;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
+import uk.co.real_logic.artio.ReproductionClock;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
@@ -315,7 +316,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
 
-    private ReproductionConfiguration reproductionConfiguration;
+    private EngineReproductionConfiguration reproductionConfiguration;
     private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
     {
     };
@@ -1192,10 +1193,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration reproduceInbound(
         final long startInNs, final long endInNs)
     {
-        final EngineReproductionClock clock = new EngineReproductionClock(
-            startInNs);
+        final ReproductionClock clock = new ReproductionClock(startInNs);
         epochNanoClock(clock);
-        this.reproductionConfiguration = new ReproductionConfiguration(
+        this.reproductionConfiguration = new EngineReproductionConfiguration(
             startInNs, endInNs, clock);
         return this;
     }
@@ -1658,6 +1658,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logAnyMessages() || isReproductionEnabled();
     }
 
+    public boolean canReplayInbound()
+    {
+        return logInboundMessages() || isReproductionEnabled();
+    }
+
     public boolean logAllMessages()
     {
         return logInboundMessages && logOutboundMessages;
@@ -1927,7 +1932,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     // ignores the clock
     // doesn't support initiated connections, only acceptor for now
     // doesn't record the interaction
-    public ReproductionConfiguration reproductionConfiguration()
+    public EngineReproductionConfiguration reproductionConfiguration()
     {
         return reproductionConfiguration;
     }
@@ -1940,8 +1945,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         super.conclude("engine");
 
-        if (reproductionConfiguration != null)
+        if (isReproductionEnabled())
         {
+            if (reproductionConfiguration.clock() != epochNanoClock())
+            {
+                throw new IllegalArgumentException("Do no set the nano clock when using reproduction mode");
+            }
+
             logInboundMessages(false);
             logOutboundMessages(false);
             bindAtStartup(false);

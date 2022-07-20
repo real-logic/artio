@@ -15,15 +15,17 @@
  */
 package uk.co.real_logic.artio.engine;
 
-public class ReproductionConfiguration
+import uk.co.real_logic.artio.ReproductionClock;
+
+public class EngineReproductionConfiguration
 {
     private final long startInNs;
     private final long endInNs;
-    private final EngineReproductionClock clock;
+    private final ReproductionClock clock;
     private final int reproductionStreamId = 10; // TODO, make this configurable
 
-    ReproductionConfiguration(
-        final long startInNs, final long endInNs, final EngineReproductionClock clock)
+    EngineReproductionConfiguration(
+        final long startInNs, final long endInNs, final ReproductionClock clock)
     {
         this.startInNs = startInNs;
         this.endInNs = endInNs;
@@ -40,7 +42,7 @@ public class ReproductionConfiguration
         return endInNs;
     }
 
-    public EngineReproductionClock clock()
+    public ReproductionClock clock()
     {
         return clock;
     }

@@ -117,7 +117,7 @@ public class PruneOperation
     {
         DebugLogger.log(STATE_CLEANUP, "PruneOperation: starting on Framer Thread");
 
-        recordingCoordinator.forEachRecording(allRecordingIds::add);
+        recordingCoordinator.forEachRecording((libraryId, recordingId) -> allRecordingIds.add(recordingId));
 
         // move over to the replayer thread
         if (!replayerCommandQueue.offer(this))

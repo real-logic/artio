@@ -71,7 +71,7 @@ public final class Streams
 
     public ExclusivePublication dataPublication(final String name)
     {
-        final ExclusivePublication publication = recordingCoordinator.track(aeronChannel, streamId);
+        final ExclusivePublication publication = recordingCoordinator.trackEngine(aeronChannel, streamId);
         StreamInformation.print(name, publication, printAeronStreamIdentifiers);
         return publication;
     }

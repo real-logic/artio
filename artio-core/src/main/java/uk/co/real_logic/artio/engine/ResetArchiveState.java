@@ -63,7 +63,7 @@ class ResetArchiveState
 
     private void truncateArchive()
     {
-        recordingCoordinator.forEachRecording(recordingId ->
+        recordingCoordinator.forEachRecording((libraryId, recordingId) ->
         {
             final long startPosition = archive.getStartPosition(recordingId);
             // If we hit some error case where

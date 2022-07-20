@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.library;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.ReproductionClock;
 import uk.co.real_logic.artio.session.DirectSessionProxy;
 import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -80,6 +81,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private SessionProxyFactory sessionProxyFactory = DEFAULT_SESSION_PROXY_FACTORY;
     private FixPConnectionExistsHandler fixPConnectionExistsHandler;
     private FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler;
+    private LibraryReproductionConfiguration reproductionConfiguration;
 
     /**
      * When a new FIX session connects to the gateway you register a callback handler to find
@@ -256,6 +258,15 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration reproduceInbound(
+        final long startInNs, final long endInNs)
+    {
+        final ReproductionClock clock = new ReproductionClock(startInNs);
+        epochNanoClock(clock);
+        this.reproductionConfiguration = new LibraryReproductionConfiguration(startInNs, endInNs, clock);
+        return this;
+    }
+
     // ------------------------
     // BEGIN INHERITED SETTERS
     // ------------------------
@@ -343,6 +354,11 @@ public final class LibraryConfiguration extends CommonConfiguration
 
         super.conclude("library-" + libraryId());
 
+        if (isReproductionEnabled() && reproductionConfiguration.clock() != epochNanoClock())
+        {
+            throw new IllegalArgumentException("Do no set the nano clock when using reproduction mode");
+        }
+
         if (libraryAeronChannels.isEmpty())
         {
             throw new IllegalArgumentException("You must specify at least one channel to connect to");
@@ -382,6 +398,16 @@ public final class LibraryConfiguration extends CommonConfiguration
     String libraryName()
     {
         return libraryName;
+    }
+
+    LibraryReproductionConfiguration reproductionConfiguration()
+    {
+        return reproductionConfiguration;
+    }
+
+    boolean isReproductionEnabled()
+    {
+        return reproductionConfiguration != null;
     }
 
     public LibraryConfiguration libraryName(final String libraryName)

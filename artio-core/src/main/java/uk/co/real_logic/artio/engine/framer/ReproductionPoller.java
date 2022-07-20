@@ -21,8 +21,8 @@ import io.aeron.archive.client.AeronArchive;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.engine.EngineReproductionClock;
-import uk.co.real_logic.artio.engine.ReproductionConfiguration;
+import uk.co.real_logic.artio.ReproductionClock;
+import uk.co.real_logic.artio.engine.EngineReproductionConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanningAgent;
 
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
@@ -30,8 +30,8 @@ import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuratio
 
 class ReproductionPoller implements Continuation
 {
-    private final EngineReproductionClock clock;
-    private final ReproductionConfiguration configuration;
+    private final ReproductionClock clock;
+    private final EngineReproductionConfiguration configuration;
     private final ReproductionProtocolHandler protocolHandler;
     private final String logFileDir;
     private final Aeron aeron;
@@ -54,7 +54,7 @@ class ReproductionPoller implements Continuation
     private Int2ObjectHashMap<LiveLibraryInfo> idToLibrary;
 
     ReproductionPoller(
-        final ReproductionConfiguration configuration,
+        final EngineReproductionConfiguration configuration,
         final TcpChannelSupplier channelSupplier,
         final IdleStrategy idleStrategy,
         final String logFileDir,

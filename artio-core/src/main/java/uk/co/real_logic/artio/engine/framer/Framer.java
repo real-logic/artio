@@ -327,7 +327,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         adminEngineProtocolSubscription = new AdminEngineProtocolSubscription(this);
 
-        final ReproductionConfiguration reproductionConfiguration = configuration.reproductionConfiguration();
+        final EngineReproductionConfiguration reproductionConfiguration = configuration.reproductionConfiguration();
         final boolean isReproducing = reproductionConfiguration != null;
 
         if (isReproducing)
@@ -2493,7 +2493,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.aeronSessionId = outboundPublication.sessionId();
             this.requiredPosition = outboundPublication.position();
 
-            if (configuration.logInboundMessages())
+            if (configuration.canReplayInbound())
             {
                 // Create GatewaySession for offline session and associate it with the library
                 final int libraryId = libraryInfo.libraryId();
@@ -2623,7 +2623,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return saveReplayMessagesReply(libraryId, correlationId, ReplayMessagesStatus.SESSION_NOT_OWNED);
         }
 
-        if (!configuration.logInboundMessages())
+        if (!configuration.canReplayInbound())
         {
             return saveReplayMessagesReply(libraryId, correlationId,
                 ReplayMessagesStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES);
@@ -2646,7 +2646,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             CatchupReplayer.ReplayFor.REPLAY_MESSAGES,
             catchupReplayFormatters,
             configuration.sessionEpochFractionFormat(),
-            clock));
+            clock, configuration.isReproductionEnabled()));
 
         return CONTINUE;
     }
@@ -2871,7 +2871,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
-            if (!configuration.logInboundMessages())
+            if (!configuration.canReplayInbound())
             {
                 continuations.add(() ->
                 {
@@ -2923,7 +2923,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     CatchupReplayer.ReplayFor.REQUEST_SESSION,
                     catchupReplayFormatters,
                     configuration.sessionEpochFractionFormat(),
-                    clock));
+                    clock,
+                    configuration.isReproductionEnabled()));
                 return COMPLETE;
             });
         }

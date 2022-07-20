@@ -142,6 +142,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final ErrorHandler errorHandler;
     private final FixCounters fixCounters;
 
+    private final boolean isReproductionEnabled;
+    private final ReproductionClock reproductionClock;
+
     private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
     private final List<BooleanSupplier> tasks = new ArrayList<>();
     private final LibraryTransport transport;
@@ -249,6 +252,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.errorHandler = errorHandler;
         this.epochFractionClock = EpochFractionClocks.create(
             epochClock, configuration.epochNanoClock(), configuration.sessionEpochFractionFormat());
+        this.isReproductionEnabled = configuration.isReproductionEnabled();
+        this.reproductionClock = isReproductionEnabled ? configuration.reproductionConfiguration().clock() : null;
     }
 
     boolean isConnected()
@@ -1221,7 +1226,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sessionId,
         final int sequenceIndex,
         final long messageType,
-        final long timestamp,
+        final long timestampInNs,
         final MessageStatus status,
         final int sequenceNumber,
         final Header header,
@@ -1230,6 +1235,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId)
         {
             DebugLogger.logFixMessage(FIX_MESSAGE, messageType, receivedFormatter, libraryId, buffer, offset, length);
+
+            checkReproductionTimestamp(timestampInNs);
 
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
@@ -1241,7 +1248,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     libraryId,
                     sequenceIndex,
                     messageType,
-                    timestamp,
+                    timestampInNs,
                     status,
                     header.position());
             }
@@ -1354,6 +1361,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
+            checkReproductionTimestamp(timestampInNs);
+
             final long timeInMs = timeInMs();
             DebugLogger.log(
                 APPLICATION_HEARTBEAT,
@@ -1372,6 +1381,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    private void checkReproductionTimestamp(final long timestampInNs)
+    {
+        if (isReproductionEnabled)
+        {
+            reproductionClock.advanceTimeTo(timestampInNs);
+        }
     }
 
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)

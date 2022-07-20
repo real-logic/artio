@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import org.agrona.DirectBuffer;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -85,8 +86,10 @@ public class FixLibrary extends GatewayProcess
             initMonitoringAgent(timers.all(), configuration, null, null);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
+            final EpochClock epochClock = configuration.isReproductionEnabled() ?
+                configuration.reproductionConfiguration().clock().toMillis() : new SystemEpochClock();
             poller = new LibraryPoller(
-                configuration, timers, fixCounters, transport, this, new SystemEpochClock(), errorHandler);
+                configuration, timers, fixCounters, transport, this, epochClock, errorHandler);
         }
         catch (final Exception e)
         {

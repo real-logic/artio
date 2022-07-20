@@ -81,7 +81,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             final int length = this.length;
             if (length > 0)
             {
-                System.out.println("'" + reproductionBuffer.getStringWithoutLengthAscii(0, length) + "'");
+                System.out.println("READ: '" + reproductionBuffer.getStringWithoutLengthAscii(0, length) + "'");
                 reproductionBuffer.getBytes(0, dst, length);
                 this.length = 0;
                 endOperation.run();

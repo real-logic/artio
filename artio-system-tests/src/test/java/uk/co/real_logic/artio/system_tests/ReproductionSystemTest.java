@@ -30,10 +30,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
+import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
@@ -73,6 +76,16 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
 
         // TODO: logon and perform a replay
 
+        reproduceScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages, startInNs, endInNs);
+    }
+
+    private void reproduceScenario(
+        final ReportFactory reportFactory,
+        final List<FixMessage> originalReceivedMessages,
+        final long[] sentPositions,
+        final List<String> sentMessages,
+        final long startInNs, final long endInNs)
+    {
         final StashingMessageHandler messageStash = new StashingMessageHandler();
         reproductionMessageHandler = messageStash;
 
@@ -81,20 +94,19 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         setupLibrary();
 
         // Reply to messages
+        final long[] reproPositions = new long[MESSAGES_SENT];
         handler.onMessageCallback((sess, fixMessage) ->
         {
             final int seqNum = fixMessage.messageSequenceNumber();
             if (seqNum >= 2 && seqNum <= 4)
             {
-                final long position = reportFactory.trySendReport(sess, Side.SELL);
-                System.out.println("position = " + position);
-                System.out.println("sentPositions = " + sentPositions[seqNum - 2]);
+                reproPositions[seqNum - 2] = reportFactory.trySendReport(sess, Side.SELL);
             }
         });
 
         final Reply<?> startReply = engine.startReproduction();
 
-        final Session session = acquireSession();
+        final Session session = acquireSession(CURRENT_SEQUENCE, 1);
         assertEquals(1, session.id());
         final CompositeKey compositeKey = session.compositeKey();
         assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
@@ -114,10 +126,18 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
 
         final List<String> reproSentMessages = messageStash.messages();
         testSystem.await("Failed to receive messages", () -> reproSentMessages.size() >= MESSAGES_SENT);
-        // TODO: get the clock wired in to the library
-//        assertEquals(sentMessages, reproSentMessages);
+
+        assertEquals(stripTimesAndChecksums(sentMessages), stripTimesAndChecksums(reproSentMessages));
+        assertArrayEquals(sentPositions, reproPositions);
 
         testSystem.awaitCompletedReply(startReply);
+    }
+
+    private List<String> stripTimesAndChecksums(final List<String> messages)
+    {
+        return messages.stream()
+            .map(msg -> msg.replaceAll("\001(52|10)=[^\001]+", ""))
+            .collect(Collectors.toList());
     }
 
     private void createScenario(

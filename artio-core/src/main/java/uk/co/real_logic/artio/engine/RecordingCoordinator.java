@@ -25,10 +25,7 @@ import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
-import org.agrona.collections.Long2LongHashMap;
-import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.LongHashSet;
-import org.agrona.collections.MutableLong;
+import org.agrona.collections.*;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
@@ -66,6 +63,7 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.LogTag.STATE_CLEANUP;
+import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.storage.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 
 /**
@@ -113,7 +111,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     private final RecordingIds inboundRecordingIds = new RecordingIds();
     private final RecordingIds outboundRecordingIds = new RecordingIds();
-    private final Long2ObjectHashMap<LibraryExtendPosition> libraryIdToExtendPosition = new Long2ObjectHashMap<>();
+    private final Int2ObjectHashMap<LibraryExtendPosition> libraryIdToExtendPosition = new Int2ObjectHashMap<>();
 
     private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
     private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
@@ -147,6 +145,16 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
             indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
         }
+        else if (configuration.isReproductionEnabled())
+        {
+            // We add the recording id lookup mapping statically based upon the library id used previously
+            // in the recording ids file
+            counters = null;
+            framerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            framerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+        }
         else
         {
             counters = null;
@@ -174,12 +182,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
                 for (final InboundRecordingsDecoder inboundRecording : previousRecording.inboundRecordings())
                 {
-                    inboundRecordingIds.free.add(inboundRecording.recordingId());
+                    inboundRecordingIds.free.put(inboundRecording.libraryId(), inboundRecording.recordingId());
                 }
 
                 for (final OutboundRecordingsDecoder outboundRecording : previousRecording.outboundRecordings())
                 {
-                    outboundRecordingIds.free.add(outboundRecording.recordingId());
+                    outboundRecordingIds.free.put(outboundRecording.libraryId(), outboundRecording.recordingId());
                 }
 
                 if (DebugLogger.isEnabled(STATE_CLEANUP))
@@ -219,14 +227,22 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 previousRecording.wrapAndApplyHeader(buffer, 0, header);
 
                 final InboundRecordingsEncoder inbound = previousRecording.inboundRecordingsCount(inboundSize);
-                inboundRecordingIds.forEach(id -> inbound.next().recordingId(id));
+                inboundRecordingIds.forEach((libraryId, recordingId) ->
+                    inbound.next().recordingId(recordingId).libraryId(libraryId));
 
                 final OutboundRecordingsEncoder outbound = previousRecording.outboundRecordingsCount(outboundSize);
-                outboundRecordingIds.forEach(id -> outbound.next().recordingId(id));
+                outboundRecordingIds.forEach((libraryId, recordingId) ->
+                    outbound.next().recordingId(recordingId).libraryId(libraryId));
 
-                for (final LibraryExtendPosition pos : libraryIdToExtendPosition.values())
+                final Int2ObjectHashMap<LibraryExtendPosition>.EntryIterator entry =
+                    libraryIdToExtendPosition.entrySet().iterator();
+                while (entry.hasNext())
                 {
-                    outbound.next().recordingId(pos.recordingId);
+                    entry.next();
+
+                    final int libraryId = entry.getIntKey();
+                    final LibraryExtendPosition pos = entry.getValue();
+                    outbound.next().recordingId(pos.recordingId).libraryId(libraryId);
                 }
 
                 mappedBuffer.force();
@@ -245,7 +261,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     }
 
     // Only called on single threaded engine startup
-    public ExclusivePublication track(final String aeronChannel, final int streamId)
+    public ExclusivePublication trackEngine(final String aeronChannel, final int streamId)
     {
         if (configuration.isRelevantStreamId(streamId))
         {
@@ -272,7 +288,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 startRecording(streamId, publication.sessionId(), LOCAL);
             }
 
-            checkRecordingStart(publication.sessionId(), lookup, recordingIds.used, isInbound);
+            checkRecordingStart(publication.sessionId(), lookup, recordingIds.used, isInbound, ENGINE_LIBRARY_ID);
 
             return publication;
         }
@@ -304,11 +320,12 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    private LibraryExtendPosition acquireRecording(final int streamId, final RecordingIds recordingIds)
+    private LibraryExtendPosition acquireRecording(
+        final int streamId, final RecordingIds recordingIds)
     {
         libraryExtendPosition = null;
 
-        final LongHashSet.LongIterator it = recordingIds.free.iterator();
+        final Long2LongHashMap.ValueIterator it = recordingIds.free.values().iterator();
         if (it.hasNext())
         {
             final long recordingId = it.nextValue();
@@ -369,7 +386,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 else
                 {
                     libraryIdToExtendPosition.remove(libraryId);
-                    checkRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used, false);
+                    checkRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used, false, ENGINE_LIBRARY_ID);
                     return null;
                 }
             }
@@ -387,7 +404,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             {
                 if (startRecording(streamId, sessionId, outboundLocation))
                 {
-                    checkRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used, false);
+                    checkRecordingStart(sessionId, framerOutboundLookup, outboundRecordingIds.used, false, ENGINE_LIBRARY_ID);
                 }
             }
         }
@@ -442,10 +459,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     // awaits the recording start and saves the file
     private void checkRecordingStart(
-        final int sessionId, final RecordingIdLookup lookup, final LongHashSet recordingIds, final boolean isInbound)
+        final int sessionId, final RecordingIdLookup lookup, final Long2LongHashMap libraryIdToRecordingId,
+        final boolean isInbound, final int libraryId)
     {
         final long recordingId = lookup.getRecordingId(sessionId);
-        recordingIds.add(recordingId);
+        libraryIdToRecordingId.put(libraryId, recordingId);
         final long registrationId = this.registrationId.get();
         if (registrationId != NULL_VALUE)
         {
@@ -561,7 +579,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     }
 
     // Called after shutdown or on the Framer Thread
-    public void forEachRecording(final LongConsumer recordingIdConsumer)
+    public void forEachRecording(final LibraryAndRecordingIdConsumer recordingIdConsumer)
     {
         inboundRecordingIds.forEach(recordingIdConsumer);
         outboundRecordingIds.forEach(recordingIdConsumer);
@@ -639,26 +657,28 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     static final class RecordingIds
     {
-        private final LongHashSet free = new LongHashSet();
-        private final LongHashSet used = new LongHashSet();
+        // Library Id to Recording Id
+        private final Long2LongHashMap free = new Long2LongHashMap(NULL_RECORDING_ID);
+        private final Long2LongHashMap used = new Long2LongHashMap(NULL_RECORDING_ID);
 
         int size()
         {
             return free.size() + used.size();
         }
 
-        void forEach(final LongConsumer recordingIdConsumer)
+        void forEach(final LibraryAndRecordingIdConsumer recordingIdConsumer)
         {
             forEach(free, recordingIdConsumer);
             forEach(used, recordingIdConsumer);
         }
 
-        private void forEach(final LongHashSet set, final LongConsumer recordingIdConsumer)
+        private void forEach(final Long2LongHashMap map, final LibraryAndRecordingIdConsumer recordingIdConsumer)
         {
-            final LongHashSet.LongIterator it = set.iterator();
+            final Long2LongHashMap.EntryIterator it = map.entrySet().iterator();
             while (it.hasNext())
             {
-                recordingIdConsumer.accept(it.nextValue());
+                it.next();
+                recordingIdConsumer.accept((int)it.getLongKey(), it.getLongValue());
             }
         }
 

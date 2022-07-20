@@ -21,7 +21,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.engine.EngineReproductionClock;
+import uk.co.real_logic.artio.ReproductionClock;
 import uk.co.real_logic.artio.engine.logger.ReproductionFixProtocolConsumer;
 import uk.co.real_logic.artio.messages.ApplicationHeartbeatDecoder;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
@@ -41,7 +41,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
     // TODO: need a way of controlling the sending of application heartbeats as well
 
     private final ReproductionTcpChannelSupplier tcpChannelSupplier;
-    private final EngineReproductionClock clock;
+    private final ReproductionClock clock;
     private final ErrorHandler errorHandler;
 
     private long connectionId = NO_CONNECTION_ID;
@@ -52,7 +52,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
 
     public ReproductionProtocolHandler(
         final ReproductionTcpChannelSupplier tcpChannelSupplier,
-        final EngineReproductionClock clock,
+        final ReproductionClock clock,
         final ErrorHandler errorHandler)
     {
         this.tcpChannelSupplier = tcpChannelSupplier;
@@ -82,7 +82,10 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int fullLength = (offset + length) - initialOffset;
         final int messageOffset = offset - initialOffset;
         final long connectionId = message.connection();
-        tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, fullLength, messageOffset, length);
+        if (!tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, fullLength, messageOffset, length))
+        {
+            System.err.println("MASSIVE FAILURE - What has happened?");
+        }
     }
 
     private void validateLibraryId(final int libraryId)
