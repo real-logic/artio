@@ -37,7 +37,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressin
 /**
  * A FIX Engine is a process in the gateway that accepts or initiates FIX connections and
  * hands them off to different FixLibrary instances. The engine can replicate and/or durably
- * store streams2 of FIX messages for replay, archival, administrative or analytics purposes.
+ * store streams of FIX messages for replay, archival, administrative or analytics purposes.
  * <p>
  * Each engine can have one or more associated libraries that manage sessions and perform business
  * logic. These may run in the same JVM process or a different JVM process.
@@ -181,15 +181,15 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * This method resets the state of the of the FixEngine that also performs usual end of day processing
-     * operations. It must can only be called when the FixEngine object has been closed. These are:
+     * This method resets the state of the FixEngine that also performs usual end of day processing
+     * operations. These are:
      *
      * <ol>
-     *     <li>Reset and optionally back up all Artio state (including session ids and sequence numbers</li>
+     *     <li>Reset and optionally back up all Artio state (including session ids and sequence numbers).</li>
      *     <li>Truncate any recordings associated with this engine instance.</li>
      * </ol>
      *
-     * Blocks until the operation is complete.
+     * It must only be called when the FixEngine object has been closed. Blocks until the operation is complete.
      *
      * @param backupLocation the directory that you wish to copy Artio's session state over to for later inspection.
      *                       If this is null no backup of data will be performed. If the directory exists it will be
