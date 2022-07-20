@@ -1,5 +1,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -189,6 +190,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
             final SocketChannel channel = iterator.next();
             if (channel.getRemoteAddress().equals(address))
             {
+                CloseHelper.quietClose(channel);
                 iterator.remove();
                 break;
             }
