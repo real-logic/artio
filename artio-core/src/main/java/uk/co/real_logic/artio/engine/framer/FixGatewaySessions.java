@@ -320,7 +320,7 @@ public class FixGatewaySessions extends GatewaySessions
             {
                 onError(new IllegalStateException(
                     "Persistence Strategy specified INDEXED but " +
-                    "EngineConfiguration has disabled required logging of messsages"));
+                    "EngineConfiguration has disabled required logging of messages"));
 
                 reject(DisconnectReason.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES);
                 return;
