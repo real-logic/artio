@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -24,9 +23,6 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -82,47 +78,32 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS + 20_000)
-    @Ignore("manual test")
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void testConnectingAfterConnectionTimeouts()
     {
-        // Suggest running with -Dfix.core.debug=FIX_CONNECTION
-
         // Launch the acceptor
         launchAcceptingEngine();
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
 
         // Make connections time out
-        System.out.printf("Run: sudo iptables -I INPUT -i lo -p tcp --dport %d -j DROP%n", port);
-        sleep();
+        debugTcpChannelSupplier.pauseConnects();
 
         // First reply times out
         final Reply<Session> firstConnectReply = completeInitiateSession();
         assertEquals(Reply.State.TIMED_OUT, firstConnectReply.state());
 
-        // First reply also times out
+        // Second reply also times out
         final Reply<Session> secondConnectReply = completeInitiateSession();
         assertEquals(Reply.State.TIMED_OUT, secondConnectReply.state());
 
         // Make connections work again
-        System.out.printf("Run: sudo iptables -D INPUT -i lo -p tcp --dport %d -j DROP%n", port);
-        sleep();
+        debugTcpChannelSupplier.unpauseConnects();
 
         // Now it should connect
         connectSessions();
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
-    }
-
-    private void sleep()
-    {
-        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (System.nanoTime() - deadline < 0)
-        {
-            testSystem.poll();
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(100));
-        }
     }
 
     private Reply<Session> completeInitiateSession()

@@ -82,10 +82,10 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
                         {
                             if (channel.finishConnect())
                             {
-                                channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
                                 selectionKey.interestOps(selectionKey.interestOps() & (~OP_CONNECT));
                                 it.remove();
-                                openingSocketChannels.remove(channel);
+
+                                onFinishConnect(channelHandler, channel);
                             }
                         }
                         catch (final IOException e)
@@ -102,6 +102,13 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         }
 
         return 0;
+    }
+
+    protected void onFinishConnect(
+        final InitiatedChannelHandler channelHandler, final SocketChannel channel) throws IOException
+    {
+        channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+        openingSocketChannels.remove(channel);
     }
 
     public void unbind() throws IOException
