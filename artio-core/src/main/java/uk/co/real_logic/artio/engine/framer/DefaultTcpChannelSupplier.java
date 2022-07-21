@@ -1,5 +1,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -81,10 +82,10 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
                         {
                             if (channel.finishConnect())
                             {
-                                channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
                                 selectionKey.interestOps(selectionKey.interestOps() & (~OP_CONNECT));
                                 it.remove();
-                                openingSocketChannels.remove(channel);
+
+                                onFinishConnect(channelHandler, channel);
                             }
                         }
                         catch (final IOException e)
@@ -101,6 +102,13 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         }
 
         return 0;
+    }
+
+    protected void onFinishConnect(
+        final InitiatedChannelHandler channelHandler, final SocketChannel channel) throws IOException
+    {
+        channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+        openingSocketChannels.remove(channel);
     }
 
     public void unbind() throws IOException
@@ -189,6 +197,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
             final SocketChannel channel = iterator.next();
             if (channel.getRemoteAddress().equals(address))
             {
+                CloseHelper.quietClose(channel);
                 iterator.remove();
                 break;
             }
