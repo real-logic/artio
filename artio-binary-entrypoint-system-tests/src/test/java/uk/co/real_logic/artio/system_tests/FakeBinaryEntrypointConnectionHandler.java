@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
+import b3.entrypoint.fixp.sbe.Boolean;
 import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
@@ -126,10 +127,9 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
             .ordStatus(OrdStatus.NEW)
             .execRestatementReason(ExecRestatementReason.NULL_VAL)
             .multiLegReportingType(MultiLegReportingType.NULL_VAL)
-            .workingIndicator(Bool.NULL_VAL)
+            .workingIndicator(Boolean.NULL_VAL)
             .transactTime().time(System.nanoTime());
         executionReport
-            .putTradeDate(1, 2)
             .protectionPrice().mantissa(1234);
         executionReport.receivedTime().time(System.nanoTime());
         executionReport.noMetricsCount(0);

@@ -204,8 +204,7 @@ public class BinaryEntryPointParser extends AbstractFixPParser
             negotiate.sessionVerID(),
             negotiate.timestamp().time(),
             negotiate.enteringFirm(),
-            negotiate.onbehalfFirm(),
-            negotiate.senderLocation());
+            negotiate.onbehalfFirm());
     }
 
     public BinaryEntryPointContext lookupContext(
@@ -231,7 +230,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     negotiate.sessionVerID(),
                     negotiate.timestamp().time(),
                     negotiate.enteringFirm(),
-                    true);
+                    true,
+                    negotiate.credentials());
 
             case EstablishDecoder.TEMPLATE_ID:
                 establish.wrap(messageBuffer, offset, blockLength, version);
@@ -240,7 +240,8 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     establish.sessionVerID(),
                     establish.timestamp().time(),
                     NegotiateDecoder.enteringFirmNullValue(),
-                    false);
+                    false,
+                    establish.credentials());
         }
 
         // TODO: deal with this scenario more politely
