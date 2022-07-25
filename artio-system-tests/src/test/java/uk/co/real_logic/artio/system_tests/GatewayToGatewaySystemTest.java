@@ -363,7 +363,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         awaitLibraryDisconnect(acceptingEngine, testSystem);
 
         // Test that Trigger the invalid l
-        sendExampleMessage(testSystem, "FAIL", acceptingSession);
+        final String fail = "FAIL";
+        sendExampleMessage(testSystem, fail, acceptingSession);
 
         // Wait for the library to detect the timeout internally.
         testSystem.add(acceptingLibrary);
@@ -375,10 +376,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Reply<SessionReplyStatus> reply = acceptingLibrary.requestSession(
             acceptingSession.id(), NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, 5_000);
 
-        assertThrows(
-            "Failed to block the sending of a message after timing out",
-            IllegalStateException.class,
-            () -> sendExampleMessage(testSystem, "FAIL", acceptingSession));
+        sendExampleMessage(testSystem, fail, acceptingSession);
 
         testSystem.awaitReply(reply);
         assertEquals(reply.toString(), Reply.State.COMPLETED, reply.state());
@@ -392,6 +390,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         uniqueReceivedNumbers.addAll(receivedSequenceNumbers);
         assertEquals(uniqueReceivedNumbers + " vs " + receivedSequenceNumbers,
             uniqueReceivedNumbers.size(), receivedSequenceNumbers.size());
+        initiatingOtfAcceptor.messages().forEach(msg -> assertNotEquals(fail, msg.testReqId()));
 
         // Ensure that the session is still active.
         assertConnected(initiatingSession);

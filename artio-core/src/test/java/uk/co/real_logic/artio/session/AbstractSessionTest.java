@@ -1352,6 +1352,7 @@ public abstract class AbstractSessionTest
             session = newSession();
 
             verify(sessionProxy).fixDictionary(any());
+            verify(sessionProxy).connectionId(CONNECTION_ID);
         }
 
         return session;

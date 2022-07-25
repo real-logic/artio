@@ -217,12 +217,12 @@ public class AbstractGatewayToGatewaySystemTest
 
     long logoutAcceptingSession()
     {
-        return logoutSession(acceptingSession);
+        return logoutSession(testSystem, acceptingSession);
     }
 
     void logoutInitiatingSession()
     {
-        logoutSession(initiatingSession);
+        logoutSession(testSystem, initiatingSession);
     }
 
     void assertSessionsDisconnected()

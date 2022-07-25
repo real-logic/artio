@@ -241,7 +241,6 @@ public class Session
         this.disableHeartbeatRepliesToTestRequests = disableHeartbeatRepliesToTestRequests;
         this.messageInfo = messageInfo;
         this.proxy = proxy;
-        this.connectionId = connectionId;
         this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
@@ -258,6 +257,7 @@ public class Session
         this.connectionType = connectionType;
         this.formatters = formatters;
 
+        connectionId(connectionId);
         // If we're an offline session that has never been corrected then we need to set the initial sequence index.
         if (state == DISCONNECTED && sequenceIndex == UNKNOWN_SEQUENCE_INDEX)
         {
@@ -651,6 +651,10 @@ public class Session
      * {@link Publication#ADMIN_ACTION} then the message won't have been written into the log buffer due to back
      * pressure issues. A retry can be attempted later.
      *
+     * If the session is in a state other than ACTIVE (see {@link #isActive()} for details) then these messages are not
+     * sent to a counter-party, they are just stored into the archive. When a session with persistent sequence numbers
+     * reconnects the counter-party can read the archived messages by sending a resend request.
+     *
      * @param encoder the encoder of the message to be sent
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
@@ -662,18 +666,6 @@ public class Session
     public long trySend(final Encoder encoder)
     {
         return trySend(encoder, null, 0);
-    }
-
-    /**
-     * @param encoder the encoder of the message to be sent
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     * @see #trySend(Encoder)
-     */
-    @Deprecated
-    public long send(final Encoder encoder)
-    {
-        return trySend(encoder);
     }
 
     /**
@@ -695,8 +687,6 @@ public class Session
         final DirectBuffer metaDataBuffer,
         final int metaDataUpdateOffset)
     {
-        validateCanSendMessage();
-
         final int sentSeqNum = prepare(encoder.header());
 
         final long result = encoder.encode(asciiBuffer, 0);
@@ -705,23 +695,6 @@ public class Session
         final long type = encoder.messageType();
 
         return trySend(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
-    }
-
-    /**
-     * @param encoder              the encoder of the message to be sent
-     * @param metaDataBuffer       the metadata to associate with this message.
-     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     * @see #trySend(Encoder, DirectBuffer, int)
-     */
-    @Deprecated
-    public long send(
-        final Encoder encoder,
-        final DirectBuffer metaDataBuffer,
-        final int metaDataUpdateOffset)
-    {
-        return trySend(encoder, metaDataBuffer, metaDataUpdateOffset);
     }
 
     /**
@@ -741,23 +714,6 @@ public class Session
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
         return trySend(messageBuffer, offset, length, seqNum, messageType, null, 0);
-    }
-
-    /**
-     * @param messageBuffer the buffer with the FIX message in to send
-     * @param offset        the offset within the messageBuffer where the message starts
-     * @param length        the length of the message within the messageBuffer
-     * @param seqNum        the sequence number of the sent message
-     * @param messageType   the long encoded message type.
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     * @see #trySend(DirectBuffer, int, int, int, long)
-     */
-    @Deprecated
-    public long send(
-        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
-    {
-        return trySend(messageBuffer, offset, length, seqNum, messageType);
     }
 
     /**
@@ -785,8 +741,9 @@ public class Session
         final DirectBuffer metaDataBuffer,
         final int metaDataUpdateOffset)
     {
-        validateCanSendMessage();
-
+        // If someone attempts to send a message during a logon / logout or offline then we should archive the message
+        // but not send it.
+        final long connectionId = this.state == ACTIVE ? this.connectionId : NO_CONNECTION_ID;
         final long position = outboundPublication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
             metaDataBuffer, metaDataUpdateOffset);
@@ -802,42 +759,16 @@ public class Session
     }
 
     /**
-     * @param messageBuffer the buffer with the FIX message in to send
-     * @param offset        the offset within the messageBuffer where the message starts
-     * @param length        the length of the message within the messageBuffer
-     * @param seqNum        the sequence number of the sent message
-     * @param messageType   the long encoded message type.
-     * @param metaDataBuffer       the metadata to associate with this message.
-     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     * @see #trySend(DirectBuffer, int, int, int, long, DirectBuffer, int)
+     * Deprecated, uses should be removed. This method will be removed in a future version.
+     *
+     * Checking whether a session is connected should be replaced with calls to {@link #isActive()}.
+     *
+     * @return always returns true.
      */
     @Deprecated
-    public long send(
-        final DirectBuffer messageBuffer,
-        final int offset,
-        final int length,
-        final int seqNum,
-        final long messageType,
-        final DirectBuffer metaDataBuffer,
-        final int metaDataUpdateOffset)
-    {
-        return trySend(messageBuffer, offset, length, seqNum, messageType, metaDataBuffer, metaDataUpdateOffset);
-    }
-
-    /**
-     * Check if the session is in a state where it can send a message.
-     * <p>
-     * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
-     * session reconnects it can read through sending a resend request.
-     *
-     * @return true if the session is in a state where it can send a message, false otherwise.
-     */
     public boolean canSendMessage()
     {
-        final SessionState state = this.state;
-        return state == ACTIVE || state == DISCONNECTED;
+        return true;
     }
 
     /**
@@ -1056,6 +987,12 @@ public class Session
         return tryResetSequenceNumbers();
     }
 
+    /**
+     * Can be used to know when a session's state is ACTIVE. In other words when it is connected to a session
+     * on the other side and the logon process has completed and the logout process hasn't started.
+     *
+     * @return true iff the state == ACTIVE.
+     */
     public boolean isActive()
     {
         return state == ACTIVE;
@@ -1222,15 +1159,6 @@ public class Session
         if (position >= 0)
         {
             lastSentMsgSeqNum(sentSeqNum);
-        }
-    }
-
-    private void validateCanSendMessage()
-    {
-        if (!canSendMessage())
-        {
-            throw new IllegalStateException(
-                String.format("Session isn't active it's %s, and thus can't send a message", state));
         }
     }
 

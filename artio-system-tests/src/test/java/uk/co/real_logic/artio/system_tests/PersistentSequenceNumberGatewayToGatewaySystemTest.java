@@ -602,6 +602,31 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldStoreAndForwardMessagesSentWhilstInSessionStateTransition()
+    {
+        final ReportFactory reportFactory = new ReportFactory();
+
+        launch(this::nothing);
+        connectPersistingSessions();
+
+        logoutSession(testSystem, acceptingSession);
+        reportFactory.sendReport(testSystem, acceptingSession, Side.BUY);
+
+        assertSessionsDisconnected();
+        assertEquals("Received Execution Report sent after logout",
+            0, initiatingOtfAcceptor.receivedMessage(EXECUTION_REPORT_MESSAGE_AS_STR).count());
+
+        final long sessionId = acceptingSession.id();
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        acquireAcceptingSession();
+        receiveReplayFromOfflineSession(sessionId);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldStoreAndForwardMessagesSentWithNewOfflineSession()
     {
         launch(this::nothing);

@@ -109,7 +109,7 @@ public final class SampleClient
                         10_000,
                         idleStrategy);
 
-                    while (!session.canSendMessage())
+                    while (!session.isActive())
                     {
                         idleStrategy.idle(library.poll(1));
                     }

@@ -102,7 +102,7 @@ public final class SerialConnections
                     }
 
                     final Session session = reply.resultIfPresent();
-                    while (!session.canSendMessage())
+                    while (session.isActive())
                     {
                         idleStrategy.idle(library.poll(1));
                     }
