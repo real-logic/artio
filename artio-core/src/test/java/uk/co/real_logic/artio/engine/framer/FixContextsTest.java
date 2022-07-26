@@ -352,7 +352,7 @@ public class FixContextsTest
     private FixContexts newSessionContexts(final AtomicBuffer buffer, final int initialSequenceIndex)
     {
         when(mappedFile.buffer()).thenReturn(buffer);
-        return new FixContexts(mappedFile, idStrategy, initialSequenceIndex, errorHandler);
+        return new FixContexts(mappedFile, idStrategy, initialSequenceIndex, errorHandler, false);
     }
 
     private void assertValuesEqual(

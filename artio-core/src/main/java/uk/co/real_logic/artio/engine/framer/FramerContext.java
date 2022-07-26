@@ -80,7 +80,8 @@ public class FramerContext
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
         this.fixContexts = new FixContexts(
-            configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler);
+            configuration.sessionIdBuffer(), sessionIdStrategy, configuration.initialSequenceIndex(), errorHandler,
+            configuration.isReproductionEnabled());
         this.fixPContexts = new FixPContexts(
             configuration.fixPIdBuffer(),
             errorHandler,

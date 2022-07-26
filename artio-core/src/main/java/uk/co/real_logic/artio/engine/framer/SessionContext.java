@@ -35,6 +35,7 @@ class SessionContext implements SessionInfo
     // SessionInfo interface.
     private volatile int sequenceIndex;
     private final int initialSequenceIndex;
+    private final boolean reproductionEnabled;
 
     private long lastLogonTimeInNs;
     private long lastSequenceResetTimeInNs;
@@ -50,12 +51,14 @@ class SessionContext implements SessionInfo
         final FixContexts fixContexts,
         final int filePosition,
         final int initialSequenceIndex,
-        final FixDictionary lastFixDictionary)
+        final FixDictionary lastFixDictionary,
+        final boolean reproductionEnabled)
     {
         this.compositeKey = compositeKey;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.initialSequenceIndex = initialSequenceIndex;
+        this.reproductionEnabled = reproductionEnabled;
         lastLogonTimeInNs(lastLogonTimeInNs);
         this.lastSequenceResetTimeInNs = lastSequenceResetTimeInNs;
         this.fixContexts = fixContexts;
@@ -71,6 +74,13 @@ class SessionContext implements SessionInfo
     void onSequenceReset(final long resetTimeInNs)
     {
         final int newSequenceIndex = sequenceIndex == UNKNOWN_SEQUENCE_INDEX ? initialSequenceIndex : sequenceIndex + 1;
+
+        if (reproductionEnabled && (sequenceIndex != UNKNOWN_SEQUENCE_INDEX))
+        {
+            // Don't increment the sequence index during the
+            return;
+        }
+
         onSequenceIndex(resetTimeInNs, newSequenceIndex);
     }
 

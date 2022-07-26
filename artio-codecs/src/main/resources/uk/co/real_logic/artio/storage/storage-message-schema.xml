@@ -94,11 +94,11 @@
     <sbe:message name="PreviousRecording" id="30" description="" sinceVersion="5">
         <group name="inboundRecordings" id="1" dimensionType="groupSizeEncoding">
             <field name="recordingId" id="10" type="int64"/>
-            <field name="libraryId" id="12" type="LibraryId"/>
+            <field name="libraryId" id="12" type="LibraryId" sinceVersion="10"/>
         </group>
         <group name="outboundRecordings" id="2" dimensionType="groupSizeEncoding">
             <field name="recordingId" id="11" type="int64"/>
-            <field name="libraryId" id="13" type="LibraryId"/>
+            <field name="libraryId" id="13" type="LibraryId" sinceVersion="10"/>
         </group>
     </sbe:message>
 

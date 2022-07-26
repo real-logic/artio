@@ -48,7 +48,7 @@ public class SessionContextCreator
             mappedFile,
             idStrategy,
             1,
-            throwable -> throwable.printStackTrace(System.out));
+            throwable -> throwable.printStackTrace(System.out), false);
 
         final FixDictionary dictionary = FixDictionary.of(FixDictionary.findDefault());
         final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1024]);

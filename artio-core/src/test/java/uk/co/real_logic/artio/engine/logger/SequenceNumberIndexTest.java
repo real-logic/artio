@@ -456,7 +456,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
             inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
             DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null,
             new Long2LongHashMap(UNK_SESSION),
-            FixPProtocolType.ILINK_3, true, DEFAULT_INDEX_CHECKSUM_ENABLED);
+            FixPProtocolType.ILINK_3, true, DEFAULT_INDEX_CHECKSUM_ENABLED, true);
     }
 
     private MappedFile newIndexFile()

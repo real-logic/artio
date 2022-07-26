@@ -132,7 +132,8 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType,
         final boolean sent,
-        final boolean indexChecksumEnabled)
+        final boolean indexChecksumEnabled,
+        final boolean logMessages)
     {
         this.sequenceNumberExtractor = sequenceNumberExtractor;
         this.inMemoryBuffer = inMemoryBuffer;
@@ -159,7 +160,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         try
         {
             initialiseBuffer();
-            if (recordingIdLookup != null) // if Logging enabled
+            if (logMessages)
             {
                 positionWriter = new IndexedPositionWriter(
                     positionsBuffer(inMemoryBuffer, indexedPositionsOffset),

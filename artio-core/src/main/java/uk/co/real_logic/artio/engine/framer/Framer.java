@@ -167,7 +167,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
     /**
-     * Null if inbound messages are not logged
+     * Null if inbound messages are not logged and if we're not in reproduction mode.
      */
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;

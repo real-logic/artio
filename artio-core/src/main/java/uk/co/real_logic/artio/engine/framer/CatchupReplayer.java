@@ -393,6 +393,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                         indexedPosition,
                         requiredPosition);
                 }
+
                 return BACK_PRESSURED;
             }
 

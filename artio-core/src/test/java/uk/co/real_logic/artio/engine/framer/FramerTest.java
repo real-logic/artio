@@ -208,7 +208,7 @@ public class FramerTest
             fixContexts,
             0,
             EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX,
-            fixDictionary));
+            fixDictionary, false));
     }
 
     @After

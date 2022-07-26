@@ -106,7 +106,7 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
 
         final Reply<?> startReply = engine.startReproduction();
 
-        final Session session = acquireSession(CURRENT_SEQUENCE, 1);
+        final Session session = acquireSession(0, CURRENT_SEQUENCE);
         assertEquals(1, session.id());
         final CompositeKey compositeKey = session.compositeKey();
         assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
@@ -157,6 +157,7 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
                 sentMessages.add(connection.lastMessageAsString());
 
                 final Session session = acquireSession();
+                System.out.println("session.sequenceIndex() = " + session.sequenceIndex());
 
                 for (int i = 0; i < MESSAGES_SENT; i++)
                 {

@@ -66,7 +66,7 @@ public class FixContexts implements SessionContexts
         null,
         OUT_OF_SPACE,
         DEFAULT_INITIAL_SEQUENCE_INDEX,
-        null);
+        null, false);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         null,
         Session.UNKNOWN,
@@ -76,7 +76,7 @@ public class FixContexts implements SessionContexts
         null,
         OUT_OF_SPACE,
         DEFAULT_INITIAL_SEQUENCE_INDEX,
-        null);
+        null, false);
     static final long LOWEST_VALID_SESSION_ID = 1L;
     static final int VERSION_WITHOUT_FIX_DICTIONARY = 2;
 
@@ -101,6 +101,7 @@ public class FixContexts implements SessionContexts
     private final ByteBuffer byteBuffer;
 
     private final AtomicBuffer buffer;
+    private final boolean reproductionEnabled;
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
@@ -113,10 +114,12 @@ public class FixContexts implements SessionContexts
         final MappedFile mappedFile,
         final SessionIdStrategy idStrategy,
         final int initialSequenceIndex,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final boolean reproductionEnabled)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
+        this.reproductionEnabled = reproductionEnabled;
         this.byteBuffer = this.buffer.byteBuffer();
         sectorFramer = new SectorFramer(buffer.capacity());
         this.idStrategy = idStrategy;
@@ -208,7 +211,7 @@ public class FixContexts implements SessionContexts
                     final SessionContext sessionContext = new SessionContext(compositeKey,
                         sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
                         sessionIdDecoder.initialOffset(),
-                        initialSequenceIndex, thisDictionary);
+                        initialSequenceIndex, thisDictionary, reproductionEnabled);
                     compositeToContext.put(compositeKey, sessionContext);
                 }
                 catch (final Exception e)
@@ -328,7 +331,8 @@ public class FixContexts implements SessionContexts
             this,
             0,
             initialSequenceIndex,
-            fixDictionary);
+            fixDictionary,
+            reproductionEnabled);
 
         allocateNewSlot(context);
 

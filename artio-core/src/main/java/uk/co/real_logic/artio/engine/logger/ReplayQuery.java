@@ -200,6 +200,13 @@ public class ReplayQuery implements AutoCloseable
             final int actingBlockLength = this.actingBlockLength;
             final int actingVersion = this.actingVersion;
 
+
+            System.out.println("SessionQuery.query");
+            System.out.println("beginSequenceNumber = " + beginSequenceNumber);
+            System.out.println("beginSequenceIndex = " + beginSequenceIndex);
+            System.out.println("endSequenceNumber = " + endSequenceNumber);
+            System.out.println("endSequenceIndex = " + endSequenceIndex);
+
             final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
             // LOOKUP THE RANGE FROM THE INDEX
@@ -235,6 +242,9 @@ public class ReplayQuery implements AutoCloseable
                 final int readLength = indexRecord.length();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+
+                System.out.println("sequenceNumber = " + sequenceNumber);
+                System.out.println("sequenceIndex = " + sequenceIndex);
 
                 // if the block was read atomically with no updates
                 if (changePosition == beginChangeVolatile(headerBuffer))

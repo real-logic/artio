@@ -121,7 +121,8 @@ public class EngineContext implements AutoCloseable
                 configuration.logFileDir(),
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                true, indexChecksumEnabled);
+                true, indexChecksumEnabled,
+                configuration.logOutboundMessages());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 recvSequenceNumberExtractor,
                 configuration.receivedSequenceNumberBuffer(),
@@ -134,7 +135,8 @@ public class EngineContext implements AutoCloseable
                 null,
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                false, indexChecksumEnabled);
+                false, indexChecksumEnabled,
+                configuration.logInboundMessages());
 
             newStreams();
             newArchivingAgent();
@@ -265,6 +267,8 @@ public class EngineContext implements AutoCloseable
 
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
             final List<Index> inboundIndices = new ArrayList<>();
+            System.out.println("configuration.logInboundMessages() = " + configuration.logInboundMessages());
+            System.out.println("configuration.isReproductionEnabled() = " + configuration.isReproductionEnabled());
             if (configuration.logInboundMessages())
             {
                 inboundReplayIndex = newReplayIndex(
@@ -408,7 +412,7 @@ public class EngineContext implements AutoCloseable
 
     public ReplayQuery inboundReplayQuery(final boolean replayerThread)
     {
-        if (!configuration.logInboundMessages())
+        if (!configuration.canReplayInbound())
         {
             return null;
         }
