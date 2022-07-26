@@ -178,7 +178,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final Formatters formatters;
     private final EpochFractionFormat epochFractionFormat;
     private final EpochNanoClock nanoClock;
-    private final boolean reproductionEnabled;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -210,8 +209,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final ReplayFor replayFor,
         final Formatters formatters,
         final EpochFractionFormat epochFractionFormat,
-        final EpochNanoClock nanoClock,
-        final boolean reproductionEnabled)
+        final EpochNanoClock nanoClock)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -232,7 +230,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.formatters = formatters;
         this.epochFractionFormat = epochFractionFormat;
         this.nanoClock = nanoClock;
-        this.reproductionEnabled = reproductionEnabled;
     }
 
     private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)

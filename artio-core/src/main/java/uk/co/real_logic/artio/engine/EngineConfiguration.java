@@ -1952,8 +1952,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                 throw new IllegalArgumentException("Do no set the nano clock when using reproduction mode");
             }
 
-            logInboundMessages(false);
-            logOutboundMessages(false);
             bindAtStartup(false);
         }
 

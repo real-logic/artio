@@ -2646,7 +2646,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             CatchupReplayer.ReplayFor.REPLAY_MESSAGES,
             catchupReplayFormatters,
             configuration.sessionEpochFractionFormat(),
-            clock, configuration.isReproductionEnabled()));
+            clock));
 
         return CONTINUE;
     }
@@ -2923,8 +2923,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     CatchupReplayer.ReplayFor.REQUEST_SESSION,
                     catchupReplayFormatters,
                     configuration.sessionEpochFractionFormat(),
-                    clock,
-                    configuration.isReproductionEnabled()));
+                    clock
+                ));
                 return COMPLETE;
             });
         }

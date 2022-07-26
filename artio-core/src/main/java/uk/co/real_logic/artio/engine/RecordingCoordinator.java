@@ -25,7 +25,9 @@ import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
-import org.agrona.collections.*;
+import org.agrona.collections.Int2ObjectHashMap;
+import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.MutableLong;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
@@ -48,7 +50,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.LongConsumer;
 
 import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.CommonContext.IPC_CHANNEL;
@@ -142,19 +143,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             counters = this.aeron.countersReader();
             framerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
             framerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-        }
-        else if (configuration.isReproductionEnabled())
-        {
-            // We add the recording id lookup mapping statically based upon the library id used previously
-            // in the recording ids file
-            counters = null;
-
-            framerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            framerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-
-            // TODO: figure out how to get the lookup right for these
             indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
             indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
         }
@@ -297,19 +285,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
         else
         {
-            final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, streamId);
-
-            if (configuration.isReproductionEnabled())
-            {
-                final boolean isInbound = streamId == configuration.inboundLibraryStream();
-                final RecordingIds recordingIds = isInbound ? inboundRecordingIds : outboundRecordingIds;
-                final RecordingIdLookup lookup = isInbound ? framerInboundLookup : framerOutboundLookup;
-
-                final long engineRecordingId = recordingIds.recordingIdForLibrary(ENGINE_LIBRARY_ID);
-                lookup.putRecordingId(publication.sessionId(), engineRecordingId);
-            }
-
-            return publication;
+            return aeron.addExclusivePublication(aeronChannel, streamId);
         }
     }
 
@@ -423,22 +399,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                     checkRecordingStart(
                         sessionId, framerOutboundLookup, outboundRecordingIds.used, false, libraryId);
                 }
-            }
-        }
-        else if (configuration.isReproductionEnabled())
-        {
-            // In reproduction mode we need to lookup the recording id mappings from the previous run
-            // And put them in the mapping
-            System.out.println("RecordingCoordinator.trackLibrary YES YES YES!");
-            final long inboundRecordingId = inboundRecordingIds.recordingIdForLibrary(libraryId);
-            final long outboundRecordingId = outboundRecordingIds.recordingIdForLibrary(libraryId);
-
-            // TODO: thread-safe publication to the other recording id lookup
-            framerOutboundLookup.putRecordingId(sessionId, outboundRecordingId);
-
-            if (inboundRecordingId == NULL_RECORDING_ID)
-            {
-                System.err.println("Ooops");
             }
         }
 

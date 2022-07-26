@@ -37,12 +37,6 @@ public class RecordingIdLookup
         this.counters = counters;
     }
 
-    // Framer Thread
-    public void putRecordingId(final int aeronSessionId, final long recordingId)
-    {
-        aeronSessionIdToRecordingId.put(aeronSessionId, recordingId);
-    }
-
     public long getRecordingId(final int aeronSessionId)
     {
         long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
