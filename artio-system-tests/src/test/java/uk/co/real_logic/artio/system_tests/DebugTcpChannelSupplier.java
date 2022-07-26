@@ -33,6 +33,9 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
     private final ArrayList<TcpChannel> channels = new ArrayList<>();
     private boolean isEnabled = true;
 
+    private final ArrayList<Runnable> pausedOperations = new ArrayList<>();
+    private volatile boolean connectsPaused = false;
+
     public DebugTcpChannelSupplier(final EngineConfiguration configuration)
     {
         super(configuration);
@@ -65,6 +68,12 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
 
     public synchronized int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
+        if (!connectsPaused && !pausedOperations.isEmpty())
+        {
+            pausedOperations.forEach(Runnable::run);
+            pausedOperations.clear();
+        }
+
         if (isEnabled)
         {
             return super.pollSelector(timeInMs, handler);
@@ -72,6 +81,39 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         else
         {
             return super.pollSelector(timeInMs, (ignore, socketChannel) -> socketChannel.close());
+        }
+    }
+
+    public synchronized void pauseConnects()
+    {
+        connectsPaused = true;
+    }
+
+    public synchronized void unpauseConnects()
+    {
+        connectsPaused = false;
+    }
+
+    protected void onFinishConnect(
+        final InitiatedChannelHandler channelHandler, final SocketChannel channel) throws IOException
+    {
+        if (connectsPaused)
+        {
+            pausedOperations.add(() ->
+            {
+                try
+                {
+                    super.onFinishConnect(channelHandler, channel);
+                }
+                catch (final IOException e)
+                {
+                    // Deliberately blank.
+                }
+            });
+        }
+        else
+        {
+            super.onFinishConnect(channelHandler, channel);
         }
     }
 

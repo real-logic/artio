@@ -149,7 +149,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             connectionExistsHandler.reset();
             connectionAcquiredHandler.reset();
 
-            connectionRejected(NegotiationRejectCode.DUPLICATE_ID);
+            connectionRejected(NegotiationRejectCode.ALREADY_NEGOTIATED);
 
             clientTerminatesSession(client);
         }
@@ -182,7 +182,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             client.writeNegotiate();
 
-            client.readNegotiateReject(NegotiationRejectCode.DUPLICATE_ID);
+            client.readNegotiateReject(NegotiationRejectCode.ALREADY_NEGOTIATED);
             client.assertDisconnected();
         }
     }
@@ -324,7 +324,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             client.writeEstablish();
 
-            client.readEstablishReject(EstablishRejectCode.KEEPALIVE_INTERVAL);
+            client.readEstablishReject(EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
             client.assertDisconnected();
         }
     }
@@ -1502,7 +1502,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             sessionVerId,
             nanoClock.nanoTime(),
             FIRM_ID,
-            fromNegotiate);
+            fromNegotiate,
+            "");
     }
 
     private long offlineSessionWithRetransmittableMessage()
@@ -1514,7 +1515,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             sessionVerID,
             System.nanoTime(),
             FIRM_ID,
-            true);
+            true,
+            "");
 
         return offlineSessionWithRetransmittableMessage(context);
     }

@@ -445,7 +445,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
             case NEGOTIATE_DUPLICATE_ID_BAD_VER:
             case NEGOTIATE_DUPLICATE_ID:
                 isNegotiate = true;
-                negotiationRejectCode = NegotiationRejectCode.DUPLICATE_ID;
+                negotiationRejectCode = NegotiationRejectCode.ALREADY_NEGOTIATED;
                 establishRejectCode = null;
                 break;
 
@@ -463,7 +463,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
 
             case VER_ID_ENDED:
                 isNegotiate = identification.fromNegotiate();
-                negotiationRejectCode = NegotiationRejectCode.DUPLICATE_ID;
+                negotiationRejectCode = NegotiationRejectCode.NEGOTIATE_NOT_ALLOWED;
                 establishRejectCode = EstablishRejectCode.UNNEGOTIATED;
                 break;
 
@@ -524,7 +524,6 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 .timestamp().time(context.requestTimestampInNs());
             negotiate.enteringFirm(context.enteringFirm());
             negotiate.onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue());
-            negotiate.senderLocation("");
         }
         else
         {

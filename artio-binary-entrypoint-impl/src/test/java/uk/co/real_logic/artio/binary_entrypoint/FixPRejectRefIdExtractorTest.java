@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.binary_entrypoint;
 
 import b3.entrypoint.fixp.sbe.*;
+import b3.entrypoint.fixp.sbe.Boolean;
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
@@ -63,7 +64,6 @@ public class FixPRejectRefIdExtractorTest
             .securityID(456)
             .price().mantissa(3);
         newOrderSingle
-            .putOrderQty(1, 2, 3, 4)
             .account(5)
             .marketSegmentID(NewOrderSingleEncoder.marketSegmentIDNullValue())
             .side(Side.BUY)
@@ -71,13 +71,10 @@ public class FixPRejectRefIdExtractorTest
             .timeInForce(TimeInForce.FILL_OR_KILL)
             .stopPx().mantissa(PriceOptionalEncoder.mantissaNullValue());
         newOrderSingle
-            .putMinQty(1, 2, 3, 4)
-            .putMaxFloor(5, 6, 7, 8)
             .enteringTrader("Maria")
             .ordTagID((short)1)
-            .mmProtectionReset(Bool.TRUE_VALUE)
+            .mmProtectionReset(Boolean.TRUE_VALUE)
             .routingInstruction(RoutingInstruction.NULL_VAL)
-            .putExpireDate(5, 5)
             .investorID(123)
             .custodianInfo()
             .custodian(1)

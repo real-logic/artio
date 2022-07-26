@@ -78,6 +78,34 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void testConnectingAfterConnectionTimeouts()
+    {
+        // Launch the acceptor
+        launchAcceptingEngine();
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig);
+
+        // Make connections time out
+        debugTcpChannelSupplier.pauseConnects();
+
+        // First reply times out
+        final Reply<Session> firstConnectReply = completeInitiateSession();
+        assertEquals(Reply.State.TIMED_OUT, firstConnectReply.state());
+
+        // Second reply also times out
+        final Reply<Session> secondConnectReply = completeInitiateSession();
+        assertEquals(Reply.State.TIMED_OUT, secondConnectReply.state());
+
+        // Make connections work again
+        debugTcpChannelSupplier.unpauseConnects();
+
+        // Now it should connect
+        connectSessions();
+        messagesCanBeExchanged();
+        assertInitiatingSequenceIndexIs(0);
+    }
+
     private Reply<Session> completeInitiateSession()
     {
         final SessionConfiguration config = SessionConfiguration.builder()

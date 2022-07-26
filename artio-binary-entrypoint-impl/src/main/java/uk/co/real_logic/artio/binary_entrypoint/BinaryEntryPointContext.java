@@ -36,6 +36,7 @@ public class BinaryEntryPointContext implements FixPContext
 
     // Not persisted
     private final boolean fromNegotiate;
+    private final String credentials;
     private final BinaryEntryPointKey key;
     private boolean hasUnsentMessagesAtNegotiate;
 
@@ -46,13 +47,15 @@ public class BinaryEntryPointContext implements FixPContext
         final long sessionVerID,
         final long timestampInNs,
         final long enteringFirm,
-        final boolean fromNegotiate)
+        final boolean fromNegotiate,
+        final String credentials)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
         this.requestTimestampInNs = timestampInNs;
         this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
+        this.credentials = credentials;
 
         ended = false;
         hasUnsentMessagesAtNegotiate = sessionVerID == NEXT_SESSION_VERSION_ID;
@@ -67,7 +70,8 @@ public class BinaryEntryPointContext implements FixPContext
             BinaryEntryPointConnection.NEXT_SESSION_VERSION_ID,
             nanoTime,
             firmId,
-            true);
+            true,
+            "");
     }
 
     public long sessionID()
@@ -214,6 +218,11 @@ public class BinaryEntryPointContext implements FixPContext
     public void onEndSequence()
     {
         ended = true;
+    }
+
+    public String credentials()
+    {
+        return credentials;
     }
 
     public FixPFirstMessageResponse checkFirstConnect()

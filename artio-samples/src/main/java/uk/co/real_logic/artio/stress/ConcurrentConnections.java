@@ -138,7 +138,7 @@ public final class ConcurrentConnections
                 System.out.println(session.id() + " Replied with: " + reply.state());
             }
 
-            while (!session.canSendMessage())
+            while (!session.isActive())
             {
                 idleStrategy.idle(library.poll(1));
             }

@@ -319,6 +319,7 @@ public class AbstractBinaryEntryPointSystemTest
         assertNotNull(context);
         assertEquals("wrong sessionId", client.sessionId(), context.sessionID());
         assertEquals("wrong sessionVerID", client.sessionVerID(), context.sessionVerID());
+        assertEquals("wrong sessionId", BinaryEntryPointClient.CREDENTIALS, context.credentials());
     }
 
     void clientTerminatesSession(final BinaryEntryPointClient client)

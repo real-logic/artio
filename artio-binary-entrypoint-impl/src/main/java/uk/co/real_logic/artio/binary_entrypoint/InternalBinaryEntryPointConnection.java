@@ -306,8 +306,7 @@ class InternalBinaryEntryPointConnection
         final long sessionVerID,
         final long timestamp,
         final long enteringFirm,
-        final long onbehalfFirm,
-        final String senderLocation)
+        final long onbehalfFirm)
     {
         final State state = state();
         if (state == UNBOUND)
@@ -403,7 +402,7 @@ class InternalBinaryEntryPointConnection
                     sessionID,
                     sessionVerID,
                     timestamp,
-                    EstablishRejectCode.KEEPALIVE_INTERVAL);
+                    EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
                 if (position > 0)
                 {
                     return fullyUnbind();

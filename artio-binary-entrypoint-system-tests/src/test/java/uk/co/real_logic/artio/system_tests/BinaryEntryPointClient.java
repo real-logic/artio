@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
+import b3.entrypoint.fixp.sbe.Boolean;
 import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
@@ -50,11 +51,11 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public static final int SESSION_ID = 123;
     public static final int SESSION_ID_2 = SESSION_ID + 1;
     public static final int FIRM_ID = 456;
-    public static final String SENDER_LOCATION = "LOCATION_1";
     public static final int CL_ORD_ID = 1;
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
     public static final long SECURITY_ID = 2;
     public static final int INITIAL_SESSION_VER_ID = 1;
+    public static final String CREDENTIALS = "ABC123";
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointProtocol.loadSbeIr());
 
@@ -326,7 +327,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public void writeNegotiate()
     {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
-        wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH);
+        wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
+            CREDENTIALS.length());
 
         negotiateTimestampInNs = timeInNs();
 
@@ -337,7 +339,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
         negotiate
             .enteringFirm(FIRM_ID)
             .onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue())
-            .senderLocation(SENDER_LOCATION);
+            .credentials(CREDENTIALS);
 
         write();
     }
@@ -350,7 +352,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public void writeEstablish(final int nextSeqNo)
     {
         final EstablishEncoder establish = new EstablishEncoder();
-        wrap(establish, EstablishEncoder.BLOCK_LENGTH);
+        wrap(establish, EstablishEncoder.BLOCK_LENGTH + EstablishEncoder.credentialsHeaderLength() +
+            CREDENTIALS.length());
 
         establishTimestampInNs = timeInNs();
         establish
@@ -362,6 +365,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
             .nextSeqNo(nextSeqNo)
             .cancelOnDisconnectType(cancelOnDisconnectType)
             .codTimeoutWindow().time(codTimeoutWindow);
+        establish.credentials(CREDENTIALS);
 
         write();
     }
@@ -436,7 +440,6 @@ public final class BinaryEntryPointClient implements AutoCloseable
             .securityID(SECURITY_ID)
             .price().mantissa(3);
         newOrderSingle
-            .putOrderQty(1, 2, 3, 4)
             .account(5)
             .marketSegmentID(NewOrderSingleEncoder.marketSegmentIDNullValue())
             .side(Side.BUY)
@@ -444,13 +447,10 @@ public final class BinaryEntryPointClient implements AutoCloseable
             .timeInForce(TimeInForce.FILL_OR_KILL)
             .stopPx().mantissa(PriceOptionalEncoder.mantissaNullValue());
         newOrderSingle
-            .putMinQty(1, 2, 3, 4)
-            .putMaxFloor(5, 6, 7, 8)
             .enteringTrader("Maria")
             .ordTagID((short)1)
-            .mmProtectionReset(Bool.TRUE_VALUE)
+            .mmProtectionReset(Boolean.TRUE_VALUE)
             .routingInstruction(RoutingInstruction.NULL_VAL)
-            .putExpireDate(5, 5)
             .investorID(123)
             .custodianInfo()
                 .custodian(1)

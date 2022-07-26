@@ -562,6 +562,11 @@ public final class SystemTestUtil
         return position;
     }
 
+    public static long logoutSession(final TestSystem testSystem, final Session session)
+    {
+        return testSystem.awaitSend(session::startLogout);
+    }
+
     public static void validateReplayIndex(final FixEngine engine, final Session session)
     {
         if (session == null || engine == null)

@@ -50,7 +50,7 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
         final boolean fromNegotiate = buffer.getShort(offset + FROM_NEGOTIATE_OFFSET) == SHORT_TRUE;
 
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
-            sessionId, sessionVerId, timestamp, enteringFirm, fromNegotiate);
+            sessionId, sessionVerId, timestamp, enteringFirm, fromNegotiate, "");
         context.ended(ended);
         context.offset(offset);
         return context;

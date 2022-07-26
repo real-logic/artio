@@ -1,5 +1,6 @@
 package uk.co.real_logic.artio.example_fixp_exchange;
 
+import b3.entrypoint.fixp.sbe.Boolean;
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
@@ -58,10 +59,9 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
                 .ordStatus(OrdStatus.NEW)
                 .execRestatementReason(ExecRestatementReason.NULL_VAL)
                 .multiLegReportingType(MultiLegReportingType.NULL_VAL)
-                .workingIndicator(Bool.NULL_VAL)
+                .workingIndicator(Boolean.NULL_VAL)
                 .transactTime().time(System.nanoTime());
             executionReport
-                .putTradeDate(1, 2)
                 .protectionPrice().mantissa(1234);
             executionReport.receivedTime().time(System.nanoTime());
             executionReport.noMetricsCount(0);

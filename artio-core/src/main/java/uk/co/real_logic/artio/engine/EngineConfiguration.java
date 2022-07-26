@@ -937,7 +937,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Override the acceptor FIX Dictionary for a given beginString. The beginString to use is extracted from the
      * Provided FIX Dictionary. If you wish to use multiple FIX dictionaries based upon the logon message and they
-     * both have the same beginString field then you should should implement a custom {@link AuthenticationStrategy}
+     * both have the same beginString field then you should implement a custom {@link AuthenticationStrategy}
      * and use the {@link AuthenticationProxy#accept(Class)} method in order to specify the dictionary.
      *
      * @param fixDictionaryClass the FIX Dictionary to use
