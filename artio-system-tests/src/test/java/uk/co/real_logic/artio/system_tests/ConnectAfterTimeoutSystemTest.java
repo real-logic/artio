@@ -61,7 +61,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         final Reply<Session> firstConnectReply = completeInitiateSession();
         assertEquals(Reply.State.TIMED_OUT, firstConnectReply.state());
 
-        // First reply also times out
+        // Second reply also times out
         final Reply<Session> secondConnectReply = completeInitiateSession();
         assertEquals(Reply.State.TIMED_OUT, secondConnectReply.state());
 
