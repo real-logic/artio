@@ -134,6 +134,16 @@ public class AcceptorSessionTest extends AbstractSessionTest
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
     }
 
+    @Test
+    public void shouldTakeForcedHeartbeatConfigurationIntoAccountWhenReplyingToLogon()
+    {
+        forcedHeartbeatIntervalInS = 5;
+
+        onLogon(1);
+
+        verifySendLogon(SEQUENCE_INDEX, false);
+    }
+
     protected void readyForLogon()
     {
         // Deliberately blank

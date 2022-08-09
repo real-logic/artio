@@ -1088,7 +1088,7 @@ public abstract class AbstractSessionTest
     }
 
     @Test
-    public void shouldTakeForcedConfigurationIntoAccount()
+    public void shouldTakeForcedHeartbeatConfigurationIntoAccount()
     {
         forcedHeartbeatIntervalInS = 5;
         assertForcedHeartbeatInterval();
@@ -1100,7 +1100,20 @@ public abstract class AbstractSessionTest
         assertForcedHeartbeatInterval();
     }
 
-    private void assertForcedHeartbeatInterval()
+    @Test
+    public void shouldTakeForcedHeartbeatConfigurationIntoAccountForResetBasedLogons()
+    {
+        forcedHeartbeatIntervalInS = 5;
+        givenActive();
+
+        session().tryResetSequenceNumbers();
+        verifySendLogon(1, true);
+
+        onLogon(HEARTBEAT_INTERVAL_IN_S, 1, true);
+        assertForcedHeartbeatInterval();
+    }
+
+    void assertForcedHeartbeatInterval()
     {
         assertEquals(5_000, session().heartbeatIntervalInMs());
     }
@@ -1156,11 +1169,16 @@ public abstract class AbstractSessionTest
 
     private void verifySetsSentSequenceNumbersToTwo(final int sequenceIndex)
     {
-        verify(sessionProxy).sendLogon(
-            eq(1), eq(HEARTBEAT_INTERVAL_IN_S), any(), any(), eq(true), eq(sequenceIndex), anyInt(),
-            any(), anyInt());
+        verifySendLogon(sequenceIndex, true);
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
+    }
+
+    void verifySendLogon(final int sequenceIndex, final boolean resetSeqNumFlag)
+    {
+        verify(sessionProxy).sendLogon(
+            eq(1), eq(HEARTBEAT_INTERVAL_IN_S), any(), any(), eq(resetSeqNumFlag), eq(sequenceIndex), anyInt(),
+            any(), anyInt());
     }
 
     private void sequenceNumbersAreThreeAndActive()
