@@ -28,11 +28,15 @@ import uk.co.real_logic.artio.messages.ConnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
+import java.util.function.IntConsumer;
+
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 public class ReproductionProtocolHandler implements ReproductionFixProtocolConsumer
 {
+    public static volatile IntConsumer countHandler;
+
     public static final boolean REPRO_DEBUG_ENABLED = DebugLogger.isEnabled(LogTag.REPRODUCTION);
 
     // Decode protocol for relevant messages and hand them off down the line to
@@ -48,6 +52,9 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
 
     // Enforce only a single operation is in progress
     private boolean operationInProgress = false;
+
+    // Keep a count of the number of calls made as an internal invariant / test of StreamTimestampZipper
+    private int count;
 
     public ReproductionProtocolHandler(
         final ReproductionTcpChannelSupplier tcpChannelSupplier,
@@ -68,6 +75,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int length,
         final ArtioLogHeader header)
     {
+        count++;
         if (REPRO_DEBUG_ENABLED)
         {
             DebugLogger.log(LogTag.REPRODUCTION,
@@ -102,6 +110,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int start,
         final int length)
     {
+        count++;
         if (REPRO_DEBUG_ENABLED)
         {
             DebugLogger.log(LogTag.REPRODUCTION,
@@ -116,6 +125,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
     public void onApplicationHeartbeat(
         final ApplicationHeartbeatDecoder decoder, final DirectBuffer buffer, final int start, final int length)
     {
+        count++;
         if (REPRO_DEBUG_ENABLED)
         {
             DebugLogger.log(LogTag.REPRODUCTION,
@@ -167,6 +177,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
             DebugLogger.log(LogTag.REPRODUCTION,
                 "ReproductionProtocolHandler.endOperation: ", String.valueOf(operationInProgress));
         }
+
         if (!operationInProgress)
         {
             errorHandler.onError(new IllegalStateException("No operation in flight"));
@@ -178,5 +189,21 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
     public boolean operationInProgress()
     {
         return operationInProgress;
+    }
+
+    public void resetCount()
+    {
+        count = 0;
+    }
+
+    public void checkCount(final int fragmentLimit)
+    {
+        if (count > fragmentLimit)
+        {
+            if (countHandler != null)
+            {
+                countHandler.accept(count);
+            }
+        }
     }
 }

@@ -79,15 +79,19 @@ public class StreamTimestampZipper implements AutoCloseable
         final int size = pollers.length;
         for (int i = 0; i < size; i++)
         {
-            read += pollers[i].poll(pollers, fragmentAssembler);
+            read += pollers[i].poll(pollers, fragmentAssembler, fragmentLimit);
+            if (read >= fragmentLimit)
+            {
+                break;
+            }
         }
 
         // Lazily compact: only process reorder buffer and compact when you hit the compaction size
         // Can generate a significant speed in batch archive scanning at the expense of greater latency
         // on handing off messages to the handler
-        if (read > 0 && (!lazilyCompact || reorderBufferOffset > compactionSize))
+        if (read > 0 && (read <= fragmentLimit) && (!lazilyCompact || reorderBufferOffset > compactionSize))
         {
-            read += processReorderBuffer(pollers);
+            read += processReorderBuffer(pollers, fragmentLimit - read);
 
             compact();
         }
@@ -95,7 +99,7 @@ public class StreamTimestampZipper implements AutoCloseable
         return read;
     }
 
-    private int processReorderBuffer(final StreamPoller[] pollers)
+    private int processReorderBuffer(final StreamPoller[] pollers, final int fragmentLimit)
     {
         final ArrayList<BufferedPosition> positions = this.positions;
 
@@ -120,6 +124,11 @@ public class StreamTimestampZipper implements AutoCloseable
                 read++;
 
                 updateOwnerTimestamp(positions, i, owner);
+
+                if (read >= fragmentLimit)
+                {
+                    break;
+                }
             }
             else
             {
@@ -304,11 +313,12 @@ public class StreamTimestampZipper implements AutoCloseable
             header = new ArtioLogHeader(poller.streamId());
         }
 
-        public int poll(final StreamPoller[] pollers, final FragmentAssembler fragmentAssembler)
+        public int poll(
+            final StreamPoller[] pollers, final FragmentAssembler fragmentAssembler, final int fragmentLimit)
         {
             final long minOtherTimestamp = findMinLowWaterMark(pollers, this);
             logEntryHandler.reset(minOtherTimestamp, this);
-            return poller.poll(fragmentAssembler);
+            return poller.poll(fragmentAssembler, fragmentLimit);
         }
 
         // This is the position at which it is safe for other streams to emit below.
@@ -641,7 +651,7 @@ public class StreamTimestampZipper implements AutoCloseable
 
     public interface Poller
     {
-        int poll(FragmentAssembler fragmentAssembler);
+        int poll(FragmentAssembler fragmentAssembler, int fragmentLimit);
 
         int streamId();
 

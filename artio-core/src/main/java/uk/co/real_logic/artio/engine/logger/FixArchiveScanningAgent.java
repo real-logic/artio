@@ -353,7 +353,7 @@ public class FixArchiveScanningAgent implements AutoCloseable
             return stopPosition != NULL_POSITION && image == null && archiveLocation == null;
         }
 
-        public int poll(final FragmentAssembler fragmentAssembler)
+        public int poll(final FragmentAssembler fragmentAssembler, final int fragmentLimit)
         {
             if (image == null)
             {
@@ -387,7 +387,7 @@ public class FixArchiveScanningAgent implements AutoCloseable
                 }
                 else
                 {
-                    return image.poll(fragmentAssembler, fragmentLimit);
+                    return image.poll(fragmentAssembler, FixArchiveScanningAgent.this.fragmentLimit);
                 }
             }
         }

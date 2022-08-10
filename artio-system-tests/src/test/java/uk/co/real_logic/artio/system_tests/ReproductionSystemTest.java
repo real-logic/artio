@@ -19,6 +19,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
+import uk.co.real_logic.artio.engine.framer.ReproductionProtocolHandler;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -30,9 +31,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.TEST_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
@@ -62,9 +64,27 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         }
     }
 
+    static class Counter implements IntConsumer
+    {
+        private volatile boolean failed = false;
+
+        public void accept(final int count)
+        {
+            System.err.println("Invalid Count: " + count);
+            failed = true;
+        }
+
+        void verify()
+        {
+            assertFalse("Failed STZ count check: see stderr for details", failed);
+        }
+    }
+
     @Test
     public void shouldReproduceMessageExchange() throws IOException
     {
+        final Counter counter = new Counter();
+        ReproductionProtocolHandler.countHandler = counter;
         printErrors = true;
 
         final ReportFactory reportFactory = new ReportFactory();
@@ -77,6 +97,8 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         final long endInNs = nanoClock.nanoTime();
 
         reproduceScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages, startInNs, endInNs);
+
+        counter.verify();
     }
 
     private void reproduceScenario(

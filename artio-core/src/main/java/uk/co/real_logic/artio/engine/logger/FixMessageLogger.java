@@ -431,9 +431,9 @@ public class FixMessageLogger implements Agent
             this.subscription = subscription;
         }
 
-        public int poll(final FragmentAssembler fragmentAssembler)
+        public int poll(final FragmentAssembler fragmentAssembler, final int fragmentLimit)
         {
-            return subscription.poll(fragmentAssembler, 10);
+            return subscription.poll(fragmentAssembler, fragmentLimit);
         }
 
         public int streamId()
