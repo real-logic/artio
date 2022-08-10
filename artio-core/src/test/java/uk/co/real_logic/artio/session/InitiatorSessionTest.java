@@ -62,6 +62,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
             disableHeartbeatRepliesToTestRequests,
+            true,
             new InternalSession.Formatters());
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);
@@ -154,6 +155,20 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         onLogon(1);
         assertForcedHeartbeatInterval();
+    }
+
+    @Test
+    public void shouldDisconnectIfFirstMessageNotALogon()
+    {
+        session().id(SESSION_ID);
+        session().poll(0);
+
+        verifyLogon();
+
+        onMessage(1);
+
+        verifyDisconnect(times(1));
+        verifyNoFurtherMessages();
     }
 
     private void verifyLogon()

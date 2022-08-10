@@ -402,7 +402,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     private Reply<Session> acquireAuthProxy()
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID,
-            initiateTimeoutInMs);
+            initiateTimeoutInMs, false);
 
         assertEventuallyTrue("failed to receive auth proxy", () ->
         {

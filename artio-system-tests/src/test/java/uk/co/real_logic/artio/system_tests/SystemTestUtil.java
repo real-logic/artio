@@ -176,12 +176,20 @@ public final class SystemTestUtil
         final FixLibrary library, final int port, final String senderCompId, final String targetCompId,
         final long timeoutInMs)
     {
+        return initiate(library, port, senderCompId, targetCompId, timeoutInMs, true);
+    }
+
+    static Reply<Session> initiate(
+        final FixLibrary library, final int port, final String senderCompId, final String targetCompId,
+        final long timeoutInMs, final boolean disconnectOnFirstMessageNotLogon)
+    {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
             .senderCompId(senderCompId)
             .targetCompId(targetCompId)
             .timeoutInMs(timeoutInMs)
+            .disconnectOnFirstMessageNotLogon(disconnectOnFirstMessageNotLogon)
             .build();
 
         return library.initiate(config);

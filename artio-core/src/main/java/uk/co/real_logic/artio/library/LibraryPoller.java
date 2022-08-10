@@ -1045,19 +1045,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final int initialSentSequenceNumber = initiatorNewSequenceNumber(
                 sessionConfiguration, SessionConfiguration::initialSentSequenceNumber, lastSentSeqNum);
             final boolean resetSeqNum = sessionConfiguration != null && sessionConfiguration.resetSeqNum();
+            final boolean disconnectOnFirstMessageNotLogon = sessionConfiguration == null ||
+                sessionConfiguration.disconnectOnFirstMessageNotLogon();
 
             if (isNewConnect)
             {
                 session = newInitiatorSession(
                     connectionId, initialSentSequenceNumber, initialReceivedSequenceNumber,
                     sessionState, sequenceIndex, enableLastMsgSeqNumProcessed,
-                    fixDictionary, resetSeqNum, messageInfo, sessionId);
+                    fixDictionary, resetSeqNum, messageInfo, sessionId, disconnectOnFirstMessageNotLogon);
             }
             else
             {
                 session.lastSentMsgSeqNum(initialSentSequenceNumber - 1);
                 session.lastReceivedMsgSeqNumOnly(initialReceivedSequenceNumber - 1);
                 session.initiatorResetSeqNum(resetSeqNum);
+                session.disconnectOnFirstMessageNotLogon(disconnectOnFirstMessageNotLogon);
             }
         }
         else
@@ -2185,7 +2188,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixDictionary fixDictionary,
         final boolean resetSeqNum,
         final OnMessageInfo messageInfo,
-        final long sessionId)
+        final long sessionId,
+        final boolean disconnectOnFirstMessageNotLogon)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
 
@@ -2216,7 +2220,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochFractionClock,
             ConnectionType.INITIATOR,
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS(), configuration.disableHeartbeatRepliesToTestRequests(),
+            configuration.forcedHeartbeatIntervalInS(),
+            configuration.disableHeartbeatRepliesToTestRequests(),
+            disconnectOnFirstMessageNotLogon,
             formatters);
         session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
@@ -2294,7 +2300,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochFractionClock,
             ConnectionType.ACCEPTOR,
             configuration.resendRequestController(),
-            configuration.forcedHeartbeatIntervalInS(), configuration.disableHeartbeatRepliesToTestRequests(),
+            configuration.forcedHeartbeatIntervalInS(),
+            configuration.disableHeartbeatRepliesToTestRequests(),
+            true,
             formatters);
         session.fixDictionary(fixDictionary);
         session.address(address);

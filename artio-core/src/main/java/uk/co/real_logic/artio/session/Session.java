@@ -129,6 +129,7 @@ public class Session
     private final int forcedHeartbeatIntervalInS;
     private int configuredHeartbeatIntervalInS;
     private final boolean disableHeartbeatRepliesToTestRequests;
+    private boolean disconnectOnFirstMessageNotLogon;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
@@ -224,6 +225,7 @@ public class Session
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
         final boolean disableHeartbeatRepliesToTestRequests,
+        final boolean disconnectOnFirstMessageNotLogon,
         final Formatters formatters)
     {
         Verify.notNull(state, "session state");
@@ -256,6 +258,7 @@ public class Session
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
         this.connectionType = connectionType;
+        this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
         this.formatters = formatters;
 
         connectionId(connectionId);
@@ -1206,7 +1209,7 @@ public class Session
         final long position)
     {
         final SessionState state = state();
-        if (state == SessionState.CONNECTED)
+        if (state == SessionState.CONNECTED || (disconnectOnFirstMessageNotLogon && state == SENT_LOGON))
         {
             // Disconnect if the first message isn't a logon message
             return Pressure.apply(requestDisconnect(FIRST_MESSAGE_NOT_LOGON));
@@ -2689,5 +2692,10 @@ public class Session
             replaysInFlight--;
         }
         resendRequestController.onResendComplete(this, replaysInFlight);
+    }
+
+    void disconnectOnFirstMessageNotLogon(final boolean disconnectOnFirstMessageNotLogon)
+    {
+        this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
     }
 }

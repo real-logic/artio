@@ -58,6 +58,7 @@ public final class SessionConfiguration
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final boolean disconnectOnFirstMessageNotLogon;
     private final Class<? extends FixDictionary> fixDictionary;
 
     public static Builder builder()
@@ -85,6 +86,7 @@ public final class SessionConfiguration
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
         final boolean enableLastMsgSeqNumProcessed,
+        final boolean disconnectOnFirstMessageNotLogon,
         final Class<? extends FixDictionary> fixDictionary)
     {
         Objects.requireNonNull(hosts, "hosts");
@@ -119,6 +121,7 @@ public final class SessionConfiguration
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+        this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
         this.fixDictionary = fixDictionary;
     }
 
@@ -235,6 +238,11 @@ public final class SessionConfiguration
         return fixDictionary;
     }
 
+    public boolean disconnectOnFirstMessageNotLogon()
+    {
+        return disconnectOnFirstMessageNotLogon;
+    }
+
     @Override
     public String toString()
     {
@@ -282,6 +290,7 @@ public final class SessionConfiguration
         private int resendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
         private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
         private boolean enableLastMsgSeqNumProcessed;
+        private boolean disconnectOnFirstMessageNotLogon = true;
         private Class<? extends FixDictionary> fixDictionary;
 
         private Builder()
@@ -516,10 +525,28 @@ public final class SessionConfiguration
         }
 
         /**
+         * Sets whether to disconnect if the first message isn't a logon. Defaults to true. If this is set to false
+         * then the non-logon first message will be passed onto your application handler. Setting to false results
+         * in non-fix-standards compliant behaviour and is generally only recommended for testing FIX behaviour or
+         * debugging an external end-point's replies to FIX logons that are invalid.
+         *
+         * Note: this only affects the initiator session in question, acceptor sessions always disconnect if the first
+         * message isn't a logon.
+         *
+         * @param disconnectOnFirstMessageNotLogon whether to disconnect if the first message isn't a logon
+         * @return this builder
+         */
+        public Builder disconnectOnFirstMessageNotLogon(final boolean disconnectOnFirstMessageNotLogon)
+        {
+            this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
+            return this;
+        }
+
+        /**
          * Set the FIX Dictionary that is used by this session.
          *
          * @param fixDictionary the FIX Dictionary that is used by this session.
-         * @return this build
+         * @return this builder
          */
         public Builder fixDictionary(final Class<? extends FixDictionary> fixDictionary)
         {
@@ -554,6 +581,7 @@ public final class SessionConfiguration
                 resendRequestChunkSize,
                 sendRedundantResendRequests,
                 enableLastMsgSeqNumProcessed,
+                disconnectOnFirstMessageNotLogon,
                 fixDictionary);
         }
     }

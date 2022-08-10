@@ -77,6 +77,7 @@ public class InternalSession extends Session implements AutoCloseable
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
         final boolean disableHeartbeatRepliesToTestRequests,
+        final boolean disconnectOnFirstMessageNotLogon,
         final Formatters formatters)
     {
         super(
@@ -105,6 +106,7 @@ public class InternalSession extends Session implements AutoCloseable
             resendRequestController,
             forcedHeartbeatIntervalInS,
             disableHeartbeatRepliesToTestRequests,
+            disconnectOnFirstMessageNotLogon,
             formatters);
     }
 
@@ -385,4 +387,10 @@ public class InternalSession extends Session implements AutoCloseable
     {
         return connectionType;
     }
+
+    public void disconnectOnFirstMessageNotLogon(final boolean disconnectOnFirstMessageNotLogon)
+    {
+        super.disconnectOnFirstMessageNotLogon(disconnectOnFirstMessageNotLogon);
+    }
+
 }
