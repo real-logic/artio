@@ -106,10 +106,10 @@ class ReproductionPoller implements Continuation
         try
         {
             final FixArchiveScanningAgent archiveScanningAgent = this.archiveScanningAgent;
-            System.out.println("polling underneath");
+            // System.out.println("polling underneath");
             if (protocolHandler.operationInProgress())
             {
-                System.out.println("Op in progress BP");
+                // System.out.println("Op in progress BP");
 
                 return Publication.BACK_PRESSURED;
             }
@@ -148,7 +148,7 @@ class ReproductionPoller implements Continuation
             idleStrategy,
             DEFAULT_COMPACTION_SIZE,
             DEFAULT_MAXIMUM_BUFFER_SIZE,
-            1, // TODO
+            1,
             logFileDir,
             aeron,
             archive);

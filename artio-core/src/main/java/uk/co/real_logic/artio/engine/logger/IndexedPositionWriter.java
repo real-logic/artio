@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.storage.messages.IndexedPositionEncoder;
 import java.util.ArrayList;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
-import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 
 /**

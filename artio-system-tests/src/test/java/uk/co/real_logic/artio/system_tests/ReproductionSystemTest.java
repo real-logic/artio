@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
@@ -52,7 +51,6 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
             final byte[] stashed = new byte[bytes.remaining()];
             bytes.get(stashed);
             final String message = new String(stashed, StandardCharsets.US_ASCII);
-            System.out.println("message = " + message);
             messages.add(message);
         }
 
@@ -65,6 +63,8 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
     @Test
     public void shouldReproduceMessageExchange() throws IOException
     {
+        printErrors = true;
+
         final ReportFactory reportFactory = new ReportFactory();
         final List<FixMessage> originalReceivedMessages = new ArrayList<>();
         final long[] sentPositions = new long[MESSAGES_SENT];
@@ -73,8 +73,6 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         final long startInNs = nanoClock.nanoTime();
         createScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages);
         final long endInNs = nanoClock.nanoTime();
-
-        // TODO: logon and perform a replay
 
         reproduceScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages, startInNs, endInNs);
     }
@@ -112,8 +110,6 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
         assertEquals(ACCEPTOR_ID, compositeKey.localCompId());
 
-        System.out.println("ACQUIRED SESSION");
-
         testSystem.await("Haven't received messages", () ->
         {
             final List<FixMessage> messages = otfAcceptor.messages();
@@ -121,14 +117,14 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
             return messages.size() >= originalReceivedMessages.size();
         });
 
-        System.out.println("Received messages");
         assertEquals(originalReceivedMessages, otfAcceptor.messages());
 
         final List<String> reproSentMessages = messageStash.messages();
         testSystem.await("Failed to receive messages", () -> reproSentMessages.size() >= MESSAGES_SENT + 2);
 
         assertEquals(stripTimesAndChecksums(sentMessages), stripTimesAndChecksums(reproSentMessages));
-//        assertArrayEquals(sentPositions, reproPositions);
+        // Do we actually need this?
+        // assertArrayEquals(sentPositions, reproPositions);
 
         testSystem.awaitCompletedReply(startReply);
     }
@@ -157,7 +153,6 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
                 sentMessages.add(connection.lastMessageAsString());
 
                 final Session session = acquireSession();
-                System.out.println("session.sequenceIndex() = " + session.sequenceIndex());
 
                 for (int i = 0; i < MESSAGES_SENT; i++)
                 {

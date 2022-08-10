@@ -33,12 +33,11 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 public class ReproductionProtocolHandler implements ReproductionFixProtocolConsumer
 {
-    public static final boolean REPRO_DBG_ENABLED = DebugLogger.isEnabled(LogTag.REPRODUCTION);
+    public static final boolean REPRO_DEBUG_ENABLED = DebugLogger.isEnabled(LogTag.REPRODUCTION);
 
     // Decode protocol for relevant messages and hand them off down the line to
     // Artio component that is responsible for dealing with the event in normal times.
     // components should block until operation complete to ensure ordering is maintained.
-    // TODO: need a way of controlling the sending of application heartbeats as well
 
     private final ReproductionTcpChannelSupplier tcpChannelSupplier;
     private final ReproductionClock clock;
@@ -69,7 +68,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int length,
         final ArtioLogHeader header)
     {
-        if (REPRO_DBG_ENABLED)
+        if (REPRO_DEBUG_ENABLED)
         {
             DebugLogger.log(LogTag.REPRODUCTION,
                 "ReproductionProtocolHandler.onMessage: ", buffer, offset, length);
@@ -82,9 +81,9 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int fullLength = (offset + length) - initialOffset;
         final int messageOffset = offset - initialOffset;
         final long connectionId = message.connection();
-        if (!tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, fullLength, messageOffset, length))
+        if (!tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, messageOffset, length))
         {
-            System.err.println("MASSIVE FAILURE - What has happened?");
+            System.err.println("FAILURE - What has happened?");
         }
     }
 
@@ -103,7 +102,11 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int start,
         final int length)
     {
-        System.out.println("ReproductionProtocolHandler.onConnect");
+        if (REPRO_DEBUG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPRODUCTION,
+                "ReproductionProtocolHandler.onConnect: ", connectDecoder.toString());
+        }
         startOperation();
         clock.advanceTimeTo(connectDecoder.timestamp());
         connectionId = connectDecoder.connection();
@@ -113,14 +116,17 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
     public void onApplicationHeartbeat(
         final ApplicationHeartbeatDecoder decoder, final DirectBuffer buffer, final int start, final int length)
     {
-        System.out.println("ReproductionProtocolHandler.onApplicationHeartbeat");
+        if (REPRO_DEBUG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPRODUCTION,
+                "ReproductionProtocolHandler.onApplicationHeartbeat: ", decoder.toString());
+        }
         clock.advanceTimeTo(decoder.timestampInNs());
         validateLibraryId(decoder.libraryId());
     }
 
     public long newConnectionId()
     {
-        System.out.println("ReproductionProtocolHandler.newConnectionId");
         if (connectionId == NO_CONNECTION_ID)
         {
             final IllegalStateException ex = new IllegalStateException("Unknown connection id");
@@ -141,7 +147,11 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
 
     private void startOperation()
     {
-        System.out.println("ReproductionProtocolHandler.startOperation: " + operationInProgress);
+        if (REPRO_DEBUG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPRODUCTION,
+                "ReproductionProtocolHandler.startOperation: ", String.valueOf(operationInProgress));
+        }
         if (operationInProgress)
         {
             errorHandler.onError(new IllegalStateException("Multiple operations in flight attempted"));
@@ -152,7 +162,11 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
 
     private void endOperation()
     {
-        System.out.println("ReproductionProtocolHandler.endOperation: " + operationInProgress);
+        if (REPRO_DEBUG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPRODUCTION,
+                "ReproductionProtocolHandler.endOperation: ", String.valueOf(operationInProgress));
+        }
         if (!operationInProgress)
         {
             errorHandler.onError(new IllegalStateException("No operation in flight"));

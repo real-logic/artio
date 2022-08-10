@@ -71,6 +71,8 @@ public class AbstractMessageBasedAcceptorSystemTest
     TestSystem testSystem;
     Session session;
 
+    boolean printErrors = false;
+
     void setup(final boolean sequenceNumberReset, final boolean shouldBind)
     {
         setup(sequenceNumberReset, shouldBind, true);
@@ -187,10 +189,17 @@ public class AbstractMessageBasedAcceptorSystemTest
             config.reproductionMessageHandler(reproductionMessageHandler);
         }
 
-        config
-//            .monitoringAgentFactory(MonitoringAgentFactory.none())
-            .errorHandlerFactory(errorBuffer -> Throwable::printStackTrace)
-            .defaultHeartbeatIntervalInS(1);
+        config.defaultHeartbeatIntervalInS(1);
+
+        if (printErrors)
+        {
+            config.errorHandlerFactory(errorBuffer -> Throwable::printStackTrace);
+        }
+        else
+        {
+            config.monitoringAgentFactory(MonitoringAgentFactory.none());
+        }
+
         engine = FixEngine.launch(config);
     }
 

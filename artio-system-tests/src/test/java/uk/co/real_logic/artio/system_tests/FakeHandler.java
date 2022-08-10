@@ -253,8 +253,6 @@ public class FakeHandler
             library.requestSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, 10_000);
         }
 
-        System.out.println("logonSequenceIndex = " + logonSequenceIndex);
-
         sessionExistsInfos.add(
             new SessionExistsInfo(
             localCompId, remoteCompId, sessionId, logonReceivedSequenceNumber, logonSequenceIndex));

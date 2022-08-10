@@ -267,8 +267,6 @@ public class EngineContext implements AutoCloseable
 
             final Long2LongHashMap connectionIdToILinkUuid = new Long2LongHashMap(UNK_SESSION);
             final List<Index> inboundIndices = new ArrayList<>();
-            System.out.println("configuration.logInboundMessages() = " + configuration.logInboundMessages());
-            System.out.println("configuration.isReproductionEnabled() = " + configuration.isReproductionEnabled());
             if (configuration.logInboundMessages())
             {
                 inboundReplayIndex = newReplayIndex(

@@ -81,7 +81,6 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             final int length = this.length;
             if (length > 0)
             {
-                System.out.println("READ: '" + reproductionBuffer.getStringWithoutLengthAscii(0, length) + "'");
                 reproductionBuffer.getBytes(0, dst, length);
                 this.length = 0;
                 endOperation.run();
@@ -96,7 +95,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
         }
 
         public boolean enqueueMessage(
-            final DirectBuffer buffer, final int initialOffset, final int fullLength, final int messageOffset,
+            final DirectBuffer buffer, final int initialOffset, final int messageOffset,
             final int length)
         {
             if (this.length != 0)
@@ -153,14 +152,13 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
         final long connectionId,
         final DirectBuffer buffer,
         final int initialOffset,
-        final int fullLength,
         final int messageOffset,
         final int length)
     {
         final ReproductionTcpChannel channel = connectionIdToChannel.get(connectionId);
         if (channel != null)
         {
-            return channel.enqueueMessage(buffer, initialOffset, fullLength, messageOffset, length);
+            return channel.enqueueMessage(buffer, initialOffset, messageOffset, length);
         }
 
         return false;

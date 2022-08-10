@@ -1204,7 +1204,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onStartReproduction(final StartReproduction startReproduction)
     {
-        System.out.println("Framer.onStartReproduction");
         reproductionPoller.start(startReproduction, idToLibrary);
         schedule(reproductionPoller);
     }

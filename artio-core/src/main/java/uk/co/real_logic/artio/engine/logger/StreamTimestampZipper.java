@@ -72,7 +72,6 @@ public class StreamTimestampZipper implements AutoCloseable
         fragmentAssembler = new FragmentAssembler(logEntryHandler);
     }
 
-    // TODO: need a way of getting the STZ to poll at most 1 event
     public int poll(final int fragmentLimit)
     {
         int read = 0;
@@ -577,10 +576,10 @@ public class StreamTimestampZipper implements AutoCloseable
             final int blockLength = messageHeader.blockLength();
             final int version = messageHeader.version();
 
+            offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
             if (templateId == FixMessageDecoder.TEMPLATE_ID)
             {
-                offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
                 final FixMessageDecoder fixMessage = this.fixMessage;
                 fixMessage.wrap(buffer, offset, blockLength, version);
 
@@ -594,8 +593,6 @@ public class StreamTimestampZipper implements AutoCloseable
             }
             else if (templateId == FixPMessageDecoder.TEMPLATE_ID)
             {
-                offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
                 fixpMessage.wrap(buffer, offset, blockLength, version);
 
                 offset += FixPMessageDecoder.BLOCK_LENGTH;
@@ -604,11 +601,23 @@ public class StreamTimestampZipper implements AutoCloseable
             }
             else if (templateId == ConnectDecoder.TEMPLATE_ID)
             {
-                System.out.println("TODO: ConnectDecoder");
+                final ReproductionFixProtocolConsumer reproductionHandler = this.reproductionFixProtocolHandler;
+                if (reproductionHandler != null)
+                {
+                    final ConnectDecoder connect = this.connect;
+                    connect.wrap(buffer, offset, blockLength, version);
+                    reproductionHandler.onConnect(connect, buffer, start, length);
+                }
             }
             else if (templateId == ApplicationHeartbeatDecoder.TEMPLATE_ID)
             {
-                System.out.println("TODO: ApplicationHeartbeatDecoder");
+                final ReproductionFixProtocolConsumer reproductionHandler = this.reproductionFixProtocolHandler;
+                if (reproductionHandler != null)
+                {
+                    final ApplicationHeartbeatDecoder applicationHeartbeat = this.applicationHeartbeat;
+                    applicationHeartbeat.wrap(buffer, offset, blockLength, version);
+                    reproductionHandler.onApplicationHeartbeat(applicationHeartbeat, buffer, offset, length);
+                }
             }
         }
 
