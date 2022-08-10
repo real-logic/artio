@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Constants.TEST_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -41,6 +42,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
     public static final int MESSAGES_SENT = 3;
+    public static final String TEST_REQ_ID = "ABC";
 
     static class StashingMessageHandler implements ReproductionMessageHandler
     {
@@ -113,7 +115,7 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         testSystem.await("Haven't received messages", () ->
         {
             final List<FixMessage> messages = otfAcceptor.messages();
-            messages.removeIf(msg -> !NEW_ORDER_SINGLE_MESSAGE_AS_STR.equals(msg.msgType()));
+            messages.removeIf(msg -> !messageToCheck(msg));
             return messages.size() >= originalReceivedMessages.size();
         });
 
@@ -127,6 +129,12 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         // assertArrayEquals(sentPositions, reproPositions);
 
         testSystem.awaitCompletedReply(startReply);
+    }
+
+    private boolean messageToCheck(final FixMessage msg)
+    {
+        final String msgType = msg.msgType();
+        return NEW_ORDER_SINGLE_MESSAGE_AS_STR.equals(msgType) || TEST_REQUEST_MESSAGE_AS_STR.equals(msgType);
     }
 
     private List<String> stripTimesAndChecksums(final List<String> messages)
@@ -168,6 +176,13 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
                 connection.readExecutionReport(3);
                 sentMessages.add(connection.lastMessageAsString());
                 connection.readExecutionReport(4);
+                sentMessages.add(connection.lastMessageAsString());
+
+                connection.sendTestRequest(TEST_REQ_ID);
+                testSystem.await("Failed to send Heartbeat", () -> session.lastSentMsgSeqNum() >= 5);
+                originalReceivedMessages.add(
+                    testSystem.awaitMessageOf(otfAcceptor, TEST_REQUEST_MESSAGE_AS_STR));
+                connection.readHeartbeat(TEST_REQ_ID);
                 sentMessages.add(connection.lastMessageAsString());
 
                 testSystem.awaitSend(session::startLogout);
