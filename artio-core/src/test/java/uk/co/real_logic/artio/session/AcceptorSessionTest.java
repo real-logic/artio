@@ -62,6 +62,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
             disableHeartbeatRepliesToTestRequests,
+            true,
             new InternalSession.Formatters());
         acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.sessionProcessHandler(fixSessionOwner);
@@ -132,6 +133,16 @@ public class AcceptorSessionTest extends AbstractSessionTest
     public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
     {
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
+    }
+
+    @Test
+    public void shouldTakeForcedHeartbeatConfigurationIntoAccountWhenReplyingToLogon()
+    {
+        forcedHeartbeatIntervalInS = 5;
+
+        onLogon(1);
+
+        verifySendLogon(SEQUENCE_INDEX, false);
     }
 
     protected void readyForLogon()

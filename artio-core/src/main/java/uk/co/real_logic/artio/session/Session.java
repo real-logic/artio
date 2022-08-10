@@ -127,7 +127,9 @@ public class Session
     private final ResendRequestResponse resendRequestResponse = new ResendRequestResponse();
     private final ResendRequestController resendRequestController;
     private final int forcedHeartbeatIntervalInS;
+    private int configuredHeartbeatIntervalInS;
     private final boolean disableHeartbeatRepliesToTestRequests;
+    private boolean disconnectOnFirstMessageNotLogon;
 
     private final BooleanSupplier saveSeqIndexSyncFunc = this::saveSeqIndexSync;
     private final Formatters formatters;
@@ -223,6 +225,7 @@ public class Session
         final ResendRequestController resendRequestController,
         final int forcedHeartbeatIntervalInS,
         final boolean disableHeartbeatRepliesToTestRequests,
+        final boolean disconnectOnFirstMessageNotLogon,
         final Formatters formatters)
     {
         Verify.notNull(state, "session state");
@@ -255,6 +258,7 @@ public class Session
         this.inboundPublication = inboundPublication;
         this.customisationStrategy = customisationStrategy;
         this.connectionType = connectionType;
+        this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
         this.formatters = formatters;
 
         connectionId(connectionId);
@@ -955,10 +959,9 @@ public class Session
         else
         {
             final int sentSeqNum = 1;
-            final int heartbeatIntervalInS = (int)NANOSECONDS.toSeconds(heartbeatIntervalInNs);
             final long position = proxy.sendLogon(
                 sentSeqNum,
-                heartbeatIntervalInS,
+                configuredHeartbeatIntervalInS,
                 username(),
                 password(),
                 true,
@@ -1206,7 +1209,7 @@ public class Session
         final long position)
     {
         final SessionState state = state();
-        if (state == SessionState.CONNECTED)
+        if (state == SessionState.CONNECTED || (disconnectOnFirstMessageNotLogon && state == SENT_LOGON))
         {
             // Disconnect if the first message isn't a logon message
             return Pressure.apply(requestDisconnect(FIRST_MESSAGE_NOT_LOGON));
@@ -2224,6 +2227,7 @@ public class Session
 
     void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
+        this.configuredHeartbeatIntervalInS = heartbeatIntervalInS;
         this.heartbeatIntervalInNs = SECONDS.toNanos(
             forcedHeartbeatIntervalInS != NO_FORCED_HEARTBEAT_INTERVAL ? forcedHeartbeatIntervalInS :
             heartbeatIntervalInS);
@@ -2441,10 +2445,8 @@ public class Session
         int actions = 0;
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
-            state(SessionState.SENT_LOGON);
-            final int heartbeatIntervalInS = (int)(heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = initiatorResetSeqNum ? 1 : newSentSeqNum();
-            final long position = proxy.sendLogon(sentSeqNum, heartbeatIntervalInS,
+            final long position = proxy.sendLogon(sentSeqNum, configuredHeartbeatIntervalInS,
                 username(),
                 password(),
                 initiatorResetSeqNum,
@@ -2452,9 +2454,11 @@ public class Session
                 lastMsgSeqNumProcessed(),
                 cancelOnDisconnectOption,
                 getCancelOnDisconnectTimeoutWindowInMs());
+
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);
+                state(SessionState.SENT_LOGON);
             }
             actions++;
         }
@@ -2688,5 +2692,10 @@ public class Session
             replaysInFlight--;
         }
         resendRequestController.onResendComplete(this, replaysInFlight);
+    }
+
+    void disconnectOnFirstMessageNotLogon(final boolean disconnectOnFirstMessageNotLogon)
+    {
+        this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
     }
 }

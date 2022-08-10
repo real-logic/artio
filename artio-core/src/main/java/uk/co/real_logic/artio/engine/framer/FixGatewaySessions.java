@@ -196,6 +196,7 @@ public class FixGatewaySessions extends GatewaySessions
             resendRequestController,
             forcedHeartbeatIntervalInS,
             disableHeartbeatRepliesToTestRequests,
+            true,
             formatters);
 
         session.awaitingResend(awaitingResend);

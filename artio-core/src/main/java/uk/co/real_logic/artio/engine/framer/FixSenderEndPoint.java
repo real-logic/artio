@@ -294,11 +294,12 @@ class FixSenderEndPoint extends SenderEndPoint
         final int startPosition = buffer.position();
 
         ByteBufferUtil.limit(buffer, offset + messageSize);
-        ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
+        final int writePosition = reattemptBytesWritten + offset;
+        ByteBufferUtil.position(buffer, writePosition);
 
         final int written = channel.write(buffer);
         ByteBufferUtil.position(buffer, offset);
-        DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
+        DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, writePosition, written);
 
         buffer.limit(startLimit).position(startPosition);
 
@@ -306,7 +307,7 @@ class FixSenderEndPoint extends SenderEndPoint
     }
 
     private void enqueueMessage(
-        final DirectBuffer srcBuffer, final int srcOffst, final int bodyLength,
+        final DirectBuffer srcBuffer, final int srcOffset, final int bodyLength,
         final int metaDataOffset, final int metaDataLength, final int sequenceNumber, final boolean replay)
     {
         final int totalLength = ENQ_MESSAGE_BLOCK_LEN + bodyLength + metaDataLength;
@@ -324,7 +325,7 @@ class FixSenderEndPoint extends SenderEndPoint
         buffer.putInt(reattemptOffset, bodyLength);
         reattemptOffset += SIZE_OF_INT;
 
-        buffer.putBytes(reattemptOffset, srcBuffer, srcOffst, bodyLength);
+        buffer.putBytes(reattemptOffset, srcBuffer, srcOffset, bodyLength);
         reattemptOffset += bodyLength;
 
         buffer.putInt(reattemptOffset, metaDataLength);

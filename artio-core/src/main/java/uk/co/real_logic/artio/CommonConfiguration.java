@@ -341,10 +341,17 @@ public class CommonConfiguration
     }
 
     /**
-     * Set an interval for heartbeats, forcing an override of the logon message. This configuration option is useful
+     * Set an interval for heartbeats, forcing an override of the timeout agreement at the exchange of logon messages.
+     * This configuration option is useful
      * for testing the behaviour of other client's heartbeat behaviour, or for working around buggy counter-parties.
      * If you want to mostly disable heartbeats in order to test counter-parties then this can be set to a very long
-     * time period, for example a week (604800 seconds).
+     * time period, for example a week (604800 seconds). This configuration option doesn't alter the HeartBtInt (108)
+     * field value of the Logon message.
+     *
+     * See also the related {@link #disableHeartbeatRepliesToTestRequests(boolean)} option.
+     *
+     * Note this option should be set to the same value for connecting {@link EngineConfiguration} and
+     *  {@link uk.co.real_logic.artio.library.LibraryConfiguration} configurations.
      *
      * @param forcedHeartbeatIntervalInS the interval for heartbeats, forcing an override of the logon message.
      *                                  Specified in seconds.
@@ -359,6 +366,11 @@ public class CommonConfiguration
     /**
      * Disables heartbeats in response to test requests. This configuration option is useful
      * for testing the behaviour of other client's heartbeat behaviour or simulating disconnects.
+     *
+     * See also the related {@link #forcedHeartbeatIntervalInS(int)} option.
+     *
+     * Note this option should be set to the same value for connecting {@link EngineConfiguration} and
+     *  {@link uk.co.real_logic.artio.library.LibraryConfiguration} configurations.
      *
      * @param disableHeartbeatRepliesToTestRequests true to disable, false (the default) to respond to test requests.
      * @return this

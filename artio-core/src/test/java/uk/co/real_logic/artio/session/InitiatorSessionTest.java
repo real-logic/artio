@@ -24,7 +24,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.CommonConfiguration.*;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_RESEND_REQUEST_CONTROLLER;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -61,6 +62,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             DEFAULT_RESEND_REQUEST_CONTROLLER,
             forcedHeartbeatIntervalInS,
             disableHeartbeatRepliesToTestRequests,
+            true,
             new InternalSession.Formatters());
         session.fixDictionary(makeDictionary());
         session.sessionProcessHandler(fixSessionOwner);
@@ -76,7 +78,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldActivateUponLogonResponse()
     {
-        session().state(SENT_LOGON);
+        readyForLogon();
 
         assertEquals(CONTINUE, onLogon(1));
 
@@ -139,6 +141,34 @@ public class InitiatorSessionTest extends AbstractSessionTest
     public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
     {
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
+    }
+
+    @Test
+    public void shouldTakeForcedHeartbeatConfigurationIntoAccountWhenSendingInitialLogon()
+    {
+        forcedHeartbeatIntervalInS = 5;
+        session().id(SESSION_ID);
+
+        session().poll(0);
+
+        verifyLogon();
+
+        onLogon(1);
+        assertForcedHeartbeatInterval();
+    }
+
+    @Test
+    public void shouldDisconnectIfFirstMessageNotALogon()
+    {
+        session().id(SESSION_ID);
+        session().poll(0);
+
+        verifyLogon();
+
+        onMessage(1);
+
+        verifyDisconnect(times(1));
+        verifyNoFurtherMessages();
     }
 
     private void verifyLogon()
