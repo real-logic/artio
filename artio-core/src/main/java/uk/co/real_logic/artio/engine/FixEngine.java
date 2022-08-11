@@ -46,7 +46,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressin
  */
 public final class FixEngine extends GatewayProcess
 {
-    private static final Object CLOSE_MUTEX = new Object();
+    private final Object closeMutex = new Object();
 
     public static final int ENGINE_LIBRARY_ID = 0;
 
@@ -74,12 +74,7 @@ public final class FixEngine extends GatewayProcess
      */
     public static FixEngine launch(final EngineConfiguration configuration)
     {
-        synchronized (CLOSE_MUTEX)
-        {
-            configuration.conclude();
-
-            return new FixEngine(configuration).launch();
-        }
+        return new FixEngine(configuration);
     }
 
     /**
@@ -285,53 +280,58 @@ public final class FixEngine extends GatewayProcess
 
     private FixEngine(final EngineConfiguration configuration)
     {
-        try
+        synchronized (closeMutex)
         {
-            this.configuration = configuration;
-
-            duplicateEngineChecker = new DuplicateEngineChecker(
-                configuration.duplicateEngineTimeoutInMs(),
-                configuration.logFileDir(),
-                configuration.errorIfDuplicateEngineDetected());
-            duplicateEngineChecker.check();
-
-            scheduler = configuration.scheduler();
-            scheduler.configure(configuration.aeronContext());
-            init(configuration, ENGINE_LIBRARY_ID);
-            timers = new EngineTimers(configuration.epochNanoClock(), fixCounters.negativeTimestamps());
-            final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
-            final AeronArchive aeronArchive =
-                configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
-            recordingCoordinator = new RecordingCoordinator(
-                aeron,
-                aeronArchive,
-                configuration,
-                configuration.archiverIdleStrategy(),
-                errorHandler);
-
-            final ExclusivePublication replayPublication = replayPublication();
-            engineContext = new EngineContext(
-                configuration,
-                errorHandler,
-                replayPublication,
-                fixCounters,
-                aeron,
-                aeronArchive,
-                recordingCoordinator);
-            engineContext.catchupIndices();
-            initFramer(configuration, fixCounters, replayPublication.sessionId());
-            initMonitoringAgent(timers.all(), configuration, aeronArchive, duplicateEngineChecker);
-        }
-        catch (final Exception e)
-        {
-            if (engineContext != null)
+            try
             {
-                engineContext.completeDuringStartup();
+                configuration.conclude();
+                this.configuration = configuration;
+                duplicateEngineChecker = new DuplicateEngineChecker(
+                    configuration.duplicateEngineTimeoutInMs(),
+                    configuration.logFileDir(),
+                    configuration.errorIfDuplicateEngineDetected());
+                duplicateEngineChecker.check();
+
+                scheduler = configuration.scheduler();
+                scheduler.configure(configuration.aeronContext());
+                init(configuration, ENGINE_LIBRARY_ID);
+                timers = new EngineTimers(configuration.epochNanoClock(), fixCounters.negativeTimestamps());
+                final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
+                final AeronArchive aeronArchive =
+                    configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
+                recordingCoordinator = new RecordingCoordinator(
+                    aeron,
+                    aeronArchive,
+                    configuration,
+                    configuration.archiverIdleStrategy(),
+                    errorHandler);
+
+                final ExclusivePublication replayPublication = replayPublication();
+                engineContext = new EngineContext(
+                    configuration,
+                    errorHandler,
+                    replayPublication,
+                    fixCounters,
+                    aeron,
+                    aeronArchive,
+                    recordingCoordinator);
+                engineContext.catchupIndices();
+                initFramer(configuration, fixCounters, replayPublication.sessionId());
+                initMonitoringAgent(timers.all(), configuration, aeronArchive, duplicateEngineChecker);
+
+                launch();
             }
+            catch (final Exception e)
+            {
+                if (engineContext != null)
+                {
+                    engineContext.completeDuringStartup();
+                }
 
-            suppressingClose(this, e);
+                suppressingClose(this, e);
 
-            throw e;
+                throw e;
+            }
         }
     }
 
@@ -422,7 +422,7 @@ public final class FixEngine extends GatewayProcess
      */
     public void close()
     {
-        synchronized (CLOSE_MUTEX)
+        synchronized (closeMutex)
         {
             if (!isClosed)
             {
