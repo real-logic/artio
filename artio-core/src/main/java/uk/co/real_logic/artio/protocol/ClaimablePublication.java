@@ -78,6 +78,11 @@ public class ClaimablePublication implements AutoCloseable
                 idleStrategy.idle();
             }
 
+            if (position == CLOSED || position == MAX_POSITION_EXCEEDED)
+            {
+                throw new NotConnectedException(position);
+            }
+
             fails.increment();
             i++;
         }
@@ -85,14 +90,7 @@ public class ClaimablePublication implements AutoCloseable
 
         idleStrategy.reset();
 
-        if (position == CLOSED || position == MAX_POSITION_EXCEEDED)
-        {
-            throw new NotConnectedException(position);
-        }
-        else
-        {
-            return position;
-        }
+        return position;
     }
 
     public long offer(final DirectBuffer buffer, final int offset, final int length)
