@@ -17,11 +17,15 @@ package uk.co.real_logic.artio;
 
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static uk.co.real_logic.artio.engine.framer.ReproductionProtocolHandler.REPRO_DEBUG_ENABLED;
 
 public class ReproductionClock implements EpochNanoClock
 {
+    private final CharFormatter formatter = new CharFormatter("Clock.advance:old=%s,new=%s,back=%s");
+
     private static final long NS_IN_MS = MILLISECONDS.toNanos(1);
 
     private long timeInNs;
@@ -38,7 +42,19 @@ public class ReproductionClock implements EpochNanoClock
 
     public void advanceTimeTo(final long timeInNs)
     {
-        this.timeInNs = timeInNs;
+        final long oldTimeInNs = this.timeInNs;
+
+        if (REPRO_DEBUG_ENABLED)
+        {
+            DebugLogger.log(LogTag.REPRODUCTION,
+                formatter,
+                oldTimeInNs,
+                timeInNs,
+                oldTimeInNs > timeInNs ? "yes" : "no");
+        }
+
+        // It's possible for a new timestamp to be lower because heartbeats use cached timestamps
+        this.timeInNs = Math.max(oldTimeInNs, timeInNs);
     }
 
     public EpochClock toMillis()

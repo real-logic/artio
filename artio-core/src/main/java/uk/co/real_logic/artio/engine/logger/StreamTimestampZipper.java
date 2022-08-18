@@ -329,8 +329,7 @@ public class StreamTimestampZipper implements AutoCloseable
 
         void handledTimestamp(final long timestamp)
         {
-            // always >= previous timestamp.
-            maxHandledTimestamp = timestamp;
+            maxHandledTimestamp = Math.max(maxHandledTimestamp, timestamp);
         }
 
         void bufferedTimestamp(final long timestamp)
