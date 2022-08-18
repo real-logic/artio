@@ -127,7 +127,7 @@ public class GatewayPublication extends ClaimablePublication
     private static final int SEQ_INDEX_SYNC_LENGTH = HEADER_LENGTH + SeqIndexSyncEncoder.BLOCK_LENGTH;
 
     private static final boolean APPLICATION_HEARTBEAT_ATTEMPT_ENABLED = isEnabled(APPLICATION_HEARTBEAT_ATTEMPT);
-    private static final boolean APPLICATION_HEARTBEAT_ENABLED = isEnabled(APPLICATION_HEARTBEAT_ATTEMPT);
+    private static final boolean APPLICATION_HEARTBEAT_ENABLED = isEnabled(APPLICATION_HEARTBEAT);
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
