@@ -318,6 +318,8 @@ public final class FixEngine extends GatewayProcess
                 initFramer(configuration, fixCounters, replayPublication.sessionId());
                 initMonitoringAgent(timers.all(), configuration, aeronArchive, duplicateEngineChecker);
 
+                recordingCoordinator.monitoringAgent(monitoringAgent);
+
                 launch();
             }
             catch (final Exception e)
@@ -397,7 +399,7 @@ public final class FixEngine extends GatewayProcess
             errorHandler,
             framerContext.framer(),
             engineContext.indexingAgent(),
-            monitoringAgent,
+            monitoringCompositeAgent,
             conductorAgent(),
             recordingCoordinator);
 

@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 
-public class ErrorPrinter implements Agent
+public class ErrorPrinter implements MonitoringAgent
 {
     public static void main(final String[] args)
     {
@@ -50,14 +50,17 @@ public class ErrorPrinter implements Agent
                 lastObservationTimestampInMs);
         };
 
+    private volatile boolean archiverStopped = false;
+
     private final ErrorConsumer errorConsumer;
     private final EpochClock clock;
 
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
 
-    private long lastPollTimeInMs;
     private final AeronArchive aeronArchive;
+
+    private long lastPollTimeInMs;
 
     ErrorPrinter(
         final AtomicBuffer errorBuffer,
@@ -78,7 +81,7 @@ public class ErrorPrinter implements Agent
     public int doWork()
     {
         int work = 0;
-        if (aeronArchive != null)
+        if (aeronArchive != null && !archiverStopped)
         {
             String errorResponse;
 
@@ -92,7 +95,7 @@ public class ErrorPrinter implements Agent
                 errorResponse = e.getMessage();
             }
 
-            if (errorResponse != null)
+            if (errorResponse != null && !archiverStopped)
             {
                 System.err.println(errorResponse);
                 work++;
@@ -114,5 +117,12 @@ public class ErrorPrinter implements Agent
     public String roleName()
     {
         return agentNamePrefix + "Error Printer";
+    }
+
+    public void archiverStopped()
+    {
+        // This isn't completely thread-safe, but the only result of the race is that
+        // "ERROR - client is closed" can be unnecessarily printed out during shutdown
+        archiverStopped = true;
     }
 }

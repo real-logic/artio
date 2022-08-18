@@ -33,6 +33,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.MonitoringAgent;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 import uk.co.real_logic.artio.storage.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.MessageHeaderEncoder;
@@ -109,6 +110,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     private final RecordingIdLookup indexerOutboundLookup;
     private final File recordingIdsFile;
     private final ErrorHandler errorHandler;
+    private MonitoringAgent monitoringAgent;
 
     private final RecordingIds inboundRecordingIds = new RecordingIds();
     private final RecordingIds outboundRecordingIds = new RecordingIds();
@@ -132,9 +134,9 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         this.archive = archive;
         this.configuration = configuration;
         this.channel = configuration.libraryAeronChannel();
+        this.errorHandler = errorHandler;
 
         recordingIdsFile = recordingIdsFile(configuration);
-        this.errorHandler = errorHandler;
         outboundLocation = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
         loadRecordingIdsFile();
 
@@ -568,6 +570,10 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
         if (configuration.requiresAeronArchive())
         {
+            if (monitoringAgent != null)
+            {
+                monitoringAgent.archiverStopped();
+            }
             archive.close();
         }
     }
@@ -694,6 +700,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 ", used=" + used +
                 '}';
         }
+    }
+
+    void monitoringAgent(final MonitoringAgent monitoringAgent)
+    {
+        this.monitoringAgent = monitoringAgent;
     }
 
     public static class LibraryExtendPosition

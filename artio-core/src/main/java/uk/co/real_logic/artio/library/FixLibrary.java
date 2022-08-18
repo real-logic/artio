@@ -109,20 +109,20 @@ public class FixLibrary extends GatewayProcess
 
     private void closeAnythingHoldingFileHandles()
     {
-        if (monitoringAgent == null)
+        if (monitoringCompositeAgent == null)
         {
             monitoringFile.close();
         }
         else
         {
-            monitoringAgent.onClose();
+            monitoringCompositeAgent.onClose();
         }
     }
 
     private FixLibrary connect()
     {
         poller.startConnecting();
-        scheduler.launch(configuration, errorHandler, monitoringAgent, conductorAgent());
+        scheduler.launch(configuration, errorHandler, monitoringCompositeAgent, conductorAgent());
         return this;
     }
 

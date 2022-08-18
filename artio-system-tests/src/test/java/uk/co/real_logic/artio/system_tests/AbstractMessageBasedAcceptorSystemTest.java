@@ -180,6 +180,7 @@ public class AbstractMessageBasedAcceptorSystemTest
         if (enableReproduction)
         {
             config.reproduceInbound(startInNs, endInNs);
+            config.agentNamePrefix("Reproduction");
         }
 
         config.bindAtStartup(shouldBind);

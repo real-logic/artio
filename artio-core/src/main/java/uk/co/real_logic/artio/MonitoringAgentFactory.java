@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.archive.client.AeronArchive;
-import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.errors.DistinctErrorLog;
@@ -68,7 +67,7 @@ public interface MonitoringAgentFactory
         return null;
     }
 
-    Agent make(
+    MonitoringAgent make(
         AtomicBuffer errorBuffer,
         String agentNamePrefix,
         AeronArchive aeronArchive);

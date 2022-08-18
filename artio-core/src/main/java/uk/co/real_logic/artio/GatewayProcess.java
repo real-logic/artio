@@ -46,7 +46,8 @@ public abstract class GatewayProcess implements AutoCloseable
     protected FixCounters fixCounters;
     protected ErrorHandler errorHandler;
     protected Aeron aeron;
-    protected Agent monitoringAgent;
+    protected MonitoringAgent monitoringAgent;
+    protected Agent monitoringCompositeAgent;
 
     protected void init(final CommonConfiguration configuration, final int libraryId)
     {
@@ -124,10 +125,11 @@ public abstract class GatewayProcess implements AutoCloseable
         final MonitoringAgentFactory monitoringAgentFactory = configuration.monitoringAgentFactory();
         if (monitoringAgentFactory != null)
         {
-            agents.add(monitoringAgentFactory.make(
+            monitoringAgent = monitoringAgentFactory.make(
                 monitoringFile.errorBuffer(),
                 configuration.agentNamePrefix(),
-                aeronArchive));
+                aeronArchive);
+            agents.add(monitoringAgent);
         }
 
         if (agent != null)
@@ -137,7 +139,7 @@ public abstract class GatewayProcess implements AutoCloseable
 
         if (!agents.isEmpty())
         {
-            this.monitoringAgent = new CompositeAgent(agents);
+            this.monitoringCompositeAgent = new CompositeAgent(agents);
         }
     }
 
