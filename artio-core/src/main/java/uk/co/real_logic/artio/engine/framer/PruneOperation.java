@@ -41,6 +41,9 @@ import static uk.co.real_logic.artio.LogTag.STATE_CLEANUP;
 public class PruneOperation
     implements ReplayerCommand, Reply<Long2LongHashMap>, RecordingDescriptorConsumer, AdminCommand
 {
+
+    public static final boolean STATE_CLEANUP_ENABLED = DebugLogger.isEnabled(STATE_CLEANUP);
+
     public static class Formatters
     {
         private final CharFormatter findingPositionsFormatter = new CharFormatter(
@@ -48,7 +51,8 @@ public class PruneOperation
         private final CharFormatter foundPositionsFormatter = new CharFormatter(
             "PruneOperation: complete recordingIdToNewStartPosition=%s");
         private final CharFormatter filteredRecordingFormatter = new CharFormatter(
-            "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s");
+            "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s" +
+            ",segmentFileLength=%s,requestedNewStartPosition=%s,startPosition=%s");
     }
 
     private final Formatters formatters;
@@ -69,6 +73,8 @@ public class PruneOperation
     private long requestedNewStartPosition;
     private long segmentStartPosition;
     private long lowerBoundPrunePosition;
+    private int stashedSegmentFileLength;
+    private long stashedStartPosition;
 
     public PruneOperation(final Formatters formatters, final Exception error)
     {
@@ -141,7 +147,7 @@ public class PruneOperation
 
     private void findAllRecordingPositions()
     {
-        if (DebugLogger.isEnabled(STATE_CLEANUP))
+        if (STATE_CLEANUP_ENABLED)
         {
             final CharFormatter formatter = formatters.findingPositionsFormatter
                 .clear()
@@ -176,7 +182,7 @@ public class PruneOperation
             }
         }
 
-        if (DebugLogger.isEnabled(STATE_CLEANUP))
+        if (STATE_CLEANUP_ENABLED)
         {
             final CharFormatter formatter = formatters.foundPositionsFormatter
                 .clear()
@@ -212,8 +218,19 @@ public class PruneOperation
                 // Don't prune if you're < a segment away from the start of the stream.
                 if (segmentStartPosition < lowerBoundPrunePosition)
                 {
-                    DebugLogger.log(STATE_CLEANUP, formatters.filteredRecordingFormatter,
-                        recordingId, segmentStartPosition, lowerBoundPrunePosition);
+                    if (STATE_CLEANUP_ENABLED)
+                    {
+                        formatters.filteredRecordingFormatter
+                            .clear()
+                            .with(recordingId)
+                            .with(segmentStartPosition)
+                            .with(lowerBoundPrunePosition)
+                            .with(stashedSegmentFileLength)
+                            .with(requestedNewStartPosition)
+                            .with(stashedStartPosition);
+                        DebugLogger.log(STATE_CLEANUP, formatters.filteredRecordingFormatter);
+                    }
+
                     it.remove();
                 }
                 else
@@ -252,6 +269,8 @@ public class PruneOperation
             startPosition, requestedNewStartPosition, termBufferLength, segmentFileLength);
         lowerBoundPrunePosition = segmentFileBasePosition(
             startPosition, startPosition, termBufferLength, segmentFileLength) + segmentFileLength;
+        stashedSegmentFileLength = segmentFileLength;
+        stashedStartPosition = startPosition;
     }
 
     private void onPruneError(final Exception e, final Long2LongHashMap.EntryIterator it)
