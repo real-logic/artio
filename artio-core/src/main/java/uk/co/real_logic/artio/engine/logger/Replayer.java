@@ -30,6 +30,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;
@@ -47,6 +48,7 @@ import java.util.List;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
@@ -194,6 +196,11 @@ public class Replayer extends AbstractReplayer
                 final int sequenceIndex = validResendRequest.sequenceIndex();
                 final long correlationId = validResendRequest.correlationId();
                 validResendRequest.wrapBody(asciiBuffer);
+
+                if (IS_REPLAY_LOG_TAG_ENABLED)
+                {
+                    DebugLogger.logSbeDecoder(REPLAY, "Replayer:", validResendRequestAppendTo);
+                }
 
                 return onResendRequest(
                     sessionId, connectionId, correlationId, beginSeqNo, endSeqNo, sequenceIndex, asciiBuffer);
