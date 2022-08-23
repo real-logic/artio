@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.collections.IntArrayList;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
@@ -43,6 +44,8 @@ import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.LogTag.REPRODUCTION_TEST;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
+import static uk.co.real_logic.artio.system_tests.DebugTcpChannelSupplier.NULL_WRITE_BYTES;
+import static uk.co.real_logic.artio.system_tests.DebugTcpChannelSupplier.WRITE_MAX;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
@@ -50,6 +53,10 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
     public static final int MESSAGES_SENT = 3;
 
     public static final String TEST_REQ_ID = "ABC";
+
+    private static final int[] MAX_BYTES_TO_WRITE_ARR = { WRITE_MAX, 50, 50, 16 };
+    private static final IntArrayList MAX_BYTES_TO_WRITE = new IntArrayList(
+        MAX_BYTES_TO_WRITE_ARR, MAX_BYTES_TO_WRITE_ARR.length, NULL_WRITE_BYTES);
 
     static class StashingMessageHandler implements ReproductionMessageHandler
     {
@@ -138,7 +145,7 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
 
         final List<String> reproSentMessages = messageStash.messages();
         testSystem.await("Failed to receive messages", () ->
-            reproSentMessages.size() >= (MESSAGES_SENT + 2) + (2 + MESSAGES_SENT + 2));
+            reproSentMessages.size() >= (MESSAGES_SENT + 1 + 2) + (2 + MESSAGES_SENT + 2));
 
         assertEquals(stripTimesAndChecksums(sentMessages), stripTimesAndChecksums(reproSentMessages));
         // Do we actually need this?
@@ -208,7 +215,9 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
     {
         try
         {
+            optionalTcpChannelSupplierFactory = ec -> new DebugTcpChannelSupplier(ec, MAX_BYTES_TO_WRITE);
             setup(false, true);
+            optionalTcpChannelSupplierFactory = null;
             setupLibrary();
 
             DebugLogger.log(REPRODUCTION_TEST, "Start of scenario creation");
@@ -305,4 +314,34 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         connection.logout();
         assertSessionDisconnected(testSystem, session);
     }
+
+    // Write lengths in un-backpressured test:
+    // 1661269610028:main[REPRODUCTION_TEST]Start of scenario creation
+    //src.remaining() = 116
+    //written = 116
+    //src.remaining() = 116
+    //written = 116
+    //src.remaining() = 116
+    //written = 116
+    //src.remaining() = 116
+    //written = 116
+    //src.remaining() = 90
+    //written = 90
+    //src.remaining() = 82
+    //written = 82
+    //1661269610106:main[REPRODUCTION_TEST]Reconnecting for Replay
+    //src.remaining() = 116
+    //written = 116
+    //src.remaining() = 98
+    //written = 98
+    //src.remaining() = 148
+    //written = 148
+    //src.remaining() = 148
+    //written = 148
+    //src.remaining() = 148
+    //written = 148
+    //src.remaining() = 98
+    //written = 98
+    //src.remaining() = 82
+    //written = 82
 }

@@ -27,12 +27,15 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
+import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
+
+import java.util.function.Function;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
@@ -70,6 +73,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     FixLibrary library;
     TestSystem testSystem;
     Session session;
+    Function<EngineConfiguration, TcpChannelSupplier> optionalTcpChannelSupplierFactory;
 
     boolean printErrors = false;
 
@@ -165,6 +169,11 @@ public class AbstractMessageBasedAcceptorSystemTest
         if (optionalAuthStrategy != null)
         {
             config.authenticationStrategy(optionalAuthStrategy);
+        }
+
+        if (optionalTcpChannelSupplierFactory != null)
+        {
+            config.channelSupplierFactory(optionalTcpChannelSupplierFactory);
         }
 
         if (enableThrottle)

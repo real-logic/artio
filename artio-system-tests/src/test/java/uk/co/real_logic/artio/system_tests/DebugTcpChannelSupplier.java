@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannel;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
@@ -22,6 +23,7 @@ import uk.co.real_logic.artio.engine.framer.TcpChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
@@ -30,20 +32,32 @@ import java.util.ArrayList;
  */
 public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
 {
+    public static final int WRITE_MAX = -1;
+    public static final int NULL_WRITE_BYTES = Integer.MIN_VALUE;
+
     private final ArrayList<TcpChannel> channels = new ArrayList<>();
     private boolean isEnabled = true;
 
     private final ArrayList<Runnable> pausedOperations = new ArrayList<>();
     private volatile boolean connectsPaused = false;
 
+    private final IntArrayList bytesToBeWritten;
+    private int index;
+
     public DebugTcpChannelSupplier(final EngineConfiguration configuration)
     {
+        this(configuration, new IntArrayList());
+    }
+
+    public DebugTcpChannelSupplier(final EngineConfiguration configuration, final IntArrayList bytesToBeWritten)
+    {
         super(configuration);
+        this.bytesToBeWritten = bytesToBeWritten;
     }
 
     protected synchronized TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
-        final TcpChannel tcpChannel = new DefaultTcpChannel(channel);
+        final TcpChannel tcpChannel = new DebugTcpChannel(channel);
         channels.add(tcpChannel);
         return tcpChannel;
     }
@@ -129,6 +143,52 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         else
         {
             // Deliberately blank - black hole the connection
+        }
+    }
+
+    class DebugTcpChannel extends DefaultTcpChannel
+    {
+        private int remaining;
+
+        DebugTcpChannel(final SocketChannel socketChannel) throws IOException
+        {
+            super(socketChannel);
+        }
+
+        public int write(final ByteBuffer src) throws IOException
+        {
+            final IntArrayList maxBytesToBeWritten = DebugTcpChannelSupplier.this.bytesToBeWritten;
+            if (index < maxBytesToBeWritten.size())
+            {
+                // Fake back-pressured TCP writes for testing purposes.
+                int bytesToWrite = maxBytesToBeWritten.getInt(index);
+                /*System.out.println("index = " + index + ", maxBytesToWrite = " + bytesToWrite
+                    + ", remaining = " + remaining);*/
+                if (bytesToWrite == WRITE_MAX)
+                {
+                    bytesToWrite = src.remaining();
+                }
+                if (remaining == 0)
+                {
+                    // first write
+                    remaining = src.remaining() - bytesToWrite;
+                    super.write(src);
+                }
+                else if (remaining < bytesToWrite)
+                {
+                    // Invariant failed, bug in our code
+                    throw new RuntimeException("Failed to write bytes: " + remaining + " < " + bytesToWrite);
+                }
+                else
+                {
+                    // Fake some bp for the remaining writes.
+                    remaining -= bytesToWrite;
+                }
+                index++;
+                return bytesToWrite;
+            }
+
+            return super.write(src);
         }
     }
 }
