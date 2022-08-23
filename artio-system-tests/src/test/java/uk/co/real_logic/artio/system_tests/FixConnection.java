@@ -313,6 +313,13 @@ public final class FixConnection implements AutoCloseable
         return executionReport;
     }
 
+    public ExecutionReportDecoder readResentExecutionReport(final int msgSeqNum)
+    {
+        final ExecutionReportDecoder executionReport = readExecutionReport(msgSeqNum);
+        assertTrue(executionReport.header().possDupFlag());
+        return executionReport;
+    }
+
     public <T extends Decoder> T readMessage(final T decoder)
     {
         try

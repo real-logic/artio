@@ -30,7 +30,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.FixThrottleRejectBuilder;

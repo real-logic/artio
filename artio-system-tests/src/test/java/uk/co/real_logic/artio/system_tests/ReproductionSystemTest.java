@@ -16,11 +16,14 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Side;
+import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
 import uk.co.real_logic.artio.engine.framer.ReproductionProtocolHandler;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
@@ -34,9 +37,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.Constants.NEW_ORDER_SINGLE_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.Constants.TEST_REQUEST_MESSAGE_AS_STR;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.LogTag.REPRODUCTION_TEST;
 import static uk.co.real_logic.artio.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -44,6 +48,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
     public static final int MESSAGES_SENT = 3;
+
     public static final String TEST_REQ_ID = "ABC";
 
     static class StashingMessageHandler implements ReproductionMessageHandler
@@ -55,6 +60,7 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
             final byte[] stashed = new byte[bytes.remaining()];
             bytes.get(stashed);
             final String message = new String(stashed, StandardCharsets.US_ASCII);
+            // System.out.println("message = " + message);
             messages.add(message);
         }
 
@@ -80,27 +86,6 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         }
     }
 
-    @Test
-    public void shouldReproduceMessageExchange() throws IOException
-    {
-        final Counter counter = new Counter();
-        ReproductionProtocolHandler.countHandler = counter;
-        printErrors = true;
-
-        final ReportFactory reportFactory = new ReportFactory();
-        final List<FixMessage> originalReceivedMessages = new ArrayList<>();
-        final long[] sentPositions = new long[MESSAGES_SENT];
-        final List<String> sentMessages = new ArrayList<>();
-
-        final long startInNs = nanoClock.nanoTime();
-        createScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages);
-        final long endInNs = nanoClock.nanoTime();
-
-        reproduceScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages, startInNs, endInNs);
-
-        counter.verify();
-    }
-
     private void reproduceScenario(
         final ReportFactory reportFactory,
         final List<FixMessage> originalReceivedMessages,
@@ -108,6 +93,8 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         final List<String> sentMessages,
         final long startInNs, final long endInNs)
     {
+        DebugLogger.log(REPRODUCTION_TEST, "Start of scenario reproduction");
+
         final StashingMessageHandler messageStash = new StashingMessageHandler();
         reproductionMessageHandler = messageStash;
 
@@ -129,34 +116,81 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         final Reply<?> startReply = engine.startReproduction();
 
         final Session session = acquireSession(0, CURRENT_SEQUENCE);
-        assertEquals(1, session.id());
+        assertSessionId(session);
         final CompositeKey compositeKey = session.compositeKey();
         assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
         assertEquals(ACCEPTOR_ID, compositeKey.localCompId());
 
-        testSystem.await("Haven't received messages", () ->
-        {
-            final List<FixMessage> messages = otfAcceptor.messages();
-            messages.removeIf(msg -> !messageToCheck(msg));
-            return messages.size() >= originalReceivedMessages.size();
-        });
+        awaitDisconnect(session);
 
-        assertEquals(originalReceivedMessages, otfAcceptor.messages());
+        DebugLogger.log(REPRODUCTION_TEST, "End of first session logon");
+
+        final Session reconnectedSession = acquireSession(6, CURRENT_SEQUENCE);
+        DebugLogger.log(REPRODUCTION_TEST, "Session reconnected");
+        assertSessionId(reconnectedSession);
+        awaitDisconnect(reconnectedSession);
+        DebugLogger.log(REPRODUCTION_TEST, "End of reconnected session");
+
+        final List<FixMessage> messages = otfAcceptor.messages();
+        messages.removeIf(msg -> !messageToCheck(msg));
+        assertEquals(toString(originalReceivedMessages) + " vs " + toString(messages),
+            originalReceivedMessages, messages);
 
         final List<String> reproSentMessages = messageStash.messages();
-        testSystem.await("Failed to receive messages", () -> reproSentMessages.size() >= MESSAGES_SENT + 2);
+        testSystem.await("Failed to receive messages", () ->
+            reproSentMessages.size() >= (MESSAGES_SENT + 2) + (2 + MESSAGES_SENT + 2));
 
         assertEquals(stripTimesAndChecksums(sentMessages), stripTimesAndChecksums(reproSentMessages));
         // Do we actually need this?
         // assertArrayEquals(sentPositions, reproPositions);
 
         testSystem.awaitCompletedReply(startReply);
+
+        DebugLogger.log(REPRODUCTION_TEST, "End of scenario reproduction");
+    }
+
+    @Test
+    public void shouldReproduceMessageExchange() throws IOException
+    {
+        final Counter counter = new Counter();
+        ReproductionProtocolHandler.countHandler = counter;
+        printErrors = true;
+
+        final ReportFactory reportFactory = new ReportFactory();
+        final List<FixMessage> originalReceivedMessages = new ArrayList<>();
+        final long[] sentPositions = new long[MESSAGES_SENT];
+        final List<String> sentMessages = new ArrayList<>();
+
+        final long startInNs = nanoClock.nanoTime();
+        createScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages);
+        final long endInNs = nanoClock.nanoTime();
+
+        reproduceScenario(reportFactory, originalReceivedMessages, sentPositions, sentMessages, startInNs, endInNs);
+
+        counter.verify();
+    }
+
+    private String toString(final List<?> values)
+    {
+        return values.stream().map(Object::toString).collect(Collectors.joining(", \n", "[", "]"));
+    }
+
+    private void assertSessionId(final Session reconnectedSession)
+    {
+        assertEquals(1, reconnectedSession.id());
+    }
+
+    private void awaitDisconnect(final Session session)
+    {
+        testSystem.await("Failed to disconnect", () -> session.state() == SessionState.DISCONNECTED);
     }
 
     private boolean messageToCheck(final FixMessage msg)
     {
         final String msgType = msg.msgType();
-        return NEW_ORDER_SINGLE_MESSAGE_AS_STR.equals(msgType) || TEST_REQUEST_MESSAGE_AS_STR.equals(msgType);
+        return NEW_ORDER_SINGLE_MESSAGE_AS_STR.equals(msgType) ||
+            TEST_REQUEST_MESSAGE_AS_STR.equals(msgType) ||
+            RESEND_REQUEST_MESSAGE_AS_STR.equals(msgType);
     }
 
     private List<String> stripTimesAndChecksums(final List<String> messages)
@@ -176,6 +210,8 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         {
             setup(false, true);
             setupLibrary();
+
+            DebugLogger.log(REPRODUCTION_TEST, "Start of scenario creation");
 
             try (FixConnection connection = FixConnection.initiate(port))
             {
@@ -207,12 +243,49 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
                 connection.readHeartbeat(TEST_REQ_ID);
                 sentMessages.add(connection.lastMessageAsString());
 
-                testSystem.awaitSend(session::startLogout);
-                connection.readLogout();
-                sentMessages.add(connection.lastMessageAsString());
-                connection.logout();
-                assertSessionDisconnected(testSystem, session);
+                logoutAndDisconnect(sentMessages, connection, session);
             }
+
+            DebugLogger.log(REPRODUCTION_TEST, "Reconnecting for Replay");
+            otfAcceptor.messages().clear();
+
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                connection.msgSeqNum(7).logon(false);
+
+                final LogonDecoder logon = connection.readLogon();
+                sentMessages.add(connection.lastMessageAsString());
+
+                assertFalse(logon.resetSeqNumFlag());
+                assertEquals(7, logon.header().msgSeqNum());
+
+                final Session session = acquireSession();
+
+                // Perform resend request
+                testSystem.awaitBlocking(() -> connection.sendResendRequest(1, 0));
+                originalReceivedMessages.add(testSystem.awaitMessageOf(otfAcceptor, RESEND_REQUEST_MESSAGE_AS_STR));
+                testSystem.awaitBlocking(() ->
+                {
+                    connection.readSequenceResetGapFill(2);
+                    sentMessages.add(connection.lastMessageAsString());
+
+                    connection.readResentExecutionReport(2);
+                    sentMessages.add(connection.lastMessageAsString());
+
+                    connection.readResentExecutionReport(3);
+                    sentMessages.add(connection.lastMessageAsString());
+
+                    connection.readResentExecutionReport(4);
+                    sentMessages.add(connection.lastMessageAsString());
+
+                    connection.readSequenceResetGapFill(8); // Heartbeat, Logoff, Logon
+                    sentMessages.add(connection.lastMessageAsString());
+                });
+
+                logoutAndDisconnect(sentMessages, connection, session);
+            }
+
+            DebugLogger.log(REPRODUCTION_TEST, "End of scenario creation");
 
             libraryId = library.libraryId();
         }
@@ -221,5 +294,15 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
             teardownArtio();
             closeMediaDriver(mediaDriver);
         }
+    }
+
+    private void logoutAndDisconnect(
+        final List<String> sentMessages, final FixConnection connection, final Session session)
+    {
+        testSystem.awaitSend(session::startLogout);
+        connection.readLogout();
+        sentMessages.add(connection.lastMessageAsString());
+        connection.logout();
+        assertSessionDisconnected(testSystem, session);
     }
 }

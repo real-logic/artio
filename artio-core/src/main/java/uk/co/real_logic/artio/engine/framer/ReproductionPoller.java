@@ -114,7 +114,6 @@ class ReproductionPoller implements Continuation
                 return Publication.BACK_PRESSURED;
             }
 
-
             protocolHandler.resetCount();
             final boolean complete = archiveScanningAgent.poll(1);
             protocolHandler.checkCount(1);

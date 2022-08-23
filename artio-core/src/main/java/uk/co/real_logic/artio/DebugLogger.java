@@ -41,7 +41,8 @@ public final class DebugLogger
     private static final AbstractDebugAppender APPENDER;
     private static final ThreadLocal<ThreadLocalLogger> THREAD_LOCAL = ThreadLocal.withInitial(ThreadLocalLogger::new);
 
-    public static final boolean IS_REPLAY_LOG_TAG_ENABLED = DebugLogger.isEnabled(LogTag.REPLAY);
+    public static final boolean IS_REPLAY_LOG_TAG_ENABLED = isEnabled(LogTag.REPLAY);
+    public static final boolean IS_REPLAY_ATTEMPT_ENABLED = isEnabled(LogTag.REPLAY_ATTEMPT);
 
     static
     {

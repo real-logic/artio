@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.ArtioLogHeader;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.ReproductionClock;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.logger.ReproductionFixProtocolConsumer;
 import uk.co.real_logic.artio.messages.ApplicationHeartbeatDecoder;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
@@ -82,6 +83,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
                 "ReproductionProtocolHandler.onMessage: ", buffer, offset, length);
         }
         startOperation();
+        final long messageType = message.messageType();
         clock.advanceTimeTo(message.timestamp());
         validateLibraryId(message.libraryId());
 
@@ -89,7 +91,9 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         final int fullLength = (offset + length) - initialOffset;
         final int messageOffset = offset - initialOffset;
         final long connectionId = message.connection();
-        if (!tcpChannelSupplier.enqueueMessage(connectionId, buffer, initialOffset, messageOffset, length))
+        if (!tcpChannelSupplier.enqueueMessage(
+            connectionId, buffer, initialOffset, messageOffset, length,
+            messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE))
         {
             System.err.println("FAILURE - What has happened?");
         }

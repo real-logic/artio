@@ -25,9 +25,11 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_ATTEMPT_ENABLED;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -50,6 +53,11 @@ public class ReplayQuery implements AutoCloseable
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
+
+    private final CharFormatter startQueryFormatter = new CharFormatter("ReplayQuery:query," +
+        "beginSequenceNumber=%s,beginSequenceIndex=%s,endSequenceNumber=%s,endSequenceIndex=%s");
+    private final CharFormatter onRowFormatter = new CharFormatter("ReplayQuery:onRow," +
+        "beginPosition=%s,recordingId=%s,sequenceNumber=%s,sequenceIndex=%s");
 
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
     private final Long2ObjectCache<SessionQuery> fixSessionToIndex;
@@ -190,6 +198,13 @@ public class ReplayQuery implements AutoCloseable
             final LogTag logTag,
             final MessageTracker messageTracker)
         {
+            final boolean log = IS_REPLAY_ATTEMPT_ENABLED && logTag == LogTag.REPLAY;
+            if (log)
+            {
+                DebugLogger.log(LogTag.REPLAY_ATTEMPT, startQueryFormatter,
+                    beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+            }
+
             final UnsafeBuffer[] segmentBuffers = this.segmentBuffers;
             final int segmentSize = ReplayQuery.this.segmentSize;
             final int segmentSizeBitShift = ReplayQuery.this.segmentSizeBitShift;
@@ -236,6 +251,12 @@ public class ReplayQuery implements AutoCloseable
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
+                if (log)
+                {
+                    DebugLogger.log(LogTag.REPLAY_ATTEMPT, onRowFormatter,
+                        beginPosition, recordingId, sequenceNumber, sequenceIndex);
+                }
+
                 // if the block was read atomically with no updates
                 if (changePosition == beginChangeVolatile(headerBuffer))
                 {
@@ -253,13 +274,8 @@ public class ReplayQuery implements AutoCloseable
                     if (withinQueryRange)
                     {
                         currentRange = addRange(
-                            ranges,
-                            currentRange,
-                            lastSequenceNumber,
-                            beginPosition,
-                            sequenceNumber,
-                            recordingId,
-                            readLength);
+                            ranges, currentRange, lastSequenceNumber, beginPosition, sequenceNumber,
+                            recordingId, readLength);
                         lastSequenceNumber = sequenceNumber;
                         iteratorPosition += RECORD_LENGTH;
                     }

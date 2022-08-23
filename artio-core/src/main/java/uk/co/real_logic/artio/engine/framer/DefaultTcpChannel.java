@@ -70,4 +70,8 @@ public class DefaultTcpChannel extends TcpChannel
             }
         }
     }
+
+    public void onReplayComplete(final long correlationId)
+    {
+    }
 }

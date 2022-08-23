@@ -645,6 +645,8 @@ class FixSenderEndPoint extends SenderEndPoint
         else
         {
             replaying(false, correlationId);
+
+            channel.onReplayComplete(correlationId);
         }
 
         return CONTINUE;

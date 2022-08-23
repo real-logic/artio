@@ -146,9 +146,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
     public String toString()
     {
-        return "FixMessage{" +
-            "session=" + session +
-            ", sequenceIndex=" + sequenceIndex +
+        return "FixMessage{sequenceIndex=" + sequenceIndex +
             ", status=" + status +
             ", valid=" + valid +
             ", " + super.toString() +

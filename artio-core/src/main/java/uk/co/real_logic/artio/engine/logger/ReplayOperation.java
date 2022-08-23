@@ -72,7 +72,6 @@ public class ReplayOperation
         () -> new CharFormatter("ReplayOperation:POLL_IMAGE_CLOSING: - id=%s"));
     private static final ThreadLocal<CharFormatter> CLOSED_FORMATTER = ThreadLocal.withInitial(
         () -> new CharFormatter("ReplayOperation:CLOSED - id=%s"));
-    private static final boolean IS_REPLAY_ATTEMPT_ENABLED = DebugLogger.isEnabled(LogTag.REPLAY_ATTEMPT);
 
     private final MessageTracker messageTracker;
     private final ControlledFragmentAssembler assembler;
@@ -314,7 +313,7 @@ public class ReplayOperation
         }
         else
         {
-            if (IS_REPLAY_ATTEMPT_ENABLED)
+            if (DebugLogger.IS_REPLAY_ATTEMPT_ENABLED)
             {
                 DebugLogger.log(LogTag.REPLAY_ATTEMPT, POLLING_REPLAY_FORMATTER.get().clear().with(image.position()));
             }
@@ -345,7 +344,7 @@ public class ReplayOperation
 
     private boolean attemptAcquireImage()
     {
-        if (IS_REPLAY_ATTEMPT_ENABLED)
+        if (DebugLogger.IS_REPLAY_ATTEMPT_ENABLED)
         {
             DebugLogger.log(LogTag.REPLAY_ATTEMPT, "Acquiring Replay Image");
         }

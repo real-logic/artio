@@ -113,7 +113,9 @@ public enum LogTag
      */
     ARCHIVE_SCAN,
 
-    REPRODUCTION;
+    REPRODUCTION,
+
+    REPRODUCTION_TEST;
 
     private final char[] logStr;
 

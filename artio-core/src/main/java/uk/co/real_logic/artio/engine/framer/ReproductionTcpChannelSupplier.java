@@ -56,6 +56,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
         private final long connectionId;
 
         private int length;
+        private boolean isResendRequest;
 
         ReproductionTcpChannel(final long connectionId) throws IOException
         {
@@ -83,7 +84,10 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             {
                 reproductionBuffer.getBytes(0, dst, length);
                 this.length = 0;
-                endOperation.run();
+                if (!isResendRequest)
+                {
+                    endOperation.run();
+                }
                 return length;
             }
 
@@ -94,9 +98,15 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
         {
         }
 
+        public void onReplayComplete(final long correlationId)
+        {
+            endOperation.run();
+        }
+
         public boolean enqueueMessage(
             final DirectBuffer buffer, final int initialOffset, final int messageOffset,
-            final int length)
+            final int length,
+            final boolean isResendRequest)
         {
             if (this.length != 0)
             {
@@ -104,6 +114,7 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             }
 
             reproductionBuffer.putBytes(0, buffer, initialOffset + messageOffset, length);
+            this.isResendRequest = isResendRequest;
             this.length = length;
             return true;
         }
@@ -153,12 +164,13 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
         final DirectBuffer buffer,
         final int initialOffset,
         final int messageOffset,
-        final int length)
+        final int length,
+        final boolean isResendRequest)
     {
         final ReproductionTcpChannel channel = connectionIdToChannel.get(connectionId);
         if (channel != null)
         {
-            return channel.enqueueMessage(buffer, initialOffset, messageOffset, length);
+            return channel.enqueueMessage(buffer, initialOffset, messageOffset, length, isResendRequest);
         }
 
         return false;

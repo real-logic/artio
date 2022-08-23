@@ -29,6 +29,8 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.function.Consumer;
+
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -45,6 +47,8 @@ abstract class AbstractReplayer implements Agent, ControlledFragmentHandler
     final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     final ValidResendRequestDecoder validResendRequest = new ValidResendRequestDecoder();
     final StartReplayEncoder startReplayEncoder = new StartReplayEncoder();
+
+    final Consumer<StringBuilder> validResendRequestAppendTo = validResendRequest::appendTo;
 
     // Safe to share between multiple ReplayerSession instances due to single threaded nature of the Replayer
     final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
