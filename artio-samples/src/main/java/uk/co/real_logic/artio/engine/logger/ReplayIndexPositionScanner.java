@@ -2,6 +2,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 
@@ -56,7 +57,8 @@ public final class ReplayIndexPositionScanner
                 System.out.println("file = " + headerFile);
                 System.out.println("positionExtractor.highestSequenceIndex() = " +
                     positionExtractor.highestSequenceIndex());
-                final Long2LongHashMap recordingIdToStartPosition = positionExtractor.recordingIdToStartPosition();
+                final Long2ObjectHashMap<PrunePosition> recordingIdToStartPosition =
+                    positionExtractor.recordingIdToStartPosition();
                 System.out.println("positionExtractor.recordingIdToStartPosition() = " +
                     recordingIdToStartPosition);
 

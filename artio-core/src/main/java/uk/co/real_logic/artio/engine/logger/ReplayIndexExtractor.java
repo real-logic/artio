@@ -36,17 +36,16 @@ public final class ReplayIndexExtractor
 
     public static class StartPositionExtractor implements ReplayIndexExtractor.ReplayIndexHandler
     {
-        private final Long2LongHashMap recordingIdToStartPosition = new Long2LongHashMap(NULL_VALUE);
-        private int highestSequenceIndex = 0;
+        private final StartPositionQuery startPositionQuery = new StartPositionQuery();
 
         public void onEntry(final ReplayIndexRecordDecoder indexRecord)
         {
             final long beginPosition = indexRecord.position();
             final int sequenceIndex = indexRecord.sequenceIndex();
             final long recordingId = indexRecord.recordingId();
+            final int sequenceNumber = indexRecord.sequenceNumber();
 
-            highestSequenceIndex = ReplayQuery.updateStartPosition(
-                sequenceIndex, highestSequenceIndex, recordingIdToStartPosition, recordingId, beginPosition);
+            startPositionQuery.updateStartPosition(sequenceNumber, sequenceIndex, recordingId, beginPosition);
         }
 
         public void onLapped()
@@ -54,14 +53,14 @@ public final class ReplayIndexExtractor
             System.err.println("Error: lapped by writer currently updating the file");
         }
 
-        public Long2LongHashMap recordingIdToStartPosition()
+        public Long2ObjectHashMap<PrunePosition> recordingIdToStartPosition()
         {
-            return recordingIdToStartPosition;
+            return startPositionQuery.recordingIdToStartPosition();
         }
 
         public int highestSequenceIndex()
         {
-            return highestSequenceIndex;
+            return startPositionQuery.highestSequenceIndex();
         }
     }
 
