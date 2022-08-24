@@ -15,9 +15,10 @@ public final class ReplayIndexPositionScanner
     {
         final Long2LongHashMap recordingIdToNewStartPosition = new Long2LongHashMap(Aeron.NULL_VALUE);
 
-        printFiles(args[0], CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM, "inbound",
+        final String logFilePath = args[0];
+        printFiles(logFilePath, CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM, "inbound",
             recordingIdToNewStartPosition);
-        printFiles(args[0], CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM, "outbound",
+        printFiles(logFilePath, CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM, "outbound",
             recordingIdToNewStartPosition);
 
         System.out.println("Aggregated recordingIdToNewStartPosition = " + recordingIdToNewStartPosition);
