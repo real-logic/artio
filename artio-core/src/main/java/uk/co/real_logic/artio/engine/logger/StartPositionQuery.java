@@ -25,10 +25,6 @@ class StartPositionQuery
 
     private int highestSequenceIndex = 0;
 
-    public StartPositionQuery()
-    {
-    }
-
     // Looking for the highest position of the lowest sequence number entry of the highest sequence index
     public void updateStartPosition(
         final int sequenceNumber, final int sequenceIndex, final long recordingId, final long beginPosition)

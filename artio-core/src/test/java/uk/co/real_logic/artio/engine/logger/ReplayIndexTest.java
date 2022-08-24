@@ -31,7 +31,6 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
