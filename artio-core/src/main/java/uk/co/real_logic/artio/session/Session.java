@@ -815,7 +815,10 @@ public class Session
 
     private boolean resetsSentSequenceNumbers(final int nextSentMessageSequenceNumber)
     {
-        return nextSentMessageSequenceNumber < this.lastSentMsgSeqNum + 1;
+        // we also consider an == case to be a reset, otherwise we stall sequence index
+        // incrementing in the case that no messages have been exchanged since the last sequence number increment
+        // this blocks the prune operation from progressing.
+        return nextSentMessageSequenceNumber <= this.lastSentMsgSeqNum + 1;
     }
 
     /**
@@ -854,7 +857,7 @@ public class Session
     {
         final boolean resetsSentSequenceNumbers = resetsSentSequenceNumbers(nextSentMessageSequenceNumber);
         final boolean resetReceivedSequenceNumbers =
-            nextReceivedMessageSequenceNumber < this.lastReceivedMsgSeqNum + 1;
+            nextReceivedMessageSequenceNumber <= this.lastReceivedMsgSeqNum + 1;
         if (resetsSentSequenceNumbers != resetReceivedSequenceNumbers)
         {
             throw new IllegalArgumentException("Cannot reset received but not sent sequence numbers");

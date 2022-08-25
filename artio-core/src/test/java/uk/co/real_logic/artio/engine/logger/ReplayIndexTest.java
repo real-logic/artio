@@ -328,8 +328,6 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID_2);
     }
 
-    // TODO: deleting old recordings.
-
     @Test(timeout = 20_000L)
     public void shouldQueryStartPositions()
     {
@@ -362,7 +360,38 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(otherPrunePosition, startPositions.get(otherRecordingId));
     }
 
+    @Test(timeout = 20_000L)
+    public void shouldQueryStartPositionsInPresenceOfDuplicateSequenceIndices()
+    {
+        final int newSequenceIndex = SEQUENCE_INDEX + 1;
+
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
+
+        final long position = indexExampleMessage(SESSION_ID, 0, newSequenceIndex);
+        indexExampleMessage(SESSION_ID, 1, newSequenceIndex);
+        final long position2 = indexExampleMessage(SESSION_ID, 0, newSequenceIndex);
+        indexExampleMessage(SESSION_ID, 1, newSequenceIndex);
+        final long position3 = indexExampleMessage(SESSION_ID, 0, newSequenceIndex);
+        indexExampleMessage(SESSION_ID, 1, newSequenceIndex);
+        assertThat(position2, greaterThan(position));
+        assertThat(position3, greaterThan(position2));
+
+        final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
+        query.queryStartPositions(startPositions);
+
+        captureRecordingId();
+
+        assertEquals(position3, startPositions.get(recordingId));
+    }
+
     private void captureRecordingIds()
+    {
+        final int recordingCount = captureRecordingId();
+        assertEquals(2, recordingCount);
+    }
+
+    private int captureRecordingId()
     {
         final int recordingCount = aeronArchive.listRecordings(0, 2,
             (controlSessionId, correlationId, recordingId,
@@ -378,7 +407,7 @@ public class ReplayIndexTest extends AbstractLogTest
                     this.otherRecordingId = recordingId;
                 }
             });
-        assertEquals(2, recordingCount);
+        return recordingCount;
     }
 
     private long recordingId;

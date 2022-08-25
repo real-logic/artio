@@ -917,7 +917,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         resetSomeSequenceNumbersOfOfflineSessions(
             () -> acceptingSession.trySendSequenceReset(1, 1),
             1,
-            1);
+            1,
+            true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -926,7 +927,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         resetSomeSequenceNumbersOfOfflineSessions(
             () -> acceptingSession.tryResetSequenceNumbers(),
             1,
-            1);
+            1,
+            true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -935,13 +937,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         resetSomeSequenceNumbersOfOfflineSessions(
             () -> acceptingSession.tryUpdateLastReceivedSequenceNumber(0),
             4,
-            4);
+            4,
+            false);
     }
 
     private void resetSomeSequenceNumbersOfOfflineSessions(
         final LongSupplier resetSeqNums,
         final int logonSequenceNumber,
-        final int initiatorInitialReceivedSequenceNumber)
+        final int initiatorInitialReceivedSequenceNumber,
+        final boolean retry)
     {
         launch(this::nothing);
         connectPersistingSessions();
@@ -953,15 +957,23 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertOfflineSession(acceptingSession.id(), acceptingSession);
         assertEquals(0, acceptingSession.sequenceIndex());
 
-        final int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
-        cannotConnectWithSequence(acceptorSequenceNumber, 1);
+        final int acceptorSentSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
+        cannotConnectWithSequence(acceptorSentSequenceNumber, 1);
 
         final ReadablePosition positionCounter = testSystem.libraryPosition(acceptingEngine, acceptingLibrary);
 
-        assertEquals(0, acceptingSession.sequenceIndex());
-        final long position = testSystem.awaitSend(resetSeqNums);
+        assertThat(acceptingSession, FixMatchers.hasSequenceIndex(0));
+        long position = testSystem.awaitSend(resetSeqNums);
         assertThat(acceptingSession, FixMatchers.hasSequenceIndex(1));
         assertEquals(0, acceptingSession.lastReceivedMsgSeqNum());
+
+        if (retry)
+        {
+            // Retry operation to ensure that it doesn't stall the sequence index increment:
+            // If this fails then the prune operation can later fail.
+            position = testSystem.awaitSend(resetSeqNums);
+            assertThat(acceptingSession, FixMatchers.hasSequenceIndex(2));
+        }
 
         initiatingOtfAcceptor.messages().clear();
 
@@ -972,7 +984,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final FixMessage logon = initiatingOtfAcceptor.receivedMessage(LOGON_MESSAGE_AS_STR).findFirst().get();
         assertEquals(logonSequenceNumber, logon.messageSequenceNumber());
 
-        assertAcceptingSessionHasSequenceIndex(1);
+        assertAcceptingSessionHasSequenceIndex(retry ? 2 : 1);
     }
 
     private void connectPersistingSessions()

@@ -2,6 +2,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 
@@ -15,9 +16,10 @@ public final class ReplayIndexPositionScanner
     {
         final Long2LongHashMap recordingIdToNewStartPosition = new Long2LongHashMap(Aeron.NULL_VALUE);
 
-        printFiles(args[0], CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM, "inbound",
+        final String logFilePath = args[0];
+        printFiles(logFilePath, CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM, "inbound",
             recordingIdToNewStartPosition);
-        printFiles(args[0], CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM, "outbound",
+        printFiles(logFilePath, CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM, "outbound",
             recordingIdToNewStartPosition);
 
         System.out.println("Aggregated recordingIdToNewStartPosition = " + recordingIdToNewStartPosition);
@@ -55,7 +57,8 @@ public final class ReplayIndexPositionScanner
                 System.out.println("file = " + headerFile);
                 System.out.println("positionExtractor.highestSequenceIndex() = " +
                     positionExtractor.highestSequenceIndex());
-                final Long2LongHashMap recordingIdToStartPosition = positionExtractor.recordingIdToStartPosition();
+                final Long2ObjectHashMap<PrunePosition> recordingIdToStartPosition =
+                    positionExtractor.recordingIdToStartPosition();
                 System.out.println("positionExtractor.recordingIdToStartPosition() = " +
                     recordingIdToStartPosition);
 
