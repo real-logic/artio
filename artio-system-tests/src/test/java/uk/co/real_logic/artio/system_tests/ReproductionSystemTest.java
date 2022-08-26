@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.collections.IntArrayList;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Reply;
@@ -48,6 +49,7 @@ import static uk.co.real_logic.artio.system_tests.DebugTcpChannelSupplier.NULL_W
 import static uk.co.real_logic.artio.system_tests.DebugTcpChannelSupplier.WRITE_MAX;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
+@Ignore // Flaky on CI
 public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
     public static final int MESSAGES_SENT = 3;

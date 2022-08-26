@@ -39,6 +39,7 @@ class ReproductionPoller implements Continuation
     private final AeronArchive archive;
     private final String aeronChannel;
     private final int inboundLibraryStreamId;
+    private final int reproductionReplayStream;
     private final IdleStrategy idleStrategy;
 
     // NB: we should never close this class as it closes the Archiver
@@ -61,7 +62,8 @@ class ReproductionPoller implements Continuation
         final String logFileDir,
         final RecordingCoordinator recordingCoordinator,
         final String aeronChannel,
-        final int inboundLibraryStreamId)
+        final int inboundLibraryStreamId,
+        final int reproductionReplayStream)
     {
         this.configuration = configuration;
         this.idleStrategy = idleStrategy;
@@ -76,6 +78,7 @@ class ReproductionPoller implements Continuation
         this.archive = recordingCoordinator.archive();
         this.aeronChannel = aeronChannel;
         this.inboundLibraryStreamId = inboundLibraryStreamId;
+        this.reproductionReplayStream = reproductionReplayStream;
     }
 
     private void onError(final Throwable throwable)
@@ -146,7 +149,6 @@ class ReproductionPoller implements Continuation
 
         protocolHandler.idToLibrary(idToLibrary);
 
-        final int reproductionStreamId = configuration.reproductionStreamId();
         archiveScanningAgent = new FixArchiveScanningAgent(
             idleStrategy,
             DEFAULT_COMPACTION_SIZE,
@@ -160,7 +162,7 @@ class ReproductionPoller implements Continuation
         queryStreamIds.add(inboundLibraryStreamId);
 
         archiveScanningAgent.setup(
-            aeronChannel, queryStreamIds, protocolHandler, null, false, reproductionStreamId);
+            aeronChannel, queryStreamIds, protocolHandler, null, false, reproductionReplayStream);
 
         state = State.POLLING;
     }

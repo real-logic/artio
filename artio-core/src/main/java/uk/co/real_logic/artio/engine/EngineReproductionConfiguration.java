@@ -22,7 +22,6 @@ public class EngineReproductionConfiguration
     private final long startInNs;
     private final long endInNs;
     private final ReproductionClock clock;
-    private final int reproductionStreamId = 10;
 
     EngineReproductionConfiguration(
         final long startInNs, final long endInNs, final ReproductionClock clock)
@@ -45,10 +44,5 @@ public class EngineReproductionConfiguration
     public ReproductionClock clock()
     {
         return clock;
-    }
-
-    public int reproductionStreamId()
-    {
-        return reproductionStreamId;
     }
 }

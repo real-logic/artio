@@ -229,6 +229,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
     public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
     public static final int DEFAULT_REPRODUCTION_LOG_STREAM = 6;
+    public static final int DEFAULT_REPRODUCTION_REPLAY_STREAM = 7;
 
     public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
 
@@ -289,6 +290,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
     private int reproductionLogStream = DEFAULT_REPRODUCTION_LOG_STREAM;
+    private int reproductionReplayStream = DEFAULT_REPRODUCTION_REPLAY_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
@@ -1193,6 +1195,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    // ignores bind operations
+    // ignores TcpChannelSupplier
+    // ignores the clock
+    // doesn't support initiated connections, only acceptor for now
+    // doesn't record the interaction
     public EngineConfiguration reproduceInbound(
         final long startInNs, final long endInNs)
     {
@@ -1214,6 +1221,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration reproductionLogStream(final int reproductionLogStream)
     {
         this.reproductionLogStream = reproductionLogStream;
+        return this;
+    }
+
+    public EngineConfiguration reproductionReplayStream(final int reproductionReplayStream)
+    {
+        this.reproductionReplayStream = reproductionReplayStream;
         return this;
     }
 
@@ -1944,11 +1957,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return indexChecksumEnabled;
     }
 
-    // ignores bind operations
-    // ignores TcpChannelSupplier
-    // ignores the clock
-    // doesn't support initiated connections, only acceptor for now
-    // doesn't record the interaction
     public EngineReproductionConfiguration reproductionConfiguration()
     {
         return reproductionConfiguration;
@@ -1962,6 +1970,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int reproductionLogStream()
     {
         return reproductionLogStream;
+    }
+
+    public int reproductionReplayStream()
+    {
+        return reproductionReplayStream;
     }
 
     // ---------------------

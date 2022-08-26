@@ -342,7 +342,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             reproductionPoller = new ReproductionPoller(
                 reproductionConfiguration, channelSupplier, configuration.framerIdleStrategy(),
                 configuration.logFileDir(), recordingCoordinator,
-                configuration.libraryAeronChannel(), configuration.inboundLibraryStream());
+                configuration.libraryAeronChannel(), configuration.inboundLibraryStream(),
+                configuration.reproductionReplayStream());
             shouldBind = false;
         }
         else
