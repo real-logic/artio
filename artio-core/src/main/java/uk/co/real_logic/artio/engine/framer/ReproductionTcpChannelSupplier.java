@@ -18,8 +18,11 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.engine.ReproductionMessageHandler;
 import uk.co.real_logic.artio.messages.ConnectDecoder;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,8 +33,12 @@ import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.List;
 
+import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
+
 public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 {
+    private final CharFormatter missedEvent = new CharFormatter("Missed BP event: conn=%s,index=%s-%s");
+
     private final Long2ObjectHashMap<ReproductionTcpChannel> connectionIdToChannel = new Long2ObjectHashMap<>();
 
     private final ReproductionMessageHandler reproductionMessageHandler;
@@ -85,33 +92,64 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             final List<ConnectionBackPressureEvent> events = this.events;
             if (events != null)
             {
-                final int nextEvent = this.nextEvent;
-
-                if (nextEvent < events.size())
-                {
-                    final ConnectionBackPressureEvent event = events.get(nextEvent);
-                    if (event.replay() == replay)
-                    {
-                        final int eventNum = event.seqNum();
-                        // We've gone past this point somehow
-                        if (seqNum > eventNum)
-                        {
-                            this.nextEvent = nextEvent + 1;
-                        }
-                        else if (seqNum == eventNum)
-                        {
-                            final int written = event.written();
-                            writeBuffer = src.duplicate();
-                            writeBuffer.limit(writeBuffer.position() + written);
-                            this.nextEvent = nextEvent + 1;
-                        }
-                    }
-                }
+                writeBuffer = checkBackpressureEvent(src, seqNum, replay, events);
             }
 
             final int remaining = writeBuffer.remaining();
             reproductionMessageHandler.onMessage(connectionId, writeBuffer);
             return remaining;
+        }
+
+        private ByteBuffer checkBackpressureEvent(
+            final ByteBuffer src,
+            final int seqNum,
+            final boolean replay,
+            final List<ConnectionBackPressureEvent> events)
+        {
+            final int nextEvent = this.nextEvent;
+
+            if (nextEvent < events.size())
+            {
+                ConnectionBackPressureEvent event = events.get(nextEvent);
+                if (event.replay() == replay)
+                {
+                    int eventSeqNum = event.seqNum();
+                    // We've gone past this point somehow
+                    if (seqNum > eventSeqNum)
+                    {
+                        int candidateEventNum = nextEvent;
+                        while (candidateEventNum < events.size())
+                        {
+                            event = events.get(candidateEventNum);
+                            eventSeqNum = event.seqNum();
+
+                            if (replay == event.replay() && seqNum >= eventSeqNum)
+                            {
+                                break;
+                            }
+                            candidateEventNum++;
+                        }
+                        this.nextEvent = candidateEventNum;
+
+                        if (IS_REPLAY_LOG_TAG_ENABLED)
+                        {
+                            missedEvent.clear().with(connectionId).with(nextEvent).with(candidateEventNum);
+                            DebugLogger.log(LogTag.REPRODUCTION, missedEvent);
+                        }
+                    }
+
+                    if (seqNum == eventSeqNum)
+                    {
+                        final int written = event.written();
+                        final ByteBuffer writeBuffer = src.duplicate();
+                        writeBuffer.limit(writeBuffer.position() + written);
+                        this.nextEvent = nextEvent + 1;
+                        return writeBuffer;
+                    }
+                }
+            }
+
+            return src;
         }
 
         public int read(final ByteBuffer dst) throws IOException
