@@ -160,6 +160,14 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the library id to be used by this library. This is especially useful when in reproduction mode, as it
+     * allows a library to have the same library id as a previous run. Under normal circumstances it isn't necessary to
+     * set a library id - a random one will be assigned.
+     *
+     * @param libraryId the id to be used by this library.
+     * @return this
+     */
     public LibraryConfiguration libraryId(final int libraryId)
     {
         if (libraryId == ENGINE_LIBRARY_ID || libraryId < ENGINE_LIBRARY_ID)
