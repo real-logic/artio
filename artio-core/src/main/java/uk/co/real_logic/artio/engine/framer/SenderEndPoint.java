@@ -42,6 +42,7 @@ public class SenderEndPoint implements AutoCloseable
 
     private final ExclusivePublication inboundPublication;
 
+    protected final ReproductionLogWriter reproductionLogWriter;
     protected final TcpChannel channel;
     protected final AtomicCounter bytesInBuffer;
     protected final int maxBytesInBuffer;
@@ -53,6 +54,7 @@ public class SenderEndPoint implements AutoCloseable
     public SenderEndPoint(
         final long connectionId,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionLogWriter,
         final int libraryId,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
@@ -62,6 +64,7 @@ public class SenderEndPoint implements AutoCloseable
     {
         this.connectionId = connectionId;
         this.inboundPublication = inboundPublication;
+        this.reproductionLogWriter = reproductionLogWriter;
         this.libraryId = libraryId;
         this.channel = channel;
         this.bytesInBuffer = bytesInBuffer;

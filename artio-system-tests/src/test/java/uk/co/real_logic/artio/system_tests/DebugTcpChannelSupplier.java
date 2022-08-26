@@ -155,7 +155,7 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
             super(socketChannel);
         }
 
-        public int write(final ByteBuffer src) throws IOException
+        public int write(final ByteBuffer src, final int seqNum, final boolean replay) throws IOException
         {
             final IntArrayList maxBytesToBeWritten = DebugTcpChannelSupplier.this.bytesToBeWritten;
             if (index < maxBytesToBeWritten.size())
@@ -172,7 +172,7 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
                 {
                     // first write
                     remaining = src.remaining() - bytesToWrite;
-                    super.write(src);
+                    super.write(src, seqNum, replay);
                 }
                 else if (remaining < bytesToWrite)
                 {
@@ -188,7 +188,7 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
                 return bytesToWrite;
             }
 
-            return super.write(src);
+            return super.write(src, seqNum, replay);
         }
     }
 }

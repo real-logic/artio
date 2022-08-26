@@ -22,7 +22,7 @@ public class EngineReproductionConfiguration
     private final long startInNs;
     private final long endInNs;
     private final ReproductionClock clock;
-    private final int reproductionStreamId = 10; // TODO, make this configurable
+    private final int reproductionStreamId = 10;
 
     EngineReproductionConfiguration(
         final long startInNs, final long endInNs, final ReproductionClock clock)

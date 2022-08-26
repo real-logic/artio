@@ -228,6 +228,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_OUTBOUND_REPLAY_STREAM = 3;
     public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
     public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
+    public static final int DEFAULT_REPRODUCTION_LOG_STREAM = 6;
 
     public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
 
@@ -287,6 +288,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private FixPRetransmitHandler fixPRetransmitHandler = DEFAULT_BINARY_FIXP_RETRANSMIT_HANDLER;
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
+    private int reproductionLogStream = DEFAULT_REPRODUCTION_LOG_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
@@ -320,6 +322,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
     {
     };
+    private boolean writeReproductionLog = false;
 
     // ---------------------
     // BEGIN SETTERS
@@ -1197,6 +1200,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         epochNanoClock(clock);
         this.reproductionConfiguration = new EngineReproductionConfiguration(
             startInNs, endInNs, clock);
+        writeReproductionLog(false);
+        return this;
+    }
+
+    public EngineConfiguration writeReproductionLog(final boolean writeReproductionLog)
+    {
+        this.writeReproductionLog = writeReproductionLog;
+        return this;
+    }
+
+    // We also use the same stream id for replay.
+    public EngineConfiguration reproductionLogStream(final int reproductionLogStream)
+    {
+        this.reproductionLogStream = reproductionLogStream;
         return this;
     }
 
@@ -1937,6 +1954,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return reproductionConfiguration;
     }
 
+    public boolean writeReproductionLog()
+    {
+        return writeReproductionLog;
+    }
+
+    public int reproductionLogStream()
+    {
+        return reproductionLogStream;
+    }
+
     // ---------------------
     // END GETTERS
     // ---------------------
@@ -1950,6 +1977,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             if (reproductionConfiguration.clock() != epochNanoClock())
             {
                 throw new IllegalArgumentException("Do no set the nano clock when using reproduction mode");
+            }
+
+            if (writeReproductionLog())
+            {
+                throw new IllegalArgumentException(
+                    "Do not set writeReproductionLog(true) when using reproduction mode");
             }
 
             bindAtStartup(false);

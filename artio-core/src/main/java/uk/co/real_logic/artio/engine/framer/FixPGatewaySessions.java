@@ -212,7 +212,7 @@ public class FixPGatewaySessions extends GatewaySessions
         {
             try
             {
-                channel.write(rejectEncodeBuffer);
+                channel.write(rejectEncodeBuffer, 1, false);
                 return rejectEncodeBuffer.hasRemaining() ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
             }
             catch (final IOException e)

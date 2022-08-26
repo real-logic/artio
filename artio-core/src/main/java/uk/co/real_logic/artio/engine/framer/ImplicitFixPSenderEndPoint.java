@@ -53,6 +53,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionLogWriter,
         final int libraryId,
         final int templateIdOffset,
         final int retransmissionTemplateId,
@@ -61,8 +62,8 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final int maxBytesInBuffer,
         final Framer framer)
     {
-        super(connectionId, channel, errorHandler, inboundPublication, libraryId, bytesInBuffer, maxBytesInBuffer,
-            framer);
+        super(connectionId, channel, errorHandler, inboundPublication, reproductionLogWriter, libraryId,
+            bytesInBuffer, maxBytesInBuffer, framer);
         this.templateIdOffset = templateIdOffset;
         this.retransmissionTemplateId = retransmissionTemplateId;
         this.fixPSenderEndPoints = fixPSenderEndPoints;

@@ -74,6 +74,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     TestSystem testSystem;
     Session session;
     Function<EngineConfiguration, TcpChannelSupplier> optionalTcpChannelSupplierFactory;
+    boolean writeReproductionLog = false;
 
     boolean printErrors = false;
 
@@ -197,6 +198,11 @@ public class AbstractMessageBasedAcceptorSystemTest
         if (reproductionMessageHandler != null)
         {
             config.reproductionMessageHandler(reproductionMessageHandler);
+        }
+
+        if (writeReproductionLog)
+        {
+            config.writeReproductionLog(true);
         }
 
         config.defaultHeartbeatIntervalInS(1);

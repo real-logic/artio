@@ -44,13 +44,15 @@ class ExplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionLogWriter,
         final int libraryId,
         final MessageTimingHandler messageTimingHandler,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
         final Framer framer)
     {
-        super(connectionId, channel, errorHandler, inboundPublication, libraryId, bytesInBuffer, maxBytesInBuffer,
+        super(connectionId, channel, errorHandler, inboundPublication, reproductionLogWriter,
+            libraryId, bytesInBuffer, maxBytesInBuffer,
             framer);
         this.messageTimingHandler = messageTimingHandler;
     }

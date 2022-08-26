@@ -63,6 +63,7 @@ public class ImplicitFixPSenderEndPointTest
     private final TcpChannel channel = mock(TcpChannel.class);
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
     private final ExclusivePublication inboundPublication = mock(ExclusivePublication.class);
+    private final ReproductionLogWriter reproductionPublication = mock(ReproductionLogWriter.class);
     private final MessageTimingHandler timingHandler = mock(MessageTimingHandler.class);
     private final FixPSenderEndPoints fixPSenderEndPoints = mock(FixPSenderEndPoints.class);
     private final UnsafeBuffer buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(CAPACITY));
@@ -74,6 +75,7 @@ public class ImplicitFixPSenderEndPointTest
         channel,
         errorHandler,
         inboundPublication,
+        reproductionPublication,
         LIBRARY_ID,
         timingHandler,
         false,
@@ -394,7 +396,7 @@ public class ImplicitFixPSenderEndPointTest
 
     private void verifyWritten(final int wantedNumInvocations) throws IOException
     {
-        verify(channel, times(wantedNumInvocations)).write(any());
+        verify(channel, times(wantedNumInvocations)).write(any(), anyInt(), anyBoolean());
         reset(channel);
     }
 
@@ -465,7 +467,7 @@ public class ImplicitFixPSenderEndPointTest
 
     private OngoingStubbing<Integer> onWrite() throws IOException
     {
-        return when(channel.write(any()));
+        return when(channel.write(any(), anyInt(), anyBoolean()));
     }
 
     private void writeFakeMessage(final int num, final int templateId, final int offset)

@@ -76,6 +76,13 @@ public final class Streams
         return publication;
     }
 
+    public ExclusivePublication reproductionPublication()
+    {
+        final ExclusivePublication publication = recordingCoordinator.reproductionPublication();
+        StreamInformation.print("recordingPublication", publication, printAeronStreamIdentifiers);
+        return publication;
+    }
+
     public Subscription subscription(final String name)
     {
         while (true)

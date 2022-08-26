@@ -144,6 +144,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final CountersReader countersReader;
     private final long outboundIndexRegistrationId;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final ReproductionLogWriter reproductionLogWriter;
     private final FixCounters fixCounters;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final LongConsumer removeILink3SenderEndPoints;
@@ -230,7 +231,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long outboundIndexRegistrationId,
         final FixCounters fixCounters,
         final SenderSequenceNumbers senderSequenceNumbers,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final ReproductionLogWriter reproductionLogWriter)
     {
         this.epochClock = epochClock;
         this.clock = configuration.epochNanoClock();
@@ -254,6 +256,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.countersReader = countersReader;
         this.outboundIndexRegistrationId = outboundIndexRegistrationId;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.reproductionLogWriter = reproductionLogWriter;
         this.fixPSenderEndPoints = new FixPSenderEndPoints();
         this.removeILink3SenderEndPoints = fixPSenderEndPoints::removeConnection;
         this.recordingCoordinator = recordingCoordinator;
@@ -332,10 +335,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (isReproducing)
         {
-            channelSupplier = new ReproductionTcpChannelSupplier(configuration.reproductionMessageHandler());
+            final ReproductionLog reproductionLog = ReproductionLogReader.read(
+                recordingCoordinator.reproductionSubscription());
+            channelSupplier = new ReproductionTcpChannelSupplier(
+                configuration.reproductionMessageHandler(), reproductionLog);
             reproductionPoller = new ReproductionPoller(
                 reproductionConfiguration, channelSupplier, configuration.framerIdleStrategy(),
-                configuration.logFileDir(), recordingCoordinator.aeron(), recordingCoordinator.archive(),
+                configuration.logFileDir(), recordingCoordinator,
                 configuration.libraryAeronChannel(), configuration.inboundLibraryStream());
             shouldBind = false;
         }
@@ -643,7 +649,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
         senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
         final FixPSenderEndPoint senderEndPoint = FixPSenderEndPoint.of(
-            connectionId, channel, errorHandler, inboundPublication.dataPublication(), ENGINE_LIBRARY_ID,
+            connectionId, channel, errorHandler, inboundPublication.dataPublication(),
+            reproductionLogWriter, ENGINE_LIBRARY_ID,
             configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
             fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
             bytesInBuffer, configuration.senderMaxBytesInBuffer(), this);
@@ -656,12 +663,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             errorHandler,
             this,
             inboundPublication,
-            ENGINE_LIBRARY_ID,
-            configuration.epochNanoClock(),
-            connectionId,
-            fixPProtocol,
-            configuration.throttleWindowInMs(),
-            configuration.throttleLimitOfMessages(),
+            ENGINE_LIBRARY_ID, configuration.epochNanoClock(), connectionId, fixPProtocol,
+            configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
             fixPRejectRefIdExtractor);
         receiverEndPoints.add(receiverEndPoint);
 
@@ -829,18 +832,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
                     senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
                     fixPSenderEndPoints.add(FixPSenderEndPoint.of(
-                        connectionId, channel, errorHandler, inboundPublication.dataPublication(), libraryId,
-                        configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
+                        connectionId, channel, errorHandler, inboundPublication.dataPublication(),
+                        reproductionLogWriter,
+                        libraryId, configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
                         fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
                         bytesInBuffer,
                         configuration.senderMaxBytesInBuffer(), this));
                     receiverEndPoints.add(new InitiatorFixPReceiverEndPoint(
                         connectionId, channel, configuration.receiverBufferSize(),
-                        errorHandler,
-                        this,
-                        inboundPublication, libraryId, context,
-                        configuration.epochNanoClock(),
-                        correlationId, fixPContexts, fixPProtocol,
+                        errorHandler, this, inboundPublication, libraryId, context,
+                        configuration.epochNanoClock(), correlationId, fixPContexts, fixPProtocol,
                         configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
                         fixPRejectRefIdExtractor));
                 });

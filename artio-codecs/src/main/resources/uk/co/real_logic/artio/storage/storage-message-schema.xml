@@ -2,9 +2,9 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.storage.messages"
                    id="666"
-                   version="10"
+                   version="11"
                    semanticVersion="0.1"
-                   description="Internal messaging format used by the FIX Gateway"
+                   description="Internal storage format used by the FIX Gateway"
                    byteOrder="littleEndian">
     <types>
         <composite name="messageHeader" description="Message identifiers and length of message root">
@@ -26,6 +26,12 @@
         <type name="FixSessionId" primitiveType="int64"/>
         <type name="SequenceIndex" primitiveType="int32"/>
         <type name="LibraryId" primitiveType="int32"/>
+        <type name="ConnectionId" primitiveType="int64"/>
+
+        <enum name="Bool" encodingType="uint8">
+            <validValue name="TRUE">0</validValue>
+            <validValue name="FALSE">1</validValue>
+        </enum>
     </types>
 
     <!-- ARCHIVAL DATA STRUCTURES -->
@@ -92,6 +98,7 @@
 
     <!-- Recording Id Coordinator -->
     <sbe:message name="PreviousRecording" id="30" description="" sinceVersion="5">
+        <field name="reproductionRecordingId" id="3" type="int64" sinceVersion="11"/>
         <group name="inboundRecordings" id="1" dimensionType="groupSizeEncoding">
             <field name="recordingId" id="10" type="int64"/>
             <field name="libraryId" id="12" type="LibraryId" sinceVersion="10"/>
@@ -102,8 +109,17 @@
         </group>
     </sbe:message>
 
+    <!-- Engine Information File -->
     <sbe:message name="EngineInformation" id="31" description="" sinceVersion="6">
         <field name="heartbeatTimeInMs" id="1" type="int64"/>
         <data name="runtimeName" id="2" type="Utf8String" />
+    </sbe:message>
+
+    <!-- Reproduction Log -->
+    <sbe:message name="ConnectionBackpressure" id="34" description="" sinceVersion="11">
+        <field name="connectionId" id="1" type="ConnectionId"/>
+        <field name="sequenceNumber" id="2" type="int32"/>
+        <field name="isReplay" id="3" type="Bool"/>
+        <field name="written" id="4" type="int32"/>
     </sbe:message>
 </sbe:messageSchema>

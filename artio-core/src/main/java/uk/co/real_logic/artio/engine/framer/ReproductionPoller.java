@@ -23,6 +23,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.ReproductionClock;
 import uk.co.real_logic.artio.engine.EngineReproductionConfiguration;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanningAgent;
 
 import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuration.DEFAULT_COMPACTION_SIZE;
@@ -58,8 +59,7 @@ class ReproductionPoller implements Continuation
         final TcpChannelSupplier channelSupplier,
         final IdleStrategy idleStrategy,
         final String logFileDir,
-        final Aeron aeron,
-        final AeronArchive archive,
+        final RecordingCoordinator recordingCoordinator,
         final String aeronChannel,
         final int inboundLibraryStreamId)
     {
@@ -72,8 +72,8 @@ class ReproductionPoller implements Continuation
             clock,
             this::onError);
         this.logFileDir = logFileDir;
-        this.aeron = aeron;
-        this.archive = archive;
+        this.aeron = recordingCoordinator.aeron();
+        this.archive = recordingCoordinator.archive();
         this.aeronChannel = aeronChannel;
         this.inboundLibraryStreamId = inboundLibraryStreamId;
     }
@@ -93,7 +93,7 @@ class ReproductionPoller implements Continuation
                 return Publication.BACK_PRESSURED;
 
             case POLLING:
-                return poll();
+                return pollArchive();
 
             case COMPLETE:
             default:
@@ -101,7 +101,7 @@ class ReproductionPoller implements Continuation
         }
     }
 
-    private long poll()
+    private long pollArchive()
     {
         try
         {

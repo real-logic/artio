@@ -70,12 +70,14 @@ public class FixSenderEndPointTest
     private final SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
     private final MessageTimingHandler messageTimingHandler = mock(MessageTimingHandler.class);
     private final ExclusivePublication inboundPublication = mock(ExclusivePublication.class);
+    private final ReproductionLogWriter reproductionLogWriter = mock(ReproductionLogWriter.class);
     private final UnsafeBuffer inboundBuffer = new UnsafeBuffer(new byte[INBOUND_BUFFER_LEN]);
     private final FixReceiverEndPoint receiverEndPoint = mock(FixReceiverEndPoint.class);
     private final FixSenderEndPoint endPoint = new FixSenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
         inboundPublication,
+        reproductionLogWriter,
         tcpChannel,
         bytesInBuffer,
         invalidLibraryAttempts,
@@ -241,13 +243,12 @@ public class FixSenderEndPointTest
         // 4. enqueue the replay message and complete
         channelWillWrite(0);
         onReplayMessage(0);
-        byteBufferNotWritten();
         assertBytesInBuffer(BODY_LENGTH + ENQ_MESSAGE_BLOCK_LEN);
         onReplayComplete();
 
         // 5. we poll the enqueued normal message and process it.
         poll();
-        byteBufferWritten();
+        byteBufferWrittenTwice();
         assertReattemptBytesWritten(firstWrites);
         assertRequiresReattempting();
         assertNotReplaying();
@@ -270,6 +271,11 @@ public class FixSenderEndPointTest
         verifyNoMoreErrors();
     }
 
+    private void byteBufferWrittenTwice()
+    {
+        byteBufferWritten(times(2));
+    }
+
     @Test
     public void shouldNotSendSlowMessagesUntilReplayComplete()
     {
@@ -287,7 +293,6 @@ public class FixSenderEndPointTest
 
         // 2. enqueue a normal message
         onOutboundMessage(0);
-        byteBufferNotWritten();
         assertBytesInBuffer(BODY_LENGTH + ENQ_MESSAGE_BLOCK_LEN);
         assertReplaying();
         assertRequiresReattempting();
@@ -391,7 +396,7 @@ public class FixSenderEndPointTest
         try
         {
             final ArgumentCaptor<ByteBuffer> bufferCaptor = ArgumentCaptor.forClass(ByteBuffer.class);
-            verify(tcpChannel, times).write(bufferCaptor.capture());
+            verify(tcpChannel, times).write(bufferCaptor.capture(), anyInt(), anyBoolean());
             reset(tcpChannel);
         }
         catch (final IOException e)
@@ -431,7 +436,7 @@ public class FixSenderEndPointTest
     {
         try
         {
-            when(tcpChannel.write(any())).thenReturn(bodyLength);
+            when(tcpChannel.write(any(), anyInt(), anyBoolean())).thenReturn(bodyLength);
         }
         catch (final IOException e)
         {

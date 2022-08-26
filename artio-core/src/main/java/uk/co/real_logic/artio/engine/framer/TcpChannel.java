@@ -39,7 +39,7 @@ public abstract class TcpChannel implements AutoCloseable
         throws ClosedChannelException;
 
     // Any subclass should maintain the API that negative numbers of bytes are never returned
-    public abstract int write(ByteBuffer src) throws IOException;
+    public abstract int write(ByteBuffer src, int seqNum, boolean replay) throws IOException;
 
     public abstract int read(ByteBuffer dst) throws IOException;
 

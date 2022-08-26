@@ -40,7 +40,7 @@ public class DefaultTcpChannel extends TcpChannel
     }
 
     // Any subclass should maintain the API that negative numbers of bytes are never returned
-    public int write(final ByteBuffer src) throws IOException
+    public int write(final ByteBuffer src, final int seqNum, final boolean replay) throws IOException
     {
         final int written = socketChannel.write(src);
         if (written < 0)

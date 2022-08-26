@@ -62,13 +62,34 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
     {
         private final CopyOnWriteArrayList<String> messages = new CopyOnWriteArrayList<>();
 
+        private int i;
+
         public void onMessage(final long connectionId, final ByteBuffer bytes)
         {
-            final byte[] stashed = new byte[bytes.remaining()];
-            bytes.get(stashed);
-            final String message = new String(stashed, StandardCharsets.US_ASCII);
-            // System.out.println("message = " + message);
-            messages.add(message);
+            try
+            {
+                final byte[] stashed = new byte[bytes.remaining()];
+                bytes.get(stashed);
+                final String message = new String(stashed, StandardCharsets.US_ASCII);
+                // System.out.println("message = " + message);
+
+                if (i < MAX_BYTES_TO_WRITE.size() && i > 0 && MAX_BYTES_TO_WRITE.get(i - 1) != WRITE_MAX)
+                {
+                    final int lastIndex = messages.size() - 1;
+                    final String combinedMessage = messages.get(lastIndex) + message;
+                    // System.out.println("combinedMessage = " + combinedMessage);
+                    messages.set(lastIndex, combinedMessage);
+                }
+                else
+                {
+                    messages.add(message);
+                }
+                i++;
+            }
+            catch (final Throwable e)
+            {
+                e.printStackTrace();
+            }
         }
 
         public List<String> messages()
@@ -143,9 +164,9 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         assertEquals(toString(originalReceivedMessages) + " vs " + toString(messages),
             originalReceivedMessages, messages);
 
-        final List<String> reproSentMessages = messageStash.messages();
-        testSystem.await("Failed to receive messages", () ->
-            reproSentMessages.size() >= (MESSAGES_SENT + 1 + 2) + (2 + MESSAGES_SENT + 2));
+        final int firstBatch = 1 + MESSAGES_SENT + 2;
+        final int resentBatch = 2 + MESSAGES_SENT + 2;
+        final List<String> reproSentMessages = awaitStashedMessages(messageStash, firstBatch + resentBatch);
 
         assertEquals(stripTimesAndChecksums(sentMessages), stripTimesAndChecksums(reproSentMessages));
         // Do we actually need this?
@@ -154,6 +175,14 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         testSystem.awaitCompletedReply(startReply);
 
         DebugLogger.log(REPRODUCTION_TEST, "End of scenario reproduction");
+    }
+
+    private List<String> awaitStashedMessages(final StashingMessageHandler messageStash, final int total)
+    {
+        final List<String> reproSentMessages = messageStash.messages();
+        testSystem.await("Failed to receive messages", () ->
+            reproSentMessages.size() >= total);
+        return reproSentMessages;
     }
 
     @Test
@@ -216,7 +245,9 @@ public class ReproductionSystemTest extends AbstractMessageBasedAcceptorSystemTe
         try
         {
             optionalTcpChannelSupplierFactory = ec -> new DebugTcpChannelSupplier(ec, MAX_BYTES_TO_WRITE);
+            writeReproductionLog = true;
             setup(false, true);
+            writeReproductionLog = false;
             optionalTcpChannelSupplierFactory = null;
             setupLibrary();
 

@@ -40,6 +40,7 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionPublication,
         final int libraryId,
         final MessageTimingHandler messageTimingHandler,
         final boolean explicitSequenceNumbers,
@@ -53,13 +54,14 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         if (explicitSequenceNumbers)
         {
             return new ExplicitFixPSenderEndPoint(
-                connectionId, channel, errorHandler, inboundPublication, libraryId, messageTimingHandler,
+                connectionId, channel, errorHandler, inboundPublication, reproductionPublication, libraryId,
+                messageTimingHandler,
                 bytesInBuffer, maxBytesInBuffer, framer);
         }
         else
         {
             return new ImplicitFixPSenderEndPoint(
-                connectionId, channel, errorHandler, inboundPublication, libraryId,
+                connectionId, channel, errorHandler, inboundPublication, reproductionPublication, libraryId,
                 templateIdOffset, retransmissionTemplateId, fixPSenderEndPoints,
                 bytesInBuffer, maxBytesInBuffer, framer);
         }
@@ -70,12 +72,14 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final TcpChannel channel,
         final ErrorHandler errorHandler,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionLogWriter,
         final int libraryId,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
         final Framer framer)
     {
-        super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
+        super(connectionId, inboundPublication, reproductionLogWriter, libraryId, channel, bytesInBuffer,
+            maxBytesInBuffer, errorHandler,
             framer);
     }
 
@@ -93,7 +97,7 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.limit(buffer, offset + messageSize);
         ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
 
-        final int written = channel.write(buffer);
+        final int written = channel.write(buffer, 0, false);
         ByteBufferUtil.position(buffer, offset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 

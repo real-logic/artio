@@ -18,11 +18,13 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.Aeron;
 import io.aeron.ChannelUri;
 import io.aeron.ExclusivePublication;
+import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ArchiveException;
 import io.aeron.archive.client.RecordingDescriptorConsumer;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -112,6 +114,9 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     private final ErrorHandler errorHandler;
     private MonitoringAgent monitoringAgent;
 
+    private long reproductionRecordingId = NULL_RECORDING_ID;
+    private ExclusivePublication reproductionPublication = null;
+
     private final RecordingIds inboundRecordingIds = new RecordingIds();
     private final RecordingIds outboundRecordingIds = new RecordingIds();
     private final Int2ObjectHashMap<LibraryExtendPosition> libraryIdToExtendPosition = new Int2ObjectHashMap<>();
@@ -139,6 +144,17 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         recordingIdsFile = recordingIdsFile(configuration);
         outboundLocation = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
         loadRecordingIdsFile();
+
+        if (reproductionRecordingId != NULL_RECORDING_ID)
+        {
+            // There's an old recording and we're not in reproduction mode delete it.
+            if (!configuration.isReproductionEnabled())
+            {
+                archive.purgeRecording(reproductionRecordingId);
+
+                reproductionRecordingId(NULL_RECORDING_ID);
+            }
+        }
 
         if (configuration.logAnyMessages())
         {
@@ -171,7 +187,17 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 final PreviousRecordingDecoder previousRecording = new PreviousRecordingDecoder();
 
                 header.wrap(buffer, 0);
-                previousRecording.wrap(buffer, ENCODED_LENGTH, header.blockLength(), header.version());
+                final int version = header.version();
+                previousRecording.wrap(buffer, ENCODED_LENGTH, header.blockLength(), version);
+
+                if (version >= PreviousRecordingDecoder.reproductionRecordingIdSinceVersion())
+                {
+                    reproductionRecordingId(previousRecording.reproductionRecordingId());
+                }
+                else
+                {
+                    reproductionRecordingId(NULL_RECORDING_ID);
+                }
 
                 for (final InboundRecordingsDecoder inboundRecording : previousRecording.inboundRecordings())
                 {
@@ -218,6 +244,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 final PreviousRecordingEncoder previousRecording = new PreviousRecordingEncoder();
 
                 previousRecording.wrapAndApplyHeader(buffer, 0, header);
+                previousRecording.reproductionRecordingId(reproductionRecordingId);
 
                 final InboundRecordingsEncoder inbound = previousRecording.inboundRecordingsCount(inboundSize);
                 inboundRecordingIds.forEach((libraryId, recordingId) ->
@@ -289,6 +316,54 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         {
             return aeron.addExclusivePublication(aeronChannel, streamId);
         }
+    }
+
+    // Only called on single threaded engine startup
+    public ExclusivePublication reproductionPublication()
+    {
+        if (reproductionPublication == null)
+        {
+            final int streamId = configuration.reproductionLogStream();
+            try
+            {
+                reproductionPublication = aeron.addExclusivePublication(IPC_CHANNEL, streamId);
+                final String fullChannel = ChannelUri.addSessionId(IPC_CHANNEL, reproductionPublication.sessionId());
+                archive.startRecording(fullChannel, streamId, LOCAL, true);
+                while (true)
+                {
+                    final long recId = archive.findLastMatchingRecording(
+                        0, IPC_CHANNEL, streamId, reproductionPublication.sessionId());
+                    if (recId != NULL_RECORDING_ID)
+                    {
+                        reproductionRecordingId(recId);
+                        break;
+                    }
+
+                    Thread.yield();
+                }
+
+                saveRecordingIdsFile();
+            }
+            catch (final Throwable ex)
+            {
+                CloseHelper.quietClose(reproductionPublication);
+                errorHandler.onError(ex);
+                return null;
+            }
+        }
+
+        return reproductionPublication;
+    }
+
+    public Subscription reproductionSubscription()
+    {
+        if (reproductionRecordingId == NULL_RECORDING_ID)
+        {
+            return null;
+        }
+
+        final int streamId = configuration.reproductionLogStream();
+        return archive.replay(reproductionRecordingId, NULL_POSITION, Long.MAX_VALUE, IPC_CHANNEL, streamId);
     }
 
     public static void setMtuLength(final int mtuLength, final ChannelUri channelUri)
@@ -494,6 +569,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         if (!closed)
         {
             awaitRecordingsCompletion();
+            CloseHelper.quietClose(reproductionPublication);
             shutdownArchiver();
             closed = true;
         }
@@ -583,6 +659,11 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     {
         inboundRecordingIds.forEach(recordingIdConsumer);
         outboundRecordingIds.forEach(recordingIdConsumer);
+    }
+
+    private void reproductionRecordingId(final long reproductionRecordingId)
+    {
+        this.reproductionRecordingId = reproductionRecordingId;
     }
 
     private class CompletingRecording

@@ -27,21 +27,25 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Collections;
+import java.util.List;
 
 public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
 {
     private final Long2ObjectHashMap<ReproductionTcpChannel> connectionIdToChannel = new Long2ObjectHashMap<>();
 
     private final ReproductionMessageHandler reproductionMessageHandler;
+    private final ReproductionLog reproductionLog;
 
     private long connectionId;
     private String address;
     private Runnable endOperation;
 
     public ReproductionTcpChannelSupplier(
-        final ReproductionMessageHandler reproductionMessageHandler)
+        final ReproductionMessageHandler reproductionMessageHandler, final ReproductionLog reproductionLog)
     {
         this.reproductionMessageHandler = reproductionMessageHandler;
+        this.reproductionLog = reproductionLog;
     }
 
     public void registerEndOperation(final Runnable endOperation)
@@ -53,15 +57,19 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
     {
         private final ExpandableArrayBuffer reproductionBuffer = new ExpandableArrayBuffer();
 
-        private final long connectionId;
+        private final List<ConnectionBackPressureEvent> events;
+        private int nextEvent = 0;
 
+        private final long connectionId;
         private int length;
         private boolean isResendRequest;
 
-        ReproductionTcpChannel(final long connectionId) throws IOException
+        ReproductionTcpChannel(final long connectionId, final List<ConnectionBackPressureEvent> events)
+            throws IOException
         {
             super(address);
             this.connectionId = connectionId;
+            this.events = events;
         }
 
         public SelectionKey register(final Selector sel, final int ops, final Object att)
@@ -70,10 +78,39 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
             return null; // we null-check elsewhere so this is safe
         }
 
-        public int write(final ByteBuffer src) throws IOException
+        public int write(final ByteBuffer src, final int seqNum, final boolean replay) throws IOException
         {
-            final int remaining = src.remaining();
-            reproductionMessageHandler.onMessage(connectionId, src);
+            ByteBuffer writeBuffer = src;
+
+            final List<ConnectionBackPressureEvent> events = this.events;
+            if (events != null)
+            {
+                final int nextEvent = this.nextEvent;
+
+                if (nextEvent < events.size())
+                {
+                    final ConnectionBackPressureEvent event = events.get(nextEvent);
+                    if (event.replay() == replay)
+                    {
+                        final int eventNum = event.seqNum();
+                        // We've gone past this point somehow
+                        if (seqNum > eventNum)
+                        {
+                            this.nextEvent = nextEvent + 1;
+                        }
+                        else if (seqNum == eventNum)
+                        {
+                            final int written = event.written();
+                            writeBuffer = src.duplicate();
+                            writeBuffer.limit(writeBuffer.position() + written);
+                            this.nextEvent = nextEvent + 1;
+                        }
+                    }
+                }
+            }
+
+            final int remaining = writeBuffer.remaining();
+            reproductionMessageHandler.onMessage(connectionId, writeBuffer);
             return remaining;
         }
 
@@ -132,13 +169,24 @@ public class ReproductionTcpChannelSupplier extends TcpChannelSupplier
     {
         if (address != null)
         {
-            final ReproductionTcpChannel channel = new ReproductionTcpChannel(connectionId);
+            final ReproductionTcpChannel channel = new ReproductionTcpChannel(
+                connectionId, getEvents());
             connectionIdToChannel.put(connectionId, channel);
             handler.onNewChannel(timeInMs, channel);
             address = null;
         }
 
         return 0;
+    }
+
+    private List<ConnectionBackPressureEvent> getEvents()
+    {
+        if (reproductionLog == null)
+        {
+            return Collections.emptyList();
+        }
+
+        return reproductionLog.lookupEvents(connectionId);
     }
 
     public void unbind() throws IOException

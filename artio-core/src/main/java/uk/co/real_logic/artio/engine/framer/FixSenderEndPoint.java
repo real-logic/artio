@@ -107,6 +107,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final long connectionId,
         final int libraryId,
         final ExclusivePublication inboundPublication,
+        final ReproductionLogWriter reproductionPublication,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
@@ -121,7 +122,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final FixReceiverEndPoint receiverEndPoint,
         final Formatters formatters)
     {
-        super(connectionId, inboundPublication, libraryId, channel, bytesInBuffer, maxBytesInBuffer, errorHandler,
+        super(connectionId, inboundPublication, reproductionPublication, libraryId, channel, bytesInBuffer,
+            maxBytesInBuffer, errorHandler,
             framer);
         this.connectionId = connectionId;
         this.invalidLibraryAttempts = invalidLibraryAttempts;
@@ -235,6 +237,11 @@ class FixSenderEndPoint extends SenderEndPoint
             if ((replaying && !replay) || (!replaying && replay) || requiresRetry)
             {
                 enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
+
+                if (requiresRetry)
+                {
+                    reattempt();
+                }
                 return;
             }
 
@@ -245,25 +252,34 @@ class FixSenderEndPoint extends SenderEndPoint
                 return;
             }
 
-            final int written = writeBuffer(directBuffer, offset, bodyLength);
+            final int written = writeBuffer(directBuffer, offset, bodyLength, seqNum, replay);
+            final int reattemptBytesWritten = this.reattemptBytesWritten;
             final int totalWritten = reattemptBytesWritten + written;
 
             if (totalWritten < bodyLength)
             {
-                reattemptBytesWritten = totalWritten;
+                this.reattemptBytesWritten = totalWritten;
                 // set seqNum to 0 in order to avoid duplicate replayComplete sends
                 final int enqSeqNum = replay ? NOT_LAST_REPLAY_MSG : seqNum;
                 enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, enqSeqNum, replay);
+
+                tryLogBackPressure(seqNum, replay, written);
             }
             else
             {
-                reattemptBytesWritten = NO_REATTEMPT;
+                this.reattemptBytesWritten = NO_REATTEMPT;
 
                 final MessageTimingHandler messageTimingHandler = this.messageTimingHandler;
                 if (messageTimingHandler != null && !replay)
                 {
                     messageTimingHandler.onMessage(
                         seqNum, connectionId, directBuffer, metaDataOffset, metaDataLength);
+                }
+
+                if (reattemptBytesWritten != NO_REATTEMPT)
+                {
+                    // Completed write of a back-pressured message
+                    tryLogBackPressure(seqNum, replay, written);
                 }
             }
 
@@ -272,6 +288,15 @@ class FixSenderEndPoint extends SenderEndPoint
         catch (final IOException e)
         {
             errorHandler.onError(e);
+        }
+    }
+
+    private void tryLogBackPressure(final int seqNum, final boolean replay, final int written)
+    {
+        final ReproductionLogWriter reproductionLogWriter = this.reproductionLogWriter;
+        if (reproductionLogWriter != null)
+        {
+            reproductionLogWriter.logBackPressure(connectionId, seqNum, replay, written);
         }
     }
 
@@ -287,7 +312,8 @@ class FixSenderEndPoint extends SenderEndPoint
     }
 
     private int writeBuffer(
-        final DirectBuffer directBuffer, final int offset, final int messageSize) throws IOException
+        final DirectBuffer directBuffer, final int offset, final int messageSize, final int seqNum,
+        final boolean replay) throws IOException
     {
         final ByteBuffer buffer = directBuffer.byteBuffer();
         final int startLimit = buffer.limit();
@@ -297,7 +323,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final int writePosition = reattemptBytesWritten + offset;
         ByteBufferUtil.position(buffer, writePosition);
 
-        final int written = channel.write(buffer);
+        final int written = channel.write(buffer, seqNum, replay);
         ByteBufferUtil.position(buffer, offset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, writePosition, written);
 
@@ -425,11 +451,13 @@ class FixSenderEndPoint extends SenderEndPoint
                     final int bodyLength = buffer.getInt(bodyLengthOffset);
 
                     final int bodyOffset = bodyLengthOffset + SIZE_OF_INT;
-                    final int written = writeBuffer(buffer, bodyOffset, bodyLength);
+                    final int written = writeBuffer(buffer, bodyOffset, bodyLength, sequenceNumber, replay);
                     final int totalWritten = written + reattemptBytesWritten;
+                    tryLogBackPressure(sequenceNumber, replay, written);
                     if (totalWritten < bodyLength)
                     {
                         this.reattemptBytesWritten = totalWritten;
+
                         break;
                     }
                     else

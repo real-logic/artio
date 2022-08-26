@@ -32,6 +32,7 @@ class FixEndPointFactory
     private final EngineConfiguration configuration;
     private final FixContexts fixContexts;
     private final GatewayPublication inboundLibraryPublication;
+    private final ReproductionLogWriter reproductionLogWriter;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
     private final FixGatewaySessions gatewaySessions;
@@ -42,6 +43,7 @@ class FixEndPointFactory
         final EngineConfiguration configuration,
         final FixContexts fixContexts,
         final GatewayPublication inboundLibraryPublication,
+        final ReproductionLogWriter reproductionLogWriter,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
         final FixGatewaySessions gatewaySessions,
@@ -51,6 +53,7 @@ class FixEndPointFactory
         this.configuration = configuration;
         this.fixContexts = fixContexts;
         this.inboundLibraryPublication = inboundLibraryPublication;
+        this.reproductionLogWriter = reproductionLogWriter;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
         this.gatewaySessions = gatewaySessions;
@@ -100,6 +103,7 @@ class FixEndPointFactory
             connectionId,
             libraryId,
             inboundLibraryPublication.dataPublication(),
+            reproductionLogWriter,
             channel,
             bytesInBuffer,
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),

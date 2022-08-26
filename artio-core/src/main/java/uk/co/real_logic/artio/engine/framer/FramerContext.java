@@ -101,6 +101,8 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler, recordingCoordinator.framerInboundLookup(),
             null);
 
+        final ReproductionLogWriter reproductionLogWriter = reproductionLogWriter(outboundLibraryStreams);
+
         final FixEndPointFactory endPointFactory;
         final SystemEpochClock epochClock = new SystemEpochClock();
         if (configuration.acceptsFixP())
@@ -137,6 +139,7 @@ public class FramerContext
                 configuration,
                 fixContexts,
                 inboundPublication,
+                reproductionLogWriter,
                 fixCounters,
                 errorHandler,
                 (FixGatewaySessions)gatewaySessions,
@@ -177,7 +180,20 @@ public class FramerContext
             engineContext.outboundIndexRegistrationId(),
             fixCounters,
             engineContext.senderSequenceNumbers(),
-            conductorAgentInvoker);
+            conductorAgentInvoker,
+            reproductionLogWriter);
+    }
+
+    private ReproductionLogWriter reproductionLogWriter(final Streams outboundLibraryStreams)
+    {
+        if (configuration.writeReproductionLog())
+        {
+            return new ReproductionLogWriter(outboundLibraryStreams.reproductionPublication());
+        }
+        else
+        {
+            return null;
+        }
     }
 
     private Subscription newAdminEngineSubscription(final Aeron aeron)

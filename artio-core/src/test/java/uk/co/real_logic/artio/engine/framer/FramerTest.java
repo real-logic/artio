@@ -197,7 +197,8 @@ public class FramerTest
             1,
             mock(FixCounters.class),
             mock(SenderSequenceNumbers.class),
-            mock(AgentInvoker.class));
+            mock(AgentInvoker.class),
+            null);
 
         when(fixContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(
             sessionKey,
