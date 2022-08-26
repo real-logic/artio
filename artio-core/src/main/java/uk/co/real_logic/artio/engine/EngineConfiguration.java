@@ -1188,6 +1188,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the message handler for outbound messages to be passed to when reproduction mode is enabled.
+     *
+     * See {@link #reproduceInbound(long, long)} in order to enable inbound reproduction.
+     *
+     * @param reproductionMessageHandler the message handler
+     * @return this
+     */
     public EngineConfiguration reproductionMessageHandler(
         final ReproductionMessageHandler reproductionMessageHandler)
     {
@@ -1195,11 +1203,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    // ignores bind operations
-    // ignores TcpChannelSupplier
-    // ignores the clock
-    // doesn't support initiated connections, only acceptor for now
-    // doesn't record the interaction
+    /**
+     * Enable inbound reproduction mode for the Engine.
+     *
+     * Inbound reproduction mode needs to be started using: {@link FixEngine#startReproduction()}. In order to use this
+     * with libraries then libraries must have their
+     * {@link uk.co.real_logic.artio.library.LibraryConfiguration#reproduceInbound(long, long)} mode enabled.
+     *
+     * @param startInNs the start time to reproduce from.
+     * @param endInNs the end time to reproduce until.
+     * @return this
+     */
     public EngineConfiguration reproduceInbound(
         final long startInNs, final long endInNs)
     {
@@ -1211,19 +1225,46 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Set whether writing the reproduction log is enabled or disabled. Disabled by default.
+     *
+     * This logs additional events on the {@link #reproductionLogStream(int)} in order to enable a more accurate
+     * reproduction of events. For example: at what point back-pressure happens. These events are not needed in order
+     * to perform an inbound reproduction: they just make the inbound reproduction more accurate.
+     *
+     * @param writeReproductionLog true to enable the reproduction log
+     * @return this
+     */
     public EngineConfiguration writeReproductionLog(final boolean writeReproductionLog)
     {
         this.writeReproductionLog = writeReproductionLog;
         return this;
     }
 
-    // We also use the same stream id for replay.
+    /**
+     * Sets the Aeron stream id for the reproduction event stream. The Aeron channel used in conjunction with
+     * this stream is {@link io.aeron.CommonContext#IPC_CHANNEL}.
+     *
+     * This is unused unless {@link #writeReproductionLog(boolean)} is set to true.
+     *
+     * @param reproductionLogStream the Aeron stream id for the reproduction event stream.
+     * @return this
+     */
     public EngineConfiguration reproductionLogStream(final int reproductionLogStream)
     {
         this.reproductionLogStream = reproductionLogStream;
         return this;
     }
 
+    /**
+     * Sets the Aeron stream id for replaying the archive log when running a reproduction. The Aeron channel used in
+     * conjunction with this stream is {@link io.aeron.CommonContext#IPC_CHANNEL}.
+     *
+     * This is unused unless {@link #reproduceInbound(long, long)} is enabled.
+     *
+     * @param reproductionReplayStream the Aeron stream id for the reproduction replay stream.
+     * @return this
+     */
     public EngineConfiguration reproductionReplayStream(final int reproductionReplayStream)
     {
         this.reproductionReplayStream = reproductionReplayStream;

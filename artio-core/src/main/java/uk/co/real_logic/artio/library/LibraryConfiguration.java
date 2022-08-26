@@ -19,6 +19,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.ReproductionClock;
+import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.session.DirectSessionProxy;
 import uk.co.real_logic.artio.session.ResendRequestController;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -258,6 +259,17 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * Enable inbound reproduction mode for the Library.
+     *
+     * Inbound reproduction mode needs to be started using: {@link FixEngine#startReproduction()}. In order to use this
+     * then the Engine that this library connects to must also have its
+     * {@link uk.co.real_logic.artio.engine.EngineConfiguration#reproduceInbound(long, long)} mode enabled.
+     *
+     * @param startInNs the start time to reproduce from.
+     * @param endInNs the end time to reproduce until.
+     * @return this
+     */
     public LibraryConfiguration reproduceInbound(
         final long startInNs, final long endInNs)
     {

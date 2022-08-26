@@ -508,6 +508,13 @@ public final class FixEngine extends GatewayProcess
         return false;
     }
 
+    /**
+     * Start a reproduction. In order for this operation to be used then
+     * {@link EngineConfiguration#reproduceInbound(long, long)} must be enabled.
+     *
+     * @return the reply for the operation. This reply completes when the reproduction completes or results in an error
+     * if there is an error running the reproduction operation.
+     */
     public Reply<?> startReproduction()
     {
         if (configuration.reproductionConfiguration() == null)

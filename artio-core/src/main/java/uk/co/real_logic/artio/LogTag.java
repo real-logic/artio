@@ -113,8 +113,15 @@ public enum LogTag
      */
     ARCHIVE_SCAN,
 
+    /**
+     * Prints out information associated with debugging reproduction runs. See
+     * {@link uk.co.real_logic.artio.engine.EngineConfiguration#reproduceInbound(long, long)}.
+     */
     REPRODUCTION,
 
+    /**
+     * Used by tests that perform reproduction.
+     */
     REPRODUCTION_TEST;
 
     private final char[] logStr;
