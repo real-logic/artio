@@ -162,6 +162,11 @@ public final class ILink3Context implements InternalFixPContext
         throw new UnsupportedOperationException();
     }
 
+    public boolean fromNegotiate()
+    {
+        return newlyAllocated;
+    }
+
     public void initiatorReconnect(final boolean reestablishConnection)
     {
         final long connectLastUuid = uuid();
@@ -219,5 +224,9 @@ public final class ILink3Context implements InternalFixPContext
     public boolean hasUnsentMessagesAtNegotiate()
     {
         return false;
+    }
+
+    public void validate(final Enum<?> rejectCode)
+    {
     }
 }

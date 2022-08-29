@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import b3.entrypoint.fixp.sbe.EstablishRejectCode;
+import b3.entrypoint.fixp.sbe.NegotiationRejectCode;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.InternalFixPContext;
@@ -312,5 +314,26 @@ public class BinaryEntryPointContext implements InternalFixPContext
     public boolean hasUnsentMessagesAtNegotiate()
     {
         return hasUnsentMessagesAtNegotiate;
+    }
+
+    public void validate(final Enum<?> rejectCode)
+    {
+        if (fromNegotiate())
+        {
+            validate(rejectCode, NegotiationRejectCode.class);
+        }
+        else
+        {
+            validate(rejectCode, EstablishRejectCode.class);
+        }
+    }
+
+    private void validate(final Enum<?> rejectCode, final Class<?> expectedClass)
+    {
+        if (rejectCode.getClass() != expectedClass)
+        {
+            throw new IllegalArgumentException(
+                "Invalid reject code used: " + rejectCode + " should be of type: " + expectedClass);
+        }
     }
 }

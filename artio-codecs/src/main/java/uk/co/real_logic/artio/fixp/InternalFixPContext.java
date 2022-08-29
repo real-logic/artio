@@ -64,4 +64,12 @@ public interface InternalFixPContext extends FixPContext
     long surrogateSessionId();
 
     boolean hasUnsentMessagesAtNegotiate();
+
+    /**
+     * Validate the passed reject code is valid for the given context.
+     *
+     * @throws IllegalArgumentException if the reject code is invalid.
+     * @param rejectCode the reject code to validate
+     */
+    void validate(Enum<?> rejectCode);
 }

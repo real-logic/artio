@@ -39,4 +39,11 @@ public interface FixPContext
     FixPProtocolType protocolType();
 
     int compareVersion(FixPContext oldContext);
+
+    /**
+     * Gets whether this context was generated from a <code>Negotiate</code> or an <code>Establish</code> message.
+     *
+     * @return true iff this context was generated from a <code>Negotiate</code> message.
+     */
+    boolean fromNegotiate();
 }

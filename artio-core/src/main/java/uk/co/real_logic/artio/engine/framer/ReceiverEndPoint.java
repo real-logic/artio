@@ -196,6 +196,7 @@ public abstract class ReceiverEndPoint
 
     void disconnectEndpoint(final DisconnectReason reason)
     {
+        Objects.requireNonNull(reason);
         framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
         cleanupDisconnectState(reason);
         if (selectionKey != null)

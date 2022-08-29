@@ -140,6 +140,16 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectConnectionsWithCustomReject() throws IOException
+    {
+        setupArtio();
+
+        fixPAuthenticationStrategy.reject(NegotiationRejectCode.INVALID_FIRM);
+
+        connectionRejected(NegotiationRejectCode.INVALID_FIRM);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectConnectionsWithDuplicateIds() throws IOException
     {
         setupArtio();
@@ -289,6 +299,17 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         fixPAuthenticationStrategy.reject();
 
         final long sessionVerID = rejectedReestablish(EstablishRejectCode.CREDENTIALS);
+        assertAuthStrategyReject(sessionVerID);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectReEstablishmentOfSessionIfAuthenticationFailsWithCustomCode() throws IOException
+    {
+        successfulConnection();
+
+        fixPAuthenticationStrategy.reject(EstablishRejectCode.ESTABLISH_ATTEMPTS_EXCEEDED);
+
+        final long sessionVerID = rejectedReestablish(EstablishRejectCode.ESTABLISH_ATTEMPTS_EXCEEDED);
         assertAuthStrategyReject(sessionVerID);
     }
 
