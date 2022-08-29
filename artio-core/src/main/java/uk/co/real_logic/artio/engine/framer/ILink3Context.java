@@ -18,9 +18,10 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
-public final class ILink3Context implements FixPContext
+public final class ILink3Context implements InternalFixPContext
 {
     private final int offset;
 

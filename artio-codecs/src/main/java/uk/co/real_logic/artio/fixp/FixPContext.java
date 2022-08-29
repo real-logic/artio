@@ -32,55 +32,11 @@ public interface FixPContext
     FixPKey key();
 
     /**
-     * Invoked when an acceptor reconnects.
-     *
-     * @param oldContext the FixPContext from the previous connect
-     * @param ignoreFromNegotiate do not perform validation about whether this is a negotiate or establish message
-     * @return a response that might be a reason to reject this connection or OK if there is no error.
-     */
-    FixPFirstMessageResponse checkAccept(FixPContext oldContext, boolean ignoreFromNegotiate);
-
-    int compareVersion(FixPContext oldContext);
-
-    /**
      * Gets the protocol type for this key.
      *
      * @return the protocol type for this key.
      */
     FixPProtocolType protocolType();
 
-    /**
-     * Invoked when a sequence is ended. There are two cases for that:
-     *
-     * <ul>
-     *     <li>When the <code>FixEngine.resetSequenceNumber(sessionId)</code> method is invoked.</li>
-     *     <li>For FIXP protocols that implement the FinishedSending / FinishedReceiving mechanism, it is invoked
-     *     upon receipt of either of those methods.</li>
-     * </ul>
-     *
-     * Artio users should never need to call this method. Implementations should be idempotent.
-     */
-    void onEndSequence();
-
-    /**
-     * Invoked when an initiator reconnects.
-     *
-     * @param reestablishConnection true if the initiator's configuration for reestablishing the connection has set
-     *                              this value to true.
-     * @throws UnsupportedOperationException if protocol not implemented as an initiator
-     */
-    void initiatorReconnect(boolean reestablishConnection);
-
-    /**
-     * Invoked when an iniator receives a response to its negotiate.
-     *
-     * @return true iff this is a new context, false if it's an update
-     */
-    boolean onInitiatorNegotiateResponse();
-
-    void onInitiatorDisconnect();
-
-    long surrogateSessionId();
-
-    boolean hasUnsentMessagesAtNegotiate();
+    int compareVersion(FixPContext oldContext);
 }

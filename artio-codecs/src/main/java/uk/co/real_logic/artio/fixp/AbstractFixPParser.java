@@ -32,7 +32,7 @@ public abstract class AbstractFixPParser
 
     public abstract int version(DirectBuffer buffer, int offset);
 
-    public abstract FixPContext lookupContext(
+    public abstract InternalFixPContext lookupContext(
         DirectBuffer messageBuffer,
         int messageOffset,
         int messageLength);

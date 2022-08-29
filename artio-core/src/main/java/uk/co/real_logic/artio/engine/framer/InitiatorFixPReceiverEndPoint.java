@@ -17,15 +17,15 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 class InitiatorFixPReceiverEndPoint extends FixPReceiverEndPoint
 {
-    private final FixPContext context;
+    private final InternalFixPContext context;
     private final FixPContexts fixPContexts;
     private final int negotiationResponse;
 
@@ -37,7 +37,7 @@ class InitiatorFixPReceiverEndPoint extends FixPReceiverEndPoint
         final Framer framer,
         final GatewayPublication publication,
         final int libraryId,
-        final FixPContext context,
+        final InternalFixPContext context,
         final EpochNanoClock epochNanoClock,
         final long correlationId,
         final FixPContexts fixPContexts,

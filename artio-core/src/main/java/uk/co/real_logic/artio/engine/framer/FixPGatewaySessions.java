@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InboundFixPConnectEncoder;
@@ -76,7 +77,7 @@ public class FixPGatewaySessions extends GatewaySessions
         final TcpChannel channel,
         final Framer framer,
         final FixPProtocolType protocolType,
-        final FixPContext identification,
+        final InternalFixPContext identification,
         final AbstractFixPProxy fixPProxy,
         final ReceiverEndPoint receiverEndPoint)
     {
@@ -124,7 +125,7 @@ public class FixPGatewaySessions extends GatewaySessions
             final TcpChannel channel,
             final Framer framer,
             final FixPProtocolType protocolType,
-            final FixPContext identification,
+            final InternalFixPContext identification,
             final AbstractFixPProxy fixPProxy,
             final ReceiverEndPoint receiverEndPoint)
         {

@@ -2,8 +2,8 @@ package uk.co.real_logic.artio.binary_entrypoint;
 
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 
 import java.nio.ByteOrder;
 
@@ -57,7 +57,7 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     }
 
     public int saveContext(
-        final FixPContext fixPContext, final AtomicBuffer buffer, final int offset, final int fileVersion)
+        final InternalFixPContext fixPContext, final AtomicBuffer buffer, final int offset, final int fileVersion)
     {
         final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPContext;
         context.offset(offset);
@@ -73,7 +73,7 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     }
 
     public void updateContext(
-        final FixPContext fixPContext, final AtomicBuffer buffer)
+        final InternalFixPContext fixPContext, final AtomicBuffer buffer)
     {
         final BinaryEntryPointContext context = (BinaryEntryPointContext)fixPContext;
         final int offset = context.offset();
