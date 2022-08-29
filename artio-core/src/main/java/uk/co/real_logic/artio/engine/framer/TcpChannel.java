@@ -23,6 +23,8 @@ import java.nio.channels.Selector;
 
 public abstract class TcpChannel implements AutoCloseable
 {
+    public static final int UNKNOWN_SEQ_NUM = -1;
+
     protected final String remoteAddress;
 
     public TcpChannel(final String remoteAddress) throws IOException

@@ -61,14 +61,22 @@ final class ReproductionLogReader
         {
             recordingSubscription.poll((buffer, offset, length, header) ->
             {
-                connectionBackpressure.wrapAndApplyHeader(buffer, offset, messageHeader);
+                final MessageHeaderDecoder messageHdr = messageHeader;
 
-                reproductionLog.put(
-                    connectionBackpressure.connectionId(),
-                    new ConnectionBackPressureEvent(
-                    connectionBackpressure.sequenceNumber(),
-                    connectionBackpressure.isReplay() == Bool.TRUE,
-                    connectionBackpressure.written()));
+                messageHdr.wrap(buffer, offset);
+                final int templateId = messageHdr.templateId();
+                if (templateId == ConnectionBackpressureDecoder.TEMPLATE_ID)
+                {
+                    final ConnectionBackpressureDecoder connectionBackpress = connectionBackpressure;
+                    connectionBackpress.wrap(buffer, offset, messageHdr.blockLength(), messageHdr.version());
+
+                    reproductionLog.put(
+                        connectionBackpress.connectionId(),
+                        new ConnectionBackPressureEvent(
+                        connectionBackpress.sequenceNumber(),
+                        connectionBackpress.isReplay() == Bool.TRUE,
+                        connectionBackpress.written()));
+                }
             }, 10);
 
             Thread.yield();

@@ -33,6 +33,8 @@ import uk.co.real_logic.artio.validation.FixPAuthenticationProxy;
 
 import java.io.IOException;
 
+import static uk.co.real_logic.artio.engine.framer.TcpChannel.UNKNOWN_SEQ_NUM;
+
 public class FixPGatewaySessions extends GatewaySessions
 {
     static final int ACCEPTED_HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
@@ -212,7 +214,7 @@ public class FixPGatewaySessions extends GatewaySessions
         {
             try
             {
-                channel.write(rejectEncodeBuffer, 1, false);
+                channel.write(rejectEncodeBuffer, UNKNOWN_SEQ_NUM, false);
                 return rejectEncodeBuffer.hasRemaining() ? SendRejectResult.BACK_PRESSURED : SendRejectResult.INFLIGHT;
             }
             catch (final IOException e)

@@ -36,6 +36,7 @@ import uk.co.real_logic.artio.storage.messages.Bool;
 import uk.co.real_logic.artio.storage.messages.ConnectionBackpressureEncoder;
 import uk.co.real_logic.artio.storage.messages.MessageHeaderEncoder;
 
+import static uk.co.real_logic.artio.engine.framer.TcpChannel.UNKNOWN_SEQ_NUM;
 import static uk.co.real_logic.artio.storage.messages.MessageHeaderEncoder.ENCODED_LENGTH;
 
 class ReproductionLogWriter
@@ -51,12 +52,26 @@ class ReproductionLogWriter
     {
         this.reproductionPublication = reproductionPublication;
 
+        // Just write a message so that the publication is created even if no bp occurs.
+        // This simplifies the reading process as it ensures there's an image.
+        while (reproductionPublication.offer(buffer) < 0)
+        {
+            Thread.yield();
+        }
+
         final MessageHeaderEncoder messageHeader = new MessageHeaderEncoder();
         connectionBackpressure.wrapAndApplyHeader(buffer, 0, messageHeader);
+
+
     }
 
     void logBackPressure(final long connectionId, final int seqNum, final boolean replay, final int written)
     {
+        if (seqNum == UNKNOWN_SEQ_NUM)
+        {
+            return;
+        }
+
         connectionBackpressure
             .connectionId(connectionId)
             .sequenceNumber(seqNum)
