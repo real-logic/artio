@@ -21,8 +21,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InboundFixPConnectEncoder;
@@ -78,7 +78,7 @@ public class FixPGatewaySessions extends GatewaySessions
         final TcpChannel channel,
         final Framer framer,
         final FixPProtocolType protocolType,
-        final FixPContext identification,
+        final InternalFixPContext identification,
         final AbstractFixPProxy fixPProxy,
         final ReceiverEndPoint receiverEndPoint)
     {
@@ -111,10 +111,11 @@ public class FixPGatewaySessions extends GatewaySessions
         private final int offset;
         private final int messageSize;
         private final FixPProtocolType protocolType;
-        private final FixPContext identification;
+        private final InternalFixPContext identification;
         private final AbstractFixPProxy fixPProxy;
 
         private FixPFirstMessageResponse fixPFirstMessageResponse;
+        private Enum<?> rejectCode;
 
         FixPPendingAcceptorLogon(
             final long sessionId,
@@ -126,7 +127,7 @@ public class FixPGatewaySessions extends GatewaySessions
             final TcpChannel channel,
             final Framer framer,
             final FixPProtocolType protocolType,
-            final FixPContext identification,
+            final InternalFixPContext identification,
             final AbstractFixPProxy fixPProxy,
             final ReceiverEndPoint receiverEndPoint)
         {
@@ -147,7 +148,7 @@ public class FixPGatewaySessions extends GatewaySessions
             }
             else
             {
-                reject(rejectReason);
+                internalReject(rejectReason, null);
             }
         }
 
@@ -207,7 +208,7 @@ public class FixPGatewaySessions extends GatewaySessions
 
         protected void encodeRejectMessage()
         {
-            rejectEncodeBuffer = fixPProxy.encodeReject(identification, fixPFirstMessageResponse);
+            rejectEncodeBuffer = fixPProxy.encodeReject(identification, fixPFirstMessageResponse, rejectCode);
         }
 
         protected SendRejectResult sendReject()
@@ -225,13 +226,24 @@ public class FixPGatewaySessions extends GatewaySessions
 
         public void reject()
         {
-            reject(FixPFirstMessageResponse.CREDENTIALS);
+            reject((Enum<?>)null);
         }
 
-        private void reject(final FixPFirstMessageResponse response)
+        public void reject(final Enum<?> rejectCode)
         {
+            internalReject(FixPFirstMessageResponse.CREDENTIALS, rejectCode);
+        }
+
+        private void internalReject(final FixPFirstMessageResponse response, final Enum<?> rejectCode)
+        {
+            if (rejectCode != null)
+            {
+                identification.validate(rejectCode);
+            }
+
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.fixPFirstMessageResponse = response;
+            this.rejectCode = rejectCode;
             this.lingerTimeoutInMs = LINGER_TIMEOUT_IN_MS;
             setState(AuthenticationState.SAVING_REJECTED_LOGON_WITH_REPLY);
         }

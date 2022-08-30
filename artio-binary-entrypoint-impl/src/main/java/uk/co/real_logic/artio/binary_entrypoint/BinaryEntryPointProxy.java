@@ -427,7 +427,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
     }
 
     public ByteBuffer encodeReject(
-        final FixPContext fixPContext, final FixPFirstMessageResponse rejectReason)
+        final FixPContext fixPContext, final FixPFirstMessageResponse rejectReason, final Enum<?> rejectCode)
     {
         final BinaryEntryPointContext identification = (BinaryEntryPointContext)fixPContext;
 
@@ -438,8 +438,21 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         {
             case CREDENTIALS:
                 isNegotiate = identification.fromNegotiate();
-                negotiationRejectCode = NegotiationRejectCode.CREDENTIALS;
-                establishRejectCode = EstablishRejectCode.CREDENTIALS;
+                if (rejectCode == null)
+                {
+                    negotiationRejectCode = NegotiationRejectCode.CREDENTIALS;
+                    establishRejectCode = EstablishRejectCode.CREDENTIALS;
+                }
+                else if (isNegotiate)
+                {
+                    negotiationRejectCode = (NegotiationRejectCode)rejectCode;
+                    establishRejectCode = null;
+                }
+                else
+                {
+                    establishRejectCode = (EstablishRejectCode)rejectCode;
+                    negotiationRejectCode = null;
+                }
                 break;
 
             case NEGOTIATE_DUPLICATE_ID_BAD_VER:

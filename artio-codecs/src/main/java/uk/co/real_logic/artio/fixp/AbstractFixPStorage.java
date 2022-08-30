@@ -24,11 +24,11 @@ import org.agrona.concurrent.AtomicBuffer;
  */
 public abstract class AbstractFixPStorage
 {
-    public abstract FixPContext newInitiatorContext(FixPKey key, int offset);
+    public abstract InternalFixPContext newInitiatorContext(FixPKey key, int offset);
 
-    public abstract FixPContext loadContext(AtomicBuffer buffer, int offset, int fileVersion);
+    public abstract InternalFixPContext loadContext(AtomicBuffer buffer, int offset, int fileVersion);
 
-    public abstract int saveContext(FixPContext context, AtomicBuffer buffer, int offset, int fileVersion);
+    public abstract int saveContext(InternalFixPContext context, AtomicBuffer buffer, int offset, int fileVersion);
 
-    public abstract void updateContext(FixPContext context, AtomicBuffer buffer);
+    public abstract void updateContext(InternalFixPContext context, AtomicBuffer buffer);
 }

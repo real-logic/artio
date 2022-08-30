@@ -16,10 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
-import uk.co.real_logic.artio.fixp.AbstractFixPParser;
-import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -36,7 +33,7 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
     private final FixPGatewaySessions gatewaySessions;
 
     private byte[] firstMessage;
-    private FixPContext context;
+    private InternalFixPContext context;
 
     FixPGatewaySession(
         final long connectionId,
@@ -102,7 +99,7 @@ public class FixPGatewaySession extends GatewaySession implements FixPConnectedS
     }
 
     void setupOfflineSession(
-        final FixPContext context,
+        final InternalFixPContext context,
         final byte[] firstMessage,
         final int libraryId)
     {

@@ -23,6 +23,7 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
 {
     private volatile boolean accept;
     private volatile FixPContext lastSessionId;
+    private Enum<?> rejectCode;
 
     public FakeFixPAuthenticationStrategy()
     {
@@ -39,6 +40,12 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
         this.accept = false;
     }
 
+    public void reject(final Enum<?> rejectCode)
+    {
+        this.rejectCode = rejectCode;
+        this.accept = false;
+    }
+
     public void authenticate(final FixPContext context, final FixPAuthenticationProxy authProxy)
     {
         lastSessionId = context;
@@ -49,7 +56,14 @@ public class FakeFixPAuthenticationStrategy implements FixPAuthenticationStrateg
         }
         else
         {
-            authProxy.reject();
+            if (rejectCode != null)
+            {
+                authProxy.reject(rejectCode);
+            }
+            else
+            {
+                authProxy.reject();
+            }
         }
     }
 

@@ -18,9 +18,10 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
 import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
-public final class ILink3Context implements FixPContext
+public final class ILink3Context implements InternalFixPContext
 {
     private final int offset;
 
@@ -161,6 +162,11 @@ public final class ILink3Context implements FixPContext
         throw new UnsupportedOperationException();
     }
 
+    public boolean fromNegotiate()
+    {
+        return newlyAllocated;
+    }
+
     public void initiatorReconnect(final boolean reestablishConnection)
     {
         final long connectLastUuid = uuid();
@@ -218,5 +224,9 @@ public final class ILink3Context implements FixPContext
     public boolean hasUnsentMessagesAtNegotiate()
     {
         return false;
+    }
+
+    public void validate(final Enum<?> rejectCode)
+    {
     }
 }

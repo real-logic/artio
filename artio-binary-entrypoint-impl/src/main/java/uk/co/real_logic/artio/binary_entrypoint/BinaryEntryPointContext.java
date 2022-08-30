@@ -15,8 +15,11 @@
  */
 package uk.co.real_logic.artio.binary_entrypoint;
 
+import b3.entrypoint.fixp.sbe.EstablishRejectCode;
+import b3.entrypoint.fixp.sbe.NegotiationRejectCode;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPFirstMessageResponse;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 
 import static uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol.unsupported;
@@ -24,7 +27,7 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 import static uk.co.real_logic.artio.fixp.AbstractFixPSequenceExtractor.NEXT_SESSION_VERSION_ID;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 
-public class BinaryEntryPointContext implements FixPContext
+public class BinaryEntryPointContext implements InternalFixPContext
 {
 
     // persisted state
@@ -311,5 +314,26 @@ public class BinaryEntryPointContext implements FixPContext
     public boolean hasUnsentMessagesAtNegotiate()
     {
         return hasUnsentMessagesAtNegotiate;
+    }
+
+    public void validate(final Enum<?> rejectCode)
+    {
+        if (fromNegotiate())
+        {
+            validate(rejectCode, NegotiationRejectCode.class);
+        }
+        else
+        {
+            validate(rejectCode, EstablishRejectCode.class);
+        }
+    }
+
+    private void validate(final Enum<?> rejectCode, final Class<?> expectedClass)
+    {
+        if (rejectCode.getClass() != expectedClass)
+        {
+            throw new IllegalArgumentException(
+                "Invalid reject code used: " + rejectCode + " should be of type: " + expectedClass);
+        }
     }
 }

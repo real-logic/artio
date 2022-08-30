@@ -20,8 +20,8 @@ import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.engine.framer.ILink3Context;
 import uk.co.real_logic.artio.engine.framer.ILink3Key;
 import uk.co.real_logic.artio.fixp.AbstractFixPStorage;
-import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.InternalFixPContext;
 import uk.co.real_logic.artio.storage.messages.ILink3ContextDecoder;
 import uk.co.real_logic.artio.storage.messages.ILink3ContextEncoder;
 
@@ -39,13 +39,13 @@ public class Ilink3Storage extends AbstractFixPStorage
         this.clock = clock;
     }
 
-    public FixPContext newInitiatorContext(final FixPKey key, final int offset)
+    public InternalFixPContext newInitiatorContext(final FixPKey key, final int offset)
     {
         final long newUuid = nanoSecondTimestamp();
         return new ILink3Context((ILink3Key)key, clock, 0, 0, newUuid, 0, true, offset);
     }
 
-    public FixPContext loadContext(
+    public InternalFixPContext loadContext(
         final AtomicBuffer buffer, final int offset, final int fileVersion)
     {
         contextDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
@@ -59,7 +59,7 @@ public class Ilink3Storage extends AbstractFixPStorage
     }
 
     public int saveContext(
-        final FixPContext fixPContext, final AtomicBuffer buffer, final int offset, final int fileVersion)
+        final InternalFixPContext fixPContext, final AtomicBuffer buffer, final int offset, final int fileVersion)
     {
         final ILink3Context context = (ILink3Context)fixPContext;
         final ILink3Key key = context.key();
@@ -73,7 +73,7 @@ public class Ilink3Storage extends AbstractFixPStorage
         return contextEncoder.limit() - offset;
     }
 
-    public void updateContext(final FixPContext fixPContext, final AtomicBuffer buffer)
+    public void updateContext(final InternalFixPContext fixPContext, final AtomicBuffer buffer)
     {
         final ILink3Context context = (ILink3Context)fixPContext;
         contextEncoder

@@ -2121,7 +2121,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId,
         final long correlationId)
     {
-        final FixPContext context = fixPContexts.lookupContext(sessionId);
+        final InternalFixPContext context = fixPContexts.lookupContext(sessionId);
         if (context == null)
         {
             return false;
@@ -2685,7 +2685,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 initFixPProtocol();
 
                 final long sessionId = fixPParser.sessionId(srcBuffer, srcOffset);
-                final FixPContext context = fixPParser.lookupContext(srcBuffer, srcOffset, srcLength);
+                final InternalFixPContext context = fixPParser.lookupContext(srcBuffer, srcOffset, srcLength);
 
                 // In the case of creating a follower session: we want to be a bit more lenient with this validation
                 // If the application uses a context that is pretending to be an Establish but it's the first time

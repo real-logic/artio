@@ -122,7 +122,7 @@ public abstract class AbstractFixPProxy
     protected abstract int applyHeader(MessageEncoderFlyweight message, MutableDirectBuffer buffer, int offset);
 
     public abstract ByteBuffer encodeReject(
-        FixPContext identification, FixPFirstMessageResponse rejectReason);
+        FixPContext identification, FixPFirstMessageResponse rejectReason, Enum<?> rejectCode);
 
     public abstract byte[] encodeFirstMessage(FixPContext context);
 }

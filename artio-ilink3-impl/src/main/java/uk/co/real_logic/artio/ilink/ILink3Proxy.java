@@ -259,7 +259,7 @@ public class ILink3Proxy extends AbstractFixPProxy
     }
 
     public ByteBuffer encodeReject(
-        final FixPContext identification, final FixPFirstMessageResponse rejectReason)
+        final FixPContext identification, final FixPFirstMessageResponse rejectReason, final Enum<?> rejectCode)
     {
         return Ilink3Protocol.unsupported();
     }
