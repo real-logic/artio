@@ -69,6 +69,8 @@ public abstract class AbstractDecoderGeneratorTest
     private static final String STRING_ENUM_OPT = "stringEnumOpt";
     public static final int CAPACITY = 8 * 1024;
 
+    private static Map<String, CharSequence> sourcesWithValidation;
+
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeatWithoutEnumValueValidation;
     private static Class<?> heartbeatWithRejectingUnknownFields;
@@ -84,7 +86,7 @@ public abstract class AbstractDecoderGeneratorTest
 
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
-        final Map<String, CharSequence> sourcesWithValidation = generateSources(
+        sourcesWithValidation = generateSources(
             true, false, true, flyweightStringsEnabled, false);
         final Map<String, CharSequence> sourcesWithNoEnumValueValidation = generateSources(
             true, false, false, flyweightStringsEnabled, false);
@@ -131,10 +133,10 @@ public abstract class AbstractDecoderGeneratorTest
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
             outputManager, validationClass, rejectUnknownField,
             rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer,
-            String.valueOf(rejectingUnknownEnumValue));
+            String.valueOf(rejectingUnknownEnumValue), true);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
-            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -152,6 +154,16 @@ public abstract class AbstractDecoderGeneratorTest
         final int modifiers = heartbeat.getModifiers();
         assertFalse("Not instantiable", isAbstract(modifiers));
         assertTrue("Not public", isPublic(modifiers));
+    }
+
+    @Test
+    public void shouldGenerateFieldTagsInJavadoc()
+    {
+        final String egComponent = sourcesWithValidation.get("null." + EG_COMPONENT + "Decoder").toString();
+        assertThat(egComponent, containsString("/* ComponentField = 124 */\n    public"));
+
+        final String header = sourcesWithValidation.get("null.HeaderDecoder").toString();
+        assertThat(header, containsString("/* BeginString = 8 */\n    public"));
     }
 
     @Test

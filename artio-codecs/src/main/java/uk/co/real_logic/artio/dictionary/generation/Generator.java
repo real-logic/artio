@@ -97,6 +97,7 @@ public abstract class Generator
     protected final boolean flyweightsEnabled;
     protected final String codecRejectUnknownEnumValueEnabled;
     protected final String scope;
+    protected final boolean fixTagsInJavadoc;
 
     protected final Deque<Aggregate> aggregateStack = new ArrayDeque<>();
 
@@ -109,7 +110,8 @@ public abstract class Generator
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
-        final String codecRejectUnknownEnumValueEnabled)
+        final String codecRejectUnknownEnumValueEnabled,
+        final boolean fixTagsInJavadoc)
     {
         this.dictionary = dictionary;
         this.thisPackage = thisPackage;
@@ -120,6 +122,7 @@ public abstract class Generator
         this.rejectUnknownEnumValueClass = rejectUnknownEnumValueClass;
         this.flyweightsEnabled = flyweightsEnabled;
         this.codecRejectUnknownEnumValueEnabled = codecRejectUnknownEnumValueEnabled;
+        this.fixTagsInJavadoc = fixTagsInJavadoc;
 
         scope = dictionary.shared() ? "protected" : "private";
     }
@@ -752,7 +755,18 @@ public abstract class Generator
 
     String qualifiedAggregateStackNames(final Function<Aggregate, String> toName)
     {
-
         return aggregateStack.stream().map(toName).collect(joining("."));
+    }
+
+    protected String generateAccessorJavadoc(final Field field)
+    {
+        if (fixTagsInJavadoc)
+        {
+            return "/* " + field.name() + " = " + field.number() + " */\n    ";
+        }
+        else
+        {
+            return "";
+        }
     }
 }

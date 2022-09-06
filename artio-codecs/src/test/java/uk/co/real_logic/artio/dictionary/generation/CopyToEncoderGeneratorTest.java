@@ -77,10 +77,10 @@ public class CopyToEncoderGeneratorTest
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, TEST_PACKAGE, outputManager, ValidationOn.class,
             RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, false, false,
-            RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+            RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
-            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+            RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
 
         constantGenerator.generate();
         enumGenerator.generate();

@@ -164,10 +164,11 @@ class EncoderGenerator extends Generator
         final Class<?> validationClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
-        final String codecRejectUnknownEnumValueEnabled)
+        final String codecRejectUnknownEnumValueEnabled,
+        final boolean fixTagsInJavadoc)
     {
         super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, false, codecRejectUnknownEnumValueEnabled);
+            rejectUnknownEnumValueClass, false, codecRejectUnknownEnumValueEnabled, fixTagsInJavadoc);
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);
@@ -603,6 +604,7 @@ class EncoderGenerator extends Generator
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final String hasField = String.format("    %2$s boolean has%1$s;\n\n", name, scope) + hasGetter(name);
+        final String javadoc = generateAccessorJavadoc(field);
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
@@ -610,7 +612,7 @@ class EncoderGenerator extends Generator
             enumSetter(className, fieldName, enumName(field.name())) : "";
 
         final Function<String, String> generateSetter =
-            (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
+            (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter, javadoc);
 
         switch (field.type())
         {
@@ -622,7 +624,7 @@ class EncoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return generateStringSetter(className, fieldName, name, enumSetter);
+                return generateStringSetter(className, fieldName, name, enumSetter, javadoc);
             case BOOLEAN:
                 return generateSetter.apply("boolean");
 
@@ -646,12 +648,13 @@ class EncoderGenerator extends Generator
             case QUANTITY:
             case PERCENTAGE:
             case AMT:
-                return decimalFloatSetter(fieldName, hasField, className, hasAssign, enumSetter);
+                return decimalFloatSetter(fieldName, hasField, className, hasAssign, enumSetter, javadoc);
 
             case DATA:
             case XMLDATA:
                 // DATA fields always come with their own Length field defined by the schema
-                return generateSetter.apply("byte[]") + generateCopyingDataSetter(className, fieldName, hasAssign);
+                return generateSetter.apply("byte[]") +
+                    generateCopyingDataSetter(className, fieldName, hasAssign, javadoc);
 
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
@@ -660,16 +663,17 @@ class EncoderGenerator extends Generator
             case MONTHYEAR:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return generateBytesSetter(className, fieldName, name);
+                return generateBytesSetter(className, fieldName, name, javadoc);
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
     }
 
-    private String generateCopyingDataSetter(final String className, final String fieldName, final String hasAssign)
+    private String generateCopyingDataSetter(
+        final String className, final String fieldName, final String hasAssign, final String javadoc)
     {
         return String.format(
-            "    public %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
+            "    %4$spublic %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s = copyInto(%1$s, value, offset, length);\n" +
             "%3$s" +
@@ -677,7 +681,8 @@ class EncoderGenerator extends Generator
             "    }\n\n",
             fieldName,
             className,
-            hasAssign);
+            hasAssign,
+            javadoc);
     }
 
     private void generateGroup(
@@ -727,83 +732,86 @@ class EncoderGenerator extends Generator
         }
     }
 
-    private String generateBytesSetter(final String className, final String fieldName, final String name)
+    private String generateBytesSetter(
+        final String className, final String fieldName, final String name, final String javadoc)
     {
         return String.format(
             "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
             "    %4$s int %1$sOffset = 0;\n\n" +
             "    %4$s int %1$sLength = 0;\n\n" +
-            "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
+            "    %5$spublic %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s.wrap(value);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final DirectBuffer value, final int length)\n" +
+            "    %5$spublic %2$s %1$s(final DirectBuffer value, final int length)\n" +
             "    {\n" +
             "        return %1$s(value, 0, length);\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final DirectBuffer value)\n" +
+            "    %5$spublic %2$s %1$s(final DirectBuffer value)\n" +
             "    {\n" +
             "        return %1$s(value, 0, value.capacity());\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
+            "    %5$spublic %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s.wrap(value);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
+            "    %5$spublic %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        copyInto(%1$s, value, offset, length);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final byte[] value, final int length)\n" +
+            "    %5$spublic %2$s %1$s(final byte[] value, final int length)\n" +
             "    {\n" +
             "        return %1$s(value, 0, length);\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final byte[] value)\n" +
+            "    %5$spublic %2$s %1$s(final byte[] value)\n" +
             "    {\n" +
             "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
-            "    public boolean has%3$s()\n" +
+            "    %5$spublic boolean has%3$s()\n" +
             "    {\n" +
             "        return %1$sLength > 0;\n" +
             "    }\n\n" +
-            "    public MutableDirectBuffer %1$s()\n" +
+            "    %5$spublic MutableDirectBuffer %1$s()\n" +
             "    {\n" +
             "        return %1$s;\n" +
             "    }\n\n" +
-            "    public String %1$sAsString()\n" +
+            "    %5$spublic String %1$sAsString()\n" +
             "    {\n" +
             "        return %1$s.getStringWithoutLengthAscii(%1$sOffset, %1$sLength);\n" +
             "    }\n\n",
             fieldName,
             className,
             name,
-            scope);
+            scope,
+            javadoc);
     }
 
     private String generateStringSetter(
         final String className,
         final String fieldName,
         final String name,
-        final String enumSetter)
+        final String enumSetter,
+        final String javadoc)
     {
         return String.format(
             "%2$s" +
-            "    public %3$s %1$s(final CharSequence value)\n" +
+            "    %5$spublic %3$s %1$s(final CharSequence value)\n" +
             "    {\n" +
             "        toBytes(value, %1$s);\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = value.length();\n" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %3$s %1$s(final AsciiSequenceView value)\n" +
+            "    %5$spublic %3$s %1$s(final AsciiSequenceView value)\n" +
             "    {\n" +
             "        final DirectBuffer buffer = value.buffer();\n" +
             "        if (buffer != null)\n" +
@@ -814,15 +822,15 @@ class EncoderGenerator extends Generator
             "        }\n" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %3$s %1$s(final char[] value)\n" +
+            "    %5$spublic %3$s %1$s(final char[] value)\n" +
             "    {\n" +
             "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
-            "    public %3$s %1$s(final char[] value, final int length)\n" +
+            "    %5$spublic %3$s %1$s(final char[] value, final int length)\n" +
             "    {\n" +
                 "        return %1$s(value, 0, length);\n" +
             "    }\n\n" +
-            "    public %3$s %1$s(final char[] value, final int offset, final int length)\n" +
+            "    %5$spublic %3$s %1$s(final char[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        toBytes(value, %1$s, offset, length);\n" +
             "        %1$sOffset = 0;\n" +
@@ -831,9 +839,10 @@ class EncoderGenerator extends Generator
             "    }\n\n" +
             "%4$s",
             fieldName,
-            generateBytesSetter(className, fieldName, name),
+            generateBytesSetter(className, fieldName, name, javadoc),
             className,
-            enumSetter);
+            enumSetter,
+            javadoc);
     }
 
     private String generateSetter(
@@ -843,18 +852,19 @@ class EncoderGenerator extends Generator
         final String optionalField,
         final String className,
         final String optionalAssign,
-        final String enumSetter)
+        final String enumSetter,
+        final String javadoc)
     {
         return String.format(
             "    %1$s %2$s %3$s;\n\n" +
             "%4$s" +
-            "    public %5$s %3$s(%2$s value)\n" +
+            "    %8$spublic %5$s %3$s(%2$s value)\n" +
             "    {\n" +
             "        %3$s = value;\n" +
             "%6$s" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %2$s %3$s()\n" +
+            "    %8$spublic %2$s %3$s()\n" +
             "    {\n" +
             "        return %3$s;\n" +
             "    }\n\n" +
@@ -865,7 +875,8 @@ class EncoderGenerator extends Generator
             optionalField,
             className,
             optionalAssign,
-            enumSetter);
+            enumSetter,
+            javadoc);
     }
 
     private String decimalFloatSetter(
@@ -873,24 +884,25 @@ class EncoderGenerator extends Generator
         final String optionalField,
         final String className,
         final String optionalAssign,
-        final String enumSetter)
+        final String enumSetter,
+        final String javadoc)
     {
         return String.format(
             "    %6$s final DecimalFloat %1$s = new DecimalFloat();\n\n" +
             "%2$s" +
-            "    public %3$s %1$s(ReadOnlyDecimalFloat value)\n" +
+            "    %7$spublic %3$s %1$s(ReadOnlyDecimalFloat value)\n" +
             "    {\n" +
             "        %1$s.set(value);\n" +
             "%4$s" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public %3$s %1$s(long value, int scale)\n" +
+            "    %7$spublic %3$s %1$s(long value, int scale)\n" +
             "    {\n" +
             "        %1$s.set(value, scale);\n" +
             "%4$s" +
             "        return this;\n" +
             "    }\n\n" +
-            "    public DecimalFloat %1$s()\n" +
+            "    %7$spublic DecimalFloat %1$s()\n" +
             "    {\n" +
             "        return %1$s;\n" +
             "    }\n\n" +
@@ -900,7 +912,8 @@ class EncoderGenerator extends Generator
             className,
             optionalAssign,
             enumSetter,
-            scope);
+            scope,
+            javadoc);
     }
 
     private String enumSetter(

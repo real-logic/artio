@@ -55,12 +55,16 @@ public final class CodecConfiguration
     public static final String PARENT_PACKAGE_PROPERTY = "fix.codecs.parent_package";
     public static final String FLYWEIGHTS_ENABLED_PROPERTY = "fix.codecs.flyweight";
     public static final String REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "reject.unknown.enum.value";
+    public static final String FIX_TAGS_IN_JAVADOC = "fix.codecs.tags_in_javadoc";
 
     public static final String DEFAULT_PARENT_PACKAGE = "uk.co.real_logic.artio";
+    public static final String DEFAULT_FIX_TAGS_IN_JAVADOC = "true";
 
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
     private boolean wrapEmptyBuffer = Boolean.getBoolean(WRAP_EMPTY_BUFFER);
+    private boolean fixTagsInJavadoc = Boolean.parseBoolean(System.getProperty(
+        FIX_TAGS_IN_JAVADOC, DEFAULT_FIX_TAGS_IN_JAVADOC));
     private SharedCodecConfiguration sharedCodecConfiguration;
 
     private String codecRejectUnknownEnumValueEnabled;
@@ -211,6 +215,19 @@ public final class CodecConfiguration
         return sharedCodecConfiguration;
     }
 
+    /**
+     * Sets whether to generate javadoc tags with the FIX tags in. Defaults to true. Can be configured via properties
+     * using <code>-Dfix.codecs.tags_in_javadoc=false</code>.
+     *
+     * @param fixTagsInJavadoc true to generate javadoc tags with the FIX tags in.
+     * @return this
+     */
+    public CodecConfiguration fixTagsInJavadoc(final boolean fixTagsInJavadoc)
+    {
+        this.fixTagsInJavadoc = fixTagsInJavadoc;
+        return this;
+    }
+
     String outputPath()
     {
         return outputPath;
@@ -249,6 +266,11 @@ public final class CodecConfiguration
     BiFunction<String, String, OutputManager> outputManagerFactory()
     {
         return outputManagerFactory;
+    }
+
+    public boolean fixTagsInJavadoc()
+    {
+        return fixTagsInJavadoc;
     }
 
     void conclude()

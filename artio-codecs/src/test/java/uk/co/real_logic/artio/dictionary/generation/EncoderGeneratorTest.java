@@ -83,7 +83,8 @@ public class EncoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
             new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
-            rejectUnknownField, rejectUnknownEnumValue, Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+            rejectUnknownField, rejectUnknownEnumValue, Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY,
+            true);
         enumGenerator.generate();
         encoderGenerator.generate();
         return outputManager.getSources();
@@ -824,6 +825,16 @@ public class EncoderGeneratorTest
         final Class<?> component = compileInMemory(COMPONENT_ENCODER, sources);
 
         assertNotNull(component);
+    }
+
+    @Test
+    public void shouldGenerateFieldTagsInJavadoc()
+    {
+        final String egComponent = sources.get("null." + EG_COMPONENT + "Encoder").toString();
+        assertThat(egComponent, containsString("/* ComponentField = 124 */\n    public"));
+
+        final String header = sources.get("null.HeaderEncoder").toString();
+        assertThat(header, containsString("/* BeginString = 8 */\n    public"));
     }
 
     @Test

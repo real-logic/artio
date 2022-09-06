@@ -132,10 +132,11 @@ class DecoderGenerator extends Generator
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
         final boolean wrapEmptyBuffer,
-        final String codecRejectUnknownEnumValueEnabled)
+        final String codecRejectUnknownEnumValueEnabled,
+        final boolean fixTagsInJavadoc)
     {
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled);
+            rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled, fixTagsInJavadoc);
         this.initialBufferSize = initialBufferSize;
         this.encoderPackage = encoderPackage;
         this.wrapEmptyBuffer = wrapEmptyBuffer;
@@ -886,20 +887,22 @@ class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
 
+        final String javadoc = generateAccessorJavadoc(field);
+
         final String length = type.isStringBased() ?
-            String.format("    public int %1$sLength();\n", fieldName) : "";
+            String.format("    %2$spublic int %1$sLength();\n", fieldName, javadoc) : "";
 
         final String stringAsciiView = type.isStringBased() ?
-            String.format("    public AsciiSequenceView %1$s(AsciiSequenceView view);\n", fieldName) : "";
+            String.format("    %2$spublic AsciiSequenceView %1$s(AsciiSequenceView view);\n", fieldName, javadoc) : "";
 
         final String optional = !entry.required() ?
-            String.format("    public boolean has%1$s();\n", name) : "";
+            String.format("    %2$spublic boolean has%1$s();\n", name, javadoc) : "";
 
         final String enumDecoder = shouldGenerateClassEnumMethods(field) ?
-            String.format("    public %s %sAsEnum();\n", name, fieldName) : "";
+            String.format("    %3$spublic %1$s %2$sAsEnum();\n", name, fieldName, javadoc) : "";
 
         return String.format(
-            "    public %1$s %2$s();\n" +
+            "    %7$spublic %1$s %2$s();\n" +
             "%3$s" +
             "%4$s" +
             "%5$s" +
@@ -909,7 +912,8 @@ class DecoderGenerator extends Generator
             optional,
             length,
             enumDecoder,
-            stringAsciiView);
+            stringAsciiView,
+            javadoc);
     }
 
     private void generateGetter(
@@ -1298,34 +1302,30 @@ class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
         final String asStringBody = generateAsStringBody(entry, name, fieldName);
+        final String javadoc = generateAccessorJavadoc(field);
 
         final String extraStringDecode = type.isStringBased() ? String.format(
-            "    public String %1$sAsString()\n" +
+            "    %4$spublic String %1$sAsString()\n" +
             "    {\n" +
             "        return %3$s;\n" +
             "    }\n\n" +
-            "    public AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
+            "    %4$spublic AsciiSequenceView %1$s(final AsciiSequenceView view)\n" +
             "    {\n" +
             "%2$s" +
             "        return view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
             "    }\n\n",
-            fieldName,
-            wrapEmptyBuffer ? wrapEmptyBuffer(entry) : optionalCheck,
-            asStringBody) : "";
+            fieldName, wrapEmptyBuffer ? wrapEmptyBuffer(entry) : optionalCheck, asStringBody, javadoc) : "";
 
         // Need to keep offset and length split due to the abject fail that is the DATA type.
         final String lengthBasedFields = type.hasLengthField(flyweightsEnabled) ? String.format(
             "    %4$s int %1$sLength;\n\n" +
-            "    public int %1$sLength()\n" +
+            "    %5$spublic int %1$sLength()\n" +
             "    {\n" +
             "%2$s" +
             "        return %1$sLength;\n" +
             "    }\n\n" +
             "%3$s",
-            fieldName,
-            optionalCheck,
-            extraStringDecode,
-            scope) : "";
+            fieldName, optionalCheck, extraStringDecode, scope, javadoc) : "";
 
         final String offsetField = type.hasOffsetField(flyweightsEnabled) ?
             String.format("    %3$s int %1$sOffset;\n\n%2$s", fieldName, lengthBasedFields, scope) : "";
@@ -1344,26 +1344,21 @@ class DecoderGenerator extends Generator
         final String enumDecoder = shouldGenerateClassEnumMethods(field) ?
             String.format(
             "%4$s" +
-            "    public %6$s %2$sAsEnum()\n" +
+            "    %7$spublic %6$s %2$sAsEnum()\n" +
             "    {\n" +
             (!entry.required() ? "        if (!has%1$s)\n return %6$s.%5$s;\n" : "") +
             (type.isStringBased() ? "        %2$sWrapper.wrap(this.%2$s(), %2$sLength);\n" : "") +
             "        return %3$s;\n" +
             "    }\n\n",
-            name,
-            fieldName,
-            enumValueDecoder,
-            enumStringBasedWrapperField,
-            NULL_VAL_NAME,
-            enumName(name)
-        ) : (field.type().isMultiValue() || field.type() == Type.STRING) ? enumStringBasedWrapperField : "";
+            name, fieldName, enumValueDecoder, enumStringBasedWrapperField, NULL_VAL_NAME, enumName(name),
+            javadoc) : (field.type().isMultiValue() || field.type() == Type.STRING) ? enumStringBasedWrapperField : "";
 
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 
         return String.format(
             "    %10$s %1$s %2$s%3$s;\n\n" +
             "%4$s" +
-            "    public %1$s %2$s()\n" +
+            "    %11$spublic %1$s %2$s()\n" +
             "    {\n" +
             "%5$s" +
             "%9$s" +
@@ -1381,7 +1376,8 @@ class DecoderGenerator extends Generator
             offsetField,
             enumDecoder,
             flyweightsEnabled ? lazyInitialisation : "",
-            scope);
+            scope,
+            javadoc);
     }
 
     private String wrapEmptyBuffer(final Entry entry)

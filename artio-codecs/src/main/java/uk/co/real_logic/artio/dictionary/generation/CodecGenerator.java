@@ -165,7 +165,8 @@ public final class CodecGenerator
             Validation.class,
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
-            codecRejectUnknownEnumValueEnabled).generate();
+            codecRejectUnknownEnumValueEnabled,
+            configuration.fixTagsInJavadoc()).generate();
 
         new DecoderGenerator(
             dictionary,
@@ -179,7 +180,8 @@ public final class CodecGenerator
             RejectUnknownEnumValue.class,
             false,
             configuration.wrapEmptyBuffer(),
-            codecRejectUnknownEnumValueEnabled).generate();
+            codecRejectUnknownEnumValueEnabled,
+            configuration.fixTagsInJavadoc()).generate();
 
         new PrinterGenerator(dictionary, decoderPackage, decoderOutput).generate();
         new AcceptorGenerator(dictionary, decoderPackage, decoderOutput).generate();
@@ -200,7 +202,8 @@ public final class CodecGenerator
                 RejectUnknownEnumValue.class,
                 true,
                 configuration.wrapEmptyBuffer(),
-                codecRejectUnknownEnumValueEnabled).generate();
+                codecRejectUnknownEnumValueEnabled,
+                configuration.fixTagsInJavadoc()).generate();
         }
     }
 }
