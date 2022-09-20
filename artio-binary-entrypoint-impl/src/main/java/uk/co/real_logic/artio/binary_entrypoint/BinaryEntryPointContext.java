@@ -308,6 +308,7 @@ public class BinaryEntryPointContext implements InternalFixPContext
             ", requestTimestampInNs=" + requestTimestampInNs +
             ", enteringFirm=" + enteringFirm +
             ", fromNegotiate=" + fromNegotiate +
+            ", credentials=" + credentials +
             '}';
     }
 

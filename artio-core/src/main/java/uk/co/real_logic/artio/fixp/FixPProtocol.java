@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.sbe.ir.Ir;
 import uk.co.real_logic.sbe.ir.Token;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -169,9 +170,10 @@ public abstract class FixPProtocol
     {
         try
         {
-            return Class.forName(decoderName).newInstance();
+            return Class.forName(decoderName).getConstructor().newInstance();
         }
-        catch (final InstantiationException | IllegalAccessException | ClassNotFoundException e)
+        catch (final InstantiationException | IllegalAccessException | ClassNotFoundException | NoSuchMethodException |
+            InvocationTargetException e)
         {
             LangUtil.rethrowUnchecked(e);
             return null;
