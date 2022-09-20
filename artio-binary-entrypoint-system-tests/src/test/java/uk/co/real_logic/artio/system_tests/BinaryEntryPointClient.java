@@ -156,7 +156,6 @@ public final class BinaryEntryPointClient implements AutoCloseable
         final NegotiateResponseDecoder response = read(new NegotiateResponseDecoder(), 0);
         assertEquals(sessionId, response.sessionID());
         assertEquals(sessionVerID, response.sessionVerID());
-        assertEquals(BinaryEntryPointClient.FIRM_ID, response.enteringFirm());
         return response;
     }
 
@@ -166,7 +165,6 @@ public final class BinaryEntryPointClient implements AutoCloseable
         assertEquals(sessionId, reject.sessionID());
         assertEquals(sessionVerID, reject.sessionVerID());
         assertEquals(negotiateTimestampInNs, reject.requestTimestamp().time());
-        assertEquals(FIRM_ID, reject.enteringFirm());
         assertEquals(negotiationRejectCode, reject.negotiationRejectCode());
         return reject;
     }

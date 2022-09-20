@@ -497,7 +497,6 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 .sessionVerID(identification.sessionVerID())
                 .requestTimestamp().time(identification.requestTimestampInNs());
             negotiateReject
-                .enteringFirm(identification.enteringFirm())
                 .negotiationRejectCode(negotiationRejectCode);
 
             DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", negotiateRejectAppendTo);
@@ -535,7 +534,6 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 .sessionID(context.sessionID())
                 .sessionVerID(context.sessionVerID())
                 .timestamp().time(context.requestTimestampInNs());
-            negotiate.enteringFirm(context.enteringFirm());
             negotiate.onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue());
         }
         else

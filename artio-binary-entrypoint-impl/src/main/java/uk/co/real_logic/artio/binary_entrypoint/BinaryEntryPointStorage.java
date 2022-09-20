@@ -21,9 +21,7 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
     private static final int SESSION_VER_ID_LENGTH = SIZE_OF_LONG;
     private static final int TIMESTAMP_OFFSET = SESSION_VER_ID_OFFSET + SESSION_VER_ID_LENGTH;
     private static final int TIMESTAMP_LENGTH = SIZE_OF_LONG;
-    private static final int ENTERING_FIRM_OFFSET = TIMESTAMP_OFFSET + TIMESTAMP_LENGTH;
-    private static final int ENTERING_FIRM_LENGTH = SIZE_OF_LONG;
-    private static final int ENDED_OFFSET = ENTERING_FIRM_OFFSET + ENTERING_FIRM_LENGTH;
+    private static final int ENDED_OFFSET = TIMESTAMP_OFFSET + TIMESTAMP_LENGTH;
     private static final int ENDED_LENGTH = SIZE_OF_SHORT;
     private static final int FROM_NEGOTIATE_OFFSET = ENDED_OFFSET + ENDED_LENGTH;
     private static final int FROM_NEGOTIATE_LENGTH = SIZE_OF_SHORT;
@@ -45,12 +43,11 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
         final long sessionId = buffer.getLong(offset + SESSION_ID_OFFSET);
         final long sessionVerId = buffer.getLong(offset + SESSION_VER_ID_OFFSET);
         final long timestamp = buffer.getLong(offset + TIMESTAMP_OFFSET);
-        final long enteringFirm = buffer.getLong(offset + ENTERING_FIRM_OFFSET);
         final boolean ended = buffer.getShort(offset + ENDED_OFFSET) == SHORT_TRUE;
         final boolean fromNegotiate = buffer.getShort(offset + FROM_NEGOTIATE_OFFSET) == SHORT_TRUE;
 
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
-            sessionId, sessionVerId, timestamp, enteringFirm, fromNegotiate, "");
+            sessionId, sessionVerId, timestamp, fromNegotiate, "");
         context.ended(ended);
         context.offset(offset);
         return context;
@@ -65,7 +62,6 @@ public class BinaryEntryPointStorage extends AbstractFixPStorage
         buffer.putLong(offset + SESSION_ID_OFFSET, context.sessionID(), ByteOrder.LITTLE_ENDIAN);
         putSessionVerId(buffer, context, offset);
         putTimestamp(buffer, context, offset);
-        buffer.putLong(offset + ENTERING_FIRM_OFFSET, context.enteringFirm(), ByteOrder.LITTLE_ENDIAN);
         putEnded(buffer, context, offset + ENDED_OFFSET);
         putShort(buffer, offset + FROM_NEGOTIATE_OFFSET, context.fromNegotiate());
 

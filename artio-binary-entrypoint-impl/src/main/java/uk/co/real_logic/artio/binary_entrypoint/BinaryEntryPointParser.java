@@ -229,7 +229,6 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     negotiate.sessionID(),
                     negotiate.sessionVerID(),
                     negotiate.timestamp().time(),
-                    negotiate.enteringFirm(),
                     true,
                     negotiate.credentials());
 
@@ -239,7 +238,6 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     establish.sessionID(),
                     establish.sessionVerID(),
                     establish.timestamp().time(),
-                    NegotiateDecoder.enteringFirmNullValue(),
                     false,
                     establish.credentials());
         }
