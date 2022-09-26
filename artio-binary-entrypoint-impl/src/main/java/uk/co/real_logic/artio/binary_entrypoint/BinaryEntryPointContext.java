@@ -30,6 +30,8 @@ import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 public class BinaryEntryPointContext implements InternalFixPContext
 {
 
+    public static final long ANY_FIRM_ID = -1;
+
     // persisted state
     private final long sessionID;
     private final long sessionVerID;
@@ -66,13 +68,13 @@ public class BinaryEntryPointContext implements InternalFixPContext
     }
 
     public static BinaryEntryPointContext forNextSessionVerID(
-        final long sessionId, final long nanoTime, final long firmId)
+        final long sessionId, final long nanoTime)
     {
         return new BinaryEntryPointContext(
             sessionId,
             BinaryEntryPointConnection.NEXT_SESSION_VERSION_ID,
             nanoTime,
-            firmId,
+            ANY_FIRM_ID,
             true,
             "");
     }
@@ -284,11 +286,8 @@ public class BinaryEntryPointContext implements InternalFixPContext
         {
             return false;
         }
-        if (requestTimestampInNs != that.requestTimestampInNs)
-        {
-            return false;
-        }
-        return enteringFirm == that.enteringFirm;
+
+        return requestTimestampInNs == that.requestTimestampInNs;
     }
 
     public int hashCode()
@@ -296,7 +295,6 @@ public class BinaryEntryPointContext implements InternalFixPContext
         int result = (int)(sessionID ^ (sessionID >>> 32));
         result = 31 * result + (int)(sessionVerID ^ (sessionVerID >>> 32));
         result = 31 * result + (int)(requestTimestampInNs ^ (requestTimestampInNs >>> 32));
-        result = 31 * result + (int)(enteringFirm ^ (enteringFirm >>> 32));
         return result;
     }
 

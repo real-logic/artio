@@ -1336,8 +1336,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     {
         return BinaryEntryPointContext.forNextSessionVerID(
             SESSION_ID,
-            System.nanoTime(),
-            FIRM_ID);
+            System.nanoTime());
     }
 
     private void replayNextSessionVersionIdMessages() throws IOException
