@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.fixp.FixPProtocol;
 import uk.co.real_logic.artio.fixp.FixPRejectRefIdExtractor;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -66,7 +67,14 @@ class AcceptorFixPReceiverEndPoint extends FixPReceiverEndPoint
     {
         if (requiresAuthentication && pendingAcceptorLogon == null)
         {
-            pendingAcceptorLogon = fixPGatewaySession.onLogon(buffer, offset, messageSize, channel, framer);
+            try
+            {
+                pendingAcceptorLogon = fixPGatewaySession.onLogon(buffer, offset, messageSize, channel, framer);
+            }
+            catch (final IllegalArgumentException e)
+            {
+                completeDisconnect(DisconnectReason.FIRST_MESSAGE_NOT_LOGON);
+            }
         }
 
         final int finishedSendingTemplateId = this.finishedSendingTemplateId;
