@@ -240,6 +240,28 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectMessageWithLargeSofh() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeNegotiateWithLargeSofh();
+            client.assertDisconnected();
+
+//            client.writeNegotiate();
+//            libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, false);
+//
+//            client.readNegotiateResponse();
+//
+//            client.writeEstablish();
+//            client.readFirstEstablishAck();
+//
+//            assertConnectionMatches(client, connectionAcquiredHandler);
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectUnNegotiatedEstablishWithHigherSessionVerId() throws IOException
     {
         successfulConnection();

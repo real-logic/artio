@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import b3.entrypoint.fixp.sbe.*;
 import b3.entrypoint.fixp.sbe.Boolean;
+import b3.entrypoint.fixp.sbe.*;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
@@ -270,6 +270,11 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private void write()
     {
         final int messageSize = readSofhMessageSize(unsafeWriteBuffer, 0);
+        writeWithLength(messageSize);
+    }
+
+    private void writeWithLength(final int messageSize)
+    {
         writeBuffer.position(0).limit(messageSize);
 
         testSystem.awaitBlocking(() ->
@@ -325,9 +330,20 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void writeNegotiate()
     {
+        writeNegotiateInternal(0);
+    }
+
+    public void writeNegotiateWithLargeSofh()
+    {
+        writeNegotiateInternal(1000);
+    }
+
+    private void writeNegotiateInternal(final int extraLength)
+    {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
-        wrap(negotiate, NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
-            CREDENTIALS.length());
+        final int actualLength = NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
+            CREDENTIALS.length();
+        wrap(negotiate, actualLength + extraLength);
 
         negotiateTimestampInNs = timeInNs();
 
@@ -340,7 +356,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
             .onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue())
             .credentials(CREDENTIALS);
 
-        write();
+        writeWithLength(BINARY_ENTRYPOINT_HEADER_LENGTH + actualLength);
     }
 
     public void writeEstablish()
