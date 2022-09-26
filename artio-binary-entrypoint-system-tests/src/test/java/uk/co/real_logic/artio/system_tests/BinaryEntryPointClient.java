@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.system_tests;
 
 import b3.entrypoint.fixp.sbe.*;
 import b3.entrypoint.fixp.sbe.Boolean;
-import b3.entrypoint.fixp.sbe.ExecutionReport_NewEncoder.NoMetricsEncoder;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
@@ -407,7 +406,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public ExecutionReport_NewDecoder readExecutionReportNew(final int clOrdId)
     {
         final ExecutionReport_NewDecoder report = read(
-            new ExecutionReport_NewDecoder(), NoMetricsEncoder.sbeBlockLength());
+            new ExecutionReport_NewDecoder(), 0);
         assertEquals(clOrdId, report.clOrdID());
         return report;
     }

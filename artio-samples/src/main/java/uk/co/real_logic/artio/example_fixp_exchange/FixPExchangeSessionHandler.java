@@ -43,7 +43,7 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
             newOrderSingle.wrap(buffer, offset, blockLength, version);
 
             final long position = connection.tryClaim(
-                executionReport, ExecutionReport_NewEncoder.NoMetricsEncoder.sbeBlockLength());
+                executionReport, 0);
 
             if (position < 0)
             {
@@ -63,8 +63,7 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
                 .transactTime().time(System.nanoTime());
             executionReport
                 .protectionPrice().mantissa(1234);
-            executionReport.receivedTime().time(System.nanoTime());
-            executionReport.noMetricsCount(0);
+            executionReport.marketSegmentReceivedTime().time(System.nanoTime());
 
             connection.commit();
             System.out.println("Sent Execution Report New");
