@@ -44,7 +44,7 @@ public class InternalBinaryEntryPointConnectionTest
         final BinaryEntryPointProxy proxy = mock(BinaryEntryPointProxy.class);
         final EpochNanoClock clock = new OffsetEpochNanoClock();
         final BinaryEntryPointContext context = new BinaryEntryPointContext(
-            SESSION_ID, SESSION_VER_ID, clock.nanoTime(), false, "");
+            SESSION_ID, SESSION_VER_ID, clock.nanoTime(), ENTERING_FIRM, false, "");
         final GatewayPublication inboundPublication = mock(GatewayPublication.class);
 
         final InternalBinaryEntryPointConnection connection = new InternalBinaryEntryPointConnection(

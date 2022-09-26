@@ -34,6 +34,7 @@ public class BinaryEntryPointContext implements InternalFixPContext
     private final long sessionID;
     private final long sessionVerID;
     private final long requestTimestampInNs;
+    private final long enteringFirm;
     private boolean ended;
 
     // Not persisted
@@ -48,12 +49,14 @@ public class BinaryEntryPointContext implements InternalFixPContext
         final long sessionID,
         final long sessionVerID,
         final long timestampInNs,
+        final long enteringFirm,
         final boolean fromNegotiate,
         final String credentials)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
         this.requestTimestampInNs = timestampInNs;
+        this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
         this.credentials = credentials;
 
@@ -63,12 +66,13 @@ public class BinaryEntryPointContext implements InternalFixPContext
     }
 
     public static BinaryEntryPointContext forNextSessionVerID(
-        final long sessionId, final long nanoTime)
+        final long sessionId, final long nanoTime, final long firmId)
     {
         return new BinaryEntryPointContext(
             sessionId,
             BinaryEntryPointConnection.NEXT_SESSION_VERSION_ID,
             nanoTime,
+            firmId,
             true,
             "");
     }
@@ -86,6 +90,11 @@ public class BinaryEntryPointContext implements InternalFixPContext
     public long requestTimestampInNs()
     {
         return requestTimestampInNs;
+    }
+
+    public long enteringFirm()
+    {
+        return enteringFirm;
     }
 
     public boolean fromNegotiate()
@@ -279,8 +288,7 @@ public class BinaryEntryPointContext implements InternalFixPContext
         {
             return false;
         }
-
-        return true;
+        return enteringFirm == that.enteringFirm;
     }
 
     public int hashCode()
@@ -288,6 +296,7 @@ public class BinaryEntryPointContext implements InternalFixPContext
         int result = (int)(sessionID ^ (sessionID >>> 32));
         result = 31 * result + (int)(sessionVerID ^ (sessionVerID >>> 32));
         result = 31 * result + (int)(requestTimestampInNs ^ (requestTimestampInNs >>> 32));
+        result = 31 * result + (int)(enteringFirm ^ (enteringFirm >>> 32));
         return result;
     }
 
@@ -297,6 +306,7 @@ public class BinaryEntryPointContext implements InternalFixPContext
             "sessionID=" + sessionID +
             ", sessionVerID=" + sessionVerID +
             ", requestTimestampInNs=" + requestTimestampInNs +
+            ", enteringFirm=" + enteringFirm +
             ", fromNegotiate=" + fromNegotiate +
             ", credentials=" + credentials +
             '}';
