@@ -969,7 +969,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.skipSequence();
 
             // Eventually get disconnected when there's no sequence message for longer than the timeout
-            client.readTerminate(TerminationCode.UNSPECIFIED);
+            client.readTerminate(TerminationCode.KEEPALIVE_INTERVAL_LAPSED);
             client.assertDisconnected();
         });
     }

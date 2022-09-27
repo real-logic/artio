@@ -204,7 +204,7 @@ class InternalBinaryEntryPointConnection
 
     protected void keepAliveExpiredTerminate()
     {
-        terminate(TerminationCode.UNSPECIFIED);
+        terminate(TerminationCode.KEEPALIVE_INTERVAL_LAPSED);
     }
 
     public void terminate(final TerminationCode terminationCode)
