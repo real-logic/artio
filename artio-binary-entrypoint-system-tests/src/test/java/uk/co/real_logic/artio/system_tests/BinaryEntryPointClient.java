@@ -338,6 +338,11 @@ public final class BinaryEntryPointClient implements AutoCloseable
         writeNegotiateInternal(1000);
     }
 
+    public void writeNegotiateWithShortSofh()
+    {
+        writeNegotiateInternal(-15);
+    }
+
     private void writeNegotiateInternal(final int extraLength)
     {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
