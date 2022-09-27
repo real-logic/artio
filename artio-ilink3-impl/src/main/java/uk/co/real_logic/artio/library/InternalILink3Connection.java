@@ -232,7 +232,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final ILink3Proxy proxy,
         final FixPMessageDissector dissector)
     {
-        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy, dissector);
+        super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy, dissector, 0);
         initiateReply(initiateReply);
         handler(configuration.handler());
         this.requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();

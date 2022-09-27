@@ -277,6 +277,20 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectMessageWithInvalidTimestamps() throws IOException
+    {
+        printErrors = false;
+
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeNegotiateWithTimestamp(0);
+            client.readNegotiateReject(NegotiationRejectCode.INVALID_TIMESTAMP);
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectConnectionWithDuplicateNegotiate() throws IOException
     {
         setupArtio();

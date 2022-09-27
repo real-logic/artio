@@ -330,27 +330,32 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void writeNegotiate()
     {
-        writeNegotiateInternal(0);
+        writeNegotiateInternal(0, timeInNs());
     }
 
     public void writeNegotiateWithLargeSofh()
     {
-        writeNegotiateInternal(1000);
+        writeNegotiateInternal(1000, timeInNs());
     }
 
     public void writeNegotiateWithShortSofh()
     {
-        writeNegotiateInternal(-15);
+        writeNegotiateInternal(-15, timeInNs());
     }
 
-    private void writeNegotiateInternal(final int extraLength)
+    public void writeNegotiateWithTimestamp(final long negotiateTimestampInNs)
+    {
+        writeNegotiateInternal(0, negotiateTimestampInNs);
+    }
+
+    private void writeNegotiateInternal(final int extraLength, final long negotiateTimestampInNs)
     {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         final int actualLength = NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
             CREDENTIALS.length();
         wrap(negotiate, actualLength + extraLength);
 
-        negotiateTimestampInNs = timeInNs();
+        this.negotiateTimestampInNs = negotiateTimestampInNs;
 
         negotiate
             .sessionID(sessionId)

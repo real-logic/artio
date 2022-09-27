@@ -131,7 +131,8 @@ class InternalBinaryEntryPointConnection
             configuration.epochNanoClock(),
             owner,
             proxy,
-            dissector);
+            dissector,
+            configuration.sendingTimeWindowInMs());
 
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.noEstablishFixPTimeoutInMs = configuration.noEstablishFixPTimeoutInMs();
@@ -304,7 +305,7 @@ class InternalBinaryEntryPointConnection
     public Action onNegotiate(
         final long sessionId,
         final long sessionVerID,
-        final long timestamp,
+        final long timestampInNanos,
         final long enteringFirm,
         final long onbehalfFirm)
     {
@@ -320,22 +321,20 @@ class InternalBinaryEntryPointConnection
         {
             if (state == SENT_NEGOTIATE_RESPONSE)
             {
-                if (Pressure.isBackPressured(proxy.sendNegotiateReject(
-                    sessionId, sessionVerID, timestamp, enteringFirm, NegotiationRejectCode.ALREADY_NEGOTIATED)))
-                {
-                    fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
-                    return CONTINUE;
-                }
-                else
-                {
-                    return ABORT;
-                }
+                return rejectNegotiate(sessionId, sessionVerID, timestampInNanos, enteringFirm,
+                    NegotiationRejectCode.ALREADY_NEGOTIATED);
             }
 
             if (checkFinishedSending(state))
             {
                 return CONTINUE;
             }
+        }
+
+        if (isInvalidTimestamp(timestampInNanos))
+        {
+            return rejectNegotiate(sessionId, sessionVerID, timestampInNanos, enteringFirm,
+                        NegotiationRejectCode.INVALID_TIMESTAMP);
         }
 
         onSessionId(sessionId, sessionVerID);
@@ -355,9 +354,37 @@ class InternalBinaryEntryPointConnection
             return ABORT;
         }
 
-        final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestamp, enteringFirm);
+        final long position = proxy.sendNegotiateResponse(sessionId, sessionVerID, timestampInNanos, enteringFirm);
         onAttemptedToSendMessage();
         return Pressure.apply(checkState(position, State.SENT_NEGOTIATE_RESPONSE, State.RETRY_NEGOTIATE_RESPONSE));
+    }
+
+    private boolean isInvalidTimestamp(final long messageTimestampInNanos)
+    {
+        final long sendingTimeWindowInNs = this.sendingTimeWindowInNs;
+        final long timestampInNs = requestTimestampInNs();
+        final long minTimestampInNs = timestampInNs - sendingTimeWindowInNs;
+        final long maxTimestampInNs = timestampInNs + sendingTimeWindowInNs;
+        return messageTimestampInNanos < minTimestampInNs || messageTimestampInNanos > maxTimestampInNs;
+    }
+
+    private Action rejectNegotiate(
+        final long sessionId,
+        final long sessionVerID,
+        final long timestamp,
+        final long enteringFirm,
+        final NegotiationRejectCode rejectCode)
+    {
+        if (Pressure.isBackPressured(proxy.sendNegotiateReject(
+            sessionId, sessionVerID, timestamp, enteringFirm, rejectCode)))
+        {
+            fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
+            return CONTINUE;
+        }
+        else
+        {
+            return ABORT;
+        }
     }
 
     private void onSessionId(final long sessionId, final long sessionVerID)
@@ -383,7 +410,7 @@ class InternalBinaryEntryPointConnection
     public Action onEstablish(
         final long sessionID,
         final long sessionVerID,
-        final long timestamp,
+        final long timestampInNs,
         final long keepAliveIntervalInMs,
         final long nextSeqNo,
         final CancelOnDisconnectType cancelOnDisconnectType,
@@ -404,24 +431,20 @@ class InternalBinaryEntryPointConnection
                 return Pressure.apply(proxy.sendEstablishReject(
                     sessionID,
                     sessionVerID,
-                    timestamp,
+                    timestampInNs,
                     EstablishRejectCode.ALREADY_ESTABLISHED));
             }
             else if (keepAliveIntervalInMs > maxFixPKeepaliveTimeoutInMs)
             {
-                onAttemptedToSendMessage();
-                final long position = proxy.sendEstablishReject(
-                    sessionID,
-                    sessionVerID,
-                    timestamp,
+                return rejectEstablish(sessionID, sessionVerID, timestampInNs,
                     EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
-                if (position > 0)
-                {
-                    return fullyUnbind();
-                }
-
-                return Pressure.apply(position);
             }
+        }
+
+        if (isInvalidTimestamp(timestampInNs))
+        {
+            return rejectEstablish(sessionID, sessionVerID, timestampInNs,
+                EstablishRejectCode.INVALID_TIMESTAMP);
         }
 
         // Notify the inbound sequence number
@@ -445,7 +468,7 @@ class InternalBinaryEntryPointConnection
         final long position = proxy.sendEstablishAck(
             sessionID,
             sessionVerID,
-            timestamp,
+            timestampInNs,
             keepAliveIntervalInMs,
             nextSeqNo,
             nextRecvSeqNo - 1);
@@ -484,6 +507,23 @@ class InternalBinaryEntryPointConnection
         {
             return ABORT;
         }
+    }
+
+    private Action rejectEstablish(
+        final long sessionID, final long sessionVerID, final long timestampInNs, final EstablishRejectCode rejectCode)
+    {
+        onAttemptedToSendMessage();
+        final long position = proxy.sendEstablishReject(
+            sessionID,
+            sessionVerID,
+            timestampInNs,
+            rejectCode);
+        if (position > 0)
+        {
+            return fullyUnbind();
+        }
+
+        return Pressure.apply(position);
     }
 
     private boolean retransmitOfflineNextSessionMessages(final long sessionID)
@@ -834,6 +874,11 @@ class InternalBinaryEntryPointConnection
         if (maxRetransmissionRange != NO_FIXP_MAX_RETRANSMISSION_RANGE && count > maxRetransmissionRange)
         {
             return sendRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs);
+        }
+
+        if (isInvalidTimestamp(timestampInNs))
+        {
+            return sendRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs);
         }
 
         final long endSequenceNumber = fromSeqNo + count - 1;

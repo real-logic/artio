@@ -317,6 +317,8 @@ public class CommonConfiguration
      * received in messages. Sessions are disconnected if the sending time diverges by
      * more than this window and if validation is enabled.
      *
+     * This is also used for validating acceptor FIXP message timestamps.
+     *
      * @param sendingTimeWindowInMs the current sending time in milliseconds
      * @return this
      */

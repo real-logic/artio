@@ -24,6 +24,8 @@ import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+import java.util.concurrent.TimeUnit;
+
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
@@ -52,6 +54,8 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected long nextReceiveMessageTimeInMs;
     protected long nextSendMessageTimeInMs;
 
+    protected final long sendingTimeWindowInNs;
+
     protected InternalFixPConnection(
         final long connectionId,
         final GatewayPublication outboundPublication,
@@ -60,7 +64,8 @@ public abstract class InternalFixPConnection implements FixPConnection
         final EpochNanoClock clock,
         final FixPSessionOwner owner,
         final AbstractFixPProxy proxy,
-        final FixPMessageDissector dissector)
+        final FixPMessageDissector dissector,
+        final long sendingTimeWindowInMs)
     {
         this.connectionId = connectionId;
         this.outboundPublication = outboundPublication;
@@ -70,6 +75,7 @@ public abstract class InternalFixPConnection implements FixPConnection
         this.owner = owner;
         this.proxy = proxy;
         this.dissector = dissector;
+        this.sendingTimeWindowInNs = TimeUnit.MILLISECONDS.toNanos(sendingTimeWindowInMs);
     }
 
     // -----------------------------------------------
