@@ -169,6 +169,33 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectConnectionsWithDuplicateIdsEstablishVersion() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            connectionExistsHandler.reset();
+            connectionAcquiredHandler.reset();
+
+            try (BinaryEntryPointClient client2 = newClient())
+            {
+                client2.writeEstablish();
+
+                client2.readEstablishReject(EstablishRejectCode.UNNEGOTIATED);
+                client2.assertDisconnected();
+
+                assertAuthStrategyReject(client2.sessionVerID());
+            }
+
+            clientTerminatesSession(client);
+        }
+
+        // Check that we can Reconnect afterwards
+        connectWithSessionVerId(2);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldAcceptReNegotiationsWithIncrementingSessionVerId() throws IOException
     {
         successfulConnection();

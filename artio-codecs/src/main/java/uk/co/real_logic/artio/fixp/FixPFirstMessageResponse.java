@@ -49,6 +49,11 @@ public enum FixPFirstMessageResponse
     NEGOTIATE_UNSPECIFIED,
 
     /**
+     * An Establish message has been rejected due to a duplicate session id.
+     */
+    ESTABLISH_DUPLICATE_ID,
+
+    /**
      * An establish message has been rejected due the session not having been negotiated yet.
      */
     ESTABLISH_UNNEGOTIATED,

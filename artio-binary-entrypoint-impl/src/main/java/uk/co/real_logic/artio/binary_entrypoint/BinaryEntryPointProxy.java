@@ -499,6 +499,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
                 break;
 
             case ESTABLISH_UNNEGOTIATED:
+            case ESTABLISH_DUPLICATE_ID:
                 isNegotiate = false;
                 negotiationRejectCode = null;
                 establishRejectCode = EstablishRejectCode.UNNEGOTIATED;

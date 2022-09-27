@@ -36,8 +36,7 @@ import java.util.function.Function;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID;
-import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.NEGOTIATE_DUPLICATE_ID_BAD_VER;
+import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
 
 
 public class FixPContexts implements SessionContexts
@@ -219,8 +218,13 @@ public class FixPContexts implements SessionContexts
         }
         else
         {
-            return context.compareVersion(oldContext) == 0 ?
-                NEGOTIATE_DUPLICATE_ID : NEGOTIATE_DUPLICATE_ID_BAD_VER;
+            if (context.fromNegotiate())
+            {
+                return context.compareVersion(oldContext) == 0 ?
+                    NEGOTIATE_DUPLICATE_ID : NEGOTIATE_DUPLICATE_ID_BAD_VER;
+            }
+
+            return ESTABLISH_DUPLICATE_ID;
         }
     }
 
