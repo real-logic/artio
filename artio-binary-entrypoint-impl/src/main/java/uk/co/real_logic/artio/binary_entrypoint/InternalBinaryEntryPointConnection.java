@@ -316,9 +316,21 @@ class InternalBinaryEntryPointConnection
             return CONTINUE;
         }
 
-        if (!(state == State.ACCEPTED || state == State.SENT_NEGOTIATE_RESPONSE))
+        if (!(state == State.ACCEPTED))
         {
-            // TODO: validation error
+            if (state == SENT_NEGOTIATE_RESPONSE)
+            {
+                if (Pressure.isBackPressured(proxy.sendNegotiateReject(
+                    sessionId, sessionVerID, timestamp, enteringFirm, NegotiationRejectCode.ALREADY_NEGOTIATED)))
+                {
+                    fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
+                    return CONTINUE;
+                }
+                else
+                {
+                    return ABORT;
+                }
+            }
 
             if (checkFinishedSending(state))
             {

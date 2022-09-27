@@ -84,7 +84,8 @@ public class ImplicitFixPSenderEndPointTest
         fixPSenderEndPoints,
         bytesInBuffer,
         CAPACITY,
-        framer);
+        framer,
+        mock(FixPReceiverEndPoint.class));
 
     @Before
     public void setup()

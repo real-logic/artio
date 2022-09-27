@@ -649,13 +649,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
         senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
-        final FixPSenderEndPoint senderEndPoint = FixPSenderEndPoint.of(
-            connectionId, channel, errorHandler, inboundPublication.dataPublication(),
-            reproductionLogWriter, ENGINE_LIBRARY_ID,
-            configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
-            fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
-            bytesInBuffer, configuration.senderMaxBytesInBuffer(), this);
-        fixPSenderEndPoints.add(senderEndPoint);
 
         final AcceptorFixPReceiverEndPoint receiverEndPoint = new AcceptorFixPReceiverEndPoint(
             connectionId,
@@ -668,6 +661,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
             fixPRejectRefIdExtractor);
         receiverEndPoints.add(receiverEndPoint);
+
+        final FixPSenderEndPoint senderEndPoint = FixPSenderEndPoint.of(
+            connectionId, channel, errorHandler, inboundPublication.dataPublication(),
+            reproductionLogWriter, ENGINE_LIBRARY_ID,
+            configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
+            fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
+            bytesInBuffer, configuration.senderMaxBytesInBuffer(), this, receiverEndPoint);
+        fixPSenderEndPoints.add(senderEndPoint);
 
         final FixPGatewaySession gatewaySession = new FixPGatewaySession(
             connectionId,
@@ -832,19 +833,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     final AtomicCounter bytesInBuffer = fixCounters.bytesInBuffer(connectionId, channel.remoteAddr());
                     senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer);
+                    final InitiatorFixPReceiverEndPoint receiverEndPoint = new InitiatorFixPReceiverEndPoint(
+                        connectionId, channel, configuration.receiverBufferSize(),
+                        errorHandler, this, inboundPublication, libraryId, context,
+                        configuration.epochNanoClock(), correlationId, fixPContexts, fixPProtocol,
+                        configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
+                        fixPRejectRefIdExtractor);
+                    receiverEndPoints.add(receiverEndPoint);
                     fixPSenderEndPoints.add(FixPSenderEndPoint.of(
                         connectionId, channel, errorHandler, inboundPublication.dataPublication(),
                         reproductionLogWriter,
                         libraryId, configuration.messageTimingHandler(), fixPProtocol.explicitSequenceNumbers(),
                         fixPParser.templateIdOffset(), fixPParser.retransmissionTemplateId(), fixPSenderEndPoints,
                         bytesInBuffer,
-                        configuration.senderMaxBytesInBuffer(), this));
-                    receiverEndPoints.add(new InitiatorFixPReceiverEndPoint(
-                        connectionId, channel, configuration.receiverBufferSize(),
-                        errorHandler, this, inboundPublication, libraryId, context,
-                        configuration.epochNanoClock(), correlationId, fixPContexts, fixPProtocol,
-                        configuration.throttleWindowInMs(), configuration.throttleLimitOfMessages(),
-                        fixPRejectRefIdExtractor));
+                        configuration.senderMaxBytesInBuffer(), this, receiverEndPoint));
                 });
         }
         catch (final Exception ex)

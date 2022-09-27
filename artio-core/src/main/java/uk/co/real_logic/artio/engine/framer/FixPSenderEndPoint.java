@@ -33,6 +33,7 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
 {
     protected static final int NO_REATTEMPT = 0;
 
+    protected final FixPReceiverEndPoint receiverEndPoint;
     protected int reattemptBytesWritten = NO_REATTEMPT;
 
     static FixPSenderEndPoint of(
@@ -49,21 +50,22 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final FixPSenderEndPoints fixPSenderEndPoints,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
-        final Framer framer)
+        final Framer framer,
+        final FixPReceiverEndPoint receiverEndPoint)
     {
         if (explicitSequenceNumbers)
         {
             return new ExplicitFixPSenderEndPoint(
                 connectionId, channel, errorHandler, inboundPublication, reproductionPublication, libraryId,
                 messageTimingHandler,
-                bytesInBuffer, maxBytesInBuffer, framer);
+                bytesInBuffer, maxBytesInBuffer, framer, receiverEndPoint);
         }
         else
         {
             return new ImplicitFixPSenderEndPoint(
                 connectionId, channel, errorHandler, inboundPublication, reproductionPublication, libraryId,
                 templateIdOffset, retransmissionTemplateId, fixPSenderEndPoints,
-                bytesInBuffer, maxBytesInBuffer, framer);
+                bytesInBuffer, maxBytesInBuffer, framer, receiverEndPoint);
         }
     }
 
@@ -76,11 +78,13 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final int libraryId,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
-        final Framer framer)
+        final Framer framer,
+        final FixPReceiverEndPoint receiverEndPoint)
     {
         super(connectionId, inboundPublication, reproductionLogWriter, libraryId, channel, bytesInBuffer,
             maxBytesInBuffer, errorHandler,
             framer);
+        this.receiverEndPoint = receiverEndPoint;
     }
 
     public abstract Action onMessage(DirectBuffer directBuffer, int offset, boolean retransmit);

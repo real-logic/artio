@@ -60,10 +60,10 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         final FixPSenderEndPoints fixPSenderEndPoints,
         final AtomicCounter bytesInBuffer,
         final int maxBytesInBuffer,
-        final Framer framer)
+        final Framer framer, final FixPReceiverEndPoint receiverEndPoint)
     {
         super(connectionId, channel, errorHandler, inboundPublication, reproductionLogWriter, libraryId,
-            bytesInBuffer, maxBytesInBuffer, framer);
+            bytesInBuffer, maxBytesInBuffer, framer, receiverEndPoint);
         this.templateIdOffset = templateIdOffset;
         this.retransmissionTemplateId = retransmissionTemplateId;
         this.fixPSenderEndPoints = fixPSenderEndPoints;
@@ -111,6 +111,8 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         catch (final IOException e)
         {
             errorHandler.onError(e);
+
+            receiverEndPoint.disconnectEndpoint(DisconnectReason.EXCEPTION);
         }
 
         return CONTINUE;

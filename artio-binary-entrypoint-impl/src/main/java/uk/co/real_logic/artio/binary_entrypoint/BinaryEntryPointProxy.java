@@ -174,6 +174,36 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         return position;
     }
 
+    public long sendNegotiateReject(
+        final long sessionID,
+        final long sessionVerID,
+        final long requestTimestamp,
+        final long enteringFirm,
+        final NegotiationRejectCode negotiateRejectEncoder)
+    {
+        final NegotiateRejectEncoder negotiateReject = this.negotiateReject;
+
+        final long position = claimMessage(NegotiateRejectEncoder.BLOCK_LENGTH, negotiateReject, requestTimestamp);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        negotiateReject
+            .sessionID(sessionID)
+            .sessionVerID(sessionVerID)
+            .requestTimestamp().time(requestTimestamp);
+        negotiateReject
+            .enteringFirm(enteringFirm)
+            .negotiationRejectCode(negotiateRejectEncoder);
+
+        DebugLogger.logSbeDecoder(FIXP_SESSION, "< ", establishRejectAppendTo);
+
+        commit();
+
+        return position;
+    }
+
     public long sendEstablishReject(
         final long sessionID,
         final long sessionVerID,
