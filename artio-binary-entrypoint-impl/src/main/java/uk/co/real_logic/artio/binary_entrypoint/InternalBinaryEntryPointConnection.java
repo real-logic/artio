@@ -60,6 +60,7 @@ class InternalBinaryEntryPointConnection
 
     private final BinaryEntryPointProxy proxy;
     private final long maxFixPKeepaliveTimeoutInMs;
+    private final long minFixPKeepaliveTimeoutInMs;
     private final long noEstablishFixPTimeoutInMs;
     private final int maxRetransmissionRange;
     private final CancelOnDisconnect cancelOnDisconnect;
@@ -135,6 +136,7 @@ class InternalBinaryEntryPointConnection
             configuration.sendingTimeWindowInMs());
 
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
+        this.minFixPKeepaliveTimeoutInMs = configuration.minFixPKeepaliveTimeoutInMs();
         this.noEstablishFixPTimeoutInMs = configuration.noEstablishFixPTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
@@ -425,19 +427,11 @@ class InternalBinaryEntryPointConnection
         {
             checkSession(sessionID, sessionVerID);
 
-            if (state != State.SENT_NEGOTIATE_RESPONSE)
+            final Action action = validateEstablish(
+                sessionID, sessionVerID, timestampInNs, keepAliveIntervalInMs, state);
+            if (action != null)
             {
-                onAttemptedToSendMessage();
-                return Pressure.apply(proxy.sendEstablishReject(
-                    sessionID,
-                    sessionVerID,
-                    timestampInNs,
-                    EstablishRejectCode.ALREADY_ESTABLISHED));
-            }
-            else if (keepAliveIntervalInMs > maxFixPKeepaliveTimeoutInMs)
-            {
-                return rejectEstablish(sessionID, sessionVerID, timestampInNs,
-                    EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
+                return action;
             }
         }
 
@@ -513,6 +507,36 @@ class InternalBinaryEntryPointConnection
         {
             return ABORT;
         }
+    }
+
+    private Action validateEstablish(
+        final long sessionID,
+        final long sessionVerID,
+        final long timestampInNs,
+        final long keepAliveIntervalInMs,
+        final State state)
+    {
+        if (state != State.SENT_NEGOTIATE_RESPONSE)
+        {
+            onAttemptedToSendMessage();
+            return Pressure.apply(proxy.sendEstablishReject(
+                sessionID,
+                sessionVerID,
+                timestampInNs,
+                EstablishRejectCode.ALREADY_ESTABLISHED));
+        }
+        else if (keepAliveIntervalInMs > maxFixPKeepaliveTimeoutInMs)
+        {
+            return rejectEstablish(sessionID, sessionVerID, timestampInNs,
+                EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
+        }
+        else if (keepAliveIntervalInMs < minFixPKeepaliveTimeoutInMs)
+        {
+            return rejectEstablish(sessionID, sessionVerID, timestampInNs,
+                EstablishRejectCode.INVALID_KEEPALIVE_INTERVAL);
+        }
+
+        return null;
     }
 
     private Action rejectEstablish(

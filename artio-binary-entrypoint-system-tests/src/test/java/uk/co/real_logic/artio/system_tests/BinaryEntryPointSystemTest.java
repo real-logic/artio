@@ -437,13 +437,25 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldRejectEstablishMessageWithInvalidKeepAliveInterval() throws IOException
+    public void shouldRejectEstablishMessageWithKeepAliveIntervalAboveMax() throws IOException
+    {
+        shouldRejectEstablishMessageWithInvalidKeepAliveIntervalOf(Long.MAX_VALUE);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectEstablishMessageWithKeepAliveIntervalBelowMin() throws IOException
+    {
+        shouldRejectEstablishMessageWithInvalidKeepAliveIntervalOf(0);
+    }
+
+    private void shouldRejectEstablishMessageWithInvalidKeepAliveIntervalOf(final long keepAliveIntervalInMs)
+        throws IOException
     {
         setupArtio();
 
         try (BinaryEntryPointClient client = newClient())
         {
-            client.keepAliveIntervalInMs(Long.MAX_VALUE);
+            client.keepAliveIntervalInMs(keepAliveIntervalInMs);
 
             client.writeNegotiate();
             libraryAcquiresConnection(client);

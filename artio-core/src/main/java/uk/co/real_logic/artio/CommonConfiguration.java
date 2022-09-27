@@ -265,6 +265,7 @@ public class CommonConfiguration
     public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
 
     public static final long DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS = MINUTES.toMillis(1);
+    public static final long DEFAULT_MIN_FIXP_KEEPALIVE_TIMEOUT_IN_MS = 1;
 
     public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
@@ -300,6 +301,7 @@ public class CommonConfiguration
     private boolean validateTimeStrictly = true;
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
     private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
+    private long minFixPKeepaliveTimeoutInMs = DEFAULT_MIN_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
     private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
     private int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
@@ -762,6 +764,19 @@ public class CommonConfiguration
     }
 
     /**
+     * Sets the minimum keep alive timeout in milliseconds that can be agreed by a FIXP connection's logon exchange.
+     *
+     * @param minFixPKeepaliveTimeoutInMs the minimum keep alive timeout.
+     * @return this
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public CommonConfiguration minFixPKeepaliveTimeoutInMs(final long minFixPKeepaliveTimeoutInMs)
+    {
+        this.minFixPKeepaliveTimeoutInMs = minFixPKeepaliveTimeoutInMs;
+        return this;
+    }
+
+    /**
      * Sets the timeout in milliseconds before a FIXP TCP connection is closed if no establish message is sent.
      * This is analogous to {@link EngineConfiguration#noLogonDisconnectTimeoutInMs(int)} for FIX.
      *
@@ -843,6 +858,11 @@ public class CommonConfiguration
     public long maxFixPKeepaliveTimeoutInMs()
     {
         return maxFixPKeepaliveTimeoutInMs;
+    }
+
+    public long minFixPKeepaliveTimeoutInMs()
+    {
+        return minFixPKeepaliveTimeoutInMs;
     }
 
     public Aeron.Context aeronContext()
