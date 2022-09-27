@@ -882,6 +882,20 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     // ----------------------------------
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldTerminateSessionWhenEstablishSequenceNumberTooLow() throws IOException
+    {
+        successfulConnection();
+
+        connectionHandler.replyToOrder(false);
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeEstablish(1);
+            client.readEstablishReject(EstablishRejectCode.INVALID_NEXTSEQNO);
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException
     {
         setupArtio();

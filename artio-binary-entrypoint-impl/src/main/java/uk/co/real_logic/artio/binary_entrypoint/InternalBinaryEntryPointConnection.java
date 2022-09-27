@@ -447,6 +447,12 @@ class InternalBinaryEntryPointConnection
                 EstablishRejectCode.INVALID_TIMESTAMP);
         }
 
+        if (nextSeqNo < this.nextRecvSeqNo)
+        {
+            return rejectEstablish(sessionID, sessionVerID, timestampInNs,
+                EstablishRejectCode.INVALID_NEXTSEQNO);
+        }
+
         // Notify the inbound sequence number
         if (!suppressRedactResend)
         {
