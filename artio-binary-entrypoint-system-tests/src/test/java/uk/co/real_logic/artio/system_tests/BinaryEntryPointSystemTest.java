@@ -1602,6 +1602,9 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             nanoClock.nanoTime(),
             FIRM_ID,
             fromNegotiate,
+            "",
+            "",
+            "",
             "");
     }
 
@@ -1615,6 +1618,9 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             System.nanoTime(),
             FIRM_ID,
             true,
+            "",
+            "",
+            "",
             "");
 
         return offlineSessionWithRetransmittableMessage(context);

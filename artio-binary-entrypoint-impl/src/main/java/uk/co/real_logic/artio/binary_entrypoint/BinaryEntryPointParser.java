@@ -231,7 +231,10 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     negotiate.timestamp().time(),
                     negotiate.enteringFirm(),
                     true,
-                    negotiate.credentials());
+                    negotiate.credentials(),
+                    negotiate.clientIP(),
+                    negotiate.clientAppName(),
+                    negotiate.clientAppVersion());
 
             case EstablishDecoder.TEMPLATE_ID:
                 establish.wrap(messageBuffer, offset, blockLength, version);
@@ -241,7 +244,10 @@ public class BinaryEntryPointParser extends AbstractFixPParser
                     establish.timestamp().time(),
                     NegotiateDecoder.enteringFirmNullValue(),
                     false,
-                    establish.credentials());
+                    establish.credentials(),
+                    "",
+                    "",
+                    "");
         }
 
         // TODO: deal with this scenario more politely

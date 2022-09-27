@@ -55,6 +55,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public static final long SECURITY_ID = 2;
     public static final int INITIAL_SESSION_VER_ID = 1;
     public static final String CREDENTIALS = "ABC123";
+    public static final String CLIENT_IP = "clientIP";
+    public static final String CLIENT_APP_NAME = "clientAppName";
+    public static final String CLIENT_APP_VERSION = "clientAppVersion";
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointProtocol.loadSbeIr());
 
@@ -352,7 +355,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
     {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         final int actualLength = NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
-            CREDENTIALS.length();
+            CREDENTIALS.length() + NegotiateEncoder.clientIPHeaderLength() + CLIENT_IP.length() +
+            NegotiateEncoder.clientAppNameHeaderLength() + CLIENT_APP_NAME.length() +
+            NegotiateEncoder.clientAppVersionHeaderLength() + CLIENT_APP_VERSION.length();
         wrap(negotiate, actualLength + extraLength);
 
         this.negotiateTimestampInNs = negotiateTimestampInNs;
@@ -364,7 +369,10 @@ public final class BinaryEntryPointClient implements AutoCloseable
         negotiate
             .enteringFirm(FIRM_ID)
             .onbehalfFirm(NegotiateEncoder.onbehalfFirmNullValue())
-            .credentials(CREDENTIALS);
+            .credentials(CREDENTIALS)
+            .clientIP(CLIENT_IP)
+            .clientAppName(CLIENT_APP_NAME)
+            .clientAppVersion(CLIENT_APP_VERSION);
 
         writeWithLength(BINARY_ENTRYPOINT_HEADER_LENGTH + actualLength);
     }

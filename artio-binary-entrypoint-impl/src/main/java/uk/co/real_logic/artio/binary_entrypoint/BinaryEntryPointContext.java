@@ -42,6 +42,9 @@ public class BinaryEntryPointContext implements InternalFixPContext
     // Not persisted
     private final boolean fromNegotiate;
     private final String credentials;
+    private final String clientIP;
+    private final String clientAppName;
+    private final String clientAppVersion;
     private final BinaryEntryPointKey key;
     private boolean hasUnsentMessagesAtNegotiate;
 
@@ -53,7 +56,10 @@ public class BinaryEntryPointContext implements InternalFixPContext
         final long timestampInNs,
         final long enteringFirm,
         final boolean fromNegotiate,
-        final String credentials)
+        final String credentials,
+        final String clientIP,
+        final String clientAppName,
+        final String clientAppVersion)
     {
         this.sessionID = sessionID;
         this.sessionVerID = sessionVerID;
@@ -61,6 +67,9 @@ public class BinaryEntryPointContext implements InternalFixPContext
         this.enteringFirm = enteringFirm;
         this.fromNegotiate = fromNegotiate;
         this.credentials = credentials;
+        this.clientIP = clientIP;
+        this.clientAppName = clientAppName;
+        this.clientAppVersion = clientAppVersion;
 
         ended = false;
         hasUnsentMessagesAtNegotiate = sessionVerID == NEXT_SESSION_VERSION_ID;
@@ -76,6 +85,9 @@ public class BinaryEntryPointContext implements InternalFixPContext
             nanoTime,
             ANY_FIRM_ID,
             true,
+            "",
+            "",
+            "",
             "");
     }
 
@@ -230,6 +242,42 @@ public class BinaryEntryPointContext implements InternalFixPContext
         return credentials;
     }
 
+    /**
+     * If this context was created from a Negotiate message then this method return the clientIP field. If the context
+     * was created from an Establish message or {@link #forNextSessionVerID(long, long)} then it will be
+     * <code>""</code>.
+     *
+     * @return the negotiate message's clientIP field or "".
+     */
+    public String clientIP()
+    {
+        return clientIP;
+    }
+
+    /**
+     * If this context was created from a Negotiate message then this method return the clientAppName field. If the
+     * context was created from an Establish message or {@link #forNextSessionVerID(long, long)} then it will be
+     * <code>""</code>.
+     *
+     * @return the negotiate message's clientAppName field or "".
+     */
+    public String clientAppName()
+    {
+        return clientAppName;
+    }
+
+    /**
+     * If this context was created from a Negotiate message then this method return the clientAppVersion field. If the
+     * context was created from an Establish message or {@link #forNextSessionVerID(long, long)} then it will be
+     * <code>""</code>.
+     *
+     * @return the negotiate message's clientAppVersion field or "".
+     */
+    public String clientAppVersion()
+    {
+        return clientAppVersion;
+    }
+
     public FixPFirstMessageResponse checkFirstConnect()
     {
         if (!fromNegotiate)
@@ -307,6 +355,9 @@ public class BinaryEntryPointContext implements InternalFixPContext
             ", enteringFirm=" + enteringFirm +
             ", fromNegotiate=" + fromNegotiate +
             ", credentials=" + credentials +
+            ", clientIP=" + clientIP +
+            ", clientAppName=" + clientAppName +
+            ", clientAppVersion=" + clientAppVersion +
             '}';
     }
 

@@ -320,6 +320,12 @@ public class AbstractBinaryEntryPointSystemTest
         assertEquals("wrong sessionId", client.sessionId(), context.sessionID());
         assertEquals("wrong sessionVerID", client.sessionVerID(), context.sessionVerID());
         assertEquals("wrong sessionId", BinaryEntryPointClient.CREDENTIALS, context.credentials());
+        if (context.fromNegotiate())
+        {
+            assertEquals(BinaryEntryPointClient.CLIENT_IP, context.clientIP());
+            assertEquals(BinaryEntryPointClient.CLIENT_APP_NAME, context.clientAppName());
+            assertEquals(BinaryEntryPointClient.CLIENT_APP_VERSION, context.clientAppVersion());
+        }
     }
 
     void clientTerminatesSession(final BinaryEntryPointClient client)
