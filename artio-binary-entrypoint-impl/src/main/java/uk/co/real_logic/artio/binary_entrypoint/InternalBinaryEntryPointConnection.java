@@ -79,6 +79,10 @@ class InternalBinaryEntryPointConnection
     private BinaryEntryPointContext context;
     private boolean retransmitOfflineNextSessionMessages = false;
 
+    private RetransmitRejectCode backpressuredRetransmitRejectCode = null;
+    private long backpressuredRetransmitRejectTimestamp = 0;
+    private boolean backpressuredRetransmitRejectTerminate = false;
+
     InternalBinaryEntryPointConnection(
         final BinaryEntryPointProtocol protocol,
         final long connectionId,
@@ -240,6 +244,14 @@ class InternalBinaryEntryPointConnection
 
     protected int poll(final long timeInMs)
     {
+        if (backpressuredRetransmitRejectCode != null)
+        {
+            tryRetransmitReject(
+                backpressuredRetransmitRejectCode,
+                backpressuredRetransmitRejectTimestamp,
+                backpressuredRetransmitRejectTerminate);
+        }
+
         switch (state)
         {
             case ACCEPTED:
@@ -910,28 +922,28 @@ class InternalBinaryEntryPointConnection
 
         if (this.sessionId != sessionID)
         {
-            return sendRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs);
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs, false);
         }
 
         if (maxRetransmissionRange != NO_FIXP_MAX_RETRANSMISSION_RANGE && count > maxRetransmissionRange)
         {
-            return sendRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs);
+            return tryRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs, false);
         }
 
         if (isInvalidTimestamp(timestampInNs))
         {
-            return sendRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs);
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs, false);
         }
 
         final long endSequenceNumber = fromSeqNo + count - 1;
         if (endSequenceNumber >= nextSentSeqNo)
         {
-            return sendRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs);
+            return tryRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs, false);
         }
 
         if (replaying)
         {
-            return sendRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs);
+            return tryRetransmitReject(RetransmitRejectCode.RETRANSMIT_IN_PROGRESS, timestampInNs, true);
         }
 
         if (!suppressRetransmissionResend)
@@ -991,9 +1003,28 @@ class InternalBinaryEntryPointConnection
             0);
     }
 
-    private Action sendRetransmitReject(final RetransmitRejectCode rejectCode, final long timestampInNs)
+    private Action tryRetransmitReject(
+        final RetransmitRejectCode rejectCode, final long timestampInNs, final boolean terminate)
     {
-        return Pressure.apply(proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs));
+        if (Pressure.isBackPressured(proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs)))
+        {
+            backpressuredRetransmitRejectCode = rejectCode;
+            backpressuredRetransmitRejectTimestamp = timestampInNs;
+            backpressuredRetransmitRejectTerminate = terminate;
+        }
+        else
+        {
+            if (terminate)
+            {
+                internalTerminateInclResend(TerminationCode.UNSPECIFIED);
+            }
+
+            backpressuredRetransmitRejectCode = null;
+            backpressuredRetransmitRejectTimestamp = 0;
+            backpressuredRetransmitRejectTerminate = false;
+        }
+
+        return CONTINUE;
     }
 
     public Reply<ThrottleConfigurationStatus> throttleMessagesAt(
