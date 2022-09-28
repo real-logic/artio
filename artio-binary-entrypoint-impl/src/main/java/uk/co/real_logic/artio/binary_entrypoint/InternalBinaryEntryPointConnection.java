@@ -901,9 +901,11 @@ class InternalBinaryEntryPointConnection
         final long sessionID, final long timestampInNs, final long fromSeqNo, final long count)
     {
         final State state = this.state;
-        if (state != ESTABLISHED && state != AWAITING_KEEPALIVE)
+        if (state != ESTABLISHED && state != AWAITING_KEEPALIVE && state != SENT_FINISHED_SENDING &&
+            state != RETRY_FINISHED_SENDING && state != RECV_FINISHED_RECEIVING_ONLY &&
+            state != REPLIED_FINISHED_SENDING)
         {
-            // TODO: error, actually error should only happen if we haven't established the connection yet
+            internalTerminateInclResend(TerminationCode.NOT_ESTABLISHED);
         }
 
         if (this.sessionId != sessionID)
