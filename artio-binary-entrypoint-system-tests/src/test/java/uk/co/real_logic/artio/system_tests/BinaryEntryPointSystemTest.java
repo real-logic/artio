@@ -70,6 +70,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.libraries;
 public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTest
 {
 
+    public static final int LOW_KEEP_ALIVE_INTERVAL_IN_MS = 500;
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldEstablishConnectionAtBeginningOfWeek() throws IOException
     {
@@ -774,6 +776,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldUseFinishedSendingAsAHeartbeatKeepAliveInTheAbsenceOfResponse() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         withLowKeepAliveClient(client ->
@@ -910,6 +914,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablish() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         shouldTerminateSessionWhenSequenceNumberTooLow();
@@ -922,6 +928,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiate() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         shouldTerminateSessionWhenSequenceNumberTooLow();
@@ -932,6 +940,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanReestablishAfterRestart() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         shouldTerminateSessionWhenSequenceNumberTooLow();
@@ -945,6 +955,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateSessionWhenSequenceNumberTooLowCanRenegotiateAfterRestart() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         shouldTerminateSessionWhenSequenceNumberTooLow();
@@ -957,6 +969,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldSendSequenceMessageAfterTimeElapsed() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         withLowKeepAliveClient(client ->
@@ -976,6 +990,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldUseSequenceMessagesAsLivenessIndicator() throws IOException
     {
+        artioKeepAliveIntervalInMs = LOW_KEEP_ALIVE_INTERVAL_IN_MS;
+
         setupArtio();
 
         withLowKeepAliveClient(client ->
@@ -1875,7 +1891,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     {
         try (BinaryEntryPointClient client = newClient())
         {
-            client.keepAliveIntervalInMs(500);
+            client.keepAliveIntervalInMs(LOW_KEEP_ALIVE_INTERVAL_IN_MS);
             establishNewConnection(client);
             handler.accept(client);
         }

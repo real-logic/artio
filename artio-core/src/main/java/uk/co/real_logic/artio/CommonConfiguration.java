@@ -266,6 +266,7 @@ public class CommonConfiguration
 
     public static final long DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS = MINUTES.toMillis(1);
     public static final long DEFAULT_MIN_FIXP_KEEPALIVE_TIMEOUT_IN_MS = 1;
+    public static final long DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS = SECONDS.toMillis(30);
 
     public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
@@ -302,6 +303,7 @@ public class CommonConfiguration
     private EpochFractionFormat sessionEpochFractionFormat = EpochFractionFormat.MILLISECONDS;
     private long maxFixPKeepaliveTimeoutInMs = DEFAULT_MAX_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
     private long minFixPKeepaliveTimeoutInMs = DEFAULT_MIN_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
+    private long acceptorFixPKeepaliveTimeoutInMs = DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
     private long noEstablishFixPTimeoutInMs = EngineConfiguration.DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS;
     private ResendRequestController resendRequestController = DEFAULT_RESEND_REQUEST_CONTROLLER;
     private int forcedHeartbeatIntervalInS = NO_FORCED_HEARTBEAT_INTERVAL;
@@ -753,6 +755,9 @@ public class CommonConfiguration
     /**
      * Sets the maximum keep alive timeout in milliseconds that can be agreed by a FIXP connection's logon exchange.
      *
+     * NB: this only affects the keepalive for the counter-party, use {@link #acceptorFixPKeepaliveTimeoutInMs(long)}
+     * for setting your own keepalive interval as an acceptor.
+     *
      * @param maxFixpKeepaliveTimeoutInMs the maximum keep alive timeout.
      * @return this
      */
@@ -766,6 +771,9 @@ public class CommonConfiguration
     /**
      * Sets the minimum keep alive timeout in milliseconds that can be agreed by a FIXP connection's logon exchange.
      *
+     * NB: this only affects the keepalive for the counter-party, use {@link #acceptorFixPKeepaliveTimeoutInMs(long)}
+     * for setting your own keepalive interval as an acceptor.
+     *
      * @param minFixPKeepaliveTimeoutInMs the minimum keep alive timeout.
      * @return this
      */
@@ -773,6 +781,19 @@ public class CommonConfiguration
     public CommonConfiguration minFixPKeepaliveTimeoutInMs(final long minFixPKeepaliveTimeoutInMs)
     {
         this.minFixPKeepaliveTimeoutInMs = minFixPKeepaliveTimeoutInMs;
+        return this;
+    }
+
+    /**
+     * Sets the minimum keep alive timeout in milliseconds that can be agreed by a FIXP connection's logon exchange.
+     *
+     * @param acceptorFixPKeepaliveTimeoutInMs the minimum keep alive timeout.
+     * @return this
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public CommonConfiguration acceptorFixPKeepaliveTimeoutInMs(final long acceptorFixPKeepaliveTimeoutInMs)
+    {
+        this.acceptorFixPKeepaliveTimeoutInMs = acceptorFixPKeepaliveTimeoutInMs;
         return this;
     }
 
@@ -863,6 +884,11 @@ public class CommonConfiguration
     public long minFixPKeepaliveTimeoutInMs()
     {
         return minFixPKeepaliveTimeoutInMs;
+    }
+
+    public long acceptorFixPKeepaliveTimeoutInMs()
+    {
+        return acceptorFixPKeepaliveTimeoutInMs;
     }
 
     public Aeron.Context aeronContext()

@@ -51,7 +51,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public static final int SESSION_ID_2 = SESSION_ID + 1;
     public static final int FIRM_ID = 456;
     public static final int CL_ORD_ID = 1;
+
     private static final long KEEP_ALIVE_INTERVAL_IN_MS = 10_000L;
+
     public static final long SECURITY_ID = 2;
     public static final int INITIAL_SESSION_VER_ID = 1;
     public static final String CREDENTIALS = "ABC123";
@@ -74,6 +76,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     private final SocketChannel socket;
     private final TestSystem testSystem;
+    private final long serverAliveIntervalInMs;
 
     private int skipTemplateId = NOT_SKIPPING;
     private int sessionId = SESSION_ID;
@@ -86,10 +89,12 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private CancelOnDisconnectType cancelOnDisconnectType = DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
     private long codTimeoutWindow = DeltaInMillisEncoder.timeNullValue();
 
-    public BinaryEntryPointClient(final int port, final TestSystem testSystem) throws IOException
+    public BinaryEntryPointClient(final int port, final TestSystem testSystem, final long serverAliveIntervalInMs)
+        throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
         this.testSystem = testSystem;
+        this.serverAliveIntervalInMs = serverAliveIntervalInMs;
 
         headerDecoder.wrap(unsafeReadBuffer, SOFH_LENGTH);
     }
@@ -415,6 +420,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
         assertEquals("sessionVerID", sessionVerID, establishAck.sessionVerID());
         assertEquals("nextSeqNo", nextSeqNo, establishAck.nextSeqNo());
         assertEquals("lastIncomingSeqNo", lastIncomingSeqNo, establishAck.lastIncomingSeqNo());
+        assertEquals(serverAliveIntervalInMs, establishAck.keepAliveInterval().time());
         return establishAck;
     }
 

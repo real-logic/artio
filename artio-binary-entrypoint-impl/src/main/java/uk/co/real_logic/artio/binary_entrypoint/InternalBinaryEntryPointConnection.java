@@ -138,13 +138,14 @@ class InternalBinaryEntryPointConnection
         this.maxFixPKeepaliveTimeoutInMs = configuration.maxFixPKeepaliveTimeoutInMs();
         this.minFixPKeepaliveTimeoutInMs = configuration.minFixPKeepaliveTimeoutInMs();
         this.noEstablishFixPTimeoutInMs = configuration.noEstablishFixPTimeoutInMs();
+        this.ourKeepAliveIntervalInMs = configuration.acceptorFixPKeepaliveTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
         initialState(context);
 
         setupInitialSendAndReceiveTimers();
         // default this to the max to suppress accidentally sending sequence messages during the logon process
-        requestedKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
+        counterpartyKeepAliveIntervalInMs = maxFixPKeepaliveTimeoutInMs;
         maxRetransmissionRange = configuration.fixPAcceptedSessionMaxRetransmissionRange();
 
         nextRecvSeqNo(adjustSeqNo(lastReceivedSequenceNumber));
@@ -469,11 +470,11 @@ class InternalBinaryEntryPointConnection
             sessionID,
             sessionVerID,
             timestampInNs,
-            keepAliveIntervalInMs,
+            ourKeepAliveIntervalInMs,
             nextSeqNo,
             nextRecvSeqNo - 1);
 
-        this.requestedKeepAliveIntervalInMs = keepAliveIntervalInMs;
+        this.counterpartyKeepAliveIntervalInMs = keepAliveIntervalInMs;
         onAttemptedToSendMessage();
         onReceivedMessage();
 

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import uk.co.real_logic.artio.CommonConfiguration;
+
 import java.io.IOException;
 
 public final class FixPExchangeExampleBuyer
@@ -26,7 +28,8 @@ public final class FixPExchangeExampleBuyer
 
         System.out.println("Starting ...");
 
-        try (BinaryEntryPointClient client = new BinaryEntryPointClient(9999, new TestSystem()))
+        try (BinaryEntryPointClient client = new BinaryEntryPointClient(9999, new TestSystem(),
+            CommonConfiguration.DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS))
         {
             client.writeNegotiate();
             client.readNegotiateResponse();

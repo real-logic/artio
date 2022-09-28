@@ -46,7 +46,8 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected LibraryReply<InternalFixPConnection> initiateReply;
     protected long connectionId;
 
-    protected long requestedKeepAliveIntervalInMs;
+    protected long counterpartyKeepAliveIntervalInMs;
+    protected long ourKeepAliveIntervalInMs;
     protected long nextSentSeqNo;
     protected long nextRecvSeqNo;
 
@@ -173,18 +174,23 @@ public abstract class InternalFixPConnection implements FixPConnection
             state(ESTABLISHED);
         }
 
-        nextReceiveMessageTimeInMs = nextTimeoutInMs();
+        nextReceiveMessageTimeInMs = nextRecvTimeoutInMs();
     }
 
-    protected long nextTimeoutInMs()
+    protected long nextRecvTimeoutInMs()
     {
-        return System.currentTimeMillis() + requestedKeepAliveIntervalInMs;
+        return System.currentTimeMillis() + counterpartyKeepAliveIntervalInMs;
+    }
+
+    protected long nextSendTimeoutInMs()
+    {
+        return System.currentTimeMillis() + ourKeepAliveIntervalInMs;
     }
 
     // This just suppresses sending sequence heartbeating messages
     protected void onAttemptedToSendMessage()
     {
-        nextSendMessageTimeInMs = nextTimeoutInMs();
+        nextSendMessageTimeInMs = nextSendTimeoutInMs();
     }
 
     protected long requestTimestampInNs()

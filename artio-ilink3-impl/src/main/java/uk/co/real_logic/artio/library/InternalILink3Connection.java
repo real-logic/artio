@@ -235,7 +235,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         super(connectionId, outboundPublication, inboundPublication, libraryId, clock, owner, proxy, dissector, 0);
         initiateReply(initiateReply);
         handler(configuration.handler());
-        this.requestedKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
+        this.ourKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
+        this.counterpartyKeepAliveIntervalInMs = configuration.requestedKeepAliveIntervalInMs();
 
         this.configuration = configuration;
         this.maxRetransmitQueueSize = configuration.maxRetransmitQueueSize();
@@ -438,7 +439,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         if (position > 0)
         {
             state = State.SENT_NEGOTIATE;
-            resendTimeInMs = nextTimeoutInMs();
+            resendTimeInMs = nextRecvTimeoutInMs();
             lastNegotiateRequestTimestamp = requestTimestamp;
             return true;
         }
@@ -476,7 +477,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         if (position > 0)
         {
-            nextSendMessageTimeInMs = resendTimeInMs = nextTimeoutInMs();
+            nextSendMessageTimeInMs = resendTimeInMs = nextSendTimeoutInMs();
             lastEstablishRequestTimestamp = requestTimestamp;
             state = State.SENT_ESTABLISH;
             return true;
@@ -569,7 +570,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
     protected void keepAliveExpiredTerminate()
     {
-        final long expiry = 2 * requestedKeepAliveIntervalInMs;
+        final long expiry = 2 * counterpartyKeepAliveIntervalInMs;
         terminate(expiry + "ms expired without message", KEEP_ALIVE_INTERVAL_LAPSED_ERROR_CODE);
     }
 
@@ -775,7 +776,7 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         state = State.ESTABLISHED;
         initiateReply.onComplete(this);
         initiateReply = null;
-        nextReceiveMessageTimeInMs = nextTimeoutInMs();
+        nextReceiveMessageTimeInMs = nextRecvTimeoutInMs();
 
         if (previousUUID == lastUuid)
         {

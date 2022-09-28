@@ -23,6 +23,7 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.mockito.Mockito;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
@@ -83,6 +84,7 @@ public class AbstractBinaryEntryPointSystemTest
     BinaryEntryPointConnection connection;
 
     boolean printErrors = true;
+    long artioKeepAliveIntervalInMs = CommonConfiguration.DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
 
     void setupArtio()
     {
@@ -150,6 +152,7 @@ public class AbstractBinaryEntryPointSystemTest
             .senderMaxBytesInBuffer(senderMaxBytesInBuffer);
 
         engineConfig.errorHandlerFactory(ffs -> Throwable::printStackTrace);
+        engineConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs);
 
         if (!printErrors)
         {
@@ -186,6 +189,8 @@ public class AbstractBinaryEntryPointSystemTest
             .noEstablishFixPTimeoutInMs(shortLogonTimeoutInMs)
             .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange)
             .epochNanoClock(nanoClock);
+
+        libraryConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs);
 
         if (!printErrors)
         {
@@ -257,7 +262,7 @@ public class AbstractBinaryEntryPointSystemTest
 
     BinaryEntryPointClient newClient() throws IOException
     {
-        return new BinaryEntryPointClient(port, testSystem);
+        return new BinaryEntryPointClient(port, testSystem, artioKeepAliveIntervalInMs);
     }
 
     void assertConnectionMatches(final BinaryEntryPointClient client)
