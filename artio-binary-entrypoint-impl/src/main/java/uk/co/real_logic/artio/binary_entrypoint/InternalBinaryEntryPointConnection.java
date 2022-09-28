@@ -650,9 +650,13 @@ class InternalBinaryEntryPointConnection
         {
             DebugLogger.log(FIXP_SESSION, "Terminated: ", terminationCode.name());
 
-            if (sessionID != this.sessionId || sessionVerID != this.sessionVerId)
+            if (sessionID != this.sessionId)
             {
                 sendTerminateAck(TerminationCode.NOT_ESTABLISHED);
+            }
+            else if (sessionVerID != this.sessionVerId)
+            {
+                sendTerminateAck(TerminationCode.UNNEGOTIATED);
             }
             else
             {
