@@ -875,6 +875,18 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldTerminateInResponseToReceivingTerminateWrongSessionId() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            client.writeTerminate(SESSION_ID_2);
+            client.readTerminate(TerminationCode.NOT_ESTABLISHED);
+        }
+    }
+
     // FIXP Spec 7.4.5
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTerminateInResponseToReceivingMessageAfterFinishedSending() throws IOException

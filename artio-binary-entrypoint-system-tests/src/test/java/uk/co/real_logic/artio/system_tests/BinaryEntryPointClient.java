@@ -453,6 +453,11 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void writeTerminate()
     {
+        writeTerminate(sessionId);
+    }
+
+    public void writeTerminate(final int sessionId)
+    {
         final TerminateEncoder terminate = new TerminateEncoder();
         wrap(terminate, TerminateEncoder.BLOCK_LENGTH);
 
