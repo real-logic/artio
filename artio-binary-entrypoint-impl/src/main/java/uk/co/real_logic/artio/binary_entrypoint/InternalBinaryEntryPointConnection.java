@@ -935,6 +935,11 @@ class InternalBinaryEntryPointConnection
             return tryRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs, false);
         }
 
+        if (count == 0)
+        {
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_COUNT, timestampInNs, false);
+        }
+
         final long endSequenceNumber = fromSeqNo + count - 1;
         if (endSequenceNumber >= nextSentSeqNo)
         {
