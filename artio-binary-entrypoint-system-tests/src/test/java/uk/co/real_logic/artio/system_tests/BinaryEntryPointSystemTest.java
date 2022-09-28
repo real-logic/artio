@@ -334,6 +334,35 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectConnectionWhenTerminateSentOnUnNegotiatedConnection() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeTerminate();
+            client.writeNegotiate();
+            client.assertDisconnected();
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectConnectionWhenTerminateSentOnNotYetEstablishedConnection() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeNegotiate();
+            client.readNegotiateResponse();
+            client.writeTerminate();
+            client.writeEstablish();
+            client.readTerminate();
+            client.assertDisconnected();
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectUnNegotiatedEstablishWithHigherSessionVerId() throws IOException
     {
         successfulConnection();
