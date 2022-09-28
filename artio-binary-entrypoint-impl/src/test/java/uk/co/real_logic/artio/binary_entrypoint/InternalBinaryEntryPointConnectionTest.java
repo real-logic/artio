@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.fixp.FixPMessageDissector;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
-import static b3.entrypoint.fixp.sbe.RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED;
+import static b3.entrypoint.fixp.sbe.RetransmitRejectCode.RETRANSMIT_IN_PROGRESS;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -86,7 +86,7 @@ public class InternalBinaryEntryPointConnectionTest
         onRetransmitRequest(connection, requestTimestampInNs, 3);
         verify(proxy, never()).sendRetransmissionWithSequence(
             eq(3L), eq(1L), anyLong(), anyLong(), anyLong());
-        verify(proxy).sendRetransmitReject(eq(REQUEST_LIMIT_EXCEEDED), anyLong(), eq(requestTimestampInNs));
+        verify(proxy).sendRetransmitReject(eq(RETRANSMIT_IN_PROGRESS), anyLong(), eq(requestTimestampInNs));
         reset(proxy);
 
         connection.onReplayComplete();
