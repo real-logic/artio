@@ -402,4 +402,15 @@ public class TestSystem
             "Timed out whilst attempting resetSequenceNumber",
             () -> engine.resetSequenceNumber(sessionId));
     }
+
+    @Override
+    public String toString()
+    {
+        return "TestSystem{" +
+            "libraries=" + libraries +
+            ", operations=" + operations +
+            ", scheduler=" + scheduler +
+            ", awaitTimeoutInMs=" + awaitTimeoutInMs +
+            '}';
+    }
 }

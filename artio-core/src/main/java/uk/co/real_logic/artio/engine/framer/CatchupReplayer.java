@@ -47,8 +47,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.CATCHUP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.bodyHeaderLength;
-import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -414,7 +413,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     CATCHUP,
                     new FixMessageTracker(CATCHUP, this, session.sessionId()));
 
-                state = State.REPLAYING;
+                state = replayOperation == null ? State.SEND_MISSING : State.REPLAYING;
 
                 return BACK_PRESSURED;
             }

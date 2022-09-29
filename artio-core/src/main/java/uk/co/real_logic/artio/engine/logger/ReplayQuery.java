@@ -60,7 +60,8 @@ public class ReplayQuery implements AutoCloseable
     private final CharFormatter onRowFormatter = new CharFormatter("ReplayQuery:onRow," +
         "beginPosition=%s,recordingId=%s,sequenceNumber=%s,sequenceIndex=%s");
 
-    private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
+    private final LongFunction<SessionQuery> newSessionQuery = this::newSessionQuery;
+
     private final Long2ObjectCache<SessionQuery> fixSessionToIndex;
     private final String logFileDir;
     private final File logFileDirFile;
@@ -127,7 +128,13 @@ public class ReplayQuery implements AutoCloseable
         final LogTag logTag,
         final MessageTracker tracker)
     {
-        return lookupSessionQuery(sessionId)
+        final SessionQuery sessionQuery = lookupSessionQuery(sessionId);
+        if (sessionQuery == null)
+        {
+            return null;
+        }
+
+        return sessionQuery
             .query(beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex, logTag, tracker);
     }
 
@@ -166,6 +173,21 @@ public class ReplayQuery implements AutoCloseable
     public void onReset(final long fixSessionId)
     {
         fixSessionToIndex.remove(fixSessionId);
+    }
+
+    private SessionQuery newSessionQuery(final long fixSessionId)
+    {
+        try
+        {
+            return new SessionQuery(fixSessionId);
+        }
+        catch (final IllegalStateException e)
+        {
+            errorHandler.onError(new IllegalStateException(
+                "Unable to create session query for: " + fixSessionId + " probably due to this session's sequence " +
+                "numbers being reset or files removed ", e));
+            return null;
+        }
     }
 
     private final class SessionQuery implements AutoCloseable
