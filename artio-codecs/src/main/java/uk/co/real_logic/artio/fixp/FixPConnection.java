@@ -249,4 +249,16 @@ public interface FixPConnection
      * @return the key associated with this connection.
      */
     FixPKey key();
+
+
+    /**
+     * Returns true if a connection is connected at this point in time.
+     *
+     * @return true if a connection is connected at this point in time.
+     */
+    boolean isConnected();
+
+    long counterpartyKeepAliveIntervalInMs();
+
+    long ourKeepAliveIntervalInMs();
 }

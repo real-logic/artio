@@ -163,6 +163,54 @@ public abstract class InternalFixPConnection implements FixPConnection
         nextSentSeqNo--;
     }
 
+    public boolean isConnected()
+    {
+        final State state = this.state;
+        switch (state)
+        {
+            case CONNECTED:
+            case SENT_NEGOTIATE:
+            case RETRY_NEGOTIATE:
+            case NEGOTIATE_REJECTED:
+            case NEGOTIATED:
+            case SENT_ESTABLISH:
+            case RETRY_ESTABLISH:
+            case ESTABLISH_REJECTED:
+            case ACCEPTED:
+            case SENT_NEGOTIATE_RESPONSE:
+            case RETRY_NEGOTIATE_RESPONSE:
+            case SENT_NEGOTIATE_REJECT:
+            case RETRY_NEGOTIATE_REJECT:
+            case RETRY_ESTABLISH_ACK:
+            case SENT_ESTABLISH_REJECT:
+            case RETRY_ESTABLISH_REJECT:
+            case NEGOTIATED_REESTABLISH:
+            case ESTABLISHED:
+            case RETRANSMITTING:
+            case SENT_FINISHED_SENDING:
+            case RETRY_FINISHED_SENDING:
+            case RECV_FINISHED_RECEIVING_ONLY:
+            case RECV_FINISHED_SENDING:
+            case REPLIED_FINISHED_SENDING:
+            case RETRY_REPLY_FINISHED_SENDING:
+            case AWAITING_KEEPALIVE:
+            case SENT_TERMINATE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public long counterpartyKeepAliveIntervalInMs()
+    {
+        return counterpartyKeepAliveIntervalInMs;
+    }
+
+    public long ourKeepAliveIntervalInMs()
+    {
+        return ourKeepAliveIntervalInMs;
+    }
+
     // --------------------------------------------------
     // Internal Methods below, not part of the public API
     // --------------------------------------------------
