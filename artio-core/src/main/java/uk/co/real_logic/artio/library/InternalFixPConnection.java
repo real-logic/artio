@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import java.util.concurrent.TimeUnit;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
@@ -348,6 +349,15 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected Action fullyUnbind()
     {
         return fullyUnbind(LOGOUT);
+    }
+
+    protected Action fullyUnbindInclRetry(final DisconnectReason reason)
+    {
+        // switching to an unbinding state means that we'll retry disconnects when we the poll
+        // if this message gets backpressured, so it's safe to return CONTINUE here.
+        this.state = UNBINDING;
+        fullyUnbind(reason);
+        return CONTINUE;
     }
 
     protected Action fullyUnbind(final DisconnectReason reason)

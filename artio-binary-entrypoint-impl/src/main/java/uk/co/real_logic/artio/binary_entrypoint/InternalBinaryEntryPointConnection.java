@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.binary_entrypoint;
 import b3.entrypoint.fixp.sbe.*;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
@@ -64,6 +65,7 @@ class InternalBinaryEntryPointConnection
     private final long noEstablishFixPTimeoutInMs;
     private final int maxRetransmissionRange;
     private final CancelOnDisconnect cancelOnDisconnect;
+    private final IntHashSet allTemplateIds;
 
     private TerminationCode resendTerminationCode;
 
@@ -111,7 +113,8 @@ class InternalBinaryEntryPointConnection
             new BinaryEntryPointProxy(
             protocol, dissector,
             connectionId, outboundPublication.dataPublication(), configuration.epochNanoClock()),
-            dissector);
+            dissector,
+            protocol);
     }
 
     InternalBinaryEntryPointConnection(
@@ -126,7 +129,8 @@ class InternalBinaryEntryPointConnection
         final CommonConfiguration configuration,
         final BinaryEntryPointContext context,
         final BinaryEntryPointProxy proxy,
-        final FixPMessageDissector dissector)
+        final FixPMessageDissector dissector,
+        final BinaryEntryPointProtocol protocol)
     {
         super(
             connectionId,
@@ -145,6 +149,8 @@ class InternalBinaryEntryPointConnection
         this.ourKeepAliveIntervalInMs = configuration.acceptorFixPKeepaliveTimeoutInMs();
         this.context = context;
         this.proxy = (BinaryEntryPointProxy)super.proxy;
+        this.allTemplateIds = protocol.findAllTemplateIds();
+
         initialState(context);
 
         setupInitialSendAndReceiveTimers();
@@ -769,6 +775,11 @@ class InternalBinaryEntryPointConnection
         final int sofhMessageSize)
     {
         onReceivedMessage();
+
+        if (!allTemplateIds.contains(templateId))
+        {
+            return fullyUnbindInclRetry(DisconnectReason.INVALID_FIXP_MESSAGE);
+        }
 
         final State state = state();
         if (canReceiveMessage(state))

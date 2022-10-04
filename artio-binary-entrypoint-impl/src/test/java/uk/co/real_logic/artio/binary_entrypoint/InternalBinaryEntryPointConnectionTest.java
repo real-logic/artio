@@ -48,6 +48,7 @@ public class InternalBinaryEntryPointConnectionTest
             "", "", "");
         final GatewayPublication inboundPublication = mock(GatewayPublication.class);
 
+        final BinaryEntryPointProtocol protocol = new BinaryEntryPointProtocol();
         final InternalBinaryEntryPointConnection connection = new InternalBinaryEntryPointConnection(
             CONNECTION_ID,
             mock(GatewayPublication.class),
@@ -60,7 +61,8 @@ public class InternalBinaryEntryPointConnectionTest
             new CommonConfiguration(),
             context,
             proxy,
-            mock(FixPMessageDissector.class));
+            mock(FixPMessageDissector.class),
+            protocol);
 
         connection.onEstablish(
             SESSION_ID, SESSION_VER_ID, clock.nanoTime(), 3_000, 1, CancelOnDisconnectType.NULL_VAL, 0);

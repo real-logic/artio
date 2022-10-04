@@ -51,8 +51,8 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         NegotiateEncoder.BLOCK_LENGTH;
     private static final int ESTABLISH_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
         EstablishEncoder.BLOCK_LENGTH;
-    private static final int BUSINESS_REJECT_LENGTH = BINARY_ENTRYPOINT_HEADER_LENGTH +
-        BusinessMessageRejectEncoder.BLOCK_LENGTH;
+    private static final int BUSINESS_REJECT_LENGTH = BusinessMessageRejectEncoder.BLOCK_LENGTH +
+        BusinessMessageRejectEncoder.memoHeaderLength() + BusinessMessageRejectEncoder.textHeaderLength();
 
     private final MessageHeaderEncoder beMessageHeader = new MessageHeaderEncoder();
     private final NegotiateEncoder negotiate = new NegotiateEncoder();
@@ -410,7 +410,7 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         final BusinessMessageRejectEncoder businessMessageReject = this.businessMessageReject;
 
         final long position = claimMessage(
-            BusinessMessageRejectEncoder.BLOCK_LENGTH, businessMessageReject, clock.nanoTime());
+            BUSINESS_REJECT_LENGTH, businessMessageReject, clock.nanoTime());
         if (position < 0)
         {
             return position;

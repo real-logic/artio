@@ -362,6 +362,22 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         }
     }
 
+    // TODO: also add a test for the first message
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectConnectionWhenOutOfRangeTemplateIdUsed() throws IOException
+    {
+        setupArtio();
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            client.writeNegotiate();
+            client.readNegotiateResponse();
+            client.writeOutOfRangeTemplateIdMessage();
+            client.writeEstablish();
+            client.assertDisconnected();
+        }
+    }
+
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectUnNegotiatedEstablishWithHigherSessionVerId() throws IOException
     {

@@ -20,6 +20,7 @@ import b3.entrypoint.fixp.sbe.FinishedSendingDecoder;
 import b3.entrypoint.fixp.sbe.NegotiateEncoder;
 import b3.entrypoint.fixp.sbe.NegotiateResponseDecoder;
 import io.aeron.ExclusivePublication;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.FixPSequenceNumberHandler;
@@ -31,6 +32,7 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.sbe.ir.Ir;
 
+import static uk.co.real_logic.artio.fixp.AbstractFixPOffsets.templateId;
 import static uk.co.real_logic.artio.fixp.SimpleOpenFramingHeader.BINARY_ENTRYPOINT_TYPE;
 
 public class BinaryEntryPointProtocol extends FixPProtocol
@@ -50,6 +52,17 @@ public class BinaryEntryPointProtocol extends FixPProtocol
     protected Ir loadIr()
     {
         return loadSbeIr();
+    }
+
+    protected IntHashSet findAllTemplateIds()
+    {
+        final IntHashSet templateIds = new IntHashSet();
+        loadSbeIr().messages().forEach(messageTokens ->
+        {
+            final int templateId = templateId(messageTokens);
+            templateIds.add(templateId);
+        });
+        return templateIds;
     }
 
     public static <T> T unsupported()

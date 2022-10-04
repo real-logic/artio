@@ -60,6 +60,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
     public static final String CLIENT_IP = "clientIP";
     public static final String CLIENT_APP_NAME = "clientAppName";
     public static final String CLIENT_APP_VERSION = "clientAppVersion";
+    public static final int OUT_OF_RANGE_TEMPLATE_ID = 1000;
 
     private final JsonPrinter jsonPrinter = new JsonPrinter(BinaryEntryPointProtocol.loadSbeIr());
 
@@ -307,6 +308,11 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     private void wrap(final MessageEncoderFlyweight messageEncoder, final int length)
     {
+        wrap(messageEncoder, length, messageEncoder.sbeTemplateId());
+    }
+
+    private void wrap(final MessageEncoderFlyweight messageEncoder, final int length, final int templateId)
+    {
         final int messageSize = BINARY_ENTRYPOINT_HEADER_LENGTH + length;
         writeBinaryEntryPointSofh(unsafeWriteBuffer, 0, messageSize);
         DebugLogger.log(FIX_TEST, "wrap messageSize=", String.valueOf(messageSize));
@@ -314,7 +320,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
         headerEncoder
             .wrap(unsafeWriteBuffer, SOFH_LENGTH)
             .blockLength(messageEncoder.sbeBlockLength())
-            .templateId(messageEncoder.sbeTemplateId())
+            .templateId(templateId)
             .schemaId(messageEncoder.sbeSchemaId())
             .version(messageEncoder.sbeSchemaVersion());
 
@@ -336,34 +342,39 @@ public final class BinaryEntryPointClient implements AutoCloseable
         CloseHelper.close(socket);
     }
 
+    public void writeOutOfRangeTemplateIdMessage()
+    {
+        writeNegotiateInternal(0, timeInNs(), OUT_OF_RANGE_TEMPLATE_ID);
+    }
+
     public void writeNegotiate()
     {
-        writeNegotiateInternal(0, timeInNs());
+        writeNegotiateInternal(0, timeInNs(), NegotiateEncoder.TEMPLATE_ID);
     }
 
     public void writeNegotiateWithLargeSofh()
     {
-        writeNegotiateInternal(1000, timeInNs());
+        writeNegotiateInternal(1000, timeInNs(), NegotiateEncoder.TEMPLATE_ID);
     }
 
     public void writeNegotiateWithShortSofh()
     {
-        writeNegotiateInternal(-15, timeInNs());
+        writeNegotiateInternal(-15, timeInNs(), NegotiateEncoder.TEMPLATE_ID);
     }
 
     public void writeNegotiateWithTimestamp(final long negotiateTimestampInNs)
     {
-        writeNegotiateInternal(0, negotiateTimestampInNs);
+        writeNegotiateInternal(0, negotiateTimestampInNs, NegotiateEncoder.TEMPLATE_ID);
     }
 
-    private void writeNegotiateInternal(final int extraLength, final long negotiateTimestampInNs)
+    private void writeNegotiateInternal(final int extraLength, final long negotiateTimestampInNs, final int templateId)
     {
         final NegotiateEncoder negotiate = new NegotiateEncoder();
         final int actualLength = NegotiateEncoder.BLOCK_LENGTH + NegotiateEncoder.credentialsHeaderLength() +
             CREDENTIALS.length() + NegotiateEncoder.clientIPHeaderLength() + CLIENT_IP.length() +
             NegotiateEncoder.clientAppNameHeaderLength() + CLIENT_APP_NAME.length() +
             NegotiateEncoder.clientAppVersionHeaderLength() + CLIENT_APP_VERSION.length();
-        wrap(negotiate, actualLength + extraLength);
+        wrap(negotiate, actualLength + extraLength, templateId);
 
         this.negotiateTimestampInNs = negotiateTimestampInNs;
 
@@ -659,7 +670,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void readBusinessReject(final long refSeqNum, final long rejectRefID)
     {
-        final BusinessMessageRejectDecoder businessReject = read(new BusinessMessageRejectDecoder(), 0);
+        final BusinessMessageRejectDecoder businessReject = read(new BusinessMessageRejectDecoder(),
+            BusinessMessageRejectDecoder.textHeaderLength() +
+            BusinessMessageRejectDecoder.memoHeaderLength());
         assertEquals(refSeqNum, businessReject.refSeqNum());
         assertEquals(MessageType.NewOrderSingle, businessReject.refMsgType());
         assertEquals(rejectRefID, businessReject.businessRejectRefID());
