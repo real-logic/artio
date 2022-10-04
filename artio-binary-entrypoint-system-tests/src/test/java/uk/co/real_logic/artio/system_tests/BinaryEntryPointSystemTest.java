@@ -413,7 +413,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         // Test that we can still establish the connection after this
         resetHandlers();
 
-        establishSuccessNewConnection();
+        establishSuccessNewConnection(true);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -446,6 +446,14 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         restartArtio();
         reEstablishConnection(3, 3);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldAcceptReEstablishmentOfSessionWithoutMessageExchange() throws IOException
+    {
+        successfulConnection(false);
+
+        reEstablishConnection(0, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -2116,20 +2124,29 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
     private void successfulConnection() throws IOException
     {
+        successfulConnection(true);
+    }
+
+    private void successfulConnection(final boolean exchangeMessages) throws IOException
+    {
         setupArtio();
 
-        establishSuccessNewConnection();
+        establishSuccessNewConnection(exchangeMessages);
 
         resetHandlers();
     }
 
-    private void establishSuccessNewConnection() throws IOException
+    private void establishSuccessNewConnection(final boolean exchangeMessages) throws IOException
     {
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            exchangeOrderAndReportNew(client);
+            if (exchangeMessages)
+            {
+                exchangeOrderAndReportNew(client);
+            }
 
-            assertNextSequenceNumbers(2, 2);
+            final int nextSeqNo = exchangeMessages ? 2 : 1;
+            assertNextSequenceNumbers(nextSeqNo, nextSeqNo);
 
             clientTerminatesSession(client);
         }
