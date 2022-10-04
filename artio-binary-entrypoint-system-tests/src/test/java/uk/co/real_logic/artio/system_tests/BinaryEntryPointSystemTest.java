@@ -271,22 +271,26 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldDisconnectMessageWithLargeSofh() throws IOException
     {
-        setupArtio();
+        printErrors = false;
+
+        // Ensure that we have a long timeout so that the test doesn't pass due to just the
+        // no logon timeout.
+        artioKeepAliveIntervalInMs = 10 * TEST_TIMEOUT_IN_MS;
+
+        setup();
+        setupJustArtio(
+            true,
+            (int)artioKeepAliveIntervalInMs,
+            NO_FIXP_MAX_RETRANSMISSION_RANGE,
+            null,
+            false,
+            DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
 
         try (BinaryEntryPointClient client = newClient())
         {
             client.writeNegotiateWithLargeSofh();
+            client.writeNegotiate();
             client.assertDisconnected();
-
-//            client.writeNegotiate();
-//            libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, false);
-//
-//            client.readNegotiateResponse();
-//
-//            client.writeEstablish();
-//            client.readFirstEstablishAck();
-//
-//            assertConnectionMatches(client, connectionAcquiredHandler);
         }
     }
 

@@ -354,7 +354,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     public void writeNegotiateWithLargeSofh()
     {
-        writeNegotiateInternal(1000, timeInNs(), NegotiateEncoder.TEMPLATE_ID);
+        writeNegotiateInternal(5, timeInNs(), NegotiateEncoder.TEMPLATE_ID);
     }
 
     public void writeNegotiateWithShortSofh()
