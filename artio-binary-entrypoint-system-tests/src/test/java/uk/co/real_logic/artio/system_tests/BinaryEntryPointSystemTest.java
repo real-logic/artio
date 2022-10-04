@@ -1565,6 +1565,35 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         });
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportReEstablishOfOfflineSession()
+        throws IOException
+    {
+        // Differs from re-establish code by not having messages to retransmit.
+
+        final BinaryEntryPointContext context = nextSessionVerIDContext();
+        offlineSession(context, true, 1);
+
+        try (BinaryEntryPointClient client = newClient())
+        {
+            establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler, true);
+            assertNextSequenceNumbers(1, 1);
+            clientTerminatesSession(client);
+        }
+        resetHandlers();
+
+        withReEstablishedConnection(0, true, client ->
+        {
+            assertNextSequenceNumbers(1, 1);
+
+            exchangeOrderAndReportNew(client);
+
+            assertNextSequenceNumbers(2, 2);
+
+            clientTerminatesSession(client);
+        });
+    }
+
     private BinaryEntryPointContext nextSessionVerIDContext()
     {
         return BinaryEntryPointContext.forNextSessionVerID(
@@ -1801,7 +1830,8 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         return sessionVerID;
     }
 
-    private long offlineSession(final BinaryEntryPointContext context, final boolean firstTime, final int clOrdId)
+    private long offlineSession(
+        final BinaryEntryPointContext context, final boolean firstTime, final int nextSentSeqNo)
     {
         final long sessionVerID = context.sessionVerID();
 
@@ -1817,7 +1847,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         assertEquals(SessionReplyStatus.OK, sessionReply.resultIfPresent());
         acquireConnection(connectionAcquiredHandler);
         assertEquals(FixPConnection.State.UNBOUND, connection.state());
-        assertNextSequenceNumbers(1, clOrdId);
+        assertNextSequenceNumbers(1, nextSentSeqNo);
         assertEquals(SESSION_ID, connection.sessionId());
         assertEquals(sessionVerID, connection.sessionVerId());
         assertEquals(sessionVerID, connectionAcquiredHandler.sessionVerIdAtAcquire());
@@ -2078,12 +2108,19 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         final int alreadyRecvMsgCount,
         final Consumer<BinaryEntryPointClient> handler) throws IOException
     {
+        withReEstablishedConnection(alreadyRecvMsgCount, false, handler);
+    }
+
+    private void withReEstablishedConnection(
+        final int alreadyRecvMsgCount, final boolean offlineOwned, final Consumer<BinaryEntryPointClient> handler)
+        throws IOException
+    {
         try (BinaryEntryPointClient client = newClient())
         {
             final int nextSeqNo = alreadyRecvMsgCount + 1;
             client.writeEstablish(nextSeqNo);
 
-            libraryAcquiresConnection(client);
+            libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, offlineOwned);
 
             client.readEstablishAck(nextSeqNo, alreadyRecvMsgCount);
 

@@ -1088,4 +1088,41 @@ class InternalBinaryEntryPointConnection
             return requestDisconnect(DisconnectReason.ENGINE_SHUTDOWN);
         }
     }
+
+    public String toString()
+    {
+        return "InternalBinaryEntryPointConnection{" +
+            "maxFixPKeepaliveTimeoutInMs=" + maxFixPKeepaliveTimeoutInMs +
+            ", minFixPKeepaliveTimeoutInMs=" + minFixPKeepaliveTimeoutInMs +
+            ", noEstablishFixPTimeoutInMs=" + noEstablishFixPTimeoutInMs +
+            ", maxRetransmissionRange=" + maxRetransmissionRange +
+            ", cancelOnDisconnect=" + cancelOnDisconnect +
+            ", allTemplateIds=" + allTemplateIds +
+            ", resendTerminationCode=" + resendTerminationCode +
+            ", sessionId=" + sessionId +
+            ", sessionVerId=" + sessionVerId +
+            ", cancelOnDisconnectType=" + cancelOnDisconnectType +
+            ", codTimeoutWindowInMs=" + codTimeoutWindowInMs +
+            ", suppressRedactResend=" + suppressRedactResend +
+            ", suppressInboundValidResend=" + suppressInboundValidResend +
+            ", suppressRetransmissionResend=" + suppressRetransmissionResend +
+            ", replaying=" + replaying +
+            ", retransmitOfflineNextSessionMessages=" + retransmitOfflineNextSessionMessages +
+            ", backpressuredRetransmitRejectCode=" + backpressuredRetransmitRejectCode +
+            ", backpressuredRetransmitRejectTimestamp=" + backpressuredRetransmitRejectTimestamp +
+            ", backpressuredRetransmitRejectTerminate=" + backpressuredRetransmitRejectTerminate +
+            ", libraryId=" + libraryId +
+            ", state=" + state +
+            ", initiateReply=" + initiateReply +
+            ", connectionId=" + connectionId +
+            ", counterpartyKeepAliveIntervalInMs=" + counterpartyKeepAliveIntervalInMs +
+            ", ourKeepAliveIntervalInMs=" + ourKeepAliveIntervalInMs +
+            ", nextSentSeqNo=" + nextSentSeqNo +
+            ", nextRecvSeqNo=" + nextRecvSeqNo +
+            ", retransmitFillTimeoutInMs=" + retransmitFillTimeoutInMs +
+            ", nextReceiveMessageTimeInMs=" + nextReceiveMessageTimeInMs +
+            ", nextSendMessageTimeInMs=" + nextSendMessageTimeInMs +
+            ", sendingTimeWindowInNs=" + sendingTimeWindowInNs +
+            '}';
+    }
 }

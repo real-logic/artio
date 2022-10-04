@@ -1998,28 +1998,30 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             return CONTINUE;
         }
-
         initFixP(protocolType);
-
         RequestSessionReply reply = null;
         try
         {
             final FixPContext context = commonFixPParser.lookupContext(
-                buffer,
-                offset,
-                messageLength);
+                buffer, offset, messageLength);
 
             if (correlationId == NO_CORRELATION_ID)
             {
                 // Reconnect of an offline session
-                final InternalFixPConnection connection = findFixPConnection(context);
+                InternalFixPConnection connection = findFixPConnection(context);
                 if (connection == null)
                 {
-                    throw new IllegalStateException(
-                        "Unable to find reconnecting connection associated with " + context);
+                    final FixPMessageDissector dissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
+                    connection = fixPProtocol.makeAcceptorConnection(
+                        connectionId, outboundPublication, inboundPublication, libraryId, fixPSessionOwner,
+                        lastReceivedSequenceNumber, lastSentSequenceNumber, lastConnectPayload, context, configuration,
+                        dissector);
+                    fixPConnections = ArrayUtil.add(fixPConnections, connection);
                 }
-                connection.onOfflineReconnect(connectionId, context);
-
+                else
+                {
+                    connection.onOfflineReconnect(connectionId, context);
+                }
                 return handleFixPConnection(connectionId, offline, buffer, offset, connection);
             }
             else
@@ -2028,32 +2030,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
                 final FixPMessageDissector dissector = new FixPMessageDissector(fixPProtocol.messageDecoders());
                 final InternalFixPConnection connection = fixPProtocol.makeAcceptorConnection(
-                    connectionId,
-                    outboundPublication,
-                    inboundPublication,
-                    libraryId,
-                    fixPSessionOwner,
-                    lastReceivedSequenceNumber,
-                    lastSentSequenceNumber,
-                    lastConnectPayload,
-                    context,
-                    configuration,
-                    dissector);
-
+                    connectionId, outboundPublication, inboundPublication, libraryId, fixPSessionOwner,
+                    lastReceivedSequenceNumber, lastSentSequenceNumber, lastConnectPayload, context,
+                    configuration, dissector);
                 if (offline)
                 {
                     connection.state(FixPConnection.State.UNBOUND);
                 }
-
                 handleFixPConnection(connectionId, offline, buffer, offset, connection);
-
                 fixPConnections = ArrayUtil.add(fixPConnections, connection);
-
                 if (reply != null)
                 {
                     reply.onComplete(SessionReplyStatus.OK);
                 }
-
             }
         }
         catch (final Exception e)

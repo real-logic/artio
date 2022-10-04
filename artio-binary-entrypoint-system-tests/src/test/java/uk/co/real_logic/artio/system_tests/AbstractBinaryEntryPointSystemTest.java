@@ -294,6 +294,7 @@ public class AbstractBinaryEntryPointSystemTest
         if (offlineOwned)
         {
             testSystem.await("connection not acquired", connectionAcquiredHandler::invoked);
+            testSystem.await("not authenticated", () -> fixPAuthenticationStrategy.lastSessionId() != null);
 
             lastAuthStrategySessionIs(client);
         }
