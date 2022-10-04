@@ -400,11 +400,11 @@ class InternalBinaryEntryPointConnection
             sessionId, sessionVerID, timestamp, enteringFirm, rejectCode)))
         {
             fullyUnbind(DisconnectReason.AUTHENTICATION_TIMEOUT);
-            return CONTINUE;
+            return ABORT;
         }
         else
         {
-            return ABORT;
+            return CONTINUE;
         }
     }
 
