@@ -23,13 +23,16 @@ import org.agrona.collections.IntArrayList;
 import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.fixp.RetransmissionInfo;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
@@ -44,6 +47,25 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     private boolean abortReport;
     private boolean finishedSending = false;
     private long lastPosition;
+    private RetransmissionInfo retransmissionInfo;
+    private RetransmitRejectCode retransmitRejectCode;
+    private final AtomicInteger retransmissionCallbacks = new AtomicInteger(0);
+    private int retransmissionBackpressureAttempts = 0;
+
+    public void retransmissionBackpressureAttempts(final int retransmissionBackpressureAttempts)
+    {
+        this.retransmissionBackpressureAttempts = retransmissionBackpressureAttempts;
+    }
+
+    public void retransmitRejectCode(final RetransmitRejectCode retransmitRejectCode)
+    {
+        this.retransmitRejectCode = retransmitRejectCode;
+    }
+
+    public int retransmissionCallbacks()
+    {
+        return retransmissionCallbacks.get();
+    }
 
     public FakeBinaryEntrypointConnectionHandler()
     {
@@ -217,8 +239,42 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
     {
         lastPosition = 0;
         disconnectReason = null;
+        retransmissionInfo = null;
         messageIds.clear();
         exceptions.clear();
         sessionIds.clear();
+    }
+
+    public ControlledFragmentHandler.Action onRetransmitRequest(
+        final FixPConnection connection, final RetransmissionInfo retransmissionInfo)
+    {
+        this.retransmissionInfo = retransmissionInfo;
+
+        retransmissionCallbacks.incrementAndGet();
+
+        if (retransmissionBackpressureAttempts <= 0)
+        {
+            if (retransmitRejectCode != null)
+            {
+                retransmissionInfo.reject(retransmitRejectCode);
+            }
+
+            return CONTINUE;
+        }
+        else
+        {
+            retransmissionBackpressureAttempts--;
+            return ABORT;
+        }
+    }
+
+    public RetransmissionInfo retransmissionInfo()
+    {
+        return retransmissionInfo;
+    }
+
+    public boolean hasRetransmissionInfo()
+    {
+        return retransmissionInfo != null;
     }
 }

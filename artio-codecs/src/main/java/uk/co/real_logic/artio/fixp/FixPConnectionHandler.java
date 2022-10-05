@@ -89,6 +89,21 @@ public interface FixPConnectionHandler
         FixPConnection connection, String reason, long requestTimestamp, int errorCodes);
 
     /**
+     * Callback when Artio has received a RetransmitRequest message. This can be used to reject retransmission
+     * attempts or to log errored requests.
+     *
+     * @param connection the connection receiving this message.
+     * @param retransmissionInfo provides information about the retransmission message and how to reject them.
+     * @return an action to indicate the correct back pressure behaviour.
+     */
+    default Action onRetransmitRequest(
+        final FixPConnection connection, final RetransmissionInfo retransmissionInfo)
+    {
+        // default for backwards compatibility.
+        return Action.CONTINUE;
+    }
+
+    /**
      * Callback triggered by a timeout on a retransmit request. See
      * {@link Builder#retransmitNotificationTimeoutInMs(int)} for details.
      *

@@ -67,6 +67,8 @@ class InternalBinaryEntryPointConnection
     private final CancelOnDisconnect cancelOnDisconnect;
     private final IntHashSet allTemplateIds;
 
+    private final BinaryEntryPointRetransmissionInfo retransmissionInfo = new BinaryEntryPointRetransmissionInfo();
+
     private TerminationCode resendTerminationCode;
 
     private long sessionId;
@@ -77,11 +79,13 @@ class InternalBinaryEntryPointConnection
     private boolean suppressRedactResend = false;
     private boolean suppressInboundValidResend = false;
     private boolean suppressRetransmissionResend = false;
+    private boolean suppressRetransmissionCallback = false;
     private boolean replaying = false;
     private BinaryEntryPointContext context;
     private boolean retransmitOfflineNextSessionMessages = false;
 
     private RetransmitRejectCode backpressuredRetransmitRejectCode = null;
+    private boolean backpressuredRetransmitRejectCallbackRequired = false;
     private long backpressuredRetransmitRejectTimestamp = 0;
     private boolean backpressuredRetransmitRejectTerminate = false;
 
@@ -255,7 +259,8 @@ class InternalBinaryEntryPointConnection
             tryRetransmitReject(
                 backpressuredRetransmitRejectCode,
                 backpressuredRetransmitRejectTimestamp,
-                backpressuredRetransmitRejectTerminate);
+                backpressuredRetransmitRejectTerminate,
+                backpressuredRetransmitRejectCallbackRequired);
         }
 
         switch (state)
@@ -931,35 +936,53 @@ class InternalBinaryEntryPointConnection
             internalTerminateInclResend(TerminationCode.NOT_ESTABLISHED);
         }
 
+        final BinaryEntryPointRetransmissionInfo retransmissionInfo = this.retransmissionInfo;
+        retransmissionInfo.initRequest(timestampInNs, fromSeqNo, count);
+
         if (this.sessionId != sessionID)
         {
-            return tryRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs, false);
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_SESSION, timestampInNs, false, true);
         }
 
         if (maxRetransmissionRange != NO_FIXP_MAX_RETRANSMISSION_RANGE && count > maxRetransmissionRange)
         {
-            return tryRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs, false);
+            return tryRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED, timestampInNs, false, true);
         }
 
         if (isInvalidTimestamp(timestampInNs))
         {
-            return tryRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs, false);
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_TIMESTAMP, timestampInNs, false, true);
         }
 
         if (count == 0)
         {
-            return tryRetransmitReject(RetransmitRejectCode.INVALID_COUNT, timestampInNs, false);
+            return tryRetransmitReject(RetransmitRejectCode.INVALID_COUNT, timestampInNs, false, true);
         }
 
         final long endSequenceNumber = fromSeqNo + count - 1;
         if (endSequenceNumber >= nextSentSeqNo)
         {
-            return tryRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs, false);
+            return tryRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE, timestampInNs, false, true);
         }
 
         if (replaying)
         {
-            return tryRetransmitReject(RetransmitRejectCode.RETRANSMIT_IN_PROGRESS, timestampInNs, true);
+            return tryRetransmitReject(RetransmitRejectCode.RETRANSMIT_IN_PROGRESS, timestampInNs, true, true);
+        }
+
+        if (!suppressRetransmissionCallback)
+        {
+            final Action action = handler.onRetransmitRequest(this, retransmissionInfo);
+            if (action == ABORT)
+            {
+                return ABORT;
+            }
+        }
+
+        final RetransmitRejectCode rejectionCode = (RetransmitRejectCode)retransmissionInfo.rejectionCode();
+        if (rejectionCode != null)
+        {
+            return tryRetransmitReject(rejectionCode, timestampInNs, false, false);
         }
 
         if (!suppressRetransmissionResend)
@@ -968,6 +991,7 @@ class InternalBinaryEntryPointConnection
                 fromSeqNo, count, requestTimestampInNs(), timestampInNs, nextSentSeqNo);
             if (position < 0)
             {
+                suppressRetransmissionCallback = true;
                 return ABORT;
             }
         }
@@ -977,6 +1001,7 @@ class InternalBinaryEntryPointConnection
         // retried
         if (position < 0)
         {
+            suppressRetransmissionCallback = true;
             suppressRetransmissionResend = true;
             return ABORT;
         }
@@ -1020,8 +1045,27 @@ class InternalBinaryEntryPointConnection
     }
 
     private Action tryRetransmitReject(
-        final RetransmitRejectCode rejectCode, final long timestampInNs, final boolean terminate)
+        final RetransmitRejectCode rejectCode, final long timestampInNs, final boolean terminate,
+        final boolean callbackRequired)
     {
+        if (callbackRequired)
+        {
+            final BinaryEntryPointRetransmissionInfo retransmissionInfo = this.retransmissionInfo;
+            retransmissionInfo.reject(rejectCode);
+            final Action action = handler.onRetransmitRequest(this, retransmissionInfo);
+            if (action == ABORT)
+            {
+                backpressuredRetransmitRejectCallbackRequired = true;
+                backpressuredRetransmitRejectCode = rejectCode;
+                backpressuredRetransmitRejectTimestamp = timestampInNs;
+                backpressuredRetransmitRejectTerminate = terminate;
+            }
+            else
+            {
+                backpressuredRetransmitRejectCallbackRequired = false;
+            }
+        }
+
         if (Pressure.isBackPressured(proxy.sendRetransmitReject(rejectCode, requestTimestampInNs(), timestampInNs)))
         {
             backpressuredRetransmitRejectCode = rejectCode;

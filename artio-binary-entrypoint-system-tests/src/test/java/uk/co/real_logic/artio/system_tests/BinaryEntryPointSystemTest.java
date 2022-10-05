@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.FixPSessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.RetransmissionInfo;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -577,6 +578,54 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldAcceptValidRetransmitRequest() throws IOException
     {
+        setupAndRetransmitMessages();
+
+        assertMessagesFromBeforeReEstablishRetransmitted();
+
+        // test repeatability
+        assertMessagesFromBeforeReEstablishRetransmitted();
+
+        restartArtio();
+
+        assertMessagesFromBeforeReEstablishRetransmitted();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldAcceptValidRetransmitRequestWhenBackpressured() throws IOException
+    {
+        final int backpressures = 5;
+        connectionHandler.retransmissionBackpressureAttempts(backpressures);
+
+        setupAndRetransmitMessages();
+
+        assertEquals(backpressures + 1, connectionHandler.retransmissionCallbacks());
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectValidRetransmitRequestOnUserRequest() throws IOException
+    {
+        connectionHandler.retransmitRejectCode(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
+
+        setupArtio();
+
+        try (BinaryEntryPointClient client = establishNewConnection())
+        {
+            exchange4OrdersAndReports(client);
+
+            client.writeRetransmitRequest(2, 2);
+
+            assertOnRetransmissionRequestCalled(2, 2, RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
+
+            client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
+
+            clientTerminatesSession(client);
+
+            assertNextSequenceNumbers(5, 5);
+        }
+    }
+
+    private void setupAndRetransmitMessages() throws IOException
+    {
         setupArtio();
 
         try (BinaryEntryPointClient client = establishNewConnection())
@@ -589,15 +638,6 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertNextSequenceNumbers(5, 5);
         }
-
-        assertMessagesFromBeforeReEstablishRetransmitted();
-
-        // test repeatability
-        assertMessagesFromBeforeReEstablishRetransmitted();
-
-        restartArtio();
-
-        assertMessagesFromBeforeReEstablishRetransmitted();
     }
 
     private void assertMessagesFromBeforeReEstablishRetransmitted() throws IOException
@@ -615,10 +655,24 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     private void assertMessagesRetransmitted(final BinaryEntryPointClient client, final long nextSeqNo)
     {
         client.writeRetransmitRequest(2, 2);
+
+        assertOnRetransmissionRequestCalled(2, 2, null);
+
         client.readRetransmission(2, 2);
         client.readExecutionReportNew(2);
         client.readExecutionReportNew(3);
         client.readSequence(nextSeqNo);
+    }
+
+    private void assertOnRetransmissionRequestCalled(final int count, final int fromSeqNo, final Object rejectionCode)
+    {
+        testSystem.await("Callback not invoked", connectionHandler::hasRetransmissionInfo);
+        final RetransmissionInfo retrans = connectionHandler.retransmissionInfo();
+        assertThat(retrans.timestampInNs(), Matchers.greaterThan(0L));
+        assertEquals(count, retrans.count());
+        assertEquals(fromSeqNo, retrans.fromSeqNo());
+        assertEquals(rejectionCode, retrans.rejectionCode());
+        connectionHandler.reset();
     }
 
     private void exchange4OrdersAndReports(final BinaryEntryPointClient client)
@@ -663,6 +717,9 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             assertNextSequenceNumbers(1, 1);
 
             client.writeRetransmitRequest(2, 2);
+
+            assertOnRetransmissionRequestCalled(2, 2, RetransmitRejectCode.OUT_OF_RANGE);
+
             client.readRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE);
 
             clientTerminatesSession(client);
@@ -678,6 +735,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             exchangeOrderAndReportNew(client, 1);
             client.writeRetransmitRequest(1000, 1, 1);
+            assertOnRetransmissionRequestCalled(1, 1, RetransmitRejectCode.INVALID_SESSION);
             client.readRetransmitReject(RetransmitRejectCode.INVALID_SESSION);
 
             clientTerminatesSession(client);
