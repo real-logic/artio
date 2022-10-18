@@ -28,13 +28,13 @@ buildscript {
 plugins {
     id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
     id 'net.researchgate.release' version '2.8.1'
-    id "com.github.ben-manes.versions" version "0.42.0"
+    id "com.github.ben-manes.versions" version "0.43.0"
 }
 
 def checkstyleVersion = '9.3'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.13.2'
-def mockitoVersion = '4.8.0'
+def mockitoVersion = '4.8.1'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.35'
 
