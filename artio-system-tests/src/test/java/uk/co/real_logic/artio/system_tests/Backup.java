@@ -12,6 +12,7 @@ import java.util.Objects;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.artio.TestFixtures.aeronArchiveContext;
 
 public class Backup
 {
@@ -55,7 +56,7 @@ public class Backup
 
     public void assertRecordingsTruncated()
     {
-        try (AeronArchive archive = AeronArchive.connect())
+        try (AeronArchive archive = AeronArchive.connect(aeronArchiveContext()))
         {
             archive.listRecording(0,
                 (controlSessionId,

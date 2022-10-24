@@ -58,6 +58,8 @@ import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
+import static uk.co.real_logic.artio.TestFixtures.configureAeronArchive;
+import static uk.co.real_logic.artio.TestFixtures.aeronArchiveContext;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
@@ -257,6 +259,7 @@ public final class SystemTestUtil
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
         configuration.epochNanoClock(nanoClock);
         configuration.agentNamePrefix("init-");
+        configureAeronArchive(configuration.aeronArchiveContext());
 
         return configuration;
     }
@@ -287,6 +290,7 @@ public final class SystemTestUtil
         final EpochNanoClock nanoClock)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
+        configureAeronArchive(configuration.aeronArchiveContext());
         final MessageValidationStrategy validationStrategy = setupCommonConfig(
             acceptorId, initiatorId, nanoClock, configuration);
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
@@ -611,6 +615,7 @@ public final class SystemTestUtil
     {
         final FixArchiveScanner.Configuration context = new FixArchiveScanner.Configuration()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
+            .archiveContext(aeronArchiveContext())
             .idleStrategy(CommonConfiguration.backoffIdleStrategy())
             .compactionSize(TEST_COMPACTION_SIZE);
 

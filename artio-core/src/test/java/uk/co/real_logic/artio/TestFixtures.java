@@ -18,6 +18,7 @@ package uk.co.real_logic.artio;
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -40,6 +41,8 @@ public final class TestFixtures
 
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
+
+    private static final String ARCHIVE_CONTROL_CHANNEL = "aeron:udp?endpoint=localhost:8010";
 
     public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
     public static final int TERM_BUFFER_LENGTH = 4 * 1024 * 1024;
@@ -109,7 +112,7 @@ public final class TestFixtures
 
     public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
-        final Archive.Context archiveCtx = new Archive.Context()
+        final Archive.Context archiveCtx = archiveContext()
             .deleteArchiveOnStart(context.dirDeleteOnStart())
             .segmentFileLength(context.ipcTermBufferLength());
 
@@ -154,6 +157,25 @@ public final class TestFixtures
         CloseChecker.onClose(aeronDirectoryName, archivingMediaDriver);
         archivingMediaDriver.close();
         return aeronDirectoryName;
+    }
+
+    public static Archive.Context archiveContext()
+    {
+        return new Archive.Context()
+            .controlChannel(ARCHIVE_CONTROL_CHANNEL)
+            .replicationChannel("aeron:udp?endpoint=localhost:0");
+    }
+
+    public static AeronArchive.Context aeronArchiveContext()
+    {
+        return configureAeronArchive(new AeronArchive.Context());
+    }
+
+    public static AeronArchive.Context configureAeronArchive(final AeronArchive.Context context)
+    {
+        return context
+            .controlRequestChannel(ARCHIVE_CONTROL_CHANNEL)
+            .controlResponseChannel("aeron:udp?endpoint=localhost:0");
     }
 
     public static String largeTestReqId()

@@ -51,6 +51,7 @@ public class TestRequestOutOfSequenceShouldNotTriggerHeartbeatBeforeResendReques
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(SessionPersistenceStrategy.alwaysPersistent());
+        configureAeronArchive(config.aeronArchiveContext());
         engine = FixEngine.launch(config);
     }
 

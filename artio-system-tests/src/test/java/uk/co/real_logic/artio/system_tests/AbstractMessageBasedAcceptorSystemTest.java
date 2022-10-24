@@ -167,6 +167,8 @@ public class AbstractMessageBasedAcceptorSystemTest
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
 
+        configureAeronArchive(config.aeronArchiveContext());
+
         if (optionalAuthStrategy != null)
         {
             config.authenticationStrategy(optionalAuthStrategy);

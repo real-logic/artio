@@ -603,7 +603,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
 
         final List<CompletingRecording> completingRecordings = new ArrayList<>();
-        aeronSessionIdToCompletionPosition.longForEach((sessionId, completionPosition) ->
+        aeronSessionIdToCompletionPosition.forEachLong((sessionId, completionPosition) ->
         {
             final int counterId = RecordingPos.findCounterIdBySession(counters, (int)sessionId);
             // Recording has completed

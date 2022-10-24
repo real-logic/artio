@@ -43,6 +43,7 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.MonitoringAgentFactory.none;
+import static uk.co.real_logic.artio.TestFixtures.configureAeronArchive;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.fixt.ApplVerID.FIX50;
 import static uk.co.real_logic.artio.fixt.Constants.APPL_VER_ID;
@@ -117,6 +118,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
     private void launchMultiVersionAcceptingEngine(final boolean printErrorMessages)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
+        configureAeronArchive(configuration.aeronArchiveContext());
         final EngineConfiguration acceptingConfiguration = configuration
             .bindTo("localhost", port)
             .libraryAeronChannel(IPC_CHANNEL)

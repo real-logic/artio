@@ -153,6 +153,7 @@ public class AbstractBinaryEntryPointSystemTest
 
         engineConfig.errorHandlerFactory(ffs -> Throwable::printStackTrace);
         engineConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs);
+        configureAeronArchive(engineConfig.aeronArchiveContext());
 
         if (!printErrors)
         {

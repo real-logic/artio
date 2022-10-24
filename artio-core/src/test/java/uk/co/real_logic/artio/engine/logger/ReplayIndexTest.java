@@ -58,6 +58,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_MAX_CLA
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
+import static uk.co.real_logic.artio.TestFixtures.aeronArchiveContext;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -129,7 +130,7 @@ public class ReplayIndexTest extends AbstractLogTest
     public void setUp()
     {
         mediaDriver = TestFixtures.launchMediaDriver();
-        aeronArchive = AeronArchive.connect();
+        aeronArchive = AeronArchive.connect(aeronArchiveContext());
 
         recordingIdLookup = new RecordingIdLookup(new YieldingIdleStrategy(), aeron().countersReader());
 

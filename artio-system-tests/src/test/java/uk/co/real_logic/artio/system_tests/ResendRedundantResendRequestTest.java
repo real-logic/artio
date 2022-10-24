@@ -35,6 +35,7 @@ public class ResendRedundantResendRequestTest
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(SessionPersistenceStrategy.alwaysPersistent())
             .acceptedSessionSendRedundantResendRequests(resendRedundantResendRequest);
+        configureAeronArchive(config.aeronArchiveContext());
         engine = FixEngine.launch(config);
     }
 

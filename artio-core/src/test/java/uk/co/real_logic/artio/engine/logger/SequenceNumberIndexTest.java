@@ -90,7 +90,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        aeronArchive = AeronArchive.connect();
+        aeronArchive = AeronArchive.connect(aeronArchiveContext());
         aeron = aeronArchive.context().aeron();
 
         aeronArchive.startRecording(IPC_CHANNEL, STREAM_ID, SourceLocation.LOCAL);
