@@ -23,8 +23,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 /**
  * A proxy that allows users to hook the sending of FIX session protocol messages through an external system. This can
  * be used to integrate Artio into a clustering system. You implement the SessionProxy interface to write the
- * session protocol messages into your clustering system. This enables you to achieve a strong concensus on the protocol
- * mesages before using the <code>SessionWriter</code> class to write them back out.
+ * session protocol messages into your clustering system. This enables you to achieve a strong consensus on the protocol
+ * messages before using the <code>SessionWriter</code> class to write them back out.
  */
 public interface SessionProxy
 {
