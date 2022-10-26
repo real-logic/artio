@@ -84,6 +84,7 @@ public class AbstractBinaryEntryPointSystemTest
     BinaryEntryPointConnection connection;
 
     boolean printErrors = true;
+    boolean acceptorWillTerminate = false;
     long artioKeepAliveIntervalInMs = CommonConfiguration.DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS;
 
     void setupArtio()
@@ -335,7 +336,7 @@ public class AbstractBinaryEntryPointSystemTest
         }
     }
 
-    void clientTerminatesSession(final BinaryEntryPointClient client)
+    void clientTerminatesConnection(final BinaryEntryPointClient client)
     {
         client.writeTerminate();
         client.readTerminate();
@@ -345,7 +346,7 @@ public class AbstractBinaryEntryPointSystemTest
         assertConnectionDisconnected();
     }
 
-    void acceptorTerminatesSession(final BinaryEntryPointClient client)
+    void acceptorTerminatesConnection(final BinaryEntryPointClient client)
     {
         client.readTerminate();
         client.writeTerminate();
@@ -375,7 +376,7 @@ public class AbstractBinaryEntryPointSystemTest
 
             assertNextSequenceNumbers(2, 2);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 

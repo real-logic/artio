@@ -80,7 +80,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -94,7 +94,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             connection.terminate(TerminationCode.FINISHED);
             assertEquals(UNBINDING, connection.state());
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         }
     }
 
@@ -164,7 +164,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             connectionRejected(NegotiationRejectCode.ALREADY_NEGOTIATED);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         // Check that we can Reconnect afterwards
@@ -191,7 +191,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
                 assertAuthStrategyReject(client2.sessionVerID());
             }
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         // Check that we can Reconnect afterwards
@@ -469,6 +469,14 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldRejectReEstablishmentOfSessionIfAuthenticationFailsAcceptorTerminated() throws IOException
+    {
+        acceptorWillTerminate = true;
+
+        shouldRejectReEstablishmentOfSessionIfAuthenticationFails();
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldRejectReEstablishmentOfSessionIfAuthenticationFailsWithCustomCode() throws IOException
     {
         successfulConnection();
@@ -492,7 +500,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             // just ignored.
             client.readEstablishReject(EstablishRejectCode.ALREADY_ESTABLISHED);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -618,7 +626,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
 
             assertNextSequenceNumbers(5, 5);
         }
@@ -634,7 +642,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertMessagesRetransmitted(client, 5);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
 
             assertNextSequenceNumbers(5, 5);
         }
@@ -648,7 +656,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertMessagesRetransmitted(client, 5);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -703,7 +711,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.writeRetransmitRequest(2, 2);
             client.readRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -722,7 +730,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             client.readRetransmitReject(RetransmitRejectCode.OUT_OF_RANGE);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -738,7 +746,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             assertOnRetransmissionRequestCalled(1, 1, RetransmitRejectCode.INVALID_SESSION);
             client.readRetransmitReject(RetransmitRejectCode.INVALID_SESSION);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -756,7 +764,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.writeRetransmitRequest(1, 2);
             client.readRetransmitReject(RetransmitRejectCode.REQUEST_LIMIT_EXCEEDED);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -794,7 +802,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readSequence(newClOrdId);
             client.readExecutionReportNew(newClOrdId);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -827,7 +835,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             acceptorInitiatedFinishSending(client, 1);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         // Cannot re-establish finished sequence
@@ -868,7 +876,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertCannotSendMessage();
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         }
     }
 
@@ -906,7 +914,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             client.writeFinishedReceiving();
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         });
     }
 
@@ -922,7 +930,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             processRetransmitRequestsDuringFinishSending(client);
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         }
     }
 
@@ -940,7 +948,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.writeFinishedSending(1);
             client.readFinishedReceiving();
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         }
     }
 
@@ -1191,7 +1199,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertAllSessionsOnlyContains(engine, connection);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -1410,7 +1418,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
                 exchangeOrderAndReportNew(client2);
 
-                clientTerminatesSession(client2);
+                clientTerminatesConnection(client2);
             }
 
             this.connection = firstConnection;
@@ -1425,7 +1433,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
                 return state == SENT_TERMINATE || state == UNBINDING || state == UNBOUND;
             });
 
-            acceptorTerminatesSession(client);
+            acceptorTerminatesConnection(client);
         }
 
         assertEquals(connectionHandler.sessionIds(),
@@ -1505,7 +1513,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             exchangeOrderAndReportNew(client);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         final long sessionId = connection.sessionId();
@@ -1539,7 +1547,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             exchangeOrderAndReportNew(client);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -1566,7 +1574,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readExecutionReportNew();
             client.readSequence(2);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -1619,7 +1627,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             exchangeOrderAndReportNew(client);
             assertNextSequenceNumbers(2, 2);
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -1636,7 +1644,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             establishNewConnection(client, connectionExistsHandler, connectionAcquiredHandler, true);
             assertNextSequenceNumbers(1, 1);
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
         resetHandlers();
 
@@ -1648,7 +1656,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertNextSequenceNumbers(2, 2);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -1682,7 +1690,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             client.readExecutionReportNew(otherClOrderID);
             assertNextSequenceNumbers(1, offlineMessages + 2);
             testSystem.await("Still replaying", () -> !connection.isReplaying());
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -1714,7 +1722,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             exchangeOrderAndReportNew(client);
             assertNextSequenceNumbers(2, 2);
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -1738,7 +1746,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             testSystem.awaitErroredReply(reply, containsString(
                 "currently connected with a different session version"));
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
         assertOnlyOneFixPSession();
     }
@@ -1757,7 +1765,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             client.sessionVerID(INITIAL_SESSION_VER_ID + 1);
             establishNewConnection(client);
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         assertOnlyOneFixPSession();
@@ -1804,7 +1812,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             client.writeNewOrderSingle(CL_ORD_ID);
             client.readExecutionReportNew();
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         assertOnlyOneFixPSession();
@@ -1816,7 +1824,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
 
         assertOnlyOneFixPSession();
@@ -1966,7 +1974,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             awaitedSleepThrottleWindow();
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         }
     }
 
@@ -1977,7 +1985,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         try (BinaryEntryPointClient client = establishNewConnection())
         {
-            closeEngine(() -> acceptorTerminatesSession(client));
+            closeEngine(() -> acceptorTerminatesConnection(client));
         }
     }
 
@@ -2158,7 +2166,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertNextSequenceNumbers(alreadyRecvMsgCount + 2, alreadySentMsgCount + 2);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
     }
 
@@ -2196,7 +2204,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
             assertNextSequenceNumbers(2, 2);
 
-            clientTerminatesSession(client);
+            clientTerminatesConnection(client);
         });
 
         resetHandlers();
@@ -2243,7 +2251,15 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
             final int nextSeqNo = exchangeMessages ? 2 : 1;
             assertNextSequenceNumbers(nextSeqNo, nextSeqNo);
 
-            clientTerminatesSession(client);
+            if (acceptorWillTerminate)
+            {
+                connection.terminate(TerminationCode.FINISHED);
+                acceptorTerminatesConnection(client);
+            }
+            else
+            {
+                clientTerminatesConnection(client);
+            }
         }
     }
 

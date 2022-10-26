@@ -57,7 +57,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         setup(CANCEL_ON_TERMINATE_ONLY, COD_TEST_TIMEOUT_IN_MS);
 
         final long logoutTimeInNs = nanoClock.nanoTime();
-        clientTerminatesSession(client);
+        clientTerminatesConnection(client);
 
         assertTriggersCancelOnDisconnect(logoutTimeInNs);
     }
