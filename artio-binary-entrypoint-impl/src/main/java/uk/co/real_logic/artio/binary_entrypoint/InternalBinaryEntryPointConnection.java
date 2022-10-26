@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fixp.FixPContext;
 import uk.co.real_logic.artio.fixp.FixPMessageDissector;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 import uk.co.real_logic.artio.library.CancelOnDisconnect;
 import uk.co.real_logic.artio.library.FixPSessionOwner;
 import uk.co.real_logic.artio.library.InternalFixPConnection;
@@ -791,6 +792,8 @@ class InternalBinaryEntryPointConnection
         {
             dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
 
+            final FixPMessageHeader messageHeader = this.messageHeader;
+            messageHeader.messageSize(sofhMessageSize);
             final Action action = handler.onBusinessMessage(
                 this,
                 templateId,
@@ -798,7 +801,8 @@ class InternalBinaryEntryPointConnection
                 offset,
                 blockLength,
                 version,
-                false);
+                false,
+                messageHeader);
 
             if (action != ABORT)
             {

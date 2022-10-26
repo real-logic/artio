@@ -7,6 +7,7 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -31,7 +32,8 @@ public class FixPExchangeSessionHandler implements FixPConnectionHandler
         final int offset,
         final int blockLength,
         final int version,
-        final boolean possRetrans)
+        final boolean possRetrans,
+        final FixPMessageHeader header)
     {
         System.out.println("Received Business Message");
         if (templateId == NewOrderSingleDecoder.TEMPLATE_ID)

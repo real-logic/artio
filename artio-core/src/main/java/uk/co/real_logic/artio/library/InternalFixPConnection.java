@@ -41,6 +41,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected final FixPSessionOwner owner;
     protected final AbstractFixPProxy proxy;
     protected final FixPMessageDissector dissector;
+    protected final FixPMessageHeader messageHeader;
 
     protected State state;
     protected FixPConnectionHandler handler;
@@ -78,6 +79,7 @@ public abstract class InternalFixPConnection implements FixPConnection
         this.proxy = proxy;
         this.dissector = dissector;
         this.sendingTimeWindowInNs = TimeUnit.MILLISECONDS.toNanos(sendingTimeWindowInMs);
+        this.messageHeader = new FixPMessageHeader();
     }
 
     // -----------------------------------------------

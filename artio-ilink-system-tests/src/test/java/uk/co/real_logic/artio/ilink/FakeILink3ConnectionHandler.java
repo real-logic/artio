@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -57,7 +58,8 @@ public class FakeILink3ConnectionHandler implements ILink3ConnectionHandler
         final int offset,
         final int blockLength,
         final int version,
-        final boolean possRetrans)
+        final boolean possRetrans,
+        final FixPMessageHeader messageHeader)
     {
         messageIds.add(templateId);
 

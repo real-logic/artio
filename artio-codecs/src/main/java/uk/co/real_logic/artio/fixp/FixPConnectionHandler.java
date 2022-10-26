@@ -54,6 +54,7 @@ public interface FixPConnectionHandler
      * @param blockLength the blockLength of the received message.
      * @param version the sbe version of the protocol.
      * @param possRetrans true of the possRetrans flag is set to true.
+     * @param messageHeader additional fields related to the message.
      * @return an action to indicate the correct back pressure behaviour.
      */
     Action onBusinessMessage(
@@ -63,7 +64,8 @@ public interface FixPConnectionHandler
         int offset,
         int blockLength,
         int version,
-        boolean possRetrans);
+        boolean possRetrans,
+        FixPMessageHeader messageHeader);
 
     /**
      * Callback when Artio has received a NotApplied message. The {@link NotAppliedResponse} parameter can be used

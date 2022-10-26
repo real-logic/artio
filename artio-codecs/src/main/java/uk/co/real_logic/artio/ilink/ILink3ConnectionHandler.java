@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 
 /**
  * This handler should be implemented by anyone using Artio to connect to the iLink3 protocol. Your application code
@@ -40,6 +41,7 @@ public interface ILink3ConnectionHandler extends FixPConnectionHandler
      * @param blockLength the blockLength of the received message.
      * @param version the sbe version of the protocol.
      * @param possRetrans true of the possRetrans flag is set to true.
+     * @param messageHeader additional fields related to the message.FakeILink3ConnectionHandler
      * @return the action to perform
      */
     @Override
@@ -50,5 +52,6 @@ public interface ILink3ConnectionHandler extends FixPConnectionHandler
         int offset,
         int blockLength,
         int version,
-        boolean possRetrans);
+        boolean possRetrans,
+        FixPMessageHeader messageHeader);
 }

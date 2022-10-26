@@ -27,10 +27,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.engine.framer.ILink3Key;
-import uk.co.real_logic.artio.fixp.FixPContext;
-import uk.co.real_logic.artio.fixp.FixPKey;
-import uk.co.real_logic.artio.fixp.FixPMessageDissector;
-import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.*;
 import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -1068,7 +1065,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
                     checkBusinessRejectSequenceNumber(buffer, offset, templateId, blockLength, version);
                     if (retransmitFillSeqNo == NOT_AWAITING_RETRANSMIT)
                     {
-                        return onBusinessMessage(buffer, offset, templateId, blockLength, version, false);
+                        return onBusinessMessage(buffer, offset, templateId, blockLength, version, false,
+                            totalLength);
                     }
                     else
                     {
@@ -1163,7 +1161,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             // nextRetransmitContiguousSeqNo == 0 if all the received messages are in order
             if (nextRetransmitContiguousSeqNo == 0 || seqNum == nextRetransmitContiguousSeqNo)
             {
-                final Action action = onBusinessMessage(buffer, offset, templateId, blockLength, version, true);
+                final Action action = onBusinessMessage(buffer, offset, templateId, blockLength, version, true,
+                    totalLength);
                 if (action == ABORT)
                 {
                     return ABORT;
@@ -1237,14 +1236,18 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
         final int templateId,
         final int blockLength,
         final int version,
-        final boolean possRetrans)
+        final boolean possRetrans,
+        final int totalLength)
     {
         if (BUSINESS_MESSAGE_LOGGING_ENABLED)
         {
             dissector.onBusinessMessage(templateId, buffer, offset, blockLength, version, true);
         }
 
-        return handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans);
+        final FixPMessageHeader messageHeader = this.messageHeader;
+        messageHeader.messageSize(totalLength);
+        return handler.onBusinessMessage(this, templateId, buffer, offset, blockLength, version, possRetrans,
+            messageHeader);
     }
 
     private void checkBusinessRejectSequenceNumber(
@@ -1420,7 +1423,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             if (messageUuid == retransmitUuid && seqNum == retransmitContiguousSeqNo + 1)
             {
                 final Action action = onBusinessMessage(
-                    retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                    retransmitQueue, messageOffset, templateId, blockLength, version, false,
+                    length);
                 if (action == ABORT)
                 {
                     this.retransmitContiguousSeqNo = retransmitContiguousSeqNo;
@@ -1439,7 +1443,9 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
         for (final RetransmitQueueEntry entry : entries)
         {
-            final int headerOffset = entry.offset + SOFH_LENGTH;
+            final int entryOffset = entry.offset;
+            final int messageSize = readSofhMessageSize(retransmitQueue, entryOffset);
+            final int headerOffset = entryOffset + SOFH_LENGTH;
             headerDecoder.wrap(retransmitQueue, headerOffset);
             final int blockLength = headerDecoder.blockLength();
             final int templateId = headerDecoder.templateId();
@@ -1447,7 +1453,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
 
             final int messageOffset = headerOffset + MessageHeaderDecoder.ENCODED_LENGTH;
             final Action action = onBusinessMessage(
-                retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                retransmitQueue, messageOffset, templateId, blockLength, version, false,
+                messageSize);
             if (action == ABORT)
             {
                 this.retransmitContiguousSeqNo = NOT_AWAITING_RETRANSMIT;
@@ -1498,7 +1505,8 @@ public final class InternalILink3Connection extends InternalFixPConnection imple
             if (retransmitMaxSeqNo == NOT_AWAITING_RETRANSMIT || seqNum <= retransmitMaxSeqNo)
             {
                 final Action action = onBusinessMessage(
-                    retransmitQueue, messageOffset, templateId, blockLength, version, false);
+                    retransmitQueue, messageOffset, templateId, blockLength, version, false,
+                    length);
                 if (action == ABORT)
                 {
                     break;

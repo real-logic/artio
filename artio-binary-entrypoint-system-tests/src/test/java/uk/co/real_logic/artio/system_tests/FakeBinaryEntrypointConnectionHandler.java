@@ -23,6 +23,7 @@ import org.agrona.collections.IntArrayList;
 import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
 import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 import uk.co.real_logic.artio.fixp.RetransmissionInfo;
 import uk.co.real_logic.artio.library.NotAppliedResponse;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -34,6 +35,8 @@ import java.util.function.Consumer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHandler
 {
@@ -94,10 +97,13 @@ public class FakeBinaryEntrypointConnectionHandler implements FixPConnectionHand
         final int offset,
         final int blockLength,
         final int version,
-        final boolean possRetrans)
+        final boolean possRetrans,
+        final FixPMessageHeader header)
     {
         messageIds.add(templateId);
         sessionIds.add(connection.key().sessionIdIfExists());
+
+        assertThat(header.messageSize(), greaterThanOrEqualTo(blockLength));
 
         if (replyToOrder && templateId == NewOrderSingleDecoder.TEMPLATE_ID)
         {

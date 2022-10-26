@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPMessageHeader;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -39,7 +40,8 @@ public class SequenceNumberCheckingHandler implements ILink3ConnectionHandler
         final int offset,
         final int blockLength,
         final int version,
-        final boolean possRetrans)
+        final boolean possRetrans,
+        final FixPMessageHeader messageHeader)
     {
         if (templateId == ExecutionReportStatus532Decoder.TEMPLATE_ID)
         {

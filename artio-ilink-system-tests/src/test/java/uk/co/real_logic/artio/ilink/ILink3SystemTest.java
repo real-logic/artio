@@ -119,6 +119,7 @@ public class ILink3SystemTest
             .gapfillOnRetransmitILinkTemplateIds(gapfillOnRetransmitILinkTemplateIds)
             .fixPRetransmitHandler(retransmitHandler)
             .messageTimingHandler(messageTimingCaptor);
+        configureAeronArchive(engineConfig.aeronArchiveContext());
 
         engine = FixEngine.launch(engineConfig);
 
