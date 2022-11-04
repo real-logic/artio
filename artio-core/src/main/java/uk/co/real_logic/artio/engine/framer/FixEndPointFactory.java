@@ -114,7 +114,6 @@ class FixEndPointFactory
             System.currentTimeMillis(),
             senderSequenceNumbers.onNewSender(connectionId, bytesInBuffer),
             messageTimingHandler,
-            configuration.maxConcurrentSessionReplays(),
             receiverEndPoint,
             senderFormatters);
     }

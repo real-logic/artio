@@ -122,7 +122,12 @@ public enum LogTag
     /**
      * Used by tests that perform reproduction.
      */
-    REPRODUCTION_TEST;
+    REPRODUCTION_TEST,
+
+    /**
+     * Specifically for logging the cause of slow consumer disconnects.
+     */
+    SLOW_CONSUMER;
 
     private final char[] logStr;
 

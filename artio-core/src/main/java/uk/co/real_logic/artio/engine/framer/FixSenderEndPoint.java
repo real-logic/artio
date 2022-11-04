@@ -49,6 +49,8 @@ import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessReje
 
 class FixSenderEndPoint extends SenderEndPoint
 {
+    private static final boolean IS_SLOW_CONSUMER_LOG_TAG_ENABLED = DebugLogger.isEnabled(LogTag.SLOW_CONSUMER);
+
     private static final int ENQ_MSG = 1;
     private static final int ENQ_REPLAY_COMPLETE = 2;
     private static final int ENQ_START_REPLAY = 3;
@@ -71,6 +73,12 @@ class FixSenderEndPoint extends SenderEndPoint
             "SEP.replaying, connId=%s, replay=%s");
         final CharFormatter requiresRetry = new CharFormatter(
             "SEP.requiresRetry, connId=%s, retry=%s");
+        final CharFormatter becomesSlow = new CharFormatter(
+            "SEP.becomesSlow, connId=%s, becomeSlow=%s");
+        final CharFormatter bufferSlowDisconnect = new CharFormatter(
+            "SEP.bufferSlowDisconnect, conn=%s,sess=%s,bufferUsage=%s,maxBytesInBuffer=%s,replay=%s");
+        final CharFormatter timeoutSlowDisconnect = new CharFormatter(
+            "SEP.timeoutSlowDisconnect, conn=%s,sess=%s,time=%s,noWriteSince=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -118,7 +126,6 @@ class FixSenderEndPoint extends SenderEndPoint
         final long timeInMs,
         final SenderSequenceNumber senderSequenceNumber,
         final MessageTimingHandler messageTimingHandler,
-        final int maxConcurrentSessionReplays,
         final FixReceiverEndPoint receiverEndPoint,
         final Formatters formatters)
     {
@@ -401,6 +408,15 @@ class FixSenderEndPoint extends SenderEndPoint
         {
             if (bufferUsage > maxBytesInBuffer)
             {
+                if (IS_SLOW_CONSUMER_LOG_TAG_ENABLED)
+                {
+                    DebugLogger.log(LogTag.SLOW_CONSUMER, formatters.bufferSlowDisconnect.clear()
+                        .with(connectionId)
+                        .with(sessionId)
+                        .with(bufferUsage)
+                        .with(maxBytesInBuffer)
+                        .with(replay));
+                }
                 disconnectEndpoint(SLOW_CONSUMER);
             }
 
@@ -637,12 +653,15 @@ class FixSenderEndPoint extends SenderEndPoint
 
         if (isSlowConsumer() && timeInMs > sendingTimeoutTimeInMs)
         {
-            errorHandler.onError(new IllegalStateException(String.format(
-                "Slow Consumer Disconnected conn=%d,sess=%d @ time %d, Due to not being able to write since %d",
-                connectionId,
-                sessionId,
-                timeInMs,
-                sendingTimeoutTimeInMs - slowConsumerTimeoutInMs)));
+            if (IS_SLOW_CONSUMER_LOG_TAG_ENABLED)
+            {
+                DebugLogger.log(LogTag.SLOW_CONSUMER, formatters.timeoutSlowDisconnect.clear()
+                    .with(connectionId)
+                    .with(sessionId)
+                    .with(timeInMs)
+                    .with(maxBytesInBuffer)
+                    .with(sendingTimeoutTimeInMs - slowConsumerTimeoutInMs));
+            }
             disconnectEndpoint(SLOW_CONSUMER);
 
             return true;
@@ -798,5 +817,17 @@ class FixSenderEndPoint extends SenderEndPoint
             }
             return usage;
         }
+    }
+
+    protected void sendSlowStatus(final boolean hasBecomeSlow)
+    {
+        if (IS_SLOW_CONSUMER_LOG_TAG_ENABLED)
+        {
+            DebugLogger.log(LogTag.SLOW_CONSUMER, formatters.becomesSlow.clear()
+                .with(connectionId)
+                .with(hasBecomeSlow));
+        }
+
+        super.sendSlowStatus(hasBecomeSlow);
     }
 }

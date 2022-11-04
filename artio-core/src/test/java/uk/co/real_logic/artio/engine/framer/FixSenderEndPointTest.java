@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.framer.FixSenderEndPoint.*;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
@@ -88,7 +87,6 @@ public class FixSenderEndPointTest
         0,
         senderSequenceNumber,
         messageTimingHandler,
-        DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
         receiverEndPoint,
         new FixSenderEndPoint.Formatters());
 
@@ -149,7 +147,6 @@ public class FixSenderEndPointTest
         endPoint.poll(timeInMs);
 
         verifySlowConsumerDisconnect(times(1));
-        errorLogged();
     }
 
     @Test
@@ -194,7 +191,6 @@ public class FixSenderEndPointTest
         endPoint.poll(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 101);
 
         verifySlowConsumerDisconnect(times(1));
-        errorLogged();
     }
 
     private void startValidReplay()
