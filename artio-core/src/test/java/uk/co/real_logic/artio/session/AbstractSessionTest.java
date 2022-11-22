@@ -54,7 +54,7 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
-import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.session.Session.TEST_REQ_ID;
@@ -629,6 +629,30 @@ public abstract class AbstractSessionTest
 
         // Roundtrip completed, so we disconnect the session
         session.onSessionWriterLogout();
+        verify(sessionProxy).sendRequestDisconnect(CONNECTION_ID, FIX_HEARTBEAT_TIMEOUT);
+        assertState(DISCONNECTED);
+    }
+
+    @Test
+    public void shouldLogoutOnLogonWithLowSequenceNumberAndWithAsyncProxy()
+    {
+        when(sessionProxy.isAsync()).thenReturn(true);
+
+        session().lastSentMsgSeqNum(10);
+        session().lastReceivedMsgSeqNum(5);
+
+        readyForLogon();
+        onLogon(2);
+
+        verify(sessionProxy).sendLowSequenceNumberLogout(
+            11, 6, 2, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+
+        // Initially we wait for the logout to be roundtripped via a cluster
+        assertState(AWAITING_ASYNC_PROXY_LOGOUT);
+
+        // Roundtrip completed, so we disconnect the session
+        session.onSessionWriterLogout();
+        verify(sessionProxy).sendRequestDisconnect(CONNECTION_ID, MSG_SEQ_NO_TOO_LOW);
         assertState(DISCONNECTED);
     }
 
