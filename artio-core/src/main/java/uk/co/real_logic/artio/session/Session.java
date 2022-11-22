@@ -199,6 +199,8 @@ public class Session
     private int replaysInFlight = 0;
     protected ConnectionType connectionType;
 
+    private DisconnectReason pendingDisconnectReason;
+
     Session(
         final int heartbeatIntervalInS,
         final long connectionId,
@@ -527,7 +529,13 @@ public class Session
         // This is that message being round-tripped via the cluster
         if (state() == AWAITING_ASYNC_PROXY_LOGOUT)
         {
-            requestDisconnect(LOGOUT);
+            DisconnectReason reason = LOGOUT;
+            if (pendingDisconnectReason != null)
+            {
+                reason = pendingDisconnectReason;
+                pendingDisconnectReason = null;
+            }
+            requestDisconnect(reason);
         }
         else
         {
@@ -609,7 +617,7 @@ public class Session
                 // Delay disconnect until the reply logout has been round-tripped via the cluster
                 if (proxy.isAsync())
                 {
-                    state(AWAITING_ASYNC_PROXY_LOGOUT);
+                    disconnectAfterAsyncLogout(reason);
                 }
                 else
                 {
@@ -1782,10 +1790,24 @@ public class Session
         final Action action = checkPosition(position);
         if (action != ABORT)
         {
-            requestDisconnect(reason);
+            // Delay disconnect until the logout has been round-tripped via the cluster
+            if (proxy.isAsync())
+            {
+                disconnectAfterAsyncLogout(reason);
+            }
+            else
+            {
+                requestDisconnect(reason);
+            }
         }
 
         return action;
+    }
+
+    private void disconnectAfterAsyncLogout(final DisconnectReason reason)
+    {
+        state(AWAITING_ASYNC_PROXY_LOGOUT);
+        pendingDisconnectReason = reason;
     }
 
     private boolean isInitialRequest()
