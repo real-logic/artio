@@ -44,9 +44,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1110,7 +1112,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         sleep(1_000);
 
-        testSystem.await("Failed to cleanup resources", () -> remainingFileCount() == 31);
+        testSystem.await("Failed to cleanup resources", () -> remainingFileCount() == 30);
 
         assertEquals(DISCONNECTED, acceptingSession.state());
         assertFalse(acceptingSession.isReplaying());
@@ -1120,8 +1122,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         try
         {
-            return Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath())
-                .count();
+            try (Stream<Path> stream = Files.walk(mediaDriver.mediaDriver().context().aeronDirectory().toPath()))
+            {
+                return stream.count();
+            }
         }
         catch (final UncheckedIOException e)
         {
