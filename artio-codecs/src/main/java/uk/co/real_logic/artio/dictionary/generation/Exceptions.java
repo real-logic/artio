@@ -124,7 +124,7 @@ public final class Exceptions
     public static boolean isJustDisconnect(final Exception ex)
     {
         final String msg = ex.getMessage();
-        return msg != null && (msg.contains("Connection reset by peer") ||
+        return msg != null && (msg.contains("Connection reset") ||
                msg.contains("An established connection was aborted"));
     }
 
