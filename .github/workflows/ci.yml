@@ -1,4 +1,5 @@
 name: Continuous Integration
+
 on:
   push:
     branches:
@@ -7,6 +8,10 @@ on:
     types: [opened, synchronize]
     branches:
       - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP -Dfix.core.ci=true"
