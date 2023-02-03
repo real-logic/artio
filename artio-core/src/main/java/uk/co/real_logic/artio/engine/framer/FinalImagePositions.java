@@ -20,6 +20,7 @@ import io.aeron.UnavailableImageHandler;
 
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiFunction;
 
 // This is written to on the client conductor thread and read from the Framer thread.
@@ -42,7 +43,7 @@ class FinalImagePositions implements UnavailableImageHandler
         final long position = image.position();
 
         final Long old = sessionIdToPosition.remove(sessionId);
-        if (old != LEAK_WITNESS) // lgtm [java/reference-equality-of-boxed-types]
+        if (!Objects.equals(old, LEAK_WITNESS))
         {
             sessionIdToPosition.put(sessionId, position);
         }

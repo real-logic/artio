@@ -40,7 +40,7 @@ public final class NetworkBenchmarkUtil
         final long time) throws IOException
     {
         buffer.putLong(0, time);
-        int position = 0;
+        long position = 0;
         while (position < MESSAGE_SIZE)
         {
             position += source.transferTo(position, MESSAGE_SIZE - position, destination);
@@ -49,7 +49,7 @@ public final class NetworkBenchmarkUtil
 
     public static long readChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
     {
-        int position = 0;
+        long position = 0;
         while (position < MESSAGE_SIZE)
         {
             position += buffer.transferFrom(channel, position, MESSAGE_SIZE - position);

@@ -27,6 +27,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,7 +57,7 @@ public class HistogramLoggingTest
     {
         when(clock.time()).thenReturn(110L, 220L, 330L, 440L);
 
-        file = File.createTempFile("histogram", "tmp");
+        file = Files.createTempFile("histogram", "tmp").toFile();
         timer = new Timer(clock::time, NAME, 1, mock(AtomicCounter.class));
         writer = new HistogramLogAgent(
             Collections.singletonList(timer),

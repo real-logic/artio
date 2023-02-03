@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -233,7 +234,7 @@ public class FixContextsTest
     @Test
     public void copiesOldSessionContextFile() throws IOException
     {
-        final File backupLocation = File.createTempFile("sessionContexts", "tmp");
+        final File backupLocation = Files.createTempFile("sessionContexts", "tmp").toFile();
         try
         {
             final SessionContext aContext = fixContexts.onLogon(aSession, fixDictionary);

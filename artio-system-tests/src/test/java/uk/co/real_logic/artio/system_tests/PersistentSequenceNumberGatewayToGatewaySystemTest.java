@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -95,14 +96,14 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private TimeRange firstConnectTimeRange;
 
-    private IntArrayList resendMsgSeqNums = new IntArrayList();
+    private final IntArrayList resendMsgSeqNums = new IntArrayList();
 
     @Before
     public void setUp() throws IOException
     {
         deleteAcceptorLogs();
         delete(CLIENT_LOGS);
-        backupLocation = File.createTempFile("backup", "tmp");
+        backupLocation = Files.createTempFile("backup", "tmp").toFile();
     }
 
     @After
