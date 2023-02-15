@@ -104,7 +104,7 @@ class AcceptorGenerator
     {
         acceptorOutput.append(String.format(
             "    @Override\n" +
-            "    public void on%1$s(final %2$s decoder) {};\n\n",
+            "    public void on%1$s(final %2$s decoder) {}\n\n",
             message.name(),
             decoderClassName(message)
         ));
