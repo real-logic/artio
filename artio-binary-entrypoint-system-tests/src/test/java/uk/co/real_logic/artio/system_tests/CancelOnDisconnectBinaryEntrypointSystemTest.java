@@ -63,6 +63,16 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotTriggerCancelOnDisconnectTimeoutWhenClientDisconnectForLogoutOnly() throws IOException
+    {
+        setup(CANCEL_ON_TERMINATE_ONLY, COD_TEST_TIMEOUT_IN_MS);
+
+        disconnect();
+
+        assertHandlerNotInvoked(LONG_COD_TEST_TIMEOUT_IN_MS);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldTriggerCancelOnDisconnectTimeoutForDisconnect() throws IOException
     {
         setup(CANCEL_ON_DISCONNECT_ONLY, COD_TEST_TIMEOUT_IN_MS);
@@ -71,6 +81,16 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         disconnect();
 
         assertTriggersCancelOnDisconnect(logoutTimeInNs);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotTriggerCancelOnDisconnectTimeoutWhenClientTerminateForDisconnectOnly() throws IOException
+    {
+        setup(CANCEL_ON_DISCONNECT_ONLY, COD_TEST_TIMEOUT_IN_MS);
+
+        clientTerminatesConnection(client);
+
+        assertHandlerNotInvoked(LONG_COD_TEST_TIMEOUT_IN_MS);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
