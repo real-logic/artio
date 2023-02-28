@@ -26,7 +26,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
+    id 'com.github.johnrengelman.shadow' version '8.1.0' apply false
     id 'net.researchgate.release' version '2.8.1'
     id 'com.github.ben-manes.versions' version '0.46.0'
 }
@@ -876,7 +876,7 @@ tasks.withType(PublishToMavenRepository) {
 }
 
 wrapper {
-    gradleVersion = '7.6'
+    gradleVersion = '8.0.1'
     distributionType = 'ALL'
 }
 
