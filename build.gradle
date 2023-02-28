@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
+ * Copyright 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,15 +176,15 @@ subprojects {
         }
 
         systemProperties(
-                'fix.core.close_checker': 'true',
-                'fix.core.debug': System.getProperty("fix.core.debug"),
-                'fix.core.ci': System.getProperty("fix.core.ci"),
-                'aeron.dir.warn.if.exists': 'false',
-                'aeron.use.windows.high.res.timer': 'true',
-                'aeron.term.buffer.sparse.file': 'true',
-                'aeron.perform.storage.checks': 'false',
-                'aeron.publication.unblock.timeout': '35000000000',
-                'aeron.client.liveness.timeout': '30000000000')
+            'fix.core.close_checker': 'true',
+            'fix.core.debug': System.getProperty("fix.core.debug"),
+            'fix.core.ci': System.getProperty("fix.core.ci"),
+            'aeron.dir.warn.if.exists': 'false',
+            'aeron.use.windows.high.res.timer': 'true',
+            'aeron.term.buffer.sparse.file': 'true',
+            'aeron.perform.storage.checks': 'false',
+            'aeron.publication.unblock.timeout': '35000000000',
+            'aeron.client.liveness.timeout': '30000000000')
 
         def threshold = System.getProperty("org.agrona.transport.iteration.threshold")
         systemProperty "org.agrona.transport.iteration.threshold", threshold
@@ -284,9 +284,9 @@ project(':artio-codecs') {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
         classpath = configurations.codecGeneration
         systemProperties('sbe.output.dir': generatedDir,
-                'sbe.target.language': 'Java',
-                'sbe.validation.stop.on.error': 'true',
-                'sbe.validation.xsd': validationXsdPath)
+            'sbe.target.language': 'Java',
+            'sbe.validation.stop.on.error': 'true',
+            'sbe.validation.xsd': validationXsdPath)
         args = [
                 'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
                 'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
@@ -354,10 +354,10 @@ project(':artio-ilink3-codecs') {
             mainClass.set('uk.co.real_logic.sbe.SbeTool')
             classpath = configurations.codecGeneration
             systemProperties(
-                    'sbe.output.dir': generatedDir,
-                    'sbe.target.language': 'Java',
-                    'sbe.java.generate.interfaces': 'true',
-                    'sbe.generate.ir': 'true')
+                'sbe.output.dir': generatedDir,
+                'sbe.target.language': 'Java',
+                'sbe.java.generate.interfaces': 'true',
+                'sbe.generate.ir': 'true')
             args = [sbePath]
         }
 
@@ -433,10 +433,10 @@ project(':artio-binary-entrypoint-codecs') {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
         classpath = configurations.codecGeneration
         systemProperties(
-                'sbe.output.dir': generatedDir,
-                'sbe.target.language': 'Java',
-                'sbe.java.generate.interfaces': 'true',
-                'sbe.generate.ir': 'true')
+            'sbe.output.dir': generatedDir,
+            'sbe.target.language': 'Java',
+            'sbe.java.generate.interfaces': 'true',
+            'sbe.generate.ir': 'true')
         args = [sbePath]
     }
 
