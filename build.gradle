@@ -120,15 +120,17 @@ allprojects {
         mavenCentral()
     }
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             failOnVersionConflict()
             force "org.agrona:agrona:${agronaVersion}"
         }
     }
 
-    tasks.withType(Sign) {
-        onlyIf { isReleaseVersion }
+    tasks.withType(Sign).tap {
+        configureEach {
+            onlyIf { isReleaseVersion }
+        }
     }
 }
 
@@ -139,7 +141,7 @@ subprojects {
     group = artioGroup
     version = version
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = artioJavaVersion
         targetCompatibility = artioJavaVersion
         options.encoding = 'UTF-8'
@@ -154,7 +156,7 @@ subprojects {
 
     checkstyle.toolVersion = "${checkstyleVersion}"
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         if (JavaVersion.current().isJava9Compatible()) {
             jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
         }
@@ -166,23 +168,23 @@ subprojects {
             afterSuite { desc, result ->
                 if (!desc.parent) {
                     println "Results: ${result.resultType} (${result.testCount} tests, " +
-                        "${result.successfulTestCount} successes, " +
-                        "${result.failedTestCount} failures, " +
-                        "${result.skippedTestCount} skipped)"
+                            "${result.successfulTestCount} successes, " +
+                            "${result.failedTestCount} failures, " +
+                            "${result.skippedTestCount} skipped)"
                 }
             }
         }
 
         systemProperties(
-            'fix.core.close_checker': 'true',
-            'fix.core.debug': System.getProperty("fix.core.debug"),
-            'fix.core.ci': System.getProperty("fix.core.ci"),
-            'aeron.dir.warn.if.exists': 'false',
-            'aeron.use.windows.high.res.timer': 'true',
-            'aeron.term.buffer.sparse.file': 'true',
-            'aeron.perform.storage.checks': 'false',
-            'aeron.publication.unblock.timeout': '35000000000',
-            'aeron.client.liveness.timeout': '30000000000')
+                'fix.core.close_checker': 'true',
+                'fix.core.debug': System.getProperty("fix.core.debug"),
+                'fix.core.ci': System.getProperty("fix.core.ci"),
+                'aeron.dir.warn.if.exists': 'false',
+                'aeron.use.windows.high.res.timer': 'true',
+                'aeron.term.buffer.sparse.file': 'true',
+                'aeron.perform.storage.checks': 'false',
+                'aeron.publication.unblock.timeout': '35000000000',
+                'aeron.client.liveness.timeout': '30000000000')
 
         def threshold = System.getProperty("org.agrona.transport.iteration.threshold")
         systemProperty "org.agrona.transport.iteration.threshold", threshold
@@ -220,13 +222,14 @@ subprojects {
         )
     }
 
-    task testJar(type: Jar, dependsOn: testClasses) {
+    tasks.register('testJar', Jar) {
+        dependsOn testClasses
         archiveClassifier.set('tests')
         archiveBaseName.set("test-${project.archivesBaseName}")
         from sourceSets.test.output
     }
 
-    task allDeps(type: DependencyReportTask) {}
+    tasks.register('allDeps', DependencyReportTask) {}
 
     configurations {
         tests
@@ -277,16 +280,16 @@ project(':artio-codecs') {
 
     compileGeneratedJava.dependsOn 'generateMessages'
 
-    task generateMessages(type: JavaExec) {
+    tasks.register('generateMessages', JavaExec) {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
         classpath = configurations.codecGeneration
         systemProperties('sbe.output.dir': generatedDir,
-            'sbe.target.language': 'Java',
-            'sbe.validation.stop.on.error': 'true',
-            'sbe.validation.xsd': validationXsdPath)
+                'sbe.target.language': 'Java',
+                'sbe.validation.stop.on.error': 'true',
+                'sbe.validation.xsd': validationXsdPath)
         args = [
-            'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
-            'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
+                'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
+                'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
         ]
     }
 
@@ -347,18 +350,18 @@ project(':artio-ilink3-codecs') {
         compileJava.dependsOn 'compileGeneratedJava'
         compileGeneratedJava.dependsOn 'generateMessages', 'copySbeIr'
 
-        task generateMessages(type: JavaExec) {
+        tasks.register('generateMessages', JavaExec) {
             mainClass.set('uk.co.real_logic.sbe.SbeTool')
             classpath = configurations.codecGeneration
             systemProperties(
-                'sbe.output.dir': generatedDir,
-                'sbe.target.language': 'Java',
-                'sbe.java.generate.interfaces': 'true',
-                'sbe.generate.ir': 'true')
-            args = [ sbePath ]
+                    'sbe.output.dir': generatedDir,
+                    'sbe.target.language': 'Java',
+                    'sbe.java.generate.interfaces': 'true',
+                    'sbe.generate.ir': 'true')
+            args = [sbePath]
         }
 
-        task copySbeIr (type: Copy) {
+        tasks.register('copySbeIr', Copy) {
             dependsOn 'generateMessages'
             from generatedDir.absolutePath + "/ilinkbinary.sbeir"
             into outputClasses + '/iLinkBinary'
@@ -426,18 +429,18 @@ project(':artio-binary-entrypoint-codecs') {
     compileJava.dependsOn 'compileGeneratedJava'
     compileGeneratedJava.dependsOn 'generateMessages', 'copySbeIr'
 
-    task generateMessages(type: JavaExec) {
+    tasks.register('generateMessages', JavaExec) {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
         classpath = configurations.codecGeneration
         systemProperties(
-            'sbe.output.dir': generatedDir,
-            'sbe.target.language': 'Java',
-            'sbe.java.generate.interfaces': 'true',
-            'sbe.generate.ir': 'true')
-        args = [ sbePath ]
+                'sbe.output.dir': generatedDir,
+                'sbe.target.language': 'Java',
+                'sbe.java.generate.interfaces': 'true',
+                'sbe.generate.ir': 'true')
+        args = [sbePath]
     }
 
-    task copySbeIr (type: Copy) {
+    tasks.register('copySbeIr', Copy) {
         dependsOn 'generateMessages'
         from generatedDir.absolutePath + "/binary_entrypoint.sbeir"
         into outputClasses + '/b3/entrypoint/fixp/sbe/'
@@ -552,7 +555,7 @@ project(':artio-session-codecs') {
     compileJava.dependsOn 'compileGeneratedJava'
     compileGeneratedJava.dependsOn 'generateCodecs', 'generateOtherCodecs'
 
-    task generateCodecs(type: JavaExec) {
+    tasks.register('generateCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
         classpath = configurations.codecGeneration
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
@@ -560,7 +563,7 @@ project(':artio-session-codecs') {
         systemProperty("fix.codecs.flyweight", "true")
     }
 
-    task generateOtherCodecs(type: JavaExec) {
+    tasks.register('generateOtherCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
         classpath = configurations.codecGeneration
         args = [generatedDir, 'src/main/resources/other_session_dictionary.xml']
@@ -622,7 +625,7 @@ project(':artio-session-fixt-codecs') {
         classpath += configurations.codecGeneration
     }
 
-    task generateCodecs(type: JavaExec) {
+    tasks.register('generateCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
         classpath = configurations.codecGeneration
         systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
@@ -718,7 +721,8 @@ project(':artio-system-tests') {
     test {
     }
 
-    task benchmarks(dependsOn: perfClasses) {
+    tasks.register('benchmarks') {
+        dependsOn perfClasses
         shadowJar {
             archiveClassifier.set("benchmarks")
 
@@ -869,7 +873,7 @@ subprojects {
     }
 }
 
-tasks.withType(PublishToMavenRepository) {
+tasks.withType(PublishToMavenRepository).configureEach {
     onlyIf {
         isReleaseVersion
     }
@@ -880,7 +884,7 @@ wrapper {
     distributionType = 'ALL'
 }
 
-task copyTestLogs(type: Copy) {
+tasks.register('copyTestLogs', Copy) {
     from '.'
     include '**/build/test-output/**'
     include '**/*.log'
