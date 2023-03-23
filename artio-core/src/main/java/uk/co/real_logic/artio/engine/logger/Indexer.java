@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.util.CharFormatter;
 import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 /**
@@ -207,12 +208,14 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        if (completedPosition(header.sessionId()) <= header.position())
+        if (header.position() <= completedPosition(header.sessionId()))
         {
             return onFragment(buffer, offset, length, header);
         }
-
-        return CONTINUE;
+        else
+        {
+            return ABORT;
+        }
     }
 
     private long completedPosition(final int aeronSessionId)
