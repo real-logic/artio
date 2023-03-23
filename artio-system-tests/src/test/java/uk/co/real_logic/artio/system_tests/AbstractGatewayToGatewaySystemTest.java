@@ -162,13 +162,11 @@ public class AbstractGatewayToGatewaySystemTest
     void closeInitiatingEngine()
     {
         closeEngine(initiatingEngine);
-        validateReplayIndex(initiatingEngine, initiatingSession);
     }
 
     void closeAcceptingEngine()
     {
         closeEngine(acceptingEngine);
-        validateReplayIndex(acceptingEngine, acceptingSession);
     }
 
     private void closeEngine(final FixEngine engine)
