@@ -4,20 +4,17 @@ import org.agrona.LangUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static io.aeron.Aeron.NULL_VALUE;
-import static uk.co.real_logic.artio.builder.Encoder.BITS_IN_INT;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayQuery.trueBeginPosition;
 
@@ -227,120 +224,6 @@ public final class ReplayIndexExtractor
         }
     }
 
-    public static class ValidationError
-    {
-        private final int sequenceIndex;
-        private final int sequenceNumber;
-        private final long position;
-        private final int length;
-        private final long endPosition;
-
-        public ValidationError(
-            final int sequenceIndex,
-            final int sequenceNumber,
-            final long position,
-            final int length,
-            final long endPosition)
-        {
-            this.sequenceIndex = sequenceIndex;
-            this.sequenceNumber = sequenceNumber;
-            this.position = position;
-            this.length = length;
-            this.endPosition = endPosition;
-        }
-
-        public int sequenceIndex()
-        {
-            return sequenceIndex;
-        }
-
-        public int sequenceNumber()
-        {
-            return sequenceNumber;
-        }
-
-        public long position()
-        {
-            return position;
-        }
-
-        public long endPosition()
-        {
-            return endPosition;
-        }
-
-        public String toString()
-        {
-            return "ValidationError{" +
-                "sequenceIndex=" + sequenceIndex +
-                ", sequenceNumber=" + sequenceNumber +
-                ", position=" + position +
-                ", length=" + length +
-                ", endPosition=" + endPosition +
-                '}';
-        }
-    }
-
-    // Validates that there are no non-contiguous duplicate entries
-    public static class ReplayIndexValidator implements ReplayIndexHandler
-    {
-        private static final long MISSING = Long.MIN_VALUE;
-
-        private final Long2LongHashMap sequenceIdToEndPosition = new Long2LongHashMap(MISSING);
-        private final List<ValidationError> errors = new ArrayList<>();
-
-        public void onEntry(final ReplayIndexRecordDecoder indexRecord)
-        {
-            final int sequenceIndex = indexRecord.sequenceIndex();
-            final int sequenceNumber = indexRecord.sequenceNumber();
-            final long position = indexRecord.position();
-            final int length = indexRecord.length();
-
-            final long sequenceId = sequenceIndex | ((long)sequenceNumber) << BITS_IN_INT;
-            final long endPosition = position + length;
-
-            final long oldEndPosition = sequenceIdToEndPosition.put(sequenceId, endPosition);
-            if (oldEndPosition != MISSING)
-            {
-                if (oldEndPosition != position)
-                {
-                    errors.add(new ValidationError(
-                        sequenceIndex,
-                        sequenceNumber,
-                        position,
-                        length,
-                        endPosition));
-                }
-            }
-        }
-
-        public List<ValidationError> errors()
-        {
-            return errors;
-        }
-
-        public void onLapped()
-        {
-            sequenceIdToEndPosition.clear();
-        }
-    }
-
-    public static void extract(
-        final EngineConfiguration configuration,
-        final long fixSessionId,
-        final boolean inbound,
-        final ReplayIndexHandler handler)
-    {
-        final int streamId = inbound ? configuration.inboundLibraryStream() : configuration.outboundLibraryStream();
-        final String logFileDir = configuration.logFileDir();
-        final File file = replayIndexHeaderFile(logFileDir, fixSessionId, streamId);
-        if (file.exists())
-        {
-            extract(file, configuration.replayIndexFileRecordCapacity(),
-                configuration.replayIndexSegmentRecordCapacity(), fixSessionId, streamId, logFileDir, handler);
-        }
-    }
-
     public static void extract(
         final File headerFile,
         final int indexFileCapacity,
@@ -367,6 +250,10 @@ public final class ReplayIndexExtractor
             final int actingVersion = messageFrameHeader.version();
 
             long iteratorPosition = beginChangeVolatile(headerBuffer);
+            if (iteratorPosition < indexFileSize)
+            {
+                iteratorPosition = 0;
+            }
             long stopIteratingPosition = iteratorPosition + indexFileSize;
 
             while (iteratorPosition < stopIteratingPosition)

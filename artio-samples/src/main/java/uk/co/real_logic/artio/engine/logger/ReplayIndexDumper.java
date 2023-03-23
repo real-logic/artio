@@ -23,7 +23,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -61,11 +60,5 @@ public final class ReplayIndexDumper
         {
             extract.accept(new ReplayIndexExtractor.PrintError(out));
         }
-
-        final ReplayIndexExtractor.ReplayIndexValidator validator = new ReplayIndexExtractor.ReplayIndexValidator();
-        extract.accept(validator);
-
-        final List<ReplayIndexExtractor.ValidationError> errors = validator.errors();
-        errors.forEach(System.err::println);
     }
 }
