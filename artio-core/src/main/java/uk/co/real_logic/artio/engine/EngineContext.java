@@ -48,7 +48,6 @@ public class EngineContext implements AutoCloseable
     private final PruneOperation.Formatters pruneOperationFormatters = new PruneOperation.Formatters();
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
-    private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
     private final SequenceNumberExtractor sentSequenceNumberExtractor = new SequenceNumberExtractor();
     private final SequenceNumberExtractor recvSequenceNumberExtractor = new SequenceNumberExtractor();
 
@@ -448,7 +447,6 @@ public class EngineContext implements AutoCloseable
     {
         inboundCompletionPosition.completeDuringStartup();
         outboundLibraryCompletionPosition.completeDuringStartup();
-        outboundClusterCompletionPosition.completeDuringStartup();
     }
 
     Agent indexingAgent()
