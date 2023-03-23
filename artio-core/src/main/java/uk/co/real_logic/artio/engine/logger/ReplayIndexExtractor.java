@@ -125,13 +125,13 @@ public final class ReplayIndexExtractor
             final Long2LongHashMap keyToPosition, final long beginPosition, final long key, final boolean min)
         {
             final long oldPosition = keyToPosition.get(key);
-            if (beyondBounary(oldPosition, beginPosition, min))
+            if (beyondBoundary(oldPosition, beginPosition, min))
             {
                 keyToPosition.put(key, beginPosition);
             }
         }
 
-        private boolean beyondBounary(final long oldPosition, final long beginPosition, final boolean min)
+        private boolean beyondBoundary(final long oldPosition, final long beginPosition, final boolean min)
         {
             if (oldPosition == NULL_VALUE)
             {
