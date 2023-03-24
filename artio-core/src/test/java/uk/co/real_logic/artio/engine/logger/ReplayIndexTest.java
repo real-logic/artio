@@ -114,7 +114,6 @@ public class ReplayIndexTest extends AbstractLogTest
             FixPProtocolType.ILINK_3,
             mock(SequenceNumberIndexReader.class),
             DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS,
-            true,
             DEFAULT_INDEX_CHECKSUM_ENABLED,
             new ReplayEvictionHandler(errorHandler));
     }

@@ -53,7 +53,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
  * Tail position counter
  * Multiple ReplayIndexRecord entries
  */
-public class ReplayIndex implements Index, RedactHandler
+public class ReplayIndex implements Index
 {
     private static final long NO_TIMESTAMP = -1;
 
@@ -103,7 +103,6 @@ public class ReplayIndex implements Index, RedactHandler
         final FixPProtocolType fixPProtocolType,
         final SequenceNumberIndexReader reader,
         final long timeIndexReplayFlushIntervalInNs,
-        final boolean sent,
         final boolean indexChecksumEnabled,
         final ReplayEvictionHandler evictionHandler)
     {
@@ -124,7 +123,7 @@ public class ReplayIndex implements Index, RedactHandler
         checkPowerOfTwo("segmentSize", segmentSize);
         checkPowerOfTwo("indexFileSize", indexFileSize);
 
-        sessTracker = new SessionOwnershipTracker(sent, this);
+        sessTracker = new SessionOwnershipTracker();
         fixPSequenceIndexer = new FixPSequenceIndexer(
             connectionIdToFixPSessionId, errorHandler, fixPProtocolType, reader,
             (sequenceNumber, uuid, messageSize, endPosition, aeronSessionId, possRetrans, timestamp, forNextSession) ->
@@ -477,10 +476,6 @@ public class ReplayIndex implements Index, RedactHandler
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
         positionReader.readLastPosition(consumer);
-    }
-
-    public void onRedact(final long sessionId, final int lastSequenceNumber)
-    {
     }
 
     private final class SessionIndex implements AutoCloseable

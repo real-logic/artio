@@ -28,16 +28,6 @@ class SessionOwnershipTracker
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
     private final Long2LongHashMap sessionIdToLibraryId = new Long2LongHashMap(MISSING_SESSION);
 
-    private final RedactHandler redactHandler;
-    private final boolean sent;
-
-    SessionOwnershipTracker(
-        final boolean sent, final RedactHandler redactHandler)
-    {
-        this.sent = sent;
-        this.redactHandler = redactHandler;
-    }
-
     void onManageSession(
         final DirectBuffer buffer, final int offset, final int actingBlockLength, final int version)
     {
@@ -59,9 +49,4 @@ class SessionOwnershipTracker
         return expectedLibraryId != MISSING_SESSION &&
             libraryId != expectedLibraryId && libraryId != ENGINE_LIBRARY_ID;
     }
-}
-
-interface RedactHandler
-{
-    void onRedact(long sessionId, int lastSequenceNumber);
 }
