@@ -60,7 +60,7 @@ import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEnc
  * Writes updates into an in-memory buffer. This buffer is then flushed down to disk. A passing place
  * file is used to ensure that there's a recoverable option if it fails.
  */
-public class SequenceNumberIndexWriter implements Index, RedactHandler
+public class SequenceNumberIndexWriter implements Index
 {
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
@@ -131,7 +131,6 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         final String metaDataDir,
         final Long2LongHashMap connectionIdToFixPSessionId,
         final FixPProtocolType fixPProtocolType,
-        final boolean sent,
         final boolean indexChecksumEnabled,
         final boolean logMessages)
     {
@@ -144,7 +143,7 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         this.clock = clock;
 
-        this.sessionOwnershipTracker = new SessionOwnershipTracker(sent, this);
+        this.sessionOwnershipTracker = new SessionOwnershipTracker();
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file().toPath();
         final File writeableFile = writableFile(indexFilePath);
@@ -370,18 +369,6 @@ public class SequenceNumberIndexWriter implements Index, RedactHandler
         if (positionWriter != null)
         {
             positionWriter.update(aeronSessionId, templateId, endPosition, recordingId);
-        }
-    }
-
-    public void onRedact(final long sessionId, final int lastSequenceNumber)
-    {
-        // Cover the case where the engine has acquired a session from a library and we've already indexed a message
-        // that was from the wrong library
-        final int lastKnownSequenceNumber = reader.lastKnownSequenceNumber(sessionId);
-
-        if (lastKnownSequenceNumber > lastSequenceNumber && lastSequenceNumber != 0)
-        {
-            onRedactSequenceUpdate(lastSequenceNumber, sessionId, NO_REQUIRED_POSITION);
         }
     }
 

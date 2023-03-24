@@ -120,7 +120,7 @@ public class EngineContext implements AutoCloseable
                 configuration.logFileDir(),
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                true, indexChecksumEnabled,
+                indexChecksumEnabled,
                 configuration.logOutboundMessages());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 recvSequenceNumberExtractor,
@@ -134,7 +134,7 @@ public class EngineContext implements AutoCloseable
                 null,
                 connectionIdToFixPSessionId,
                 fixPProtocolType,
-                false, indexChecksumEnabled,
+                indexChecksumEnabled,
                 configuration.logInboundMessages());
 
             newStreams();
@@ -199,7 +199,6 @@ public class EngineContext implements AutoCloseable
             configuration.supportedFixPProtocolType(),
             reader,
             configuration.timeIndexReplayFlushIntervalInNs(),
-            streamId == configuration.outboundLibraryStream(),
             indexChecksumEnabled,
             evictionHandler);
     }
