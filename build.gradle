@@ -889,6 +889,8 @@ tasks.register('copyTestLogs', Copy) {
     include '**/build/test-output/**'
     include '**/*.log'
     include '**/*.tlog'
+    include '**/build/reports/tests/**'
+    include '**/build/test-results/*/TEST*.xml'
     include 'LICENSE'
     exclude 'build'
     into 'build/test_logs'
