@@ -58,7 +58,7 @@ class InternalBinaryEntryPointConnection
     extends InternalFixPConnection implements BinaryEntryPointConnection
 {
     private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
-    private static final int THROTTLE_REASON = 99;
+    private static final int THROTTLE_REASON = 33000;
 
     private final BinaryEntryPointProxy proxy;
     private final long maxFixPKeepaliveTimeoutInMs;
