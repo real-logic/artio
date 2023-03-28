@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.fixp.FixPConnection.State.*;
-import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.LOGOUT;
 
 public abstract class InternalFixPConnection implements FixPConnection
@@ -369,7 +368,7 @@ public abstract class InternalFixPConnection implements FixPConnection
             return ABORT;
         }
 
-        final Action action = unbindState(APPLICATION_DISCONNECT);
+        final Action action = unbindState(reason);
         if (action != ABORT)
         {
             owner.remove(this);
@@ -381,7 +380,7 @@ public abstract class InternalFixPConnection implements FixPConnection
     protected Action unbindState(final DisconnectReason reason)
     {
         final State oldState = this.state;
-        state(State.UNBOUND);
+        state(UNBOUND);
         final Action action = handler.onDisconnect(this, reason);
         if (action == ABORT)
         {

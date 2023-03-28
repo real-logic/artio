@@ -693,7 +693,10 @@ class InternalBinaryEntryPointConnection
 
     protected Action unbindState(final DisconnectReason reason)
     {
-        cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
+        if (!DisconnectReason.LOGOUT.equals(reason))
+        {
+            cancelOnDisconnect.checkCancelOnDisconnectDisconnect();
+        }
 
         super.unbindState(reason);
         return null;
