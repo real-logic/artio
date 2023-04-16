@@ -323,15 +323,16 @@ class FixSenderEndPoint extends SenderEndPoint
         final boolean replay) throws IOException
     {
         final ByteBuffer buffer = directBuffer.byteBuffer();
+        final int bufferOffset = directBuffer.wrapAdjustment() + offset;
         final int startLimit = buffer.limit();
         final int startPosition = buffer.position();
 
-        ByteBufferUtil.limit(buffer, offset + messageSize);
-        final int writePosition = reattemptBytesWritten + offset;
+        ByteBufferUtil.limit(buffer, bufferOffset + messageSize);
+        final int writePosition = reattemptBytesWritten + bufferOffset;
         ByteBufferUtil.position(buffer, writePosition);
 
         final int written = channel.write(buffer, seqNum, replay);
-        ByteBufferUtil.position(buffer, offset);
+        ByteBufferUtil.position(buffer, bufferOffset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, writePosition, written);
 
         buffer.limit(startLimit).position(startPosition);

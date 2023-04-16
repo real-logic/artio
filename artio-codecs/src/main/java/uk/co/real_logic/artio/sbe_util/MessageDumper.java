@@ -26,9 +26,10 @@ public class MessageDumper
         final JsonPrinter dumper, final DirectBuffer buffer, final int offset, final int length)
     {
         final ByteBuffer byteBuffer = buffer.byteBuffer();
+        final int bufferOffset = buffer.wrapAdjustment() + offset;
         final int originalPosition = byteBuffer.position();
         final int originalLimit = byteBuffer.limit();
-        byteBuffer.limit(length + offset).position(offset);
+        byteBuffer.limit(length + bufferOffset).position(bufferOffset);
         final ByteBuffer slice = byteBuffer.slice();
         byteBuffer.limit(originalLimit).position(originalPosition);
 

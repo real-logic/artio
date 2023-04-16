@@ -95,14 +95,15 @@ abstract class FixPSenderEndPoint extends SenderEndPoint
         final int reattemptBytesWritten = this.reattemptBytesWritten;
 
         final ByteBuffer buffer = directBuffer.byteBuffer();
+        final int bufferOffset = directBuffer.wrapAdjustment() + offset;
         final int startLimit = buffer.limit();
         final int startPosition = buffer.position();
 
-        ByteBufferUtil.limit(buffer, offset + messageSize);
-        ByteBufferUtil.position(buffer, reattemptBytesWritten + offset);
+        ByteBufferUtil.limit(buffer, bufferOffset + messageSize);
+        ByteBufferUtil.position(buffer, reattemptBytesWritten + bufferOffset);
 
         final int written = channel.write(buffer, 0, false);
-        ByteBufferUtil.position(buffer, offset);
+        ByteBufferUtil.position(buffer, bufferOffset);
         DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, startPosition, written);
 
         buffer.limit(startLimit).position(startPosition);
