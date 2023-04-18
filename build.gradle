@@ -47,6 +47,18 @@ def iLink3Enabled = false
 
 defaultTasks 'clean', 'build'
 
+static int getBuildJavaVersion() {
+    def buildJavaVersion = System.getenv('BUILD_JAVA_VERSION') ?: JavaVersion.current().getMajorVersion()
+    if (buildJavaVersion.indexOf('.') > 0) {
+        buildJavaVersion = buildJavaVersion.substring(0, buildJavaVersion.indexOf('.'))
+    }
+    if (buildJavaVersion.indexOf('-') > 0) {
+        buildJavaVersion = buildJavaVersion.substring(0, buildJavaVersion.indexOf('-'))
+    }
+    Integer.parseInt(buildJavaVersion)
+}
+int buildJavaVersion = getBuildJavaVersion()
+
 def projectPom = {
     name = 'artio'
     packaging = 'jar'
@@ -141,11 +153,20 @@ subprojects {
     group = artioGroup
     version = version
 
+    def toolchainLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(buildJavaVersion)
+    }
+
+    def toolchainCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(buildJavaVersion)
+    }
+
     tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = artioJavaVersion
         targetCompatibility = artioJavaVersion
         options.encoding = 'UTF-8'
         options.deprecation = true
+        javaCompiler.set(toolchainCompiler)
     }
 
     dependencies {
@@ -157,9 +178,12 @@ subprojects {
     checkstyle.toolVersion = "${checkstyleVersion}"
 
     tasks.withType(Test).configureEach {
-        if (JavaVersion.current().isJava9Compatible()) {
+        if (buildJavaVersion >= 9) {
             jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
+            jvmArgs('--add-opens', 'java.base/java.util.zip=ALL-UNNAMED')
         }
+        testClassesDirs = testing.suites.test.sources.output.classesDirs
+        classpath = testing.suites.test.sources.runtimeClasspath
 
         testLogging {
             events 'skipped', 'failed'
@@ -200,6 +224,12 @@ subprojects {
                 println " with result: ${result.resultType}"
             }
         }
+
+        javaLauncher.set(toolchainLauncher)
+    }
+
+    tasks.withType(JavaExec).configureEach {
+        javaLauncher.set(toolchainLauncher)
     }
 
     javadoc {
