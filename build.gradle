@@ -165,16 +165,15 @@ subprojects {
         languageVersion = JavaLanguageVersion.of(buildJavaVersion)
     }
 
-    def toolchainCompiler = javaToolchains.compilerFor {
-        languageVersion = JavaLanguageVersion.of(buildJavaVersion)
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(buildJavaVersion)
+        }
     }
 
     tasks.withType(JavaCompile).configureEach {
-        sourceCompatibility = artioJavaVersion
-        targetCompatibility = artioJavaVersion
         options.encoding = 'UTF-8'
         options.deprecation = true
-        javaCompiler.set(toolchainCompiler)
     }
 
     dependencies {
