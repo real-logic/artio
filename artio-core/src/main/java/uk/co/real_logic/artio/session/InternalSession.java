@@ -292,12 +292,6 @@ public class InternalSession extends Session implements AutoCloseable
         super.lastReceivedMsgSeqNumOnly(value);
     }
 
-    protected void finalize() throws Throwable
-    {
-        close();
-        super.finalize();
-    }
-
     public OnMessageInfo messageInfo()
     {
         return super.messageInfo();
