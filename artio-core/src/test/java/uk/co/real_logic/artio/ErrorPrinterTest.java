@@ -7,6 +7,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 
+import java.nio.ByteBuffer;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -24,7 +26,7 @@ public class ErrorPrinterTest
     public void shouldPrintErrorOnce()
     {
         final ErrorConsumer consumer = mock(ErrorConsumer.class);
-        final UnsafeBuffer errorBuffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
+        final UnsafeBuffer errorBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(BUFFER_SIZE));
         final FakeEpochClock clock = new FakeEpochClock();
         final DistinctErrorLog distinctErrorLog = new DistinctErrorLog(errorBuffer, clock);
         final ErrorPrinter printer = new ErrorPrinter(
