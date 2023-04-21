@@ -1106,15 +1106,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         testSystem.send(initiatingSession, resendRequest);
 
-        sleep(1);
+        testSystem.awaitSend("Failed to disconnect", initiatingSession::requestDisconnect);
 
-        testSystem.awaitSend("Failed to disconnect", () -> initiatingSession.requestDisconnect());
+        testSystem.await("Wrong state", () -> DISCONNECTED == acceptingSession.state());
 
-        sleep(1_000);
+        testSystem.await("Failed to cleanup resources", () -> remainingFileCount() <= 30);
 
-        testSystem.await("Failed to cleanup resources", () -> remainingFileCount() == 30);
-
-        assertEquals(DISCONNECTED, acceptingSession.state());
         assertFalse(acceptingSession.isReplaying());
     }
 
