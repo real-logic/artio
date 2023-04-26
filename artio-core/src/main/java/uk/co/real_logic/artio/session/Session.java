@@ -458,7 +458,8 @@ public class Session
 
     /**
      * Gets the cancel on disconnect option from the Logon message. Note: a missing COD option will result in
-     * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}.
+     * the value set in
+     * {@link uk.co.real_logic.artio.engine.EngineConfiguration#cancelOnDisconnectOption(CancelOnDisconnectOption)}.
      *
      * @return cancel on disconnect option received in the Logon message.
      */
@@ -2633,7 +2634,7 @@ public class Session
     {
         this.cancelOnDisconnectTimeoutWindowInNs = Math.min(
             MAX_COD_TIMEOUT_IN_NS, cancelOnDisconnectTimeoutWindowInNs);
-        cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(cancelOnDisconnectTimeoutWindowInNs);
+        cancelOnDisconnect.cancelOnDisconnectTimeoutWindowInNs(this.cancelOnDisconnectTimeoutWindowInNs);
     }
 
     void fixDictionary(final FixDictionary fixDictionary)

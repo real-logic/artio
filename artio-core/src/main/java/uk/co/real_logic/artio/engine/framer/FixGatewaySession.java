@@ -34,7 +34,6 @@ import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
-import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, FixSessionOwner
@@ -407,7 +406,7 @@ class FixGatewaySession extends GatewaySession implements ConnectedSessionInfo, 
 
     public CancelOnDisconnectOption cancelOnDisconnectOption()
     {
-        return cancelOnDisconnectOption == null ? DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT : cancelOnDisconnectOption;
+        return cancelOnDisconnectOption == null ? configuration.cancelOnDisconnectOption() : cancelOnDisconnectOption;
     }
 
     public long cancelOnDisconnectTimeoutWindowInNs()

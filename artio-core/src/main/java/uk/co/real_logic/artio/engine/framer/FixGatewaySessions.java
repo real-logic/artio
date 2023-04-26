@@ -89,6 +89,8 @@ public class FixGatewaySessions extends GatewaySessions
     private final int forcedHeartbeatIntervalInS;
     private final boolean disableHeartbeatRepliesToTestRequests;
     private final boolean isReproductionEnabled;
+    private final CancelOnDisconnectOption cancelOnDisconnectOption;
+    private final int cancelOnDisconnectTimeoutWindowInMs;
 
     // Initialised after logon processed.
     private SessionContext sessionContext;
@@ -137,6 +139,8 @@ public class FixGatewaySessions extends GatewaySessions
         this.resendRequestController = configuration.resendRequestController();
         this.forcedHeartbeatIntervalInS = configuration.forcedHeartbeatIntervalInS();
         this.disableHeartbeatRepliesToTestRequests = configuration.disableHeartbeatRepliesToTestRequests();
+        this.cancelOnDisconnectOption = configuration.cancelOnDisconnectOption();
+        this.cancelOnDisconnectTimeoutWindowInMs = configuration.cancelOnDisconnectTimeoutWindowInMs();
 
         sendingTimeEncoder = new UtcTimestampEncoder(epochFractionPrecision);
     }
@@ -203,6 +207,8 @@ public class FixGatewaySessions extends GatewaySessions
         session.closedResendInterval(gatewaySession.closedResendInterval());
         session.resendRequestChunkSize(gatewaySession.resendRequestChunkSize());
         session.sendRedundantResendRequests(gatewaySession.sendRedundantResendRequests());
+        session.cancelOnDisconnectOption(gatewaySession.cancelOnDisconnectOption());
+        session.cancelOnDisconnectTimeoutWindowInNs(gatewaySession.cancelOnDisconnectTimeoutWindowInNs());
 
         final SessionParser sessionParser = new SessionParser(
             session,
@@ -246,7 +252,7 @@ public class FixGatewaySessions extends GatewaySessions
 
         return new FixPendingAcceptorLogon(
             sessionIdStrategy, gatewaySession, logon, connectionId, fixContexts, channel, fixDictionary, framer,
-            remoteAddress, fixReceiverEndPoint);
+            remoteAddress, fixReceiverEndPoint, cancelOnDisconnectOption, cancelOnDisconnectTimeoutWindowInMs);
     }
 
     void onUserRequest(
@@ -286,6 +292,8 @@ public class FixGatewaySessions extends GatewaySessions
         private final FixContexts fixContexts;
         private final String remoteAddress;
         private final boolean resetSeqNum;
+        private final CancelOnDisconnectOption cancelOnDisconnectOption;
+        private final int cancelOnDisconnectTimeoutWindowInMs;
 
         private FixDictionary fixDictionary;
         private Encoder encoder;
@@ -302,7 +310,9 @@ public class FixGatewaySessions extends GatewaySessions
             final FixDictionary fixDictionary,
             final Framer framer,
             final String remoteAddress,
-            final FixReceiverEndPoint fixReceiverEndPoint)
+            final FixReceiverEndPoint fixReceiverEndPoint,
+            final CancelOnDisconnectOption cancelOnDisconnectOption,
+            final int cancelOnDisconnectTimeoutWindowInMs)
         {
             super(gatewaySession, connectionId, channel, framer, fixReceiverEndPoint);
 
@@ -312,6 +322,8 @@ public class FixGatewaySessions extends GatewaySessions
             this.fixContexts = fixContexts;
             this.fixDictionary = fixDictionary;
             this.remoteAddress = remoteAddress;
+            this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+            this.cancelOnDisconnectTimeoutWindowInMs = cancelOnDisconnectTimeoutWindowInMs;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -381,9 +393,11 @@ public class FixGatewaySessions extends GatewaySessions
 
             final String username = SessionParser.username(logon);
             final String password = SessionParser.password(logon);
-            final CancelOnDisconnectOption cancelOnDisconnectOption = SessionParser.cancelOnDisconnectType(logon);
+            final CancelOnDisconnectOption cancelOnDisconnectOption = SessionParser.cancelOnDisconnectType(logon,
+                this.cancelOnDisconnectOption);
             final long cancelOnDisconnectTimeoutWindowInNs =
-                MILLISECONDS.toNanos(SessionParser.cancelOnDisconnectTimeoutWindow(logon));
+                MILLISECONDS.toNanos(SessionParser.cancelOnDisconnectTimeoutWindow(logon,
+                this.cancelOnDisconnectTimeoutWindowInMs));
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey;

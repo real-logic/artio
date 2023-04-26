@@ -20,12 +20,16 @@ package uk.co.real_logic.artio.session;
  *
  * In order for this handler to be invoked:
  * <ul>
- *  <li>Your FIX session dictionary must contain a cancel on disconnect type field associated with a logon
- *  message</li>
- *  <li>A session must specify a CancelOnDisconnectType field in it's logon message that requires
- * a cancel on either logout, disconnect or both</li>
- *  <li>the CODTimeoutWindow also specified in the logon message must have expired without a reconnect</li>
+ *  <li>The FIX session must have a cancel on disconnect type configured that requires a cancel on either logout,
+ *  disconnect or both. This may be be provided either via the logon message or the acceptor engine configuration</li>
+ *  <li>The CODTimeoutWindow also specified in the logon message or acceptor engine defaults must have expired without
+ *  a reconnect</li>
  * </ul>.
+ *
+ * To provide these values on the logon message your FIX session dictionary must contain a CancelOnDisconnectType
+ * field and optionally a CODTimeoutWindow field. Each of these configuration options are checked by first taking
+ * the value provided in the logon message if it is specified and otherwise taking it from the acceptor engine
+ * configuration.
  *
  * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
  * for more details around Cancel on disconnect support.
