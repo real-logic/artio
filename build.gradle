@@ -38,7 +38,7 @@ plugins {
 
 def checkstyleVersion = '9.3'
 def hamcrestVersion = '2.2'
-def junitVersion = '5.9.2'
+def junitVersion = '5.9.3'
 def mockitoVersion = '4.11.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.36'
@@ -243,7 +243,7 @@ subprojects {
 
     javadoc {
         title = '<h1>Artio</h1>'
-        options.bottom = '<i>Copyright &#169; 2015-2022 Real Logic Limited. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd. All Rights Reserved.</i>'
         options.encoding = 'UTF-8'
         options.docEncoding = 'UTF-8'
         options.charSet = 'UTF-8'
