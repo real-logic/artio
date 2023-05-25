@@ -26,8 +26,6 @@ import static org.junit.Assert.assertEquals;
 public class MutableAsciiBufferTest
 {
 
-    private final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[8 * 1024]);
-
     @DataPoints
     public static int[][] valuesAndLengths()
     {
