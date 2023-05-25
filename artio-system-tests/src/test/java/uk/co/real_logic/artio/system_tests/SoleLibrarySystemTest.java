@@ -113,7 +113,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
     // Replicates a bug reported in issue #361 where reconnecting initiators can't reconnect.
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldAllowReonnectingInitiatorsToReconnect()
+    public void shouldAllowReconnectingInitiatorsToReconnect()
     {
         launch();
 
