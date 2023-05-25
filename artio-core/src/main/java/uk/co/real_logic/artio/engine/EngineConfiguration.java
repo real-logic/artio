@@ -350,9 +350,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Controls whether the engine should eagerly bind the network interface at startup when {@link #bindTo(String, int)} is used, or
-     * whether it is delayed delayed until {@link FixEngine#bind()} is invoked. If used in conjunction with
-     * {@link InitialAcceptedSessionOwner#SOLE_LIBRARY} then the binding operation will delayed until the library
+     * Controls whether the engine should eagerly bind the network interface at startup when {@link #bindTo(String, int)}
+     * is used, or whether it is delayed until {@link FixEngine#bind()} is invoked. If used in conjunction with
+     * {@link InitialAcceptedSessionOwner#SOLE_LIBRARY} then the binding operation will be delayed until the library
      * is connected.
      *
      * @param bindAtStartup false to delay binding until {@link FixEngine#bind()} is invoked.
