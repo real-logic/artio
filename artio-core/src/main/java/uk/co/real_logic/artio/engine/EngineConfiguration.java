@@ -660,9 +660,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration sessionPersistenceStrategy(final SessionPersistenceStrategy sessionReplicationStrategy)
+    public EngineConfiguration sessionPersistenceStrategy(final SessionPersistenceStrategy sessionPersistenceStrategy)
     {
-        this.sessionPersistenceStrategy = sessionReplicationStrategy;
+        this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         return this;
     }
 
