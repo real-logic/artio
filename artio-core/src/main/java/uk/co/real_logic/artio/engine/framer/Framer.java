@@ -1676,7 +1676,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (!online)
         {
-            checkOfflineSequenceReset(sessionId, messageType, buffer, offset, length, sequenceIndex);
+            checkOfflineSequenceReset(sessionId, messageType, sequenceIndex);
         }
 
         sendTimer.recordSince(now);
@@ -1694,9 +1694,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    private void checkOfflineSequenceReset(
-        final long sessionId, final long messageType, final DirectBuffer buffer, final int offset, final int length,
-        final int sequenceIndex)
+    private void checkOfflineSequenceReset(final long sessionId, final long messageType, final int sequenceIndex)
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
