@@ -275,7 +275,8 @@ public class DirectSessionProxy implements SessionProxy
     public long sendLogout(
         final int msgSeqNo, final int sequenceIndex, final int rejectReason, final int lastMsgSeqNumProcessed)
     {
-        final byte[] reasonText = LOGGED_ON_SESSION_REJECT_REASONS[rejectReason];
+        final int rejectReasonIndex = getRejectReasonIndex(rejectReason);
+        final byte[] reasonText = LOGGED_ON_SESSION_REJECT_REASONS[rejectReasonIndex];
         return sendLogout(msgSeqNo, reasonText, reasonText.length, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
@@ -399,7 +400,7 @@ public class DirectSessionProxy implements SessionProxy
         {
             reject.refMsgType(refMsgType, refMsgTypeLength);
         }
-        final int rejectReasonIndex = rejectReason == OTHER.representation() ? OTHER_REJECT_INDEX : rejectReason;
+        final int rejectReasonIndex = getRejectReasonIndex(rejectReason);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReasonIndex]);
 
         final SessionHeaderEncoder header = reject.header();
@@ -475,6 +476,11 @@ public class DirectSessionProxy implements SessionProxy
         }
 
         return position;
+    }
+
+    private int getRejectReasonIndex(final int rejectReason)
+    {
+        return rejectReason == OTHER.representation() ? OTHER_REJECT_INDEX : rejectReason;
     }
 
     public long lastSentPosition()
