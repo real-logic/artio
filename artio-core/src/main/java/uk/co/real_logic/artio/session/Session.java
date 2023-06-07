@@ -878,10 +878,10 @@ public class Session
             // Do not reset the sequence index at this point, as it will have been done by the sent case.
             lastReceivedMsgSeqNumOnly(newLastReceivedMessageSequenceNumber);
 
-            final long redactPositon = fixSessionOwner.inboundMessagePosition();
-            if (redact(redactPositon))
+            final long redactPosition = fixSessionOwner.inboundMessagePosition();
+            if (redact(redactPosition))
             {
-                fixSessionOwner.enqueueTask(() -> redact(redactPositon));
+                fixSessionOwner.enqueueTask(() -> redact(redactPosition));
             }
         }
         return position;
