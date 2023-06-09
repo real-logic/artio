@@ -43,6 +43,7 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.messages.ThrottleRejectDecoder.businessRejectRefIDHeaderLength;
@@ -150,6 +151,8 @@ class FixSenderEndPoint extends SenderEndPoint
         final int offset,
         final int bodyLength,
         final int sequenceNumber,
+        final int sequenceIndex,
+        final long messageType,
         final long timeInMs,
         final int metaDataLength)
     {
@@ -162,6 +165,11 @@ class FixSenderEndPoint extends SenderEndPoint
         onMessage(directBuffer, offset, bodyLength, metaDataLength, sequenceNumber, timeInMs, false);
 
         senderSequenceNumber.onNewMessage(sequenceNumber);
+
+        if (messageType == LOGON_MESSAGE_TYPE)
+        {
+            receiverEndPoint.onLogonSent(sequenceIndex);
+        }
     }
 
     public void onThrottleReject(
@@ -169,6 +177,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final long refMsgType,
         final int refSeqNum,
         final int sequenceNumber,
+        final int sequenceIndex,
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
@@ -200,6 +209,8 @@ class FixSenderEndPoint extends SenderEndPoint
             throttleRejectBuilder.offset(),
             throttleRejectBuilder.length(),
             sequenceNumber,
+            sequenceIndex,
+            throttleRejectBuilder.messageType(),
             timeInMs,
             0);
     }
