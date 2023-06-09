@@ -176,6 +176,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             throttleReject.refMsgType(),
             throttleReject.refSeqNum(),
             throttleReject.sequenceNumber(),
+            throttleReject.sequenceIndex(),
             buffer,
             businessRejectRefIDOffset,
             throttleReject.businessRejectRefIDLength(),

@@ -79,13 +79,23 @@ class FixSenderEndPoints implements AutoCloseable
         final int offset,
         final int length,
         final int sequenceNumber,
+        final int sequenceIndex,
+        final long messageType,
         final int metaDataLength)
     {
         final FixSenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onOutboundMessage(
-                libraryId, buffer, offset, length, sequenceNumber, timeInMs, metaDataLength);
+                libraryId,
+                buffer,
+                offset,
+                length,
+                sequenceNumber,
+                sequenceIndex,
+                messageType,
+                timeInMs,
+                metaDataLength);
             return true;
         }
 
@@ -98,6 +108,7 @@ class FixSenderEndPoints implements AutoCloseable
         final long refMsgType,
         final int refSeqNum,
         final int sequenceNumber,
+        final int sequenceIndex,
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength)
@@ -106,7 +117,7 @@ class FixSenderEndPoints implements AutoCloseable
         if (endPoint != null)
         {
             endPoint.onThrottleReject(
-                libraryId, refMsgType, refSeqNum, sequenceNumber,
+                libraryId, refMsgType, refSeqNum, sequenceNumber, sequenceIndex,
                 businessRejectRefIDBuffer, businessRejectRefIDOffset, businessRejectRefIDLength,
                 timeInMs);
         }

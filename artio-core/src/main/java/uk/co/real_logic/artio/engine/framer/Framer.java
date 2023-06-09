@@ -934,6 +934,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long refMsgType,
         final int refSeqNum,
         final int sequenceNumber,
+        final int sequenceIndex,
         final DirectBuffer businessRejectRefIDBuffer,
         final int businessRejectRefIDOffset,
         final int businessRejectRefIDLength,
@@ -945,6 +946,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             refMsgType,
             refSeqNum,
             sequenceNumber,
+            sequenceIndex,
             businessRejectRefIDBuffer,
             businessRejectRefIDOffset,
             businessRejectRefIDLength
@@ -1672,7 +1674,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long now = outboundTimer.recordSince(timestamp);
 
         final boolean online = fixSenderEndPoints.onMessage(
-            libraryId, connectionId, buffer, offset, length, sequenceNumber, metaDataLength);
+            libraryId,
+            connectionId,
+            buffer,
+            offset,
+            length,
+            sequenceNumber,
+            sequenceIndex,
+            messageType,
+            metaDataLength);
 
         if (!online)
         {

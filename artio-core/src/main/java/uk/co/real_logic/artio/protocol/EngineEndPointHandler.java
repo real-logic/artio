@@ -130,6 +130,7 @@ public interface EngineEndPointHandler
         long refMsgType,
         int refSeqNum,
         int sequenceNumber,
+        int sequenceIndex,
         DirectBuffer businessRejectRefIDBuffer,
         int businessRejectRefIDOffset,
         int businessRejectRefIDLength,

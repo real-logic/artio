@@ -135,4 +135,9 @@ public class FixThrottleRejectBuilder
     {
         return length;
     }
+
+    public long messageType()
+    {
+        return businessMessageReject.messageType();
+    }
 }

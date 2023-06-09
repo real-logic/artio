@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -159,6 +161,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     private FixGatewaySession gatewaySession;
     private long sessionId;
     private int sequenceIndex;
+    /**
+     * Sequence index update can be pending after we send a Logon with ResetSeqNumFlag=Y, until we receive a response.
+     * A disconnect when a sequence index update is pending will finish the update.
+     */
+    private int pendingSequenceIndex;
     private boolean isPaused = false;
 
     private int pendingAcceptorLogonMsgOffset;
@@ -454,7 +461,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     if (requiresAuthentication())
                     {
                         startAuthenticationFlow(offset, length, messageType);
-                        // Actually has a logon message in it's buffer, but we return true because it's not
+                        // Actually has a logon message in its buffer, but we return true because it's not
                         // a back-pressure scenario.
                         return true;
                     }
@@ -1023,6 +1030,11 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return stashIfBackPressured(offset, position);
     }
 
+    void onLogonSent(final int sequenceIndex)
+    {
+        pendingSequenceIndex = sequenceIndex;
+    }
+
     void closeResources()
     {
         try
@@ -1043,6 +1055,20 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     void cleanupDisconnectState(final DisconnectReason reason)
     {
+        final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
+        if (entry != null)
+        {
+            final SessionContext sessionContext = entry.getValue();
+            final int currentSequenceIndex = sessionContext.sequenceIndex();
+            if (pendingSequenceIndex > currentSequenceIndex)
+            {
+                sessionContext.onSequenceIndex(clock.nanoTime(), pendingSequenceIndex);
+                // Need to reset inbound sequence number index, as it's queried for the last received sequence number
+                // when a session gets accepted.
+                framer.schedule(() -> publication.saveResetSequenceNumber(sessionId));
+            }
+        }
+
         fixContexts.onDisconnect(sessionId);
         gatewaySessions.onDisconnect(sessionId, connectionId, reason);
     }
