@@ -434,6 +434,17 @@ class DecoderGenerator extends Generator
         }
     }
 
+    protected String resetLength(final String name)
+    {
+        return String.format(
+                "    public void %1$s()\n" +
+                        "    {\n" +
+                        "        %2$sLength = 0;\n" +
+                        "    }\n\n",
+                nameOfResetMethod(name),
+                formatPropertyName(name));
+    }
+
     private String iteratorClassName(final Group group, final boolean ofParent)
     {
         final String prefix = ofParent ? "Abstract" : "";

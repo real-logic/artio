@@ -160,6 +160,28 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldNotUseAsciiSequenceViewAfterReset() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        final byte[] originalValue = { 97, 98, 99, 100 };
+        final byte[] byteArray = new byte[originalValue.length];
+        System.arraycopy(originalValue, 0, byteArray, 0, originalValue.length);
+
+        final AsciiSequenceView asciiSequenceView = new AsciiSequenceView();
+        asciiSequenceView.wrap(new UnsafeBuffer(byteArray), 0, byteArray.length);
+
+        heartbeat
+                .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
+                .invoke(encoder, asciiSequenceView);
+
+        reset(encoder);
+
+        setCharSequence(encoder, TEST_REQ_ID, "xxx");
+        assertArrayEquals(originalValue, byteArray);
+    }
+
+    @Test
     public void shouldWriteByteArraySettersToFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();

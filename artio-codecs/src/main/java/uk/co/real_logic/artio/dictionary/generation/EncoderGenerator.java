@@ -249,6 +249,23 @@ class EncoderGenerator extends Generator
         }
     }
 
+    protected String resetLength(final String name)
+    {
+        return String.format(
+                "    public void %1$s()\n" +
+                        "    {\n" +
+                        "        %2$sLength = 0;\n" +
+                        "        if (%2$sInternalBuffer != null)\n" +
+                        "        {\n" +
+                        "            %2$s.wrap(%2$sInternalBuffer);\n" +
+                        "            %2$sInternalBuffer = null;\n" +
+                        "            %2$sOffset = 0;\n" +
+                        "        }\n" +
+                        "    }\n\n",
+                nameOfResetMethod(name),
+                formatPropertyName(name));
+    }
+
     private void generateAggregateClass(
         final Aggregate aggregate,
         final AggregateType type,
@@ -736,11 +753,13 @@ class EncoderGenerator extends Generator
         final String className, final String fieldName, final String name, final String javadoc)
     {
         return String.format(
-            "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
-            "    %4$s int %1$sOffset = 0;\n\n" +
+            "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n" +
+            "    %4$s byte[] %1$sInternalBuffer;\n" +
+            "    %4$s int %1$sOffset = 0;\n" +
             "    %4$s int %1$sLength = 0;\n\n" +
             "    %5$spublic %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
+            "        %1$sInternalBuffer = %1$s.byteArray();\n" +
             "        %1$s.wrap(value);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
@@ -756,6 +775,7 @@ class EncoderGenerator extends Generator
             "    }\n\n" +
             "    %5$spublic %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
+            "        %1$sInternalBuffer = %1$s.byteArray();\n" +
             "        %1$s.wrap(value);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
@@ -782,6 +802,7 @@ class EncoderGenerator extends Generator
             "    }\n\n" +
             "    %5$spublic MutableDirectBuffer %1$s()\n" +
             "    {\n" +
+            "        %1$sInternalBuffer = %1$s.byteArray();\n" +
             "        return %1$s;\n" +
             "    }\n\n" +
             "    %5$spublic String %1$sAsString()\n" +
@@ -816,6 +837,7 @@ class EncoderGenerator extends Generator
             "        final DirectBuffer buffer = value.buffer();\n" +
             "        if (buffer != null)\n" +
             "        {\n" +
+            "            %1$sInternalBuffer = %1$s.byteArray();\n" +
             "            %1$s.wrap(buffer);\n" +
             "            %1$sOffset = value.offset();\n" +
             "            %1$sLength = value.length();\n" +
