@@ -434,6 +434,7 @@ class DecoderGenerator extends Generator
         }
     }
 
+    @Override
     protected String resetLength(final String name)
     {
         return String.format(

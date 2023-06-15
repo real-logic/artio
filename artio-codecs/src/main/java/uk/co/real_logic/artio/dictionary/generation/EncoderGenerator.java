@@ -249,6 +249,7 @@ class EncoderGenerator extends Generator
         }
     }
 
+    @Override
     protected String resetLength(final String name)
     {
         return String.format(
