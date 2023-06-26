@@ -187,6 +187,22 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void offsetAndLengthByteArrayCopyingSettersWriteFields() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        heartbeat
+            .getMethod(TEST_REQ_ID_AS_COPY, byte[].class, int.class, int.class)
+            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, 1, 3);
+
+        assertArrayEquals(VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(0, encoder);
+        assertTestReqIdLength(3, encoder);
+
+        assertEncodesTestReqIdFully(encoder);
+    }
+
+    @Test
     public void shouldWriteDirectBufferSettersToFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
@@ -1144,9 +1160,9 @@ public class EncoderGeneratorTest
         assertEquals(expectedLength, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
-    private void assertTestReqIdOffset(final int expectedoffset, final Object encoder) throws Exception
+    private void assertTestReqIdOffset(final int expectedOffset, final Object encoder) throws Exception
     {
-        assertEquals(expectedoffset, getField(encoder, TEST_REQ_ID_OFFSET));
+        assertEquals(expectedOffset, getField(encoder, TEST_REQ_ID_OFFSET));
     }
 
     private void assertEncodesTestReqIdFully(final Encoder encoder) throws Exception

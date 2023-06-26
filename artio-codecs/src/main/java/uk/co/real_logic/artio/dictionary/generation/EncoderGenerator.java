@@ -764,7 +764,7 @@ class EncoderGenerator extends Generator
             "    %5$spublic %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        copyInto(%1$s, value, offset, length);\n" +
-            "        %1$sOffset = offset;\n" +
+            "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
