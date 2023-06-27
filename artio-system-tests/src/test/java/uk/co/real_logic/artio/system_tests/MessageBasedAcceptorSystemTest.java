@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -613,6 +614,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldHandleOnlineResetFollowedByDisconnectAndRestart() throws IOException
     {
+        System.out.println(Instant.now() + " shouldHandleOnlineResetFollowedByDisconnectAndRestart started");
         final int erSeqNum;
 
         setup(false, true, true, SOLE_LIBRARY, false, false, 0, 0, true);
@@ -652,13 +654,20 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             final HeartbeatDecoder hb = testSystem.awaitBlocking(() -> connection.readHeartbeat("two"));
 
             connection.sendResendRequest(1, 0);
+            System.out.println(Instant.now() + " starting awaitBlocking");
             testSystem.awaitBlocking(() ->
             {
+                System.out.println(Instant.now() + " readSequenceResetGapFill...");
                 connection.readSequenceResetGapFill(erSeqNum);
+                System.out.println(Instant.now() + " readResentExecutionReport...");
                 connection.readResentExecutionReport(erSeqNum);
+                System.out.println(Instant.now() + " readSequenceResetGapFill...");
                 connection.readSequenceResetGapFill(hb.header().msgSeqNum() + 1);
+                System.out.println(Instant.now() + " finished awaitBlocking");
             });
         }
+
+        System.out.println(Instant.now() + " shouldHandleOnlineResetFollowedByDisconnectAndRestart finished");
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
