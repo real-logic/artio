@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP,REPLAY -Dfix.core.ci=true"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dfix.core.debug=STATE_CLEANUP -Dfix.core.ci=true"
 
 permissions:
   contents: read

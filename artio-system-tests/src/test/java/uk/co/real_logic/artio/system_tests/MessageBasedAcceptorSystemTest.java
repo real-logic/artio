@@ -614,6 +614,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void shouldHandleOnlineResetFollowedByDisconnectAndRestart() throws IOException
     {
+        printErrors = true;
         System.out.println(Instant.now() + " shouldHandleOnlineResetFollowedByDisconnectAndRestart started");
         final int erSeqNum;
 
@@ -845,6 +846,8 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
     {
         // Replicates a bug reported where if you send a message on a FIX session after a tryResetSequenceNumbers
         // and before the counter-party replies with their logon then it can result in an infinite logon loop.
+
+        printErrors = true;
 
         setup(sequenceNumberReset, true, true, owner);
         setupLibrary();
