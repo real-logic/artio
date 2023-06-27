@@ -736,8 +736,9 @@ class EncoderGenerator extends Generator
         final String className, final String fieldName, final String name, final String javadoc)
     {
         return String.format(
-            "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
-            "    %4$s int %1$sOffset = 0;\n\n" +
+            "    %4$s final MutableDirectBuffer %1$s = new UnsafeBuffer();\n" +
+            "    %4$s byte[] %1$sInternalBuffer = %1$s.byteArray();\n" +
+            "    %4$s int %1$sOffset = 0;\n" +
             "    %4$s int %1$sLength = 0;\n\n" +
             "    %5$spublic %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
             "    {\n" +
@@ -763,7 +764,10 @@ class EncoderGenerator extends Generator
             "    }\n\n" +
             "    %5$spublic %2$s %1$sAsCopy(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
-            "        copyInto(%1$s, value, offset, length);\n" +
+            "        if (copyInto(%1$s, value, offset, length))\n" +
+            "        {\n" +
+            "            %1$sInternalBuffer = %1$s.byteArray();\n" +
+            "        }\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
@@ -806,7 +810,10 @@ class EncoderGenerator extends Generator
             "%2$s" +
             "    %5$spublic %3$s %1$s(final CharSequence value)\n" +
             "    {\n" +
-            "        toBytes(value, %1$s);\n" +
+            "        if (toBytes(value, %1$s))\n" +
+            "        {\n" +
+            "            %1$sInternalBuffer = %1$s.byteArray();\n" +
+            "        }\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = value.length();\n" +
             "        return this;\n" +
@@ -828,11 +835,14 @@ class EncoderGenerator extends Generator
             "    }\n\n" +
             "    %5$spublic %3$s %1$s(final char[] value, final int length)\n" +
             "    {\n" +
-                "        return %1$s(value, 0, length);\n" +
+            "        return %1$s(value, 0, length);\n" +
             "    }\n\n" +
             "    %5$spublic %3$s %1$s(final char[] value, final int offset, final int length)\n" +
             "    {\n" +
-            "        toBytes(value, %1$s, offset, length);\n" +
+            "        if (toBytes(value, %1$s, offset, length))\n" +
+            "        {\n" +
+            "            %1$sInternalBuffer = %1$s.byteArray();\n" +
+            "        }\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
@@ -1313,6 +1323,18 @@ class EncoderGenerator extends Generator
                 className,
                 formatPropertyName(element.name())));
         }
+    }
+
+    protected String resetLength(final String name)
+    {
+        return String.format(
+            "    public void %1$s()\n" +
+            "    {\n" +
+            "        %2$sLength = 0;\n" +
+            "        %2$s.wrap(%2$sInternalBuffer);\n" +
+            "    }\n\n",
+            nameOfResetMethod(name),
+            formatPropertyName(name));
     }
 
     protected String resetRequiredFloat(final String name)

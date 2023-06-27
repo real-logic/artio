@@ -428,16 +428,7 @@ public abstract class Generator
 
     protected abstract String resetRequiredFloat(String name);
 
-    protected String resetLength(final String name)
-    {
-        return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "        %2$sLength = 0;\n" +
-            "    }\n\n",
-            nameOfResetMethod(name),
-            formatPropertyName(name));
-    }
+    protected abstract String resetLength(String name);
 
     protected String resetByFlag(final String name)
     {

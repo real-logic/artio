@@ -138,13 +138,29 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
 
-        heartbeat
-                .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
-                .invoke(encoder, new AsciiSequenceView());
+        setTestReqIdTo(encoder, new AsciiSequenceView());
 
         assertArrayEquals(new byte[0], getTestReqIdBytes(encoder));
         assertTestReqIdOffset(0, encoder);
         assertTestReqIdLength(0, encoder);
+    }
+
+    @Test
+    public void shouldNotUseAsciiSequenceViewAfterReset() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        final byte[] originalValue = LONG_VALUE_IN_BYTES;
+        final byte[] byteArray = originalValue.clone();
+
+        final AsciiSequenceView asciiSequenceView = new AsciiSequenceView();
+        asciiSequenceView.wrap(new UnsafeBuffer(byteArray), 0, byteArray.length);
+
+        setTestReqIdTo(encoder, asciiSequenceView);
+        reset(encoder);
+        setTestReqIdTo(encoder, "xxx");
+
+        assertArrayEquals(originalValue, byteArray);
     }
 
     @Test
@@ -1143,6 +1159,13 @@ public class EncoderGeneratorTest
     private void setTestReqIdTo(final Object encoder, final String value) throws Exception
     {
         setCharSequence(encoder, TEST_REQ_ID, value);
+    }
+
+    private void setTestReqIdTo(final Object encoder, final AsciiSequenceView asciiSequenceView) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
+            .invoke(encoder, asciiSequenceView);
     }
 
     private Encoder newHeartbeat() throws Exception
