@@ -106,18 +106,23 @@ public final class CodecUtil
     }
 
     // NB: only valid for ASCII bytes.
-    public static void toBytes(final CharSequence value, final MutableDirectBuffer buffer)
+    public static boolean toBytes(final CharSequence value, final MutableDirectBuffer buffer)
     {
+        boolean bufferChanged = false;
+
         final int length = value.length();
         if (buffer.capacity() < length)
         {
             buffer.wrap(new byte[length]);
+            bufferChanged = true;
         }
 
         for (int i = 0; i < length; i++)
         {
             buffer.putByte(i, (byte)value.charAt(i));
         }
+
+        return bufferChanged;
     }
 
     // NB: only valid for ASCII bytes.
@@ -127,18 +132,23 @@ public final class CodecUtil
     }
 
     // NB: only valid for ASCII bytes.
-    public static void toBytes(
+    public static boolean toBytes(
         final char[] value, final MutableDirectBuffer buffer, final int offset, final int length)
     {
+        boolean bufferChanged = false;
+
         if (buffer.capacity() < length)
         {
             buffer.wrap(new byte[length]);
+            bufferChanged = true;
         }
 
         for (int i = 0; i < length; i++)
         {
             buffer.putByte(i, (byte)value[i + offset]);
         }
+
+        return bufferChanged;
     }
 
     public static boolean equals(
@@ -237,17 +247,19 @@ public final class CodecUtil
         }
     }
 
-    public static void copyInto(
+    public static boolean copyInto(
         final MutableDirectBuffer buffer, final byte[] data, final int offset, final int length)
     {
         final byte[] dest = buffer.byteArray();
         if (dest != null && dest.length >= length)
         {
             System.arraycopy(data, offset, dest, 0, length);
+            return false;
         }
         else
         {
             buffer.wrap(Arrays.copyOfRange(data, offset, offset + length));
+            return true;
         }
     }
 

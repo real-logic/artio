@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.LONG_VALUE_IN_BYTES;
 
 public class CodecUtilTest
 {
@@ -75,5 +78,50 @@ public class CodecUtilTest
         final int firstHash = CodecUtil.hashCode("zyxabc".toCharArray(), 0, 3);
         final int secondHash = CodecUtil.hashCode("abczyx".toCharArray(), 3, 3);
         assertEquals(firstHash, secondHash);
+    }
+
+    @Test
+    public void testToBytes()
+    {
+        final MutableDirectBuffer buffer = new UnsafeBuffer();
+
+        assertTrue(CodecUtil.toBytes("ab", buffer));
+        assertEquals("ab", buffer.getStringWithoutLengthAscii(0, 2));
+
+        assertFalse(CodecUtil.toBytes("c", buffer));
+        assertEquals("c", buffer.getStringWithoutLengthAscii(0, 1));
+
+        assertTrue(CodecUtil.toBytes("def", buffer));
+        assertEquals("def", buffer.getStringWithoutLengthAscii(0, 3));
+    }
+
+    @Test
+    public void testToBytesWithOffsetAndLength()
+    {
+        final MutableDirectBuffer buffer = new UnsafeBuffer();
+
+        assertTrue(CodecUtil.toBytes("ab".toCharArray(), buffer, 0, 2));
+        assertEquals("ab", buffer.getStringWithoutLengthAscii(0, 2));
+
+        assertFalse(CodecUtil.toBytes("abc".toCharArray(), buffer, 2, 1));
+        assertEquals("c", buffer.getStringWithoutLengthAscii(0, 1));
+
+        assertTrue(CodecUtil.toBytes("def".toCharArray(), buffer, 0, 3));
+        assertEquals("def", buffer.getStringWithoutLengthAscii(0, 3));
+    }
+
+    @Test
+    public void testCopyIntoBuffer()
+    {
+        final MutableDirectBuffer buffer = new UnsafeBuffer();
+
+        assertTrue(CodecUtil.copyInto(buffer, LONG_VALUE_IN_BYTES, 0, 2));
+        assertEquals("ab", buffer.getStringWithoutLengthAscii(0, 2));
+
+        assertFalse(CodecUtil.copyInto(buffer, LONG_VALUE_IN_BYTES, 2, 1));
+        assertEquals("c", buffer.getStringWithoutLengthAscii(0, 1));
+
+        assertTrue(CodecUtil.copyInto(buffer, LONG_VALUE_IN_BYTES, 0, 4));
+        assertEquals("abcd", buffer.getStringWithoutLengthAscii(0, 4));
     }
 }
