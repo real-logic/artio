@@ -20,4 +20,4 @@ After the first build this is all that is required.
 
 ## Downloading
 
-Binaries can be found on [Maven Central](https://search.maven.org/search?q=artio)
+Binaries can be found on [Maven Central](https://central.sonatype.com/search?q=artio&namespace=uk.co.real-logic)
