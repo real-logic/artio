@@ -40,7 +40,6 @@ import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
@@ -108,16 +107,29 @@ public class SessionParser
         return logon.supportsPassword() ? logon.passwordAsString() : null;
     }
 
-    public static CancelOnDisconnectOption cancelOnDisconnectType(final AbstractLogonDecoder logon)
+    public static CancelOnDisconnectOption cancelOnDisconnectType(
+        final AbstractLogonDecoder logon,
+        final CancelOnDisconnectOption defaultCancelOnDisconnectOption)
     {
         return logon.supportsCancelOnDisconnectType() && logon.hasCancelOnDisconnectType() ?
-            CancelOnDisconnectOption.get(logon.cancelOnDisconnectType()) : DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
+            CancelOnDisconnectOption.get(logon.cancelOnDisconnectType()) : defaultCancelOnDisconnectOption;
     }
 
-    public static int cancelOnDisconnectTimeoutWindow(final AbstractLogonDecoder logon)
+    public static int cancelOnDisconnectTimeoutWindow(final AbstractLogonDecoder logon,
+        final int defaultCancelOnDisconnectTimeoutWindow)
     {
-        return logon.supportsCODTimeoutWindow() && logon.hasCODTimeoutWindow() ?
-            logon.cODTimeoutWindow() : 0;
+        if (logon.supportsCODTimeoutWindow() && logon.hasCODTimeoutWindow())
+        {
+            return logon.cODTimeoutWindow();
+        }
+        else if (defaultCancelOnDisconnectTimeoutWindow != MISSING_INT)
+        {
+            return defaultCancelOnDisconnectTimeoutWindow;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     public Action onMessage(
@@ -528,8 +540,10 @@ public class SessionParser
             final long origSendingTime = origSendingTimeInMs(header);
             final String username = username(logon);
             final String password = password(logon);
-            final CancelOnDisconnectOption cancelOnDisconnectOption = cancelOnDisconnectType(logon);
-            final int cancelOnDisconnectTimeoutWindow = cancelOnDisconnectTimeoutWindow(logon);
+            final CancelOnDisconnectOption cancelOnDisconnectOption = cancelOnDisconnectType(logon,
+                session.cancelOnDisconnectOption());
+            final int cancelOnDisconnectTimeoutWindowInMs = cancelOnDisconnectTimeoutWindow(logon,
+                session.getCancelOnDisconnectTimeoutWindowInMs());
             final boolean possDup = isPossDup(header);
 
             return session.onLogon(
@@ -544,7 +558,7 @@ public class SessionParser
                 possDup,
                 position,
                 cancelOnDisconnectOption,
-                cancelOnDisconnectTimeoutWindow);
+                cancelOnDisconnectTimeoutWindowInMs);
         }
     }
 

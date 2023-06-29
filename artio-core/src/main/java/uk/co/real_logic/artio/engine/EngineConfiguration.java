@@ -42,6 +42,7 @@ import uk.co.real_logic.artio.fields.EpochFractionFormat;
 import uk.co.real_logic.artio.fixp.FixPCancelOnDisconnectTimeoutHandler;
 import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
@@ -68,6 +69,7 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.HEADER_FILE_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.MAX_FILE_SEGMENT_CAPACITY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
+import static uk.co.real_logic.artio.messages.CancelOnDisconnectOption.DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
 import static uk.co.real_logic.artio.messages.FixPProtocolType.ILINK_3;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
@@ -232,6 +234,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_REPRODUCTION_REPLAY_STREAM = 7;
 
     public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
+    public static final int DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS = 0;
 
     private String host = null;
     private int port;
@@ -319,6 +322,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int throttleWindowInMs = NO_THROTTLE_WINDOW;
     private int throttleLimitOfMessages = NO_THROTTLE_WINDOW;
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
+    private CancelOnDisconnectOption cancelOnDisconnectOption = DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
+    private int cancelOnDisconnectTimeoutWindowInMs = DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS;
 
     private EngineReproductionConfiguration reproductionConfiguration;
     private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
@@ -784,7 +789,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets the {@link SessionConfiguration#closedResendInterval()} property for accepted Sessions.
      *
      * @param acceptedSessionClosedResendInterval the {@link SessionConfiguration#closedResendInterval()} property for
-     *                                           accepted Sessions.
+     *                                            accepted Sessions.
      * @return this
      */
     public EngineConfiguration acceptedSessionClosedResendInterval(final boolean acceptedSessionClosedResendInterval)
@@ -797,7 +802,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets the {@link SessionConfiguration#resendRequestChunkSize()} property for accepted Sessions.
      *
      * @param acceptedSessionResendRequestChunkSize the {@link SessionConfiguration#resendRequestChunkSize()} property
-     *                                             for accepted Sessions.
+     *                                              for accepted Sessions.
      * @return this
      */
     public EngineConfiguration acceptedSessionResendRequestChunkSize(final int acceptedSessionResendRequestChunkSize)
@@ -1268,6 +1273,35 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration reproductionReplayStream(final int reproductionReplayStream)
     {
         this.reproductionReplayStream = reproductionReplayStream;
+        return this;
+    }
+
+    /**
+     * Sets the default option in the case that no cancel on disconnect option is specified on the logon message.
+     * The default value for this field is {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}
+     *
+     * @param cancelOnDisconnectOption the cancel on disconnect option to use if none is provided by the initiator.
+     * @return this
+     */
+    public EngineConfiguration cancelOnDisconnectOption(final CancelOnDisconnectOption cancelOnDisconnectOption)
+    {
+        this.cancelOnDisconnectOption = cancelOnDisconnectOption;
+        return this;
+    }
+
+    /**
+     * Sets the default cancel on disconnection timeout window in the case that none is specified on the logon message.
+     * This is only used when the resolved cancel on disconnect option is not
+     * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}. The default value for this field is
+     * {@link #DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS}
+     *
+     * @param cancelOnDisconnectTimeoutWindowInMs the cancel on disconnect timeout window to use if none is provided by
+     *                                            the initiator.
+     * @return this
+     */
+    public EngineConfiguration cancelOnDisconnectTimeoutWindowInMs(final int cancelOnDisconnectTimeoutWindowInMs)
+    {
+        this.cancelOnDisconnectTimeoutWindowInMs = cancelOnDisconnectTimeoutWindowInMs;
         return this;
     }
 
@@ -1991,6 +2025,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long timeIndexReplayFlushIntervalInNs()
     {
         return timeIndexReplayFlushIntervalInNs;
+    }
+
+    public CancelOnDisconnectOption cancelOnDisconnectOption()
+    {
+        return cancelOnDisconnectOption;
+    }
+
+    public int cancelOnDisconnectTimeoutWindowInMs()
+    {
+        return cancelOnDisconnectTimeoutWindowInMs;
     }
 
     public boolean indexChecksumEnabled()

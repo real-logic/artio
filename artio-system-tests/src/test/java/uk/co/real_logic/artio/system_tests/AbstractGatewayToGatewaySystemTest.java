@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -280,9 +281,14 @@ public class AbstractGatewayToGatewaySystemTest
 
     void connectSessions()
     {
+        connectSessions(null);
+    }
+
+    void connectSessions(final Class<? extends FixDictionary> fixDictionary)
+    {
         connectTimeRange = new TimeRange(nanoClock);
         final Reply<Session> reply = initiate(
-            initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID, TEST_REPLY_TIMEOUT_IN_MS);
+            initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID, TEST_REPLY_TIMEOUT_IN_MS, true, fixDictionary);
         completeConnectInitiatingSession(reply);
         connectTimeRange.end();
     }

@@ -178,12 +178,13 @@ public final class SystemTestUtil
         final FixLibrary library, final int port, final String senderCompId, final String targetCompId,
         final long timeoutInMs)
     {
-        return initiate(library, port, senderCompId, targetCompId, timeoutInMs, true);
+        return initiate(library, port, senderCompId, targetCompId, timeoutInMs, true, null);
     }
 
     static Reply<Session> initiate(
         final FixLibrary library, final int port, final String senderCompId, final String targetCompId,
-        final long timeoutInMs, final boolean disconnectOnFirstMessageNotLogon)
+        final long timeoutInMs, final boolean disconnectOnFirstMessageNotLogon,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
@@ -192,6 +193,7 @@ public final class SystemTestUtil
             .targetCompId(targetCompId)
             .timeoutInMs(timeoutInMs)
             .disconnectOnFirstMessageNotLogon(disconnectOnFirstMessageNotLogon)
+            .fixDictionary(fixDictionary)
             .build();
 
         return library.initiate(config);
@@ -565,6 +567,13 @@ public final class SystemTestUtil
                 testSystem.poll();
                 return session.state() == DISCONNECTED && session.connectionId() == NO_CONNECTION_ID;
             });
+    }
+
+    public static long disconnectSession(final Session session)
+    {
+        final long position = session.requestDisconnect();
+        assertThat(position, greaterThan(0L));
+        return position;
     }
 
     public static long logoutSession(final Session session)
