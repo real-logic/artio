@@ -459,7 +459,8 @@ public class Session
     /**
      * Gets the cancel on disconnect option from the Logon message. Note: a missing COD option will result in
      * the value set in
-     * {@link uk.co.real_logic.artio.engine.EngineConfiguration#cancelOnDisconnectOption(CancelOnDisconnectOption)}.
+     * {@link uk.co.real_logic.artio.engine.EngineConfiguration#cancelOnDisconnectOption(CancelOnDisconnectOption)}
+     * for accepted and {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT} for initiated sessions.
      *
      * @return cancel on disconnect option received in the Logon message.
      */

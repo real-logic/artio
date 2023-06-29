@@ -283,6 +283,19 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertHandlerNotInvoked(LONG_COD_TEST_TIMEOUT_IN_MS);
     }
 
+    @Test
+    public void shouldTriggerCancelOnDisconnectFromGatewayAfterReacquiring()
+    {
+        launch();
+        setup(CANCEL_ON_DISCONNECT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
+
+        acquireAcceptingSession();
+        testSystem.awaitCompletedReply(acceptingLibrary.releaseToGateway(acceptingSession, 5_000));
+
+        testSystem.awaitRequestDisconnect(initiatingSession);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
+    }
+
     private void assertDisconnectWithHandlerNotInvoked()
     {
         assertSessionDisconnected(initiatingSession);

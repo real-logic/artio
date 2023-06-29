@@ -1277,8 +1277,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the default option in the case that no cancel on disconnect option is specified on the logon message.
-     * The default value for this field is {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}
+     * Sets the default option for accepted sessions in the case that no cancel on disconnect option is provided by the
+     * initiator on the logon message. The default value for this field is
+     * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}.
      *
      * @param cancelOnDisconnectOption the cancel on disconnect option to use if none is provided by the initiator.
      * @return this
@@ -1290,10 +1291,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the default cancel on disconnection timeout window in the case that none is specified on the logon message.
-     * This is only used when the resolved cancel on disconnect option is not
+     * Sets the default cancel on disconnection timeout window for accepted sessions in the case that none is provided
+     * by the initiator on the logon message. This is only used when the resolved cancel on disconnect option is not
      * {@link CancelOnDisconnectOption#DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT}. The default value for this field is
-     * {@link #DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS}
+     * {@link #DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS}.
      *
      * @param cancelOnDisconnectTimeoutWindowInMs the cancel on disconnect timeout window to use if none is provided by
      *                                            the initiator.
