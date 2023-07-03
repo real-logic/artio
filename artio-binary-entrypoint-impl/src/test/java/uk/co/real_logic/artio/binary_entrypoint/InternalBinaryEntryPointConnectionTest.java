@@ -125,7 +125,7 @@ public class InternalBinaryEntryPointConnectionTest
             mock(FixPMessageDissector.class),
             protocol);
 
-        connection.notApplied(0, 5);
+        connection.trySendNotApplied(0, 5);
         verify(proxy, times(1)).sendNotApplied(eq(0L), eq(5L), anyLong());
     }
 

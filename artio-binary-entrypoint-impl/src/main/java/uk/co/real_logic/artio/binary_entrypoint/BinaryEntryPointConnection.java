@@ -58,7 +58,7 @@ public interface BinaryEntryPointConnection extends FixPConnection
      * @param count How many messages have not been applied.
      * @return position.
      */
-    long notApplied(long fromSeqNo, long count);
+    long trySendNotApplied(long fromSeqNo, long count);
 
     // -----------------------------------------------
     // Accessors

@@ -232,7 +232,7 @@ class InternalBinaryEntryPointConnection
         internalTerminateInclResend(terminationCode);
     }
 
-    public long notApplied(final long fromSeqNo, final long count)
+    public long trySendNotApplied(final long fromSeqNo, final long count)
     {
         return this.proxy.sendNotApplied(fromSeqNo, count, requestTimestampInNs());
     }
