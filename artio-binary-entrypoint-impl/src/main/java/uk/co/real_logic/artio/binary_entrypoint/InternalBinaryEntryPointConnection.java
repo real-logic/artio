@@ -232,6 +232,11 @@ class InternalBinaryEntryPointConnection
         internalTerminateInclResend(terminationCode);
     }
 
+    public long trySendNotApplied(final long fromSeqNo, final long count)
+    {
+        return this.proxy.sendNotApplied(fromSeqNo, count, requestTimestampInNs());
+    }
+
     // Handles resends
     private void internalTerminateInclResend(final TerminationCode terminationCode)
     {

@@ -51,6 +51,15 @@ public interface BinaryEntryPointConnection extends FixPConnection
      */
     void terminate(TerminationCode terminationCode);
 
+    /**
+     * Send a notApplied message to the client.
+     *
+     * @param fromSeqNo the first applied sequence number.
+     * @param count How many messages have not been applied.
+     * @return position.
+     */
+    long trySendNotApplied(long fromSeqNo, long count);
+
     // -----------------------------------------------
     // Accessors
     // -----------------------------------------------

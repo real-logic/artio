@@ -100,6 +100,35 @@ public class InternalBinaryEntryPointConnectionTest
         successfulRetransmit(proxy, requestTimestampInNs, 4L);
     }
 
+    @Test
+    public void shouldSendNotAppliedMessageUsingBinaryProxy()
+    {
+        final BinaryEntryPointProxy proxy = mock(BinaryEntryPointProxy.class);
+        final EpochNanoClock clock = new OffsetEpochNanoClock();
+        final BinaryEntryPointContext context = new BinaryEntryPointContext(SESSION_ID, SESSION_VER_ID,
+            clock.nanoTime(), ENTERING_FIRM, false, "", "", "", "");
+        final GatewayPublication inboundPublication = mock(GatewayPublication.class);
+        final BinaryEntryPointProtocol protocol = new BinaryEntryPointProtocol();
+
+        final InternalBinaryEntryPointConnection connection = new InternalBinaryEntryPointConnection(
+            CONNECTION_ID,
+            mock(GatewayPublication.class),
+            inboundPublication,
+            LIBRARY_ID,
+            mock(FixPSessionOwner.class),
+            UNK_SESSION,
+            UNK_SESSION,
+            0,
+            new CommonConfiguration(),
+            context,
+            proxy,
+            mock(FixPMessageDissector.class),
+            protocol);
+
+        connection.trySendNotApplied(0, 5);
+        verify(proxy, times(1)).sendNotApplied(eq(0L), eq(5L), anyLong());
+    }
+
     private void successfulRetransmit(
         final BinaryEntryPointProxy proxy, final long requestTimestampInNs, final long fromSeqNo)
     {
