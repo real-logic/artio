@@ -30,9 +30,12 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
@@ -133,6 +136,48 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             }, 5000);
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotBeAbleToReplayMessagesFromBeforeReset1()
+    {
+        // reset when ReplayIndex instances exist
+        shouldNotBeAbleToReplayMessagesFromBeforeReset0(() -> {});
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldNotBeAbleToReplayMessagesFromBeforeReset2()
+    {
+        // reset when ReplayIndex instances do not exist
+        shouldNotBeAbleToReplayMessagesFromBeforeReset0(() ->
+        {
+            // restart
+            close();
+            clearMessages();
+            launchMediaDriverWithDirs();
+            launchWithoutConnectingSessions();
+        });
+    }
+
+    private void shouldNotBeAbleToReplayMessagesFromBeforeReset0(final Runnable beforeReset)
+    {
+        final long acceptingSessionId = acceptingSession.id();
+        exchangeMessages();
+        initiatingSession.startLogout();
+        assertSessionsDisconnected();
+
+        beforeReset.run();
+
+        testSystem.awaitCompletedReply(acceptingEngine.resetSequenceNumber(acceptingSessionId));
+
+        connectSessions(1, 1);
+
+        clearMessages();
+        testSystem.awaitCompletedReply(acceptingSession.replayReceivedMessages(
+            1, 0,
+            MOST_RECENT_MESSAGE, 1,
+            5000));
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(1));
+    }
+
     private int exchangeMessages()
     {
         OrderFactory.sendOrder(initiatingSession);
@@ -143,6 +188,13 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)
+    {
+        launchWithoutConnectingSessions();
+
+        connectSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, initiatorInitialReceivedSequenceNumber);
+    }
+
+    private void launchWithoutConnectingSessions()
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
@@ -160,9 +212,14 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         final LibraryConfiguration initiatingLibraryConfig =
             initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock);
         initiatingLibrary = testSystem.connect(initiatingLibraryConfig);
+    }
 
+    private void connectSessions(
+        final int initiatorInitialSentSequenceNumber,
+        final int initiatorInitialReceivedSequenceNumber)
+    {
         final Reply<Session> reply = connectPersistentSessions(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, initiatorInitialReceivedSequenceNumber, false);
+            initiatorInitialSentSequenceNumber, initiatorInitialReceivedSequenceNumber, false);
         assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         acquireAcceptingSession();
