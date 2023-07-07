@@ -97,6 +97,17 @@ public class AcceptorSessionTest extends AbstractSessionTest
     }
 
     @Test
+    public void shouldRequestLogoutWithCustomText()
+    {
+        shouldBeActivatedBySuccessfulLogin();
+        final byte[] text = "custom text".getBytes();
+
+        session.logoutAndDisconnect(text);
+
+        verifyLogout(2, times(1), text);
+    }
+
+    @Test
     public void shouldRequestResendIfHighSeqNoLogon()
     {
         onLogon(3);

@@ -408,13 +408,18 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             return acceptingSessionWriter.send(logon, adjustedMsgSeqNo);
         }
 
-        public long sendLogout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+        public long sendLogout(
+            final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed, final byte[] text)
         {
             sentLogouts++;
 
             final int adjustedMsgSeqNo = msgSeqNo + sequenceNumberAdjustment;
             final HeaderEncoder header = logout.header();
             setupHeader(header, adjustedMsgSeqNo);
+            if (text != null)
+            {
+                logout.text(text);
+            }
 
             if (send)
             {
