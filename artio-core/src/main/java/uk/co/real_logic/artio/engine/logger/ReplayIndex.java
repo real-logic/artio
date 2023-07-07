@@ -31,6 +31,8 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
@@ -444,10 +446,18 @@ public class ReplayIndex implements Index
         {
             // File might be present but not within the cache.
             evictionHandler.onReset(fixSessionId);
-            final File replayIndexFile = replayIndexHeaderFile(fixSessionId);
-            if (replayIndexFile.exists())
+            final File headerFile = replayIndexHeaderFile(fixSessionId);
+            if (headerFile.exists())
             {
-                deleteFile(replayIndexFile);
+                deleteFile(headerFile);
+            }
+            for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+            {
+                final File segmentFile = replayIndexSegmentFile(fixSessionId, segmentIndex);
+                if (segmentFile.exists())
+                {
+                    deleteFile(segmentFile);
+                }
             }
         }
     }
@@ -515,12 +525,34 @@ public class ReplayIndex implements Index
                     .schemaId(replayIndexRecord.sbeSchemaId())
                     .version(replayIndexRecord.sbeSchemaVersion());
                 notForNextSession(headerBuffer);
+
+                checkSegmentFilesDoNotExist();
             }
             else
             {
                 // Reset the positions in order to avoid wraps at the start.
                 final long resetPosition = beginChange(headerBuffer);
                 endChangeOrdered(headerBuffer, resetPosition);
+            }
+        }
+
+        private void checkSegmentFilesDoNotExist()
+        {
+            final List<File> existingSegmentFiles = new ArrayList<>();
+
+            for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+            {
+                final File segmentFile = replayIndexSegmentFile(fixSessionId, segmentIndex);
+                if (segmentFile.exists())
+                {
+                    existingSegmentFiles.add(segmentFile);
+                }
+            }
+
+            if (!existingSegmentFiles.isEmpty())
+            {
+                errorHandler.onError(new IllegalStateException("Replay index header file did not exist, " +
+                    "but the following segment files did: " + existingSegmentFiles));
             }
         }
 
