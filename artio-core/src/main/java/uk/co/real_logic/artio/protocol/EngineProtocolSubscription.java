@@ -468,7 +468,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             replayMessages.session(),
             replayMessages.correlationId(),
             replayMessages.replayFromSequenceNumber(),
-            replayMessages.replayToSequenceIndex(),
+            replayMessages.replayFromSequenceIndex(),
             replayMessages.replayToSequenceNumber(),
             replayMessages.replayToSequenceIndex(),
             replayMessages.latestReplyArrivalTimeInMs());
