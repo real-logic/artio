@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
@@ -659,6 +660,24 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 connection.readSequenceResetGapFill(hb.header().msgSeqNum() + 1);
             });
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportReplayingReceivedMessagesWithDifferentFromAndToSequenceIndices() throws IOException
+    {
+        shouldSupportLogonBasedSequenceNumberReset(true, ENGINE, (connection, reportFactory) ->
+        {
+            connection.msgSeqNum(1).logon(true);
+
+            testSystem.awaitReceivedSequenceNumber(session, 1);
+
+            otfAcceptor.messages().clear();
+            testSystem.awaitCompletedReply(session.replayReceivedMessages(
+                1, 0,
+                MOST_RECENT_MESSAGE, 1,
+                5000));
+            assertThat(otfAcceptor.messages(), hasSize(3));
+        });
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
