@@ -739,7 +739,7 @@ public class CommonConfiguration
     }
 
     /**
-     * Sets the time precision that the the session logic uses to encode time stamps.
+     * Sets the time precision that the session logic uses to encode time stamps.
      *
      * @param sessionEpochFractionFormat the format to use.
      * @return this

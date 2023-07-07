@@ -77,7 +77,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 {
     private static volatile boolean saveOnShutdown = true;
 
-    // Used for testing the the resilience of this file loading / saving mechanism to the process being terminated.
+    // Used for testing the resilience of this file loading / saving mechanism to the process being terminated.
     public static void saveOnShutdownTesting(final boolean saveOnShutdown)
     {
         RecordingCoordinator.saveOnShutdown = saveOnShutdown;

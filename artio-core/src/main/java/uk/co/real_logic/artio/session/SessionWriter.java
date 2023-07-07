@@ -188,9 +188,9 @@ public class SessionWriter
     }
 
     /**
-     * Gets the the id the session that this is a writer for.
+     * Gets the id of the session that this is a writer for.
      *
-     * @return the id the session that this is a writer for.
+     * @return the id of the session that this is a writer for.
      */
     public long id()
     {
