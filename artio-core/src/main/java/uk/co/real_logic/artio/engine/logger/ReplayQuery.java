@@ -70,6 +70,7 @@ public class ReplayQuery implements AutoCloseable
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
+    private final ReplayQueryListener replayQueryListener;
     private final int archiveReplayStream;
     private final int segmentSize;
     private final int segmentSizeBitShift;
@@ -87,6 +88,7 @@ public class ReplayQuery implements AutoCloseable
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
+        final ReplayQueryListener replayQueryListener,
         final int archiveReplayStream,
         final int indexFileCapacity,
         final int indexSegmentCapacity)
@@ -97,6 +99,7 @@ public class ReplayQuery implements AutoCloseable
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
+        this.replayQueryListener = replayQueryListener;
         this.archiveReplayStream = archiveReplayStream;
 
         this.indexFileSize = ReplayIndexDescriptor.capacityToBytes(indexFileCapacity);
@@ -213,6 +216,7 @@ public class ReplayQuery implements AutoCloseable
             actingVersion = messageFrameHeader.version();
         }
 
+        @SuppressWarnings("MethodLength")
         ReplayOperation query(
             final int beginSequenceNumber,
             final int beginSequenceIndex,
@@ -252,18 +256,26 @@ public class ReplayQuery implements AutoCloseable
             while (iteratorPosition < stopIteratingPosition)
             {
                 final long changePosition = endChangeVolatile(headerBuffer);
+                replayQueryListener.onEndChangeRead();
 
                 // Lapped by writer
+                final long beginChangePosition;
                 if (changePosition > iteratorPosition &&
-                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
+                    (iteratorPosition + indexFileSize) < (beginChangePosition = beginChangeVolatile(headerBuffer)))
                 {
-                    iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + indexFileSize;
+                    iteratorPosition = beginChangePosition - indexFileSize;
+                    stopIteratingPosition = beginChangePosition;
+                    replayQueryListener.onLapped();
+                }
+
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+                if (offset == 0 && iteratorPosition >= changePosition)
+                {
+                    break; // beginning of a segment, the file might not exist yet if we caught up with the writer
                 }
 
                 final UnsafeBuffer segmentBuffer = segmentBuffer(
                     iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize);
-                final int offset = offsetInSegment(iteratorPosition, segmentSize);
 
                 indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();
@@ -414,13 +426,8 @@ public class ReplayQuery implements AutoCloseable
         private long getIteratorPosition()
         {
             // positions on a monotonically increasing scale
-            long iteratorPosition = beginChangeVolatile(headerBuffer);
             // First iteration around you need to start at 0
-            if (iteratorPosition < indexFileSize)
-            {
-                iteratorPosition = 0;
-            }
-            return iteratorPosition;
+            return Math.max(beginChangeVolatile(headerBuffer) - indexFileSize, 0);
         }
 
         public Long2ObjectHashMap<PrunePosition> queryStartPositions()
@@ -445,16 +452,22 @@ public class ReplayQuery implements AutoCloseable
                 final long changePosition = endChangeVolatile(headerBuffer);
 
                 // Lapped by writer
+                final long beginChangePosition;
                 if (changePosition > iteratorPosition &&
-                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
+                    (iteratorPosition + indexFileSize) < (beginChangePosition = beginChangeVolatile(headerBuffer)))
                 {
-                    iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + indexFileSize;
+                    iteratorPosition = beginChangePosition - indexFileSize;
+                    stopIteratingPosition = beginChangePosition;
+                }
+
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+                if (offset == 0 && iteratorPosition >= changePosition)
+                {
+                    break; // beginning of a segment, the file might not exist yet if we caught up with the writer
                 }
 
                 final UnsafeBuffer segmentBuffer = segmentBuffer(
                     iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize);
-                final int offset = offsetInSegment(iteratorPosition, segmentSize);
 
                 indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();

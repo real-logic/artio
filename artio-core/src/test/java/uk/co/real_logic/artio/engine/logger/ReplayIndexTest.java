@@ -50,8 +50,7 @@ import java.util.stream.IntStream;
 
 import static io.aeron.Aeron.NULL_VALUE;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
@@ -152,6 +151,7 @@ public class ReplayIndexTest extends AbstractLogTest
             new NoOpIdleStrategy(),
             aeronArchive,
             errorHandler,
+            NoOpReplayQueryListener.INSTANCE,
             DEFAULT_ARCHIVE_REPLAY_STREAM,
             DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
             DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY);
@@ -291,6 +291,24 @@ public class ReplayIndexTest extends AbstractLogTest
 
         assertEquals(expectedMessages, msgCount);
         verifyMessagesRead(expectedMessages);
+    }
+
+    @Test(timeout = 20_000L)
+    public void shouldBeQueryableWhenLastSegmentIsFull()
+    {
+        final int segmentCapacity = DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY;
+
+        IntStream.rangeClosed(1, segmentCapacity)
+            .forEach(seqNum -> indexExampleMessage(SESSION_ID, seqNum, SEQUENCE_INDEX));
+
+        final int msgCount = query(1, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        assertEquals(segmentCapacity, msgCount);
+        verifyMessagesRead(segmentCapacity);
+
+        final Long2LongHashMap startPositions = new Long2LongHashMap(NULL_VALUE);
+        query.queryStartPositions(startPositions);
+        assertThat(startPositions, hasEntry(0L, 0L));
     }
 
     @Test(timeout = 20_000L)

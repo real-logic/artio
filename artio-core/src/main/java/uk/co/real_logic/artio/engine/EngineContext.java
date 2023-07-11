@@ -219,6 +219,7 @@ public class EngineContext implements AutoCloseable
             idleStrategy,
             aeronArchive,
             errorHandler,
+            NoOpReplayQueryListener.INSTANCE,
             archiveReplayStream,
             configuration.replayIndexFileRecordCapacity(),
             configuration.replayIndexSegmentRecordCapacity());

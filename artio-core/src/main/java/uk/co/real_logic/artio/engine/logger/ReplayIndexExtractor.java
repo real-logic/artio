@@ -249,29 +249,31 @@ public final class ReplayIndexExtractor
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
 
-            long iteratorPosition = beginChangeVolatile(headerBuffer);
-            if (iteratorPosition < indexFileSize)
-            {
-                iteratorPosition = 0;
-            }
+            long iteratorPosition = Math.max(beginChangeVolatile(headerBuffer) - indexFileSize, 0);
             long stopIteratingPosition = iteratorPosition + indexFileSize;
 
             while (iteratorPosition < stopIteratingPosition)
             {
                 final long changePosition = endChangeVolatile(headerBuffer);
 
+                final long beginChangePosition;
                 if (changePosition > iteratorPosition &&
-                    (iteratorPosition + indexFileSize) <= beginChangeVolatile(headerBuffer))
+                    (iteratorPosition + indexFileSize) < (beginChangePosition = beginChangeVolatile(headerBuffer)))
                 {
                     handler.onLapped();
-                    iteratorPosition = changePosition;
-                    stopIteratingPosition = iteratorPosition + indexFileSize;
+                    iteratorPosition = beginChangePosition - indexFileSize;
+                    stopIteratingPosition = beginChangePosition;
+                }
+
+                final int offset = offsetInSegment(iteratorPosition, segmentSize);
+                if (offset == 0 && iteratorPosition >= changePosition)
+                {
+                    break; // beginning of a segment, the file might not exist yet if we caught up with the writer
                 }
 
                 final UnsafeBuffer segmentBuffer = segmentBuffer(
                     iteratorPosition, segmentSizeBitShift, segmentBuffers, indexFileSize,
                     fixSessionId, streamId, logFileDir);
-                final int offset = offsetInSegment(iteratorPosition, segmentSize);
                 indexRecord.wrap(segmentBuffer, offset, actingBlockLength, actingVersion);
                 final long beginPosition = indexRecord.position();
 
