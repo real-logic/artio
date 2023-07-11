@@ -43,6 +43,7 @@ public final class ReplayQueryChecker
             CommonConfiguration.backoffIdleStrategy(),
             null,
             Throwable::printStackTrace,
+            NoOpReplayQueryListener.INSTANCE,
             -1,
             DEFAULT_REPLAY_INDEX_RECORD_CAPACITY,
             DEFAULT_REPLAY_INDEX_SEGMENT_CAPACITY);
