@@ -481,6 +481,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void initiatorSessionCanBeDisconnectedCustomLogoutMessage()
+    {
+        acquireAcceptingSession();
+
+        final String customLogoutMessage = "custom logout message";
+        logoutSessionWithCustomTextAndDisconnect(initiatingSession, customLogoutMessage);
+
+        assertSessionsDisconnected();
+        testSystem.await("logout text does not match", () ->
+            acceptingOtfAcceptor.lastReceivedMessage().get(58).equals(customLogoutMessage));
+
+        assertSequenceIndicesAre(0);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
     public void acceptorSessionCanBeDisconnected()
     {
         acquireAcceptingSession();

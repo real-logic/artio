@@ -366,7 +366,10 @@ public abstract class AbstractSessionTest
 
     private void backPressureLogout()
     {
-        when(sessionProxy.sendLogout(anyInt(), eq(SEQUENCE_INDEX), anyInt())).thenReturn(BACK_PRESSURED, POSITION);
+        when(sessionProxy.sendLogout(anyInt(),
+          eq(SEQUENCE_INDEX),
+          anyInt(),
+          any())).thenReturn(BACK_PRESSURED, POSITION);
 
         backPressureDisconnect();
     }
@@ -659,7 +662,7 @@ public abstract class AbstractSessionTest
     private void verifyLogoutOnlyOnce()
     {
         verify(sessionProxy, times(1)).sendLogout(
-            anyInt(), eq(SEQUENCE_INDEX), eq(NO_LAST_MSG_SEQ_NUM_PROCESSED));
+            anyInt(), eq(SEQUENCE_INDEX), eq(NO_LAST_MSG_SEQ_NUM_PROCESSED), any());
     }
 
     @Test
@@ -678,6 +681,27 @@ public abstract class AbstractSessionTest
         poll();
 
         verifyLogout(9, times(2));
+    }
+
+    @Test
+    public void shouldKeepCustomLogoutTextWhenBackPressured()
+    {
+        shouldSendTestRequestUponTimeout();
+
+        fakeClock.advanceSeconds(1);
+
+        backPressureLogout();
+
+        final byte[] logoutTextBytes = "customText".getBytes();
+        session().logoutAndDisconnect(logoutTextBytes);
+
+        assertState(LOGGING_OUT_AND_DISCONNECTING);
+
+        poll();
+
+        assertState(DISCONNECTING);
+
+        verifyLogout(8, times(2), logoutTextBytes);
     }
 
     @Test
@@ -1276,7 +1300,12 @@ public abstract class AbstractSessionTest
 
     public void verifyLogout(final int msgSeqNo, final VerificationMode times)
     {
-        verify(sessionProxy, times).sendLogout(msgSeqNo, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verifyLogout(msgSeqNo, times, null);
+    }
+
+    public void verifyLogout(final int msgSeqNo, final VerificationMode times, final byte[] text)
+    {
+        verify(sessionProxy, times).sendLogout(msgSeqNo, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED, text);
     }
 
     public void assertState(final SessionState state)
