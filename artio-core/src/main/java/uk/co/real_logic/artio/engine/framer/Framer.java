@@ -1142,7 +1142,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId = sessionInfo.sessionId();
         final CompositeKey sessionKey = sessionInfo.sessionKey();
 
-        if (sessionKey != null) {
+        if (sessionKey != null)
+        {
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
 
