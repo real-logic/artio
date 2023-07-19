@@ -1142,24 +1142,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId = sessionInfo.sessionId();
         final CompositeKey sessionKey = sessionInfo.sessionKey();
 
-        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        if (sessionKey != null) {
+            final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
 
-        sessionsEncoder.next()
-            .sessionId(sessionId)
-            .connectionId(connectionId)
-            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .lastSentSequenceNumber(lastSentSequenceNumber)
-            .lastLogonTime(lastLogonTime)
-            .sequenceIndex(sessionInfo.sequenceIndex())
-            .slowStatus(isSlowConsumer ? SlowStatus.SLOW : SlowStatus.NOT_SLOW)
-            .address(address)
-            .localCompId(sessionKey.localCompId())
-            .localSubId(sessionKey.localSubId())
-            .localLocationId(sessionKey.localLocationId())
-            .remoteCompId(sessionKey.remoteCompId())
-            .remoteSubId(sessionKey.remoteSubId())
-            .remoteLocationId(sessionKey.remoteLocationId());
+            sessionsEncoder.next()
+                    .sessionId(sessionId)
+                    .connectionId(connectionId)
+                    .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+                    .lastSentSequenceNumber(lastSentSequenceNumber)
+                    .lastLogonTime(lastLogonTime)
+                    .sequenceIndex(sessionInfo.sequenceIndex())
+                    .slowStatus(isSlowConsumer ? SlowStatus.SLOW : SlowStatus.NOT_SLOW)
+                    .address(address)
+                    .localCompId(sessionKey.localCompId())
+                    .localSubId(sessionKey.localSubId())
+                    .localLocationId(sessionKey.localLocationId())
+                    .remoteCompId(sessionKey.remoteCompId())
+                    .remoteSubId(sessionKey.remoteSubId())
+                    .remoteLocationId(sessionKey.remoteLocationId());
+        }
     }
 
     public void onAdminResetSequenceNumbersRequest(final long correlationId, final long sessionId)
