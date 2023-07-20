@@ -201,6 +201,8 @@ public class Session
 
     private DisconnectReason pendingDisconnectReason;
 
+    private byte[] logoutText;
+
     Session(
         final int heartbeatIntervalInS,
         final long connectionId,
@@ -588,6 +590,17 @@ public class Session
     }
 
     /**
+     * Default version of {@link Session#logoutAndDisconnect(byte[])}
+     * The result logout message does not have any value in tag 58
+     *
+     * @return the position within the Aeron stream where the disconnect is encoded.
+     */
+    public long logoutAndDisconnect()
+    {
+        return logoutAndDisconnect(APPLICATION_DISCONNECT);
+    }
+
+    /**
      * Send a logout message and immediately disconnect the session. You should normally use
      * the <code>startLogout</code> method and not this one.
      * <p>
@@ -596,20 +609,28 @@ public class Session
      * message. This should only be used when you want to rapidly disconnect the session and are willing
      * to take the risk that the logout message is not received.
      *
+     * @param text value to be assigned to tag 58 of logout message.
+     *
      * @return the position within the Aeron stream where the disconnect is encoded.
      * @see Session#startLogout()
      */
-    public long logoutAndDisconnect()
+    public long logoutAndDisconnect(final byte[] text)
     {
-        return logoutAndDisconnect(APPLICATION_DISCONNECT);
+        return logoutAndDisconnect(APPLICATION_DISCONNECT, text);
     }
 
     long logoutAndDisconnect(final DisconnectReason reason)
     {
+        return logoutAndDisconnect(reason, null);
+    }
+
+    long logoutAndDisconnect(final DisconnectReason reason, final byte[] text)
+    {
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            position = trySendLogout();
+            text(text);
+            position = trySendLogout(text);
             if (position < 0)
             {
                 state(LOGGING_OUT_AND_DISCONNECTING);
@@ -2238,9 +2259,14 @@ public class Session
 
     private long trySendLogout()
     {
+        return trySendLogout(null);
+    }
+
+    private long trySendLogout(final byte[] text)
+    {
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
-            proxy.sendLogout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed) :
+            proxy.sendLogout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed, text) :
             proxy.sendLogout(sentSeqNum, sequenceIndex(), logoutRejectReason, lastMsgSeqNumProcessed);
         if (position >= 0)
         {
@@ -2398,7 +2424,7 @@ public class Session
 
             case LOGGING_OUT_AND_DISCONNECTING_VALUE:
             {
-                logoutAndDisconnect(APPLICATION_DISCONNECT);
+                logoutAndDisconnect(APPLICATION_DISCONNECT, this.logoutText);
 
                 return actions + 1;
             }
@@ -2724,5 +2750,10 @@ public class Session
     void disconnectOnFirstMessageNotLogon(final boolean disconnectOnFirstMessageNotLogon)
     {
         this.disconnectOnFirstMessageNotLogon = disconnectOnFirstMessageNotLogon;
+    }
+
+    private void text(final byte[] logoutText)
+    {
+        this.logoutText = logoutText;
     }
 }

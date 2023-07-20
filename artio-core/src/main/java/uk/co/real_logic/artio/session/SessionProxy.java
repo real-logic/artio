@@ -54,7 +54,7 @@ public interface SessionProxy
         CancelOnDisconnectOption cancelOnDisconnectOption,
         int cancelOnDisconnectTimeoutWindowInMs);
 
-    long sendLogout(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
+    long sendLogout(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed, byte[] text);
 
     long sendLogout(
         int msgSeqNo, int sequenceIndex, int rejectReason, int lastMsgSeqNumProcessed);

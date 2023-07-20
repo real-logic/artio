@@ -583,6 +583,13 @@ public final class SystemTestUtil
         return position;
     }
 
+    public static long logoutSessionWithCustomTextAndDisconnect(final Session session, final String text)
+    {
+        final long position = session.logoutAndDisconnect(text == null ? null : text.getBytes());
+        assertThat(position, greaterThan(0L));
+        return position;
+    }
+
     public static long logoutSession(final TestSystem testSystem, final Session session)
     {
         return testSystem.awaitSend(session::startLogout);

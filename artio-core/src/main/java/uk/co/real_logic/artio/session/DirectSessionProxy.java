@@ -267,9 +267,13 @@ public class DirectSessionProxy implements SessionProxy
         return string != null && string.length() > 0;
     }
 
-    public long sendLogout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+    public long sendLogout(
+        final int msgSeqNo,
+        final int sequenceIndex,
+        final int lastMsgSeqNumProcessed,
+        final byte[] text)
     {
-        return sendLogout(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, text, text == null ? 0 : text.length, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
     public long sendLogout(
