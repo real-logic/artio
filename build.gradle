@@ -44,9 +44,9 @@ def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.37'
 def byteBuddyVersion = '1.14.4'
 
-def agronaVersion = '1.18.2'
-def sbeVersion = '1.28.3'
-def aeronVersion = '1.41.4'
+def agronaVersion = '1.19.1'
+def sbeVersion = '1.29.0'
+def aeronVersion = '1.42.0'
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
 
