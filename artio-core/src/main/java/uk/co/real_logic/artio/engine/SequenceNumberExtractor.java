@@ -73,7 +73,7 @@ public class SequenceNumberExtractor
 
     private int pickSequenceNumber()
     {
-        return newSequenceNumber != NO_SEQUENCE_NUMBER ? newSequenceNumber : sequenceNumber;
+        return newSequenceNumber != NO_SEQUENCE_NUMBER ? newSequenceNumber - 1 : sequenceNumber;
     }
 
     public int sequenceNumber()
@@ -115,7 +115,7 @@ public class SequenceNumberExtractor
             }
             else if (tag == NEW_SEQ_NO && isSequenceReset)
             {
-                newSequenceNumber = buffer.getInt(offset, offset + length) - 1;
+                newSequenceNumber = buffer.getInt(offset, offset + length);
                 return STOP;
             }
 
