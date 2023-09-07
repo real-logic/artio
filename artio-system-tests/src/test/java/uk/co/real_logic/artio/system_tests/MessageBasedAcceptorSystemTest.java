@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.RethrowingErrorHandler;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
@@ -840,6 +842,77 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 connection.readSequenceResetGapFill(highSeqNum);
             });
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportResendRequestsAfterOfflineSequenceReset() throws Exception
+    {
+        printErrors = true;
+
+        setup(false, true, true, SOLE_LIBRARY);
+
+        setupLibrary();
+
+        int highestPrevSeqNum = 0;
+        final ReportFactory reportFactory = new ReportFactory();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            connection.logon(false);
+            testSystem.awaitBlocking(() -> connection.readLogon(1));
+
+            session = handler.lastSession();
+            assertNotNull(session);
+
+            // make the acceptor send some messages to increase the outgoing sequence number
+            final int erCount = 10;
+            for (int i = 0; i < erCount; i++)
+            {
+                reportFactory.sendReport(testSystem, session, Side.BUY);
+            }
+            for (int i = 0; i < erCount; i++)
+            {
+                highestPrevSeqNum = connection.readExecutionReport().header().msgSeqNum();
+            }
+        }
+
+        // reset sequence numbers while the session is disconnected to trigger the sequence reset flow
+        assertSessionDisconnected(testSystem, session);
+        testSystem.awaitSend(() -> session.tryResetSequenceNumbers());
+
+        // we need to await on the received sequence number index, because that's what the framer will query on accept
+        try (SequenceNumberIndexReader indexReader = createReceivedSequenceNumberIndexReader())
+        {
+            testSystem.await("received seq num reset", () -> indexReader.lastKnownSequenceNumber(session.id()) == 0);
+        }
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            // reconnect with sequence numbers reset
+            connection.logon(false);
+            testSystem.awaitBlocking(() -> connection.readLogon(1));
+
+            // make the acceptor send an execution report, so that we can request a resend of something
+            reportFactory.sendReport(testSystem, session, Side.SELL);
+            final ExecutionReportDecoder er = connection.readExecutionReport();
+            assertSell(er);
+
+            // now request a resend of the execution report, which should get serviced, while making sure the sequence
+            // number is lower than the highest in the previous sequence index
+            final int erSeqNum = er.header().msgSeqNum();
+            assertThat(erSeqNum, lessThan(highestPrevSeqNum));
+            connection.sendResendRequest(erSeqNum, 0);
+            testSystem.awaitBlocking(() -> connection.readResentExecutionReport(erSeqNum));
+        }
+    }
+
+    private SequenceNumberIndexReader createReceivedSequenceNumberIndexReader()
+    {
+        return new SequenceNumberIndexReader(
+            engine.configuration().receivedSequenceNumberBuffer(),
+            RethrowingErrorHandler.INSTANCE,
+            null,
+            null);
     }
 
     private void assertSell(final ExecutionReportDecoder executionReport)

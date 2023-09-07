@@ -874,6 +874,10 @@ public class SequenceNumberIndexWriter implements Index
                         createNewRecord(newSequenceNumber, sessionId, position, messagePosition);
                         hasSavedRecordSinceFileUpdate = true;
                     }
+                    else
+                    {
+                        saveRedactForLater(newSequenceNumber, requiredPosition, sessionId);
+                    }
                     return position;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
@@ -915,9 +919,7 @@ public class SequenceNumberIndexWriter implements Index
             {
                 // We've not processed the message that needs redacting yet, so keep track that we need to
                 // redact this message when it arrives.
-                final Long2LongHashMap redactPositionToSeqNum = sessionIdToRedactPositions.computeIfAbsent(
-                    sessionId, ignore -> new Long2LongHashMap(NO_SEQUENCE_NUMBER));
-                redactPositionToSeqNum.put(requiredPosition, newSequenceNumber);
+                saveRedactForLater(newSequenceNumber, requiredPosition, sessionId);
                 return;
             }
         }
@@ -958,6 +960,13 @@ public class SequenceNumberIndexWriter implements Index
             }
             hasSavedRecordSinceFileUpdate = true;
         }
+    }
+
+    private void saveRedactForLater(final int newSequenceNumber, final long requiredPosition, final long sessionId)
+    {
+        final Long2LongHashMap redactPositionToSeqNum = sessionIdToRedactPositions.computeIfAbsent(
+            sessionId, ignore -> new Long2LongHashMap(NO_SEQUENCE_NUMBER));
+        redactPositionToSeqNum.put(requiredPosition, newSequenceNumber);
     }
 
     private void createNewRecord(
