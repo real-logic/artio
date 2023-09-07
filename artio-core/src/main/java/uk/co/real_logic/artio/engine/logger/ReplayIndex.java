@@ -38,6 +38,7 @@ import java.util.function.LongFunction;
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.logbuffer.FrameDescriptor.*;
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
@@ -401,6 +402,7 @@ public class ReplayIndex implements Index
             final int newSequenceNumber = sequenceNumberExtractor.newSequenceNumber();
             final int sequenceIndex = messageFrame.sequenceIndex();
             final long timestamp = messageFrame.timestamp();
+            final long messageType = messageFrame.messageType();
 
             if (sequenceNumber != NO_SEQUENCE_NUMBER)
             {
@@ -427,6 +429,11 @@ public class ReplayIndex implements Index
                 }
                 else
                 {
+                    if (messageType == SEQUENCE_RESET_MESSAGE_TYPE && newSequenceNumber == 1)
+                    {
+                        sequenceNumber = 0;
+                    }
+
                     sessionIndex.onRecord(
                         endPosition, length, sequenceNumber, sequenceIndex, aeronSessionId, recordingId, timestamp);
                 }

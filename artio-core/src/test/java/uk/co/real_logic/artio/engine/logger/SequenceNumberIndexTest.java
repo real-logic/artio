@@ -247,6 +247,16 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     }
 
     @Test
+    public void shouldRedactSequenceNumberWhenFixMessageProcessedAfterRedactButNotBefore()
+    {
+        bufferContainsExampleMessage(false, SESSION_ID, SEQUENCE_NUMBER + 100, SEQUENCE_INDEX);
+        final long messagePosition = writeBuffer();
+        indexRedactSequenceMessage(messagePosition);
+        indexToPosition(publication.sessionId(), messagePosition);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+    }
+
+    @Test
     public void shouldValidateBufferItReadsFrom()
     {
         final AtomicBuffer tableBuffer = newBuffer();
