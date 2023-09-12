@@ -66,6 +66,7 @@ public class FixPSenderEndPoints implements AutoCloseable
         if (endPoint != null)
         {
             endPoint.close();
+            this.backPressuredEndpoints = ArrayUtil.remove(backPressuredEndpoints, endPoint);
         }
     }
 
