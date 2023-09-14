@@ -98,7 +98,7 @@ public class ConnectAfterTimeoutSystemTest extends AbstractGatewayToGatewaySyste
         assertEquals(Reply.State.TIMED_OUT, secondConnectReply.state());
 
         // Make connections work again
-        debugTcpChannelSupplier.unpauseConnects();
+        debugTcpChannelSupplier.unpauseAndDiscardConnects();
 
         // Now it should connect
         connectSessions();

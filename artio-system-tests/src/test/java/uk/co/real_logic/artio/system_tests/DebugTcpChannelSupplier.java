@@ -108,6 +108,12 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         connectsPaused = false;
     }
 
+    public synchronized void unpauseAndDiscardConnects()
+    {
+        connectsPaused = false;
+        pausedOperations.clear();
+    }
+
     protected void onFinishConnect(
         final InitiatedChannelHandler channelHandler, final SocketChannel channel) throws IOException
     {
