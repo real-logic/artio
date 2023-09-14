@@ -194,6 +194,7 @@ public class FramerTest
             mock(RecordingCoordinator.class),
             mock(FixPContexts.class),
             mock(CountersReader.class),
+            2,
             1,
             mock(FixCounters.class),
             mock(SenderSequenceNumbers.class),

@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.RethrowingErrorHandler;
 import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -27,7 +26,6 @@ import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
@@ -881,10 +879,11 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
         testSystem.awaitSend(() -> session.tryResetSequenceNumbers());
 
         // we need to await on the received sequence number index, because that's what the framer will query on accept
-        try (SequenceNumberIndexReader indexReader = createReceivedSequenceNumberIndexReader())
-        {
-            testSystem.await("received seq num reset", () -> indexReader.lastKnownSequenceNumber(session.id()) == 0);
-        }
+        awaitIndexerCaughtUp(
+            testSystem,
+            mediaDriver.mediaDriver().aeronDirectoryName(),
+            engine,
+            library);
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
@@ -904,15 +903,6 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             connection.sendResendRequest(erSeqNum, 0);
             testSystem.awaitBlocking(() -> connection.readResentExecutionReport(erSeqNum));
         }
-    }
-
-    private SequenceNumberIndexReader createReceivedSequenceNumberIndexReader()
-    {
-        return new SequenceNumberIndexReader(
-            engine.configuration().receivedSequenceNumberBuffer(),
-            RethrowingErrorHandler.INSTANCE,
-            null,
-            null);
     }
 
     private void assertSell(final ExecutionReportDecoder executionReport)

@@ -535,4 +535,13 @@ public class FixLibrary extends GatewayProcess
         return RETHROW_EXCEPTION.get();
     }
 
+    /**
+     * Returns information about library streams. Internal API for testing.
+     *
+     * @return information about library streams
+     */
+    LibraryStreamInfo libraryStreamInfo()
+    {
+        return poller.libraryStreamInfo();
+    }
 }

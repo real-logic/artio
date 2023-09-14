@@ -142,6 +142,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReceiverEndPoints receiverEndPoints;
     private final FixSenderEndPoints fixSenderEndPoints;
     private final CountersReader countersReader;
+    private final long inboundIndexRegistrationId;
     private final long outboundIndexRegistrationId;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final ReproductionLogWriter reproductionLogWriter;
@@ -228,6 +229,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final RecordingCoordinator recordingCoordinator,
         final FixPContexts fixPContexts,
         final CountersReader countersReader,
+        final long inboundIndexRegistrationId,
         final long outboundIndexRegistrationId,
         final FixCounters fixCounters,
         final SenderSequenceNumbers senderSequenceNumbers,
@@ -254,6 +256,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.fixSenderEndPoints = new FixSenderEndPoints(errorHandler);
         this.countersReader = countersReader;
+        this.inboundIndexRegistrationId = inboundIndexRegistrationId;
         this.outboundIndexRegistrationId = outboundIndexRegistrationId;
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.reproductionLogWriter = reproductionLogWriter;
@@ -3488,6 +3491,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         command.position(new UnsafeBufferPosition((UnsafeBuffer)countersReader.valuesBuffer(), counterId));
+    }
+
+    public void onEngineStreamInfoRequest(final EngineStreamInfoRequestCommand command)
+    {
+        command.complete(new EngineStreamInfo(
+            inboundIndexRegistrationId,
+            outboundIndexRegistrationId,
+            inboundPublication.sessionId(),
+            inboundPublication.position(),
+            outboundPublication.sessionId(),
+            outboundPublication.position()));
     }
 
     public void onWriteMetaDataResponse(final WriteMetaDataResponse response)

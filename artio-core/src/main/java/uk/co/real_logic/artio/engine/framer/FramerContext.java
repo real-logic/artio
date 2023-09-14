@@ -177,6 +177,7 @@ public class FramerContext
             recordingCoordinator,
             fixPContexts,
             aeron.countersReader(),
+            engineContext.inboundIndexRegistrationId(),
             engineContext.outboundIndexRegistrationId(),
             fixCounters,
             engineContext.senderSequenceNumbers(),
@@ -424,5 +425,17 @@ public class FramerContext
             Thread.yield();
         }
         return command;
+    }
+
+    public Reply<EngineStreamInfo> engineStreamInfo()
+    {
+        final EngineStreamInfoRequestCommand command = new EngineStreamInfoRequestCommand();
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
     }
 }

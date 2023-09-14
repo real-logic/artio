@@ -2427,6 +2427,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         return (List<FixPConnection>)(List<?>)unmodifiableFixPConnections;
     }
+
+    LibraryStreamInfo libraryStreamInfo()
+    {
+        return new LibraryStreamInfo(
+            inboundPublication.sessionId(),
+            inboundPublication.position(),
+            outboundPublication.sessionId(),
+            outboundPublication.position());
+    }
 }
 
 class UnmodifiableWrapper<T> extends AbstractList<T>
