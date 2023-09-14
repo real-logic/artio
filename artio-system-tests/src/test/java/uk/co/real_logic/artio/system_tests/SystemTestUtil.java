@@ -15,11 +15,13 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.Aeron;
 import org.agrona.IoUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.status.CountersReader;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
@@ -29,20 +31,21 @@ import uk.co.real_logic.artio.builder.AbstractTestRequestEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.FixEngineInternals;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
+import uk.co.real_logic.artio.engine.framer.EngineStreamInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.fixp.FixPMessageConsumer;
-import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -617,6 +620,91 @@ public final class SystemTestUtil
                 fixPConsumer,
                 follow,
                 DEFAULT_ARCHIVE_SCANNER_STREAM);
+        }
+    }
+
+    static void awaitIndexerCaughtUp(
+        final TestSystem testSystem,
+        final String aeronDirectoryName,
+        final FixEngine engine,
+        final FixLibrary library)
+    {
+        final EngineStreamInfo engineStreamInfo =
+            testSystem.awaitCompletedReply(FixEngineInternals.engineStreamInfo(engine)).resultIfPresent();
+
+        final LibraryStreamInfo libraryStreamInfo = FixLibraryInternals.libraryStreamInfo(library);
+
+        final Aeron.Context aeronCtx = new Aeron.Context().aeronDirectoryName(aeronDirectoryName);
+        try (Aeron aeron = Aeron.connect(aeronCtx))
+        {
+            final CountersReader countersReader = aeron.countersReader();
+
+            final List<SubPosMatcher> subPosMatchers = new ArrayList<>();
+            subPosMatchers.add(new SubPosMatcher(
+                countersReader,
+                engineStreamInfo.inboundIndexSubscriptionRegistrationId(),
+                engineStreamInfo.inboundPublicationSessionId(),
+                engineStreamInfo.inboundPublicationPosition()));
+            subPosMatchers.add(new SubPosMatcher(
+                countersReader,
+                engineStreamInfo.inboundIndexSubscriptionRegistrationId(),
+                libraryStreamInfo.inboundPublicationSessionId(),
+                libraryStreamInfo.inboundPublicationPosition()));
+            subPosMatchers.add(new SubPosMatcher(
+                countersReader,
+                engineStreamInfo.outboundIndexSubscriptionRegistrationId(),
+                engineStreamInfo.outboundPublicationSessionId(),
+                engineStreamInfo.outboundPublicationPosition()));
+            subPosMatchers.add(new SubPosMatcher(
+                countersReader,
+                engineStreamInfo.outboundIndexSubscriptionRegistrationId(),
+                libraryStreamInfo.outboundPublicationSessionId(),
+                libraryStreamInfo.outboundPublicationPosition()));
+
+            countersReader.forEach((counterId, typeId, keyBuffer, label) ->
+            {
+                for (final SubPosMatcher subPosMatcher : subPosMatchers)
+                {
+                    subPosMatcher.tryMatch(counterId, typeId, keyBuffer);
+                }
+            });
+
+            for (final SubPosMatcher subPosMatcher : subPosMatchers)
+            {
+                if (!subPosMatcher.hasCounterId())
+                {
+                    throw new IllegalStateException("did not match all counters: " + subPosMatchers);
+                }
+            }
+
+            assertEventuallyTrue(
+                () ->
+                {
+                    final StringBuilder builder = new StringBuilder();
+                    builder.append("expected sub-pos counters:\n");
+                    for (final SubPosMatcher subPosMatcher : subPosMatchers)
+                    {
+                        builder.append(subPosMatcher).append('\n');
+                    }
+                    builder.append("\nbut counters were:\n");
+                    countersReader.forEach((value, counterId, label) ->
+                        builder.append(String.format("%d: %d - %s%n", counterId, value, label)));
+                    return builder.toString();
+                },
+                () ->
+                {
+                    testSystem.poll();
+                    for (final SubPosMatcher subPosMatcher : subPosMatchers)
+                    {
+                        if (!subPosMatcher.isCaughtUp())
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                DEFAULT_TIMEOUT_IN_MS,
+                () -> {});
         }
     }
 }

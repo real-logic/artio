@@ -23,6 +23,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.status.ReadablePosition;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.engine.framer.EngineStreamInfo;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.timing.EngineTimers;
@@ -524,5 +525,15 @@ public final class FixEngine extends GatewayProcess
         }
 
         return framerContext.startReproduction();
+    }
+
+    /**
+     * Returns information about engine streams. Internal API for testing.
+     *
+     * @return a reply that should eventually contain information about engine streams or {@code null} if back-pressured
+     */
+    Reply<EngineStreamInfo> engineStreamInfo()
+    {
+        return framerContext.engineStreamInfo();
     }
 }

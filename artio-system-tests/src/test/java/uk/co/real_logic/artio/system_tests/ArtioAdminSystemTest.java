@@ -112,6 +112,13 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged(otherInitSession);
         assertThat(acceptingLibrary.sessions(), hasSize(1));
 
+        // admin API queries the index for sequence numbers, so we need to wait
+        awaitIndexerCaughtUp(
+            testSystem,
+            mediaDriver.mediaDriver().aeronDirectoryName(),
+            acceptingEngine,
+            acceptingLibrary);
+
         testSystem.awaitLongBlocking(() ->
         {
             launchArtioAdmin();

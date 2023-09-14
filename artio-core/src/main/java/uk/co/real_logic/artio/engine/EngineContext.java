@@ -77,6 +77,7 @@ public class EngineContext implements AutoCloseable
     private ReplayQuery pruneInboundReplayQuery;
     private ReplayQuery outboundReplayQuery;
     private FramerContext framerContext;
+    private long inboundIndexRegistrationId;
     private long outboundIndexRegistrationId;
 
     EngineContext(
@@ -281,9 +282,12 @@ public class EngineContext implements AutoCloseable
             }
             inboundIndices.add(receivedSequenceNumberIndex);
 
+            final Subscription inboundIndexSubscription = inboundLibraryStreams.subscription("inboundIndexer");
+            inboundIndexRegistrationId = inboundIndexSubscription.registrationId();
+
             inboundIndexer = new Indexer(
                 inboundIndices,
-                inboundLibraryStreams.subscription("inboundIndexer"),
+                inboundIndexSubscription,
                 configuration.agentNamePrefix(),
                 inboundCompletionPosition,
                 configuration.archiveReplayStream());
@@ -320,6 +324,11 @@ public class EngineContext implements AutoCloseable
             suppressingClose(outboundReplayIndex, e);
             throw e;
         }
+    }
+
+    public long inboundIndexRegistrationId()
+    {
+        return inboundIndexRegistrationId;
     }
 
     public long outboundIndexRegistrationId()
