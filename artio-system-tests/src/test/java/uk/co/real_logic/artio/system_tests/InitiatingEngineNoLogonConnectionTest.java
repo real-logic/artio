@@ -38,25 +38,26 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGatewaySystemTest
 {
     private final ServerSocket serverSocket;
+    private final Thread serverThread;
 
     public InitiatingEngineNoLogonConnectionTest() throws IOException
     {
         serverSocket = new ServerSocket(port);
-        final Thread serverThread = new Thread(() ->
-        {
-            try
+        serverThread = new Thread(
+            () ->
             {
-                while (true)
+                try
                 {
-                    serverSocket.accept();
+                    while (true)
+                    {
+                        serverSocket.accept();
+                    }
                 }
-            }
-            catch (final Exception e)
-            {
-                // Deliberately blank as closing the socket will cause an exception to be thrown.
-            }
-        });
-        serverThread.start();
+                catch (final IOException ignore)
+                {
+                    // Deliberately blank as closing the socket will cause an exception to be thrown.
+                }
+            });
     }
 
     @Before
@@ -68,12 +69,19 @@ public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGate
         initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort, nanoClock));
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, nanoClock);
         testSystem = new TestSystem(initiatingLibrary);
+
+        serverThread.setDaemon(true);
+        serverThread.start();
     }
 
     @After
-    public void stopServerThread() throws IOException
+    public void stopServerThread() throws Exception
     {
         serverSocket.close();
+        if (serverThread.isAlive())
+        {
+            serverThread.join();
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

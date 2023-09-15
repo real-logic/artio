@@ -115,6 +115,9 @@ public class ReportFactory
             case NO:
                 header.origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()));
                 break;
+
+            default:
+                break;
         }
 
         return executionReport;

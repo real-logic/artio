@@ -70,6 +70,9 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
             case SESSION_CONNECTED:
                 sendOrder();
                 return 1;
+
+            default:
+                break;
         }
 
         return 0;
@@ -189,5 +192,4 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
     {
         return this;
     }
-
 }

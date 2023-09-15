@@ -226,7 +226,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
 
         public void onCancelOnDisconnectTimeout(final long sessionId, final FixPContext context)
         {
-            this.result = new TimeoutResult(sessionId, context);
+            this.result = new TimeoutResult(sessionId, context, nanoClock.nanoTime());
             invokeCount.incrementAndGet();
         }
 
@@ -241,18 +241,17 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         }
     }
 
-    final class TimeoutResult
+    static final class TimeoutResult
     {
         private final long surrogateId;
         private final FixPContext context;
         private final long timeInNs;
 
-        private TimeoutResult(final long surrogateId, final FixPContext context)
+        private TimeoutResult(final long surrogateId, final FixPContext context, final long nowNs)
         {
             this.surrogateId = surrogateId;
             this.context = context;
-            timeInNs = nanoClock.nanoTime();
+            timeInNs = nowNs;
         }
     }
-
 }

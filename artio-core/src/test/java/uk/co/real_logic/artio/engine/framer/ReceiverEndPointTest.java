@@ -426,7 +426,8 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesTwoCompleteMessages();
-        assertEquals(-2 * MSG_LEN, endPoint.poll());
+        final int expected = -2 * MSG_LEN;
+        assertEquals(expected, endPoint.poll());
 
         pollWithNoData(0);
 

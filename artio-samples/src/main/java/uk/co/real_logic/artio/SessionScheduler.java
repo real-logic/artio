@@ -208,6 +208,9 @@ public class SessionScheduler
                         state = State.DISCONNECTED;
                         return 1;
                     }
+
+                    default:
+                        break;
                 }
 
                 return 0;
