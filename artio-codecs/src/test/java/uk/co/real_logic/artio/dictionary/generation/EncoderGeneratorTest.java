@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.util.Reflection;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
@@ -66,6 +67,8 @@ public class EncoderGeneratorTest
         {
             System.out.println(sources);
         }
+
+        Objects.requireNonNull(heartbeat, "heartbeat must not be null");
         final ClassLoader classLoader = heartbeat.getClassLoader();
         enumTestMessage = classLoader.loadClass(ENUM_TEST_MESSAGE_ENCODER);
         otherMessage = classLoader.loadClass(OTHER_MESSAGE_ENCODER);
