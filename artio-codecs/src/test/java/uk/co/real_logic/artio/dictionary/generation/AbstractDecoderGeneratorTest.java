@@ -98,7 +98,12 @@ public abstract class AbstractDecoderGeneratorTest
         if (heartbeat == null || CODEC_LOGGING)
         {
             System.err.println("sourcesWithValidation = " + sourcesWithValidation);
+            if (null == heartbeat)
+            {
+                throw new NullPointerException("heartbeat cannot be null");
+            }
         }
+
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         phoneBookMessage = heartbeat.getClassLoader().loadClass(PHONE_BOOK_MESSAGE_DECODER);
