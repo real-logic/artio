@@ -35,7 +35,6 @@ import static uk.co.real_logic.artio.engine.logger.FixMessageLogger.Configuratio
  */
 public class FixArchiveScanner implements AutoCloseable
 {
-    public static final String DEFAULT_ARCHIVE_CONTROL_CHANNEL = "aeron:udp?endpoint=localhost:8010";
     public static final int DEFAULT_FRAGMENT_LIMIT = 10000;
 
     static final boolean DEBUG_LOG_ARCHIVE_SCAN = DebugLogger.isEnabled(ARCHIVE_SCAN);
@@ -211,7 +210,6 @@ public class FixArchiveScanner implements AutoCloseable
         if (archiveContext == null)
         {
             archiveContext = new AeronArchive.Context();
-            archiveContext.controlResponseChannel(DEFAULT_ARCHIVE_CONTROL_CHANNEL);
         }
         // Context closes Aeron instance if this fails to connect.
         final AeronArchive aeronArchive = AeronArchive.connect(archiveContext.aeron(aeron).ownsAeronClient(true));
