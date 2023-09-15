@@ -590,7 +590,7 @@ class DecoderGenerator extends Generator
     {
         final List<Field> allGroupFields = groupAggregate
             .fieldEntries()
-            .map(entry -> (Field)entry.element())
+            .map((entry) -> (Field)entry.element())
             .collect(toList());
         return generateFieldDictionary(allGroupFields, ALL_GROUP_FIELDS, true);
     }
@@ -1743,7 +1743,11 @@ class DecoderGenerator extends Generator
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
             "            int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
-            malformedMessageCheck() +
+            "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX)\n" +
+            "            {\n" +
+            "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
+            "                break;\n" +
+            "            }\n" +
             "            final int valueLength = endOfField - valueOffset;\n" +
             "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "            {\n" +
@@ -1769,16 +1773,6 @@ class DecoderGenerator extends Generator
             "            }\n\n" +
             "            switch (tag)\n" +
             "            {\n";
-    }
-
-    private String malformedMessageCheck()
-    {
-        return "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX || " +
-               "equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
-               "            {\n" +
-               "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
-               "                break;\n" +
-               "            }\n";
     }
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
