@@ -1152,7 +1152,6 @@ class InternalBinaryEntryPointConnection
             ", minFixPKeepaliveTimeoutInMs=" + minFixPKeepaliveTimeoutInMs +
             ", noEstablishFixPTimeoutInMs=" + noEstablishFixPTimeoutInMs +
             ", maxRetransmissionRange=" + maxRetransmissionRange +
-            ", cancelOnDisconnect=" + cancelOnDisconnect +
             ", allTemplateIds=" + allTemplateIds +
             ", resendTerminationCode=" + resendTerminationCode +
             ", sessionId=" + sessionId +

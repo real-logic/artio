@@ -393,11 +393,10 @@ public class FixGatewaySessions extends GatewaySessions
 
             final String username = SessionParser.username(logon);
             final String password = SessionParser.password(logon);
-            final CancelOnDisconnectOption cancelOnDisconnectOption = SessionParser.cancelOnDisconnectType(logon,
-                this.cancelOnDisconnectOption);
-            final long cancelOnDisconnectTimeoutWindowInNs =
-                MILLISECONDS.toNanos(SessionParser.cancelOnDisconnectTimeoutWindow(logon,
-                this.cancelOnDisconnectTimeoutWindowInMs));
+            final CancelOnDisconnectOption cancelOnDisconnectOptionLocal = SessionParser.cancelOnDisconnectType(
+                logon, cancelOnDisconnectOption);
+            final long cancelOnDisconnectTimeoutWindowInNs = MILLISECONDS.toNanos(
+                SessionParser.cancelOnDisconnectTimeoutWindow(logon, cancelOnDisconnectTimeoutWindowInMs));
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey;
@@ -434,7 +433,7 @@ public class FixGatewaySessions extends GatewaySessions
                 password,
                 logon.heartBtInt(),
                 header.msgSeqNum(),
-                cancelOnDisconnectOption,
+                cancelOnDisconnectOptionLocal,
                 cancelOnDisconnectTimeoutWindowInNs);
             session.lastLogonTime(logonTimeInNs);
 

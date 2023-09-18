@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.lang.reflect.Proxy;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.lang.reflect.Modifier.*;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
@@ -61,7 +62,10 @@ public class AcceptorGeneratorTest
         DECODER_GENERATOR.generate();
         ACCEPTOR_GENERATOR.generate();
         final Map<String, CharSequence> sources = OUTPUT_MANAGER.getSources();
+
         acceptor = compileInMemory(TEST_PACKAGE + "." + DICTIONARY_ACCEPTOR, sources);
+        Objects.requireNonNull(acceptor, "acceptor must not be null");
+
         decoder = acceptor.getClassLoader().loadClass(TEST_PACKAGE + "." + DICTIONARY_DECODER);
         if (acceptor == null || decoder == null)
         {

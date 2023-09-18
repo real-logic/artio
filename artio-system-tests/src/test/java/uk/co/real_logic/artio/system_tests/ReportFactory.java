@@ -107,6 +107,9 @@ public class ReportFactory
             case NO_WITHOUT_ORIG_SENDING_TIME:
                 header.possDupFlag(false);
                 break;
+
+            default:
+                break;
         }
 
         switch (possDupFlag)
@@ -114,6 +117,9 @@ public class ReportFactory
             case YES:
             case NO:
                 header.origSendingTime(timestamp.buffer(), timestamp.encode(System.currentTimeMillis()));
+                break;
+
+            default:
                 break;
         }
 

@@ -417,7 +417,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         public void onCancelOnDisconnectTimeout(final long sessionId, final CompositeKey fixSessionKey)
         {
-            this.result = new TimeoutResult(sessionId, fixSessionKey);
+            result = new TimeoutResult(sessionId, fixSessionKey, nanoClock.nanoTime());
             invokeCount.incrementAndGet();
         }
 
@@ -432,18 +432,17 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         }
     }
 
-    final class TimeoutResult
+    static final class TimeoutResult
     {
         private final long surrogateId;
         private final CompositeKey compositeId;
         private final long timeInNs;
 
-        private TimeoutResult(final long surrogateId, final CompositeKey compositeId)
+        private TimeoutResult(final long surrogateId, final CompositeKey compositeId, final long nowNs)
         {
             this.surrogateId = surrogateId;
             this.compositeId = compositeId;
-            timeInNs = nanoClock.nanoTime();
+            timeInNs = nowNs;
         }
     }
-
 }

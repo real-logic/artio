@@ -16,9 +16,10 @@
 package uk.co.real_logic.artio.benchmarks;
 
 import org.HdrHistogram.Histogram;
+import org.agrona.IoUtil;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -39,7 +40,11 @@ public final class NetworkBenchmarkUtil
         final MappedByteBuffer buffer,
         final long time) throws IOException
     {
-        buffer.putLong(0, time);
+        if (null != buffer)
+        {
+            buffer.putLong(0, time);
+        }
+
         long position = 0;
         while (position < MESSAGE_SIZE)
         {
@@ -61,19 +66,18 @@ public final class NetworkBenchmarkUtil
 
     public static FileChannel newFile(final String filename)
     {
+        FileChannel fileChannel = null;
         try
         {
-            final RandomAccessFile file = new RandomAccessFile("/dev/shm/" + filename, "rw");
-            file.write(new byte[MESSAGE_SIZE]);
-            file.seek(0);
-            return file.getChannel();
+            fileChannel = IoUtil.createEmptyFile(new File("/dev/shm/" + filename), MESSAGE_SIZE, true);
         }
-        catch (final IOException e)
+        catch (final Exception ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
             System.exit(1);
-            return null;
         }
+
+        return fileChannel;
     }
 
     public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer, final long value)

@@ -32,10 +32,7 @@ import uk.co.real_logic.artio.util.Reflection;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -99,6 +96,8 @@ public abstract class AbstractDecoderGeneratorTest
         {
             System.err.println("sourcesWithValidation = " + sourcesWithValidation);
         }
+
+        Objects.requireNonNull(heartbeat, "heartbeat must not be null");
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         phoneBookMessage = heartbeat.getClassLoader().loadClass(PHONE_BOOK_MESSAGE_DECODER);
