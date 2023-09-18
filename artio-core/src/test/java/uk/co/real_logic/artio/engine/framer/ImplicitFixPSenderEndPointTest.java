@@ -242,6 +242,7 @@ public class ImplicitFixPSenderEndPointTest
             .then(inv -> checkMessageFullySent(4, inv));
         assertEquals(CONTINUE, endPoint.onReplayComplete(CORRELATION_ID));
         verifyWritten(3);
+        reattempt();
 
         onSentMessage(5, false);
     }
