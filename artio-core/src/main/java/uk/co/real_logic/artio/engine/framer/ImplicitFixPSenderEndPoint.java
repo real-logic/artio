@@ -39,11 +39,17 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
  */
 class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 {
+    /**
+     * Property name for the ordered delivery boolean
+     */
+    public static final String UNORDERED_DELIVERY_PROP = "fix.core.unordered_delivery";
+
     private final int templateIdOffset;
     private final int retransmissionTemplateId;
     private final FixPSenderEndPoints fixPSenderEndPoints;
     private final ReattemptState normalBuffer = new ReattemptState();
     private final ReattemptState retransmitBuffer = new ReattemptState();
+    private final boolean orderedDelivery;
 
     private boolean retransmitting;
     private boolean requiresReattempting;
@@ -67,6 +73,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         this.templateIdOffset = templateIdOffset;
         this.retransmissionTemplateId = retransmissionTemplateId;
         this.fixPSenderEndPoints = fixPSenderEndPoints;
+        this.orderedDelivery = !Boolean.getBoolean(UNORDERED_DELIVERY_PROP);
     }
 
     public Action onMessage(final DirectBuffer directBuffer, final int offset, final boolean retransmit)
@@ -78,7 +85,10 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 
             final int messageSize = readSofhMessageSize(directBuffer, offset);
 
-            if ((retransmitting && !retransmit) || (!retransmitting && retransmit) || reattemptBytesWritten > 0)
+            if ((retransmitting && !retransmit) || 
+                (!retransmitting && retransmit) || 
+                reattemptBytesWritten > 0 || 
+                (orderedDelivery && requiresReattempting))
             {
                 enqueue(directBuffer, offset, messageSize, retransmit);
                 return CONTINUE;
