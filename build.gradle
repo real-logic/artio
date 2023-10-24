@@ -25,15 +25,15 @@ buildscript {
     }
 
     dependencies {
-        classpath 'org.ow2.asm:asm:9.5'
-        classpath 'org.ow2.asm:asm-commons:9.5'
+        classpath 'org.ow2.asm:asm:9.6'
+        classpath 'org.ow2.asm:asm-commons:9.6'
     }
 }
 
 plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
     id 'net.researchgate.release' version '2.8.1'
-    id 'com.github.ben-manes.versions' version '0.48.0'
+    id 'com.github.ben-manes.versions' version '0.49.0'
 }
 
 def checkstyleVersion = '9.3'
@@ -42,7 +42,7 @@ def junitVersion = '5.10.0'
 def mockitoVersion = '4.11.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.37'
-def byteBuddyVersion = '1.14.8'
+def byteBuddyVersion = '1.14.9'
 
 def agronaVersion = '1.19.2'
 def sbeVersion = '1.29.0'
