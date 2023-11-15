@@ -78,9 +78,10 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 
             final int messageSize = readSofhMessageSize(directBuffer, offset);
 
-            if ((retransmitting && !retransmit) || (!retransmitting && retransmit) || reattemptBytesWritten > 0)
+            if ((retransmitting && !retransmit) || (!retransmitting && retransmit) ||
+                reattemptBytesWritten > 0 || streamHasBufferedMessages(retransmit))
             {
-                enqueue(directBuffer, offset, messageSize, retransmit);
+                enqueueAll(directBuffer, offset, messageSize, templateId, retransmit);
                 return CONTINUE;
             }
 
@@ -89,7 +90,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             if (totalWritten < messageSize)
             {
                 this.reattemptBytesWritten = totalWritten;
-                enqueue(directBuffer, offset, messageSize, retransmit);
+                enqueueAll(directBuffer, offset, messageSize, templateId, retransmit);
             }
             else
             {
@@ -100,11 +101,10 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
                     retransmitting = true;
 
                     processReattemptBuffer(true);
+                    // no need for requireReattempting(), because onReplayComplete() will be pending
 
-                    // retransmission messages can have a sequence buffered up for resend.
-                    final int secondOffset = offset + messageSize;
-                    final int secondSize = readSofhMessageSize(directBuffer, secondOffset);
-                    enqueue(directBuffer, secondOffset, secondSize, retransmit);
+                    // retransmission messages have a sequence buffered up for resend.
+                    enqueueSecond(directBuffer, offset, messageSize, retransmit);
                 }
             }
         }
@@ -130,21 +130,58 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
             return ABORT;
         }
 
+        if (ABORT == super.onReplayComplete(correlationId))
+        {
+            return ABORT;
+        }
+
         retransmitting = false;
 
-        processReattemptBuffer(false);
+        if (!processReattemptBuffer(false))
+        {
+            requireReattempting();
+        }
 
-        return super.onReplayComplete(correlationId);
+        return CONTINUE;
     }
 
-    void enqueue(final DirectBuffer srcBuffer, final int srcOffst, final int messageSize, final boolean retransmit)
+    private void enqueueAll(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int messageSize,
+        final int templateId,
+        final boolean retransmit)
+    {
+        enqueue(srcBuffer, srcOffset, messageSize, retransmit);
+
+        if (templateId == retransmissionTemplateId)
+        {
+            enqueueSecond(srcBuffer, srcOffset, messageSize, retransmit);
+        }
+    }
+
+    private void enqueueSecond(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int firstMessageSize,
+        final boolean retransmit)
+    {
+        final int secondOffset = srcOffset + firstMessageSize;
+        final int secondSize = readSofhMessageSize(srcBuffer, secondOffset);
+        enqueue(srcBuffer, secondOffset, secondSize, retransmit);
+    }
+
+    private void enqueue(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int messageSize,
+        final boolean retransmit)
     {
         // we only need re-attempting when we've got messages buffered for the current state
         final boolean currentStream = retransmit == retransmitting;
-        if (!requiresReattempting && currentStream)
+        if (currentStream)
         {
-            requiresReattempting = true;
-            fixPSenderEndPoints.backPressured(this);
+            requireReattempting();
         }
 
         final ReattemptState reattemptState = reattemptState(retransmit);
@@ -162,7 +199,21 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
 
             bytesInBuffer.setOrdered(bufferUsage);
         }
-        buffer.putBytes(reattemptOffset, srcBuffer, srcOffst, messageSize);
+        buffer.putBytes(reattemptOffset, srcBuffer, srcOffset, messageSize);
+    }
+
+    private void requireReattempting()
+    {
+        if (!requiresReattempting)
+        {
+            requiresReattempting = true;
+            fixPSenderEndPoints.backPressured(this);
+        }
+    }
+
+    private boolean streamHasBufferedMessages(final boolean retransmit)
+    {
+        return reattemptState(retransmit).usage > 0;
     }
 
     private void removeEndpoint(final DisconnectReason reason)
@@ -195,8 +246,17 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
                 }
                 else
                 {
+                    final int headerOffset = offset + SOFH_LENGTH;
+                    final int templateId = templateId(buffer, headerOffset, templateIdOffset);
+
                     offset += totalWritten;
                     this.reattemptBytesWritten = NO_REATTEMPT;
+
+                    if (templateId == retransmissionTemplateId)
+                    {
+                        retransmitting = true;
+                        break;
+                    }
                 }
             }
             catch (final IOException e)
@@ -232,7 +292,7 @@ class ImplicitFixPSenderEndPoint extends FixPSenderEndPoint
         }
     }
 
-    static class ReattemptState
+    private static class ReattemptState
     {
         ExpandableDirectByteBuffer buffer;
         int usage;
