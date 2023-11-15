@@ -270,7 +270,7 @@ public class ImplicitFixPSenderEndPointPropertyTest
             }
             else if (obj instanceof ReplayComplete)
             {
-                action = fixPSenderEndPoints.onReplayComplete(CONNECTION_ID, 0, false);
+                action = fixPSenderEndPoints.onReplayComplete(CONNECTION_ID, 0);
             }
             else
             {

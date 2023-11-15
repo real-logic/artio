@@ -70,7 +70,7 @@ public class FixPSenderEndPoints implements AutoCloseable
         }
     }
 
-    public Action onReplayComplete(final long connectionId, final long correlationId, final boolean slow)
+    public Action onReplayComplete(final long connectionId, final long correlationId)
     {
         final FixPSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)

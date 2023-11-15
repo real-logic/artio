@@ -327,7 +327,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return fixPSenderEndPoints.onMessage(connectionId, buffer, offset, true);
                 }
             },
-            new ReplayProtocolSubscription(new FramerReplayProtocolHandler(false))),
+            new ReplayProtocolSubscription(new FramerReplayProtocolHandler())),
             0,
             true);
 
@@ -3810,19 +3810,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     class FramerReplayProtocolHandler implements ReplayProtocolHandler
     {
-        private final boolean slow;
-
-        FramerReplayProtocolHandler(final boolean slow)
-        {
-            this.slow = slow;
-        }
-
         public Action onReplayComplete(final long connectionId, final long correlationId)
         {
-            final Action action = fixSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
-            if (action != ABORT && !slow)
+            final Action action = fixSenderEndPoints.onReplayComplete(connectionId, correlationId);
+            if (action != ABORT)
             {
-                return fixPSenderEndPoints.onReplayComplete(connectionId, correlationId, slow);
+                return fixPSenderEndPoints.onReplayComplete(connectionId, correlationId);
             }
             return action;
         }
@@ -3830,7 +3823,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         public Action onStartReplay(
             final long session, final long connection, final long correlationId, final long position)
         {
-            fixSenderEndPoints.onStartReplay(connection, correlationId, slow);
+            fixSenderEndPoints.onStartReplay(connection, correlationId);
 
             return CONTINUE;
         }

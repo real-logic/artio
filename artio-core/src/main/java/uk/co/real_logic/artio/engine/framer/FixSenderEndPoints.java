@@ -31,8 +31,8 @@ import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_LOG_TAG_ENABLED;
 
 class FixSenderEndPoints implements AutoCloseable
 {
-    final CharFormatter missReplayComplete = new CharFormatter(
-        "SEPs.missReplayComplete, connId=%s, corrId=%s, slow=%s");
+    private final CharFormatter missReplayComplete = new CharFormatter(
+        "SEPs.missReplayComplete, connId=%s, corrId=%s");
 
     private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
@@ -151,7 +151,7 @@ class FixSenderEndPoints implements AutoCloseable
             buffer.getStringWithoutLengthUtf8(offset, length))));
     }
 
-    Action onReplayComplete(final long connectionId, final long correlationId, final boolean slow)
+    Action onReplayComplete(final long connectionId, final long correlationId)
     {
         final FixSenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (senderEndPoint != null)
@@ -162,8 +162,7 @@ class FixSenderEndPoints implements AutoCloseable
         {
             if (IS_REPLAY_LOG_TAG_ENABLED)
             {
-                DebugLogger.log(LogTag.REPLAY, missReplayComplete.clear().with(connectionId).with(correlationId)
-                    .with(slow));
+                DebugLogger.log(LogTag.REPLAY, missReplayComplete.clear().with(connectionId).with(correlationId));
             }
         }
         return CONTINUE;
@@ -215,8 +214,7 @@ class FixSenderEndPoints implements AutoCloseable
         }
     }
 
-    public void onStartReplay(
-        final long connection, final long correlationId, final boolean slow)
+    public void onStartReplay(final long connection, final long correlationId)
     {
         final FixSenderEndPoint fixSenderEndPoint = connectionIdToSenderEndpoint.get(connection);
         if (fixSenderEndPoint != null)
