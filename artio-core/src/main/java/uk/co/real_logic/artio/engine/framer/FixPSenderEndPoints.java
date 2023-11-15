@@ -82,7 +82,7 @@ public class FixPSenderEndPoints implements AutoCloseable
 
     public String toString()
     {
-        return "ILink3SenderEndPoints{" +
+        return "FixPSenderEndPoints{" +
             "connectionIdToSenderEndpoint=" + connectionIdToSenderEndpoint +
             '}';
     }
