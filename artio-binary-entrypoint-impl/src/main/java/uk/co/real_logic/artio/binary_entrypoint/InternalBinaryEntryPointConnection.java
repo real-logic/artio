@@ -1020,6 +1020,7 @@ class InternalBinaryEntryPointConnection
         else
         {
             replaying = true;
+            suppressRetransmissionCallback = false;
             suppressRetransmissionResend = false;
             return CONTINUE;
         }
