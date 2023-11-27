@@ -128,6 +128,7 @@ class DecoderGenerator extends Generator
         final String encoderPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
+        final Class<?> rejectEmptyTagClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
@@ -135,8 +136,9 @@ class DecoderGenerator extends Generator
         final String codecRejectUnknownEnumValueEnabled,
         final boolean fixTagsInJavadoc)
     {
-        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled, fixTagsInJavadoc);
+        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectEmptyTagClass,
+            rejectUnknownFieldClass, rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled,
+            fixTagsInJavadoc);
         this.initialBufferSize = initialBufferSize;
         this.encoderPackage = encoderPackage;
         this.wrapEmptyBuffer = wrapEmptyBuffer;
@@ -1676,30 +1678,31 @@ class DecoderGenerator extends Generator
             .collect(joining("\n", "", "\n"));
 
         final String suffix =
-            "            default:\n" +
-            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
-            "                {\n" +
-            (isGroup ?
-            "                    seenFields.remove(tag);\n" :
-            "                    alreadyVisitedFields.remove(tag);\n") +
-            "                }\n" +
-            (isGroup ? "" :
-            "                else\n" +
-            "                {\n" +
-            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                default:\n" +
+            "                    if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
             "                    {\n" +
-            "                        unknownFields.add(tag);\n" +
+            (isGroup ?
+            "                        seenFields.remove(tag);\n" :
+            "                        alreadyVisitedFields.remove(tag);\n") +
             "                    }\n" +
-            "                }\n") +
+            (isGroup ? "" :
+            "                    else\n" +
+            "                    {\n" +
+            "                        if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                        {\n" +
+            "                            unknownFields.add(tag);\n" +
+            "                        }\n" +
+            "                    }\n") +
 
             // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            "                    if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
             " || " + unknownFieldPredicate(type) + ")\n" +
-            "                {\n" +
-            decodeTrailerOrReturn(hasCommonCompounds, 5) +
-            "                }\n" +
+            "                    {\n" +
+            decodeTrailerOrReturn(hasCommonCompounds, 6) +
+            "                    }\n" +
             "\n" +
-            "            }\n\n" +
+            "                }\n\n" +
+            "            }\n" +
             "            if (position < (endOfField + 1))\n" +
             "            {\n" +
             "                position = endOfField + 1;\n" +
@@ -1718,61 +1721,63 @@ class DecoderGenerator extends Generator
         final String endGroupCheck)
     {
         return "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
-            "    {\n" +
-            "        // Decode " + aggregate.name() + "\n" +
-            "        int seenFieldCount = 0;\n" +
-            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "        {\n" +
-            "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
-            (isGroup ? "" : "            alreadyVisitedFields.clear();\n") +
-            "        }\n" +
-            "        this.buffer = buffer;\n" +
-            "        final int end = offset + length;\n" +
-            "        int position = offset;\n" +
-            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-            (isGroup ? "        seenFields.clear();\n" : "") +
-            "        int tag;\n\n" +
-            "        while (position < end)\n" +
-            "        {\n" +
-            "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-            "            if (equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
-            "            {\n" +
-            "               return position;\n" +
-            "            }\n" +
-            "            tag = buffer.getInt(position, equalsPosition);\n" +
-            endGroupCheck +
-            "            final int valueOffset = equalsPosition + 1;\n" +
-            "            int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
-            "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX)\n" +
-            "            {\n" +
-            "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
-            "                break;\n" +
-            "            }\n" +
-            "            final int valueLength = endOfField - valueOffset;\n" +
-            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "            {\n" +
-            "                if (tag <= 0)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
-            "                }\n" +
-            "                else if (valueLength == 0)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
-            "                }\n" +
-            headerValidation(isHeader) +
-            (isGroup ? "" :
+               "    {\n" +
+               "        // Decode " + aggregate.name() + "\n" +
+               "        int seenFieldCount = 0;\n" +
+               "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+               "        {\n" +
+               "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
+               (isGroup ? "" : "            alreadyVisitedFields.clear();\n") +
+               "        }\n" +
+               "        this.buffer = buffer;\n" +
+               "        final int end = offset + length;\n" +
+               "        int position = offset;\n" +
+               (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
+               (isGroup ? "        seenFields.clear();\n" : "") +
+               "        int tag;\n\n" +
+               "        while (position < end)\n" +
+               "        {\n" +
+               "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+               "            if (equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
+               "            {\n" +
+               "               return position;\n" +
+               "            }\n" +
+               "            tag = buffer.getInt(position, equalsPosition);\n" +
+               endGroupCheck +
+               "            final int valueOffset = equalsPosition + 1;\n" +
+               "            int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+               "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX)\n" +
+               "            {\n" +
+               "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
+               "                break;\n" +
+               "            }\n" +
+               "            final int valueLength = endOfField - valueOffset;\n" +
+               "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+               "            {\n" +
+               "                if (tag <= 0)\n" +
+               "                {\n" +
+               "                    invalidTagId = tag;\n" +
+               "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
+               "                }\n" +
+               "                else if (" + CODEC_REJECT_EMPTY_TAG_ENABLED + " && valueLength == 0)\n" +
+               "                {\n" +
+               "                    invalidTagId = tag;\n" +
+               "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
+               "                }\n" +
+               headerValidation(isHeader) +
+               (isGroup ? "" :
             "                if (!alreadyVisitedFields.add(tag))\n" +
             "                {\n" +
             "                    invalidTagId = tag;\n" +
             "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
             "                }\n") +
-            "                missingRequiredFields.remove(tag);\n" +
-            "                seenFieldCount++;\n" +
-            "            }\n\n" +
-            "            switch (tag)\n" +
-            "            {\n";
+               "                missingRequiredFields.remove(tag);\n" +
+               "                seenFieldCount++;\n" +
+               "            }\n\n" +
+               "            if (valueLength > 0)\n" +
+               "            {\n" +
+               "                switch (tag)\n" +
+               "                {\n";
     }
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
@@ -1948,13 +1953,13 @@ class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
 
         return String.format(
-            "            case Constants.%s:\n" +
+            "                case Constants.%s:\n" +
             "%s" +
             "%s" +
             "%s" +
             "%s" +
             "%s" +
-            "                break;\n",
+            "                    break;\n",
             constantName(name),
             optionalAssign(entry),
             fieldDecodeMethod(field, fieldName),
@@ -1966,25 +1971,25 @@ class DecoderGenerator extends Generator
     private String storeLengthForVariableLengthFields(final Type type, final String fieldName)
     {
         return type.hasLengthField(flyweightsEnabled) ?
-            String.format("                %sLength = valueLength;\n", fieldName) :
+            String.format("                    %sLength = valueLength;\n", fieldName) :
             "";
     }
 
     private String storeOffsetForVariableLengthFields(final Type type, final String fieldName)
     {
         return type.hasOffsetField(flyweightsEnabled) ?
-            String.format("                %sOffset = valueOffset;\n", fieldName) :
+            String.format("                    %sOffset = valueOffset;\n", fieldName) :
             "";
     }
 
     private String optionalAssign(final Entry entry)
     {
-        return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
+        return entry.required() ? "" : String.format("                    has%s = true;\n", entry.name());
     }
 
     private String fieldDecodeMethod(final Field field, final String fieldName)
     {
-        final String prefix = String.format("                %s = ", fieldName);
+        final String prefix = String.format("                    %s = ", fieldName);
         final String decodeMethod;
         switch (field.type())
         {

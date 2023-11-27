@@ -162,13 +162,15 @@ class EncoderGenerator extends Generator
         final String builderCommonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
+        final Class<?> rejectEmptyTagClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final String codecRejectUnknownEnumValueEnabled,
         final boolean fixTagsInJavadoc)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, false, codecRejectUnknownEnumValueEnabled, fixTagsInJavadoc);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectEmptyTagClass,
+            rejectUnknownFieldClass, rejectUnknownEnumValueClass, false, codecRejectUnknownEnumValueEnabled,
+            fixTagsInJavadoc);
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);

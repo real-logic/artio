@@ -17,6 +17,9 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.PackageOutputManager;
+
+
+import uk.co.real_logic.artio.builder.RejectEmptyTag;
 import uk.co.real_logic.artio.builder.RejectUnknownEnumValue;
 import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
@@ -163,6 +166,7 @@ public final class CodecGenerator
             parentPackage,
             encoderOutput,
             Validation.class,
+            RejectEmptyTag.class,
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
             codecRejectUnknownEnumValueEnabled,
@@ -176,6 +180,7 @@ public final class CodecGenerator
             encoderPackage,
             decoderOutput,
             Validation.class,
+            RejectEmptyTag.class,
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
             false,
@@ -198,6 +203,7 @@ public final class CodecGenerator
                 parentPackage,
                 encoderPackage, flyweightDecoderOutput,
                 Validation.class,
+                RejectEmptyTag.class,
                 RejectUnknownField.class,
                 RejectUnknownEnumValue.class,
                 true,

@@ -82,12 +82,13 @@ public class EncoderGeneratorTest
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = RejectUnknownFieldOff.class;
         final Class<?> rejectUnknownEnumValue = RejectUnknownEnumValueOn.class;
+        final Class<?> rejectEmptyTag = RejectEmptyTagOn.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
             new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
-            rejectUnknownField, rejectUnknownEnumValue, Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY,
-            true);
+            rejectEmptyTag, rejectUnknownField, rejectUnknownEnumValue,
+            Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
         enumGenerator.generate();
         encoderGenerator.generate();
         return outputManager.getSources();

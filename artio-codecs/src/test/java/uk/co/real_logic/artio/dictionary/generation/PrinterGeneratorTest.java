@@ -40,11 +40,11 @@ public class PrinterGeneratorTest
 
     private static final DecoderGenerator DECODER_GENERATOR = new DecoderGenerator(
         MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
-        OUTPUT_MANAGER, ValidationOn.class,
+        OUTPUT_MANAGER, ValidationOn.class, RejectEmptyTagOn.class,
         RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false, false,
         Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
     private static final EncoderGenerator ENCODER_GENERATOR = new EncoderGenerator(
-        MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, OUTPUT_MANAGER, ValidationOn.class,
+        MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, OUTPUT_MANAGER, ValidationOn.class, RejectEmptyTagOn.class,
         RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY,
         true);
 
