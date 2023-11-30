@@ -41,7 +41,6 @@ public final class CodecGenerator
 
         final String outputPath = configuration.outputPath();
         final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
-        final String codecRejectEmptyTagsEnabled = configuration.codecRejectUnknownEnumValueEnabled();
 
         final boolean hasSharedCodecs = configuration.sharedCodecConfiguration() != null;
         if (hasSharedCodecs)
