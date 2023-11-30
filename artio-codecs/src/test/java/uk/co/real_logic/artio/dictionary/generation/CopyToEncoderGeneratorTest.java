@@ -75,11 +75,11 @@ public class CopyToEncoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE,
-            TEST_PARENT_PACKAGE, TEST_PACKAGE, outputManager, ValidationOn.class, RejectEmptyTagOn.class,
-            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, false, false,
+            TEST_PARENT_PACKAGE, TEST_PACKAGE, outputManager, ValidationOn.class,
+            RejectUnknownFieldOn.class, RejectUnknownEnumValueOn.class, false, false, false,
             RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
-            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectEmptyTagOn.class, RejectUnknownFieldOn.class,
+            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
             RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
 
         constantGenerator.generate();

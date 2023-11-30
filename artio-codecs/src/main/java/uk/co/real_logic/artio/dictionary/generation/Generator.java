@@ -93,7 +93,6 @@ public abstract class Generator
     private final String commonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
-    protected final Class<?> rejectEmptyTagClass;
     protected final Class<?> rejectUnknownFieldClass;
     private final Class<?> rejectUnknownEnumValueClass;
     protected final boolean flyweightsEnabled;
@@ -109,7 +108,6 @@ public abstract class Generator
         final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectEmptyTagClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
@@ -121,7 +119,6 @@ public abstract class Generator
         this.commonPackage = commonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
-        this.rejectEmptyTagClass = rejectEmptyTagClass;
         this.rejectUnknownFieldClass = rejectUnknownFieldClass;
         this.rejectUnknownEnumValueClass = rejectUnknownEnumValueClass;
         this.flyweightsEnabled = flyweightsEnabled;
@@ -183,7 +180,6 @@ public abstract class Generator
 
         out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
-            .append(importStaticFor(rejectEmptyTagClass, CODEC_REJECT_EMPTY_TAG_ENABLED))
             .append(importStaticFor(rejectUnknownFieldClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED))
             .append(importStaticFor(rejectUnknownEnumValueClass, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY));
 

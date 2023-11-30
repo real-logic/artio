@@ -128,7 +128,6 @@ public abstract class AbstractDecoderGeneratorTest
     )
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
-        final Class<?> rejectEmptyTag = rejectingEmptyTags ? RejectEmptyTagOn.class : RejectEmptyTagOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
             RejectUnknownFieldOn.class : RejectUnknownFieldOff.class;
         final Class<?> rejectUnknownEnumValue = rejectingUnknownEnumValue ?
@@ -139,11 +138,11 @@ public abstract class AbstractDecoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
-            outputManager, validationClass, rejectEmptyTag, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer,
+            outputManager, validationClass, rejectUnknownField,
+            rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer, !rejectingEmptyTags,
             String.valueOf(rejectingUnknownEnumValue), true);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
-            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectEmptyTagOn.class, RejectUnknownFieldOn.class,
+            TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
             RejectUnknownEnumValueOn.class, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY, true);
 
         constantGenerator.generate();

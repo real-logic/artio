@@ -102,6 +102,7 @@ class DecoderGenerator extends Generator
     public static final int TAG_APPEARS_MORE_THAN_ONCE =
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
+    private final boolean allowEmptyTags;
 
     static String decoderClassName(final Aggregate aggregate)
     {
@@ -128,20 +129,21 @@ class DecoderGenerator extends Generator
         final String encoderPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectEmptyTagClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
         final boolean wrapEmptyBuffer,
+        final boolean allowEmptyTags,
         final String codecRejectUnknownEnumValueEnabled,
         final boolean fixTagsInJavadoc)
     {
-        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectEmptyTagClass,
+        super(dictionary, thisPackage, commonPackage, outputManager, validationClass,
             rejectUnknownFieldClass, rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled,
             fixTagsInJavadoc);
         this.initialBufferSize = initialBufferSize;
         this.encoderPackage = encoderPackage;
         this.wrapEmptyBuffer = wrapEmptyBuffer;
+        this.allowEmptyTags = allowEmptyTags;
     }
 
     public void generate()
@@ -1759,11 +1761,12 @@ class DecoderGenerator extends Generator
                "                    invalidTagId = tag;\n" +
                "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
                "                }\n" +
-               "                else if (" + CODEC_REJECT_EMPTY_TAG_ENABLED + " && valueLength == 0)\n" +
+               (allowEmptyTags ? "" :
+               "                else if (valueLength == 0)\n" +
                "                {\n" +
                "                    invalidTagId = tag;\n" +
                "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
-               "                }\n" +
+               "                }\n") +
                headerValidation(isHeader) +
                (isGroup ? "" :
             "                if (!alreadyVisitedFields.add(tag))\n" +
