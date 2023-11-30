@@ -41,6 +41,7 @@ public final class CodecGenerator
 
         final String outputPath = configuration.outputPath();
         final String codecRejectUnknownEnumValueEnabled = configuration.codecRejectUnknownEnumValueEnabled();
+        final String codecRejectEmptyTagsEnabled = configuration.codecRejectUnknownEnumValueEnabled();
 
         final boolean hasSharedCodecs = configuration.sharedCodecConfiguration() != null;
         if (hasSharedCodecs)
@@ -182,7 +183,7 @@ public final class CodecGenerator
             RejectUnknownEnumValue.class,
             false,
             configuration.wrapEmptyBuffer(),
-            false,
+            configuration.allowEmptyTags(),
             codecRejectUnknownEnumValueEnabled,
             configuration.fixTagsInJavadoc()).generate();
 
@@ -205,7 +206,7 @@ public final class CodecGenerator
                 RejectUnknownEnumValue.class,
                 true,
                 configuration.wrapEmptyBuffer(),
-                false,
+                configuration.allowEmptyTags(),
                 codecRejectUnknownEnumValueEnabled,
                 configuration.fixTagsInJavadoc()).generate();
         }
