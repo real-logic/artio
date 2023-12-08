@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_
 import static uk.co.real_logic.artio.engine.EngineConfiguration.NO_THROTTLE_WINDOW;
 import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.TestMessages.*;
@@ -205,6 +206,20 @@ public class ReceiverEndPointTest
     }
 
     @Test
+    public void shouldDetectOversizedFixMessage()
+    {
+        theEndpointReceivesTheStartOfAnOversizedMessage();
+
+        polls(BUFFER_SIZE);
+
+        savesInvalidMessage(BUFFER_SIZE, times(1), INVALID, TIMESTAMP);
+        verifyError(times(1));
+        verifyDisconnected(EXCEPTION);
+
+        sessionReceivesNoMessages();
+    }
+
+    @Test
     public void shouldFrameValidFixMessageWhenBackpressuredSelectionKeyCase()
     {
         firstSaveAttemptIsBackPressured();
@@ -321,7 +336,7 @@ public class ReceiverEndPointTest
         endPoint.poll();
 
         verify(mockFixContexts).onDisconnect(anyLong());
-        verifyDisconnected();
+        verifyDisconnected(REMOTE_DISCONNECT);
     }
 
     @Test
@@ -331,7 +346,7 @@ public class ReceiverEndPointTest
 
         endPoint.poll();
 
-        verifyDisconnected();
+        verifyDisconnected(REMOTE_DISCONNECT);
     }
 
     @Test
@@ -516,6 +531,12 @@ public class ReceiverEndPointTest
         assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
     }
 
+    private void verifyError(final VerificationMode mode)
+    {
+        verify(errorHandler, mode).onError(any());
+        assertTrue("Endpoint Disconnected", endPoint.hasDisconnected());
+    }
+
     private void savesInvalidOutOfRequiredMessage(final VerificationMode mode, final long timestamp)
     {
         savesInvalidMessage(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length, mode, INVALID, timestamp);
@@ -530,9 +551,9 @@ public class ReceiverEndPointTest
             eq(status), eq(0), eq(timestamp));
     }
 
-    private void verifyDisconnected()
+    private void verifyDisconnected(final DisconnectReason reason)
     {
-        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, reason);
     }
 
     private void verifyNotDisconnected()
@@ -612,6 +633,19 @@ public class ReceiverEndPointTest
     private void theEndpointReceivesACompleteMessage()
     {
         theEndpointReceives(EG_MESSAGE, 0, MSG_LEN);
+    }
+
+    private void theEndpointReceivesTheStartOfAnOversizedMessage()
+    {
+        endpointBufferUpdatedWith(
+            (buffer) ->
+            {
+                final int paddingLength = buffer.capacity() - OVERSIZED_MESSAGE_START.length;
+                assertTrue(paddingLength > 0);
+                buffer.put(OVERSIZED_MESSAGE_START, 0, OVERSIZED_MESSAGE_START.length);
+                buffer.put(new byte[paddingLength], 0, paddingLength);
+                return buffer.capacity();
+            });
     }
 
     private void theEndpointReceivesTwoCompleteMessages()
