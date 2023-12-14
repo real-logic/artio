@@ -436,6 +436,11 @@ public class FixLibrary extends GatewayProcess
         return poller.followerFixPSession(context, testTimeoutInMs);
     }
 
+    public Reply<Boolean> resetFollowerSequences(final long sessionId, final long testTimeoutInMs)
+    {
+        return poller.saveReductSequenceUpdate(sessionId, testTimeoutInMs);
+    }
+
     /**
      * Write meta data associated with a session. Session meta-data is a sequence of bytes that application can
      * associate with a session. It shares it's lifecycle with the current session - so whenever sequence numbers or

@@ -26,22 +26,65 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.*;
+import org.agrona.collections.ArrayUtil;
+import org.agrona.collections.CollectionUtil;
+import org.agrona.collections.Hashing;
+import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.GatewayProcess;
+import uk.co.real_logic.artio.LivenessDetector;
+import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.ReproductionClock;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
-import uk.co.real_logic.artio.fixp.*;
+import uk.co.real_logic.artio.fixp.AbstractFixPParser;
+import uk.co.real_logic.artio.fixp.AbstractFixPProxy;
+import uk.co.real_logic.artio.fixp.FixPConnection;
+import uk.co.real_logic.artio.fixp.FixPConnectionHandler;
+import uk.co.real_logic.artio.fixp.FixPContext;
+import uk.co.real_logic.artio.fixp.FixPKey;
+import uk.co.real_logic.artio.fixp.FixPMessageDissector;
+import uk.co.real_logic.artio.fixp.FixPProtocol;
+import uk.co.real_logic.artio.fixp.FixPProtocolFactory;
 import uk.co.real_logic.artio.ilink.ILink3Connection;
 import uk.co.real_logic.artio.ilink.ILink3ConnectionConfiguration;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
+import uk.co.real_logic.artio.messages.ConnectionType;
+import uk.co.real_logic.artio.messages.ControlNotificationDecoder;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
-import uk.co.real_logic.artio.protocol.*;
-import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.messages.GatewayError;
+import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
+import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.messages.SessionStatus;
+import uk.co.real_logic.artio.messages.SlowStatus;
+import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.LibraryEndPointHandler;
+import uk.co.real_logic.artio.protocol.LibraryProtocolSubscription;
+import uk.co.real_logic.artio.protocol.NotConnectedException;
+import uk.co.real_logic.artio.protocol.ProtocolHandler;
+import uk.co.real_logic.artio.protocol.ProtocolSubscription;
+import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.InternalSession;
+import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.SessionProxy;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.CharFormatter;
@@ -53,18 +96,29 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
-import static uk.co.real_logic.artio.LogTag.*;
+import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
+import static uk.co.real_logic.artio.LogTag.CLOSE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter.NO_REQUIRED_POSITION;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
@@ -385,6 +439,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             length);
     }
 
+    public Reply<Boolean> saveReductSequenceUpdate(final long sessionId, final long testTimeoutInMs)
+    {
+        checkState();
+
+        return new ReductSequenceReply(this, timeInMs() + testTimeoutInMs, sessionId);
+    }
+
     public void readMetaData(final long sessionId, final MetadataHandler handler)
     {
         new ReadMetaDataReply(
@@ -569,6 +630,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         return outboundPublication.saveRequestSession(
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
+    }
+
+    long saveReductSequenceUpdate(final long sessionId)
+    {
+        checkState();
+        final long position = inboundPublication.saveRedactSequenceUpdate(sessionId, 0, NO_REQUIRED_POSITION);
+        if (position < 0)
+        {
+            return position;
+        }
+        return outboundPublication.saveRedactSequenceUpdate(sessionId, 0, NO_REQUIRED_POSITION);
     }
 
     long saveFollowerSessionRequest(
