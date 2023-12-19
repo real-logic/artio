@@ -424,6 +424,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int endOfChecksumTag = startOfChecksumTag + MIN_CHECKSUM_SIZE;
                 if (endOfChecksumTag >= usedBufferData)
                 {
+                    disconnectOnOversizedMessage(offset, readTimestampInNs);
                     break;
                 }
 
@@ -952,6 +953,18 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     {
         DebugLogger.log(FIX_MESSAGE, "Invalidated (IAE): ", buffer, offset, MIN_MESSAGE_SIZE);
         return saveInvalidMessage(offset, readTimestamp);
+    }
+
+    private void disconnectOnOversizedMessage(final int offset, final long readTimestamp)
+    {
+        if (offset == 0 && this.byteBuffer.remaining() == 0)
+        {
+            saveInvalidMessage(offset, readTimestamp);
+            errorHandler.onError(new Exception(String.format(
+                "Unable to frame message, receiver buffer too small. connectionId=%d",
+                connectionId)));
+            disconnectEndpoint(DisconnectReason.EXCEPTION);
+        }
     }
 
     private boolean saveInvalidMessage(final int offset, final int length, final long readTimestamp)
