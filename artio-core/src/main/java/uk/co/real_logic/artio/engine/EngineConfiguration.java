@@ -1665,9 +1665,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * See {@link #fixPCancelOnDisconnectTimeoutHandler(FixPCancelOnDisconnectTimeoutHandler)} for details.
+     * See {@link #receiverBufferSize(int)} for details.
      *
-     * @return the FIXP cancel on disconnect timeout handler
+     * @return the receiver buffer size
      */
     public int receiverBufferSize()
     {
