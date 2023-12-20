@@ -178,15 +178,17 @@ subprojects {
     dependencies {
         testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
         testImplementation "org.mockito:mockito-core:${mockitoVersion}"
-        testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+        testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
         testImplementation "junit:junit:4.13.2" // FIXME: Remove after migration to JUnit 5 is complete
-        testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+        testRuntimeOnly "org.junit.platform:junit-platform-launcher"
         testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junitVersion}"
     }
 
     checkstyle.toolVersion = "${checkstyleVersion}"
 
     tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+
         if (buildJavaVersion >= 9) {
             jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
             jvmArgs('--add-opens', 'java.base/java.util.zip=ALL-UNNAMED')
