@@ -82,10 +82,6 @@ public final class TestMessages
     public static final byte[] INVALID_LENGTH_MESSAGE = toAscii(
         "8=FIX.4.4\0019=5\00135=A\00134=1\00149=TW\00152=20150604-12:46:54\00156=ISLD\00198=0\00110=000\001");
 
-    public static final byte[] OVERSIZED_MESSAGE_START =
-            toAscii("8=FIX.4.2\0019=99999\00135=D\00134=4\00149=ABC_DEFG01\001" +
-                    "52=20090323-15:40:29\00156=CCG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\00155=CVS\00140=1");
-
     public static final byte[] ZERO_CHECKSUM_MESSAGE = toAscii(
         "8=FIX.4.4\0019=0067\00135=0\00149=acceptor\00156=initiator\00134=2" +
             "\00152=20160415-12:50:23.294\001112=hi\00110=000\001");

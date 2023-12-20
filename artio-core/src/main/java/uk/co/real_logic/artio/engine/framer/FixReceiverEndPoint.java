@@ -392,6 +392,7 @@ class FixReceiverEndPoint extends ReceiverEndPoint
     // true - no more framed messages in the buffer data to process. This could mean no more messages, or some data
     // that is an incomplete message.
     // false - needs to be retried, aka back-pressured
+    @SuppressWarnings("MethodLength")
     private boolean frameMessages(final long readTimestampInNs)
     {
         final MutableAsciiBuffer buffer = this.buffer;
@@ -407,6 +408,14 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
             try
             {
+                //                8=FIX.4.4|9=60|35=5|49=initiator|56=acceptor|34=3|52=20231220-13:12:16.021|10=234|
+                //                            ^ ^                                                           ^    ^ ^
+                // startOfBodyLength ---------+ |                                                           |    | |
+                // endOfBodyLength -------------+                                                           |    | |
+                // startOfChecksumTag ----------------------------------------------------------------------+    | |
+                // endOfChecksumTag/startOfChecksumValue --------------------------------------------------------+ |
+                // endOfMessage -----------------------------------------------------------------------------------+
+
                 final int startOfBodyLength = scanForBodyLength(offset, readTimestampInNs);
                 if (startOfBodyLength < 0)
                 {
@@ -424,7 +433,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int endOfChecksumTag = startOfChecksumTag + MIN_CHECKSUM_SIZE;
                 if (endOfChecksumTag >= usedBufferData)
                 {
-                    disconnectOnOversizedMessage(offset, readTimestampInNs);
+                    if (isMessageOversized(offset))
+                    {
+                        return saveOversizedMessageAndDisconnect(offset, readTimestampInNs);
+                    }
                     break;
                 }
 
@@ -442,6 +454,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                 final int endOfMessage = scanEndOfMessage(startOfChecksumValue);
                 if (endOfMessage == UNKNOWN_INDEX)
                 {
+                    if (isMessageOversized(offset))
+                    {
+                        return saveOversizedMessageAndDisconnect(offset, readTimestampInNs);
+                    }
                     break; // Need more data
                 }
 
@@ -955,16 +971,27 @@ class FixReceiverEndPoint extends ReceiverEndPoint
         return saveInvalidMessage(offset, readTimestamp);
     }
 
-    private void disconnectOnOversizedMessage(final int offset, final long readTimestamp)
+    private boolean isMessageOversized(final int offset)
     {
-        if (offset == 0 && this.byteBuffer.remaining() == 0)
+        return offset == 0 && byteBuffer.remaining() == 0;
+    }
+
+    // returns false if back-pressured
+    private boolean saveOversizedMessageAndDisconnect(final int offset, final long readTimestamp)
+    {
+        DebugLogger.log(FIX_MESSAGE, "Invalidated (oversized): ", buffer, offset, usedBufferData - offset);
+
+        if (saveInvalidMessage(offset, readTimestamp))
         {
-            saveInvalidMessage(offset, readTimestamp);
-            errorHandler.onError(new Exception(String.format(
-                "Unable to frame message, receiver buffer too small. connectionId=%d",
-                connectionId)));
-            disconnectEndpoint(DisconnectReason.EXCEPTION);
+            return false;
         }
+
+        errorHandler.onError(new Exception(
+            "Unable to frame message, receiver buffer too small. connectionId=" + connectionId));
+
+        completeDisconnect(DisconnectReason.EXCEPTION);
+
+        return true;
     }
 
     private boolean saveInvalidMessage(final int offset, final int length, final long readTimestamp)

@@ -19,10 +19,7 @@ import org.agrona.concurrent.status.ReadablePosition;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Side;
-import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -53,6 +50,7 @@ import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_RECEIVER_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
@@ -902,6 +900,27 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             assertThat(erSeqNum, lessThan(highestPrevSeqNum));
             connection.sendResendRequest(erSeqNum, 0);
             testSystem.awaitBlocking(() -> connection.readResentExecutionReport(erSeqNum));
+        }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldDisconnectConnectionTryingToSendOversizedMessage() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            final Session session = acquireSession();
+
+            connection.sendBytesLarge(TestFixtures.largeMessage(DEFAULT_RECEIVER_BUFFER_SIZE + 5));
+
+            assertSessionDisconnected(testSystem, session);
+            assertEquals(1, session.lastReceivedMsgSeqNum());
+
+            assertConnectionDisconnects(testSystem, connection);
         }
     }
 

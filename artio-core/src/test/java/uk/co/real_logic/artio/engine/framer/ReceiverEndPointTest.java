@@ -22,9 +22,12 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -41,15 +44,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.function.ToIntFunction;
+import java.util.stream.IntStream;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.NO_THROTTLE_WINDOW;
-import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
-import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
-import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
+import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.TestMessages.*;
@@ -206,14 +208,37 @@ class ReceiverEndPointTest
         sessionReceivesOneMessage();
     }
 
-    @Test
-    void shouldDetectOversizedFixMessage()
+    static IntStream overflowRange()
     {
-        theEndpointReceivesTheStartOfAnOversizedMessage();
+        return IntStream.range(1, 10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("overflowRange")
+    void shouldDetectOversizedFixMessage(final int overflow)
+    {
+        theEndpointReceivesTheStartOfAnOversizedMessage(overflow);
 
         polls(BUFFER_SIZE);
 
         savesInvalidMessage(BUFFER_SIZE, times(1), INVALID, TIMESTAMP);
+        verifyError(times(1));
+        verifyDisconnected(EXCEPTION);
+
+        sessionReceivesNoMessages();
+    }
+
+    @ParameterizedTest
+    @MethodSource("overflowRange")
+    void shouldHandleBackPressureWhenSavingOversizedMessage(final int overflow)
+    {
+        theEndpointReceivesTheStartOfAnOversizedMessage(overflow);
+
+        firstSaveAttemptIsBackPressured();
+        polls(-BUFFER_SIZE);
+        assertTrue(endPoint.retryFrameMessages());
+
+        savesInvalidMessage(BUFFER_SIZE, times(2), INVALID, TIMESTAMP);
         verifyError(times(1));
         verifyDisconnected(EXCEPTION);
 
@@ -637,16 +662,16 @@ class ReceiverEndPointTest
         theEndpointReceives(EG_MESSAGE, 0, MSG_LEN);
     }
 
-    private void theEndpointReceivesTheStartOfAnOversizedMessage()
+    private void theEndpointReceivesTheStartOfAnOversizedMessage(final int overflow)
     {
         endpointBufferUpdatedWith(
             (buffer) ->
             {
-                final int paddingLength = buffer.capacity() - OVERSIZED_MESSAGE_START.length;
-                assertTrue(paddingLength > 0);
-                buffer.put(OVERSIZED_MESSAGE_START, 0, OVERSIZED_MESSAGE_START.length);
-                buffer.put(new byte[paddingLength], 0, paddingLength);
-                return buffer.capacity();
+                final int capacity = buffer.capacity();
+                final int messageLength = capacity + overflow;
+                final byte[] bytes = TestFixtures.largeMessage(messageLength);
+                buffer.put(bytes, 0, capacity);
+                return capacity;
             });
     }
 

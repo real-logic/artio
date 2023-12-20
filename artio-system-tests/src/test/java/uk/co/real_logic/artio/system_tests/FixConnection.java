@@ -239,6 +239,20 @@ public final class FixConnection implements AutoCloseable
         send(0, length);
     }
 
+    public void sendBytesLarge(final byte[] bytes)
+    {
+        int offset = 0;
+        int remaining = bytes.length;
+        while (remaining > 0)
+        {
+            final int length = Math.min(remaining, BUFFER_SIZE);
+            writeAsciiBuffer.putBytes(0, bytes, offset, length);
+            send(0, length);
+            offset += length;
+            remaining -= length;
+        }
+    }
+
     public void logon(final boolean resetSeqNumFlag)
     {
         logon(resetSeqNumFlag, 30);
