@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
+ * Copyright 2015-2024 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,7 +245,7 @@ subprojects {
 
     javadoc {
         title = '<h1>Artio</h1>'
-        options.bottom = '<i>Copyright &#169; 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015-2024 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd. All Rights Reserved.</i>'
         options.encoding = 'UTF-8'
         options.docEncoding = 'UTF-8'
         options.charSet = 'UTF-8'
