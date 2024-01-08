@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2024 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,14 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -41,19 +44,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.function.ToIntFunction;
+import java.util.stream.IntStream;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.NO_THROTTLE_WINDOW;
-import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
-import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
+import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.TestMessages.*;
 
-public class ReceiverEndPointTest
+class ReceiverEndPointTest
 {
     private static final long MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
@@ -100,8 +103,8 @@ public class ReceiverEndPointTest
         return pendingAcceptorLogon;
     }
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         givenReceiverEndPoint(SESSION_ID);
         when(gatewaySession.session()).thenReturn(session);
@@ -166,7 +169,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldNotifyDuplicateSession()
+    void shouldNotifyDuplicateSession()
     {
         givenAnUnauthenticatedReceiverEndPoint();
         givenADuplicateSession();
@@ -180,7 +183,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldDisconnectWhenFirstMessageIsNotALogon()
+    void shouldDisconnectWhenFirstMessageIsNotALogon()
     {
         givenAnUnauthenticatedReceiverEndPoint();
         givenLogonResult(pendingAuth);
@@ -194,7 +197,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameValidFixMessage()
+    void shouldFrameValidFixMessage()
     {
         theEndpointReceivesACompleteMessage();
 
@@ -205,8 +208,45 @@ public class ReceiverEndPointTest
         sessionReceivesOneMessage();
     }
 
+    static IntStream overflowRange()
+    {
+        return IntStream.range(1, 10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("overflowRange")
+    void shouldDetectOversizedFixMessage(final int overflow)
+    {
+        theEndpointReceivesTheStartOfAnOversizedMessage(overflow);
+
+        polls(BUFFER_SIZE);
+
+        savesInvalidMessage(BUFFER_SIZE, times(1), INVALID, TIMESTAMP);
+        verifyError(times(1));
+        verifyDisconnected(EXCEPTION);
+
+        sessionReceivesNoMessages();
+    }
+
+    @ParameterizedTest
+    @MethodSource("overflowRange")
+    void shouldHandleBackPressureWhenSavingOversizedMessage(final int overflow)
+    {
+        theEndpointReceivesTheStartOfAnOversizedMessage(overflow);
+
+        firstSaveAttemptIsBackPressured();
+        polls(-BUFFER_SIZE);
+        assertTrue(endPoint.retryFrameMessages());
+
+        savesInvalidMessage(BUFFER_SIZE, times(2), INVALID, TIMESTAMP);
+        verifyError(times(1));
+        verifyDisconnected(EXCEPTION);
+
+        sessionReceivesNoMessages();
+    }
+
     @Test
-    public void shouldFrameValidFixMessageWhenBackpressuredSelectionKeyCase()
+    void shouldFrameValidFixMessageWhenBackpressuredSelectionKeyCase()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -221,7 +261,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameValidFixMessageWhenBackpressuredPollingCase()
+    void shouldFrameValidFixMessageWhenBackpressuredPollingCase()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -237,7 +277,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldIgnoreMessageWithBodyLengthTooShort()
+    void shouldIgnoreMessageWithBodyLengthTooShort()
     {
         final int length = INVALID_LENGTH_MESSAGE.length;
         theEndpointReceives(INVALID_LENGTH_MESSAGE, 0, length);
@@ -253,7 +293,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldOnlyFrameCompleteFixMessage()
+    void shouldOnlyFrameCompleteFixMessage()
     {
         theEndpointReceivesAnIncompleteMessage();
 
@@ -263,7 +303,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameSplitFixMessage()
+    void shouldFrameSplitFixMessage()
     {
         theEndpointReceivesAnIncompleteMessage();
         endPoint.poll();
@@ -277,7 +317,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameTwoCompleteFixMessagesInOnePacket()
+    void shouldFrameTwoCompleteFixMessagesInOnePacket()
     {
         theEndpointReceivesTwoCompleteMessages();
 
@@ -289,7 +329,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncomplete()
+    void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncomplete()
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
 
@@ -301,7 +341,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameSecondSplitMessage()
+    void shouldFrameSecondSplitMessage()
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.poll();
@@ -315,28 +355,28 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void aClosedSocketSavesItsDisconnect() throws IOException
+    void aClosedSocketSavesItsDisconnect() throws IOException
     {
         theChannelIsClosedByException();
 
         endPoint.poll();
 
         verify(mockFixContexts).onDisconnect(anyLong());
-        verifyDisconnected();
+        verifyDisconnected(REMOTE_DISCONNECT);
     }
 
     @Test
-    public void anUnreadableSocketDisconnectsItsSession() throws IOException
+    void anUnreadableSocketDisconnectsItsSession() throws IOException
     {
         theChannelIsClosed();
 
         endPoint.poll();
 
-        verifyDisconnected();
+        verifyDisconnected(REMOTE_DISCONNECT);
     }
 
     @Test
-    public void invalidChecksumMessageRecorded()
+    void invalidChecksumMessageRecorded()
     {
         theEndpointReceivesAMessageWithInvalidChecksum();
 
@@ -350,7 +390,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void invalidChecksumMessageRecordedWhenBackpressuredPolling()
+    void invalidChecksumMessageRecordedWhenBackpressuredPolling()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -364,7 +404,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void invalidChecksumMessageRecordedWhenBackpressuredSelectionKey()
+    void invalidChecksumMessageRecordedWhenBackpressuredSelectionKey()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -378,7 +418,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void fieldOutOfOrderMessageRecordedOnce()
+    void fieldOutOfOrderMessageRecordedOnce()
     {
         theEndpointReceivesAnOutOfOrderMessage(OUT_OF_REQUIRED_ORDER_MSG_LEN);
 
@@ -391,7 +431,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void fieldOutOfOrderMessageRecordedWhenBackpressured()
+    void fieldOutOfOrderMessageRecordedWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
         theEndpointReceivesAnOutOfOrderMessage(-OUT_OF_REQUIRED_ORDER_MSG_LEN);
@@ -403,7 +443,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameSplitFixMessageWhenBackpressured()
+    void shouldFrameSplitFixMessageWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -421,7 +461,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameTwoCompleteFixMessagesInOnePacketWhenBackpressured()
+    void shouldFrameTwoCompleteFixMessagesInOnePacketWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -437,7 +477,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncompleteWhenBackpressured()
+    void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncompleteWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -450,7 +490,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameSecondSplitMessageWhenBackpressured()
+    void shouldFrameSecondSplitMessageWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
 
@@ -466,7 +506,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameLogonMessageWhenLoggerBehind()
+    void shouldFrameLogonMessageWhenLoggerBehind()
     {
         givenAnUnauthenticatedReceiverEndPoint();
         givenLogonResult(backpressuredPendingAuth);
@@ -515,7 +555,13 @@ public class ReceiverEndPointTest
     private void verifyNoError()
     {
         verify(errorHandler, never()).onError(any());
-        assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
+        assertFalse(endPoint.hasDisconnected(), "Endpoint Disconnected");
+    }
+
+    private void verifyError(final VerificationMode mode)
+    {
+        verify(errorHandler, mode).onError(any());
+        assertTrue(endPoint.hasDisconnected(), "Endpoint Connected");
     }
 
     private void savesInvalidOutOfRequiredMessage(final VerificationMode mode, final long timestamp)
@@ -532,9 +578,9 @@ public class ReceiverEndPointTest
             eq(status), eq(0), eq(timestamp));
     }
 
-    private void verifyDisconnected()
+    private void verifyDisconnected(final DisconnectReason reason)
     {
-        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, reason);
     }
 
     private void verifyNotDisconnected()
@@ -614,6 +660,19 @@ public class ReceiverEndPointTest
     private void theEndpointReceivesACompleteMessage()
     {
         theEndpointReceives(EG_MESSAGE, 0, MSG_LEN);
+    }
+
+    private void theEndpointReceivesTheStartOfAnOversizedMessage(final int overflow)
+    {
+        endpointBufferUpdatedWith(
+            (buffer) ->
+            {
+                final int capacity = buffer.capacity();
+                final int messageLength = capacity + overflow;
+                final byte[] bytes = TestFixtures.largeMessage(messageLength);
+                buffer.put(bytes, 0, capacity);
+                return capacity;
+            });
     }
 
     private void theEndpointReceivesTwoCompleteMessages()

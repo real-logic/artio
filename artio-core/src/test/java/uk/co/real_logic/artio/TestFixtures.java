@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2024 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Arrays;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class TestFixtures
 {
@@ -184,5 +186,39 @@ public final class TestFixtures
         Arrays.fill(testReqIDChars, 'A');
 
         return new String(testReqIDChars);
+    }
+
+    public static byte[] largeMessage(final int messageLength)
+    {
+        // 8=FIX.4.4|9=00000|35=0|49=initiator|56=acceptor|34=2|52=20231220-13:12:16.020|112=...|10=...|
+
+        if (messageLength < 91)
+        {
+            throw new IllegalArgumentException(messageLength + " is not large enough");
+        }
+        final byte[] bytes = new byte[messageLength];
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(bytes);
+        int index = buffer.putAscii(0, "8=FIX.4.4\0019=");
+        final int bodyLength = messageLength - (18 + 7); // header + trailer
+        if (bodyLength > 99_999)
+        {
+            throw new IllegalArgumentException(messageLength + " is too large");
+        }
+        buffer.putNaturalPaddedIntAscii(index, 5, bodyLength);
+        index += 5;
+        index += buffer.putAscii(index,
+            "\00135=0\00149=initiator\00156=acceptor\00134=2\00152=20231220-13:12:16.020\001112=");
+        while (index < messageLength - 8)
+        {
+            buffer.putCharAscii(index++, '+');
+        }
+        buffer.putSeparator(index++);
+        final int checksum = buffer.computeChecksum(0, index);
+        index += buffer.putAscii(index, "10=");
+        buffer.putNaturalPaddedIntAscii(index, 3, checksum);
+        index += 3;
+        buffer.putSeparator(index++);
+        assertEquals(messageLength, index);
+        return bytes;
     }
 }

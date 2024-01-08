@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2023 Real Logic Limited.
+ * Copyright 2015-2024 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -237,6 +237,20 @@ public final class FixConnection implements AutoCloseable
         writeAsciiBuffer.putBytes(0, bytes);
 
         send(0, length);
+    }
+
+    public void sendBytesLarge(final byte[] bytes)
+    {
+        int offset = 0;
+        int remaining = bytes.length;
+        while (remaining > 0)
+        {
+            final int length = Math.min(remaining, BUFFER_SIZE);
+            writeAsciiBuffer.putBytes(0, bytes, offset, length);
+            send(0, length);
+            offset += length;
+            remaining -= length;
+        }
     }
 
     public void logon(final boolean resetSeqNumFlag)

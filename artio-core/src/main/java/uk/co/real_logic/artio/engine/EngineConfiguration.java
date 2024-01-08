@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2023 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2024 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -490,15 +490,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Convert the number of records in a replay index file to a file size. Note: because replay index file sizes must
-     * be a power of two this method can return a file size greater than the requested number of methods but never less.
+     * be a power of two this method can return a file size greater than the requested number of records but never less.
      *
      * @param requestedNumberOfRecordsToStore the number of records to store in the replay index.
      * @return the replay index file size in bytes
      */
-    public static int replayIndexFileCapacityToBytes(final int requestedNumberOfRecordsToStore)
+    public static long replayIndexFileCapacityToBytes(final int requestedNumberOfRecordsToStore)
     {
         return HEADER_FILE_SIZE + ReplayIndexDescriptor.RECORD_LENGTH *
-            findNextPositivePowerOfTwo(requestedNumberOfRecordsToStore);
+            (long)findNextPositivePowerOfTwo(requestedNumberOfRecordsToStore);
     }
 
     /**
@@ -1665,9 +1665,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * See {@link #fixPCancelOnDisconnectTimeoutHandler(FixPCancelOnDisconnectTimeoutHandler)} for details.
+     * See {@link #receiverBufferSize(int)} for details.
      *
-     * @return the FIXP cancel on disconnect timeout handler
+     * @return the receiver buffer size
      */
     public int receiverBufferSize()
     {
