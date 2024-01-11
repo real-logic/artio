@@ -659,6 +659,7 @@
         <field name="connection" id="1" type="ConnectionId"/>
         <field name="enqueueTime" id="2" type="Timestamp" sinceVersion="12"/>
         <field name="sessionId" id="3" type="FixSessionId"/>
+        <field name="externalSeqNo" id="4" type="int64"/>
     </sbe:message>
 
     <!-- Messages From either Library or Engine outbound -->

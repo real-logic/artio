@@ -127,21 +127,24 @@ public abstract class InternalFixPConnection implements FixPConnection
         return state;
     }
 
-    public long tryClaim(
-        final MessageEncoderFlyweight message)
+    public long tryClaim(final MessageEncoderFlyweight message)
     {
         return tryClaim(message, 0);
     }
 
-    public long tryClaim(
-        final MessageEncoderFlyweight message, final int variableLength)
+    public long tryClaim(final MessageEncoderFlyweight message, final int variableLength)
+    {
+        return tryClaim(message, 0, 0);
+    }
+
+    public long tryClaim(final MessageEncoderFlyweight message, final int variableLength, final long seqNo)
     {
         validateCanSend();
 
         final long timestamp = requestTimestampInNs();
 
         final long position = proxy.claimMessage(
-            message.sbeBlockLength() + variableLength, message, timestamp);
+            message.sbeBlockLength() + variableLength, message, timestamp, seqNo);
 
         if (position > 0)
         {

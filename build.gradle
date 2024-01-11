@@ -47,7 +47,7 @@ def byteBuddyVersion = '1.14.11'
 def agronaVersion = '1.20.0'
 def sbeVersion = '1.30.0'
 def aeronVersion = '1.43.0'
-def artioGroup = 'uk.co.real-logic'
+def artioGroup = 'se.vermiculus'
 def iLink3Enabled = false
 
 defaultTasks 'clean', 'build'
@@ -69,33 +69,18 @@ def projectPom = {
     packaging = 'jar'
     description = 'High-Performance FIX Gateway'
 
-    url = 'https://github.com/real-logic/artio'
+    url = 'https://github.com/VermicFinTech/artio'
 
     scm {
-        connection = 'scm:git:https://github.com/real-logic/artio.git'
-        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
-        url = 'https://github.com/real-logic/artio.git'
+        connection = 'scm:git:https://github.com/VermicFinTech/artio.git'
+        developerConnection = 'scm:git:https://github.com/VermicFinTech/artio.git'
+        url = 'https://github.com/VermicFinTech/artio.git'
     }
 
     licenses {
         license {
             name = 'The Apache License, Version 2.0'
             url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-        }
-    }
-
-    developers {
-        developer {
-            id = 'RichardWarburton'
-            name = 'Richard Warburton'
-            email = 'richard.warburton@gmail.com'
-            url = 'https://github.com/RichardWarburton'
-        }
-        developer {
-            id = 'mjpt777'
-            name = 'Martin Thompson'
-            email = 'mjpt777@gmail.com'
-            url = 'https://github.com/mjpt777'
         }
     }
 }
@@ -895,19 +880,11 @@ subprojects {
     publishing {
         repositories {
             maven {
-                name = 'oss'
-                url = !isReleaseVersion ? snapshotUrl : repoUrl
+                name = "GitHubPackages"
+                url = "https://maven.pkg.github.com/vermicfintech/artio"
                 credentials {
-                    username = repoUsername
-                    password = repoPassword
-                }
-            }
-            maven {
-                name = 'private'
-                url = 's3://artio-repository/releases'
-                credentials(AwsCredentials) {
-                    accessKey = awsAccessKeyId
-                    secretKey = awsSecretAccessKey
+                    username = project.findProperty("gpr.user") ?: System.getenv("BUILD_ACTOR")
+                    password = project.findProperty("gpr.key") ?: System.getenv("BUILD_TOKEN")
                 }
             }
         }

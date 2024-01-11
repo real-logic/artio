@@ -66,6 +66,12 @@ public abstract class AbstractFixPProxy
         MessageEncoderFlyweight message,
         long timestamp);
 
+    public abstract long claimMessage(
+        int messageLength,
+        MessageEncoderFlyweight message,
+        long timestamp,
+        long externalSequence);
+
     public void commit()
     {
         final BufferClaim bufferClaim = this.bufferClaim;
@@ -91,6 +97,19 @@ public abstract class AbstractFixPProxy
         final int protocolHeaderLength,
         final short protocolType)
     {
+        return claimMessage(messageLength, message, timestamp, 0,
+            totalHeaderLength, protocolHeaderLength, protocolType);
+    }
+
+    protected long claimMessage(
+        final int messageLength,
+        final MessageEncoderFlyweight message,
+        final long timestamp,
+        final long externalSequence,
+        final int totalHeaderLength,
+        final int protocolHeaderLength,
+        final short protocolType)
+    {
         final BufferClaim bufferClaim = this.bufferClaim;
         final long position = publication.tryClaim(totalHeaderLength + messageLength, bufferClaim);
         if (position < 0)
@@ -105,6 +124,7 @@ public abstract class AbstractFixPProxy
             .wrapAndApplyHeader(buffer, bufferClaim.offset(), messageHeader)
             .connection(connectionId)
             .sessionId(sessionId)
+            .externalSeqNo(externalSequence)
             .enqueueTime(timestamp);
 
         offset += ARTIO_HEADER_LENGTH;

@@ -288,7 +288,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             final boolean isInbound = streamId == configuration.inboundLibraryStream();
             final RecordingIds recordingIds = isInbound ? inboundRecordingIds : outboundRecordingIds;
             final RecordingIdLookup lookup = isInbound ? framerOutboundLookup : framerInboundLookup;
-            final LibraryExtendPosition libraryExtendPosition = acquireRecording(streamId, recordingIds);
+            final LibraryExtendPosition libraryExtendPosition = acquireRecording(streamId, recordingIds, FixEngine.ENGINE_LIBRARY_ID);
             final ExclusivePublication publication;
             if (libraryExtendPosition != null)
             {
@@ -388,49 +388,57 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         }
     }
 
-    private LibraryExtendPosition acquireRecording(
-        final int streamId, final RecordingIds recordingIds)
+    private LibraryExtendPosition acquireRecording(final int streamId,
+                                                   final RecordingIds recordingIds,
+                                                   final int libraryId)
     {
         libraryExtendPosition = null;
-
-        final Long2LongHashMap.ValueIterator it = recordingIds.free.values().iterator();
-        if (it.hasNext())
-        {
-            final long recordingId = it.nextValue();
-            it.remove();
-
-            final int count = archive.listRecording(recordingId, this);
-            if (count != 1 || null == libraryExtendPosition)
-            {
-                errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
-                    " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
-                if (libraryExtendPosition == null)
-                {
-                    return null;
-                }
-            }
-            else if (libraryExtendPosition.streamId != streamId)
-            {
-                errorHandler.onError(new IllegalStateException(String.format(
-                    "Unable to reuse recordingId: %d. Stream id is mismatch: actual: %d, expected: %d",
-                    recordingId, libraryExtendPosition.streamId, streamId)));
-                libraryExtendPosition = null;
-                return null;
-            }
-            // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the
-            // Engine process with no clean shutdown and a running media driver. In order to hit this scenario you
-            // to restart the process rapidly as the media driver will eventually timeout the old process and stop the
-            // associated recording.
-            while (libraryExtendPosition.stopPosition == NULL_POSITION)
-            {
-                // We don't check the return value here because it returns false if the recording has stopped.
-                // This might happened if a timeout based stop occurs since the call to archive.listRecording.
-                archive.tryStopRecordingByIdentity(recordingId);
-                libraryExtendPosition.stopPosition = archive.getStopPosition(recordingId);
+        long recordingId = recordingIds.free.remove(libraryId);
+        if (recordingId == NULL_RECORDING_ID) {
+            final Long2LongHashMap.ValueIterator it = recordingIds.free.values().iterator();
+            if (it.hasNext()) {
+                recordingId = it.nextValue();
+                it.remove();
             }
         }
-
+        checkRecording(streamId, recordingId);
         return libraryExtendPosition;
+    }
+
+    private boolean checkRecording(final int streamId, final long recordingId) {
+        if (recordingId == NULL_RECORDING_ID) {
+            return false;
+        }
+        final int count = archive.listRecording(recordingId, this);
+        if (count != 1 || null == libraryExtendPosition)
+        {
+            errorHandler.onError(new IllegalStateException("Unable to reuse recordingId: " + recordingId +
+                " (Perhaps you have deleted this recording id or some aeron archiver state?)"));
+            if (libraryExtendPosition == null)
+            {
+                return false;
+            }
+        }
+        else if (libraryExtendPosition.streamId != streamId)
+        {
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Unable to reuse recordingId: %d. Stream id is mismatch: actual: %d, expected: %d",
+                recordingId, libraryExtendPosition.streamId, streamId)));
+            libraryExtendPosition = null;
+            return false;
+        }
+        // A NULL stopPosition means the recording wasn't stopped. This can potentially happen if we restart the
+        // Engine process with no clean shutdown and a running media driver. In order to hit this scenario you
+        // to restart the process rapidly as the media driver will eventually timeout the old process and stop the
+        // associated recording.
+        while (libraryExtendPosition.stopPosition == NULL_POSITION)
+        {
+            // We don't check the return value here because it returns false if the recording has stopped.
+            // This might happened if a timeout based stop occurs since the call to archive.listRecording.
+            archive.tryStopRecordingByIdentity(recordingId);
+            libraryExtendPosition.stopPosition = archive.getStopPosition(recordingId);
+        }
+        return true;
     }
 
     // Called from Framer thread.
@@ -460,7 +468,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 }
             }
 
-            extendPosition = acquireRecording(streamId, outboundRecordingIds);
+            extendPosition = acquireRecording(streamId, outboundRecordingIds, libraryId);
             if (extendPosition != null)
             {
                 extendRecording(streamId, extendPosition, extendPosition.newSessionId);

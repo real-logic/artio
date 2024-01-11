@@ -27,6 +27,7 @@ out
 build-local.properties
 .gradle
 build
+bin
 
 # Benchmark timings
 timings.log

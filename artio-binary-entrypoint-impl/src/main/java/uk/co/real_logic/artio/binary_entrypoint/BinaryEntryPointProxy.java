@@ -434,10 +434,20 @@ public class BinaryEntryPointProxy extends AbstractFixPProxy
         final MessageEncoderFlyweight message,
         final long timestampInNs)
     {
+        return claimMessage(messageLength, message, timestampInNs, 0);
+    }
+
+    public long claimMessage(
+        final int messageLength,
+        final MessageEncoderFlyweight message,
+        final long timestampInNs,
+        final long externalSequence)
+    {
         return claimMessage(
             messageLength,
             message,
             timestampInNs,
+            externalSequence,
             BINARY_ENTRYPOINT_MESSAGE_HEADER,
             BINARY_ENTRYPOINT_HEADER_LENGTH,
             BINARY_ENTRYPOINT_TYPE);

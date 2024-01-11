@@ -150,6 +150,19 @@ public interface FixPConnection
     long tryClaim(MessageEncoderFlyweight message, int variableLength);
 
     /**
+     * Tries to send a business message associated with an external sequence number.
+     *
+     * @param message the business layer message to send.
+     * @param variableLength the total size of all the variable length and group fields in the message including their
+     *                       headers. Aka the total length of the message minus it's block length.
+     * @param externalSequence associated with the fix message
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @see #tryClaim(MessageEncoderFlyweight)
+     */
+    long tryClaim(MessageEncoderFlyweight message, int variableLength, long externalSequence);
+
+    /**
      * Commit a message that has been claimed. Do not overlap sending other messages or polling the FixLibrary
      * with claiming and committing your own message - just claim and commit it immediately. If an error happens during
      * the initialization of the message then you should call {@link #abort()}
