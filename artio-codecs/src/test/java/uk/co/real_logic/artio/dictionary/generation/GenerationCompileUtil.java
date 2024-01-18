@@ -45,7 +45,7 @@ class GenerationCompileUtil
         final JavaFileManager fileManager = new ClassFileManager<>(
             compiler.getStandardFileManager(null, null, null));
         final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
-        final Iterable<String> options = Arrays.asList("-Xlint:unchecked");
+        final Iterable<String> options = Arrays.asList("-proc:none", "-Xlint:unchecked");
         final JavaCompiler.CompilationTask task = compiler.getTask(
             null, fileManager, diagnosticCollector, options, null, wrap(sources));
 
