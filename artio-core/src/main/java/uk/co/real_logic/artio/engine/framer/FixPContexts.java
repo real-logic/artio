@@ -286,7 +286,7 @@ public class FixPContexts implements SessionContexts
         return authenticatedSessionIdToConnectionId.containsKey(sessionId);
     }
 
-    static class InfoWrapper implements FixPSessionInfo
+    public static class InfoWrapper implements FixPSessionInfo
     {
         private final FixPContext context;
 
@@ -298,6 +298,10 @@ public class FixPContexts implements SessionContexts
         public FixPKey key()
         {
             return context.key();
+        }
+
+        public FixPContext context() {
+            return context;
         }
 
         public String toString()

@@ -2223,6 +2223,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final LiveLibraryInfo libraryInfo,
             final boolean offline)
         {
+            super();
             this.correlationId = correlationId;
             this.gatewaySession = gatewaySession;
             this.libraryInfo = libraryInfo;
@@ -2310,6 +2311,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final LiveLibraryInfo libraryInfo,
             final FixGatewaySession gatewaySession)
         {
+            super();
             this.libraryInfo = libraryInfo;
             this.gatewaySession = gatewaySession;
 
