@@ -1441,9 +1441,6 @@ class EncoderGenerator extends Generator
         final String name = aggregate.name();
 
         return String.format(
-            "    /**\n" +
-            "     * {@inheritDoc}\n" +
-            "     */\n" +
             "    public %1$s copyTo(final Encoder encoder)\n" +
             "    {\n" +
             "        return copyTo((%1$s)encoder);\n" +

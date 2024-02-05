@@ -2188,9 +2188,6 @@ class DecoderGenerator extends Generator
         }
 
         return String.format(
-            "    /**\n" +
-            "     * {@inheritDoc}\n" +
-            "     */\n" +
             "    public %1$s toEncoder(final Encoder encoder)\n" +
             "    {\n" +
             "        return toEncoder((%1$s)encoder);\n" +
