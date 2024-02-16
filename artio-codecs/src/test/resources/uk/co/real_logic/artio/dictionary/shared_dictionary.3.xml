@@ -36,6 +36,13 @@
             <component name="SemiSharedComponent" required="N" />
             <field name="FieldSometimesInComponent" required="N"/>
         </message>
+        <message name="AnyFieldsOne" msgtype="AF1" msgcat="app">
+            <field name="UserRequestID" required="Y"/>
+            <anyFields name="TrailingAnyFields"/>
+        </message>
+        <message name="AnyFieldsTwo" msgtype="AF2" msgcat="app">
+            <field name="UserRequestID" required="Y"/>
+        </message>
     </messages>
     <components>
         <component name="Instrument">
@@ -66,6 +73,8 @@
             <value enum="D" description="ORDER_SINGLE"/>
             <value enum="j" description="BUSINESS_MESSAGE_REJECT"/>
             <value enum="BE" description="USER_REQUEST"/>
+            <value enum="AF1" description="ANY_FIELDS_ONE"/>
+            <value enum="AF2" description="ANY_FIELDS_TWO"/>
         </field>
         <field number="10" name="CheckSum" type="STRING"/>
         <field number="49" name="SenderCompID" type="STRING"/>

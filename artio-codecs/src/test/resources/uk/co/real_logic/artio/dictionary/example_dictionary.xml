@@ -46,6 +46,7 @@
             <field name="CumQty" required="Y"/>
             <field name="AvgPx" required="Y"/>
             <field name="OpenCloseSettlFlag" required="N"/>
+            <anyFields name="TrailingAnyFields"/>
         </message>
         <message name="News" msgtype="B" msgcat="app">
             <group name="LinesOfText" required="Y">

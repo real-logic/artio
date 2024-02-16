@@ -251,7 +251,8 @@ public abstract class Generator
     {
         return resetFields(entries, methods) +
             resetComponents(entries, methods) +
-            resetGroups(entries, methods);
+            resetGroups(entries, methods) +
+            resetAnyFields(entries, methods);
     }
 
     private String resetFields(final List<Entry> entries, final StringBuilder methods)
@@ -295,6 +296,8 @@ public abstract class Generator
     }
 
     protected abstract String resetGroup(Entry entry);
+
+    protected abstract String resetAnyFields(List<Entry> entries, StringBuilder methods);
 
     private String resetField(final boolean isRequired, final Field field)
     {
@@ -554,6 +557,10 @@ public abstract class Generator
         {
             return componentAppendTo((Component)element);
         }
+        else if (element instanceof AnyFields)
+        {
+            return anyFieldsAppendTo((AnyFields)element);
+        }
 
         return "";
     }
@@ -561,6 +568,8 @@ public abstract class Generator
     protected abstract boolean appendToChecksHasGetter(Entry entry, Field field);
 
     protected abstract String groupEntryAppendTo(Group element, String name);
+
+    protected abstract String anyFieldsAppendTo(AnyFields element);
 
     protected abstract boolean hasFlag(Entry entry, Field field);
 

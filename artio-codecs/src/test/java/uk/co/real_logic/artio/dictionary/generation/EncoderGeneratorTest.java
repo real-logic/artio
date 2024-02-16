@@ -24,6 +24,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.FieldBagEncoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -51,6 +52,7 @@ public class EncoderGeneratorTest
     private static Class<?> enumTestMessage;
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
+    private static Class<?> anyFieldsMessage;
 
     private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -72,6 +74,7 @@ public class EncoderGeneratorTest
         final ClassLoader classLoader = heartbeat.getClassLoader();
         enumTestMessage = classLoader.loadClass(ENUM_TEST_MESSAGE_ENCODER);
         otherMessage = classLoader.loadClass(OTHER_MESSAGE_ENCODER);
+        anyFieldsMessage = classLoader.loadClass(ANY_FIELDS_MESSAGE_ENCODER);
 
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_ENCODER, sourcesWithoutValidation);
@@ -971,6 +974,43 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, "8=FIX.4.4\0019=6\00135=AB\00110=247\001");
     }
 
+    @Test
+    public void shouldGenerateAnyFieldsEncoderIfRequested() throws Exception
+    {
+        final Encoder encoder = newAnyFieldsMessage();
+        final Encoder copy = newAnyFieldsMessage();
+
+        setLong(encoder, "longField2", 1000000);
+
+        final FieldBagEncoder trailingAnyFields = getAnyFieldsEncoder(encoder, "trailingAnyFields");
+        trailingAnyFields.addIntField(123, 456);
+        trailingAnyFields.addAsciiStringField(39999, "lorem ipsum");
+
+        assertThat(encoder.toString(), allOf(
+            containsString("\"MsgType\": \"" + ANY_FIELDS_MESSAGE_TYPE + "\""),
+            containsString("\"LongField2\": \"1000000\""),
+            containsString("\"TrailingAnyFields\": \"123=456\00139999=lorem ipsum\001\"")
+        ));
+
+        final String expectedFix1 = "8=FIX.4.4\0019=45\00135=AF\001" +
+            "5005=1000000\001123=456\00139999=lorem ipsum\00110=188\001";
+        assertEncodesTo(encoder, expectedFix1);
+
+        encoder.copyTo(copy);
+        assertEncodesTo(copy, expectedFix1);
+
+        reset(encoder);
+        setLong(encoder, "longField2", 350);
+
+        assertThat(encoder.toString(), not(containsString("TrailingAnyFields")));
+
+        final String expectedFix2 = "8=FIX.4.4\0019=15\00135=AF\0015005=350\00110=203\001";
+        assertEncodesTo(encoder, expectedFix2);
+
+        encoder.copyTo(copy);
+        assertEncodesTo(copy, expectedFix2);
+    }
+
     private void setNestedField(final Object group) throws Exception
     {
         final Object nestedGroup = getNestedGroup(group, 1);
@@ -1099,6 +1139,11 @@ public class EncoderGeneratorTest
         setByteArray(encoder, DATA_FIELD, new byte[]{ '1', '2', '3' });
     }
 
+    private FieldBagEncoder getAnyFieldsEncoder(final Encoder encoder, final String name) throws Exception
+    {
+        return (FieldBagEncoder)get(encoder, name);
+    }
+
     private void setupTrailer(final Encoder encoder) throws Exception
     {
         setupTrailer(encoder, "");
@@ -1179,6 +1224,11 @@ public class EncoderGeneratorTest
     private Encoder newEnumTestMessage() throws Exception
     {
         return (Encoder)enumTestMessage.getConstructor().newInstance();
+    }
+
+    private Encoder newAnyFieldsMessage() throws Exception
+    {
+        return (Encoder)anyFieldsMessage.getConstructor().newInstance();
     }
 
     private void assertTestReqIdLength(final int expectedLength, final Object encoder) throws Exception

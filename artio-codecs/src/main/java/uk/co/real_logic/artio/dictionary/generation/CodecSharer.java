@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.collections.Int2ObjectHashMap;
+import org.agrona.collections.MutableInteger;
 import uk.co.real_logic.artio.dictionary.DictionaryParser;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
@@ -47,6 +48,7 @@ class CodecSharer
     private final Map<String, Group> sharedIdToGroup = new HashMap<>();
     private final Set<String> commonGroupIds = new HashSet<>();
     private final Map<String, Component> sharedNameToComponent = new HashMap<>();
+    private final Set<String> commonAnyFields = new HashSet<>();
 
     CodecSharer(final List<Dictionary> inputDictionaries)
     {
@@ -59,6 +61,7 @@ class CodecSharer
 
         findSharedGroups();
         findSharedComponents();
+        findCommonAnyFields();
         final Map<String, Message> nameToSharedMessage = findSharedMessages();
         findComponentsWithSharedFieldsNotInAllDictionaries(nameToSharedMessage);
 
@@ -324,6 +327,32 @@ class CodecSharer
             inputDictionaries.get(index).components().put(componentName, synthesizedComponent);
         }
         return synthesizedComponent;
+    }
+
+    private void findCommonAnyFields()
+    {
+        final Map<String, MutableInteger> counts = new HashMap<>();
+
+        for (final Dictionary inputDictionary : inputDictionaries)
+        {
+            for (final Message message : inputDictionary.messages())
+            {
+                message.anyFieldsEntries().forEach(entry ->
+                {
+                    final String id = anyFieldsId(Collections.singletonList(message), (AnyFields)entry.element());
+                    counts.computeIfAbsent(id, k -> new MutableInteger()).increment();
+                });
+            }
+        }
+
+        counts.values().removeIf(count -> count.get() < inputDictionaries.size());
+
+        commonAnyFields.addAll(counts.keySet());
+    }
+
+    private String anyFieldsId(final List<Aggregate> parents, final AnyFields anyFields)
+    {
+        return parents.stream().map(Aggregate::name).collect(joining(".")) + "." + anyFields.name();
     }
 
     private Map<String, Message> findSharedMessages()
@@ -863,6 +892,14 @@ class CodecSharer
             }
 
             element = sharedGroup;
+        }
+        else if (element instanceof AnyFields)
+        {
+            final String id = anyFieldsId(parents, (AnyFields)element);
+            if (!commonAnyFields.contains(id))
+            {
+                return null;
+            }
         }
         else
         {

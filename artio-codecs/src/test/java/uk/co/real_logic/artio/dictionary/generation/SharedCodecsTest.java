@@ -154,6 +154,16 @@ public class SharedCodecsTest
         return encoder(dictNorm, "NewOrderSingle");
     }
 
+    private static String anyFieldsOneEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "AnyFieldsOne");
+    }
+
+    private static String anyFieldsTwoEncoder(final String dictNorm)
+    {
+        return encoder(dictNorm, "AnyFieldsTwo");
+    }
+
     private static String constants(final String dictNorm)
     {
         return className(dictNorm, (dictNorm == null ? "Shared" : "") + "Constants", "", "");
@@ -776,6 +786,28 @@ public class SharedCodecsTest
         sometimesComponentDecoder.getMethod(FIELD_SOMETIMES_IN_COMPONENT_LENGTH);
 
         assertNotOnEncoderChildren(FIELD_SOMETIMES_IN_COMPONENT, CharSequence.class);
+    }
+
+    @Test
+    public void shouldSupportAnyFields() throws Exception
+    {
+        // any fields shared between all dicts
+        final Class<?> anyFieldsOneEncoder1 = loadClass(anyFieldsOneEncoder(DICT_1_NORM));
+        final Class<?> anyFieldsOneEncoderShared = loadClass(anyFieldsOneEncoder(null));
+
+        // any fields not shared between all dicts
+        final Class<?> anyFieldsTwoEncoder1 = loadClass(anyFieldsTwoEncoder(DICT_1_NORM));
+        final Class<?> anyFieldsTwoEncoderShared = loadClass(anyFieldsTwoEncoder(null));
+
+        final String trailingAnyFields = "trailingAnyFields";
+
+        anyFieldsOneEncoder1.getMethod(trailingAnyFields);
+        anyFieldsOneEncoderShared.getMethod(trailingAnyFields);
+        noField(anyFieldsOneEncoderShared, trailingAnyFields); // only in children
+
+        anyFieldsTwoEncoder1.getMethod(trailingAnyFields);
+        noMethod(anyFieldsTwoEncoderShared, trailingAnyFields);
+        noField(anyFieldsTwoEncoderShared, trailingAnyFields);
     }
 
     private String sometimesComponentDecoder(final String dictNorm)
