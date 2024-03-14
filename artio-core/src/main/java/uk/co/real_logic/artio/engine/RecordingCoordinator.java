@@ -763,17 +763,6 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             }
         }
 
-        long recordingIdForLibrary(final int libraryId)
-        {
-            final long recordingId = free.get(libraryId);
-            if (recordingId != NULL_RECORDING_ID)
-            {
-                return recordingId;
-            }
-
-            return used.get(libraryId);
-        }
-
         public String toString()
         {
             return "RecordingIds{" +
