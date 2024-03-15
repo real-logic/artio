@@ -1,0 +1,15 @@
+# Helps IDEA users apply some of the formatting rules enforced by checkstyle
+
+root = true
+
+[*.java]
+indent_size = 4
+max_line_length = 120
+ij_java_method_brace_style = next_line
+ij_java_block_brace_style = next_line
+ij_java_else_on_new_line = true
+ij_java_class_brace_style = next_line
+ij_java_space_after_type_cast = false
+ij_any_catch_on_new_line = true
+ij_any_spaces_around_equality_operators = true
+ij_java_continuation_indent_size = 4
