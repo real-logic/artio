@@ -49,7 +49,8 @@ public final class Entry
     public <T> T match(
         final BiFunction<Entry, Field, ? extends T> withField,
         final BiFunction<Entry, Group, ? extends T> withGroup,
-        final BiFunction<Entry, Component, ? extends T> withComponent)
+        final BiFunction<Entry, Component, ? extends T> withComponent,
+        final BiFunction<Entry, AnyFields, ? extends T> withAnyFields)
     {
         if (element instanceof Field)
         {
@@ -63,6 +64,10 @@ public final class Entry
         {
             return withComponent.apply(this, (Component)element);
         }
+        else if (element instanceof AnyFields)
+        {
+            return withAnyFields.apply(this, (AnyFields)element);
+        }
 
         throw new IllegalStateException("Unknown element type: " + element);
     }
@@ -70,7 +75,8 @@ public final class Entry
     public void forEach(
         final ResourceConsumer<Field> withField,
         final ResourceConsumer<Group> withGroup,
-        final ResourceConsumer<Component> withComponent)
+        final ResourceConsumer<Component> withComponent,
+        final ResourceConsumer<AnyFields> withAnyFields)
     {
         try
         {
@@ -86,6 +92,10 @@ public final class Entry
             {
                 withComponent.accept((Component)element);
             }
+            else if (element instanceof AnyFields)
+            {
+                withAnyFields.accept((AnyFields)element);
+            }
             else
             {
                 throw new IllegalStateException("Unknown element type: " + element);
@@ -100,12 +110,14 @@ public final class Entry
     public <T> T matchEntry(
         final Function<Entry, ? extends T> withField,
         final Function<Entry, ? extends T> withGroup,
-        final Function<Entry, ? extends T> withComponent)
+        final Function<Entry, ? extends T> withComponent,
+        final Function<Entry, ? extends T> withAnyFields)
     {
         return match(
             (entry, field) -> withField.apply(entry),
             (entry, group) -> withGroup.apply(entry),
-            (entry, component) -> withComponent.apply(entry));
+            (entry, component) -> withComponent.apply(entry),
+            (entry, anyFields) -> withAnyFields.apply(entry));
     }
 
     /**
@@ -154,6 +166,11 @@ public final class Entry
     public boolean isGroup()
     {
         return element() instanceof Group;
+    }
+
+    public boolean isAnyFields()
+    {
+        return element() instanceof AnyFields;
     }
 
     public String toString()

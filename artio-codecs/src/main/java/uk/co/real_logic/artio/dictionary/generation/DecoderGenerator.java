@@ -772,7 +772,8 @@ class DecoderGenerator extends Generator
         return entry.match(
             (e, field) -> Stream.of(field),
             (e, group) -> Stream.of((Field)group.numberField().element()),
-            (e, component) -> requiredFields(component.entries()));
+            (e, component) -> requiredFields(component.entries()),
+            (e, anyFields) -> Stream.empty());
     }
 
     private Stream<Field> extractFields(final Entry entry)
@@ -781,7 +782,8 @@ class DecoderGenerator extends Generator
             (e, field) -> Stream.of(field),
             (e, group) -> Stream.concat(Stream.of((Field)group.numberField().element()),
                                 group.entries().stream().flatMap(this::extractFields)),
-            (e, component) -> component.entries().stream().flatMap(this::extractFields));
+            (e, component) -> component.entries().stream().flatMap(this::extractFields),
+            (e, anyFields) -> Stream.empty());
     }
 
     private Stream<Field> extractFields(final List<Entry> entries)
@@ -850,7 +852,8 @@ class DecoderGenerator extends Generator
         entry.forEach(
             (field) -> out.append(fieldInterfaceGetter(entry, field)),
             (group) -> groupInterfaceGetter(group, out),
-            (component) -> {});
+            (component) -> {},
+            (anyFields) -> {});
     }
 
     private void groupInterfaceGetter(final Group group, final Writer out) throws IOException
@@ -943,7 +946,8 @@ class DecoderGenerator extends Generator
                 // Components can be shared, but without every message of the given type implementing that component
                 final boolean componentIsInParent = aggregateIsInParent && entry.isInParent();
                 componentGetter(component, out, missingOptionalFields, componentIsInParent);
-            });
+            },
+            (anyFields) -> {});
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -1850,7 +1854,8 @@ class DecoderGenerator extends Generator
         return entry.matchEntry(
             (e) -> decodeField(e, ""),
             this::decodeGroup,
-            this::decodeComponent);
+            this::decodeComponent,
+            (e) -> "");
     }
 
     private String decodeComponent(final Entry entry)
@@ -2188,9 +2193,6 @@ class DecoderGenerator extends Generator
         }
 
         return String.format(
-            "    /**\n" +
-            "     * {@inheritDoc}\n" +
-            "     */\n" +
             "    public %1$s toEncoder(final Encoder encoder)\n" +
             "    {\n" +
             "        return toEncoder((%1$s)encoder);\n" +
@@ -2375,5 +2377,15 @@ class DecoderGenerator extends Generator
     protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field);
+    }
+
+    protected String anyFieldsAppendTo(final AnyFields element)
+    {
+        return "";
+    }
+
+    protected String resetAnyFields(final List<Entry> entries, final StringBuilder methods)
+    {
+        return "";
     }
 }

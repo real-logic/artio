@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchivingMediaDriver;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
@@ -89,9 +90,22 @@ public final class FixArchivePrinter
             return null;
         }
 
+        final Archive.Context archiveCtx = new Archive.Context().archiveDirectoryName(offlineArchiveDirectoryName);
+        if (archiveCtx.controlChannel() == null)
+        {
+            final AeronArchive.Context archiveClientCtx = new AeronArchive.Context()
+                .controlResponseChannel("aeron:udp?endpoint=localhost:0");
+            archiveCtx.controlChannelEnabled(false)
+                .archiveClientContext(archiveClientCtx);
+        }
+        if (archiveCtx.replicationChannel() == null)
+        {
+            archiveCtx.replicationChannel("aeron:udp?endpoint=localhost:0");
+        }
+
         return ArchivingMediaDriver.launch(
             new MediaDriver.Context().aeronDirectoryName(aeronDirectoryName),
-            new Archive.Context().archiveDirectoryName(offlineArchiveDirectoryName));
+            archiveCtx);
     }
 
     private void parseArgs(final String[] args)

@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -236,6 +237,15 @@ public class DictionaryParserTest
     }
 
     @Test
+    public void shouldParseAnyFieldsEntries()
+    {
+        final Message executionReport = message("ExecutionReport");
+        final List<Entry> anyFieldsEntries = executionReport.anyFieldsEntries().collect(toList());
+        assertThat(anyFieldsEntries, hasSize(1));
+        assertEquals("TrailingAnyFields", anyFieldsEntries.get(0).name());
+    }
+
+    @Test
     public void shouldDedupeFieldsIncludedTwice()
     {
         shouldThrow(() -> parseDictionary("example_invalid_dictionary_fields_included_twice.xml"),
@@ -289,6 +299,15 @@ public class DictionaryParserTest
             " RawData is missing a length field in EgGroupGroup");
     }
 
+    @Test
+    public void shouldNotAllowMultipleAnyFieldsEntries()
+    {
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_multiple_any_fields_entries.xml"),
+            IllegalStateException.class,
+            "At most one anyFields entry is allowed," +
+            " but MultipleAnyFieldsEntriesTest contains multiple: [PrecedingAnyFields, TrailingAnyFields]");
+    }
+
     private Component component(final String name)
     {
         return dictionary.components().get(name);
@@ -307,6 +326,14 @@ public class DictionaryParserTest
             .stream()
             .filter(Field::isEnum)
             .count();
+    }
+
+    private Message message(final String name)
+    {
+        return dictionary.messages().stream()
+            .filter(message -> message.name().equals(name))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Message " + name + " not found"));
     }
 
     private Field field(final String name)

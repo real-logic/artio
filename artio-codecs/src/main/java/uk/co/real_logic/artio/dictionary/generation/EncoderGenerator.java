@@ -21,6 +21,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.FieldBagEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.Generated;
 import uk.co.real_logic.artio.dictionary.ir.*;
@@ -208,7 +209,8 @@ class EncoderGenerator extends Generator
                     DirectBuffer.class,
                     MutableDirectBuffer.class,
                     UnsafeBuffer.class,
-                    AsciiSequenceView.class);
+                    AsciiSequenceView.class,
+                    FieldBagEncoder.class);
                 generateAggregateClass(aggregate, aggregateType, className, out);
             });
     }
@@ -595,7 +597,8 @@ class EncoderGenerator extends Generator
                     }
                 },
                 (group) -> generateGroup(className, group, out, optionalFields),
-                (component) -> generateComponentField(encoderClassName(entry.name()), component, out));
+                (component) -> generateComponentField(encoderClassName(entry.name()), component, out),
+                (anyFields) -> generateAnyFields(entry, out));
         }
     }
 
@@ -1037,7 +1040,7 @@ class EncoderGenerator extends Generator
         }
         else
         {
-            return entry.matchEntry(this::encodeField, this::encodeGroup, this::encodeComponent);
+            return entry.matchEntry(this::encodeField, this::encodeGroup, this::encodeComponent, this::encodeAnyFields);
         }
     }
 
@@ -1187,6 +1190,93 @@ class EncoderGenerator extends Generator
         return String.format(
             "            position += %1$s.encode(buffer, position);\n",
             formatPropertyName(entry.name()));
+    }
+
+    private void generateAnyFields(final Entry entry, final Writer out) throws IOException
+    {
+        if (isSharedParent())
+        {
+            out.write(String.format(
+                "    public abstract FieldBagEncoder %1$s();\n\n",
+                formatPropertyName(entry.name())
+            ));
+        }
+        else
+        {
+            out.write(String.format(
+                "    private final FieldBagEncoder %1$s = new FieldBagEncoder();\n" +
+                "\n" +
+                "    public FieldBagEncoder %1$s()\n" +
+                "    {\n" +
+                "        return %1$s;\n" +
+                "    }\n\n",
+                formatPropertyName(entry.name())
+            ));
+        }
+    }
+
+    protected String resetAnyFields(final List<Entry> entries, final StringBuilder methods)
+    {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
+        return resetAllBy(entries, methods, Entry::isAnyFields, entry -> "", this::resetAnyFields);
+    }
+
+    private String resetAnyFields(final Entry entry)
+    {
+        return String.format(
+            "        %1$s.reset();\n",
+            formatPropertyName(entry.name()));
+    }
+
+    private String encodeAnyFields(final Entry entry)
+    {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
+        return String.format(
+            "        if (!%1$s.isEmpty())\n" +
+            "        {\n" +
+            "            position += %1$s.encode(buffer, position);\n" +
+            "        }\n\n",
+            formatPropertyName(entry.name()));
+    }
+
+    protected String anyFieldsAppendTo(final AnyFields element)
+    {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
+        return String.format(
+            "        if (!%1$s.isEmpty())\n" +
+            "        {\n" +
+            "            indent(builder, level);\n" +
+            "            builder.append(\"\\\"%2$s\\\": \\\"\");\n" +
+            "            %1$s.appendTo(builder);\n" +
+            "            builder.append(\"\\\",\\n\");\n" +
+            "        }\n",
+            formatPropertyName(element.name()),
+            element.name());
+    }
+
+    private String anyFieldsCopyTo(final AnyFields element, final String encoderName)
+    {
+        if (isSharedParent())
+        {
+            return "";
+        }
+
+        return String.format(
+            "        %1$s.copyTo(%2$s.%1$s());\n",
+            formatPropertyName(element.name()),
+            encoderName);
     }
 
     private String formatTag(final String fieldName, final String optionalPrefix)
@@ -1441,9 +1531,6 @@ class EncoderGenerator extends Generator
         final String name = aggregate.name();
 
         return String.format(
-            "    /**\n" +
-            "     * {@inheritDoc}\n" +
-            "     */\n" +
             "    public %1$s copyTo(final Encoder encoder)\n" +
             "    {\n" +
             "        return copyTo((%1$s)encoder);\n" +
@@ -1498,6 +1585,10 @@ class EncoderGenerator extends Generator
         else if (element instanceof Component)
         {
             return componentCopyTo((Component)element, encoderName);
+        }
+        else if (element instanceof AnyFields)
+        {
+            return anyFieldsCopyTo((AnyFields)element, encoderName);
         }
 
         return "";

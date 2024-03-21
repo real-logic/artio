@@ -97,6 +97,7 @@ public final class DictionaryParser
         sanitizeDictionary(fields, messages);
         validateDataFields(messages);
         validateDataFields(components.values());
+        validateAnyFields(messages);
 
         if (fixtDictionary != null)
         {
@@ -158,7 +159,8 @@ public final class DictionaryParser
                     checkAssociatedLengthField(nameToField, field, aggregate.name());
                 },
                 this::validateDataFieldsInAggregate,
-                this::validateDataFieldsInAggregate);
+                this::validateDataFieldsInAggregate,
+                (anyFields) -> {});
         }
     }
 
@@ -195,6 +197,22 @@ public final class DictionaryParser
         }
 
         return false;
+    }
+
+    private void validateAnyFields(final List<Message> messages)
+    {
+        for (final Message message : messages)
+        {
+            final List<String> anyFieldsEntries = message.anyFieldsEntries()
+                .map(Entry::name)
+                .collect(Collectors.toList());
+
+            if (anyFieldsEntries.size() > 1)
+            {
+                throw new IllegalStateException("At most one anyFields entry is allowed, but " + message.name() +
+                    " contains multiple: " + anyFieldsEntries);
+            }
+        }
     }
 
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
@@ -237,7 +255,7 @@ public final class DictionaryParser
                 final String name = name(attributes);
                 final Component component = new Component(name);
 
-                extractEntries(node.getChildNodes(), fields, component.entries(), components, forwardReferences);
+                extractEntries(node.getChildNodes(), fields, component.entries(), components, forwardReferences, false);
 
                 components.put(name, component);
             });
@@ -322,7 +340,7 @@ public final class DictionaryParser
                 final String category = getValue(attributes, "msgcat");
                 final Message message = new Message(name, fullType, category);
 
-                extractEntries(node.getChildNodes(), fields, message.entries(), components, forwardReferences);
+                extractEntries(node.getChildNodes(), fields, message.entries(), components, forwardReferences, true);
 
                 messages.add(message);
             });
@@ -335,7 +353,8 @@ public final class DictionaryParser
         final Map<String, Field> fields,
         final List<Entry> entries,
         final Map<String, Component> components,
-        final Map<Entry, String> forwardReferences)
+        final Map<Entry, String> forwardReferences,
+        final boolean isMessage)
     {
         forEach(childNodes,
             (node) ->
@@ -363,7 +382,13 @@ public final class DictionaryParser
 
                     case "group":
                         final Group group = Group.of(fields.get(name), fields);
-                        extractEntries(node.getChildNodes(), fields, group.entries(), components, forwardReferences);
+                        extractEntries(
+                            node.getChildNodes(),
+                            fields,
+                            group.entries(),
+                            components,
+                            forwardReferences,
+                            false);
                         newEntry.accept(group);
                         break;
 
@@ -375,6 +400,15 @@ public final class DictionaryParser
                             forwardReferences.put(entry, name);
                         }
                         entries.add(entry);
+                        break;
+
+                    case "anyFields":
+                        if (!isMessage)
+                        {
+                            throw new IllegalStateException(
+                                "Only messages can contain anyFields entries (" + name + ")");
+                        }
+                        newEntry.accept(new AnyFields(name));
                         break;
                 }
             });
@@ -391,7 +425,7 @@ public final class DictionaryParser
     {
         final Component component = new Component(name);
         final NodeList nodes = evaluate(document, expression);
-        extractEntries(nodes, fields, component.entries(), components, forwardReferences);
+        extractEntries(nodes, fields, component.entries(), components, forwardReferences, false);
 
         return component;
     }
@@ -532,7 +566,8 @@ public final class DictionaryParser
                         path,
                         errorCollector);
                     path.removeLast();
-                }
+                },
+                (anyFields) -> {}
             );
         }
     }

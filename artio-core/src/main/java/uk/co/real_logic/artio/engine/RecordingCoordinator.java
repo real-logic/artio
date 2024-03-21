@@ -288,7 +288,8 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             final boolean isInbound = streamId == configuration.inboundLibraryStream();
             final RecordingIds recordingIds = isInbound ? inboundRecordingIds : outboundRecordingIds;
             final RecordingIdLookup lookup = isInbound ? framerOutboundLookup : framerInboundLookup;
-            final LibraryExtendPosition libraryExtendPosition = acquireRecording(streamId, recordingIds);
+            final LibraryExtendPosition libraryExtendPosition =
+                acquireRecording(streamId, recordingIds, ENGINE_LIBRARY_ID);
             final ExclusivePublication publication;
             if (libraryExtendPosition != null)
             {
@@ -389,16 +390,13 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
     }
 
     private LibraryExtendPosition acquireRecording(
-        final int streamId, final RecordingIds recordingIds)
+        final int streamId, final RecordingIds recordingIds, final int libraryId)
     {
         libraryExtendPosition = null;
 
-        final Long2LongHashMap.ValueIterator it = recordingIds.free.values().iterator();
-        if (it.hasNext())
+        final long recordingId = recordingIds.acquire(libraryId);
+        if (recordingId != NULL_RECORDING_ID)
         {
-            final long recordingId = it.nextValue();
-            it.remove();
-
             final int count = archive.listRecording(recordingId, this);
             if (count != 1 || null == libraryExtendPosition)
             {
@@ -460,7 +458,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
                 }
             }
 
-            extendPosition = acquireRecording(streamId, outboundRecordingIds);
+            extendPosition = acquireRecording(streamId, outboundRecordingIds, libraryId);
             if (extendPosition != null)
             {
                 extendRecording(streamId, extendPosition, extendPosition.newSessionId);
@@ -763,15 +761,21 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             }
         }
 
-        long recordingIdForLibrary(final int libraryId)
+        long acquire(final int libraryId)
         {
-            final long recordingId = free.get(libraryId);
-            if (recordingId != NULL_RECORDING_ID)
+            long recordingId = free.remove(libraryId);
+
+            if (recordingId == NULL_RECORDING_ID)
             {
-                return recordingId;
+                final Long2LongHashMap.ValueIterator it = free.values().iterator();
+                if (it.hasNext())
+                {
+                    recordingId = it.nextValue();
+                    it.remove();
+                }
             }
 
-            return used.get(libraryId);
+            return recordingId;
         }
 
         public String toString()

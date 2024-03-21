@@ -343,8 +343,7 @@ class FixSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.position(buffer, writePosition);
 
         final int written = channel.write(buffer, seqNum, replay);
-        ByteBufferUtil.position(buffer, bufferOffset);
-        DebugLogger.logBytes(FIX_MESSAGE_TCP, "Written  ", buffer, writePosition, written);
+        DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", directBuffer, offset + reattemptBytesWritten, written);
 
         buffer.limit(startLimit).position(startPosition);
 

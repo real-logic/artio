@@ -70,6 +70,7 @@ public final class ExampleDictionary
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
     public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
     public static final String ENUM_TEST_MESSAGE_ENCODER = TEST_PACKAGE + ".EnumTestMessageEncoder";
+    public static final String ANY_FIELDS_MESSAGE_ENCODER = TEST_PACKAGE + ".AnyFieldsMessageEncoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
@@ -113,6 +114,9 @@ public final class ExampleDictionary
 
     public static final String MSG_TYPE = "msgType";
     public static final String BODY_LENGTH = "bodyLength";
+
+    public static final String ANY_FIELDS_MESSAGE_NAME = "AnyFieldsMessage";
+    public static final String ANY_FIELDS_MESSAGE_TYPE = "AF";
 
     public static final long HEARTBEAT_TYPE = '0';
 
@@ -703,8 +707,12 @@ public final class ExampleDictionary
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 707, CURRENCY_ENUM_RF, CURRENCY)
             .addValue("USD", "US_Dollar").addValue("GBP", "Pound"));
 
+        final Message anyFieldsMessage = new Message(ANY_FIELDS_MESSAGE_NAME, ANY_FIELDS_MESSAGE_TYPE, "app");
+        anyFieldsMessage.requiredEntry(registerField(messageEgFields, 5005, "LongField2", LONG));
+        anyFieldsMessage.optionalEntry(new AnyFields("TrailingAnyFields"));
+
         final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, lowerCaseMessage,
-            allReqFieldTypesMessage, enumTestMessage, phoneBookMessage);
+            allReqFieldTypesMessage, enumTestMessage, phoneBookMessage, anyFieldsMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);

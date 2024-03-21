@@ -66,7 +66,8 @@ public abstract class Aggregate
                 (entry) -> entry.match(
                     (ele, field) -> Stream.of(ele),
                     (ele, group) -> Stream.empty(),
-                    (ele, component) -> component.allFieldsIncludingComponents()
+                    (ele, component) -> component.allFieldsIncludingComponents(),
+                    (ele, anyFields) -> Stream.empty()
                 ));
     }
 
@@ -80,7 +81,8 @@ public abstract class Aggregate
                 (entry) -> entry.match(
                     (ele, field) -> Stream.empty(),
                     (ele, group) -> Stream.of(ele),
-                    (ele, component) -> component.allGroupsIncludingComponents()
+                    (ele, component) -> component.allGroupsIncludingComponents(),
+                    (ele, anyFields) -> Stream.empty()
                 ));
     }
 
@@ -91,7 +93,8 @@ public abstract class Aggregate
                 (entry) -> entry.match(
                     (e, field) -> Stream.empty(),
                     (e, group) -> Stream.empty(),
-                    (e, component) -> Stream.concat(Stream.of(e), component.allComponents())
+                    (e, component) -> Stream.concat(Stream.of(e), component.allComponents()),
+                    (e, anyFields) -> Stream.empty()
                 ));
     }
 
@@ -128,7 +131,8 @@ public abstract class Aggregate
                 (entry) -> entry.match(
                     (ele, field) -> false,
                     (ele, group) -> true,
-                    (ele, component) -> component.containsGroup()
+                    (ele, component) -> component.containsGroup(),
+                    (ele, anyFields) -> false
                 ));
     }
 
@@ -150,5 +154,10 @@ public abstract class Aggregate
     public boolean hasComponent(final String componentName)
     {
         return componentEntries().anyMatch(e -> componentName.equals(e.name()));
+    }
+
+    public Stream<Entry> anyFieldsEntries()
+    {
+        return entries().stream().filter(Entry::isAnyFields);
     }
 }
