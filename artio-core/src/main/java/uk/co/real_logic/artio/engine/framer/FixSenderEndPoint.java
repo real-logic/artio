@@ -79,7 +79,7 @@ class FixSenderEndPoint extends SenderEndPoint
         final CharFormatter bufferSlowDisconnect = new CharFormatter(
             "SEP.bufferSlowDisconnect, conn=%s,sess=%s,bufferUsage=%s,maxBytesInBuffer=%s,replay=%s");
         final CharFormatter timeoutSlowDisconnect = new CharFormatter(
-            "SEP.timeoutSlowDisconnect, conn=%s,sess=%s,time=%s,noWriteSince=%s");
+            "SEP.timeoutSlowDisconnect, conn=%s,sess=%s,time=%s,maxBytesInBuffer=%s,noWriteSince=%s");
     }
 
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
