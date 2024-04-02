@@ -42,7 +42,6 @@ import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -442,7 +441,6 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     @Test(timeout = 20_000L)
-    @Ignore
     public void shouldDeleteIndexSegmentsOnSequenceResetWhenASegmentHasBeenTouched()
     {
         int seqNo = 1;
