@@ -24,6 +24,15 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
+import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
+import uk.co.real_logic.artio.messages.FixPProtocolType;
+import uk.co.real_logic.artio.messages.ResetSequenceNumberEncoder;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.Session;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -33,16 +42,9 @@ import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
-import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.TestFixtures;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
-import uk.co.real_logic.artio.messages.FixPProtocolType;
-import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -50,14 +52,18 @@ import java.util.stream.IntStream;
 
 import static io.aeron.Aeron.NULL_VALUE;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.TestFixtures.aeronArchiveContext;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
-import static uk.co.real_logic.artio.TestFixtures.aeronArchiveContext;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -403,6 +409,93 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(position3, startPositions.get(recordingId));
     }
 
+    @Test(timeout = 20_000L)
+    public void shouldDeleteIndexSegmentsOnSequenceResetWhenNoSegmentsHaveBeenTouched()
+    {
+        int seqNo = 1;
+        for (int i = 0; i < DEFAULT_REPLAY_INDEX_RECORD_CAPACITY; i++)
+        {
+            indexExampleMessage(SESSION_ID, seqNo++, SEQUENCE_INDEX);
+        }
+
+        assertTrue(logFile(SESSION_ID).exists());
+
+        assertTrue(segmentFile(SESSION_ID, 0).exists());
+        assertTrue(segmentFile(SESSION_ID, 1).exists());
+        assertTrue(segmentFile(SESSION_ID, 2).exists());
+        assertTrue(segmentFile(SESSION_ID, 3).exists());
+
+        assertFalse(segmentFile(SESSION_ID, 4).exists());
+
+        replayIndex.close();
+
+        newReplayIndex();
+
+        resetSequenceNumber();
+
+        assertFalse(logFile(SESSION_ID).exists());
+
+        assertFalse(segmentFile(SESSION_ID, 0).exists());
+        assertFalse(segmentFile(SESSION_ID, 1).exists());
+        assertFalse(segmentFile(SESSION_ID, 2).exists());
+        assertFalse(segmentFile(SESSION_ID, 3).exists());
+    }
+
+    @Test(timeout = 20_000L)
+    @Ignore
+    public void shouldDeleteIndexSegmentsOnSequenceResetWhenASegmentHasBeenTouched()
+    {
+        int seqNo = 1;
+        for (int i = 0; i < DEFAULT_REPLAY_INDEX_RECORD_CAPACITY; i++)
+        {
+            indexExampleMessage(SESSION_ID, seqNo++, SEQUENCE_INDEX);
+        }
+
+        assertTrue(logFile(SESSION_ID).exists());
+
+        assertTrue(segmentFile(SESSION_ID, 0).exists());
+        assertTrue(segmentFile(SESSION_ID, 1).exists());
+        assertTrue(segmentFile(SESSION_ID, 2).exists());
+        assertTrue(segmentFile(SESSION_ID, 3).exists());
+
+        assertFalse(segmentFile(SESSION_ID, 4).exists());
+
+        replayIndex.close();
+
+        newReplayIndex();
+
+        indexExampleMessage(SESSION_ID, seqNo++, SEQUENCE_INDEX);
+
+        resetSequenceNumber();
+
+        assertFalse(logFile(SESSION_ID).exists());
+
+        assertFalse(segmentFile(SESSION_ID, 0).exists());
+        assertFalse(segmentFile(SESSION_ID, 1).exists());
+        assertFalse(segmentFile(SESSION_ID, 2).exists());
+        assertFalse(segmentFile(SESSION_ID, 3).exists());
+    }
+
+    private void resetSequenceNumber()
+    {
+        final int offset = START;
+
+        final ResetSequenceNumberEncoder resetEncoder = new ResetSequenceNumberEncoder();
+        resetEncoder
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(SESSION_ID);
+
+        final int limit = resetEncoder.limit();
+        final int length = limit - offset;
+
+        while (publication.offer(buffer, offset, length) <= 0)
+        {
+            Thread.yield();
+        }
+
+        indexRecord();
+    }
+
     private void captureRecordingIds()
     {
         final int recordingCount = captureRecordingId();
@@ -469,6 +562,11 @@ public class ReplayIndexTest extends AbstractLogTest
     private File logFile(final long sessionId)
     {
         return ReplayIndexDescriptor.replayIndexHeaderFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID);
+    }
+
+    private File segmentFile(final long sessionId, final int segmentIndex)
+    {
+        return ReplayIndexDescriptor.replayIndexSegmentFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID, segmentIndex);
     }
 
     private void indexRecord()
