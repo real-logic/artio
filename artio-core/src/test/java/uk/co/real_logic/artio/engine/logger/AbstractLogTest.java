@@ -127,7 +127,7 @@ public class AbstractLogTest
             SESSION_ID, sequenceNumber, SEQUENCE_INDEX, testRequestEncoder, header, TestRequestDecoder.MESSAGE_TYPE);
     }
 
-    private void bufferContainsMessage(
+    protected void bufferContainsMessage(
         final long sessionId,
         final int sequenceNumber,
         final int sequenceIndex,
