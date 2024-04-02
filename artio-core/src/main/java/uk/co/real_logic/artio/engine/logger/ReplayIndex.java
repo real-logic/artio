@@ -621,9 +621,11 @@ public class ReplayIndex implements Index
 
             evictionHandler.onReset(fixSessionId);
             deleteFile(headerFile);
-            for (final File segmentFile: segmentBufferFiles)
+
+            for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
             {
-                if (segmentFile != null)
+                final File segmentFile = replayIndexSegmentFile(fixSessionId, segmentIndex);
+                if (segmentFile.exists())
                 {
                     deleteFile(segmentFile);
                 }
