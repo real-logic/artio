@@ -86,7 +86,7 @@ public final class FixMessagePredicates
         {
             final int actingVersion = message.sbeSchemaVersion();
             final int actingBlockLength = message.sbeBlockLength();
-            final int initialOffset = message.initialOffset();
+            final int initialOffset = message.offset();
 
             if (predicate.test(message))
             {
