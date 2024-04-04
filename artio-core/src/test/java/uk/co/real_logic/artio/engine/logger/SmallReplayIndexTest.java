@@ -136,7 +136,8 @@ public class SmallReplayIndexTest extends AbstractLogTest implements ReplayQuery
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect(aeronArchiveContext());
 
-        recordingIdLookup = new RecordingIdLookup(new YieldingIdleStrategy(), aeron().countersReader());
+        recordingIdLookup =
+            new RecordingIdLookup(aeronArchive.archiveId(), new YieldingIdleStrategy(), aeron().countersReader());
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

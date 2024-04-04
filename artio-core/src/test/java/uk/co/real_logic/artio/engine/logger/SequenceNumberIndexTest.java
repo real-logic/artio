@@ -108,7 +108,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         deleteFiles();
 
-        recordingIdLookup = new RecordingIdLookup(YieldingIdleStrategy.INSTANCE, aeron.countersReader());
+        recordingIdLookup =
+            new RecordingIdLookup(aeronArchive.archiveId(), YieldingIdleStrategy.INSTANCE, aeron.countersReader());
         writer = newWriter(inMemoryBuffer);
         reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, recordingIdLookup, null);
     }
