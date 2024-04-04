@@ -42,7 +42,7 @@ def junitVersion = '5.10.2'
 def mockitoVersion = '4.11.0'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.37'
-def byteBuddyVersion = '1.14.12'
+def byteBuddyVersion = '1.14.13'
 
 def agronaVersion = '1.20.0'
 def sbeVersion = '1.30.0'
