@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 public class DebugFIXClient
 {
     private final DebugServer.HasIOStream io;
-    private final Thread thread;
+    private Thread thread;
 
     private final BlockingQueue<Map<String, String>> messages = new LinkedBlockingQueue<>();
     private volatile boolean disposed;
@@ -27,6 +27,11 @@ public class DebugFIXClient
     public DebugFIXClient(final DebugServer.HasIOStream io)
     {
         this.io = Objects.requireNonNull(io);
+    }
+
+    public void start()
+    {
+        assert thread == null;
         thread = new Thread(this::run, "DebugFIXClient");
         thread.start();
     }
@@ -36,6 +41,7 @@ public class DebugFIXClient
         disposed = true;
         io.in.close();
         io.in.close();
+        io.socket.close();
         thread.interrupt();
         thread.join();
     }
@@ -58,7 +64,7 @@ public class DebugFIXClient
                 {
                     messages.add(msg);
                     msg = new HashMap<>();
-                    System.out.println(prefix + s);
+                    System.err.println(prefix + s);
                     s.setLength(0);
                 }
             }
@@ -78,6 +84,7 @@ public class DebugFIXClient
     public void popAndAssert(final String tagValues) throws InterruptedException
     {
         final Map<String, String> map = popMessage();
+        System.err.println(map);
         if (map == null)
         {
             throw new AssertionError("No message received");
@@ -87,7 +94,15 @@ public class DebugFIXClient
         {
             final String tag = rule.substring(0, rule.indexOf('='));
             final String value = map.get(tag);
-            Assert.assertEquals(rule, tag + "=" + value);
+            try
+            {
+                Assert.assertEquals(rule, tag + "=" + value);
+            }
+            catch (final Throwable e)
+            {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 

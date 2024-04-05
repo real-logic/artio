@@ -96,7 +96,7 @@ public class DebugServer
                                 in.reset();
                             }
 
-                            final HasIOStream client = new HasIOStream(in, out);
+                            final HasIOStream client = new HasIOStream(socket, in, out);
                             sendResponses(client.out);
                             clients.add(client);
                         }
@@ -154,11 +154,13 @@ public class DebugServer
     public static class HasIOStream
     {
 
+        public final Socket socket;
         public final InputStream in;
         public final OutputStream out;
 
-        public HasIOStream(final InputStream in, final OutputStream out)
+        public HasIOStream(final Socket socket, final InputStream in, final OutputStream out)
         {
+            this.socket = socket;
             this.in = in;
             this.out = out;
         }

@@ -5,7 +5,6 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.EpochFractionFormat;
@@ -29,10 +28,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingConfig;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingLibraryConfig;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.connect;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingConfig;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingLibraryConfig;
@@ -56,13 +51,14 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
     private long sleepBeforeSendResendRequest;
 
     private final ArrayList<AutoCloseable> autoClose = new ArrayList<>();
+    private DebugServer initialAcceptor;
 
-    private void launch()
+    private void launch() throws IOException
     {
         mediaDriver = launchMediaDriver();
-        launchAccepting();
+        launchInitialAcceptor();
         launchInitiating();
-        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
+        testSystem = new TestSystem(initiatingLibrary);
     }
 
     private void launchInitiating()
@@ -103,15 +99,15 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    private void launchAccepting()
+    private void launchInitialAcceptor() throws IOException
     {
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
-            .deleteLogFileDirOnStart(true)
-            .initialAcceptedSessionOwner(SOLE_LIBRARY);
-        acceptingEngine = FixEngine.launch(acceptingConfig);
-
-        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
-        acceptingLibrary = connect(acceptingLibraryConfig);
+        initialAcceptor = new DebugServer(port);
+        initialAcceptor.setWaitForData(true);
+        initialAcceptor.addFIXResponse(
+            "8=FIX.4.4|9=94|35=A|49=acceptor|56=initiator|34=1|52=***|98=0|108=10|141=N|35002=0|35003=0|10=024|",
+            "8=FIX.4.4|9=94|35=1|49=acceptor|56=initiator|34=2|52=***|112=hello|98=0|108=10|141=N|10=024|"
+        );
+        initialAcceptor.start();
     }
 
     /**
@@ -154,33 +150,19 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
         @Override
         public long onResend(
             final Session session, final AbstractResendRequestDecoder resendRequest,
-            final int correctedEndSeqNo, final ResendRequestResponse response,
+            final int endSeqNo, final ResendRequestResponse response,
             final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength
         )
         {
-            onResendRequestReceived(session, resendRequest, correctedEndSeqNo, response,
-                messageBuffer, messageOffset, messageLength);
-            return 1;
-        }
-
-        private void onResendRequestReceived(
-            final Session session, final AbstractResendRequestDecoder request, final int endSeqNo,
-            final ResendRequestResponse response,
-            final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength
-        )
-        {
-            System.err.println("onResendRequestReceived() called");
-            if (!useProxy || sleepBeforeSendResendRequest == 0)
-            {
-                response.resend();
-            }
-            else
+            System.err.println("onResend() called");
+            if (useProxy && sleepBeforeSendResendRequest != 0)
             {
                 response.delay();
                 final MutableAsciiBuffer buf = new MutableAsciiBuffer(new byte[messageLength]);
                 buf.putBytes(0, messageBuffer, messageOffset, messageLength);
-                pendingResendRequest = new PendingResendRequest(session, request.beginSeqNo(), endSeqNo, buf);
+                pendingResendRequest = new PendingResendRequest(session, resendRequest.beginSeqNo(), endSeqNo, buf);
             }
+            return 1;
         }
 
         @Override
@@ -223,10 +205,6 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
                 if (pendingResendRequest != null)
                 {
                     pendingResendRequest.execute();
-                }
-                else
-                {
-                    System.err.println("onResend not called (direct)");
                 }
             }
             return 1;
@@ -303,14 +281,14 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
         launch();
 
         connectAndAcquire();
+        final DebugFIXClient acc1 = new DebugFIXClient(initialAcceptor.popClient(5000));
+        acc1.start();
 
-        messagesCanBeExchanged();
-
-        disconnectSessions();
-        Exceptions.closeAll(this::closeAcceptingEngine);
-
-        assertEquals(3, acceptingSession.lastReceivedMsgSeqNum());
-        assertEquals(3, initiatingSession.lastReceivedMsgSeqNum());
+        acc1.popAndAssert("35=A 34=1");
+        acc1.popAndAssert("35=0 34=2 112=hello");
+        acc1.close();
+        initialAcceptor.stop();
+        assertEquals(2, initiatingSession.lastReceivedMsgSeqNum());
 
         final DebugServer srv = new DebugServer(port);
         srv.setWaitForData(true);
@@ -323,11 +301,12 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
 
         connectPersistentSessions(4, 4, false);
 
-        final DebugFIXClient exchange = new DebugFIXClient(srv.popClient(5000));
-        autoClose.add(exchange::close);
-        exchange.popAndAssert("35=A 34=4");
-        exchange.popAndAssert("35=2 34=5 7=4 16=0"); // ResendRequest now always received first
-        exchange.popAndAssert("35=4 34=4 36=6");
+        final DebugFIXClient acc2 = new DebugFIXClient(srv.popClient(5000));
+        acc2.start();
+        autoClose.add(acc2::close);
+        acc2.popAndAssert("35=A 34=4");
+        acc2.popAndAssert("35=2 34=5 7=4 16=0"); // ResendRequest now always received first
+        acc2.popAndAssert("35=4 34=4 36=6");
     }
 
     @Override
@@ -349,6 +328,5 @@ public class RaceResendResetTest extends AbstractGatewayToGatewaySystemTest
     private void connectAndAcquire()
     {
         connectSessions();
-        acceptingSession = acceptingHandler.lastSession();
     }
 }
