@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.exceptions.TimeoutException;
 import org.agrona.CloseHelper;
 import org.junit.After;
 import org.junit.Before;
@@ -33,8 +34,7 @@ import java.util.List;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -263,6 +263,23 @@ public class ArtioAdminSystemTest extends AbstractGatewayToGatewaySystemTest
                 FixGatewayException.class,
                 containsString("unknown"));
         });
+    }
+
+    @Test
+    public void shouldThrowExceptionIfAdminClientFailsToConnectToTheFixEngine()
+    {
+        final ArtioAdminConfiguration config = new ArtioAdminConfiguration()
+            .inboundAdminStream(1010101010)
+            .outboundAdminStream(2020202020)
+            .aeronChannel("aeron:ipc")
+            .connectTimeoutNs(123);
+
+        assertThrows(
+            () -> ArtioAdmin.launch(config),
+            TimeoutException.class,
+            equalTo("ERROR - Failed to connect to FixEngine using channel=aeron:ipc " +
+            "outboundAdminStreamId=2020202020 inboundAdminStreamId=1010101010 subscription.isConnected=false " +
+            "publication.isConnected=false after 123 ns"));
     }
 
     private void createOfflineSession()

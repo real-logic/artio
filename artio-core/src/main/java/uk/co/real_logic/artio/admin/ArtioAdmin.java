@@ -17,12 +17,13 @@ package uk.co.real_logic.artio.admin;
 
 import io.aeron.Aeron;
 import io.aeron.Counter;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.exceptions.TimeoutException;
+import org.agrona.CloseHelper;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,7 +38,7 @@ import static uk.co.real_logic.artio.FixCounters.FixCountersId.FAILED_ADMIN_TYPE
  * Provides a blocking wrapper for Artio API operations that can be used from a different process. Every API operation
  * in this class blocks its invoking thread until the operation is complete and only one API operation can be performed
  * at a time.
- *
+ * <p>
  * This can be used for integration into commandline tools (such as FixAdminTool) or external processes, such as
  * web services APIs or custom GUI tools. It is designed to provide functionality for tasks that operational personnel
  * may want to perform on a FIX Gateway.
@@ -93,7 +94,7 @@ public final class ArtioAdmin implements AutoCloseable
      * to this API operation, leaving its data stale.
      *
      * @return the list of FIX sessions.
-     * @throws TimeoutException if the operation times out.
+     * @throws TimeoutException      if the operation times out.
      * @throws IllegalStateException if the instance has been closed.
      */
     public List<FixAdminSession> allFixSessions()
@@ -105,8 +106,8 @@ public final class ArtioAdmin implements AutoCloseable
      * Disconnects a currently connected FIX session.
      *
      * @param sessionId the id of the session to disconnect.
-     * @throws FixGatewayException if the session id is unknown or if the session is not currently connected.
-     * @throws TimeoutException if the operation times out.
+     * @throws FixGatewayException   if the session id is unknown or if the session is not currently connected.
+     * @throws TimeoutException      if the operation times out.
      * @throws IllegalStateException if the instance has been closed.
      */
     public void disconnectSession(final long sessionId)
@@ -123,8 +124,8 @@ public final class ArtioAdmin implements AutoCloseable
      * resetSeqNum=Y flag will be sent to the counter-party.
      *
      * @param sessionId the id of the session to perform the reset operation on.
-     * @throws FixGatewayException if the session id is unknown.
-     * @throws TimeoutException if the operation times out.
+     * @throws FixGatewayException   if the session id is unknown.
+     * @throws TimeoutException      if the operation times out.
      * @throws IllegalStateException if the instance has been closed.
      */
     public void resetSequenceNumbers(final long sessionId)
@@ -144,7 +145,7 @@ public final class ArtioAdmin implements AutoCloseable
         {
             if (!closed)
             {
-                Exceptions.closeAll(failCounter, aeron);
+                CloseHelper.closeAll(failCounter, aeron);
                 closed = true;
             }
         }
@@ -170,21 +171,47 @@ public final class ArtioAdmin implements AutoCloseable
 
     private ArtioAdmin(final ArtioAdminConfiguration config)
     {
-        config.conclude();
+        try
+        {
+            config.conclude();
 
-        aeron = Aeron.connect(config.aeronContext());
-        idleStrategy = config.idleStrategy();
-        epochNanoClock = config.epochNanoClock();
-        failCounter = aeron.addCounter(FAILED_ADMIN_TYPE_ID.id(), "Failed offer for admin publication");
-        replyTimeoutInNs = config.replyTimeoutInNs();
+            aeron = Aeron.connect(config.aeronContext());
+            idleStrategy = config.idleStrategy();
+            epochNanoClock = config.epochNanoClock();
+            failCounter = aeron.addCounter(FAILED_ADMIN_TYPE_ID.id(), "Failed offer for admin publication");
+            replyTimeoutInNs = config.replyTimeoutInNs();
 
-        final String channel = config.aeronChannel();
-        outboundPublication = new AdminPublication(
-            aeron.addExclusivePublication(channel, config.outboundAdminStream()),
-            failCounter,
-            idleStrategy,
-            MAX_CLAIM_ATTEMPTS);
-        inboundSubscription = aeron.addSubscription(channel, config.inboundAdminStream());
+            final String channel = config.aeronChannel();
+            final ExclusivePublication publication =
+                aeron.addExclusivePublication(channel, config.outboundAdminStream());
+            outboundPublication = new AdminPublication(
+                publication,
+                failCounter,
+                idleStrategy,
+                MAX_CLAIM_ATTEMPTS);
+            inboundSubscription = aeron.addSubscription(channel, config.inboundAdminStream());
+
+            final long connectDeadlineNs = nanoTime() + config.connectTimeoutNs();
+            idleStrategy.reset();
+            while (!inboundSubscription.isConnected() || !publication.isConnected())
+            {
+                if (nanoTime() > connectDeadlineNs)
+                {
+                    throw new TimeoutException("Failed to connect to FixEngine using channel=" + channel +
+                        " outboundAdminStreamId=" + config.outboundAdminStream() +
+                        " inboundAdminStreamId=" + config.inboundAdminStream() +
+                        " subscription.isConnected=" + inboundSubscription.isConnected() +
+                        " publication.isConnected=" + publication.isConnected() +
+                        " after " + config.connectTimeoutNs() + " ns");
+                }
+                idleStrategy.idle();
+            }
+        }
+        catch (final RuntimeException ex)
+        {
+            close();
+            throw ex;
+        }
     }
 
     private boolean saveRequestAllFixSessionsFunc()
