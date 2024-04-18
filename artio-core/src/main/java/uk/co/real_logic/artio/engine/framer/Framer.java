@@ -19,17 +19,6 @@ import io.aeron.*;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
-import org.agrona.DeadlineTimerWheel;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.collections.Int2ObjectHashMap;
-import org.agrona.collections.Long2LongHashMap;
-import org.agrona.collections.Long2LongHashMap.KeyIterator;
-import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.*;
-import org.agrona.concurrent.status.AtomicCounter;
-import org.agrona.concurrent.status.CountersReader;
-import org.agrona.concurrent.status.UnsafeBufferPosition;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -47,6 +36,17 @@ import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+import org.agrona.DeadlineTimerWheel;
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.collections.Int2ObjectHashMap;
+import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2LongHashMap.KeyIterator;
+import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.status.CountersReader;
+import org.agrona.concurrent.status.UnsafeBufferPosition;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,7 +66,9 @@ import static org.agrona.collections.CollectionUtil.removeIf;
 import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
-import static uk.co.real_logic.artio.LogTag.*;
+import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.LogTag.LIBRARY_MANAGEMENT;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
@@ -89,7 +91,9 @@ import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_L
 import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
-import static uk.co.real_logic.artio.messages.SessionState.*;
+import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
+import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.messages.SessionStatus.SESSION_HANDOVER;
 
 /**
@@ -1885,6 +1889,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 clock);
 
             final LiveLibraryInfo library = new LiveLibraryInfo(
+                errorHandler,
                 libraryId, libraryName, livenessDetector, aeronSessionId,
                 gatewaySessions instanceof FixPGatewaySessions);
             idToLibrary.put(libraryId, library);
