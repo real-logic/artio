@@ -19,7 +19,6 @@ import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -134,7 +133,6 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    @Ignore
     public void shouldSupportManySessionReconnections()
     {
         launch(false, true);
