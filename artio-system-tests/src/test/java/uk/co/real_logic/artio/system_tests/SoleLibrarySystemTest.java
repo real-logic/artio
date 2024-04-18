@@ -15,40 +15,54 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.junit.Test;
-import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
+import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.artio.FixMatchers.hasSessionId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private LockStepFramerEngineScheduler scheduler;
+
     private void launch()
     {
-        launch(true);
+        launch(true, false);
     }
 
-    private void launch(final boolean logMessages)
+    private void launch(final boolean logMessages, final boolean useScheduler)
     {
         mediaDriver = launchMediaDriver();
 
+
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true)
+            .replyTimeoutInMs(120_000)
             .initialAcceptedSessionOwner(SOLE_LIBRARY);
+
+        if (useScheduler)
+        {
+            scheduler = new LockStepFramerEngineScheduler();
+            acceptingConfig.scheduler(scheduler);
+        }
+
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig =
@@ -59,9 +73,23 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
-        acceptingLibrary = connect(acceptingLibraryConfig);
+        acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
+        assertEventuallyTrue(
+            () -> "Unable to connect to engine",
+            () ->
+            {
+                if (useScheduler)
+                {
+                    scheduler.invokeFramer();
+                }
+                acceptingLibrary.poll(LIBRARY_LIMIT);
+
+                return acceptingLibrary.isConnected();
+            },
+            DEFAULT_TIMEOUT_IN_MS,
+            acceptingLibrary::close);
         initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler, nanoClock));
-        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
+        testSystem = new TestSystem(scheduler, acceptingLibrary, initiatingLibrary);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
@@ -105,6 +133,57 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(1, acceptingSession.lastSentMsgSeqNum());
     }
 
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Ignore
+    public void shouldSupportManySessionReconnections()
+    {
+        launch(false, true);
+
+        // 300 > number in groupSizeEncoding
+        for (int i = 0; i < 300; i++)
+        {
+            connectAndAcquire();
+            messagesCanBeExchanged();
+            disconnectSessions();
+        }
+
+        assertThat(acceptingLibrary.sessions(), hasItem(acceptingSession));
+        final long sessionId = acceptingSession.id();
+        assertCountersClosed(false, acceptingSession);
+
+        assertOfflineSession(sessionId, acceptingSession);
+        assertCountersClosed(false, acceptingSession);
+
+        final long testDeadlineMs = System.currentTimeMillis() + 10_000;
+
+        // trigger library timeout
+        while (acceptingLibrary.isConnected())
+        {
+            acceptingLibrary.poll(10);
+            initiatingLibrary.poll(10);
+
+            if (System.currentTimeMillis() > testDeadlineMs)
+            {
+                fail("Failed to disconnect library");
+            }
+        }
+
+        // library reconnect
+        while (!acceptingLibrary.isConnected())
+        {
+            testSystem.poll();
+
+            if (System.currentTimeMillis() > testDeadlineMs)
+            {
+                fail("Failed to reconnect library");
+            }
+        }
+
+        connectAndAcquire();
+        assertEquals(ACTIVE, acceptingSession.state());
+        messagesCanBeExchanged();
+    }
+
     private void connectAndAcquire()
     {
         connectSessions();
@@ -130,7 +209,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     public void shouldAcquireSessionsWithLoggingSwitchedOff()
     {
         // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest
-        launch(false);
+        launch(false, false);
 
         connectAndAcquire();
         acceptingMessagesCanBeExchanged();
