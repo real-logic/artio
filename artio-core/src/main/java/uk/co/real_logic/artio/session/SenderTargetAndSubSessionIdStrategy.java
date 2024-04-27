@@ -196,10 +196,10 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             this.localSubID = CodecUtil.fromBytes(localSubID);
             this.remoteCompID = CodecUtil.fromBytes(remoteCompID);
             hashCode = hash(this.localCompID, this.localSubID, this.remoteCompID);
-            this.localCompIDStr=new String(this.localCompID);
-            this.localSubIDStr=new String(this.localSubID);
-            this.remoteCompIDStr=new String(this.remoteCompID);
-            compositeKeyStr=compositKey();
+            this.localCompIDStr = new String(this.localCompID);
+            this.localSubIDStr = new String(this.localSubID);
+            this.remoteCompIDStr = new String(this.remoteCompID);
+            compositeKeyStr = compositKey();
         }
 
         private int hash(final char[] localCompID, final char[] localSubID, final char[] remoteCompID)
