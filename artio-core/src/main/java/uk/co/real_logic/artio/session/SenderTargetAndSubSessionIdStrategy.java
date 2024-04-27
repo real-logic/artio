@@ -181,10 +181,10 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             this.remoteCompID = Arrays.copyOf(remoteCompID, remoteCompIDLength);
             this.localSubID = Arrays.copyOf(localSubID, localSubIDLength);
             hashCode = hash(this.localCompID, this.localSubID, this.remoteCompID);
-            this.localCompIDStr=new String(this.localCompID);
-            this.localSubIDStr=new String(this.localSubID);
-            this.remoteCompIDStr=new String(this.remoteCompID);
-            compositeKeyStr=compositKey();
+            this.localCompIDStr = new String(this.localCompID);
+            this.localSubIDStr = new String(this.localSubID);
+            this.remoteCompIDStr = new String(this.remoteCompID);
+            compositeKeyStr = compositKey();
         }
 
         private CompositeKeyImpl(
