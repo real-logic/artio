@@ -231,10 +231,10 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         private String compositKey()
         {
             return "CompositeKey{" +
-                    "localCompId=" + localCompId() +
-                    ", localSubId=" + localSubId() +
-                    ", remoteCompId=" + remoteCompId() +
-                    '}';
+                "localCompId=" + localCompId() +
+                ", localSubId=" + localSubId() +
+                ", remoteCompId=" + remoteCompId() +
+                '}';
         }
 
         public String toString()
