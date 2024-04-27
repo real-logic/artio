@@ -207,9 +207,9 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         private String compositKey()
         {
             return "CompositeKey{" +
-                    "localCompId=" + localCompId() +
-                    ", remoteCompId=" + remoteCompId() +
-                    '}';
+                "localCompId=" + localCompId() +
+                ", remoteCompId=" + remoteCompId() +
+                '}';
         }
 
         public String toString()
