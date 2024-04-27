@@ -274,7 +274,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
         this.fixCounters = fixCounters;
-        this.nextConnectionId=configuration.initialConnectionId();
+        this.nextConnectionId = configuration.initialConnectionId();
 
         replyTimeoutInNs = TimeUnit.MILLISECONDS.toNanos(configuration.replyTimeoutInMs());
         timerEventHandler = new TimerEventHandler(errorHandler);
