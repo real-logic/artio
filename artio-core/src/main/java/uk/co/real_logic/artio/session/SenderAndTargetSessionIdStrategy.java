@@ -165,8 +165,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             this.localCompID = Arrays.copyOf(localCompID, localCompIDLength);
             this.remoteCompID = Arrays.copyOf(remoteCompID, remoteCompIDLength);
             hashCode = hash(this.localCompID, this.remoteCompID);
-            this.localCompIDStr=new String(this.localCompID);
-            this.remoteCompIDStr=new String(this.remoteCompID);
+            this.localCompIDStr = new String(this.localCompID);
+            this.remoteCompIDStr = new String(this.remoteCompID);
             compositeKeyStr=compositKey();
         }
 
@@ -175,8 +175,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             this.localCompID = CodecUtil.fromBytes(localCompID);
             this.remoteCompID = CodecUtil.fromBytes(remoteCompID);
             hashCode = hash(this.localCompID, this.remoteCompID);
-            this.localCompIDStr=new String(this.localCompID);
-            this.remoteCompIDStr=new String(this.remoteCompID);
+            this.localCompIDStr = new String(this.localCompID);
+            this.remoteCompIDStr = new String(this.remoteCompID);
             compositeKeyStr=compositKey();
         }
 
