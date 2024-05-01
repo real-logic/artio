@@ -329,23 +329,23 @@ public final class FixArchivePrinter
             false);
         printOption(
             "target-comp-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target comp id field matches this",
             false);
         printOption(
             "sender-sub-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's sender sub id field matches this",
             false);
         printOption(
             "target-sub-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target sub id field matches this",
             false);
         printOption(
             "sender-location-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's sender location id field matches this",
             false);
         printOption(
             "target-location-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target location id field matches this",
             false);
         printOption(
             "query-stream-id",
