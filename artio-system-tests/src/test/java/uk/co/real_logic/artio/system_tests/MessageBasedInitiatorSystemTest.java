@@ -477,7 +477,7 @@ public class MessageBasedInitiatorSystemTest
             connection.logon(false);
 
             final Session session1 = lookupSession();
-            assertSame(session1, session1);
+            assertSame(session, session1);
             assertEquals(sessionId, session1.id());
         }
     }
