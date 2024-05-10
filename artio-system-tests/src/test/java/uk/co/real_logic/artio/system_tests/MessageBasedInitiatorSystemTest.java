@@ -85,7 +85,6 @@ public class MessageBasedInitiatorSystemTest
     private FixEngine engine;
     private FixLibrary library;
     private TestSystem testSystem;
-    private int polled;
 
     private Reply<Session> sessionReply;
 
