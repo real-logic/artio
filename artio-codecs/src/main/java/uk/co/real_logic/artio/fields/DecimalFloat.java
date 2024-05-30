@@ -81,7 +81,7 @@ public final class DecimalFloat extends ReadOnlyDecimalFloat
     }
 
     /**
-     * Resets the encoder to the NAN value. This can checked using the {@link #isNaNValue()} method.
+     * Resets the encoder to the NAN value. This can be checked using the {@link #isNaNValue()} method.
      */
     public void reset()
     {

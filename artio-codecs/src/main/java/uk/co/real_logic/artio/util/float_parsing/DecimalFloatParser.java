@@ -20,7 +20,7 @@ public final class DecimalFloatParser
         final int offset,
         final int length)
     {
-        // Throw away trailing spaces or zeros
+        // Throw away trailing spaces
         int workingOffset = offset;
         int end = workingOffset + length;
         for (int index = end - 1; charReader.isSpace(data, index) && index > workingOffset; index--)
@@ -28,19 +28,20 @@ public final class DecimalFloatParser
             end--;
         }
 
-        int endDiff = 0;
-        for (int index = end - 1; charReader.isZero(data, index) && index > workingOffset; index--)
-        {
-            endDiff++;
-        }
+        int endOfSignificand = findEndOfSignificand(charReader, workingOffset, end, data);
+        final int startOfExponent = endOfSignificand + 1;
 
-        if (isFloatingPoint(charReader, workingOffset, end, endDiff, data))
+        if (isFloatingPoint(charReader, workingOffset, endOfSignificand, data))
         {
-            end -= endDiff;
+            // Throw away trailing zeros
+            for (int index = endOfSignificand - 1; charReader.isZero(data, index) && index > workingOffset; index--)
+            {
+                endOfSignificand--;
+            }
         }
 
         // Throw away leading spaces
-        for (int index = workingOffset; charReader.isSpace(data, index) && index < end; index++)
+        for (int index = workingOffset; index < endOfSignificand && charReader.isSpace(data, index); index++)
         {
             workingOffset++;
         }
@@ -53,78 +54,117 @@ public final class DecimalFloatParser
         }
 
         // Throw away leading zeros
-        for (int index = workingOffset; index < end && charReader.isZero(data, index); index++)
+        for (int index = workingOffset; index < endOfSignificand && charReader.isZero(data, index); index++)
         {
             workingOffset++;
         }
 
         int workingScale = 0;
         long value = 0;
-        int base10exponent = 0;
-        boolean isScientificNotation = false;
-        short scaleDecrementValue = 0;
-        short scientificExponentMultiplier = -1;
-        for (int index = workingOffset; index < end; index++)
+        for (int index = workingOffset; index < endOfSignificand; index++)
         {
             final char charValue = charReader.charAt(data, index);
             if (charValue == DOT)
             {
                 // number of digits after the dot
-                workingScale = end - (index + 1);
-                scaleDecrementValue = 1;
-            }
-            else if (charValue == LOWER_CASE_E || charValue == UPPER_CASE_E)
-            {
-                isScientificNotation = true;
-
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && charValue == PLUS)
-            {
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && charValue == MINUS)
-            {
-                workingScale -= scaleDecrementValue;
-                scientificExponentMultiplier = 1;
+                workingScale = endOfSignificand - (index + 1);
             }
             else
             {
                 final int digit = charReader.getDigit(data, index, charValue);
-                if (isScientificNotation)
+                value = value * 10 + digit;
+                if (value < 0)
                 {
-                    base10exponent = base10exponent * 10 + digit;
-                    workingScale -= scaleDecrementValue;
-                }
-                else
-                {
-                    value = value * 10 + digit;
-                    if (value < 0)
-                    {
-                        throw new ArithmeticException(
-                                "Out of range: when parsing " + charReader.asString(data, offset, length));
-                    }
+                    throw new ArithmeticException(
+                        "Out of range: when parsing " + charReader.asString(data, offset, length));
                 }
             }
         }
 
-        final int scale = workingScale + (scientificExponentMultiplier * base10exponent);
+        int exponent = 0;
+        final int exponentLength = end - startOfExponent;
+        if (exponentLength > 0)
+        {
+            // scientific notation
+            exponent = parseExponent(charReader, data, offset, length, startOfExponent, end);
+        }
+        else if (exponentLength == 0)
+        {
+            throw new NumberFormatException(charReader.asString(data, offset, length).toString());
+        }
+
+        final int scale = workingScale - exponent;
         final long signedValue = negative ? -1 * value : value;
         return number.set(
-                (scale >= 0) ? signedValue : signedValue * pow10(-scale),
-                Math.max(scale, 0)
+            (scale >= 0) ? signedValue : signedValue * pow10(-scale),
+            Math.max(scale, 0)
         );
+    }
+
+    private static <Data> int parseExponent(
+        final CharReader<Data> charReader,
+        final Data data,
+        final int offset,
+        final int length,
+        final int startOfExponent,
+        final int end)
+    {
+        int exponent = 0;
+        boolean negative = false;
+        int position = startOfExponent;
+
+        final char firstChar = charReader.charAt(data, position);
+        if (firstChar == MINUS)
+        {
+            position++;
+            negative = true;
+        }
+        else if (firstChar == PLUS)
+        {
+            position++;
+        }
+
+        while (position < end)
+        {
+            final char charValue = charReader.charAt(data, position);
+            final int digit = charReader.getDigit(data, position, charValue);
+            position++;
+            exponent = exponent * 10 + digit;
+            if (exponent > 1000) // overflow and arbitrary limit check
+            {
+                throw new NumberFormatException(charReader.asString(data, offset, length).toString());
+            }
+        }
+
+        return negative ? -exponent : exponent;
+    }
+
+    private static <Data> int findEndOfSignificand(
+        final CharReader<Data> dataExtractor,
+        final int offset,
+        final int end,
+        final Data data
+    )
+    {
+        for (int index = end - 1; index > offset; index--)
+        {
+            final char charValue = dataExtractor.charAt(data, index);
+            if (charValue == LOWER_CASE_E || charValue == UPPER_CASE_E)
+            {
+                return index;
+            }
+        }
+        return end;
     }
 
     private static <Data> boolean isFloatingPoint(
         final CharReader<Data> dataExtractor,
         final int offset,
         final int end,
-        final int endDiff,
         final Data data
     )
     {
-        for (int index = end - endDiff - 1; index > offset; index--)
+        for (int index = end - 1; index >= offset; index--)
         {
             if (dataExtractor.charAt(data, index) == '.')
             {
