@@ -78,6 +78,10 @@ public class Replayer extends AbstractReplayer
     final CharFormatter completeNotRecentFormatter = new CharFormatter(
         "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
         "endSeqNo=%s beginSeqNo=%s expectedCount=%s connId=%s");
+    final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
+    final FixMessageDecoder fixMessageDecoder = new FixMessageDecoder();
+    final ThrottleRejectDecoder throttleRejectDecoder = new ThrottleRejectDecoder();
+    final AsciiBuffer sessionAsciiBuffer = new MutableAsciiBuffer();
 
     // Binary FIXP specific state
     private final IntHashSet gapfillOnRetransmitILinkTemplateIds;
