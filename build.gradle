@@ -44,7 +44,7 @@ def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.37'
 def byteBuddyVersion = '1.14.16'
 
-def agronaVersion = '1.21.1'
+def agronaVersion = '1.21.2'
 def sbeVersion = '1.31.1'
 def aeronVersion = '1.44.1'
 def artioGroup = 'uk.co.real-logic'
