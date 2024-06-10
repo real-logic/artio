@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.MessageStatus;
 
+import java.io.PrintStream;
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
@@ -50,7 +51,7 @@ public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        new FixArchivePrinter().scan(args);
+        new FixArchivePrinter(System.out, System.err).scan(args);
     }
 
     private FixPProtocolType fixPProtocolType = FixPProtocolType.ILINK_3;
@@ -63,10 +64,19 @@ public final class FixArchivePrinter
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
     private boolean fixp = false;
+    private boolean pipeDelimiter = false;
     private Class<? extends FixDictionary> fixDictionaryType = null;
     private Predicate<SessionHeaderDecoder> headerPredicate = null;
+    private final PrintStream out;
+    private final PrintStream err;
 
-    private void scan(final String[] args)
+    public FixArchivePrinter(final PrintStream out, final PrintStream err)
+    {
+        this.out = out;
+        this.err = err;
+    }
+
+    public void scan(final String[] args)
     {
         parseArgs(args);
         validateArgs();
@@ -130,6 +140,10 @@ public final class FixArchivePrinter
                 case "fixp":
                 case "ilink":
                     fixp = true;
+                    break;
+
+                case "pipe-delimiter":
+                    pipeDelimiter = true;
                     break;
 
                 default:
@@ -212,17 +226,17 @@ public final class FixArchivePrinter
         requiredArgument(aeronChannel, "aeron-channel");
     }
 
-    private static void requiredArgument(final int eqIndex)
+    private void requiredArgument(final int eqIndex)
     {
         if (eqIndex == -1)
         {
-            System.err.println("--ilink, --help and --follow are the only options that don't take a value");
+            err.println("--ilink, --help and --follow are the only options that don't take a value");
             printHelp();
             System.exit(-1);
         }
     }
 
-    private static void scanArchive(
+    private void scanArchive(
         final String aeronDirectoryName,
         final String aeronChannel,
         final IntHashSet queryStreamIds,
@@ -252,31 +266,31 @@ public final class FixArchivePrinter
 
         try (FixArchiveScanner scanner = new FixArchiveScanner(configuration))
         {
-            System.out.println("Starting Scan ... ");
+            out.println("Starting Scan ... ");
             scanner.scan(
                 aeronChannel,
                 queryStreamIds,
-                filterBy(FixArchivePrinter::print, predicate),
+                filterBy(this::print, predicate),
                 new LazyFixPMessagePrinter(DEFAULT_INBOUND_LIBRARY_STREAM, fixPProtocolType),
                 follow,
                 archiveScannerStreamId);
         }
     }
 
-    private static void requiredArgument(final String argument, final String description)
+    private void requiredArgument(final String argument, final String description)
     {
         if (argument == null)
         {
-            System.err.printf("Missing required --%s argument%n", description);
+            err.printf("Missing required --%s argument%n", description);
             printHelp();
             System.exit(-1);
         }
     }
 
-    private static void printHelp()
+    private void printHelp()
     {
-        System.out.println("FixArchivePrinter Options");
-        System.out.println("All options are specified in the form: --optionName=optionValue");
+        out.println("FixArchivePrinter Options");
+        out.println("All options are specified in the form: --optionName=optionValue");
 
         printOption(
             "aeron-dir-name",
@@ -366,11 +380,15 @@ public final class FixArchivePrinter
             "Specifies a logFileDir option, this should be the same as provided to your EngineConfiguration." +
             "  This can be used to optimize scans that are time based",
             false);
+        printOption(
+            "pipe-delimiter",
+            "Replace the binary delimiter with a pipe",
+            false);
     }
 
-    private static void printOption(final String name, final String description, final boolean required)
+    private void printOption(final String name, final String description, final boolean required)
     {
-        System.out.printf("  --%-20s [%s] - %s%n", name, required ? "required" : "optional", description);
+        out.printf("  --%-20s [%s] - %s%n", name, required ? "required" : "optional", description);
     }
 
     private static <T> Predicate<T> safeAnd(final Predicate<T> left, final Predicate<T> right)
@@ -378,7 +396,7 @@ public final class FixArchivePrinter
         return left == null ? right : left.and(right);
     }
 
-    private static void print(
+    private void print(
         final FixMessageDecoder message,
         final DirectBuffer buffer,
         final int offset,
@@ -387,8 +405,8 @@ public final class FixArchivePrinter
     {
         final MessageStatus status = message.status();
         final long timestamp = message.timestamp();
-        final String body = message.body();
-        System.out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
+        final String body = pipeDelimiter ? message.body().replace('\u0001', '|') : message.body();
+        out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
     }
 
 }
