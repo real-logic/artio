@@ -20,6 +20,8 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.hamcrest.Matcher;
 import org.junit.Test;
+
+
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
@@ -75,6 +77,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static Class<?> component;
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
+    private static Class<?> fieldsMessageAllowingEmptyTags;
     private static Class<?> phoneBookMessage;
     private static Class<?> allReqFieldTypesMessage;
     private static Class<?> enumTestMessage;
@@ -84,13 +87,15 @@ public abstract class AbstractDecoderGeneratorTest
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
         sourcesWithValidation = generateSources(
-            true, false, true, flyweightStringsEnabled, false);
+            true, true, false, true, flyweightStringsEnabled, false);
         final Map<String, CharSequence> sourcesWithNoEnumValueValidation = generateSources(
-            true, false, false, flyweightStringsEnabled, false);
+            true, true, false, false, flyweightStringsEnabled, false);
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
-            false, false, true, flyweightStringsEnabled, true);
+            false, true, false, true, flyweightStringsEnabled, true);
         final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
-            true, true, true, flyweightStringsEnabled, false);
+            true, true, true, true, flyweightStringsEnabled, false);
+        final Map<String, CharSequence> sourcesAllowingEmptyTags = generateSources(
+            true, false, true, true, flyweightStringsEnabled, false);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -108,6 +113,7 @@ public abstract class AbstractDecoderGeneratorTest
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
         heartbeatWithoutEnumValueValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithNoEnumValueValidation);
         heartbeatWithRejectingUnknownFields = compileInMemory(HEARTBEAT_DECODER, sourcesRejectingUnknownFields);
+        fieldsMessageAllowingEmptyTags = compileInMemory(FIELDS_MESSAGE_DECODER, sourcesAllowingEmptyTags);
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
@@ -116,8 +122,10 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     private static Map<String, CharSequence> generateSources(
-        final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
-        final boolean flyweightStringsEnabled, final boolean wrapEmptyBuffer)
+        final boolean validation, final boolean rejectingEmptyTags, final boolean rejectingUnknownFields,
+        final boolean rejectingUnknownEnumValue, final boolean flyweightStringsEnabled,
+        final boolean wrapEmptyBuffer
+    )
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
@@ -131,7 +139,7 @@ public abstract class AbstractDecoderGeneratorTest
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, TEST_PACKAGE,
             outputManager, validationClass, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer,
+            rejectUnknownEnumValue, flyweightStringsEnabled, wrapEmptyBuffer, !rejectingEmptyTags,
             String.valueOf(rejectingUnknownEnumValue), true);
         final EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE,
             TEST_PARENT_PACKAGE, outputManager, ValidationOn.class, RejectUnknownFieldOn.class,
@@ -1220,6 +1228,19 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
         decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
+
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
+
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldDecodeDifferentFieldTypesWithoutOptionalFieldsWhenTagsEmpty() throws Exception
+    {
+        final Decoder decoder = (Decoder)fieldsMessageAllowingEmptyTags.getConstructor().newInstance();
+        decode(EG_OPTIONAL_FIELDS_EMPTY_MESSAGE, decoder);
 
         assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
 
