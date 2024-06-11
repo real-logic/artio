@@ -82,7 +82,7 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void canUsePipeAsDelimiter()
+    public void canUseSpecifiedCharAsDelimiter()
     {
         setupAndExchangeMessages();
 
@@ -91,7 +91,7 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
         final ByteArrayOutputStream outputBytes = new ByteArrayOutputStream();
         final FixArchivePrinter fixArchivePrinter = new FixArchivePrinter(new PrintStream(outputBytes), System.err);
         final String[] args = new String[] {
-            "--pipe-delimiter",
+            "--delimiter=|",
             "--aeron-channel=" + configuration.libraryAeronChannel(),
             "--log-file-dir=" + configuration.logFileDir(),
             "--aeron-dir-name=" + context.aeronDirectory().getAbsolutePath(),
@@ -100,7 +100,7 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
 
         fixArchivePrinter.scan(args);
 
-        assertThat(outputBytes.toString(), containsString("|112=hi1"));
+        assertThat(outputBytes.toString(), containsString("|112=hi"));
     }
 
     private void setupAndExchangeMessages()
@@ -110,17 +110,3 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

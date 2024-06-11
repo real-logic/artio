@@ -64,7 +64,7 @@ public final class FixArchivePrinter
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
     private boolean fixp = false;
-    private boolean pipeDelimiter = false;
+    private char delimiter = Character.MIN_VALUE;
     private Class<? extends FixDictionary> fixDictionaryType = null;
     private Predicate<SessionHeaderDecoder> headerPredicate = null;
     private final PrintStream out;
@@ -142,10 +142,6 @@ public final class FixArchivePrinter
                     fixp = true;
                     break;
 
-                case "pipe-delimiter":
-                    pipeDelimiter = true;
-                    break;
-
                 default:
                     requiredArgument(eqIndex);
             }
@@ -205,6 +201,10 @@ public final class FixArchivePrinter
                     break;
                 case "log-file-dir":
                     logFileDir = optionValue;
+                    break;
+
+                case "delimiter":
+                    delimiter = optionValue.charAt(0);
                     break;
             }
         }
@@ -381,8 +381,8 @@ public final class FixArchivePrinter
             "  This can be used to optimize scans that are time based",
             false);
         printOption(
-            "pipe-delimiter",
-            "Replace the binary delimiter with a pipe",
+            "delimiter",
+            "Specifies the character to replace the binary delimiter with",
             false);
     }
 
@@ -405,8 +405,8 @@ public final class FixArchivePrinter
     {
         final MessageStatus status = message.status();
         final long timestamp = message.timestamp();
-        final String body = pipeDelimiter ? message.body().replace('\u0001', '|') : message.body();
+        final String body =
+            delimiter != Character.MIN_VALUE ? message.body().replace('\u0001', delimiter) : message.body();
         out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
     }
-
 }
