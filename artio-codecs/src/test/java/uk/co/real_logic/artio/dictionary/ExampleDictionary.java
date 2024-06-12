@@ -102,6 +102,7 @@ public final class ExampleDictionary
     public static final String INT_ENUM_RF = "IntEnumRF";
     public static final String CHAR_ENUM_RF = "CharEnumRF";
     public static final String CURRENCY_ENUM_RF = "CurrencyEnumRF";
+    public static final String UTC_TIMESTAMP_RF = "UtcTimestampRF";
 
     public static final String STRING_ENUM_REQ = "stringEnumReq";
     public static final String INT_ENUM_REQ = "intEnumReq";
@@ -454,7 +455,7 @@ public final class ExampleDictionary
 
     public static final String RF_ALL_FIELDS =
         "8=FIX.4.4\0019=0057\00135=Z\001700=one\001701=10\001702=b\001703=123.456\001" +
-        "704=one\001705=10\001706=b\001707=GBP\00110=209\001";
+        "704=one\001705=10\001706=b\001707=GBP\001708=20240611-14:35:58.012\00110=209\001";
 
     public static final String RF_NO_FIELDS =
         "8=FIX.4.4\0019=0049\00135=Z\00110=209\001";
@@ -706,6 +707,7 @@ public final class ExampleDictionary
             .addValue("a", "APPLE").addValue("b", "BANANA"));
         allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 707, CURRENCY_ENUM_RF, CURRENCY)
             .addValue("USD", "US_Dollar").addValue("GBP", "Pound"));
+        allReqFieldTypesMessage.requiredEntry(registerField(messageEgFields, 708, UTC_TIMESTAMP_RF, UTCTIMESTAMP));
 
         final Message anyFieldsMessage = new Message(ANY_FIELDS_MESSAGE_NAME, ANY_FIELDS_MESSAGE_TYPE, "app");
         anyFieldsMessage.requiredEntry(registerField(messageEgFields, 5005, "LongField2", LONG));

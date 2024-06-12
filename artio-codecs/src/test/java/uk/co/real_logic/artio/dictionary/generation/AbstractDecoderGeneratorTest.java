@@ -199,6 +199,18 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
+    public void shouldNotRetainUtcTimestampFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = createRequiredFieldMessageDecoder();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals("20240611-14:35:58.012", getMethod(decoder, UTC_TIMESTAMP_RF + "AsString"));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals("", getMethod(decoder, UTC_TIMESTAMP_RF + "AsString"));
+    }
+
+    @Test
     public void shouldNotRetainIntegerFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
         final Decoder decoder = createRequiredFieldMessageDecoder();

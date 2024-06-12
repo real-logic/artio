@@ -405,15 +405,6 @@ public abstract class Generator
             String.format("    %2$s boolean has%1$s;\n\n", name, scope);
     }
 
-    protected String resetNothing(final String name)
-    {
-        return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "    }\n\n",
-            nameOfResetMethod(name));
-    }
-
     private boolean isNotResettableField(final String name)
     {
         return isDerivedField(name) || isPreCalculatedField(name);
