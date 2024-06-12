@@ -54,6 +54,7 @@ public final class FixArchivePrinter
         new FixArchivePrinter(System.out, System.err).scan(args);
     }
 
+    private static final char SOH = '\u0001';
     private FixPProtocolType fixPProtocolType = FixPProtocolType.ILINK_3;
     private String logFileDir = null;
     private final IntHashSet queryStreamIds = new IntHashSet();
@@ -64,7 +65,7 @@ public final class FixArchivePrinter
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
     private boolean fixp = false;
-    private char delimiter = Character.MIN_VALUE;
+    private char delimiter = SOH;
     private Class<? extends FixDictionary> fixDictionaryType = null;
     private Predicate<SessionHeaderDecoder> headerPredicate = null;
     private final PrintStream out;
@@ -202,7 +203,6 @@ public final class FixArchivePrinter
                 case "log-file-dir":
                     logFileDir = optionValue;
                     break;
-
                 case "delimiter":
                     delimiter = optionValue.charAt(0);
                     break;
@@ -294,12 +294,11 @@ public final class FixArchivePrinter
 
         printOption(
             "aeron-dir-name",
-            "Specifies the directory to use for archiving, should be the same as your " +
-            "aeronContext.aeronDirectoryName()",
+            "Specifies the media driver directory, should be the same as your aeronContext.aeronDirectoryName()",
             true);
         printOption(
             "aeron-channel",
-            "Specifies the aeron channel that was used to by the engine",
+            "Specifies the aeron channel that was used by the engine",
             true);
 
         printOption(
@@ -310,7 +309,7 @@ public final class FixArchivePrinter
             false);
         printOption(
             "fix-dictionary",
-            "The class name of the Fix Dictionary to use, default is used if this is not provided",
+            "The class name of the FIX dictionary to use, default is used if this is not provided",
             false);
         printOption(
             "ilink",
@@ -318,7 +317,7 @@ public final class FixArchivePrinter
             false);
         printOption(
             "fixp",
-            "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
+            "Suppresses the need to provide a FIX dictionary on the classpath - used for situations where" +
             " only FIXP messages will be printed out",
             false);
         printOption(
@@ -364,12 +363,12 @@ public final class FixArchivePrinter
         printOption(
             "query-stream-id",
             "Only print messages where the query-stream-id matches this." +
-            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream().  " +
+            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream(). " +
             "Defaults to outbound. Can be used twice in order to print both inbound and outbound streams.",
             false);
         printOption(
             "follow",
-            "Continue to print out archive messages for a recording that is still in flight. defaults to off",
+            "Continue to print out archive messages for a recording that is still in flight. Defaults to off.",
             false);
         printOption(
             "help",
@@ -378,11 +377,11 @@ public final class FixArchivePrinter
         printOption(
             "log-file-dir",
             "Specifies a logFileDir option, this should be the same as provided to your EngineConfiguration." +
-            "  This can be used to optimize scans that are time based",
+            " This can be used to optimize scans that are time based",
             false);
         printOption(
             "delimiter",
-            "Specifies the character to replace the binary delimiter with",
+            "Specifies the character which will replace the field delimiter (SOH) in printed messages",
             false);
     }
 
@@ -405,8 +404,7 @@ public final class FixArchivePrinter
     {
         final MessageStatus status = message.status();
         final long timestamp = message.timestamp();
-        final String body =
-            delimiter != Character.MIN_VALUE ? message.body().replace('\u0001', delimiter) : message.body();
+        final String body = message.body().replace(SOH, delimiter);
         out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
     }
 }
