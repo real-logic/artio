@@ -63,14 +63,7 @@ class FixReplayerSession extends ReplayerSession
         CLOSING
     }
 
-    // Safe to share between multiple instances due to single threaded nature of the replayer
-    private static final FixMessageEncoder FIX_MESSAGE_ENCODER = new FixMessageEncoder();
-    private static final FixMessageDecoder FIX_MESSAGE = new FixMessageDecoder();
-    private static final ThrottleRejectDecoder THROTTLE_REJECT = new ThrottleRejectDecoder();
-    private static final AsciiBuffer ASCII_BUFFER = new MutableAsciiBuffer();
-
     private final GapFillEncoder gapFillEncoder;
-
     private final PossDupEnabler possDupEnabler;
     private final EpochNanoClock clock;
     private final String message;
@@ -147,7 +140,7 @@ class FixReplayerSession extends ReplayerSession
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
     {
         final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
-        FIX_MESSAGE_ENCODER
+        replayer.fixMessageEncoder
             .wrap(buffer, frameOffset)
             .connection(connectionId)
             .sequenceNumber(headerSeqNum);
@@ -199,31 +192,33 @@ class FixReplayerSession extends ReplayerSession
         final int offset,
         final int version)
     {
-        FIX_MESSAGE.wrap(
+        final FixMessageDecoder fixMessageDecoder = replayer.fixMessageDecoder;
+        fixMessageDecoder.wrap(
             srcBuffer,
             offset,
             actingBlockLength,
             version);
 
-        if (FIX_MESSAGE.status() == MessageStatus.OK)
+        if (fixMessageDecoder.status() == MessageStatus.OK)
         {
             final int metaDataAdjustment = version >= metaDataSinceVersion() ?
-                metaDataHeaderLength() + FIX_MESSAGE.metaDataLength() : 0;
+                metaDataHeaderLength() + fixMessageDecoder.metaDataLength() : 0;
             final int messageFrameBlockLength = MESSAGE_FRAME_BLOCK_LENGTH + metaDataAdjustment;
             final int messageOffset = srcOffset + messageFrameBlockLength;
             final int messageLength = srcLength - messageFrameBlockLength;
 
             final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
-            final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
+            final long messageType = MessageTypeExtractor.getMessageType(fixMessageDecoder);
 
-            ASCII_BUFFER.wrap(srcBuffer);
+            final AsciiBuffer asciiBuffer = replayer.sessionAsciiBuffer;
+            asciiBuffer.wrap(srcBuffer);
             replayHandler.onReplayedMessage(
-                ASCII_BUFFER,
+                asciiBuffer,
                 messageOffset,
                 messageLength,
-                FIX_MESSAGE.libraryId(),
-                FIX_MESSAGE.session(),
-                FIX_MESSAGE.sequenceIndex(),
+                fixMessageDecoder.libraryId(),
+                fixMessageDecoder.session(),
+                fixMessageDecoder.sequenceIndex(),
                 messageType);
 
             if (gapFillMessageTypes.contains(messageType))
@@ -271,12 +266,13 @@ class FixReplayerSession extends ReplayerSession
     private Action onThrottleReject(
         final DirectBuffer srcBuffer, final int actingBlockLength, final int offset, final int version)
     {
-        THROTTLE_REJECT.wrap(
+        final ThrottleRejectDecoder throttleRejectDecoder = replayer.throttleRejectDecoder;
+        throttleRejectDecoder.wrap(
             srcBuffer,
             offset,
             actingBlockLength,
             version);
-        final int msgSeqNum = THROTTLE_REJECT.sequenceNumber();
+        final int msgSeqNum = throttleRejectDecoder.sequenceNumber();
 
         if (gapFillMessageTypes.contains(BUSINESS_MESSAGE_REJECT_MESSAGE_TYPE))
         {
@@ -299,15 +295,15 @@ class FixReplayerSession extends ReplayerSession
                 sendGapFill(lastSeqNo, msgSeqNum, false);
             }
 
-            final int businessRejectRefIDOffset = THROTTLE_REJECT.limit() +
+            final int businessRejectRefIDOffset = throttleRejectDecoder.limit() +
                 ThrottleNotificationDecoder.businessRejectRefIDHeaderLength();
             throttleRejectBuilder.build(
-                THROTTLE_REJECT.refMsgType(),
-                THROTTLE_REJECT.refSeqNum(),
-                THROTTLE_REJECT.sequenceNumber(),
+                throttleRejectDecoder.refMsgType(),
+                throttleRejectDecoder.refSeqNum(),
+                throttleRejectDecoder.sequenceNumber(),
                 srcBuffer,
                 businessRejectRefIDOffset,
-                THROTTLE_REJECT.businessRejectRefIDLength(),
+                throttleRejectDecoder.businessRejectRefIDLength(),
                 true);
 
             final Action action = sendFixMessage(
@@ -351,7 +347,7 @@ class FixReplayerSession extends ReplayerSession
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
-            FIX_MESSAGE_ENCODER
+            replayer.fixMessageEncoder
                 .wrapAndApplyHeader(destBuffer, destOffset, replayer.messageHeaderEncoder)
                 .session(this.sessionId)
                 .connection(this.connectionId)

@@ -2117,7 +2117,7 @@ class DecoderGenerator extends Generator
 
     protected String resetTemporalValue(final String name)
     {
-        return resetNothing(name);
+        return resetStringBasedData(name);
     }
 
     protected String resetComponents(final List<Entry> entries, final StringBuilder methods)

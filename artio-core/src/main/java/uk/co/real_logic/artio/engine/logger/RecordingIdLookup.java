@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Aeron;
 import io.aeron.archive.status.RecordingPos;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.IdleStrategy;
@@ -26,13 +27,30 @@ import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 public class RecordingIdLookup
 {
     private final Long2LongHashMap aeronSessionIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
+    private final long archiveId;
     private final IdleStrategy archiverIdleStrategy;
     private final CountersReader counters;
 
+    /**
+     *
+     * @param archiverIdleStrategy idle strategy.
+     * @param counters reader.
+     * @deprecated Use {@link #RecordingIdLookup(long, IdleStrategy, CountersReader)} instead.
+     */
+    @Deprecated
     public RecordingIdLookup(
         final IdleStrategy archiverIdleStrategy,
         final CountersReader counters)
     {
+        this(Aeron.NULL_VALUE, archiverIdleStrategy, counters);
+    }
+
+    public RecordingIdLookup(
+        final long archiveId,
+        final IdleStrategy archiverIdleStrategy,
+        final CountersReader counters)
+    {
+        this.archiveId = archiveId;
         this.archiverIdleStrategy = archiverIdleStrategy;
         this.counters = counters;
     }
@@ -67,7 +85,7 @@ public class RecordingIdLookup
 
     private long checkRecordingId(final int aeronSessionId)
     {
-        final int counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
+        final int counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId, archiveId);
         if (counterId == NULL_COUNTER_ID)
         {
             return NULL_RECORDING_ID;

@@ -159,10 +159,10 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         if (configuration.logAnyMessages())
         {
             counters = this.aeron.countersReader();
-            framerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            framerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            indexerInboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
-            indexerOutboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            framerInboundLookup = new RecordingIdLookup(archive.archiveId(), archiverIdleStrategy, counters);
+            framerOutboundLookup = new RecordingIdLookup(archive.archiveId(), archiverIdleStrategy, counters);
+            indexerInboundLookup = new RecordingIdLookup(archive.archiveId(), archiverIdleStrategy, counters);
+            indexerOutboundLookup = new RecordingIdLookup(archive.archiveId(), archiverIdleStrategy, counters);
         }
         else
         {
@@ -522,7 +522,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
 
     private boolean recordingAlreadyStarted(final int sessionId)
     {
-        return RecordingPos.findCounterIdBySession(counters, sessionId) != NULL_VALUE;
+        return RecordingPos.findCounterIdBySession(counters, sessionId, archive.archiveId()) != NULL_VALUE;
     }
 
     // awaits the recording start and saves the file
@@ -603,7 +603,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
         final List<CompletingRecording> completingRecordings = new ArrayList<>();
         aeronSessionIdToCompletionPosition.forEachLong((sessionId, completionPosition) ->
         {
-            final int counterId = RecordingPos.findCounterIdBySession(counters, (int)sessionId);
+            final int counterId = RecordingPos.findCounterIdBySession(counters, (int)sessionId, archive.archiveId());
             // Recording has completed
             if (counterId != NULL_COUNTER_ID)
             {
@@ -630,7 +630,7 @@ public class RecordingCoordinator implements AutoCloseable, RecordingDescriptorC
             it.next();
             final long registrationId = it.getLongKey();
             final long recordingId = it.getLongValue();
-            final int counterId = RecordingPos.findCounterIdByRecording(counters, recordingId);
+            final int counterId = RecordingPos.findCounterIdByRecording(counters, recordingId, archive.archiveId());
             archive.stopRecording(registrationId);
             if (counterId != NULL_COUNTER_ID)
             {

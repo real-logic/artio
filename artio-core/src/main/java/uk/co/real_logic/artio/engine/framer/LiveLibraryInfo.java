@@ -15,10 +15,11 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.FixPConnectedSessionInfo;
+import org.agrona.ErrorHandler;
+import org.agrona.collections.Long2ObjectHashMap;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,6 +29,7 @@ import static java.util.Collections.unmodifiableList;
 
 final class LiveLibraryInfo implements LibraryInfo
 {
+    private final ErrorHandler errorHandler;
     private final int libraryId;
     private final String libraryName;
     private final LivenessDetector livenessDetector;
@@ -41,12 +43,14 @@ final class LiveLibraryInfo implements LibraryInfo
 
     @SuppressWarnings("unchecked")
     LiveLibraryInfo(
+        final ErrorHandler errorHandler,
         final int libraryId,
         final String libraryName,
         final LivenessDetector livenessDetector,
         final int aeronSessionId,
         final boolean isFixP)
     {
+        this.errorHandler = errorHandler;
         this.libraryId = libraryId;
         this.libraryName = libraryName;
         this.livenessDetector = livenessDetector;
@@ -120,6 +124,14 @@ final class LiveLibraryInfo implements LibraryInfo
 
     void addSession(final GatewaySession session)
     {
+        final GatewaySession existingSession = removeSessionBySessionId(session.sessionId());
+        if (existingSession != null && !existingSession.isOffline())
+        {
+            final IllegalStateException exception = new IllegalStateException(
+                "Session already exists for session id: " + session.sessionId() + " and it is not offline."
+            );
+            errorHandler.onError(exception);
+        }
         allSessions.add(session);
     }
 

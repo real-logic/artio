@@ -15,21 +15,18 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import org.junit.Test;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.comparesEqualTo;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
-
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class DecimalFloatTest
+class DecimalFloatTest
 {
     private static final DecimalFloat ZERO = new DecimalFloat(0, 0);
     private static final DecimalFloat FIVE = new DecimalFloat(5, 0);
@@ -40,7 +37,7 @@ public class DecimalFloatTest
     private static final DecimalFloat MINUS_FIVE_POINT_FIVE = new DecimalFloat(-55, 1);
 
     @Test
-    public void compareToDetectsEqualIntegers()
+    void compareToDetectsEqualIntegers()
     {
         assertThat(ZERO, comparesEqualTo(ZERO));
         assertThat(FIVE, comparesEqualTo(new DecimalFloat(5, 0)));
@@ -51,14 +48,14 @@ public class DecimalFloatTest
     }
 
     @Test
-    public void compareToOrdersIntegers()
+    void compareToOrdersIntegers()
     {
         assertOrderWithNegatives(ZERO, FIVE);
         assertOrderWithNegatives(MINUS_FIVE, FIVE);
     }
 
     @Test
-    public void compareToOrdersFloatsOfSameScale()
+    void compareToOrdersFloatsOfSameScale()
     {
         assertOrderWithNegatives(POINT_ONE, FIVE_POINT_FIVE);
         assertOrderWithNegatives(MINUS_FIVE_POINT_FIVE, POINT_ONE);
@@ -66,7 +63,7 @@ public class DecimalFloatTest
     }
 
     @Test
-    public void compareToOrdersFloatsWithIntegers()
+    void compareToOrdersFloatsWithIntegers()
     {
         assertOrderWithNegatives(ZERO, POINT_ONE);
         assertOrderWithNegatives(MINUS_FIVE_POINT_FIVE, ZERO);
@@ -74,28 +71,28 @@ public class DecimalFloatTest
     }
 
     @Test
-    public void compareToOrdersFloatsOfDifferentScale()
+    void compareToOrdersFloatsOfDifferentScale()
     {
         assertOrderWithNegatives(new DecimalFloat(45, 2), new DecimalFloat(45, 1));
         assertOrderWithNegatives(new DecimalFloat(9, 2), POINT_ONE);
     }
 
     @Test
-    public void compareToOrdersFloatsOfDifferentScaleVsZero()
+    void compareToOrdersFloatsOfDifferentScaleVsZero()
     {
         assertOrderWithNegatives(ZERO, new DecimalFloat(45, 1));
         assertOrderWithNegatives(ZERO, new DecimalFloat(45, 2));
     }
 
     @Test
-    public void compareToOrderFloatsOfDifferentScaleWithMultiDigitValues()
+    void compareToOrderFloatsOfDifferentScaleWithMultiDigitValues()
     {
         assertOrderWithNegatives(new DecimalFloat(54321, 2), new DecimalFloat(543219, 3));
         assertOrderWithNegatives(new DecimalFloat(54321, 2), new DecimalFloat(5433, 1));
     }
 
     @Test
-    public void normaliseValuesDuringConstruction()
+    void normaliseValuesDuringConstruction()
     {
         assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat(0, 0)));
         assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat(0, 25)));
@@ -105,54 +102,54 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(1234, 2), equalTo(new DecimalFloat(123400, 4)));
     }
 
-    @Test(expected = NumberFormatException.class)
-    public void shouldNotConvertInvalidStringIntoANumber()
+    @Test
+    void shouldNotConvertInvalidStringIntoANumber()
     {
-        new DecimalFloat().fromString("ABC");
-    }
-
-    @Test(expected = ArithmeticException.class)
-    public void shouldNotParseValueOutOfRange()
-    {
-        // Valid decimal floats have max 18 digits, could also have e, E, -, + or .
-        new DecimalFloat().fromString("10000000000000000000000");
-    }
-
-    // Bug reproduction testcase
-    @Test(expected = ArithmeticException.class)
-    public void shouldNotParseOverflowingValue()
-    {
-        new DecimalFloat().fromString("99999999999999990000000");
+        assertThrows(NumberFormatException.class, () -> new DecimalFloat().fromString("ABC"));
     }
 
     @Test
-    public void parseZeroDecimalFloat()
+    void shouldNotParseValueOutOfRange()
+    {
+        // Valid decimal floats have max 18 digits, could also have e, E, -, + or .
+        assertThrows(ArithmeticException.class, () -> new DecimalFloat().fromString("10000000000000000000000"));
+    }
+
+    // Bug reproduction testcase
+    @Test
+    void shouldNotParseOverflowingValue()
+    {
+        assertThrows(ArithmeticException.class, () -> new DecimalFloat().fromString("99999999999999990000000"));
+    }
+
+    @Test
+    void parseZeroDecimalFloat()
     {
         assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat().fromString("0")));
     }
 
     // Bug reproduction testcase
-    @Test(expected = ArithmeticException.class)
-    public void shouldNotDecodeOverflowingValue()
+    @Test
+    void shouldNotDecodeOverflowingValue()
     {
-        parseNumberFromBuffer("99999999999999990000000");
-    }
-
-    @Test(expected = ArithmeticException.class)
-    public void shouldNotDecodeValueOutOfRange()
-    {
-        parseNumberFromBuffer("10000000000000000000000");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldNotEncodeAnInvalidValue()
-    {
-        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1000]);
-        buffer.putFloatAscii(0, DecimalFloat.NAN);
+        assertThrows(ArithmeticException.class, () -> parseNumberFromBuffer("99999999999999990000000"));
     }
 
     @Test
-    public void shouldNotBeAbleToRedefineConstantValues()
+    void shouldNotDecodeValueOutOfRange()
+    {
+        assertThrows(ArithmeticException.class, () -> parseNumberFromBuffer("10000000000000000000000"));
+    }
+
+    @Test
+    void shouldNotEncodeAnInvalidValue()
+    {
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1000]);
+        assertThrows(IllegalArgumentException.class, () -> buffer.putFloatAscii(0, DecimalFloat.NAN));
+    }
+
+    @Test
+    void shouldNotBeAbleToRedefineConstantValues()
     {
         final DecimalFloat value;
         final DecimalFloat zero = DecimalFloat.ZERO.mutableCopy();
@@ -166,6 +163,22 @@ public class DecimalFloatTest
         // Then
         assertThat(value, equalTo(new DecimalFloat(5)));
         assertThat(DecimalFloat.ZERO, equalTo(zero));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "e1",
+        "1e",
+        "1e2.3",
+        "1e2147483647",
+        "1e2147483648",
+        "1e-2147483648",
+        "1e-2147483649",
+    })
+    void shouldThrowWhenDecodedStringIsInvalid(final String invalidFloat)
+    {
+        final DecimalFloat df = new DecimalFloat();
+        assertThrows(NumberFormatException.class, () -> df.fromString(invalidFloat));
     }
 
     private void parseNumberFromBuffer(final String number)

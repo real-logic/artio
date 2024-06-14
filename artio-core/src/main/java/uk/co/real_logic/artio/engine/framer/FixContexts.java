@@ -210,7 +210,7 @@ public class FixContexts implements SessionContexts
                         FixDictionary.of(FixDictionary.find(lastFixDictionary)) : dictionary;
                     final SessionContext sessionContext = new SessionContext(compositeKey,
                         sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this,
-                        sessionIdDecoder.initialOffset(),
+                        sessionIdDecoder.offset(),
                         initialSequenceIndex, thisDictionary, reproductionEnabled);
                     compositeToContext.put(compositeKey, sessionContext);
                 }

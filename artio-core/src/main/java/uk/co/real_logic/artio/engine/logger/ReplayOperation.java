@@ -425,7 +425,8 @@ public class ReplayOperation
 
     private boolean archivingNotComplete(final long endPosition, final long recordingId)
     {
-        final int counterId = RecordingPos.findCounterIdByRecording(countersReader, recordingId);
+        final int counterId =
+            RecordingPos.findCounterIdByRecording(countersReader, recordingId, aeronArchive.archiveId());
 
         // wait if the recording is active - otherwise assume that the recording has complete.
         if (counterId != CountersReader.NULL_COUNTER_ID)

@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.MessageStatus;
 
+import java.io.PrintStream;
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
@@ -50,9 +51,10 @@ public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        new FixArchivePrinter().scan(args);
+        new FixArchivePrinter(System.out, System.err).scan(args);
     }
 
+    private static final char SOH = '\u0001';
     private FixPProtocolType fixPProtocolType = FixPProtocolType.ILINK_3;
     private String logFileDir = null;
     private final IntHashSet queryStreamIds = new IntHashSet();
@@ -63,10 +65,19 @@ public final class FixArchivePrinter
     private FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
     private boolean follow = false;
     private boolean fixp = false;
+    private char delimiter = SOH;
     private Class<? extends FixDictionary> fixDictionaryType = null;
     private Predicate<SessionHeaderDecoder> headerPredicate = null;
+    private final PrintStream out;
+    private final PrintStream err;
 
-    private void scan(final String[] args)
+    public FixArchivePrinter(final PrintStream out, final PrintStream err)
+    {
+        this.out = out;
+        this.err = err;
+    }
+
+    public void scan(final String[] args)
     {
         parseArgs(args);
         validateArgs();
@@ -192,6 +203,9 @@ public final class FixArchivePrinter
                 case "log-file-dir":
                     logFileDir = optionValue;
                     break;
+                case "delimiter":
+                    delimiter = optionValue.charAt(0);
+                    break;
             }
         }
     }
@@ -212,17 +226,17 @@ public final class FixArchivePrinter
         requiredArgument(aeronChannel, "aeron-channel");
     }
 
-    private static void requiredArgument(final int eqIndex)
+    private void requiredArgument(final int eqIndex)
     {
         if (eqIndex == -1)
         {
-            System.err.println("--ilink, --help and --follow are the only options that don't take a value");
+            err.println("--ilink, --help and --follow are the only options that don't take a value");
             printHelp();
             System.exit(-1);
         }
     }
 
-    private static void scanArchive(
+    private void scanArchive(
         final String aeronDirectoryName,
         final String aeronChannel,
         final IntHashSet queryStreamIds,
@@ -252,40 +266,39 @@ public final class FixArchivePrinter
 
         try (FixArchiveScanner scanner = new FixArchiveScanner(configuration))
         {
-            System.out.println("Starting Scan ... ");
+            out.println("Starting Scan ... ");
             scanner.scan(
                 aeronChannel,
                 queryStreamIds,
-                filterBy(FixArchivePrinter::print, predicate),
+                filterBy(this::print, predicate),
                 new LazyFixPMessagePrinter(DEFAULT_INBOUND_LIBRARY_STREAM, fixPProtocolType),
                 follow,
                 archiveScannerStreamId);
         }
     }
 
-    private static void requiredArgument(final String argument, final String description)
+    private void requiredArgument(final String argument, final String description)
     {
         if (argument == null)
         {
-            System.err.printf("Missing required --%s argument%n", description);
+            err.printf("Missing required --%s argument%n", description);
             printHelp();
             System.exit(-1);
         }
     }
 
-    private static void printHelp()
+    private void printHelp()
     {
-        System.out.println("FixArchivePrinter Options");
-        System.out.println("All options are specified in the form: --optionName=optionValue");
+        out.println("FixArchivePrinter Options");
+        out.println("All options are specified in the form: --optionName=optionValue");
 
         printOption(
             "aeron-dir-name",
-            "Specifies the directory to use for archiving, should be the same as your " +
-            "aeronContext.aeronDirectoryName()",
+            "Specifies the media driver directory, should be the same as your aeronContext.aeronDirectoryName()",
             true);
         printOption(
             "aeron-channel",
-            "Specifies the aeron channel that was used to by the engine",
+            "Specifies the aeron channel that was used by the engine",
             true);
 
         printOption(
@@ -296,7 +309,7 @@ public final class FixArchivePrinter
             false);
         printOption(
             "fix-dictionary",
-            "The class name of the Fix Dictionary to use, default is used if this is not provided",
+            "The class name of the FIX dictionary to use, default is used if this is not provided",
             false);
         printOption(
             "ilink",
@@ -304,7 +317,7 @@ public final class FixArchivePrinter
             false);
         printOption(
             "fixp",
-            "Suppresses the need to provide a fix dictionary on the classpath - used for situations where" +
+            "Suppresses the need to provide a FIX dictionary on the classpath - used for situations where" +
             " only FIXP messages will be printed out",
             false);
         printOption(
@@ -329,33 +342,33 @@ public final class FixArchivePrinter
             false);
         printOption(
             "target-comp-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target comp id field matches this",
             false);
         printOption(
             "sender-sub-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's sender sub id field matches this",
             false);
         printOption(
             "target-sub-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target sub id field matches this",
             false);
         printOption(
             "sender-location-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's sender location id field matches this",
             false);
         printOption(
             "target-location-id",
-            "Only print messages where the header's sender comp id field matches this",
+            "Only print messages where the header's target location id field matches this",
             false);
         printOption(
             "query-stream-id",
             "Only print messages where the query-stream-id matches this." +
-            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream().  " +
+            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream(). " +
             "Defaults to outbound. Can be used twice in order to print both inbound and outbound streams.",
             false);
         printOption(
             "follow",
-            "Continue to print out archive messages for a recording that is still in flight. defaults to off",
+            "Continue to print out archive messages for a recording that is still in flight. Defaults to off.",
             false);
         printOption(
             "help",
@@ -364,13 +377,17 @@ public final class FixArchivePrinter
         printOption(
             "log-file-dir",
             "Specifies a logFileDir option, this should be the same as provided to your EngineConfiguration." +
-            "  This can be used to optimize scans that are time based",
+            " This can be used to optimize scans that are time based",
+            false);
+        printOption(
+            "delimiter",
+            "Specifies the character which will replace the field delimiter (SOH) in printed messages",
             false);
     }
 
-    private static void printOption(final String name, final String description, final boolean required)
+    private void printOption(final String name, final String description, final boolean required)
     {
-        System.out.printf("  --%-20s [%s] - %s%n", name, required ? "required" : "optional", description);
+        out.printf("  --%-20s [%s] - %s%n", name, required ? "required" : "optional", description);
     }
 
     private static <T> Predicate<T> safeAnd(final Predicate<T> left, final Predicate<T> right)
@@ -378,7 +395,7 @@ public final class FixArchivePrinter
         return left == null ? right : left.and(right);
     }
 
-    private static void print(
+    private void print(
         final FixMessageDecoder message,
         final DirectBuffer buffer,
         final int offset,
@@ -387,8 +404,7 @@ public final class FixArchivePrinter
     {
         final MessageStatus status = message.status();
         final long timestamp = message.timestamp();
-        final String body = message.body();
-        System.out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
+        final String body = message.body().replace(SOH, delimiter);
+        out.printf("%1$20s: %2$s (%3$s)%n", timestamp, body, status);
     }
-
 }

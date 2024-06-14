@@ -87,7 +87,7 @@ public class ReproductionProtocolHandler implements ReproductionFixProtocolConsu
         clock.advanceTimeTo(message.timestamp());
         validateLibraryId(message.libraryId());
 
-        final int initialOffset = message.initialOffset() - MessageHeaderDecoder.ENCODED_LENGTH;
+        final int initialOffset = message.offset() - MessageHeaderDecoder.ENCODED_LENGTH;
         final int fullLength = (offset + length) - initialOffset;
         final int messageOffset = offset - initialOffset;
         final long connectionId = message.connection();

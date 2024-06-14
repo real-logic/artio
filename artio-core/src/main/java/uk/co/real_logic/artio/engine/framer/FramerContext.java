@@ -212,7 +212,7 @@ public class FramerContext
         final ExclusivePublication adminDataPublication = aeron.addExclusivePublication(
             configuration.libraryAeronChannel(), configuration.inboundAdminStream());
         StreamInformation.print(
-            "adminEngineSubscription", adminDataPublication, configuration.printAeronStreamIdentifiers());
+            "adminEnginePublication", adminDataPublication, configuration.printAeronStreamIdentifiers());
         return new AdminReplyPublication(
             adminDataPublication,
             fixCounters.failedAdminReplyPublications(),

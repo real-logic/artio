@@ -21,7 +21,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
- * A Aggregate is either a group, a message or a component.
+ * An Aggregate is either a group, a message or a component.
  */
 public abstract class Aggregate
 {
