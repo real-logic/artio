@@ -9,7 +9,7 @@ public class CommonEncoderImpl
 {
     protected MutableAsciiBuffer customTagsBuffer = new MutableAsciiBuffer(new byte[128]);
 
-    public void setCustomTagsBuffer(MutableAsciiBuffer customTagsBuffer)
+    public void setCustomTagsBuffer(final MutableAsciiBuffer customTagsBuffer)
     {
         this.customTagsBuffer = customTagsBuffer;
     }
