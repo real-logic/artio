@@ -1,5 +1,6 @@
 name: Release
 
+
 on:
   workflow_dispatch:
     inputs:
@@ -108,7 +109,7 @@ jobs:
     permissions:
       contents: write
     needs: build-java
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v4
