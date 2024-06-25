@@ -48,6 +48,7 @@ def agronaVersion = '1.21.2'
 def sbeVersion = '1.31.1'
 def aeronVersion = '1.44.1'
 def artioGroup = 'uk.co.real-logic'
+def artioVersion = file('version.txt').text.trim()
 def iLink3Enabled = false
 
 defaultTasks 'clean', 'build'
@@ -103,6 +104,8 @@ def projectPom = {
 ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
+    repoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    snapshotUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
     iLink3Enabled = Boolean.getBoolean("fix.core.iLink3Enabled")
 
     if (!project.hasProperty('repoUsername')) {
@@ -113,12 +116,12 @@ ext {
         repoPassword = ''
     }
 
-    if (!project.hasProperty('repoUrl')) {
-        repoUrl = ''
+    if (!project.hasProperty('signingKey')) {
+        signingKey = null
     }
 
-    if (!project.hasProperty('snapshotUrl')) {
-        snapshotUrl = ''
+    if (!project.hasProperty('signingPassword')) {
+        signingPassword = null
     }
 }
 
@@ -286,6 +289,9 @@ subprojects {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
     }
@@ -364,6 +370,9 @@ project(':artio-codecs') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioCodecs
     }
 }
@@ -444,6 +453,9 @@ project(':artio-ilink3-codecs') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioILink3Codecs
     }
 }
@@ -521,6 +533,9 @@ project(':artio-binary-entrypoint-codecs') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioBinaryEntrypointCodecs
     }
 }
@@ -544,6 +559,9 @@ project(':artio-binary-entrypoint-impl') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioBinaryEntrypointImpl
     }
 }
@@ -575,6 +593,9 @@ project(':artio-ilink3-impl') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioIlink3Impl
     }
 }
@@ -641,6 +662,9 @@ project(':artio-session-codecs') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioSessionCodecs
     }
 }
@@ -702,6 +726,9 @@ project(':artio-session-fixt-codecs') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioSessionFixtCodecs
     }
 }
@@ -734,6 +761,9 @@ project(':artio-core') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioCore
     }
 }
@@ -795,6 +825,9 @@ project(':artio-system-tests') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioSystemTests
     }
 }
@@ -830,6 +863,9 @@ project(':artio-ilink-system-tests') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioILink3SystemTests
     }
 }
@@ -860,6 +896,9 @@ project(':artio-binary-entrypoint-system-tests') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioBinaryEntrypointSystemTests
     }
 }
@@ -892,6 +931,9 @@ project(':artio-samples') {
     }
 
     signing {
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
         sign publishing.publications.artioSamples
     }
 }
