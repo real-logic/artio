@@ -161,7 +161,7 @@ subprojects {
     apply plugin: 'checkstyle'
 
     group = artioGroup
-    version = version
+    version = artioVersion
 
     def toolchainLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(buildJavaVersion)
