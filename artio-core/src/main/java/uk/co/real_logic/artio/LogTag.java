@@ -30,7 +30,7 @@ public enum LogTag
      * This logs direct reads and writes of messages from TCP sockets. These lines are labelled "Read" and
      * "Written".
      *
-     * NB: TCP reads may read multiple messages at the same time. This isn't a bug.
+     * NB: TCP reads may read partial messages or multiple messages at the same time. This isn't a bug.
      */
     FIX_MESSAGE_TCP,
     /**

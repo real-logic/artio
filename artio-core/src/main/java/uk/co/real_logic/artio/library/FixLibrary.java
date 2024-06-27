@@ -397,7 +397,7 @@ public class FixLibrary extends GatewayProcess
      * This allows offline sessions to be created using this method and messages sent via either the SessionWriter
      * or the Session itself.
      *
-     * For the FIX version see {@link #followerFixPSession(FixPContext, long)}.
+     * For the FIXP version see {@link #followerFixPSession(FixPContext, long)}.
      *
      * @param headerEncoder the message header that contains fields that identify the Session. You could set the
      *                      senderCompId and targetCompId on this header for example if those are the fields used to
