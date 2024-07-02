@@ -3,12 +3,8 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      run-ci:
-        description: Run ci and test workflows
-        required: true
-        type: boolean
       release:
-        description: Is release? (Will update tags and version)
+        description: Is release? (Will create tag and update version)
         required: true
         default: false
         type: boolean
@@ -29,16 +25,15 @@ env:
   GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.warning.mode=fail'
 
 jobs:
-  run-release-ci:
-    name: Run ci workflows
-    uses: ./.github/workflows/pre-release-ci.yml
-    with:
-      run-ci: ${{ inputs.run-ci }}
-      codeql: ${{ inputs.run-ci }}
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  codeql:
+    uses: ./.github/workflows/codeql.yml
 
   pre-release:
     name: Update version, tag repo, and return sha
-    needs: run-release-ci
+    needs: [ ci, codeql ]
     uses: ./.github/workflows/pre-release.yml
     with:
       release: ${{ inputs.release }}
@@ -47,7 +42,7 @@ jobs:
   release:
     name: Release java artifacts
     permissions:
-      contents: write
+      contents: read
       packages: write
     needs: pre-release
     runs-on: ubuntu-latest
@@ -78,12 +73,12 @@ jobs:
           ORG_GRADLE_PROJECT_repoPassword: ${{ secrets.osshrPassword }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signingKey }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signingPassword }}
-      - name: install-sshpass
+      - name: Install sshpass
         if: ${{ matrix.repo == 'private' }}
         run: |
           sudo apt-get update
           sudo apt-get -y install sshpass
-      - name: get-cme-ilink
+      - name: Get CME ILink3 XML Schema
         if: ${{ matrix.repo == 'private' }}
         run: sshpass -p "$CME_PASSWORD" scp cmeconfig@sftpng.cmegroup.com:/MSGW/Production/Templates/ilinkbinary_v7.xml artio-ilink3-codecs/src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml
         env:
