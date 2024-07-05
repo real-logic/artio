@@ -178,10 +178,12 @@ subprojects {
     dependencies {
         testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
         testImplementation "org.mockito:mockito-core:${mockitoVersion}"
-        testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+        testImplementation platform("org.junit:junit-bom:${junitVersion}")
+
+        testImplementation "org.junit.jupiter:junit-jupiter"
         testImplementation "junit:junit:4.13.2" // FIXME: Remove after migration to JUnit 5 is complete
         testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-        testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junitVersion}"
+        testRuntimeOnly "org.junit.vintage:junit-vintage-engine"
     }
 
     checkstyle.toolVersion = "${checkstyleVersion}"
