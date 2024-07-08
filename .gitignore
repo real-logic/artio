@@ -63,7 +63,6 @@ client-aeron-archive/
 client-aeron/
 
 #iLink3
-artio-ilink3-codecs/src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml
 artio-system-tests/generated/
 
 artio-system-tests/src/perf/java/br/
