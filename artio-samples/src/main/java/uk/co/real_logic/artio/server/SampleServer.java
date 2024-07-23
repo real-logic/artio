@@ -75,8 +75,8 @@ public final class SampleServer
 
         final Archive.Context archiveContext = new Archive.Context()
             .threadingMode(ArchiveThreadingMode.SHARED)
-                .controlChannel(aeronChannel)
-                .replicationChannel(aeronChannel)
+            .controlChannel(aeronChannel)
+            .replicationChannel(aeronChannel)
             .deleteArchiveOnStart(true);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
