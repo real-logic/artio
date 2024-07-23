@@ -74,6 +74,7 @@ public final class SampleClient
 
         archiveContext
             .controlChannel(CONTROL_REQUEST_CHANNEL)
+            .replicationChannel(CONTROL_REQUEST_CHANNEL)
             .recordingEventsChannel(RECORDING_EVENTS_CHANNEL);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext))

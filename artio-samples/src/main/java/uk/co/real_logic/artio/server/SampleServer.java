@@ -61,7 +61,11 @@ public final class SampleServer
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
             .libraryAeronChannel(aeronChannel);
-        configuration.authenticationStrategy(authenticationStrategy);
+
+        configuration.authenticationStrategy(authenticationStrategy)
+                .aeronArchiveContext()
+                .controlResponseChannel(aeronChannel)
+                .controlRequestChannel(aeronChannel);
 
         cleanupOldLogFileDir(configuration);
 
@@ -71,6 +75,8 @@ public final class SampleServer
 
         final Archive.Context archiveContext = new Archive.Context()
             .threadingMode(ArchiveThreadingMode.SHARED)
+                .controlChannel(aeronChannel)
+                .replicationChannel(aeronChannel)
             .deleteArchiveOnStart(true);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
