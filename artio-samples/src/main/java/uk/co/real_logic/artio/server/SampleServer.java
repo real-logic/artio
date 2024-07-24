@@ -63,6 +63,10 @@ public final class SampleServer
             .libraryAeronChannel(aeronChannel);
         configuration.authenticationStrategy(authenticationStrategy);
 
+        configuration.aeronArchiveContext()
+            .controlRequestChannel(CONTROL_REQUEST_CHANNEL)
+            .controlResponseChannel(CONTROL_RESPONSE_CHANNEL);
+
         cleanupOldLogFileDir(configuration);
 
         final Context context = new Context()
@@ -71,6 +75,8 @@ public final class SampleServer
 
         final Archive.Context archiveContext = new Archive.Context()
             .threadingMode(ArchiveThreadingMode.SHARED)
+            .controlChannel(CONTROL_REQUEST_CHANNEL)
+            .replicationChannel(REPLICATION_CHANNEL)
             .deleteArchiveOnStart(true);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
@@ -121,4 +127,8 @@ public final class SampleServer
 
         return new SampleSessionHandler(session);
     }
+
+    private static final String CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8010";
+    private static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:8020";
+    private static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
 }

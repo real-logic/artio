@@ -21,6 +21,7 @@ import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import uk.co.real_logic.artio.SampleUtil;
 
+import static io.aeron.archive.Archive.Configuration.REPLICATION_CHANNEL_PROP_NAME;
 import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL_PROP_NAME;
 import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -37,6 +38,7 @@ public final class BuyerApplication
     {
         System.setProperty(CONTROL_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:9010");
         System.setProperty(CONTROL_RESPONSE_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:9020");
+        System.setProperty(REPLICATION_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:0");
 
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)

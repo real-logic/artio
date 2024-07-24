@@ -29,6 +29,9 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
 import java.io.File;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.archive.Archive.Configuration.REPLICATION_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
@@ -40,6 +43,10 @@ public final class FixPExchangeApplication
 {
     public static void main(final String[] args) throws Exception
     {
+        System.setProperty(CONTROL_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:10010");
+        System.setProperty(CONTROL_RESPONSE_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:10020");
+        System.setProperty(REPLICATION_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:0");
+
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)

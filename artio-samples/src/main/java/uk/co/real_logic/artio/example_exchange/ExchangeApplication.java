@@ -31,6 +31,9 @@ import java.io.File;
 import java.util.Collections;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.archive.Archive.Configuration.REPLICATION_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
@@ -41,6 +44,10 @@ public final class ExchangeApplication
 
     public static void main(final String[] args) throws Exception
     {
+        System.setProperty(CONTROL_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:10010");
+        System.setProperty(CONTROL_RESPONSE_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:10020");
+        System.setProperty(REPLICATION_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:0");
+
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_COMP_ID)
             .and(MessageValidationStrategy.senderCompId(Collections.singletonList(INITIATOR_COMP_ID)));
 
