@@ -80,15 +80,17 @@ public class TestSystem
         return this;
     }
 
-    public void poll()
+    public int poll()
     {
+        int resultInvokeFramer = 0;
         if (scheduler != null)
         {
-            scheduler.invokeFramer();
-            scheduler.invokeFramer();
+            resultInvokeFramer = scheduler.invokeFramer();
         }
-        libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
+        final int result = resultInvokeFramer + libraries.stream().mapToInt((library) ->
+            library.poll(LIBRARY_LIMIT)).sum();
         operations.forEach(Runnable::run);
+        return result;
     }
 
     public void addOperation(final Runnable operation)
