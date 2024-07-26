@@ -1146,12 +1146,10 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
     private void logonThenLogout() throws IOException
     {
-        final FixConnection connection = FixConnection.initiate(port);
-
-        logon(connection);
-
-        connection.logoutAndAwaitReply();
-
-        connection.close();
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            connection.logoutAndAwaitReply();
+        }
     }
 }

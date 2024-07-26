@@ -27,7 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 final class OrderFactory
 {
-    private static NewOrderSingleEncoder makeOrder()
+    public static NewOrderSingleEncoder makeOrder()
     {
         final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
         final DecimalFloat price = new DecimalFloat(100);
