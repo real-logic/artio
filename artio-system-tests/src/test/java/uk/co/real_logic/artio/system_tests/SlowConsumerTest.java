@@ -149,7 +149,7 @@ public class SlowConsumerTest
                     hasBecomeSlow = true;
                 }
 
-                sendMessage();
+                sendMessageWithRetry();
             }
 
             testSystem.poll();
@@ -172,6 +172,11 @@ public class SlowConsumerTest
         }
 
         assertTrue(session.isSlowConsumer());
+    }
+
+    private void sendMessageWithRetry()
+    {
+        testSystem.awaitSend(this::sendMessage);
     }
 
     private long sendMessage()
@@ -207,7 +212,7 @@ public class SlowConsumerTest
             }
             while (bytesRead > 0);
 
-            sendMessage();
+            sendMessageWithRetry();
 
             testSystem.poll();
         }
@@ -260,7 +265,7 @@ public class SlowConsumerTest
         {
             for (int i = 0; i < 10; i++)
             {
-                sendMessage();
+                sendMessageWithRetry();
             }
 
             testSystem.poll();
