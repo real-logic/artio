@@ -35,7 +35,7 @@ public interface SessionHandler
      * @param libraryId the id of library which has received this message.
      * @param session the session which has received this message.
      * @param sequenceIndex the sequence index of this message.
-     * @param messageType the FIX msgType field, encoded as an int.
+     * @param messageType the FIX msgType field, encoded as a long.
      * @param timestampInNs the time of the message in nanoseconds.
      * @param position the position in the Aeron stream at the end of the message.
      * @param messageInfo additional information about the message.
@@ -56,7 +56,8 @@ public interface SessionHandler
     /**
      * This session has timed out on this library. It is still connected, but will
      * be managed by the gateway.
-     *  @param libraryId the id of library which the session used to owned by.
+     *
+     * @param libraryId the id of library which the session used to owned by.
      * @param session the session that has timed out.
      */
     void onTimeout(int libraryId, Session session);
@@ -67,7 +68,7 @@ public interface SessionHandler
      * <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">the wiki</a>
      * for details on what a slow consumer is.
      *
-     *  @param libraryId the id of library which the session used to owned by.
+     * @param libraryId the id of library which the session used to owned by.
      * @param session the session that has become slow.
      * @param hasBecomeSlow true iff the session has been detected as slow, false if it is no longer slow.
      */
@@ -84,7 +85,7 @@ public interface SessionHandler
     Action onDisconnect(int libraryId, Session session, DisconnectReason reason);
 
     /**
-     * Invoked When a client resets a session to the initial sequence number via a logon whilst still connected.
+     * Invoked when a client resets a session to the initial sequence number via a logon whilst still connected.
      *
      * @param session The session that has just started.
      */

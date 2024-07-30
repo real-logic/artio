@@ -82,7 +82,7 @@ public class SessionWriter
     }
 
     /**
-     * Sets the current sequence index.
+     * Gets the current sequence index.
      *
      * @return the current sequence index
      */

@@ -368,4 +368,3 @@ public class SlowConsumerTest
         library = testSystem.connect(libraryConfiguration);
     }
 }
-
