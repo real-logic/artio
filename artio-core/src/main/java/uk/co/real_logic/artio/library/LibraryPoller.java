@@ -1294,6 +1294,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     }
                 }
 
+                final WeakReference<SessionWriter> sessionWriterRef =
+                    sessionIdToFollowerSessionWriter.get(session.id());
+                if (sessionWriterRef != null)
+                {
+                    final SessionWriter sessionWriter = sessionWriterRef.get();
+                    if (sessionWriter != null)
+                    {
+                        InternalSession.disconnectWriter(sessionWriter);
+                    }
+                }
+
                 connectionIdToSession.remove(connectionId);
 
                 if (isEngineOwned)

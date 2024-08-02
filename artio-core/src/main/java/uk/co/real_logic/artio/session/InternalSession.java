@@ -254,6 +254,11 @@ public class InternalSession extends Session implements AutoCloseable
         sessionWriter.linkTo(this);
     }
 
+    public static void disconnectWriter(final SessionWriter writer)
+    {
+        writer.onDisconnect();
+    }
+
     public static void closeWriter(final SessionWriter writer)
     {
         writer.close();

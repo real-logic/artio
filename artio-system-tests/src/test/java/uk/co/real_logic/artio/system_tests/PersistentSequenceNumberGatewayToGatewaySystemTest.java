@@ -50,6 +50,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.MonitoringAgentFactory.consumeDistinctErrors;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -986,6 +987,27 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(logonSequenceNumber, logon.messageSequenceNumber());
 
         assertAcceptingSessionHasSequenceIndex(retry ? 2 : 1);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void followerSessionShouldReturnCurrentConnectionId()
+    {
+        launch(this::nothing);
+
+        final SessionWriter followerSession = createFollowerSession(TEST_REPLY_TIMEOUT_IN_MS);
+        assertEquals(NO_CONNECTION_ID, followerSession.connectionId());
+
+        for (int i = 0; i < 2; i++)
+        {
+            connectPersistingSessions();
+
+            assertNotEquals(NO_CONNECTION_ID, followerSession.connectionId());
+            assertEquals(acceptingSession.connectionId(), followerSession.connectionId());
+
+            disconnectSessions();
+
+            assertEquals(NO_CONNECTION_ID, followerSession.connectionId());
+        }
     }
 
     private void connectPersistingSessions()

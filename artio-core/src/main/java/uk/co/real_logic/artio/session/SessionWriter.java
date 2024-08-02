@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -205,6 +206,11 @@ public class SessionWriter
     {
         this.session = session;
         this.connectionId = session.connectionId();
+    }
+
+    void onDisconnect()
+    {
+        connectionId = NO_CONNECTION_ID;
     }
 
     void checkState()
