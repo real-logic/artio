@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 
 /**
  * Customer interface to control whether resend requests are responded to or not.
@@ -33,11 +34,16 @@ public interface ResendRequestController
      * (eg: begin sequence number &gt; end sequence number or begin sequence number &gt; last sent sequence number)
      * then this callback won't be invoked.
      *
+     * SessionProxy is now also notified immediately after this method is called, with additional parameters that
+     * allow to delay the processing of the ResendRequest. The SessionProxy can thus override the decision made by
+     * ResendRequestController.
+     *
      * @param session the session that has received the resend request.
      * @param resendRequest the decoded resend request in question.
      * @param correctedEndSeqNo the end sequence number that Artio will reply with. This is useful if, for example, the
      *                          resend request uses 0 for its endSeqNo parameter.
      * @param response respond to the resend request by calling methods on this object.
+     * @see SessionProxy#onResend(Session, AbstractResendRequestDecoder, int, ResendRequestResponse, AsciiBuffer, int, int)
      */
     void onResend(
         Session session,
