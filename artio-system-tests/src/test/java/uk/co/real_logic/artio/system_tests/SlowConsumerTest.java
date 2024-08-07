@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
@@ -148,7 +149,7 @@ public class SlowConsumerTest
                     hasBecomeSlow = true;
                 }
 
-                sendMessage();
+                sendMessageWithRetry();
             }
 
             testSystem.poll();
@@ -173,16 +174,21 @@ public class SlowConsumerTest
         assertTrue(session.isSlowConsumer());
     }
 
-    private void sendMessage()
+    private void sendMessageWithRetry()
+    {
+        testSystem.awaitSend(this::sendMessage);
+    }
+
+    private long sendMessage()
     {
         if (sendMetadata)
         {
             metadata.putInt(0, session.lastSentMsgSeqNum() + 1);
-            session.trySend(testRequest, metadata, 0);
+            return session.trySend(testRequest, metadata, 0);
         }
         else
         {
-            session.trySend(testRequest);
+            return session.trySend(testRequest);
         }
     }
 
@@ -206,7 +212,7 @@ public class SlowConsumerTest
             }
             while (bytesRead > 0);
 
-            sendMessage();
+            sendMessageWithRetry();
 
             testSystem.poll();
         }
@@ -259,7 +265,7 @@ public class SlowConsumerTest
         {
             for (int i = 0; i < 10; i++)
             {
-                sendMessage();
+                sendMessageWithRetry();
             }
 
             testSystem.poll();
