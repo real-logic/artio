@@ -55,6 +55,10 @@ public class Server implements Agent
             .authenticationStrategy(authenticationStrategy)
             .agentNamePrefix("server-");
 
+        configuration.aeronArchiveContext()
+            .controlRequestChannel(StressConfiguration.CONTROL_REQUEST_CHANNEL)
+            .controlResponseChannel(StressConfiguration.SERVER_CONTROL_RESPONSE_CHANNEL);
+
         System.out.println("Server Logs at " + configuration.logFileDir());
 
         StressUtil.cleanupOldLogFileDir(configuration);
@@ -65,6 +69,8 @@ public class Server implements Agent
 
         final Archive.Context archiveContext = new Archive.Context()
             .threadingMode(ArchiveThreadingMode.SHARED)
+            .controlChannel(StressConfiguration.CONTROL_REQUEST_CHANNEL)
+            .replicationChannel(StressConfiguration.REPLICATION_CHANNEL)
             .deleteArchiveOnStart(true);
 
         mediaDriver = ArchivingMediaDriver.launch(context, archiveContext);

@@ -52,6 +52,10 @@ public final class ConcurrentConnections
             .logFileDir("stress-client-logs");
         engineConfiguration.authenticationStrategy((logon) -> true);
 
+        engineConfiguration.aeronArchiveContext()
+            .controlRequestChannel(StressConfiguration.CONTROL_REQUEST_CHANNEL)
+            .controlResponseChannel(StressConfiguration.CLIENT_CONTROL_RESPONSE_CHANNEL);
+
         System.out.println("Client Logs at " + engineConfiguration.logFileDir());
 
         StressUtil.cleanupOldLogFileDir(engineConfiguration);

@@ -20,12 +20,19 @@ import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 
+import static io.aeron.archive.Archive.Configuration.REPLICATION_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_CHANNEL_PROP_NAME;
+import static io.aeron.archive.client.AeronArchive.Configuration.CONTROL_RESPONSE_CHANNEL_PROP_NAME;
 import static io.aeron.driver.ThreadingMode.SHARED;
 
 public final class SoleMediaDriver
 {
     public static void main(final String[] args)
     {
+        System.setProperty(CONTROL_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:8010");
+        System.setProperty(CONTROL_RESPONSE_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:8020");
+        System.setProperty(REPLICATION_CHANNEL_PROP_NAME, "aeron:udp?endpoint=localhost:0");
+
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
             .dirDeleteOnStart(true);

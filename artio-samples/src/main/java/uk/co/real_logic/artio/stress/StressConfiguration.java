@@ -35,4 +35,8 @@ final class StressConfiguration
         return FAILED_SPINS_PRINT != DO_NOT_PRINT && failCount > FAILED_SPINS_PRINT;
     }
 
+    public static final String CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8010";
+    public static final String SERVER_CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:8020";
+    public static final String CLIENT_CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:8030";
+    public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
 }
