@@ -46,7 +46,7 @@ def byteBuddyVersion = '1.14.18'
 
 def agronaVersion = '1.22.0'
 def sbeVersion = '1.32.1'
-def aeronVersion = '1.44.1'
+def aeronVersion = '1.45.0'
 def artioGroup = 'uk.co.real-logic'
 def iLink3Enabled = false
 
