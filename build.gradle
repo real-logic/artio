@@ -205,6 +205,11 @@ subprojects {
 
         testClassesDirs = testing.suites.test.sources.output.classesDirs
         classpath = testing.suites.test.sources.runtimeClasspath
+        maxHeapSize("1g")
+        jvmArgs("-XX:MaxDirectMemorySize=1g",
+                "-XX:+HeapDumpOnOutOfMemoryError",
+                "-XX:+CrashOnOutOfMemoryError",
+                "-XX:HeapDumpPath=" + project.rootDir + "/heap.hprof")
 
         testLogging {
             events 'skipped', 'failed'
