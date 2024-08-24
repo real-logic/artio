@@ -275,7 +275,7 @@ subprojects {
     tasks.register('testJar', Jar) {
         dependsOn testClasses
         archiveClassifier.set('tests')
-        archiveBaseName.set("test-${project.archivesBaseName}")
+        archiveBaseName.set("test-${base.archivesName}")
         from sourceSets.test.output
     }
 
@@ -317,11 +317,11 @@ project(':artio-codecs') {
         api "io.aeron:aeron-client:${aeronVersion}"
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
         api "uk.co.real-logic:sbe-tool:${sbeVersion}"
-        api files('build/classes/java/generated')
-        testImplementation files('build/classes/java/generated')
+        api files("${layout.buildDirectory.get()}/classes/java/generated")
+        testImplementation files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
-    def generatedDir = file("${buildDir}/generated-src")
+    def generatedDir = file("${layout.buildDirectory.get()}/generated-src")
     sourceSets {
         generated {
             java.srcDir generatedDir
@@ -388,13 +388,13 @@ project(':artio-ilink3-codecs') {
     dependencies {
         api "org.agrona:agrona:${agronaVersion}"
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
-        api files('build/classes/java/generated')
-        testImplementation files('build/classes/java/generated')
+        api files("${layout.buildDirectory.get()}/classes/java/generated")
+        testImplementation files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
     def outputClasses = 'out/production/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
-    def generatedDir = file("${buildDir}/generated-src")
+    def generatedDir = file("${layout.buildDirectory.get()}/generated-src")
     sourceSets {
         generated {
             java.srcDir generatedDir
@@ -471,13 +471,13 @@ project(':artio-binary-entrypoint-codecs') {
     dependencies {
         api "org.agrona:agrona:${agronaVersion}"
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
-        api files('build/classes/java/generated')
-        testImplementation files('build/classes/java/generated')
+        api files("${layout.buildDirectory.get()}/classes/java/generated")
+        testImplementation files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
     def outputClasses = 'out/production/classes'
     def sbePath = 'src/main/resources/uk/co/real_logic/artio/entrypoint/binary_entrypoint.xml'
-    def generatedDir = file("${buildDir}/generated-src")
+    def generatedDir = file("${layout.buildDirectory.get()}/generated-src")
     sourceSets {
         generated {
             java.srcDir generatedDir
@@ -609,7 +609,7 @@ project(':artio-session-codecs') {
     dependencies {
         api project(':artio-codecs')
         codecGeneration project(':artio-codecs')
-        api files('build/classes/java/generated')
+        api files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -678,7 +678,7 @@ project(':artio-session-fixt-codecs') {
     dependencies {
         api project(path: ':artio-codecs')
         codecGeneration project(':artio-codecs')
-        api files('build/classes/java/generated')
+        api files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -969,7 +969,7 @@ tasks.withType(PublishToMavenRepository).configureEach {
 }
 
 wrapper {
-    gradleVersion = '8.1.1'
+    gradleVersion = '8.10'
     distributionType = 'ALL'
 }
 
