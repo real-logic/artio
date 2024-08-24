@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 
@@ -46,6 +47,24 @@ class ReceiverEndPoints extends TransportPoller
     // An endpoint that has read data out of the TCP layer but has been back-pressured when attempting to write
     // the data into the Aeron stream.
     private ReceiverEndPoint backpressuredEndPoint = null;
+    private int bytesReceived;
+    private final Consumer<SelectionKey> selectorPoller = (selectionKey) ->
+    {
+        if (null == backpressuredEndPoint)
+        {
+            final ReceiverEndPoint endPoint = (ReceiverEndPoint)selectionKey.attachment();
+            final int polledBytes = endPoint.poll();
+            if (polledBytes < 0)
+            {
+                backpressuredEndPoint = endPoint;
+                bytesReceived -= polledBytes;
+            }
+            else
+            {
+                bytesReceived += polledBytes;
+            }
+        }
+    };
 
     ReceiverEndPoints(final ErrorHandler errorHandler)
     {
@@ -216,7 +235,7 @@ class ReceiverEndPoints extends TransportPoller
 
     private int pollNormalEndPoints(final int numRequiredPollingEndPoints) throws IOException
     {
-        int bytesReceived = 0;
+        bytesReceived = 0;
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int numEndPoints = endPoints.length;
         final int threshold = ARTIO_ITERATION_THRESHOLD - numRequiredPollingEndPoints;
@@ -226,43 +245,7 @@ class ReceiverEndPoints extends TransportPoller
         }
         else
         {
-            selector.selectNow();
-
-            final SelectionKey[] keys = selectedKeySet.keys();
-            final int size = selectedKeySet.size();
-            int i;
-            for (i = 0; i < size; i++)
-            {
-                final SelectionKey key = keys[i];
-                // key could be null if a ReceiverEndPoint was removed during the processing of a previous key in the
-                // current poll iteration
-                if (key != null)
-                {
-                    final ReceiverEndPoint endPoint = (ReceiverEndPoint)key.attachment();
-                    final int polledBytes = endPoint.poll();
-                    if (polledBytes < 0)
-                    {
-                        backpressuredEndPoint = endPoint;
-                        bytesReceived -= polledBytes;
-                        break;
-                    }
-
-                    bytesReceived += polledBytes;
-                }
-            }
-
-            if (i != 0)
-            {
-                if (i == size)
-                {
-                    selectedKeySet.reset();
-                }
-                else
-                {
-                    final int skipCount = Math.min(i, selectedKeySet.size());
-                    selectedKeySet.reset(skipCount);
-                }
-            }
+            selector.selectNow(selectorPoller);
         }
         return bytesReceived;
     }
