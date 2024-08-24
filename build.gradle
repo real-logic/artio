@@ -44,7 +44,8 @@ def hdrHistogramVersion = '2.2.2'
 def jmhVersion = '1.37'
 def byteBuddyVersion = '1.14.18'
 
-def agronaVersion = '1.22.0'
+def agronaVersion = '1.23.0'
+def agronaVersionRange = "[${agronaVersion},2.0["
 def sbeVersion = '1.33.0'
 def aeronVersion = '1.45.0'
 def artioGroup = 'uk.co.real-logic'
@@ -313,7 +314,12 @@ project(':artio-codecs') {
     }
 
     dependencies {
-        api "org.agrona:agrona:${agronaVersion}"
+        api("org.agrona:agrona") {
+            version {
+                strictly(agronaVersionRange)
+                prefer(agronaVersion)
+            }
+        }
         api "io.aeron:aeron-client:${aeronVersion}"
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
         api "uk.co.real-logic:sbe-tool:${sbeVersion}"
@@ -386,7 +392,12 @@ project(':artio-ilink3-codecs') {
     }
 
     dependencies {
-        api "org.agrona:agrona:${agronaVersion}"
+        api("org.agrona:agrona") {
+            version {
+                strictly(agronaVersionRange)
+                prefer(agronaVersion)
+            }
+        }
         codecGeneration "uk.co.real-logic:sbe-tool:${sbeVersion}"
         api files("${layout.buildDirectory.get()}/classes/java/generated")
         testImplementation files("${layout.buildDirectory.get()}/classes/java/generated")
@@ -612,7 +623,7 @@ project(':artio-session-codecs') {
         api files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
-    def generatedDir = file("$buildDir/generated-src")
+    def generatedDir = file("${layout.buildDirectory.get()}/generated-src")
     sourceSets {
         generated {
             java.srcDir generatedDir
@@ -681,7 +692,7 @@ project(':artio-session-fixt-codecs') {
         api files("${layout.buildDirectory.get()}/classes/java/generated")
     }
 
-    def generatedDir = file("$buildDir/generated-src")
+    def generatedDir = file("${layout.buildDirectory.get()}/generated-src")
     sourceSets {
         generated {
             java.srcDir generatedDir
