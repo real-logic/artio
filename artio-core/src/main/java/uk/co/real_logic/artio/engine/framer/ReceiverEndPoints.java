@@ -26,8 +26,6 @@ import java.lang.reflect.Field;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Set;
 import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 
@@ -72,6 +70,7 @@ class ReceiverEndPoints extends TransportPoller
             PUBLIC_SELECTED_KEYS_FIELD = publicSelectKeysField;
         }
     }
+
     private final NioSelectedKeySet selectedKeySet = new NioSelectedKeySet();
     // FIXME: << temporary workaround
 

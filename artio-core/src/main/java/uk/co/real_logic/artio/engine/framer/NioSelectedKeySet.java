@@ -37,7 +37,7 @@ final class NioSelectedKeySet extends AbstractSet<SelectionKey>
     /**
      * Construct a key set with default capacity
      */
-    public NioSelectedKeySet()
+    NioSelectedKeySet()
     {
         keys = new SelectionKey[INITIAL_CAPACITY];
     }
@@ -47,7 +47,7 @@ final class NioSelectedKeySet extends AbstractSet<SelectionKey>
      *
      * @param initialCapacity for the key set
      */
-    public NioSelectedKeySet(final int initialCapacity)
+    NioSelectedKeySet(final int initialCapacity)
     {
         if (initialCapacity < 0 || initialCapacity > ArrayUtil.MAX_CAPACITY)
         {
