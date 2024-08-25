@@ -27,7 +27,7 @@ import java.util.function.ToIntFunction;
  * Try to fix handling of HashSet for {@link java.nio.channels.Selector} to avoid excessive allocation.
  * Assumes single threaded usage.
  */
-public class NioSelectedKeySet extends AbstractSet<SelectionKey>
+final class NioSelectedKeySet extends AbstractSet<SelectionKey>
 {
     private static final int INITIAL_CAPACITY = 10;
 
