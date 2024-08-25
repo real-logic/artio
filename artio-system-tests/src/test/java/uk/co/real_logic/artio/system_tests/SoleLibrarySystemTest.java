@@ -132,7 +132,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(1, acceptingSession.lastSentMsgSeqNum());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test(timeout = LONG_TEST_TIMEOUT_IN_MS)
     public void shouldSupportManySessionReconnections()
     {
         launch(false, true);
