@@ -22,7 +22,9 @@ import org.agrona.nio.TransportPoller;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
@@ -39,6 +41,40 @@ class ReceiverEndPoints extends TransportPoller
     public static final int ARTIO_ITERATION_THRESHOLD = Integer.getInteger(
         ARTIO_ITERATION_THRESHOLD_PROP_NAME, ITERATION_THRESHOLD_DEFAULT);
 
+    // FIXME: >> A temporary workaround to the recursive poll problem
+    private static final Field SELECTED_KEYS_FIELD;
+    private static final Field PUBLIC_SELECTED_KEYS_FIELD;
+    static
+    {
+        Field selectKeysField = null;
+        Field publicSelectKeysField = null;
+
+        try (Selector selector = Selector.open())
+        {
+            final Class<?> clazz = Class.forName("sun.nio.ch.SelectorImpl", false, ClassLoader.getSystemClassLoader());
+
+            if (clazz.isAssignableFrom(selector.getClass()))
+            {
+                selectKeysField = clazz.getDeclaredField("selectedKeys");
+                selectKeysField.setAccessible(true);
+
+                publicSelectKeysField = clazz.getDeclaredField("publicSelectedKeys");
+                publicSelectKeysField.setAccessible(true);
+            }
+        }
+        catch (final Exception ex)
+        {
+            LangUtil.rethrowUnchecked(ex);
+        }
+        finally
+        {
+            SELECTED_KEYS_FIELD = selectKeysField;
+            PUBLIC_SELECTED_KEYS_FIELD = publicSelectKeysField;
+        }
+    }
+    private final NioSelectedKeySet selectedKeySet = new NioSelectedKeySet();
+    // FIXME: << temporary workaround
+
     private final ErrorHandler errorHandler;
 
     // Authentication flow requires periodic polling of the receiver end points until the authentication is
@@ -52,6 +88,17 @@ class ReceiverEndPoints extends TransportPoller
     ReceiverEndPoints(final ErrorHandler errorHandler)
     {
         this.errorHandler = errorHandler;
+
+        // FIXME: A temporary workaround using legacy Selector hacks
+        try
+        {
+            SELECTED_KEYS_FIELD.set(selector, selectedKeySet);
+            PUBLIC_SELECTED_KEYS_FIELD.set(selector, selectedKeySet);
+        }
+        catch (final Exception ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
     void add(final ReceiverEndPoint endPoint)
@@ -229,10 +276,15 @@ class ReceiverEndPoints extends TransportPoller
         else
         {
             selector.selectNow();
-            final Set<SelectionKey> selectedKeys = selector.selectedKeys();
-            for (final Iterator<SelectionKey> iterator = selectedKeys.iterator(); iterator.hasNext();)
+
+            final SelectionKey[] keys = selectedKeySet.keys();
+            final int size = selectedKeySet.size();
+            int i;
+            for (i = 0; i < size; i++)
             {
-                final SelectionKey key = iterator.next();
+                final SelectionKey key = keys[i];
+                // key could be null if a ReceiverEndPoint was removed during the processing of a previous key in the
+                // current poll iteration
                 if (key != null)
                 {
                     final ReceiverEndPoint endPoint = (ReceiverEndPoint)key.attachment();
@@ -245,7 +297,19 @@ class ReceiverEndPoints extends TransportPoller
                     }
 
                     bytesReceived += polledBytes;
-                    iterator.remove();
+                }
+            }
+
+            if (i != 0)
+            {
+                if (i == size)
+                {
+                    selectedKeySet.reset();
+                }
+                else
+                {
+                    final int skipCount = Math.min(i, selectedKeySet.size());
+                    selectedKeySet.reset(skipCount);
                 }
             }
         }
