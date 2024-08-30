@@ -35,6 +35,7 @@ public final class ExampleDictionary
 {
 
     public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final String NO_NESTED_EG_GROUP = "NoNestedGroup";
     public static final String NO_SECOND_EG_GROUP = "NoSecondEgGroup";
     public static final String NO_ADMIN_EG_GROUP = "NoAdminEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
@@ -472,6 +473,14 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001120=3\001121=1\001121=2\00110=053\001";
 
+    public static final String NESTED_REPEATING_GROUP_MESSAGE_WITH_TOO_LOW_NUMBER_FIELD =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=1\001121=1\001122=1\001123=1\001123=1\00110=063\001";
+
+    public static final String NESTED_REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=1\001121=1\001122=2\001123=1\00110=063\001";
+
     public static final String NON_EMPTY_OPTIONAL_COMPONENT_OF_REQUIRED_GROUP =
         "8=FIX.4.4\0019=81\00135=OCRG\0012001=1\0012002=555-100-1234\00110=246\001";
 
@@ -563,7 +572,7 @@ public final class ExampleDictionary
         final Field dayOfMonthField = registerField(messageEgFields, 129, "DayOfMonthField", Type.DAYOFMONTH);
 
         final Group nestedGroup = Group.of(registerField(
-            messageEgFields, 122, "NoNestedGroup", INT), messageEgFields);
+            messageEgFields, 122, NO_NESTED_EG_GROUP, INT), messageEgFields);
         nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
 
         final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, INT), messageEgFields);

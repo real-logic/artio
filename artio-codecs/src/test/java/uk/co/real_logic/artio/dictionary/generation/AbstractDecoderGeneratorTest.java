@@ -839,6 +839,24 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
+    public void shouldSupportGroupNumbersGreaterThanTheNumberOfElementsInTheNestedGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            NESTED_REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 122);
+    }
+
+    @Test
+    public void shouldReasonablyValidateGroupNumbersLessThanTheNumberOfElementsInTheNestedGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            NESTED_REPEATING_GROUP_MESSAGE_WITH_TOO_LOW_NUMBER_FIELD);
+
+        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 122);
+    }
+
+    @Test
     public void shouldLeaveDecoderInUsableIfUnknownFieldForRepeatingGroupReachedAndRejectingOn() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
