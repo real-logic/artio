@@ -270,7 +270,15 @@ class FixSenderEndPoint extends SenderEndPoint
                 return;
             }
 
-            final int written = writeBuffer(directBuffer, offset, bodyLength, seqNum, replay);
+            int written = 0;
+            if (receiverEndPoint.hasDisconnected)
+            {
+                logSendError(connectionId, directBuffer, offset, bodyLength);
+            }
+            else
+            {
+                written = writeBuffer(directBuffer, offset, bodyLength, seqNum, replay);
+            }
             final int reattemptBytesWritten = this.reattemptBytesWritten;
             final int totalWritten = reattemptBytesWritten + written;
 
@@ -343,7 +351,14 @@ class FixSenderEndPoint extends SenderEndPoint
         ByteBufferUtil.position(buffer, writePosition);
 
         final int written = channel.write(buffer, seqNum, replay);
-        DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", directBuffer, offset + reattemptBytesWritten, written);
+        if (written > 0)
+        {
+            DebugLogger.log(FIX_MESSAGE_TCP,
+                "Written  ",
+                directBuffer,
+                offset + reattemptBytesWritten,
+                written);
+        }
 
         buffer.limit(startLimit).position(startPosition);
 
@@ -478,7 +493,15 @@ class FixSenderEndPoint extends SenderEndPoint
                     final int bodyLength = buffer.getInt(bodyLengthOffset);
 
                     final int bodyOffset = bodyLengthOffset + SIZE_OF_INT;
-                    final int written = writeBuffer(buffer, bodyOffset, bodyLength, sequenceNumber, replay);
+                    int written = 0;
+                    if (receiverEndPoint.hasDisconnected)
+                    {
+                        logSendError(connectionId, buffer, offset, bodyLength);
+                    }
+                    else
+                    {
+                        written = writeBuffer(buffer, offset, bodyLength, sequenceNumber, replay);
+                    }
                     final int totalWritten = written + reattemptBytesWritten;
                     tryLogBackPressure(sequenceNumber, replay, written);
                     if (totalWritten < bodyLength)
@@ -498,7 +521,6 @@ class FixSenderEndPoint extends SenderEndPoint
                     final int idOffset = offset + SIZE_OF_INT;
                     final long correlationId = buffer.getLong(idOffset);
                     this.reattemptBytesWritten = NO_REATTEMPT;
-
                     // Complete
                     final int endOfReplayEntry = idOffset + SIZE_OF_LONG;
 
@@ -841,4 +863,14 @@ class FixSenderEndPoint extends SenderEndPoint
 
         super.sendSlowStatus(hasBecomeSlow);
     }
+
+    private void logSendError(final long connectionId, final DirectBuffer buffer, final int offset, final int length)
+    {
+        errorHandler.onError(new IllegalArgumentException(String.format(
+            "Failed to send message on conn=%1$d [%2$s], this probably indicates the connection has disconnected " +
+            "from Artio whilst this message was in the process of being sent",
+            connectionId,
+            buffer.getStringWithoutLengthUtf8(offset, length))));
+    }
+
 }
