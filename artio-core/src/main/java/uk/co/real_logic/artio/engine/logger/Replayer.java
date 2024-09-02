@@ -384,7 +384,9 @@ public class Replayer extends AbstractReplayer
             return session;
         }
 
-        throw new IllegalStateException("Unknown session: sessionId=" + sessionId + ",connectionId=" + connectionId);
+        // ManageSession and ValidResendRequest might race each other (different sessions), so it's possible we see
+        // VRR before MS and sessionCodecs is null, simply wait in this case for the other image to catch up.
+        return null;
     }
 
     private FixReplayerSession processFixResendRequest(
