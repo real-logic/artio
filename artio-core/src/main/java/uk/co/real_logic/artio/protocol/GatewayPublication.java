@@ -27,8 +27,10 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.DisconnectedSessionsEncoder;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
@@ -125,6 +127,8 @@ public class GatewayPublication extends ClaimablePublication
     private static final int THROTTLE_CONFIGURATION_REPLY_LENGTH = HEADER_LENGTH +
         ThrottleConfigurationReplyEncoder.BLOCK_LENGTH;
     private static final int SEQ_INDEX_SYNC_LENGTH = HEADER_LENGTH + SeqIndexSyncEncoder.BLOCK_LENGTH;
+    private static final int LIBRARY_TIMEOUT_LENGTH = HEADER_LENGTH + LibraryTimeoutEncoder.BLOCK_LENGTH +
+        GroupSizeEncodingEncoder.ENCODED_LENGTH;
 
     private static final boolean APPLICATION_HEARTBEAT_ATTEMPT_ENABLED = isEnabled(APPLICATION_HEARTBEAT_ATTEMPT);
     private static final boolean APPLICATION_HEARTBEAT_ENABLED = isEnabled(APPLICATION_HEARTBEAT);
@@ -966,25 +970,33 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLibraryTimeout(final int libraryId, final long connectCorrelationId)
+    public long saveLibraryTimeout(final LibraryInfo libraryInfo, final long connectCorrelationId)
     {
-        final long position = claim(LibraryTimeoutEncoder.BLOCK_LENGTH + HEADER_LENGTH);
-        if (position < 0)
-        {
-            return position;
-        }
+        final List<ConnectedSessionInfo> connectedSessionInfos = libraryInfo.sessions();
+        final int sessionsCount = connectedSessionInfos.size();
 
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
+        final int framedLength = LIBRARY_TIMEOUT_LENGTH + sessionsCount *
+            LibraryTimeoutEncoder.SessionsEncoder.sbeBlockLength();
+        final ExpandableArrayBuffer buffer = buffer(framedLength);
 
         libraryTimeout
-            .wrapAndApplyHeader(buffer, offset, header)
-            .libraryId(libraryId)
+            .wrapAndApplyHeader(buffer, 0, header)
+            .libraryId(libraryInfo.libraryId())
             .connectCorrelationId(connectCorrelationId);
 
-        bufferClaim.commit();
+        final LibraryTimeoutEncoder.SessionsEncoder sessionsEncoder = libraryTimeout.sessionsCount(sessionsCount);
+        for (int i = 0; i < sessionsCount; i++)
+        {
+            final SessionInfo session = connectedSessionInfos.get(i);
+            sessionsEncoder.next().sessionId(session.sessionId());
+        }
 
-        logSbeMessage(GATEWAY_MESSAGE, libraryTimeout);
+        final long position = dataPublication.offer(buffer, 0, framedLength);
+
+        if (position > 0)
+        {
+            logSbeMessage(GATEWAY_MESSAGE, libraryTimeout);
+        }
 
         return position;
     }
