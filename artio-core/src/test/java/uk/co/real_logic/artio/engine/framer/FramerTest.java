@@ -37,6 +37,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.CloseChecker;
 import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.*;
@@ -140,6 +141,12 @@ public class FramerTest
 
     private final MutableLong connectionId = new MutableLong(NO_CONNECTION_ID);
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final LivenessDetector livenessDetector = mock(LivenessDetector.class);
+
+    private final LiveLibraryInfo libraryInfo = new LiveLibraryInfo(
+        errorHandler,
+        LIBRARY_ID, LIBRARY_NAME, livenessDetector, 1,
+        false);
 
     @Before
     @SuppressWarnings("unchecked")
@@ -1004,7 +1011,7 @@ public class FramerTest
 
     private void verifyLibraryTimeout()
     {
-        verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID, 0);
+        verify(inboundPublication).saveLibraryTimeout(libraryInfo, 0);
     }
 
     private void libraryHasAcceptedClient() throws IOException

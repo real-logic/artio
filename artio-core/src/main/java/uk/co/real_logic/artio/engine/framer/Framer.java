@@ -559,9 +559,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void saveLibraryTimeout(final LibraryInfo library)
     {
-        final int libraryId = library.libraryId();
-        schedule(() -> inboundPublication.saveLibraryTimeout(libraryId, 0));
-        schedule(() -> outboundPublication.saveLibraryTimeout(libraryId, 0));
+        schedule(() -> inboundPublication.saveLibraryTimeout(library, 0));
+        schedule(() -> outboundPublication.saveLibraryTimeout(library, 0));
     }
 
     private void acquireLibrarySessions(final LiveLibraryInfo library)
