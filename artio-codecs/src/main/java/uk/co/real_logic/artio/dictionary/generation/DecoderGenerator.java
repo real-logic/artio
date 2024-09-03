@@ -1925,7 +1925,12 @@ class DecoderGenerator extends Generator
             "                        {\n" +
             "                            invalidTagId = tag;\n" +
             "                            rejectReason = %6$s;\n" +
-            "                            return position;\n" +
+            "                            while (%1$sCurrent != null) \n" +
+            "                            {\n" +
+            "                               position += %1$sCurrent.decode(buffer, position, end - position);\n" +
+            "                               %1$sCurrent = %1$sCurrent.next();\n" +
+            "                            }\n" +
+            "                            return position - offset;\n" +
             "                        }\n" +
             "                    }\n" +
             "                }\n",
