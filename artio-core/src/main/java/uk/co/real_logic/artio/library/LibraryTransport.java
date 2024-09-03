@@ -30,7 +30,7 @@ import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
 {
-    private static final String OUTBOUND_PUBLICATION = "outboundPublication";
+    private static final String OUTBOUND_PUBLICATION = "library outboundPublication";
 
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
@@ -87,7 +87,7 @@ class LibraryTransport
             idleStrategy, outboundDataPublication(aeronChannel));
 
         final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, inboundLibraryStream);
-        StreamInformation.print("inboundPublication", publication, printAeronStreamIdentifiers);
+        StreamInformation.print("library inboundPublication", publication, printAeronStreamIdentifiers);
         inboundPublication = new GatewayPublication(
             publication,
             fixCounters.failedInboundPublications(),
