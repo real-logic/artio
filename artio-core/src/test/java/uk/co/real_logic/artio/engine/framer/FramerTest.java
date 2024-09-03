@@ -117,7 +117,6 @@ public class FramerTest
     private final InternalSession session = mock(InternalSession.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
     private final Image replayImage = mock(Image.class);
-    private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
