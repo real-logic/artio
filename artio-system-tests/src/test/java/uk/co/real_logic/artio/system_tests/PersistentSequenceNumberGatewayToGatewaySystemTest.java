@@ -216,9 +216,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             HIGH_INITIAL_SEQUENCE_NUMBER,
             4,
             HIGH_INITIAL_SEQUENCE_NUMBER,
-            5);
-
-        receivesGapfill(acceptingOtfAcceptor, greaterThan(HIGH_INITIAL_SEQUENCE_NUMBER));
+            5,
+            greaterThan(HIGH_INITIAL_SEQUENCE_NUMBER));
 
         // Test that we don't accidentally send another resend request
         // Reproduction of reported bug
@@ -1095,6 +1094,20 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int expectedInitToAccSeqNum,
         final int expectedAccToInitSeqNum)
     {
+        exchangeMessagesAroundARestart(initialSentSequenceNumber,
+            initialReceivedSequenceNumber,
+            expectedInitToAccSeqNum,
+            expectedAccToInitSeqNum,
+            null);
+    }
+
+    private void exchangeMessagesAroundARestart(
+        final int initialSentSequenceNumber,
+        final int initialReceivedSequenceNumber,
+        final int expectedInitToAccSeqNum,
+        final int expectedAccToInitSeqNum,
+        final Matcher<Integer> gapFillMatcher)
+    {
         launch(this::nothing);
         connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, resetSequenceNumbersOnLogon);
         assertLastLogonEquals(1, 0);
@@ -1132,6 +1145,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         if (expectedInitToAccSeqNum != DOES_NOT_MATTER)
         {
             assertSequenceFromInitToAcceptAt(expectedInitToAccSeqNum, expectedAccToInitSeqNum);
+        }
+
+        // this means a resend request will be sent by the acceptor
+        if (initialReceivedSequenceNumber != AUTOMATIC_INITIAL_SEQUENCE_NUMBER &&
+            initialReceivedSequenceNumber < expectedAccToInitSeqNum)
+        {
+            assertReceivedResendRequest(testSystem, initiatingOtfAcceptor, expectedAccToInitSeqNum);
+        }
+        if (gapFillMatcher != null)
+        {
+            receivesGapfill(acceptingOtfAcceptor, gapFillMatcher);
         }
 
         assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
