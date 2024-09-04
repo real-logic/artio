@@ -261,15 +261,14 @@ public class SlowConsumerTest
         assertNotSlow();
 
         // Get into a slow state
-        while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
+        while (!handler.isSlow(session))
         {
             for (int i = 0; i < 10; i++)
             {
                 sendMessageWithRetry();
             }
-
-            testSystem.poll();
         }
+        testSystem.poll();
 
         assertIsSlow();
         return sessionInfo;

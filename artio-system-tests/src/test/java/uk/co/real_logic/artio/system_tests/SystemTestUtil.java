@@ -538,6 +538,20 @@ public final class SystemTestUtil
             });
     }
 
+    static void assertReceivedResendRequest(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final int msgSeqNo)
+    {
+        assertEventuallyTrue("Failed to received heartbeat",
+            () ->
+            {
+                testSystem.poll();
+
+                return acceptor
+                    .receivedMessage("2")
+                    .anyMatch((message) -> msgSeqNo == Integer.parseInt(message.get(Constants.MSG_SEQ_NUM)));
+            });
+    }
+
     static LibraryInfo gatewayLibraryInfo(final FixEngine engine)
     {
         return libraries(engine)
