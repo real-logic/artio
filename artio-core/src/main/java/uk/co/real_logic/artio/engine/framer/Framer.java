@@ -1715,24 +1715,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void checkOfflineSequenceReset(final long sessionId, final long messageType, final int sequenceIndex)
     {
-        if (messageType == LOGON_MESSAGE_TYPE)
+        if (messageType == LOGON_MESSAGE_TYPE || messageType == SEQUENCE_RESET_MESSAGE_TYPE)
         {
-            // Always a sequence reset
             final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
-                context.onSequenceIndex(clock.nanoTime(), sequenceIndex);
-            }
-        }
-        else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
-        {
-            // If it's not a gap-fill it's a sequence reset
-            final Map.Entry<CompositeKey, SessionContext> entry = fixContexts.lookupById(sessionId);
-            if (entry != null)
-            {
-                final SessionContext context = entry.getValue();
-                context.onSequenceIndex(clock.nanoTime(), sequenceIndex);
+                final int currentSequenceIndex = context.sequenceIndex();
+                if (sequenceIndex > currentSequenceIndex)
+                {
+                    context.onSequenceIndex(clock.nanoTime(), sequenceIndex);
+                }
             }
         }
     }
