@@ -28,6 +28,7 @@ import org.junit.Assert;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol;
 import uk.co.real_logic.sbe.json.JsonPrinter;
+import uk.co.real_logic.sbe.otf.OtfHeaderDecoder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -89,6 +90,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
     private CancelOnDisconnectType cancelOnDisconnectType = DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
     private long codTimeoutWindow = DeltaInMillisEncoder.timeNullValue();
+    private static final OtfHeaderDecoder OTF_HEADER_DECODER = new OtfHeaderDecoder(
+        BinaryEntryPointProtocol.loadSbeIr().headerStructure());
 
     public BinaryEntryPointClient(final int port, final TestSystem testSystem, final long serverAliveIntervalInMs)
         throws IOException
@@ -331,9 +334,15 @@ public final class BinaryEntryPointClient implements AutoCloseable
     {
         if (DebugLogger.isEnabled(FIX_TEST))
         {
-            final StringBuilder sb = new StringBuilder();
-            jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
-            DebugLogger.log(FIX_TEST, prefixString, sb.toString());
+            // when templateId == 1000 the call to jsonPrinter.print throws an exception as it does not recognize
+            // this as a valid templateId
+            final int templateId = OTF_HEADER_DECODER.getTemplateId(unsafeReadBuffer, SOFH_LENGTH);
+            if (templateId != OUT_OF_RANGE_TEMPLATE_ID)
+            {
+                final StringBuilder sb = new StringBuilder();
+                jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
+                DebugLogger.log(FIX_TEST, prefixString, sb.toString());
+            }
         }
     }
 
