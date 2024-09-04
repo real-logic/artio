@@ -830,17 +830,14 @@ public class AbstractGatewayToGatewaySystemTest
 
     void sleep(final int timeInMs)
     {
-        testSystem.awaitBlocking(() ->
+        try
         {
-            try
-            {
-                Thread.sleep(timeInMs);
-            }
-            catch (final InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-        });
+            Thread.sleep(timeInMs);
+        }
+        catch (final InterruptedException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     void assertResendsCompleted(final int count, final Matcher<Iterable<Integer>> items)

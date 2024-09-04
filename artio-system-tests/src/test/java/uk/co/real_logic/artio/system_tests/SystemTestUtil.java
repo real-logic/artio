@@ -707,4 +707,55 @@ public final class SystemTestUtil
                 () -> {});
         }
     }
+
+    static void assertEngineSubscriptionCaughtUpToLibraryPublication(
+        final TestSystem testSystem,
+        final String aeronDirectoryName,
+        final FixEngine engine,
+        final FixLibrary library)
+    {
+        final EngineStreamInfo engineStreamInfo =
+            testSystem.awaitCompletedReply(FixEngineInternals.engineStreamInfo(engine)).resultIfPresent();
+
+        final LibraryStreamInfo libraryStreamInfo = FixLibraryInternals.libraryStreamInfo(library);
+
+        final Aeron.Context aeronCtx = new Aeron.Context().aeronDirectoryName(aeronDirectoryName);
+        try (Aeron aeron = Aeron.connect(aeronCtx))
+        {
+            final CountersReader countersReader = aeron.countersReader();
+
+            final SubPosMatcher subPosMatcher = new SubPosMatcher(
+                countersReader,
+                engineStreamInfo.librarySubscriptionRegistrationId(),
+                libraryStreamInfo.outboundPublicationSessionId(),
+                libraryStreamInfo.outboundPublicationPosition());
+
+            countersReader.forEach((counterId, typeId, keyBuffer, label) ->
+                subPosMatcher.tryMatch(counterId, typeId, keyBuffer));
+
+            if (!subPosMatcher.hasCounterId())
+            {
+                throw new IllegalStateException("did not match counter: " + subPosMatcher);
+            }
+
+            assertEventuallyTrue(
+                () ->
+                {
+                    final StringBuilder builder = new StringBuilder();
+                    builder.append("expected sub-pos counters:\n");
+                    builder.append(subPosMatcher).append('\n');
+                    builder.append("\nbut counters were:\n");
+                    countersReader.forEach((value, counterId, label) ->
+                        builder.append(String.format("%d: %d - %s%n", counterId, value, label)));
+                    return builder.toString();
+                },
+                () ->
+                {
+                    testSystem.poll();
+                    return subPosMatcher.isCaughtUp();
+                },
+                DEFAULT_TIMEOUT_IN_MS,
+                () -> {});
+        }
+    }
 }

@@ -1722,7 +1722,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (entry != null)
             {
                 final SessionContext context = entry.getValue();
-                context.onSequenceReset(clock.nanoTime());
+                context.onSequenceIndex(clock.nanoTime(), sequenceIndex);
             }
         }
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
@@ -3502,6 +3502,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         command.complete(new EngineStreamInfo(
             inboundIndexRegistrationId,
             outboundIndexRegistrationId,
+            librarySubscription.registrationId(),
             inboundPublication.sessionId(),
             inboundPublication.position(),
             outboundPublication.sessionId(),
