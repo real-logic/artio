@@ -4,6 +4,7 @@ public final class EngineStreamInfo
 {
     private final long inboundIndexSubscriptionRegistrationId;
     private final long outboundIndexSubscriptionRegistrationId;
+    private final long librarySubscriptionRegistrationId;
     private final int inboundPublicationSessionId;
     private final long inboundPublicationPosition;
     private final int outboundPublicationSessionId;
@@ -12,6 +13,7 @@ public final class EngineStreamInfo
     EngineStreamInfo(
         final long inboundIndexSubscriptionRegistrationId,
         final long outboundIndexSubscriptionRegistrationId,
+        final long librarySubscriptionRegistrationId,
         final int inboundPublicationSessionId,
         final long inboundPublicationPosition,
         final int outboundPublicationSessionId,
@@ -19,6 +21,7 @@ public final class EngineStreamInfo
     {
         this.inboundIndexSubscriptionRegistrationId = inboundIndexSubscriptionRegistrationId;
         this.outboundIndexSubscriptionRegistrationId = outboundIndexSubscriptionRegistrationId;
+        this.librarySubscriptionRegistrationId = librarySubscriptionRegistrationId;
         this.inboundPublicationSessionId = inboundPublicationSessionId;
         this.inboundPublicationPosition = inboundPublicationPosition;
         this.outboundPublicationSessionId = outboundPublicationSessionId;
@@ -33,6 +36,11 @@ public final class EngineStreamInfo
     public long outboundIndexSubscriptionRegistrationId()
     {
         return outboundIndexSubscriptionRegistrationId;
+    }
+
+    public long librarySubscriptionRegistrationId()
+    {
+        return librarySubscriptionRegistrationId;
     }
 
     public int inboundPublicationSessionId()
@@ -60,6 +68,7 @@ public final class EngineStreamInfo
         return "EngineStreamInfo{" +
             "inboundIndexSubscriptionRegistrationId=" + inboundIndexSubscriptionRegistrationId +
             ", outboundIndexSubscriptionRegistrationId=" + outboundIndexSubscriptionRegistrationId +
+            ", librarySubscriptionRegistrationId=" + librarySubscriptionRegistrationId +
             ", inboundPublicationSessionId=" + inboundPublicationSessionId +
             ", inboundPublicationPosition=" + inboundPublicationPosition +
             ", outboundPublicationSessionId=" + outboundPublicationSessionId +
