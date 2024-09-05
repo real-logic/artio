@@ -23,12 +23,11 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.messages.DisconnectReason;
-import uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner;
-import uk.co.real_logic.artio.messages.SessionReplyStatus;
-import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -55,8 +54,7 @@ import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
-import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.LONG_TEST_TIMEOUT_IN_MS;
-import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.*;
 import static uk.co.real_logic.artio.system_tests.FixConnection.BUFFER_SIZE;
 import static uk.co.real_logic.artio.system_tests.MessageBasedInitiatorSystemTest.assertConnectionDisconnects;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -922,6 +920,72 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             assertConnectionDisconnects(testSystem, connection);
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldSupportFollowerSessionLogonWithoutSequenceResetOnDisconnectBeforeLibraryLogonResponse()
+        throws IOException
+    {
+        setup(false, true);
+        setupLibrary();
+
+        final List<SessionInfo> noSessionContext = engine.allSessions();
+        assertEquals(0, noSessionContext.size());
+
+        final SessionWriter sessionWriter = createFollowerSession(
+            TEST_TIMEOUT_IN_MS, testSystem, library, INITIATOR_ID, ACCEPTOR_ID);
+        final SessionReplyStatus requestSessionReply = requestSession(library, sessionWriter.id(), testSystem);
+        assertEquals(SessionReplyStatus.OK, requestSessionReply);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            connection.logon(false);
+            Timing.assertEventuallyTrue("Library did not transition session to connected",
+                () ->
+                {
+                    library.poll(1);
+                    final List<Session> sessions = library.sessions();
+                    return sessions.size() == 1 && sessions.get(0).state() == SessionState.CONNECTED;
+                }
+            );
+        }
+
+        Timing.assertEventuallyTrue("Fix connection was not disconnected",
+            () ->
+            {
+                final Reply<List<LibraryInfo>> libraryReply = engine.libraries();
+                while (!libraryReply.hasCompleted())
+                {
+                    sleep(500);
+                }
+
+                final List<LibraryInfo> allLibraryInfo = libraryReply.resultIfPresent();
+                for (final LibraryInfo libraryInfo : allLibraryInfo)
+                {
+                    if (libraryInfo.libraryId() == library.libraryId())
+                    {
+                        return libraryInfo.sessions().isEmpty();
+                    }
+                }
+                return false;
+            }
+        );
+
+        Timing.assertEventuallyTrue("Library did not transition session to active",
+            () ->
+            {
+                library.poll(1);
+                final List<Session> sessions = library.sessions();
+                return sessions.size() == 1 && sessions.get(0).state() == SessionState.ACTIVE;
+            }
+        );
+
+        assertEngineSubscriptionCaughtUpToLibraryPublication(
+            testSystem, mediaDriver.mediaDriver().aeronDirectoryName(), engine, library);
+
+        final List<SessionInfo> sessionContextAfterLogonNoSenderEndpoint = engine.allSessions();
+        assertEquals(1, sessionContextAfterLogonNoSenderEndpoint.size());
+        assertEquals(0, sessionContextAfterLogonNoSenderEndpoint.get(0).sequenceIndex());
     }
 
     private void assertSell(final ExecutionReportDecoder executionReport)

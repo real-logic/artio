@@ -27,8 +27,6 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.SessionInfo;
-import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -44,7 +42,6 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
@@ -1016,70 +1013,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private void connectPersistingSessions()
     {
         connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
-    }
-
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldSupportFollowerSessionLogonWithoutSequenceResetOnDisconnectBeforeLibraryLogonResponse()
-        throws IOException
-    {
-        launch(this::nothing);
-
-        final List<SessionInfo> noSessionContext = acceptingEngine.allSessions();
-        assertEquals(0, noSessionContext.size());
-
-        final SessionWriter sessionWriter = createFollowerSession(TEST_TIMEOUT_IN_MS);
-        final SessionReplyStatus requestSessionReply = requestSession(acceptingLibrary, sessionWriter.id(), testSystem);
-        assertEquals(SessionReplyStatus.OK, requestSessionReply);
-
-        try (FixConnection connection = FixConnection.initiate(port))
-        {
-            connection.logon(true);
-            Timing.assertEventuallyTrue("Library did not transition session to connected",
-                () ->
-                {
-                    acceptingLibrary.poll(1);
-                    final List<Session> sessions = acceptingLibrary.sessions();
-                    return sessions.size() == 1 && sessions.get(0).state() == SessionState.CONNECTED;
-                }
-            );
-        }
-
-        Timing.assertEventuallyTrue("Fix connection was not disconnected",
-            () ->
-            {
-                final Reply<List<LibraryInfo>> libraryReply = acceptingEngine.libraries();
-                while (!libraryReply.hasCompleted())
-                {
-                    sleep(500);
-                }
-
-                final List<LibraryInfo> allLibraryInfo = libraryReply.resultIfPresent();
-                for (final LibraryInfo libraryInfo : allLibraryInfo)
-                {
-                    if (libraryInfo.libraryId() == acceptingLibrary.libraryId())
-                    {
-                        return libraryInfo.sessions().isEmpty();
-                    }
-                }
-                return false;
-            }
-        );
-
-        Timing.assertEventuallyTrue("Library did not transition session to active",
-            () ->
-            {
-                acceptingLibrary.poll(1);
-                final List<Session> sessions = acceptingLibrary.sessions();
-                return sessions.size() == 1 && sessions.get(0).state() == SessionState.ACTIVE;
-            }
-        );
-
-        assertEngineSubscriptionCaughtUpToLibraryPublication(
-            testSystem, mediaDriver.mediaDriver().aeronDirectoryName(), acceptingEngine, acceptingLibrary);
-
-        final List<SessionInfo> sessionContextAfterLogonNoSenderEndpoint = acceptingEngine.allSessions();
-        assertEquals(1, sessionContextAfterLogonNoSenderEndpoint.size());
-        assertEquals(0, sessionContextAfterLogonNoSenderEndpoint.get(0).sequenceIndex());
     }
 
     private void resetSequenceNumbers()
