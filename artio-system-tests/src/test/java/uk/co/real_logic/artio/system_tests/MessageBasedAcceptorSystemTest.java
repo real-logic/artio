@@ -956,7 +956,7 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 final Reply<List<LibraryInfo>> libraryReply = engine.libraries();
                 while (!libraryReply.hasCompleted())
                 {
-                    sleep(500);
+                    sleep(100);
                 }
 
                 final List<LibraryInfo> allLibraryInfo = libraryReply.resultIfPresent();
