@@ -27,6 +27,7 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import org.junit.Assert;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.sbe.json.JsonPrinter;
 import uk.co.real_logic.sbe.otf.OtfHeaderDecoder;
 
@@ -205,7 +206,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
             final int readHeader = readSocket();
             if (readHeader != headerLength)
             {
-                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
+                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength=" + headerLength +
+                  ", socket[isConnected]:" + socket.isConnected() +
+                  ", socket[isOpen]: " + socket.isOpen());
             }
 
             final int totalLength = readSofh(unsafeReadBuffer, 0, BINARY_ENTRYPOINT_TYPE);
@@ -247,7 +250,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
             if (totalLength != read)
             {
-                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
+                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read +
+                    ", socket[isConnected]:" + socket.isConnected() +
+                    ", socket[isOpen]: " + socket.isOpen());
             }
 
             messageDecoder.wrap(
@@ -271,7 +276,19 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     private int readSocket() throws IOException
     {
-        final int read = socket.read(readBuffer);
+        int read;
+        try
+        {
+            read = socket.read(readBuffer);
+        }
+        catch (final Exception e)
+        {
+            read = 0;
+            if (!Exceptions.isJustDisconnect(e))
+            {
+                throw new RuntimeException(e);
+            }
+        }
         if (read < 0)
         {
             throw new IllegalStateException("SOCKET CLOSED");
@@ -550,6 +567,13 @@ public final class BinaryEntryPointClient implements AutoCloseable
                 catch (final IOException e)
                 {
                     // Deliberately blank - if it throws an exception due to being disconnected that's ok
+                }
+                catch (final Exception e)
+                {
+                    if (!Exceptions.isJustDisconnect(e))
+                    {
+                        throw e;
+                    }
                 }
             });
         }
