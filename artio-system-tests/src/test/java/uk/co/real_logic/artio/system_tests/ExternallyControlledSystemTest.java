@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private boolean awaitsNewOrderSingle = false;
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private SessionWriter acceptingSessionWriter = null;
     private final FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -99,6 +100,11 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         assertNotNull(acceptingSessionWriter);
 
+        if (awaitsNewOrderSingle)
+        {
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, "D");
+        }
+
         messagesCanBeExchanged();
 
         assertEquals(1, sessionProxyRequests);
@@ -135,6 +141,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         fakeSessionProxy.sequenceNumberAdjustment = 1;
 
+        awaitsNewOrderSingle = true;
         shouldRoundTripMessagesViaExternalSystem();
 
         assertEquals(acceptingSession.id(), writerSessionId);
