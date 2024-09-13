@@ -142,7 +142,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         acceptingEngine = FixEngine.launch(acceptingConfiguration);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToSendMessagesFromInitiatorToBothAcceptors()
     {
         launchArtio();
@@ -153,7 +153,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         bothSessionsCanExchangeMessages();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToAquireSessions()
     {
         launchArtio();
@@ -176,7 +176,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         assertHeaderHasApplVerId(acceptingOtfAcceptor);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToAcceptAFixVersionBasedUponLogonMessage()
     {
         launchArtio();
@@ -195,7 +195,7 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
         initiatingOtfAcceptor.messages().forEach(this::assertHasTestField);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldHandleIncorrectFixVersionsGracefully()
     {
         // Test that if a session connects with a different FIX version than expected that no random exceptions

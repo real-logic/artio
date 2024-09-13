@@ -91,7 +91,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldRoundTripMessagesViaExternalSystem()
     {
         connectSessions();
@@ -113,7 +113,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReconnectConnections()
     {
         shouldRoundTripMessagesViaExternalSystem();
@@ -133,7 +133,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
         final SessionWriter sessionWriter = writeMessageWithFollowerSessionWriter();
@@ -157,7 +157,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         awaitMessageFromSessionWriter(secondNOSSeqNum, secondNOSSeqNum);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToAdjustSequenceNumbersFromTheControlSystem()
     {
         connectSessions();
@@ -177,7 +177,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseInitiatorSentLogout()
     {
         connectSessions();
@@ -197,7 +197,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(LOGOUT_MESSAGE_AS_STR, lastInitRecvMsg.msgType());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseAcceptorSentLogout()
     {
         connectSessions();

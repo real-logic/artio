@@ -43,13 +43,13 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         backup.cleanup();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPerformEndOfDayOperationWithLibrarySession()
     {
         shouldPerformEndOfDayOperation(true);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPerformEndOfDayOperationWithGatewaySession()
     {
         shouldPerformEndOfDayOperation(false);

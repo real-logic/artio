@@ -25,6 +25,9 @@ import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matcher;
 import org.junit.After;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
@@ -69,6 +72,9 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
 {
+    @Rule
+    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
+
     public static final long TEST_TIMEOUT_IN_MS = 20_000L;
     public static final long LONG_TEST_TIMEOUT_IN_MS = 50_000L;
 

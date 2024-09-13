@@ -35,7 +35,7 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
         connectSessions();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldSupportConnectionAfterAuthenticationFailure()
     {
         // on first session
@@ -50,7 +50,7 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
         messagesCanBeExchanged();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldSupportRepeatedConnectionOfTheSameSessionId()
     {
         acquireAcceptingSession();

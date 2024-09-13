@@ -66,7 +66,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler, nanoClock));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReadWrittenSessionMetaData()
     {
         connectSessions();
@@ -79,7 +79,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReadWrittenSessionMetaDataForFollowerSession()
     {
         createFollowerSession(TEST_REPLY_TIMEOUT_IN_MS);
@@ -92,7 +92,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReadWrittenSessionMetaDataForFollowerSessionAfterRestart()
     {
         createFollowerSession(TEST_REPLY_TIMEOUT_IN_MS);
@@ -110,7 +110,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReadWrittenSessionSendMetaData()
     {
         connectSessions();
@@ -165,7 +165,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveSessionMetaDataWhenSessionAcquired()
     {
         connectSessions();
@@ -180,7 +180,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(SIZE_OF_INT, readBuffer.capacity());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotReceiveSessionMetaDataWhenSessionAcquiredWithNoMetaData()
     {
         connectSessions();
@@ -191,7 +191,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(0, readBuffer.capacity());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
     {
         connectSessions();
@@ -216,7 +216,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(writeBuffer, readBuffer);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldUpdateWrittenSessionMetaDataTooBigForOldSlot()
     {
         connectSessions();
@@ -245,7 +245,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(aggregatedBuffer, readBuffer);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveReadErrorForUnwrittenSessionMetaData()
     {
         connectSessions();
@@ -253,7 +253,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertNoMetaData();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveReadErrorForMetaDataWithUnknownSession()
     {
         connectSessions();
@@ -261,7 +261,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertUnknownSessionMetaData(META_DATA_WRONG_SESSION_ID);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveWriteErrorForMetaDataWithUnknownSession()
     {
         connectSessions();
@@ -271,7 +271,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(MetaDataStatus.UNKNOWN_SESSION, reply.resultIfPresent());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldResetMetaDataWhenSequenceNumberResetsWithLogon()
     {
         connectSessions();
@@ -287,7 +287,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         assertNoMetaData();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldResetMetaDataWhenSequenceNumberResetsWhenSessionIdExplicitlyReset()
     {
         connectSessions();
@@ -302,7 +302,7 @@ public class MetaDataTest extends AbstractGatewayToGatewaySystemTest
         acceptingSession = null;
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldResetMetaDataWhenSequenceNumberResetsWithExplicitResetSessionIds()
     {
         connectSessions();

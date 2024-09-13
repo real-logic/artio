@@ -91,7 +91,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReplayMessageBeforeARestart()
     {
         final int resendSeqNum = exchangeMessages();
@@ -136,14 +136,14 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             }, 5000);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotBeAbleToReplayMessagesFromBeforeReset1()
     {
         // reset when ReplayIndex instances exist
         shouldNotBeAbleToReplayMessagesFromBeforeReset0(() -> {});
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotBeAbleToReplayMessagesFromBeforeReset2()
     {
         // reset when ReplayIndex instances do not exist

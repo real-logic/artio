@@ -482,7 +482,7 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotLeakCountersIfDisconnectedBeforeLogonCompleteInSoleLibraryMode() throws IOException
     {
         // Replicates a client issue, note that we only close the counters when we're

@@ -41,7 +41,7 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         start(true);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldSurviveCompleteRestart() throws InterruptedException
     {
         acceptingLibrary.close();

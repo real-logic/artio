@@ -21,7 +21,9 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -64,6 +66,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 @RunWith(Parameterized.class)
 public class SlowConsumerTest
 {
+    @Rule
+    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
     private static final int SIZE_OF_METADATA = 137;
 
     @Parameters(name = "metadata={0},fragmented={1}")
@@ -118,7 +122,7 @@ public class SlowConsumerTest
         testRequest = newTestRequest();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
         final int senderMaxBytesInBuffer = 8 * 1024;
@@ -192,7 +196,7 @@ public class SlowConsumerTest
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldRestoreConnectionFromSlowGroupWhenItCatchesUp() throws IOException
     {
         final MessageTimingCaptor messageTimingCaptor = new MessageTimingCaptor();
@@ -233,7 +237,7 @@ public class SlowConsumerTest
         assertTrue(socketIsConnected());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotifyLibraryOfSlowConnectionWhenAcquired() throws IOException
     {
         sessionBecomesSlow(null);

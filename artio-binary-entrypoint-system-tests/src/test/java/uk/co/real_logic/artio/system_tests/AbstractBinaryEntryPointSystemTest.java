@@ -22,6 +22,8 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
@@ -59,6 +61,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIME
 
 public class AbstractBinaryEntryPointSystemTest
 {
+    @Rule
+    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
     public static final long TEST_TIMEOUT_IN_MS = 20_000L;
 
     static final int AWAIT_TIMEOUT_IN_MS = 10_000;

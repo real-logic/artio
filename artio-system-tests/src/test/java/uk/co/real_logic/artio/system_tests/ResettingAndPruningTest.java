@@ -77,7 +77,7 @@ public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPurgeSegmentsBeforeLastReset()
     {
         // Test a reproduction of a spotted bug, performing a pruneArchive() twice caused the first index positions
@@ -110,7 +110,7 @@ public class ResettingAndPruningTest extends AbstractGatewayToGatewaySystemTest
         assertThat(segments3 + " < " + segments2, segments3.size(), lessThan(segments2.size()));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPurgeSegmentsBeforeLastResetWhilstSessionConnected()
     {
         // Test a reproduction of a spotted bug, performing a pruneArchive() twice caused the first index positions

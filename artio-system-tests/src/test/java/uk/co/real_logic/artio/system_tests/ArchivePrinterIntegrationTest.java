@@ -60,7 +60,7 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
         connectSessions();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldUseDefaultDelimiter()
     {
         setupAndExchangeMessages();
@@ -81,7 +81,7 @@ public class ArchivePrinterIntegrationTest extends AbstractGatewayToGatewaySyste
         assertThat(outputBytes.toString(), containsString("\u0001112=hi"));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canUseSpecifiedCharAsDelimiter()
     {
         setupAndExchangeMessages();
