@@ -1,0 +1,27 @@
+[versions]
+aeron = "1.46.4"
+agrona = "1.23.0"
+byteBuddy = "1.15.2"
+checkstyle = "10.18.1"
+junit = "5.11.1"
+gradle = "8.10.2"
+jmh = "1.37"
+
+[libraries]
+agrona = { group = "org.agrona", name = "agrona", version = { strictly = "[1.23.0, 2.0[", require = "1.23.0" } }
+aeron-client = { group = "io.aeron", name = "aeron-client", version.ref = "aeron" }
+aeron-archive = { group = "io.aeron", name = "aeron-archive", version.ref = "aeron" }
+sbe = { group = "uk.co.real-logic", name = "sbe-tool", version = "1.33.1" }
+mockito = { group = "org.mockito", name = "mockito-core", version = "5.13.0" }
+hamcrest = { group = "org.hamcrest", name = "hamcrest", version = "3.0" }
+junit4 = { group = "junit", name = "junit", version = "4.13.2" }
+byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }
+byteBuddy-agent = { group = "net.bytebuddy", name = "byte-buddy-agent", version.ref = "byteBuddy" }
+hdrHistogram = { group = "org.hdrhistogram", name = "HdrHistogram", version = "2.2.2" }
+jmh-core = { group = "org.openjdk.jmh", name = "jmh-core", version.ref = "jmh" }
+jmh-generator-annprocess = { group = "org.openjdk.jmh", name = "jmh-generator-annprocess", version.ref = "jmh" }
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
+release = { id = "net.researchgate.release", version = "3.0.2" }
+shadow = { id = "com.gradleup.shadow", version = "8.3.2" }
