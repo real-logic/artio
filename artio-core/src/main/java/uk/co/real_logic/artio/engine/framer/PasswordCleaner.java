@@ -165,7 +165,7 @@ class PasswordCleaner
         return cleanedLength;
     }
 
-    private class FieldScanner implements OtfMessageAcceptor
+    private final class FieldScanner implements OtfMessageAcceptor
     {
         public MessageControl onNext()
         {

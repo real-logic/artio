@@ -79,7 +79,7 @@ public class ReplayerTest extends AbstractLogTest
 
     public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
         ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=" + ORIGINAL_SENDING_TIME + "\00156=CCG\001" +
-            "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
+        "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
 
     private static final int MAX_CLAIM_ATTEMPTS = 100;
     private static final long CORRELATION_ID = 2;

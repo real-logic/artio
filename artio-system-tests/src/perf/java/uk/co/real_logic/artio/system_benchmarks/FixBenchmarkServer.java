@@ -125,7 +125,7 @@ public final class FixBenchmarkServer
             });
     }
 
-    private static class BenchmarkAuthenticationStrategy implements AuthenticationStrategy
+    private static final class BenchmarkAuthenticationStrategy implements AuthenticationStrategy
     {
         private static final byte[] INVALID_PASSWORD = "Invalid Password".getBytes(StandardCharsets.US_ASCII);
         private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);

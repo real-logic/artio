@@ -117,7 +117,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
     /**
      * Adapt a recording coordinator to the Agent interface to enable it to be shutdown in order.
      */
-    private class RecordingCoordinatorAgent implements Agent
+    private final class RecordingCoordinatorAgent implements Agent
     {
         @Override
         public int doWork()

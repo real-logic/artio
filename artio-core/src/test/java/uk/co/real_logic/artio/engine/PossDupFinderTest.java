@@ -13,11 +13,11 @@ public class PossDupFinderTest
 {
     private static final byte[] FIRST_MESSAGE =
         ("8=FIX.4.4\0019=0065\00135=5\00149=initiator\00156=acceptor\00134=2\001" +
-            "52=20161206-11:04:51.461\00110=088\001").getBytes(US_ASCII);
+        "52=20161206-11:04:51.461\00110=088\001").getBytes(US_ASCII);
 
     private static final byte[] SECOND_MESSAGE =
         ("8=FIX.4.4\0019=0065\00135=5\00149=initiator\00156=acceptor\00134=2\001" +
-            "52=20161206-11:04:51.461\00143=Y\00110=088\001").getBytes(US_ASCII);
+        "52=20161206-11:04:51.461\00143=Y\00110=088\001").getBytes(US_ASCII);
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new LongDictionary());
