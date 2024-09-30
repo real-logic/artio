@@ -26,7 +26,11 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Rule;
+import org.junit.internal.runners.statements.FailOnTimeout;
 import org.junit.rules.Timeout;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestTimedOutException;
 
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
@@ -52,6 +56,7 @@ import uk.co.real_logic.artio.session.SessionWriter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertTrue;
@@ -73,7 +78,28 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class AbstractGatewayToGatewaySystemTest
 {
     @Rule
-    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
+    public Timeout globalTimeout = new Timeout(LONG_TEST_TIMEOUT_IN_MS, TimeUnit.MILLISECONDS)
+    {
+        public Statement apply(final Statement base, final Description description)
+        {
+            return new FailOnTimeout(base, LONG_TEST_TIMEOUT_IN_MS)
+            {
+                @Override
+                public void evaluate() throws Throwable
+                {
+                    try
+                    {
+                        super.evaluate();
+                    }
+                    catch (final TestTimedOutException e)
+                    {
+                        Exceptions.printStackTracesForAllThreads();
+                        throw e;
+                    }
+                }
+            };
+        }
+    };
 
     public static final long TEST_TIMEOUT_IN_MS = 20_000L;
     public static final long LONG_TEST_TIMEOUT_IN_MS = 50_000L;

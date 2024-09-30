@@ -23,13 +23,18 @@ import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
 import org.junit.Rule;
+import org.junit.internal.runners.statements.FailOnTimeout;
 import org.junit.rules.Timeout;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestTimedOutException;
 import org.mockito.Mockito;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointContext;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointConnection;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.ILink3RetransmitHandler;
@@ -42,6 +47,7 @@ import uk.co.real_logic.artio.messages.FixPProtocolType;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -62,8 +68,29 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIME
 public class AbstractBinaryEntryPointSystemTest
 {
     @Rule
-    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
-    public static final long TEST_TIMEOUT_IN_MS = 20_000L;
+    public Timeout globalTimeout = new Timeout(LONG_TEST_TIMEOUT_IN_MS, TimeUnit.MILLISECONDS)
+    {
+        public Statement apply(final Statement base, final Description description)
+        {
+            return new FailOnTimeout(base, LONG_TEST_TIMEOUT_IN_MS)
+            {
+                @Override
+                public void evaluate() throws Throwable
+                {
+                    try
+                    {
+                        super.evaluate();
+                    }
+                    catch (final TestTimedOutException e)
+                    {
+                        Exceptions.printStackTracesForAllThreads();
+                        throw e;
+                    }
+                }
+            };
+        }
+    };
+    public static final long LONG_TEST_TIMEOUT_IN_MS = 20_000L;
 
     static final int AWAIT_TIMEOUT_IN_MS = 10_000;
     static final int TIMEOUT_EPSILON_IN_MS = 10;
