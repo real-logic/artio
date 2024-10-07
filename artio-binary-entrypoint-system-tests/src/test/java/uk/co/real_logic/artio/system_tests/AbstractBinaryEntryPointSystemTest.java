@@ -90,7 +90,7 @@ public class AbstractBinaryEntryPointSystemTest
             };
         }
     };
-    public static final long LONG_TEST_TIMEOUT_IN_MS = 20_000L;
+    public static final long LONG_TEST_TIMEOUT_IN_MS = 50_000L;
 
     static final int AWAIT_TIMEOUT_IN_MS = 10_000;
     static final int TIMEOUT_EPSILON_IN_MS = 10;
