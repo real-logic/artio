@@ -53,6 +53,8 @@ public class PruneOperation
         private final CharFormatter filteredRecordingFormatter = new CharFormatter(
             "PruneOperation: filtered recordingId=%s,segmentStartPosition=%s,lowerBoundPrunePosition=%s" +
             ",segmentFileLength=%s,requestedNewStartPosition=%s,startPosition=%s");
+        private final CharFormatter purgedSegmentsFormatter = new CharFormatter(
+            "PruneOperation: purged recordingId=%s,oldStartPosition=%s,newStartPosition=%s,durationNs=%s");
     }
 
     private final Formatters formatters;
@@ -235,7 +237,19 @@ public class PruneOperation
                 }
                 else
                 {
+                    final long start = System.nanoTime();
                     aeronArchive.purgeSegments(recordingId, segmentStartPosition);
+                    if (STATE_CLEANUP_ENABLED)
+                    {
+                        final long durationNs = System.nanoTime() - start;
+                        formatters.purgedSegmentsFormatter
+                            .clear()
+                            .with(recordingId)
+                            .with(stashedStartPosition)
+                            .with(segmentStartPosition)
+                            .with(durationNs);
+                        DebugLogger.log(STATE_CLEANUP, formatters.purgedSegmentsFormatter);
+                    }
                     recordingIdToNewStartPosition.put(recordingId, segmentStartPosition);
                 }
             }
