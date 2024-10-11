@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.PackageOutputManager;
+
+
 import uk.co.real_logic.artio.builder.RejectUnknownEnumValue;
 import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
@@ -180,6 +182,7 @@ public final class CodecGenerator
             RejectUnknownEnumValue.class,
             false,
             configuration.wrapEmptyBuffer(),
+            configuration.allowEmptyTags(),
             codecRejectUnknownEnumValueEnabled,
             configuration.fixTagsInJavadoc()).generate();
 
@@ -202,6 +205,7 @@ public final class CodecGenerator
                 RejectUnknownEnumValue.class,
                 true,
                 configuration.wrapEmptyBuffer(),
+                configuration.allowEmptyTags(),
                 codecRejectUnknownEnumValueEnabled,
                 configuration.fixTagsInJavadoc()).generate();
         }

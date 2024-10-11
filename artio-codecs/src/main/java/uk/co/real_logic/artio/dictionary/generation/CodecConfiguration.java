@@ -54,6 +54,7 @@ public final class CodecConfiguration
     public static final String WRAP_EMPTY_BUFFER = "fix.codecs.wrap_empty_buffer";
     public static final String PARENT_PACKAGE_PROPERTY = "fix.codecs.parent_package";
     public static final String FLYWEIGHTS_ENABLED_PROPERTY = "fix.codecs.flyweight";
+    public static final String ALLOW_EMPTY_TAGS_PROPERTY = "fix.codecs.allow.empty.fix.tags";
     public static final String REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "reject.unknown.enum.value";
     public static final String FIX_TAGS_IN_JAVADOC = "fix.codecs.tags_in_javadoc";
 
@@ -63,6 +64,7 @@ public final class CodecConfiguration
     private String parentPackage = System.getProperty(PARENT_PACKAGE_PROPERTY, DEFAULT_PARENT_PACKAGE);
     private boolean flyweightsEnabled = Boolean.getBoolean(FLYWEIGHTS_ENABLED_PROPERTY);
     private boolean wrapEmptyBuffer = Boolean.getBoolean(WRAP_EMPTY_BUFFER);
+    private boolean allowEmptyTags = Boolean.getBoolean(ALLOW_EMPTY_TAGS_PROPERTY);
     private boolean fixTagsInJavadoc = Boolean.parseBoolean(System.getProperty(
         FIX_TAGS_IN_JAVADOC, DEFAULT_FIX_TAGS_IN_JAVADOC));
     private SharedCodecConfiguration sharedCodecConfiguration;
@@ -111,6 +113,12 @@ public final class CodecConfiguration
     public CodecConfiguration flyweightsEnabled(final boolean flyweightsEnabled)
     {
         this.flyweightsEnabled = flyweightsEnabled;
+        return this;
+    }
+
+    public CodecConfiguration allowEmptyTags(final boolean allowEmptyTags)
+    {
+        this.allowEmptyTags = allowEmptyTags;
         return this;
     }
 
@@ -246,6 +254,11 @@ public final class CodecConfiguration
     boolean wrapEmptyBuffer()
     {
         return wrapEmptyBuffer;
+    }
+
+    boolean allowEmptyTags()
+    {
+        return allowEmptyTags;
     }
 
     String codecRejectUnknownEnumValueEnabled()
