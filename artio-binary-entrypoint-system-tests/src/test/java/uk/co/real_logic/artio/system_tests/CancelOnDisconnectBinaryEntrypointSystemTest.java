@@ -216,7 +216,7 @@ public class CancelOnDisconnectBinaryEntrypointSystemTest extends AbstractBinary
         assertEquals(onlySession.key(), result.context.key());
         final long timeoutTakenInNs = result.timeInNs - logoutTimeInNs;
         assertThat(timeoutTakenInNs, greaterThanOrEqualTo(codTimeoutInNs));
-        assertEquals(1, timeoutHandler.invokeCount());
+        testSystem.await("timeoutHandler.invokeCount() is not 1", () -> 1 == timeoutHandler.invokeCount());
     }
 
     class FakeTimeoutHandler implements FixPCancelOnDisconnectTimeoutHandler
