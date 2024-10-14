@@ -32,7 +32,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         connectSessions();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldEnableLibraryConnectionsOneAfterAnother()
     {
         for (int i = 0; i < 10; i++)

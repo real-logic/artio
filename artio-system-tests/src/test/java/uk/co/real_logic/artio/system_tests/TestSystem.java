@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 
 public class TestSystem
 {
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
     public static final long LONG_AWAIT_TIMEOUT_IN_MS = 600_000_000;
 
     private final List<FixLibrary> libraries;
@@ -80,15 +81,17 @@ public class TestSystem
         return this;
     }
 
-    public void poll()
+    public int poll()
     {
+        int resultInvokeFramer = 0;
         if (scheduler != null)
         {
-            scheduler.invokeFramer();
-            scheduler.invokeFramer();
+            resultInvokeFramer = scheduler.invokeFramer();
         }
-        libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
+        final int result = resultInvokeFramer + libraries.stream().mapToInt((library) ->
+            library.poll(LIBRARY_LIMIT)).sum();
         operations.forEach(Runnable::run);
+        return result;
     }
 
     public void addOperation(final Runnable operation)
@@ -311,48 +314,42 @@ public class TestSystem
 
     public <T> T awaitBlocking(final Callable<T> operation)
     {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final Future<T> future = executor.submit(operation);
+
+        final long deadlineInMs = System.currentTimeMillis() + awaitTimeoutInMs;
+
+        while (!future.isDone())
+        {
+            poll();
+
+            Thread.yield();
+
+            if (System.currentTimeMillis() > deadlineInMs)
+            {
+                Exceptions.printStackTracesForAllThreads();
+
+                throw new TimeoutException(String.format(" %s failed: timed out after [%s]ms",
+                    operation,
+                    awaitTimeoutInMs));
+            }
+        }
+
         try
         {
-            final Future<T> future = executor.submit(operation);
-
-            final long deadlineInMs = System.currentTimeMillis() + awaitTimeoutInMs;
-
-            while (!future.isDone())
-            {
-                poll();
-
-                Thread.yield();
-
-                if (System.currentTimeMillis() > deadlineInMs)
-                {
-                    Exceptions.printStackTracesForAllThreads();
-
-                    throw new TimeoutException(operation + " failed: timed out");
-                }
-            }
-
-            try
-            {
-                return future.get();
-            }
-            catch (final InterruptedException | ExecutionException e)
-            {
-                if (e.getCause() instanceof TimeoutException ||
-                    e.getCause() instanceof java.util.concurrent.TimeoutException)
-                {
-                    Exceptions.printStackTracesForAllThreads();
-                }
-
-                LangUtil.rethrowUnchecked(e);
-            }
-
-            return null;
+            return future.get();
         }
-        finally
+        catch (final InterruptedException | ExecutionException e)
         {
-            executor.shutdown();
+            if (e.getCause() instanceof TimeoutException ||
+                e.getCause() instanceof java.util.concurrent.TimeoutException)
+            {
+                Exceptions.printStackTracesForAllThreads();
+            }
+
+            LangUtil.rethrowUnchecked(e);
         }
+
+        return null;
     }
 
     public void awaitUnbind(final ILink3Connection session)

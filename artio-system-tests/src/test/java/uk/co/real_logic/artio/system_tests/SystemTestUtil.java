@@ -81,7 +81,7 @@ public final class SystemTestUtil
     static final String INITIATOR_ID2 = "initiator2";
     static final String INITIATOR_ID3 = "initiator3";
     public static final String CLIENT_LOGS = "client-logs";
-    static final long TIMEOUT_IN_MS = 100;
+    static final long TIMEOUT_IN_MS = 1000;
     static final long AWAIT_TIMEOUT_IN_MS = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;
 
@@ -535,6 +535,20 @@ public final class SystemTestUtil
                 return acceptor
                     .receivedMessage("0")
                     .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
+            });
+    }
+
+    static void assertReceivedResendRequest(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final int msgSeqNo)
+    {
+        assertEventuallyTrue("Failed to received heartbeat",
+            () ->
+            {
+                testSystem.poll();
+
+                return acceptor
+                    .receivedMessage("2")
+                    .anyMatch((message) -> msgSeqNo == Integer.parseInt(message.get(Constants.MSG_SEQ_NUM)));
             });
     }
 

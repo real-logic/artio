@@ -21,6 +21,9 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochNanoClock;
 import org.agrona.concurrent.OffsetEpochNanoClock;
 import org.junit.After;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.MonitoringAgentFactory;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
@@ -46,12 +49,15 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.artio.system_tests.AbstractGatewayToGatewaySystemTest.TEST_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
 
 public class AbstractMessageBasedAcceptorSystemTest
 {
+    @Rule
+    public Timeout globalTimeout = Timeout.millis(TEST_TIMEOUT_IN_MS);
     public static final int TEST_THROTTLE_WINDOW_IN_MS = 300;
     public static final int THROTTLE_MSG_LIMIT = 3;
     public static final int RESET_THROTTLE_MSG_LIMIT = 5;
@@ -253,6 +259,7 @@ public class AbstractMessageBasedAcceptorSystemTest
     public void tearDown()
     {
         teardownArtio();
+
 
         cleanupMediaDriver(mediaDriver);
         verifyNoMoreInteractions(errorHandler);

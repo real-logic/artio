@@ -49,7 +49,7 @@ public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
         launchGatewayToGateway();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToLookupOfflineSession()
     {
         acquireAcceptingSession();
@@ -87,7 +87,7 @@ public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
         }, 3_000L);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void engineShouldNotAcquireTimedOutOfflineSessions()
     {
         logoutInitiatingSession();
@@ -103,7 +103,7 @@ public class OfflineSystemTest extends AbstractGatewayToGatewaySystemTest
         assertThat(libraries.get(0).sessions(), hasSize(0));
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotAcquireOrInitiateOfflineSessionOwnedByAnotherLibrary()
     {
         final long sessionId = initiatingSession.id();

@@ -51,6 +51,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
     public static final int COD_TEST_TIMEOUT_IN_MS = 500;
     public static final int LONG_COD_TEST_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : COD_TEST_TIMEOUT_IN_MS;
     public static final Class<FixDictionaryImpl> FIX_DICTIONARY_WITHOUT_COD = FixDictionaryImpl.class;
+    private long now;
 
     private final FakeTimeoutHandler timeoutHandler = new FakeTimeoutHandler();
 
@@ -113,29 +114,31 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForLogout()
     {
         launch();
         setup(CANCEL_ON_LOGOUT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
 
+        now = nanoClock.nanoTime();
         logoutSession(initiatingSession);
 
-        assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY, now);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForDisconnect()
     {
         launch();
         setup(CANCEL_ON_DISCONNECT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
 
+        now = nanoClock.nanoTime();
         testSystem.awaitRequestDisconnect(initiatingSession);
 
-        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY, now);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForLogoutLibrary()
     {
         launch();
@@ -143,23 +146,25 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         logoutSession(initiatingSession);
 
-        assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_LOGOUT_ONLY, now);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForDisconnectLibrary()
     {
         launch();
         setup(CANCEL_ON_DISCONNECT_ONLY.representation(), COD_TEST_TIMEOUT_IN_MS);
 
+        now = nanoClock.nanoTime();
         testSystem.awaitRequestDisconnect(initiatingSession);
 
-        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY, now);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotTriggerCancelOnDisconnectTimeoutWhenConfiguredNotTo()
     {
         launch();
@@ -171,7 +176,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotTriggerCancelOnDisconnectTimeoutWithNoLogonOptions()
     {
         launch();
@@ -183,7 +188,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertInitiatorCodState(DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT, 0, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutWithNoLogonOptionsButServerOption()
     {
         launch(CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY, FIX_DICTIONARY_WITHOUT_COD);
@@ -192,12 +197,13 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         disconnectSession(initiatingSession);
 
         assertTriggersCancelOnDisconnectFromDefaults(CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutWithNoLogonOptionsButServerOptionAndTimeout()
     {
         launch(CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY, COD_TEST_TIMEOUT_IN_MS, FIX_DICTIONARY_WITHOUT_COD);
@@ -206,13 +212,14 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         disconnectSession(initiatingSession);
 
         assertTriggersCancelOnDisconnectFromDefaults(CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY,
             COD_TEST_TIMEOUT_IN_MS);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForLogoutWithServerOption()
     {
         launch(CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY, FIX_DICTIONARY_WITHOUT_COD);
@@ -221,12 +228,13 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         logoutSession(initiatingSession);
 
         assertTriggersCancelOnDisconnectFromDefaults(CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY, 0);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForLogoutWithServerOptionAndTimeout()
     {
         launch(CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY, COD_TEST_TIMEOUT_IN_MS, FIX_DICTIONARY_WITHOUT_COD);
@@ -235,13 +243,14 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         logoutSession(initiatingSession);
 
         assertTriggersCancelOnDisconnectFromDefaults(CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY,
             COD_TEST_TIMEOUT_IN_MS);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTriggerCancelOnDisconnectTimeoutForLogoutWithOptionsInsteadOfServerOptionAndTimeout()
     {
         launch(CancelOnDisconnectOption.CANCEL_ON_DISCONNECT_ONLY, 0, null);
@@ -249,13 +258,14 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
 
         acquireAcceptingSession();
 
+        now = nanoClock.nanoTime();
         logoutSession(initiatingSession);
 
         assertTriggersCancelOnDisconnectFromDefaults(CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY,
             CancelOnDisconnectOption.CANCEL_ON_LOGOUT_ONLY, COD_TEST_TIMEOUT_IN_MS, COD_TEST_TIMEOUT_IN_MS);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldCorrectTimeoutsOverLimit()
     {
         launch();
@@ -268,7 +278,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals(maxTimeoutInNs, initiatingSession.cancelOnDisconnectTimeoutWindowInNs());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldNotTriggerCancelOnDisconnectTimeoutIfReconnectOccurs()
     {
         launch();
@@ -292,8 +302,9 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         acquireAcceptingSession();
         testSystem.awaitCompletedReply(acceptingLibrary.releaseToGateway(acceptingSession, 5_000));
 
+        now = nanoClock.nanoTime();
         testSystem.awaitRequestDisconnect(initiatingSession);
-        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY);
+        assertTriggersCancelOnDisconnect(CANCEL_ON_DISCONNECT_ONLY, now);
     }
 
     private void assertDisconnectWithHandlerNotInvoked()
@@ -321,16 +332,18 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals(0, timeoutHandler.invokeCount());
     }
 
-    private void assertTriggersCancelOnDisconnect(final CancelOnDisconnectType type)
+    private void assertTriggersCancelOnDisconnect(final CancelOnDisconnectType type, final long initiatorLogoutTime)
     {
-        assertTriggersCancelOnDisconnect(type, COD_TEST_TIMEOUT_IN_MS);
+        assertTriggersCancelOnDisconnect(type, COD_TEST_TIMEOUT_IN_MS, initiatorLogoutTime);
     }
 
-    private void assertTriggersCancelOnDisconnect(final CancelOnDisconnectType type, final int codTestTimeoutInMs)
+    private void assertTriggersCancelOnDisconnect(final CancelOnDisconnectType type,
+        final int codTestTimeoutInMs,
+        final long initiatorLogoutTime)
     {
         final long codTimeoutInNs = MILLISECONDS.toNanos(codTestTimeoutInMs);
 
-        assertAcceptorCodTriggered(codTimeoutInNs);
+        assertAcceptorCodTriggered(codTimeoutInNs, initiatorLogoutTime);
 
         assertInitiatorCodState(type, codTimeoutInNs, codTestTimeoutInMs);
     }
@@ -354,12 +367,11 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals(initiatorOption, initiatingSession.cancelOnDisconnectOption());
         assertEquals(initiatorCodTestTimeoutInNs, initiatingSession.cancelOnDisconnectTimeoutWindowInNs());
 
-        assertAcceptorCodTriggered(acceptorCodTimeoutInNs);
+        assertAcceptorCodTriggered(acceptorCodTimeoutInNs, now);
     }
 
-    private void assertAcceptorCodTriggered(final long codTimeoutInNs)
+    private void assertAcceptorCodTriggered(final long codTimeoutInNs, final long initiatorLogoutTime)
     {
-        final long logoutTimeInNs = nanoClock.nanoTime();
         assertSessionDisconnected(initiatingSession);
 
         testSystem.await("timeout not triggered", () -> timeoutHandler.result() != null);
@@ -368,7 +380,7 @@ public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystem
         final TimeoutResult result = timeoutHandler.result();
         assertEquals(onlySession.sessionId(), result.surrogateId);
         assertEquals(onlySession.sessionKey(), result.compositeId);
-        final long timeoutTakenInNs = result.timeInNs - logoutTimeInNs;
+        final long timeoutTakenInNs = result.timeInNs - initiatorLogoutTime;
         assertThat(timeoutTakenInNs, greaterThanOrEqualTo(codTimeoutInNs));
         assertEquals(1, timeoutHandler.invokeCount());
     }

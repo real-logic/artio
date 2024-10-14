@@ -84,7 +84,7 @@ public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGate
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldTimeoutWhenConnectingToUnresponsiveEngine()
     {
         final Reply<Session> secondConnectReply = initiateSession();

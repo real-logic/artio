@@ -27,7 +27,9 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import org.junit.Assert;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.binary_entrypoint.BinaryEntryPointProtocol;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.sbe.json.JsonPrinter;
+import uk.co.real_logic.sbe.otf.OtfHeaderDecoder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -89,6 +91,8 @@ public final class BinaryEntryPointClient implements AutoCloseable
     private long keepAliveIntervalInMs = KEEP_ALIVE_INTERVAL_IN_MS;
     private CancelOnDisconnectType cancelOnDisconnectType = DO_NOT_CANCEL_ON_DISCONNECT_OR_TERMINATE;
     private long codTimeoutWindow = DeltaInMillisEncoder.timeNullValue();
+    private static final OtfHeaderDecoder OTF_HEADER_DECODER = new OtfHeaderDecoder(
+        BinaryEntryPointProtocol.loadSbeIr().headerStructure());
 
     public BinaryEntryPointClient(final int port, final TestSystem testSystem, final long serverAliveIntervalInMs)
         throws IOException
@@ -202,7 +206,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
             final int readHeader = readSocket();
             if (readHeader != headerLength)
             {
-                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength" + headerLength);
+                throw new IllegalStateException("readHeader=" + readHeader + ",headerLength=" + headerLength +
+                  ", socket[isConnected]:" + socket.isConnected() +
+                  ", socket[isOpen]: " + socket.isOpen());
             }
 
             final int totalLength = readSofh(unsafeReadBuffer, 0, BINARY_ENTRYPOINT_TYPE);
@@ -244,7 +250,9 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
             if (totalLength != read)
             {
-                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read);
+                throw new IllegalArgumentException("totalLength=" + totalLength + ",read=" + read +
+                    ", socket[isConnected]:" + socket.isConnected() +
+                    ", socket[isOpen]: " + socket.isOpen());
             }
 
             messageDecoder.wrap(
@@ -268,7 +276,19 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
     private int readSocket() throws IOException
     {
-        final int read = socket.read(readBuffer);
+        int read;
+        try
+        {
+            read = socket.read(readBuffer);
+        }
+        catch (final Exception e)
+        {
+            read = 0;
+            if (!Exceptions.isJustDisconnect(e))
+            {
+                throw new RuntimeException(e);
+            }
+        }
         if (read < 0)
         {
             throw new IllegalStateException("SOCKET CLOSED");
@@ -332,8 +352,15 @@ public final class BinaryEntryPointClient implements AutoCloseable
         if (DebugLogger.isEnabled(FIX_TEST))
         {
             final StringBuilder sb = new StringBuilder();
-            jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
-            DebugLogger.log(FIX_TEST, prefixString, sb.toString());
+
+            // when templateId == 1000 the call to jsonPrinter.print throws an exception as it does not recognize
+            // this as a valid templateId
+            final int templateId = OTF_HEADER_DECODER.getTemplateId(unsafeReadBuffer, SOFH_LENGTH);
+            if (templateId != OUT_OF_RANGE_TEMPLATE_ID)
+            {
+                jsonPrinter.print(sb, unsafeReadBuffer, SOFH_LENGTH);
+                DebugLogger.log(FIX_TEST, prefixString, sb.toString());
+            }
         }
     }
 
@@ -540,6 +567,13 @@ public final class BinaryEntryPointClient implements AutoCloseable
                 catch (final IOException e)
                 {
                     // Deliberately blank - if it throws an exception due to being disconnected that's ok
+                }
+                catch (final Exception e)
+                {
+                    if (!Exceptions.isJustDisconnect(e))
+                    {
+                        throw e;
+                    }
                 }
             });
         }

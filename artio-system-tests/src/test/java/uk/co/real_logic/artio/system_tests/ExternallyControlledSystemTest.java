@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private boolean awaitsNewOrderSingle = false;
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private SessionWriter acceptingSessionWriter = null;
     private final FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -90,7 +91,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldRoundTripMessagesViaExternalSystem()
     {
         connectSessions();
@@ -98,6 +99,11 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         awaitForwardingOfAcceptingSession();
 
         assertNotNull(acceptingSessionWriter);
+
+        if (awaitsNewOrderSingle)
+        {
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, "D");
+        }
 
         messagesCanBeExchanged();
 
@@ -107,7 +113,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReconnectConnections()
     {
         shouldRoundTripMessagesViaExternalSystem();
@@ -127,7 +133,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
         final SessionWriter sessionWriter = writeMessageWithFollowerSessionWriter();
@@ -135,6 +141,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         fakeSessionProxy.sequenceNumberAdjustment = 1;
 
+        awaitsNewOrderSingle = true;
         shouldRoundTripMessagesViaExternalSystem();
 
         assertEquals(acceptingSession.id(), writerSessionId);
@@ -150,7 +157,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         awaitMessageFromSessionWriter(secondNOSSeqNum, secondNOSSeqNum);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeAbleToAdjustSequenceNumbersFromTheControlSystem()
     {
         connectSessions();
@@ -170,7 +177,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseInitiatorSentLogout()
     {
         connectSessions();
@@ -190,7 +197,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(LOGOUT_MESSAGE_AS_STR, lastInitRecvMsg.msgType());
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldReceiveLogoutBeforeDisconnectInClusteredCaseAcceptorSentLogout()
     {
         connectSessions();

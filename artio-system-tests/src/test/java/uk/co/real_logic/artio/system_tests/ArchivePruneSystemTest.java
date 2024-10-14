@@ -75,7 +75,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         acceptingEngine = FixEngine.launch(acceptingConfig);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositions()
     {
         setupSessionWithSegmentOfFiles();
@@ -85,7 +85,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertPruneWorks(false, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositionsWithFreeLibraryIds()
     {
         setupSessionWithSegmentOfFiles();
@@ -105,7 +105,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertPruneWorks(false, false);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositionsForFixEngineResetSequenceNumbers()
     {
         setupSessionWithSegmentOfFiles();
@@ -115,7 +115,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertPruneWorks(true, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositionsForSessionTrySendSequenceReset()
     {
         setupSessionWithSegmentOfFiles();
@@ -141,7 +141,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
             () -> sessionInfo.sequenceIndex() == sequenceIndex);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbers()
     {
         acquireAcceptingSession();
@@ -162,7 +162,7 @@ public class ArchivePruneSystemTest extends AbstractGatewayToGatewaySystemTest
         assertPruneWorks(false, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldPruneAwayOldArchivePositionsForSessionTryResetSequenceNumbersProcessTerminated()
     {
         RecordingCoordinator.saveOnShutdownTesting(false);

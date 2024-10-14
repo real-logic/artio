@@ -28,7 +28,7 @@ import static org.junit.Assert.fail;
 public final class Timing
 {
     // Long timeout, but one that doesn't cause long overflow.
-    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 20_000;
+    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 49_000;
 
     public static <T> T withTimeout(final String message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
     {

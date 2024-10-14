@@ -32,7 +32,7 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
 {
     private boolean follow = false;
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canScanArchiveWhilstGatewayRunningOneStream() throws IOException
     {
         setupAndExchangeMessages();
@@ -40,7 +40,7 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
         assertOutboundArchiveContainsMessages();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canScanArchiveWhilstGatewayRunningBothStreams() throws IOException
     {
         setupAndExchangeMessages();
@@ -48,7 +48,7 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
         assertArchiveContainsBothMessages();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canScanArchiveWhilstGatewayRunningBothStreamsFollowMode() throws IOException
     {
         follow = true;
@@ -58,7 +58,7 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
         assertArchiveContainsBothMessages();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canScanArchiveWhenGatewayStoppedOneStream() throws IOException
     {
         setupAndExchangeMessages();
@@ -68,7 +68,7 @@ public class BinaryEntryPointArchiveScannerIntegrationTest extends AbstractBinar
         assertOutboundArchiveContainsMessages();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void canScanArchiveWhenGatewayStoppedBothStreams() throws IOException
     {
         setupAndExchangeMessages();

@@ -77,7 +77,7 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @SuppressWarnings("unchecked")
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldConnectManySessions()
     {
         final long timeoutInMs = 5 * TEST_REPLY_TIMEOUT_IN_MS;
@@ -98,7 +98,7 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
         sessions.forEach(this::messagesCanBeExchanged);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldBeNotifiedOnSessionLogoutAndDisconnect()
     {
         final Reply<Session> sessionReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);

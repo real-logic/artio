@@ -91,7 +91,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem = new TestSystem(scheduler, acceptingLibrary, initiatingLibrary);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldOnlyHandOffSessionToApplicationWhenConnected()
     {
         launch();
@@ -107,7 +107,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldSupportUnreleasedOfflineSessionsInSoleLibraryMode()
     {
         launch();
@@ -189,7 +189,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     // Replicates a bug reported in issue #361 where reconnecting initiators can't reconnect.
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldAllowReconnectingInitiatorsToReconnect()
     {
         launch();
@@ -203,7 +203,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         disconnectSessions();
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldAcquireSessionsWithLoggingSwitchedOff()
     {
         // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest

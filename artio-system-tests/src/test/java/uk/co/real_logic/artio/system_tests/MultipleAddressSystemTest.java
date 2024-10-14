@@ -57,7 +57,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         testSystem = new TestSystem(initiatingLibrary);
     }
 
-    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    @Test
     public void shouldConnectToValidAddressIfMultipleGiven()
     {
         final SessionConfiguration config = SessionConfiguration.builder()
