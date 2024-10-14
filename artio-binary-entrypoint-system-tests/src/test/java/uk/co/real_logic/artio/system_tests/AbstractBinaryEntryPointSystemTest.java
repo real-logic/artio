@@ -152,7 +152,7 @@ public class AbstractBinaryEntryPointSystemTest
             .epochNanoClock(nanoClock)
             .senderMaxBytesInBuffer(senderMaxBytesInBuffer);
 
-        engineConfig.errorHandlerFactory(ffs -> Throwable::printStackTrace);
+        engineConfig.errorHandlerFactory(ffs -> Throwable::printStackTrace).printAeronStreamIdentifiers(true);
         engineConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs);
         configureAeronArchive(engineConfig.aeronArchiveContext());
 
@@ -192,7 +192,7 @@ public class AbstractBinaryEntryPointSystemTest
             .fixPAcceptedSessionMaxRetransmissionRange(fixPAcceptedSessionMaxRetransmissionRange)
             .epochNanoClock(nanoClock);
 
-        libraryConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs);
+        libraryConfig.acceptorFixPKeepaliveTimeoutInMs(artioKeepAliveIntervalInMs).printAeronStreamIdentifiers(true);
 
         if (!printErrors)
         {
