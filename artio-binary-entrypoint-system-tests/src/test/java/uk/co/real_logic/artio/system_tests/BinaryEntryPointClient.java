@@ -492,6 +492,7 @@ public final class BinaryEntryPointClient implements AutoCloseable
 
         newOrderSingle
             .clOrdID(clOrdId)
+            .selfTradePreventionInstruction(SelfTradePreventionInstruction.CANCEL_BOTH_ORDERS)
             .securityID(SECURITY_ID)
             .price().mantissa(3);
         newOrderSingle
