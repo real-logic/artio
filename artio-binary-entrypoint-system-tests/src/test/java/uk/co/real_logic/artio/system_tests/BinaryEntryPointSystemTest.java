@@ -43,6 +43,7 @@ import uk.co.real_logic.artio.messages.ThrottleConfigurationStatus;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -402,13 +403,15 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
     {
         setupArtio(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS, 1);
 
-        final long timeInMs = System.currentTimeMillis();
+        // taking from the same clock used by the framer which gives more accuracy
+        final long timeInNs = nanoClock.nanoTime();
         try (BinaryEntryPointClient client = newClient())
         {
             client.assertDisconnected();
-            final long durationInMs = System.currentTimeMillis() - timeInMs;
-            final long acceptableLowerBoundInMs = TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS - TIMEOUT_EPSILON_IN_MS;
-            assertThat(durationInMs, Matchers.greaterThanOrEqualTo(acceptableLowerBoundInMs));
+            final long acceptableLowerBoundInMs = Duration.ofMillis(TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS)
+                .minusMillis(TIMEOUT_EPSILON_IN_MS).toNanos();
+            final long durationInNs = nanoClock.nanoTime() - timeInNs;
+            assertThat(durationInNs, Matchers.greaterThanOrEqualTo(acceptableLowerBoundInMs));
         }
 
         // Test that we can still establish the connection after this
@@ -1333,6 +1336,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
 
         exchangeOverASegmentOfMessages(finishSending);
 
+        testSystem.await("connection is still on", () -> !connection.isConnected());
         resetOp.reset();
 
         assertPruneWorks();
@@ -1391,6 +1395,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
                 acceptorInitiatedFinishSending(client, overASegmentOfMessages);
             }
         }
+        assertConnectionDisconnected();
     }
 
     // ----------------------------------
