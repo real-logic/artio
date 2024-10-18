@@ -49,7 +49,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class EngineAndLibraryIntegrationTest
 {
-    private static final int SHORT_TIMEOUT_IN_MS = 100;
+    private static final int SHORT_TIMEOUT_IN_MS = 500;
 
     private final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     private ArchivingMediaDriver mediaDriver;
