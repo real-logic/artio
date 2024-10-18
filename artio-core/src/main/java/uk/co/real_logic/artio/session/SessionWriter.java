@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -24,6 +25,7 @@ import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -158,6 +160,8 @@ public class SessionWriter
 
         if (position > 0)
         {
+            DebugLogger.logFixMessage(FIX_MESSAGE, messageType, "Sent ", messageBuffer, offset, length);
+
             final InternalSession session = this.session;
             if (session != null)
             {
