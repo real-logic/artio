@@ -12,7 +12,7 @@ agrona = { group = "org.agrona", name = "agrona", version = { strictly = "[1.23.
 aeron-client = { group = "io.aeron", name = "aeron-client", version.ref = "aeron" }
 aeron-archive = { group = "io.aeron", name = "aeron-archive", version.ref = "aeron" }
 sbe = { group = "uk.co.real-logic", name = "sbe-tool", version = "1.33.1" }
-mockito = { group = "org.mockito", name = "mockito-core", version = "5.14.1" }
+mockito = { group = "org.mockito", name = "mockito-core", version = "5.14.2" }
 hamcrest = { group = "org.hamcrest", name = "hamcrest", version = "3.0" }
 junit4 = { group = "junit", name = "junit", version = "4.13.2" }
 byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }
