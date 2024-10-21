@@ -16,10 +16,12 @@
 package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.builder.AbstractRejectEncoder;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 
 public class ResendRequestResponse
 {
-    private boolean result;
+    private boolean resendNow;
+    private boolean delayProcessing;
 
     private int refTagId;
     private AbstractRejectEncoder rejectEncoder;
@@ -29,7 +31,8 @@ public class ResendRequestResponse
      */
     public void resend()
     {
-        result = true;
+        resendNow = true;
+        delayProcessing = false;
     }
 
     /**
@@ -41,14 +44,16 @@ public class ResendRequestResponse
     {
         this.refTagId = refTagId;
 
-        result = false;
+        resendNow = false;
+        delayProcessing = false;
     }
 
     public void reject(final AbstractRejectEncoder rejectEncoder)
     {
         this.rejectEncoder = rejectEncoder;
 
-        result = false;
+        resendNow = false;
+        delayProcessing = false;
     }
 
     AbstractRejectEncoder rejectEncoder()
@@ -58,11 +63,36 @@ public class ResendRequestResponse
 
     boolean result()
     {
-        return result;
+        return resendNow;
     }
 
     int refTagId()
     {
         return refTagId;
+    }
+
+    /**
+     * Since version 0.148(?) it is possible to postpone the execution of a ResendRequest. This method indicates
+     * that the request must not be processed nor rejected. It is the responsibility of the caller to call
+     * Session.executeResendRequest() when ready.
+     *
+     * @see Session#executeResendRequest(int, int, AsciiBuffer, int, int)
+     * @return true if response to the request must not be done immediately
+     */
+    public boolean shouldDelay()
+    {
+        return delayProcessing;
+    }
+
+    /**
+     * This method indicates that the request must not be processed nor rejected. It is the responsibility of
+     * the caller to call Session.executeResendRequest() when ready.
+     *
+     * @see Session#executeResendRequest(int, int, AsciiBuffer, int, int)
+     */
+    public void delay()
+    {
+        resendNow = false;
+        delayProcessing = true;
     }
 }
