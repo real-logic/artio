@@ -66,6 +66,7 @@ import static uk.co.real_logic.artio.system_tests.ArchivePruneSystemTest.*;
 import static uk.co.real_logic.artio.system_tests.BinaryEntryPointClient.*;
 import static uk.co.real_logic.artio.system_tests.FakeBinaryEntrypointConnectionHandler.sendExecutionReportNew;
 import static uk.co.real_logic.artio.system_tests.FakeFixPConnectionExistsHandler.requestSession;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.awaitIndexerCaughtUp;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiate;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.libraries;
 
@@ -449,6 +450,7 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         reEstablishConnection(2, 2);
 
         restartArtio();
+
         reEstablishConnection(3, 3);
     }
 
@@ -2190,6 +2192,10 @@ public class BinaryEntryPointSystemTest extends AbstractBinaryEntryPointSystemTe
         {
             final int nextSeqNo = alreadyRecvMsgCount + 1;
             client.writeEstablish(nextSeqNo);
+
+            // if not this, then sometimes the 'alreadyRecvMsgCount' does not match 'nextSeqNo' below when calling
+            // readEstablishAck
+            awaitIndexerCaughtUp(testSystem, mediaDriver.mediaDriver().aeronDirectoryName(), engine, library);
 
             libraryAcquiresConnection(client, connectionExistsHandler, connectionAcquiredHandler, offlineOwned);
 
