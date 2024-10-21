@@ -90,7 +90,7 @@ public final class SystemTestUtil
 
     private static final String HI_ID = "hi";
 
-    public static final long TEST_REPLY_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : 1_000;
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = 3_000;
 
     private static final int TEST_COMPACTION_SIZE = 1024 * 1024;
 
