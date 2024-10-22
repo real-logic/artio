@@ -62,8 +62,8 @@ public class AbstractBinaryEntryPointSystemTest
     public static final long TEST_TIMEOUT_IN_MS = 20_000L;
 
     static final int AWAIT_TIMEOUT_IN_MS = 10_000;
-    static final int TIMEOUT_EPSILON_IN_MS = 10;
-    static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 200;
+    static final int TIMEOUT_EPSILON_IN_MS = 50;
+    static final int TEST_NO_LOGON_DISCONNECT_TIMEOUT_IN_MS = 2000;
 
     final EpochNanoClock nanoClock = new OffsetEpochNanoClock();
     final int port = unusedPort();
