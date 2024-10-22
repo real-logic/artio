@@ -601,6 +601,10 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
             testSystem.awaitMessageOf(otfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR,
                 msg -> msg.messageSequenceNumber() == seqNum2 && msg.sequenceIndex() == 1);
 
+            // to ensure the indexes are processed before resend request is received - which would mean a gapfill
+            // responded rather than a replay msg
+            awaitIndexerCaughtUp(testSystem, mediaDriver.mediaDriver().aeronDirectoryName(), engine, library);
+
             connection.sendResendRequest(2, 2);
             testSystem.awaitBlocking(
                 () -> assertEquals(Side.SELL, connection.readResentExecutionReport(2).sideAsEnum()));

@@ -41,7 +41,6 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static uk.co.real_logic.artio.CancelOnDisconnectType.*;
-import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -49,7 +48,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class CancelOnDisconnectSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     public static final int COD_TEST_TIMEOUT_IN_MS = 500;
-    public static final int LONG_COD_TEST_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : COD_TEST_TIMEOUT_IN_MS;
+    public static final int LONG_COD_TEST_TIMEOUT_IN_MS = 3_000;
     public static final Class<FixDictionaryImpl> FIX_DICTIONARY_WITHOUT_COD = FixDictionaryImpl.class;
     private long now;
 

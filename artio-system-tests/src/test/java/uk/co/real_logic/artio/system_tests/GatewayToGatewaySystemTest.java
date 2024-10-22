@@ -114,6 +114,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceIndicesAre(0);
 
+        testSystem.await("messageTimingHandler.count() is not 2", () -> messageTimingHandler.count() == 2);
         messageTimingHandler.verifyConsecutiveSequenceNumbers(2);
     }
 

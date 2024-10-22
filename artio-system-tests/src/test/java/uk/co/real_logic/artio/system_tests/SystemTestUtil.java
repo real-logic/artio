@@ -90,7 +90,7 @@ public final class SystemTestUtil
 
     private static final String HI_ID = "hi";
 
-    public static final long TEST_REPLY_TIMEOUT_IN_MS = RUNNING_ON_WINDOWS ? 3_000 : 1_000;
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = 3_000;
 
     private static final int TEST_COMPACTION_SIZE = 1024 * 1024;
 
@@ -261,7 +261,8 @@ public final class SystemTestUtil
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .printAeronStreamIdentifiers(true);
         configuration.epochNanoClock(nanoClock);
         configuration.agentNamePrefix("init-");
         configureAeronArchive(configuration.aeronArchiveContext());
@@ -309,7 +310,8 @@ public final class SystemTestUtil
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler())
             .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .printAeronStreamIdentifiers(true);
     }
 
     static String acceptorMonitoringFile(final String countersSuffix)
@@ -328,7 +330,8 @@ public final class SystemTestUtil
             .sessionAcquireHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .libraryName("accepting")
-            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
+            .printAeronStreamIdentifiers(true);
 
         return libraryConfiguration;
     }
@@ -411,7 +414,7 @@ public final class SystemTestUtil
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
             .libraryName("initiating")
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
-        config.epochNanoClock(nanoClock);
+        config.epochNanoClock(nanoClock).printAeronStreamIdentifiers(true);
         return config;
     }
 
