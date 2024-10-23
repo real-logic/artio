@@ -838,6 +838,16 @@ public abstract class AbstractDecoderGeneratorTest
         assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
     }
 
+    //TODO this test was added to guide the bugfix
+    @Test
+    public void shouldReasonablyValidateGroupNumbersLessThanTheNumberOfElementsInTheGroupList() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
+            REPEATING_GROUP_MESSAGE_WITH_THREE, REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+
+//        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
+    }
+
     @Test
     public void shouldSupportGroupNumbersGreaterThanTheNumberOfElementsInTheNestedGroup() throws Exception
     {
@@ -1876,6 +1886,16 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = (Decoder)heartbeatWithoutValidation.getConstructor().newInstance();
         decode(example, decoder);
+        return decoder;
+    }
+
+    private Decoder decodeHeartbeatWithRejectingUnknownFields(final String... example) throws Exception
+    {
+        final Decoder decoder = (Decoder)heartbeatWithRejectingUnknownFields.getConstructor().newInstance();
+        for (final String s : example)
+        {
+            decode(s, decoder);
+        }
         return decoder;
     }
 
