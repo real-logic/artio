@@ -33,6 +33,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -838,14 +839,21 @@ public abstract class AbstractDecoderGeneratorTest
         assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
     }
 
-    //TODO this test was added to guide the bugfix
+    //this test was added for issue #525
     @Test
     public void shouldReasonablyValidateGroupNumbersLessThanTheNumberOfElementsInTheGroupList() throws Exception
     {
-        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(
-            REPEATING_GROUP_MESSAGE_WITH_THREE, REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+        final Decoder decoder = (Decoder)heartbeatWithRejectingUnknownFields.getConstructor().newInstance();
 
-//        assertInvalid(decoder, INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP, 120);
+        decodeHeartbeatWithRejectingUnknownFields(
+            decoder, this::assertValid, REPEATING_GROUP_MESSAGE_WITH_THREE);
+        decodeHeartbeatWithRejectingUnknownFields(
+            decoder, decoder1 ->
+            assertInvalid(decoder1,
+            INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP,
+            120), REPEATING_GROUP_MESSAGE_WITH_TOO_HIGH_NUMBER_FIELD);
+        decodeHeartbeatWithRejectingUnknownFields(
+            decoder, this::assertValid, REPEATING_GROUP_MESSAGE_WITH_THREE);
     }
 
     @Test
@@ -1167,15 +1175,29 @@ public abstract class AbstractDecoderGeneratorTest
 
         decoder.reset();
 
-        decode(MULTI_ENTRY_NESTED_GROUP_MESSAGE_WITHOUT_NESTED_FIELDS, decoder);
+        decode(MULTI_ENTRY_EG_GROUP_MESSAGE_WITHOUT_NESTED_GROUPS, decoder);
         assertEquals(2, getNoEgGroupGroupCounter(decoder));
 
         group = getEgGroup(decoder);
-
-        assertNestedRepeating(group, 1, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+        assertNull(getNestedGroup(group));
 
         group = next(group);
-        assertNestedRepeating(group, 2, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+        assertNull(getNestedGroup(group));
+    }
+
+    @Test
+    public void shouldHaveAllNestedRepeatingGroupEntriesNullifiedWhenMessageDoesNotHaveIt() throws Exception
+    {
+        Object group;
+
+        final Decoder decoder = decodeHeartbeat(MULTI_ENTRY_EG_GROUP_MESSAGE_WITHOUT_NESTED_GROUPS);
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        group = getEgGroup(decoder);
+        assertNull(getNestedGroup(group));
+
+        group = next(group);
+        assertNull(getNestedGroup(group));
     }
 
     @Test
@@ -1889,13 +1911,12 @@ public abstract class AbstractDecoderGeneratorTest
         return decoder;
     }
 
-    private Decoder decodeHeartbeatWithRejectingUnknownFields(final String... example) throws Exception
+    private Decoder decodeHeartbeatWithRejectingUnknownFields(final Decoder decoder,
+        final Consumer<Decoder> consumer,
+        final String example)
     {
-        final Decoder decoder = (Decoder)heartbeatWithRejectingUnknownFields.getConstructor().newInstance();
-        for (final String s : example)
-        {
-            decode(s, decoder);
-        }
+        decode(example, decoder);
+        consumer.accept(decoder);
         return decoder;
     }
 
@@ -1909,6 +1930,7 @@ public abstract class AbstractDecoderGeneratorTest
     void decode(final String example, final Decoder decoder)
     {
         buffer.putAscii(1, example);
+        decoder.reset();
         decoder.decode(buffer, 1, example.length());
     }
 
