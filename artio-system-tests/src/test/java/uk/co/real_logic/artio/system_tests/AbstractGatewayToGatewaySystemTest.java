@@ -122,7 +122,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, nanoClock);
         initiatingConfig.deleteLogFileDirOnStart(true);
-        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none());
+        initiatingConfig.monitoringAgentFactory(MonitoringAgentFactory.none()).printAeronStreamIdentifiers(true);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler, nanoClock);
@@ -130,7 +130,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         final LibraryConfiguration initiatingLibraryConfig = initiatingLibraryConfig(
             libraryAeronPort, initiatingHandler, nanoClock);
-        initiatingLibraryConfig.resendRequestController(fakeResendRequestController);
+        initiatingLibraryConfig.resendRequestController(fakeResendRequestController).printAeronStreamIdentifiers(true);
         initiatingLibrary = connect(initiatingLibraryConfig);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 

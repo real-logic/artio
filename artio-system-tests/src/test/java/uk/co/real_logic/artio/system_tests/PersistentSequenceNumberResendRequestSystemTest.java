@@ -140,7 +140,15 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     public void shouldNotBeAbleToReplayMessagesFromBeforeReset1()
     {
         // reset when ReplayIndex instances exist
-        shouldNotBeAbleToReplayMessagesFromBeforeReset0(() -> {});
+        shouldNotBeAbleToReplayMessagesFromBeforeReset0(() ->
+        {
+            // this is to ensure the logout msg notification is received by the indexer before the session disconnect
+            // as they both come from different publications
+            awaitIndexerCaughtUp(testSystem,
+                mediaDriver.mediaDriver().aeronDirectoryName(),
+                acceptingEngine,
+                acceptingLibrary);
+        });
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

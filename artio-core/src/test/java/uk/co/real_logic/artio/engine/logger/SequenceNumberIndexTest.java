@@ -240,10 +240,15 @@ public class SequenceNumberIndexTest extends AbstractLogTest
                 publication, mock(AtomicCounter.class), YieldingIdleStrategy.INSTANCE,
                 mock(EpochNanoClock.class), 1);
 
-            final long redactMessagePosition = gatewayPublication.saveRedactSequenceUpdate(
-                SESSION_ID, SEQUENCE_NUMBER, fixMessageToRedactPosition);
+            long position = 0L;
+            while (position < 1)
+            {
+                position = gatewayPublication.saveRedactSequenceUpdate(
+                    SESSION_ID, SEQUENCE_NUMBER, fixMessageToRedactPosition);
+                Thread.yield();
+            }
 
-            indexToPosition(publication.sessionId(), redactMessagePosition);
+            indexToPosition(publication.sessionId(), position);
         }
     }
 
@@ -427,16 +432,18 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexFixMessage();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
 
-        bufferContainsExampleMessage(false, SESSION_ID + 1, SEQUENCE_NUMBER + 5,
+        bufferContainsExampleMessage(false, SESSION_ID_2, SEQUENCE_NUMBER + 5,
             SEQUENCE_INDEX);
         indexRecord();
-        assertLastKnownSequenceNumberIs(SESSION_ID + 1, SEQUENCE_NUMBER + 5);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, SEQUENCE_NUMBER + 5);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
 
         writer.close();
         writer = newWriter(inMemoryBuffer);
 
         resetSequenceNumber(SESSION_ID);
         assertLastKnownSequenceNumberIs(SESSION_ID, 0);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, SEQUENCE_NUMBER + 5);
 
         // this should write to old session place and not to same as previous call
         resetSequenceNumber(SESSION_ID_2);
