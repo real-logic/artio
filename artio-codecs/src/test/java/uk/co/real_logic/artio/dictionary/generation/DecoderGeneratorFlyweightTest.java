@@ -20,6 +20,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 
+import java.util.HashMap;
+
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.util.CustomMatchers.assertTargetThrows;
@@ -64,5 +66,16 @@ public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
         // generated with wrapEmptyBuffer=false
         assertTargetThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
             "No value for optional field: TestReqID");
+    }
+
+    @Test
+    public void shouldVisitUnknownTags() throws Exception
+    {
+        final Decoder decoder = newHeartbeat();
+        final HashMap<Integer, String> map = new HashMap<>();
+        decoder.setUnknownTagVisitor((tag, buffer, offset, length) -> map.put(tag, buffer.getAscii(offset, length)));
+        decode(UNKNOWN_TAG_MESSAGE, decoder);
+        assertEquals("FOO", map.get(10100));
+        assertEquals("BAR", map.get(10101));
     }
 }

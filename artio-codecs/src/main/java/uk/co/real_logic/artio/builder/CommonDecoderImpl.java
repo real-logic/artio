@@ -31,6 +31,7 @@ public abstract class CommonDecoderImpl
     protected int invalidTagId = Decoder.NO_ERROR;
     protected int rejectReason = Decoder.NO_ERROR;
     protected AsciiBuffer buffer;
+    protected UnknownTagVisitor unknownTagVisitor;
 
     public int invalidTagId()
     {
@@ -40,6 +41,11 @@ public abstract class CommonDecoderImpl
     public int rejectReason()
     {
         return rejectReason;
+    }
+
+    public void setUnknownTagVisitor(final UnknownTagVisitor unknownTagVisitor)
+    {
+        this.unknownTagVisitor = unknownTagVisitor;
     }
 
     public int getInt(
