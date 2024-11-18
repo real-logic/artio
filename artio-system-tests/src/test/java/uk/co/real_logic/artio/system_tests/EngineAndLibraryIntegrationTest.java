@@ -88,7 +88,6 @@ public class EngineAndLibraryIntegrationTest
     {
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock);
         config.deleteLogFileDirOnStart(true);
-        config.slowConsumerTimeoutInMs(replyTimeoutInMs);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
     }

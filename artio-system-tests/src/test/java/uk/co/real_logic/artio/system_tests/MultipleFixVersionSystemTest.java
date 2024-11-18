@@ -125,7 +125,6 @@ public class MultipleFixVersionSystemTest extends AbstractGatewayToGatewaySystem
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(FIXT_ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
-            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .authenticationStrategy(new MultiVersionAuthenticationStrategy(OTHER_INITIATOR_ID, OTHER_FIX_DICTIONARY));
 

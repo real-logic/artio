@@ -110,7 +110,6 @@ public class ILink3SystemTest
         final EngineConfiguration engineConfig = new EngineConfiguration()
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
-            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .libraryAeronChannel(IPC_CHANNEL)
             .lookupDefaultAcceptorfixDictionary(false)

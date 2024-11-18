@@ -260,7 +260,6 @@ public final class SystemTestUtil
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler())
-            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
         configuration.epochNanoClock(nanoClock);
         configuration.agentNamePrefix("init-");
@@ -308,7 +307,6 @@ public final class SystemTestUtil
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler())
-            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
     }
 

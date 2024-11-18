@@ -140,7 +140,6 @@ public class AbstractBinaryEntryPointSystemTest
             .logFileDir(ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler())
             .libraryAeronChannel(IPC_CHANNEL)
-            .slowConsumerTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .noLogonDisconnectTimeoutInMs(shortLogonTimeoutInMs)
             .fixPAuthenticationStrategy(fixPAuthenticationStrategy)
