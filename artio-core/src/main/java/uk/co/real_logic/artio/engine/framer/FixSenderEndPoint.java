@@ -106,6 +106,8 @@ class FixSenderEndPoint extends SenderEndPoint
     private boolean requiresRetry;
     private int reattemptBytesWritten = NO_REATTEMPT;
 
+    private boolean disconnected;
+
     FixSenderEndPoint(
         final long connectionId,
         final int libraryId,
@@ -245,7 +247,7 @@ class FixSenderEndPoint extends SenderEndPoint
             {
                 enqueueMessage(directBuffer, offset, bodyLength, metaDataOffset, metaDataLength, seqNum, replay);
 
-                if (requiresRetry)
+                if (requiresRetry && !disconnected)
                 {
                     reattempt();
                 }
@@ -673,6 +675,7 @@ class FixSenderEndPoint extends SenderEndPoint
     private void disconnectEndpoint(final DisconnectReason reason)
     {
         receiverEndPoint.completeDisconnect(reason);
+        disconnected = true;
     }
 
     public Action onReplayComplete(final long correlationId)
