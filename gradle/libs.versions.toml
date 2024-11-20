@@ -4,7 +4,7 @@ agrona = "1.23.1"
 byteBuddy = "1.15.10"
 checkstyle = "10.20.1"
 junit = "5.11.3"
-gradle = "8.10.2"
+gradle = "8.11"
 jmh = "1.37"
 
 [libraries]
