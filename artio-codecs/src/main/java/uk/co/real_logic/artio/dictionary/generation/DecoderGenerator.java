@@ -1691,24 +1691,28 @@ class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            "                boolean isTrailer = " + unknownFieldPredicate(type) + ";\n" +
             "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
             "                {\n" +
             (isGroup ?
             "                    seenFields.remove(tag);\n" :
             "                    alreadyVisitedFields.remove(tag);\n") +
+            "                    if (unknownTagVisitor != null && !isTrailer)\n" +
+            "                    {\n" +
+            "                        unknownTagVisitor.onUnknownTag(tag, buffer, valueOffset, valueLength);\n" +
+            "                    }\n" +
             "                }\n" +
             (isGroup ? "" :
             "                else\n" +
             "                {\n" +
-            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                    if (!isTrailer)\n" +
             "                    {\n" +
             "                        unknownFields.add(tag);\n" +
             "                    }\n" +
             "                }\n") +
-
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
-            " || " + unknownFieldPredicate(type) + ")\n" +
+            " || isTrailer)\n" +
             "                {\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
             "                }\n" +

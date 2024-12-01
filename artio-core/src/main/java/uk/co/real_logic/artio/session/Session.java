@@ -2097,41 +2097,24 @@ public class Session
         final ResendRequestResponse resendRequestResponse = this.resendRequestResponse;
         if (!backpressuredResendRequestResponse)
         {
+            // historic behavior
             resendRequestController.onResend(this, resendRequest, correctedEndSeqNo, resendRequestResponse);
+
+            // also invoke the proxy
+            if (Pressure.isBackPressured(proxy.onResend(this, resendRequest,
+                correctedEndSeqNo, resendRequestResponse, messageBuffer, messageOffset, messageLength)))
+            {
+                return ABORT;
+            }
         }
 
         if (resendRequestResponse.result())
         {
-            final long correlationId = generateReplayCorrelationId();
-
-            // Notify the sender end point that a replay is going to happen.
-            if (!backpressuredResendRequestResponse || backpressuredOutboundValidResendRequest)
-            {
-                if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
-                    correlationId, outboundPublication))
-                {
-                    lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
-                    backpressuredResendRequestResponse = true;
-                    backpressuredOutboundValidResendRequest = true;
-                    return ABORT;
-                }
-
-                backpressuredOutboundValidResendRequest = false;
-            }
-
-            if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
-                correlationId, inboundPublication))
-            {
-                lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
-                backpressuredResendRequestResponse = true;
-                return ABORT;
-            }
-
-            backpressuredResendRequestResponse = false;
-            replaysInFlight++;
-            return CONTINUE;
+            return executeResendRequest(
+                beginSeqNum, correctedEndSeqNo, oldLastReceivedMsgSeqNum, messageBuffer, messageOffset, messageLength
+            );
         }
-        else
+        else if (!resendRequestResponse.shouldDelay())
         {
             final AbstractRejectEncoder rejectEncoder = resendRequestResponse.rejectEncoder();
             if (rejectEncoder != null)
@@ -2141,6 +2124,72 @@ public class Session
 
             return sendReject(msgSeqNum, resendRequestResponse.refTagId(), OTHER, oldLastReceivedMsgSeqNum);
         }
+        else
+        {
+            return CONTINUE;
+        }
+    }
+
+    private Action executeResendRequest(
+        final int beginSeqNum, final int correctedEndSeqNo, final int oldLastReceivedMsgSeqNum,
+        final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength
+    )
+    {
+        final long correlationId = generateReplayCorrelationId();
+
+        // Notify the sender end point that a replay is going to happen.
+        if (!backpressuredResendRequestResponse || backpressuredOutboundValidResendRequest)
+        {
+            if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
+                correlationId, outboundPublication))
+            {
+                if (lastReceivedMsgSeqNum >= 0)
+                {
+                    lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+                }
+                backpressuredResendRequestResponse = true;
+                backpressuredOutboundValidResendRequest = true;
+                return ABORT;
+            }
+
+            backpressuredOutboundValidResendRequest = false;
+        }
+
+        if (saveValidResendRequest(beginSeqNum, messageBuffer, messageOffset, messageLength, correctedEndSeqNo,
+            correlationId, inboundPublication))
+        {
+            if (lastReceivedMsgSeqNum >= 0)
+            {
+                lastReceivedMsgSeqNum(oldLastReceivedMsgSeqNum);
+            }
+            backpressuredResendRequestResponse = true;
+            return ABORT;
+        }
+
+        backpressuredResendRequestResponse = false;
+        replaysInFlight++;
+        return CONTINUE;
+    }
+
+
+    /**
+     * Executes a resend request. Used to be done immediately when receiving such a request, but
+     * it is now possible to delay the execution, so this method must be called when ready.
+     *
+     * @param beginSeqNum       begin sequence number found in received ResendRequest
+     * @param correctedEndSeqNo corrected end sequence number
+     * @param messageBuffer     buffer containing the ResendRequest message
+     * @param messageOffset     offset of message in buffer
+     * @param messageLength     length of message in buffer
+     * @return an Action: be sure to handle back pressure!
+     * @see SessionProxy#onResend(Session, AbstractResendRequestDecoder, int, ResendRequestResponse, AsciiBuffer, int, int)
+     */
+    public Action executeResendRequest(
+        final int beginSeqNum, final int correctedEndSeqNo,
+        final AsciiBuffer messageBuffer, final int messageOffset, final int messageLength
+    )
+    {
+        return executeResendRequest(beginSeqNum, correctedEndSeqNo, -1, messageBuffer, messageOffset, messageLength);
     }
 
     private Action sendCustomReject(final int oldLastReceivedMsgSeqNum, final AbstractRejectEncoder rejectEncoder)

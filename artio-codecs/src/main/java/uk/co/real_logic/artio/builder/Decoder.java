@@ -91,4 +91,11 @@ public interface Decoder extends CharAppender
      * @return the encoder passed as an argument.
      */
     Encoder toEncoder(Encoder encoder);
+
+    /**
+     * Sets a visitor to be called when an unknown tag is encountered while decoding a message.
+     *
+     * @param visitor the visitor to invoke
+     */
+    void setUnknownTagVisitor(UnknownTagVisitor visitor);
 }

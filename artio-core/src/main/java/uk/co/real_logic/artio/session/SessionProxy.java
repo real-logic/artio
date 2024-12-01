@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.artio.session;
 
+import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.messages.CancelOnDisconnectOption;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 
 /**
  * A proxy that allows users to hook the sending of FIX session protocol messages through an external system. This can
@@ -116,4 +118,34 @@ public interface SessionProxy
      * @return true if asynchronous, false otherwise.
      */
     boolean isAsync();
+
+    /**
+     * Equivalent to onResend() method in ResendRequestController, but with finer control. It receives the buffer
+     * containing the ResendRequest message, so a copy can be made in case we want to delay the processing of the
+     * Resend request.
+     *
+     * @param session           the session that has received the resend request.
+     * @param resendRequest     the decoded resend request in question.
+     * @param correctedEndSeqNo the end sequence number that Artio will reply with. This is useful if, for example, the
+     *                          resend request uses 0 for its endSeqNo parameter.
+     * @param response          respond to the resend request by calling methods on this object.
+     * @param messageBuffer     buffer containing the ResendRequest message
+     * @param messageOffset     offset of message in buffer
+     * @param messageLength     length of message in buffer
+     * @return a null or negative number if back pressured
+     * @see Session#executeResendRequest(int, int, AsciiBuffer, int, int)
+     * @see ResendRequestController#onResend(Session, AbstractResendRequestDecoder, int, ResendRequestResponse)
+     */
+    default long onResend(
+        Session session,
+        AbstractResendRequestDecoder resendRequest,
+        int correctedEndSeqNo,
+        ResendRequestResponse response,
+        AsciiBuffer messageBuffer,
+        int messageOffset,
+        int messageLength
+    )
+    {
+        return 1;
+    }
 }
