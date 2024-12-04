@@ -322,6 +322,7 @@ public final class SystemTestUtil
         setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, nanoClock, libraryConfiguration);
 
         libraryConfiguration
+            .libraryConnectHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
