@@ -38,7 +38,7 @@ import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 
 public class FakeHandler
-    implements SessionHandler, SessionAcquireHandler, SessionExistsHandler
+    implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, LibraryConnectHandler
 {
     public static final String SESSION_START_ERROR = "Unexpected Error";
 
@@ -61,6 +61,8 @@ public class FakeHandler
 
     private boolean throwInOnSessionStart = false;
     private boolean onSessionStartCalled = false;
+    private int onLibraryConnectCalled = 0;
+    private int onLibraryDisconnectCalled = 0;
 
     {
         heartbeatEncoder.testReqID("abc");
@@ -387,5 +389,27 @@ public class FakeHandler
     public boolean onSessionStartCalled()
     {
         return onSessionStartCalled;
+    }
+
+    @Override
+    public void onConnect(final FixLibrary library)
+    {
+        onLibraryConnectCalled++;
+    }
+
+    @Override
+    public void onDisconnect(final FixLibrary library)
+    {
+        onLibraryDisconnectCalled++;
+    }
+
+    public int isOnLibraryDisconnectCalled()
+    {
+        return onLibraryDisconnectCalled;
+    }
+
+    public int isOnLibraryConnectCalled()
+    {
+        return onLibraryConnectCalled;
     }
 }
