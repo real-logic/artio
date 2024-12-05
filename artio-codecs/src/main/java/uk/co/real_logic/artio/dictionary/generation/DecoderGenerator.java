@@ -119,6 +119,11 @@ class DecoderGenerator extends Generator
      * Wrap empty buffer instead of throwing an exception if an optional string is unset.
      */
     private final boolean wrapEmptyBuffer;
+    /**
+     * Do not reject messages when there's an empty tag: instead, treat the field as absent
+     */
+    private final boolean allowEmptyTags;
+
 
     DecoderGenerator(
         final Dictionary dictionary,
@@ -132,6 +137,7 @@ class DecoderGenerator extends Generator
         final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled,
         final boolean wrapEmptyBuffer,
+        final boolean allowEmptyTags,
         final String codecRejectUnknownEnumValueEnabled,
         final boolean fixTagsInJavadoc)
     {
@@ -140,6 +146,7 @@ class DecoderGenerator extends Generator
         this.initialBufferSize = initialBufferSize;
         this.encoderPackage = encoderPackage;
         this.wrapEmptyBuffer = wrapEmptyBuffer;
+        this.allowEmptyTags = allowEmptyTags;
     }
 
     public void generate()
@@ -1770,11 +1777,7 @@ class DecoderGenerator extends Generator
             "                    invalidTagId = tag;\n" +
             "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
             "                }\n" +
-            "                else if (valueLength == 0)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
-            "                }\n" +
+            emptyTagValidation() +
             headerValidation(isHeader) +
             (isGroup ? "" :
             "                if (!alreadyVisitedFields.add(tag))\n" +
@@ -1787,6 +1790,22 @@ class DecoderGenerator extends Generator
             "            }\n\n" +
             "            switch (tag)\n" +
             "            {\n";
+    }
+
+    private String emptyTagValidation()
+    {
+        if (allowEmptyTags)
+        {
+            return "";
+        }
+        else
+        {
+            return "                else if (valueLength == 0)\n" +
+                   "                {\n" +
+                   "                    invalidTagId = tag;\n" +
+                   "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
+                   "                }\n";
+        }
     }
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
