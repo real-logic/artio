@@ -180,6 +180,7 @@ public final class CodecGenerator
             RejectUnknownEnumValue.class,
             false,
             configuration.wrapEmptyBuffer(),
+            configuration.allowEmptyTags(),
             codecRejectUnknownEnumValueEnabled,
             configuration.fixTagsInJavadoc()).generate();
 
@@ -202,6 +203,7 @@ public final class CodecGenerator
                 RejectUnknownEnumValue.class,
                 true,
                 configuration.wrapEmptyBuffer(),
+                configuration.allowEmptyTags(),
                 codecRejectUnknownEnumValueEnabled,
                 configuration.fixTagsInJavadoc()).generate();
         }
