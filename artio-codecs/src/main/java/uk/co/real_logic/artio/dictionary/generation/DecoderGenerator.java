@@ -424,28 +424,21 @@ class DecoderGenerator extends Generator
                 "    {\n" +
                 "        for (final %2$s %6$s : %5$s.iterator())\n" +
                 "        {\n" +
+                "            %6$s.reset();\n" +
                 "            if (%6$s.next() == null)\n" +
                 "            {\n" +
-                "                %6$s.reset();\n" +
                 "                break;\n" +
-                "            }\n" +
-                "            else\n" +
-                "            {\n" +
-                "                %6$s.reset();\n" +
                 "            }\n" +
                 "        }\n" +
                 "        %3$s = MISSING_INT;\n" +
                 "        has%4$s = false;\n" +
-                "        %7$s = null;\n" +
                 "    }\n\n",
                 resetMethod,
                 decoderClassName(name),
                 formatPropertyName(numberField.name()),
                 numberField.name(),
                 iteratorFieldName(group),
-                formatPropertyName(decoderClassName(name)),
-                formatPropertyName(name)
-            );
+                formatPropertyName(decoderClassName(name)));
         }
     }
 
@@ -499,9 +492,6 @@ class DecoderGenerator extends Generator
     {
         return
             "        buffer = null;\n" +
-              (isGroup ?
-            "        next = null;\n" : ""
-              ) +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
             "            invalidTagId = Decoder.NO_ERROR;\n" +
