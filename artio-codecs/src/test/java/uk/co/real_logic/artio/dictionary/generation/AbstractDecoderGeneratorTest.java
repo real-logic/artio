@@ -978,6 +978,16 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeatAllowingEmptyTags(EMPTY_FIX_TAG_FOR_STRING_FIELD_MESSAGE);
 
         assertTrue("Failed validation with empty fix tag", decoder.validate());
+        assertFalse((Boolean)get(decoder, "hasTestReqID"));
+    }
+
+    @Test
+    public void shouldAllowMessagesWithEmptyTagsForIntPropertyWhenAllowTagsPropIsSet() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatAllowingEmptyTags(EMPTY_FIX_TAG_FOR_LONG_FIELD_MESSAGE);
+
+        assertTrue("Failed validation with empty fix tag", decoder.validate());
+        assertFalse((Boolean)get(decoder, "hasLongField"));
     }
 
     @Test
