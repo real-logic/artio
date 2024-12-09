@@ -1179,10 +1179,14 @@ public abstract class AbstractDecoderGeneratorTest
         assertEquals(2, getNoEgGroupGroupCounter(decoder));
 
         group = getEgGroup(decoder);
-        assertNull(getNestedGroup(group));
+
+        // Although the message does not have nestedEg tags, the decoders will remain
+        // This is to ensure allocation is done only when it's necessary to add new elements to a repeating group
+        // for more details see issue https://github.com/real-logic/artio/issues/532
+        assertNotNull(getNestedGroup(group));
 
         group = next(group);
-        assertNull(getNestedGroup(group));
+        assertNotNull(getNestedGroup(group));
     }
 
     @Test
