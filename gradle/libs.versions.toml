@@ -1,7 +1,7 @@
 [versions]
 aeron = "1.46.7"
 agrona = "1.23.1"
-byteBuddy = "1.15.10"
+byteBuddy = "1.15.11"
 checkstyle = "10.20.1"
 junit = "5.11.3"
 gradle = "8.11.1"
