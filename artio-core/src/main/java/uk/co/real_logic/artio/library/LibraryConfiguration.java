@@ -289,7 +289,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     }
 
     /**
-     * Set a threshold for the library work cycle time which when exceed it will increment the
+     * Set a threshold for the library work cycle time which when exceeded it will increment the
      * library cycle time exceeded count.
      *
      * @param libraryCycleThresholdNs value in nanoseconds

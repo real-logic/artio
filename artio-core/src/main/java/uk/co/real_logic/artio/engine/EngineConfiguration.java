@@ -1297,7 +1297,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Set a threshold for the framer work cycle time which when exceed it will increment the
+     * Set a threshold for the framer work cycle time which when exceeded it will increment the
      * framer cycle time exceeded count.
      *
      * @param framerCycleThresholdNs value in nanoseconds
@@ -1310,7 +1310,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Set a threshold for the indexer work cycle time which when exceed it will increment the
+     * Set a threshold for the indexer work cycle time which when exceeded it will increment the
      * indexer cycle time exceeded count.
      *
      * @param indexerCycleThresholdNs value in nanoseconds
