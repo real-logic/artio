@@ -10,9 +10,10 @@ public class IndexerDutyCycleTracker implements Agent
     final EpochNanoClock clock;
     final DutyCycleTracker dutyCycleTracker;
 
-    public IndexerDutyCycleTracker(final String agentNamePrefix,
-                                   final EpochNanoClock clock,
-                                   final DutyCycleTracker dutyCycleTracker)
+    public IndexerDutyCycleTracker(
+        final String agentNamePrefix,
+        final EpochNanoClock clock,
+        final DutyCycleTracker dutyCycleTracker)
     {
         this.agentNamePrefix = agentNamePrefix;
         this.clock = clock;
