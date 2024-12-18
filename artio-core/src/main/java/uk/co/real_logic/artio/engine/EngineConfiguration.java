@@ -324,6 +324,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
     private CancelOnDisconnectOption cancelOnDisconnectOption = DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
     private int cancelOnDisconnectTimeoutWindowInMs = DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS;
+    private long framerCycleThresholdNs = DEFAULT_CYCLE_THRESHOLD_NS;
+    private long indexerCycleThresholdNs = DEFAULT_CYCLE_THRESHOLD_NS;
 
     private EngineReproductionConfiguration reproductionConfiguration;
     private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
@@ -1294,6 +1296,32 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Set a threshold for the framer work cycle time which when exceed it will increment the
+     * framer cycle time exceeded count.
+     *
+     * @param framerCycleThresholdNs value in nanoseconds
+     * @return this for fluent API.
+     */
+    public EngineConfiguration framerCycleThresholdNs(final long framerCycleThresholdNs)
+    {
+        this.framerCycleThresholdNs = framerCycleThresholdNs;
+        return this;
+    }
+
+    /**
+     * Set a threshold for the indexer work cycle time which when exceed it will increment the
+     * indexer cycle time exceeded count.
+     *
+     * @param indexerCycleThresholdNs value in nanoseconds
+     * @return this for fluent API.
+     */
+    public EngineConfiguration indexerCycleThresholdNs(final long indexerCycleThresholdNs)
+    {
+        this.indexerCycleThresholdNs = indexerCycleThresholdNs;
+        return this;
+    }
+
     // ---------------------
     // END SETTERS
     // ---------------------
@@ -2023,6 +2051,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int cancelOnDisconnectTimeoutWindowInMs()
     {
         return cancelOnDisconnectTimeoutWindowInMs;
+    }
+
+    public long framerCycleThresholdNs()
+    {
+        return framerCycleThresholdNs;
+    }
+
+    public long indexerCycleThresholdNs()
+    {
+        return indexerCycleThresholdNs;
     }
 
     public boolean indexChecksumEnabled()

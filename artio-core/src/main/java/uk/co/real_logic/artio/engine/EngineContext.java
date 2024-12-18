@@ -380,6 +380,15 @@ public class EngineContext implements AutoCloseable
         agents.add(outboundIndexer);
         agents.add(replayer);
 
+        if (!(configuration.scheduler() instanceof LowResourceEngineScheduler))
+        {
+            final Agent dutyCycleTrackingAgent = new IndexerDutyCycleTracker(
+                configuration.agentNamePrefix(),
+                clock,
+                fixCounters.getIndexerDutyCycleTracker(configuration.indexerCycleThresholdNs()));
+            agents.add(dutyCycleTrackingAgent);
+        }
+
         indexingAgent = new CompositeAgent(agents);
     }
 

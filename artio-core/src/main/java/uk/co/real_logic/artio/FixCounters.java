@@ -17,6 +17,8 @@ package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
 import io.aeron.Counter;
+import io.aeron.driver.DutyCycleTracker;
+import io.aeron.driver.status.DutyCycleStallTracker;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersReader;
@@ -47,7 +49,13 @@ public class FixCounters implements AutoCloseable
         CURRENT_REPLAY_COUNT_TYPE_ID(10_008),
         NEGATIVE_TIMESTAMP_TYPE_ID(10_009),
         FAILED_ADMIN_TYPE_ID(10_010),
-        FAILED_ADMIN_REPLY_TYPE_ID(10_011);
+        FAILED_ADMIN_REPLY_TYPE_ID(10_011),
+        FRAMER_MAX_CYCLE_TIME_TYPE_ID(10_012),
+        FRAMER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID(10_013),
+        INDEXER_MAX_CYCLE_TIME_TYPE_ID(10_014),
+        INDEXER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID(10_015),
+        LIBRARY_MAX_CYCLE_TIME_TYPE_ID(10_016),
+        LIBRARY_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID(10_017);
 
         final int id;
 
@@ -147,6 +155,36 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter negativeTimestamps()
     {
         return negativeTimestamps;
+    }
+
+    public DutyCycleTracker getFramerDutyCycleTracker(final long threshold)
+    {
+        return new DutyCycleStallTracker(
+            newCounter(FRAMER_MAX_CYCLE_TIME_TYPE_ID.id(), "framer max cycle time in ns"),
+            newCounter(FRAMER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),
+                    "framer work cycle time exceeded count: threshold=" + threshold),
+            threshold
+        );
+    }
+
+    public DutyCycleTracker getIndexerDutyCycleTracker(final long threshold)
+    {
+        return new DutyCycleStallTracker(
+            newCounter(INDEXER_MAX_CYCLE_TIME_TYPE_ID.id(), "indexer max cycle time in ns"),
+            newCounter(INDEXER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),
+                    "indexer work cycle time exceeded count: threshold=" + threshold),
+            threshold
+        );
+    }
+
+    public DutyCycleTracker getLibraryDutyCycleTracker(final int libraryId, final long threshold)
+    {
+        return new DutyCycleStallTracker(
+            newCounter(LIBRARY_MAX_CYCLE_TIME_TYPE_ID.id(), "library " + libraryId + " max cycle time in ns"),
+            newCounter(LIBRARY_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),
+                    "library " + libraryId + " work cycle time exceeded count: threshold=" + threshold),
+            threshold
+        );
     }
 
     public AtomicCounter messagesRead(final long connectionId, final String address)
