@@ -268,6 +268,8 @@ public class CommonConfiguration
     public static final long DEFAULT_MIN_FIXP_KEEPALIVE_TIMEOUT_IN_MS = 1;
     public static final long DEFAULT_ACCEPTOR_FIXP_KEEPALIVE_TIMEOUT_IN_MS = SECONDS.toMillis(30);
 
+    public static final long DEFAULT_CYCLE_THRESHOLD_NS = SECONDS.toNanos(1);
+
     public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;

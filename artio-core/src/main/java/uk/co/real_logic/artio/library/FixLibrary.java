@@ -123,6 +123,7 @@ public class FixLibrary extends GatewayProcess
     {
         poller.startConnecting();
         scheduler.launch(configuration, errorHandler, monitoringCompositeAgent, conductorAgent());
+        poller.onStart();
         return this;
     }
 

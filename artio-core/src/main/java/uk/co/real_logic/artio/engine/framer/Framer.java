@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.*;
+import io.aeron.driver.DutyCycleTracker;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -138,6 +139,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final EpochNanoClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
+    private final DutyCycleTracker dutyCycleTracker;
 
     private final ControlledFragmentHandler librarySubscriber;
     private final ControlledFragmentHandler replaySubscriber;
@@ -278,6 +280,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.acceptsFixP = configuration.acceptsFixP();
         this.fixPContexts = fixPContexts;
         this.fixCounters = fixCounters;
+        this.dutyCycleTracker = fixCounters.getFramerDutyCycleTracker(configuration.framerCycleThresholdNs());
 
         replyTimeoutInNs = TimeUnit.MILLISECONDS.toNanos(configuration.replyTimeoutInMs());
         timerEventHandler = new TimerEventHandler(errorHandler);
@@ -376,11 +379,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             MILLISECONDS, epochClock.time(), 128, 512);
     }
 
+    public void onStart()
+    {
+        dutyCycleTracker.update(clock.nanoTime());
+    }
+
     public int doWork() throws Exception
     {
         final long timeInNs = clock.nanoTime();
         final long timeInMs = epochClock.time();
 
+        dutyCycleTracker.measureAndUpdate(timeInNs);
         fixSenderEndPoints.timeInMs(timeInMs);
 
         checkOutboundTimestampSender(timeInNs);

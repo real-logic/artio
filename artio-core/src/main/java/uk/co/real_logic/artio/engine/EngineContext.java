@@ -375,10 +375,16 @@ public class EngineContext implements AutoCloseable
                 clock);
         }
 
+        final Agent dutyCycleTrackingAgent = new IndexerDutyCycleTracker(
+            configuration.agentNamePrefix(),
+            clock,
+            fixCounters.getIndexerDutyCycleTracker(configuration.indexerCycleThresholdNs()));
+
         final List<Agent> agents = new ArrayList<>();
         agents.add(inboundIndexer);
         agents.add(outboundIndexer);
         agents.add(replayer);
+        agents.add(dutyCycleTrackingAgent);
 
         indexingAgent = new CompositeAgent(agents);
     }
