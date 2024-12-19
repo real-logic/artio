@@ -16,10 +16,12 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
+import io.aeron.driver.DutyCycleTracker;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
@@ -69,16 +71,23 @@ abstract class AbstractReplayer implements Agent, ControlledFragmentHandler
 
     boolean sendStartReplay = true;
 
+    protected final EpochNanoClock clock;
+    private final DutyCycleTracker dutyCycleTracker;
+
     AbstractReplayer(
         final ExclusivePublication publication,
         final FixSessionCodecsFactory fixSessionCodecsFactory,
         final BufferClaim bufferClaim,
-        final SenderSequenceNumbers senderSequenceNumbers)
+        final SenderSequenceNumbers senderSequenceNumbers,
+        final EpochNanoClock clock,
+        final DutyCycleTracker dutyCycleTracker)
     {
         this.publication = publication;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
         this.bufferClaim = bufferClaim;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.clock = clock;
+        this.dutyCycleTracker = dutyCycleTracker;
     }
 
     boolean trySendStartReplay(final long sessionId, final long connectionId, final long correlationId)
@@ -106,6 +115,16 @@ abstract class AbstractReplayer implements Agent, ControlledFragmentHandler
         }
 
         return false;
+    }
+
+    public void onStart()
+    {
+        dutyCycleTracker.update(clock.nanoTime());
+    }
+
+    protected void trackDutyCycleTime(final long timeInNs)
+    {
+        dutyCycleTracker.measureAndUpdate(timeInNs);
     }
 
     public void onClose()

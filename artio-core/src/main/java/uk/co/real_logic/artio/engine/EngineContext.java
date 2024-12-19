@@ -252,7 +252,8 @@ public class EngineContext implements AutoCloseable
             configuration.maxConcurrentSessionReplays(),
             clock,
             configuration.supportedFixPProtocolType(),
-            configuration);
+            configuration,
+            fixCounters.getIndexerDutyCycleTracker(configuration.indexerCycleThresholdNs()));
     }
 
     private void newIndexers()
@@ -372,19 +373,14 @@ public class EngineContext implements AutoCloseable
                 senderSequenceNumbers,
                 replayerCommandQueue,
                 new FixSessionCodecsFactory(clock, configuration.sessionEpochFractionFormat()),
-                clock);
+                clock,
+                fixCounters.getIndexerDutyCycleTracker(configuration.indexerCycleThresholdNs()));
         }
-
-        final Agent dutyCycleTrackingAgent = new IndexerDutyCycleTracker(
-            configuration.agentNamePrefix(),
-            clock,
-            fixCounters.getIndexerDutyCycleTracker(configuration.indexerCycleThresholdNs()));
 
         final List<Agent> agents = new ArrayList<>();
         agents.add(inboundIndexer);
         agents.add(outboundIndexer);
         agents.add(replayer);
-        agents.add(dutyCycleTrackingAgent);
 
         indexingAgent = new CompositeAgent(agents);
     }

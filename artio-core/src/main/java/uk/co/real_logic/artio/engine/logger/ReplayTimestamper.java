@@ -48,9 +48,8 @@ class ReplayTimestamper
         replayerTimestampEncoder.wrapAndApplyHeader(timestampBuffer, 0, messageHeaderEncoder);
     }
 
-    void sendTimestampMessage()
+    void sendTimestampMessage(final long timeInNs)
     {
-        final long timeInNs = clock.nanoTime();
         if (timeInNs > nextTimestampMessageInNs)
         {
             replayerTimestampEncoder.timestamp(timeInNs);

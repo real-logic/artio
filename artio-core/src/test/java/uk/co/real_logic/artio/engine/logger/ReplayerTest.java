@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Subscription;
 import io.aeron.driver.Configuration;
+import io.aeron.driver.DutyCycleTracker;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -138,7 +139,8 @@ public class ReplayerTest extends AbstractLogTest
             DEFAULT_MAX_CONCURRENT_SESSION_REPLAYS,
             clock,
             FixPProtocolType.ILINK_3,
-            mock(EngineConfiguration.class));
+            mock(EngineConfiguration.class),
+            mock(DutyCycleTracker.class));
     }
 
     private void setReplayedMessages(final int replayedMessages)
