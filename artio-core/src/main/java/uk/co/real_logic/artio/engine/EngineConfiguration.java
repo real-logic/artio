@@ -235,6 +235,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public static final int DEFAULT_INITIAL_SEQUENCE_INDEX = 0;
     public static final int DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS = 0;
+    public static final long DEFAULT_INITIAL_CONNECTION_ID = (long)(Math.random() * Long.MAX_VALUE);
 
     private String host = null;
     private int port;
@@ -324,6 +325,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long timeIndexReplayFlushIntervalInNs = DEFAULT_TIME_INDEX_FLUSH_INTERVAL_IN_NS;
     private CancelOnDisconnectOption cancelOnDisconnectOption = DO_NOT_CANCEL_ON_DISCONNECT_OR_LOGOUT;
     private int cancelOnDisconnectTimeoutWindowInMs = DEFAULT_CANCEL_ON_DISCONNECT_TIMEOUT_WINDOW_IN_MS;
+    private long initialConnectionId = DEFAULT_INITIAL_CONNECTION_ID;
 
     private EngineReproductionConfiguration reproductionConfiguration;
     private ReproductionMessageHandler reproductionMessageHandler = (connectionId, bytes) ->
@@ -1294,6 +1296,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the initial connectionId to start with.
+     *
+     * @param initialConnectionId initial connection id
+     * @return this
+     */
+    public EngineConfiguration initialConnectionId(final long initialConnectionId)
+    {
+        this.initialConnectionId = initialConnectionId;
+        return this;
+    }
+
     // ---------------------
     // END SETTERS
     // ---------------------
@@ -2048,6 +2062,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int reproductionReplayStream()
     {
         return reproductionReplayStream;
+    }
+
+    public long initialConnectionId()
+    {
+        return initialConnectionId;
     }
 
     // ---------------------
