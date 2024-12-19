@@ -83,6 +83,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private FixPConnectionExistsHandler fixPConnectionExistsHandler;
     private FixPConnectionAcquiredHandler fixPConnectionAcquiredHandler;
     private LibraryReproductionConfiguration reproductionConfiguration;
+    private long libraryCycleThresholdNs = DEFAULT_CYCLE_THRESHOLD_NS;
 
     /**
      * When a new FIX session connects to the gateway you register a callback handler to find
@@ -287,6 +288,19 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * Set a threshold for the library work cycle time which when exceeded it will increment the
+     * library cycle time exceeded count.
+     *
+     * @param libraryCycleThresholdNs value in nanoseconds. The value 0 will disable duty cycle tracking on the library.
+     * @return this for fluent API.
+     */
+    public LibraryConfiguration libraryCycleThresholdNs(final long libraryCycleThresholdNs)
+    {
+        this.libraryCycleThresholdNs = libraryCycleThresholdNs;
+        return this;
+    }
+
     // ------------------------
     // BEGIN INHERITED SETTERS
     // ------------------------
@@ -428,6 +442,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     boolean isReproductionEnabled()
     {
         return reproductionConfiguration != null;
+    }
+
+    public long libraryCycleThresholdNs()
+    {
+        return libraryCycleThresholdNs;
     }
 
     public LibraryConfiguration libraryName(final String libraryName)

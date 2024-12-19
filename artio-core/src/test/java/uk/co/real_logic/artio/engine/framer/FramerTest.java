@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.driver.DutyCycleTracker;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -112,6 +113,7 @@ public class FramerTest
     private final SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private final FixCounters fixCounters = mock(FixCounters.class);
     private final FixContexts fixContexts = mock(FixContexts.class);
     private final FixGatewaySessions gatewaySessions = mock(FixGatewaySessions.class);
     private final FixGatewaySession gatewaySession = mock(FixGatewaySession.class);
@@ -154,6 +156,9 @@ public class FramerTest
         server.configureBlocking(false);
 
         clientBuffer.putInt(10, 5);
+
+        when(fixCounters.getFramerDutyCycleTracker(anyLong())).thenReturn(mock(DutyCycleTracker.class));
+        when(fixCounters.getIndexerDutyCycleTracker(anyLong())).thenReturn(mock(DutyCycleTracker.class));
 
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(normalImage);
 
@@ -208,7 +213,7 @@ public class FramerTest
             mock(CountersReader.class),
             2,
             1,
-            mock(FixCounters.class),
+            fixCounters,
             mock(SenderSequenceNumbers.class),
             mock(AgentInvoker.class),
             null);

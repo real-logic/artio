@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import io.aeron.driver.DutyCycleTracker;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -106,7 +107,6 @@ public class Replayer extends AbstractReplayer
     private final ReplayerCommandQueue replayerCommandQueue;
     private final AtomicCounter currentReplayCount;
     private final int maxConcurrentSessionReplays;
-    private final EpochNanoClock clock;
     private final EngineConfiguration configuration;
     private final ReplayQuery outboundReplayQuery;
     private final IdleStrategy idleStrategy;
@@ -140,9 +140,10 @@ public class Replayer extends AbstractReplayer
         final int maxConcurrentSessionReplays,
         final EpochNanoClock clock,
         final FixPProtocolType fixPProtocolType,
-        final EngineConfiguration configuration)
+        final EngineConfiguration configuration,
+        final DutyCycleTracker dutyCycleTracker)
     {
-        super(publication, fixSessionCodecsFactory, bufferClaim, senderSequenceNumbers);
+        super(publication, fixSessionCodecsFactory, bufferClaim, senderSequenceNumbers, clock, dutyCycleTracker);
         this.outboundReplayQuery = outboundReplayQuery;
         this.idleStrategy = idleStrategy;
         this.errorHandler = errorHandler;
@@ -157,7 +158,6 @@ public class Replayer extends AbstractReplayer
         this.replayerCommandQueue = replayerCommandQueue;
         this.currentReplayCount = currentReplayCount;
         this.maxConcurrentSessionReplays = maxConcurrentSessionReplays;
-        this.clock = clock;
         this.configuration = configuration;
 
         gapFillMessageTypes = packAllMessageTypes(gapfillOnReplayMessageTypes);
@@ -468,7 +468,10 @@ public class Replayer extends AbstractReplayer
 
     public int doWork()
     {
-        timestamper.sendTimestampMessage();
+        final long timeInNs = clock.nanoTime();
+
+        trackDutyCycleTime(timeInNs);
+        timestamper.sendTimestampMessage(timeInNs);
 
         int work = replayerCommandQueue.poll();
         work += pollReplayerChannels();
