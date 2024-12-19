@@ -159,6 +159,11 @@ public class FixCounters implements AutoCloseable
 
     public DutyCycleTracker getFramerDutyCycleTracker(final long threshold)
     {
+        if (threshold == 0)
+        {
+            return new DutyCycleTracker();
+        }
+
         return new DutyCycleStallTracker(
             newCounter(FRAMER_MAX_CYCLE_TIME_TYPE_ID.id(), "framer max cycle time in ns"),
             newCounter(FRAMER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),
@@ -169,6 +174,11 @@ public class FixCounters implements AutoCloseable
 
     public DutyCycleTracker getIndexerDutyCycleTracker(final long threshold)
     {
+        if (threshold == 0)
+        {
+            return new DutyCycleTracker();
+        }
+
         return new DutyCycleStallTracker(
             newCounter(INDEXER_MAX_CYCLE_TIME_TYPE_ID.id(), "indexer max cycle time in ns"),
             newCounter(INDEXER_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),
@@ -179,6 +189,11 @@ public class FixCounters implements AutoCloseable
 
     public DutyCycleTracker getLibraryDutyCycleTracker(final int libraryId, final long threshold)
     {
+        if (threshold == 0)
+        {
+            return new DutyCycleTracker();
+        }
+
         return new DutyCycleStallTracker(
             newCounter(LIBRARY_MAX_CYCLE_TIME_TYPE_ID.id(), "library " + libraryId + " max cycle time in ns"),
             newCounter(LIBRARY_CYCLE_TIME_THRESHOLD_EXCEEDED_TYPE_ID.id(),

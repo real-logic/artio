@@ -1300,7 +1300,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Set a threshold for the framer work cycle time which when exceeded it will increment the
      * framer cycle time exceeded count.
      *
-     * @param framerCycleThresholdNs value in nanoseconds
+     * @param framerCycleThresholdNs value in nanoseconds. The value 0 will disable duty cycle tracking on the framer.
      * @return this for fluent API.
      */
     public EngineConfiguration framerCycleThresholdNs(final long framerCycleThresholdNs)
@@ -1313,7 +1313,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Set a threshold for the indexer work cycle time which when exceeded it will increment the
      * indexer cycle time exceeded count.
      *
-     * @param indexerCycleThresholdNs value in nanoseconds
+     * @param indexerCycleThresholdNs value in nanoseconds. The value 0 will disable duty cycle tracking on the indexer.
      * @return this for fluent API.
      */
     public EngineConfiguration indexerCycleThresholdNs(final long indexerCycleThresholdNs)

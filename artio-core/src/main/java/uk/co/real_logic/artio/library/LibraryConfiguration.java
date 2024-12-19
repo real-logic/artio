@@ -292,7 +292,7 @@ public final class LibraryConfiguration extends CommonConfiguration
      * Set a threshold for the library work cycle time which when exceeded it will increment the
      * library cycle time exceeded count.
      *
-     * @param libraryCycleThresholdNs value in nanoseconds
+     * @param libraryCycleThresholdNs value in nanoseconds. The value 0 will disable duty cycle tracking on the library.
      * @return this for fluent API.
      */
     public LibraryConfiguration libraryCycleThresholdNs(final long libraryCycleThresholdNs)
