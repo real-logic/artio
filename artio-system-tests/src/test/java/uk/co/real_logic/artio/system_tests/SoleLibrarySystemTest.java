@@ -15,11 +15,14 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import org.junit.Test;
+import uk.co.real_logic.artio.messages.SessionState;
+import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 
@@ -204,7 +207,7 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
-    public void shouldAcquireSessionsWithLoggingSwitchedOff()
+    public void shouldInitiatingLibraryDisconnectSessionOnLibraryTimeout()
     {
         // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest
         launch(false, false);
@@ -216,6 +219,21 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.remove(initiatingLibrary);
         awaitLibraryDisconnect(initiatingEngine, testSystem);
 
-        acceptingMessagesCanBeExchanged();
+        assertEventuallyTrue("Accepting library did not recognize disconnected session", () -> {
+            testSystem.poll();
+            final List<Session> sessions = acceptingLibrary.sessions();
+            assertEquals(1, sessions.size());
+            final Session session = sessions.get(0);
+            assertEquals(SessionState.DISCONNECTED, session.state());
+        });
+
+        assertEventuallyTrue("Initiating Engine did not disconnect session", () -> {
+            final Reply<List<LibraryInfo>> libraryInfoReply = initiatingEngine.libraries();
+            assertTrue(libraryInfoReply.hasCompleted());
+            final List<LibraryInfo> libraryInfo = libraryInfoReply.resultIfPresent();
+            assertEquals(1, libraryInfo.size());
+            final LibraryInfo libInfo = libraryInfo.get(0);
+            assertEquals(0, libInfo.sessions().size());
+        });
     }
 }
