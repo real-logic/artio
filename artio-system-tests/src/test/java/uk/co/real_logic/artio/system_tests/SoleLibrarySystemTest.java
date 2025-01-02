@@ -219,21 +219,27 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.remove(initiatingLibrary);
         awaitLibraryDisconnect(initiatingEngine, testSystem);
 
-        assertEventuallyTrue("Accepting library did not recognize disconnected session", () -> {
-            testSystem.poll();
-            final List<Session> sessions = acceptingLibrary.sessions();
-            assertEquals(1, sessions.size());
-            final Session session = sessions.get(0);
-            assertEquals(SessionState.DISCONNECTED, session.state());
-        });
+        assertEventuallyTrue("Accepting library did not recognize disconnected session",
+            () ->
+            {
+                testSystem.poll();
+                final List<Session> sessions = acceptingLibrary.sessions();
+                assertEquals(1, sessions.size());
+                final Session session = sessions.get(0);
+                assertEquals(SessionState.DISCONNECTED, session.state());
+            }
+        );
 
-        assertEventuallyTrue("Initiating Engine did not disconnect session", () -> {
-            final Reply<List<LibraryInfo>> libraryInfoReply = initiatingEngine.libraries();
-            assertTrue(libraryInfoReply.hasCompleted());
-            final List<LibraryInfo> libraryInfo = libraryInfoReply.resultIfPresent();
-            assertEquals(1, libraryInfo.size());
-            final LibraryInfo libInfo = libraryInfo.get(0);
-            assertEquals(0, libInfo.sessions().size());
-        });
+        assertEventuallyTrue("Initiating Engine did not disconnect session",
+            () ->
+            {
+                final Reply<List<LibraryInfo>> libraryInfoReply = initiatingEngine.libraries();
+                assertTrue(libraryInfoReply.hasCompleted());
+                final List<LibraryInfo> libraryInfo = libraryInfoReply.resultIfPresent();
+                assertEquals(1, libraryInfo.size());
+                final LibraryInfo libInfo = libraryInfo.get(0);
+                assertEquals(0, libInfo.sessions().size());
+            }
+        );
     }
 }
