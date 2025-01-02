@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
@@ -35,7 +34,6 @@ class FixSenderEndPoints implements AutoCloseable
         "SEPs.missReplayComplete, connId=%s, corrId=%s, slow=%s");
 
     private final Long2ObjectHashMap<FixSenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
-    private final ErrorHandler errorHandler;
     private final LongToIntFunction libraryLookup = this::libraryLookup;
 
     private int libraryLookup(final long sessionId)
@@ -52,11 +50,6 @@ class FixSenderEndPoints implements AutoCloseable
     }
 
     private long timeInMs;
-
-    FixSenderEndPoints(final ErrorHandler errorHandler)
-    {
-        this.errorHandler = errorHandler;
-    }
 
     public void add(final FixSenderEndPoint senderEndPoint)
     {
@@ -134,21 +127,8 @@ class FixSenderEndPoints implements AutoCloseable
         {
             return endPoint.onReplayMessage(buffer, offset, length, timeInMs, sequenceNumber);
         }
-        else
-        {
-            logReplayError(connectionId, buffer, offset, length);
+        return CONTINUE;
 
-            return CONTINUE;
-        }
-    }
-
-    private void logReplayError(final long connectionId, final DirectBuffer buffer, final int offset, final int length)
-    {
-        errorHandler.onError(new IllegalArgumentException(String.format(
-            "Failed to replay message on conn=%1$d [%2$s], this probably indicates the connection has disconnected " +
-            "from Artio whilst this message was in the process of being replayed",
-            connectionId,
-            buffer.getStringWithoutLengthUtf8(offset, length))));
     }
 
     Action onReplayComplete(final long connectionId, final long correlationId, final boolean slow)

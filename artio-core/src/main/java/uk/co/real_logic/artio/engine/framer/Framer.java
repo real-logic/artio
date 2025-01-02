@@ -260,7 +260,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.agentNamePrefix = agentNamePrefix;
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
-        this.fixSenderEndPoints = new FixSenderEndPoints(errorHandler);
+        this.fixSenderEndPoints = new FixSenderEndPoints();
         this.countersReader = countersReader;
         this.inboundIndexRegistrationId = inboundIndexRegistrationId;
         this.outboundIndexRegistrationId = outboundIndexRegistrationId;
