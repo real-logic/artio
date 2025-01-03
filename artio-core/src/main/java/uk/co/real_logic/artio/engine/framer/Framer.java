@@ -114,6 +114,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         "Received Heartbeat (msg=%s) from library %s at %sms, sent at %sns");
     private final CharFormatter acquiringSessionFormatter = new CharFormatter(
         "Acquiring session %s from library %s");
+    private final CharFormatter disconnectingSessionFormatter = new CharFormatter(
+        "Disconnecting session %s from library %s");
     private final CharFormatter releasingSessionFormatter = new CharFormatter(
         "Releasing session %s with connectionId %s from library %s");
     private final CharFormatter connectingFormatter = new CharFormatter(
@@ -493,7 +495,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
         }
 
-        tryAcquireLibrarySessions(library);
+        tryAcquireOrDisconnectLibrarySessions(library);
         saveLibraryTimeout(library);
         disconnectILinkConnections(library);
     }
@@ -519,7 +521,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
+    private void tryAcquireOrDisconnectLibrarySessions(final LiveLibraryInfo library)
     {
         final int librarySessionId = library.aeronSessionId();
         final Image image = librarySubscription.imageBySessionId(librarySessionId);
@@ -533,7 +535,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         // just acquire
         if (!configuration.logOutboundMessages() || sentIndexedPosition(librarySessionId, libraryPosition))
         {
-            acquireLibrarySessions(library);
+            acquireOrDisconnectLibrarySessions(library);
         }
         else
         {
@@ -547,7 +549,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (!configuration.logOutboundMessages() ||
             sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition()))
         {
-            acquireLibrarySessions(library);
+            acquireOrDisconnectLibrarySessions(library);
             return true;
         }
 
@@ -572,7 +574,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         schedule(() -> outboundPublication.saveLibraryTimeout(library, 0));
     }
 
-    private void acquireLibrarySessions(final LiveLibraryInfo library)
+    private void acquireOrDisconnectLibrarySessions(final LiveLibraryInfo library)
     {
         final List<GatewaySession> sessions = library.gatewaySessions();
         for (int i = 0, size = sessions.size(); i < size; i++)
@@ -585,31 +587,46 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     continue;
                 }
 
-                final long sessionId = session.sessionId();
-                final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
-                final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
-
-                DebugLogger.log(
-                    LIBRARY_MANAGEMENT,
-                    acquiringSessionFormatter, session.sessionId(), library.libraryId());
-
-                ((FixGatewaySessions)gatewaySessions).acquire(
-                    session,
-                    state,
-                    false,
-                    session.heartbeatIntervalInS(),
-                    sentSequenceNumber,
-                    receivedSequenceNumber,
-                    session.username(),
-                    session.password());
-
-                schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
-
-                if (performingDisconnectOperation)
+                if (soleLibraryMode)
                 {
-                    session.session().logoutAndDisconnect();
+                    DebugLogger.log(
+                        LIBRARY_MANAGEMENT,
+                        disconnectingSessionFormatter, session.sessionId(), library.libraryId());
+
+                    final long connectionId = session.connectionId();
+                    receiverEndPoints.removeConnection(connectionId, DisconnectReason.LIBRARY_DISCONNECT);
+                    fixSenderEndPoints.removeConnection(connectionId);
+                    gatewaySessions.releaseByConnectionId(connectionId);
+                }
+
+                else
+                {
+                    final long sessionId = session.sessionId();
+                    final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                    final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                    final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
+                    final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
+
+                    DebugLogger.log(
+                        LIBRARY_MANAGEMENT,
+                        acquiringSessionFormatter, session.sessionId(), library.libraryId());
+
+                    ((FixGatewaySessions)gatewaySessions).acquire(
+                        session,
+                        state,
+                        false,
+                        session.heartbeatIntervalInS(),
+                        sentSequenceNumber,
+                        receivedSequenceNumber,
+                        session.username(),
+                        session.password());
+
+                    schedule(saveManageSession(ENGINE_LIBRARY_ID, session));
+
+                    if (performingDisconnectOperation)
+                    {
+                        session.session().logoutAndDisconnect();
+                    }
                 }
             }
         }
