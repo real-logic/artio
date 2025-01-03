@@ -21,8 +21,6 @@ import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import org.junit.Test;
-import uk.co.real_logic.artio.messages.SessionState;
-import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 
@@ -56,7 +54,6 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID, nanoClock)
             .deleteLogFileDirOnStart(true)
-            .replyTimeoutInMs(120_000)
             .initialAcceptedSessionOwner(SOLE_LIBRARY);
 
         if (useScheduler)
@@ -219,21 +216,33 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         testSystem.remove(initiatingLibrary);
         awaitLibraryDisconnect(initiatingEngine, testSystem);
 
-        assertEventuallyTrue("Accepting library did not recognize disconnected session",
-            () ->
-            {
-                testSystem.poll();
-                final List<Session> sessions = acceptingLibrary.sessions();
-                assertEquals(1, sessions.size());
-                final Session session = sessions.get(0);
-                assertEquals(SessionState.DISCONNECTED, session.state());
-            }
-        );
+        assertSessionDisconnected(acceptingSession);
+        assertDisconnectedLibraryAndConnection("Initiating Engine did not disconnect session", initiatingEngine);
+    }
 
-        assertEventuallyTrue("Initiating Engine did not disconnect session",
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldAcceptingLibraryDisconnectSessionOnLibraryTimeout()
+    {
+        // Equivalent invariant tested in Engine mode in NoLoggingGatewayToGatewaySystemTest
+        launch(false, false);
+
+        connectAndAcquire();
+        acceptingMessagesCanBeExchanged();
+
+        // timeout acceptingLibrary
+        testSystem.remove(acceptingLibrary);
+        awaitLibraryDisconnect(acceptingEngine, testSystem);
+
+        assertSessionDisconnected(initiatingSession);
+        assertDisconnectedLibraryAndConnection("Accepting Engine did not disconnect session", acceptingEngine);
+    }
+
+    private static void assertDisconnectedLibraryAndConnection(final String message, final FixEngine fixEngine)
+    {
+        assertEventuallyTrue(message,
             () ->
             {
-                final Reply<List<LibraryInfo>> libraryInfoReply = initiatingEngine.libraries();
+                final Reply<List<LibraryInfo>> libraryInfoReply = fixEngine.libraries();
                 assertTrue(libraryInfoReply.hasCompleted());
                 final List<LibraryInfo> libraryInfo = libraryInfoReply.resultIfPresent();
                 assertEquals(1, libraryInfo.size());
