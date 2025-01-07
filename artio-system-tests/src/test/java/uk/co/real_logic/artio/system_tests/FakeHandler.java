@@ -130,6 +130,7 @@ public class FakeHandler
         parser.onMessage(buffer, offset, length);
         final FixMessage parsedMessage = acceptor.lastReceivedMessage();
         parsedMessage.sequenceIndex(sequenceIndex);
+        parsedMessage.messageType(messageType);
         parsedMessage.status(messageInfo.status());
         parsedMessage.isValid(messageInfo.isValid());
         acceptor.forSession(session);

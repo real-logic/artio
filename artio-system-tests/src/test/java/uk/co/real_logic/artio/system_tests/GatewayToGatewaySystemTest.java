@@ -27,10 +27,9 @@ import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.decoder.ThreeCharacterTypeMessageDecoder;
+import uk.co.real_logic.artio.decoder.TwoCharacterTypeMessageDecoder;
 import uk.co.real_logic.artio.engine.ConnectedSessionInfo;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -115,6 +114,26 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
 
         messageTimingHandler.verifyConsecutiveSequenceNumbers(2);
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void messagesWithTypesLongerThanOneCharacterCanBeExchanged()
+    {
+        acquireAcceptingSession();
+
+        final TwoCharacterTypeMessageEncoder twoCharacterTypeMessage = new TwoCharacterTypeMessageEncoder();
+        twoCharacterTypeMessage.text("two");
+        testSystem.awaitSend(() -> initiatingSession.trySend(twoCharacterTypeMessage));
+
+        final ThreeCharacterTypeMessageEncoder threeCharacterTypeMessage = new ThreeCharacterTypeMessageEncoder();
+        threeCharacterTypeMessage.text("three");
+        testSystem.awaitSend(() -> initiatingSession.trySend(threeCharacterTypeMessage));
+
+        final FixMessage two = testSystem.awaitMessageOf(acceptingOtfAcceptor, "@A");
+        assertEquals(TwoCharacterTypeMessageDecoder.MESSAGE_TYPE, two.messageType());
+
+        final FixMessage three = testSystem.awaitMessageOf(acceptingOtfAcceptor, "@AB");
+        assertEquals(ThreeCharacterTypeMessageDecoder.MESSAGE_TYPE, three.messageType());
     }
 
     @Theory

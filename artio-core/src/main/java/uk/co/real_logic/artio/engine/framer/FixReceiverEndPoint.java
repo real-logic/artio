@@ -938,12 +938,10 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private long getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
-        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
-        if (buffer.getByte(start + 2) == START_OF_HEADER)
-        {
-            return buffer.getByte(start + 1);
-        }
-        return buffer.getMessageType(start + 1, 2);
+        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=') + 1;
+        final int end = buffer.scan(start + 1, indexOfLastByteOfMessage, START_OF_HEADER);
+        final int length = end - start;
+        return buffer.getMessageType(start, length);
     }
 
     private int getBodyLength(final int startOfBodyLength, final int endOfBodyLength)

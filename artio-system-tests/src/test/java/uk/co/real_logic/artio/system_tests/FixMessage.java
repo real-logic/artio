@@ -30,9 +30,9 @@ import static uk.co.real_logic.artio.util.CustomMatchers.hasResult;
  */
 public class FixMessage extends Int2ObjectHashMap<String>
 {
-
     private Session session;
     private int sequenceIndex;
+    private long messageType;
     private MessageStatus status;
     private boolean valid;
 
@@ -95,6 +95,16 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return sequenceIndex;
     }
 
+    public void messageType(final long messageType)
+    {
+        this.messageType = messageType;
+    }
+
+    public long messageType()
+    {
+        return messageType;
+    }
+
     public void status(final MessageStatus status)
     {
         this.status = status;
@@ -130,6 +140,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
         final FixMessage theClone = new FixMessage();
         theClone.session(session);
         theClone.sequenceIndex(sequenceIndex);
+        theClone.messageType(messageType);
         theClone.status(status);
         theClone.putAll(this);
         return theClone;
@@ -147,6 +158,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
     public String toString()
     {
         return "FixMessage{sequenceIndex=" + sequenceIndex +
+            ", messageType=" + messageType +
             ", status=" + status +
             ", valid=" + valid +
             ", " + super.toString() +

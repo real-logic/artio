@@ -95,6 +95,14 @@
             <field name="Side" required="Y"/>
             <field name="TransactTime" required="N"/>
         </message>
+
+        <!-- Messages for Tests -->
+        <message name="TwoCharacterTypeMessage" msgtype="@A" msgcat="app">
+            <field name="Text" required="Y"/>
+        </message>
+        <message name="ThreeCharacterTypeMessage" msgtype="@AB" msgcat="app">
+            <field name="Text" required="Y"/>
+        </message>
     </messages>
     <components>
         <!-- Components for Samples -->
