@@ -49,6 +49,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
+import static uk.co.real_logic.artio.util.MessageTypeEncoding.MAX_MESSAGE_TYPE_LENGTH;
 
 /**
  * Handles incoming data from sockets.
@@ -461,9 +462,17 @@ class FixReceiverEndPoint extends ReceiverEndPoint
                     break; // Need more data
                 }
 
-                final long messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
-                if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
+
+                final long messageType = getMessageType(endOfBodyLength, endOfMessage);
+                if (messageType == 0)
+                {
+                    if (saveInvalidMsgTypeMessage(offset, length, readTimestampInNs))
+                    {
+                        return false;
+                    }
+                }
+                else if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
                     DebugLogger.logFixMessage(
                         FIX_MESSAGE, messageType, "Invalidated (checksum): ", buffer, offset, length);
@@ -938,9 +947,25 @@ class FixReceiverEndPoint extends ReceiverEndPoint
 
     private long getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
-        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=') + 1;
-        final int end = buffer.scan(start + 1, indexOfLastByteOfMessage, START_OF_HEADER);
+        if (0x3d353301 /* <SOH>35= */ != buffer.getInt(endOfBodyLength))
+        {
+            return 0;
+        }
+
+        final int start = endOfBodyLength + 4;
+        final int limit = Math.min(start + MAX_MESSAGE_TYPE_LENGTH, indexOfLastByteOfMessage) + 1;
+        final int end = buffer.scan(start, limit, START_OF_HEADER);
+        if (UNKNOWN_INDEX == end)
+        {
+            return 0;
+        }
+
         final int length = end - start;
+        if (0 == length)
+        {
+            return 0;
+        }
+
         return buffer.getMessageType(start, length);
     }
 
@@ -1062,6 +1087,26 @@ class FixReceiverEndPoint extends ReceiverEndPoint
             sequenceIndex,
             connectionId,
             INVALID_CHECKSUM,
+            0,
+            readTimestamp);
+
+        return stashIfBackPressured(offset, position);
+    }
+
+    private boolean saveInvalidMsgTypeMessage(final int offset, final int length, final long readTimestamp)
+    {
+        DebugLogger.log(FIX_MESSAGE, "Invalidated (MsgType): ", buffer, offset, length);
+
+        final long position = publication.saveMessage(
+            buffer,
+            offset,
+            length,
+            libraryId,
+            INVALID_MESSAGE_TYPE,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID,
             0,
             readTimestamp);
 

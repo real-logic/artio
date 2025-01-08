@@ -31,6 +31,8 @@ import static org.agrona.UnsafeAccess.UNSAFE;
  */
 public final class MessageTypeEncoding
 {
+    public static final int MAX_MESSAGE_TYPE_LENGTH = 8;
+
     private static final int MESSAGE_TYPE_BITSHIFT = 8;
 
     /**
@@ -87,7 +89,7 @@ public final class MessageTypeEncoding
 
     private static void checkLength(final int length)
     {
-        if (length > 8)
+        if (length > MAX_MESSAGE_TYPE_LENGTH)
         {
             throw new IllegalArgumentException("Message types longer than 8 are not supported yet");
         }

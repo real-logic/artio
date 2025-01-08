@@ -28,11 +28,16 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
+import uk.co.real_logic.artio.util.MessageTypeEncoding;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -61,6 +66,9 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptorSystemTest
 {
+    private static final DateTimeFormatter UTC_TIMESTAMP_FORMATTER =
+        DateTimeFormatter.ofPattern("uuuuMMdd-HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
+
     private final int timeoutDisconnectHeartBtIntInS = 1;
     private final long timeoutDisconnectHeartBtIntInMs = TimeUnit.SECONDS.toMillis(timeoutDisconnectHeartBtIntInS);
 
@@ -920,6 +928,71 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             assertConnectionDisconnects(testSystem, connection);
         }
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldInvalidateMessageWithInvalidMsgType() throws IOException
+    {
+        setup(true, true);
+
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            acquireSession();
+
+            connection.sendBytes(messageWithMsgType(null));
+            connection.sendBytes(messageWithMsgType(""));
+            connection.sendBytes(messageWithMsgType("ABCDEFGHI"));
+
+            final String longestAllowedMsgType = "ABCDEFGH";
+            connection.sendBytes(messageWithMsgType(longestAllowedMsgType));
+
+            final FixMessage message = testSystem.awaitMessageOf(otfAcceptor, longestAllowedMsgType);
+            assertEquals(MessageTypeEncoding.packMessageType(longestAllowedMsgType), message.messageType());
+
+            if (otfAcceptor.messages().size() > 1)
+            {
+                fail("received more messages than expected: " + otfAcceptor.messages());
+            }
+        }
+    }
+
+    private static byte[] messageWithMsgType(final String msgType)
+    {
+        final byte[] buffer = new byte[128];
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
+
+        final int bodyStart = 16;
+        int index = bodyStart;
+
+        if (null != msgType)
+        {
+            index += asciiBuffer.putIntAscii(index, 35);
+            asciiBuffer.putByte(index++, (byte)'=');
+            index += asciiBuffer.putAscii(index, msgType);
+            asciiBuffer.putByte(index++, START_OF_HEADER);
+        }
+
+        index += asciiBuffer.putAscii(index, "49=initiator\u000156=acceptor\u000134=2\u000152=");
+        index += asciiBuffer.putAscii(index, UTC_TIMESTAMP_FORMATTER.format(Instant.now()));
+        asciiBuffer.putByte(index++, START_OF_HEADER);
+
+        asciiBuffer.putByte(bodyStart - 1, START_OF_HEADER);
+        final int length = index - bodyStart;
+        int startIndex = asciiBuffer.putNaturalIntAsciiFromEnd(length, bodyStart - 1);
+        final String prefix = "8=FIX.4.4\u00019=";
+        final int prefixLength = prefix.length();
+        startIndex -= asciiBuffer.putAscii(startIndex - prefixLength, prefix);
+
+        final int checksum = asciiBuffer.computeChecksum(startIndex, index);
+        index += asciiBuffer.putAscii(index, "10=");
+        asciiBuffer.putNaturalPaddedIntAscii(index, 3, checksum);
+        index += 3;
+        asciiBuffer.putByte(index++, START_OF_HEADER);
+
+        return Arrays.copyOfRange(buffer, startIndex, index);
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)
