@@ -49,6 +49,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.RESEND_REQUEST_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
@@ -56,6 +57,7 @@ import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_RECEIVER_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
+import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.messages.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.messages.ThrottleConfigurationStatus.OK;
@@ -682,6 +684,29 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
                 5000));
             assertThat(otfAcceptor.messages(), hasSize(3));
         });
+    }
+
+    @Test(timeout = TEST_TIMEOUT_IN_MS)
+    public void shouldFilterCatchupReplayMessagesWhenRequestingSession() throws IOException
+    {
+        setup(false, true);
+        setupLibrary();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final Session session = acquireSession(0, CURRENT_SEQUENCE);
+            assertThat(otfAcceptor.messages(), hasSize(1));
+
+            testSystem.awaitReply(library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS));
+            otfAcceptor.messages().clear();
+
+            connection.exchangeTestRequestHeartbeat("ABC");
+
+            testSystem.awaitReply(library.requestSession(session.id(), 0, CURRENT_SEQUENCE, DEFAULT_REPLY_TIMEOUT_IN_MS));
+            assertThat(otfAcceptor.messages(), hasSize(2));
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT_IN_MS)

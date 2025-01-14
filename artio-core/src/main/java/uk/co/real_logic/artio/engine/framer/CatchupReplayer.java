@@ -256,6 +256,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             messageHeaderDecoder.blockLength(),
             version);
 
+        if (messageDecoder.status() == CATCHUP_REPLAY)
+        {
+            return CONTINUE;
+        }
+
         final long messageType = MessageTypeExtractor.getMessageType(messageDecoder);
 
         messageDecoder.skipMetaData();
