@@ -704,7 +704,8 @@ public class MessageBasedAcceptorSystemTest extends AbstractMessageBasedAcceptor
 
             connection.exchangeTestRequestHeartbeat("ABC");
 
-            testSystem.awaitReply(library.requestSession(session.id(), 0, CURRENT_SEQUENCE, DEFAULT_REPLY_TIMEOUT_IN_MS));
+            testSystem.awaitReply(
+                library.requestSession(session.id(), 0, CURRENT_SEQUENCE, DEFAULT_REPLY_TIMEOUT_IN_MS));
             assertThat(otfAcceptor.messages(), hasSize(2));
         }
     }
