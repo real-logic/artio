@@ -153,7 +153,6 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     // Only to be called on the Framer thread.
     boolean poll()
     {
-
         if (clock.nanoTime() - resetTimeInNs >= timeoutInNs)
         {
             return onTimeout();
@@ -300,7 +299,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         if (isAdminReset)
         {
             if (adminReplyPublication.saveGenericAdminReply(adminCorrelationId, GatewayError.EXCEPTION,
-                    sessionId + " sequence numbers not reset in " + timeoutInNs + "ns") > 0)
+                sessionId + " sequence numbers not reset in " + timeoutInNs + "ns") > 0)
             {
                 state = TIMED_OUT;
                 return true;
