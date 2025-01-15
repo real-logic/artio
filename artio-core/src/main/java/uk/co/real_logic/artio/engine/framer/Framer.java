@@ -1215,7 +1215,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sentSequenceNumberIndex,
             inboundPublication,
             outboundPublication,
-            clock.nanoTime());
+            clock,
+            replyTimeoutInNs);
 
         resetSequenceNumberCommand.setupAdminReset(correlationId, adminReplyPublication);
 

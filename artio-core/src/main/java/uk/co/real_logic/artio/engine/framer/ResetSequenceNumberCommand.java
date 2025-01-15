@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.concurrent.EpochNanoClock;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -22,10 +23,12 @@ import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.LongToIntFunction;
 
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
+import static uk.co.real_logic.artio.Reply.State.TIMED_OUT;
 
 class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {
@@ -42,7 +45,9 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
+    private final EpochNanoClock clock;
     private final long resetTimeInNs;
+    private final long timeoutInNs;
     private Session session;
     private LongToIntFunction libraryLookup;
     private long awaitSequenceNumber = 1;
@@ -104,7 +109,8 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
-        final long resetTimeInNs)
+        final EpochNanoClock clock,
+        final long timeoutInMs)
     {
         this.sessionId = sessionId;
         this.gatewaySessions = gatewaySessions;
@@ -113,7 +119,9 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.inboundPublication = inboundPublication;
         this.outboundPublication = outboundPublication;
-        this.resetTimeInNs = resetTimeInNs;
+        this.clock = clock;
+        this.resetTimeInNs = clock.nanoTime();
+        this.timeoutInNs = TimeUnit.MILLISECONDS.toNanos(timeoutInMs);
     }
 
     public Exception error()
@@ -145,6 +153,12 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     // Only to be called on the Framer thread.
     boolean poll()
     {
+
+        if (clock.nanoTime() - resetTimeInNs >= timeoutInNs)
+        {
+            return onTimeout();
+        }
+
         switch (step)
         {
             case START:
@@ -279,6 +293,27 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private boolean sessionIsUnknown()
     {
         return !sessionContexts.isKnownSessionId(sessionId);
+    }
+
+    private boolean onTimeout()
+    {
+        if (isAdminReset)
+        {
+            if (adminReplyPublication.saveGenericAdminReply(adminCorrelationId, GatewayError.EXCEPTION,
+                    sessionId + " sequence numbers not reset in " + timeoutInNs + "ns") > 0)
+            {
+                state = TIMED_OUT;
+                return true;
+            }
+
+            return false;
+        }
+
+        else
+        {
+            state = TIMED_OUT;
+            return true;
+        }
     }
 
     public String toString()

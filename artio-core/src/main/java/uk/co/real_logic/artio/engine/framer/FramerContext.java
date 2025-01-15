@@ -247,7 +247,8 @@ public class FramerContext
             sentSequenceNumberIndex,
             inboundPublication,
             outboundPublication,
-            configuration.epochNanoClock().nanoTime());
+            configuration.epochNanoClock(),
+            configuration.replyTimeoutInMs());
 
         if (adminCommands.offer(reply))
         {
