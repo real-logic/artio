@@ -1,5 +1,5 @@
 [versions]
-aeron = "1.46.7"
+aeron = "1.46.8"
 agrona = "1.23.1"
 byteBuddy = "1.15.11"
 checkstyle = "10.20.1"
