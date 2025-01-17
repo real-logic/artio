@@ -1,6 +1,6 @@
 [versions]
-aeron = "1.46.8"
-agrona = "1.23.1"
+aeron = "1.47.0"
+agrona = "2.0.1"
 byteBuddy = "1.15.11"
 checkstyle = "10.20.1"
 junit = "5.11.4"
@@ -8,10 +8,10 @@ gradle = "8.11.1"
 jmh = "1.37"
 
 [libraries]
-agrona = { group = "org.agrona", name = "agrona", version = { strictly = "[1.23.1, 2.0[", require = "1.23.1" } }
+agrona = { group = "org.agrona", name = "agrona", version.ref = "agrona" }
 aeron-client = { group = "io.aeron", name = "aeron-client", version.ref = "aeron" }
 aeron-archive = { group = "io.aeron", name = "aeron-archive", version.ref = "aeron" }
-sbe = { group = "uk.co.real-logic", name = "sbe-tool", version = "1.33.2" }
+sbe = { group = "uk.co.real-logic", name = "sbe-tool", version = "1.34.1" }
 mockito = { group = "org.mockito", name = "mockito-core", version = "5.15.2" }
 hamcrest = { group = "org.hamcrest", name = "hamcrest", version = "3.0" }
 junit4 = { group = "junit", name = "junit", version = "4.13.2" }

@@ -15,16 +15,16 @@
  */
 package uk.co.real_logic.artio.util;
 
+import org.agrona.UnsafeApi;
 import org.agrona.collections.LongHashSet;
 
 import java.util.Set;
 
 import static org.agrona.BufferUtil.ARRAY_BASE_OFFSET;
-import static org.agrona.UnsafeAccess.UNSAFE;
 
 /**
  * Class for handling the encoding and decoding of Artio's packed message types.
- *
+ * <p>
  * FIX uses 1 or 2 character ascii sequences as a way of representing the message type of messages. Some venues
  * have a longer representation with more message types in. Artio has a packed representation where the bytes of
  * the message type are encoded into a long.
@@ -69,7 +69,7 @@ public final class MessageTypeEncoding
      * Creates a packed message type from a char[] and length.
      *
      * @param messageType message type as ascii char[].
-     * @param length the number of characters within messageType to use.
+     * @param length      the number of characters within messageType to use.
      * @return the packed message type.
      * @throws IllegalArgumentException if messageType parameter is too long.
      */
@@ -99,8 +99,8 @@ public final class MessageTypeEncoding
      * Creates a packed message type from a byte[] and length.
      *
      * @param messageType message type as ascii byte[].
-     * @param offset the offset within the messagetype to start looking
-     * @param length the number of characters within messageType to use.
+     * @param offset      the offset within the messagetype to start looking
+     * @param length      the number of characters within messageType to use.
      * @return the packed message type.
      * @throws IllegalArgumentException if messageType parameter is too long.
      */
@@ -115,18 +115,18 @@ public final class MessageTypeEncoding
 
         if (length == 1)
         {
-            return UNSAFE.getByte(messageType, baseOffset + offset);
+            return UnsafeApi.getByte(messageType, baseOffset + offset);
         }
         else if (length == 2)
         {
-            return UNSAFE.getShort(messageType, baseOffset + offset);
+            return UnsafeApi.getShort(messageType, baseOffset + offset);
         }
         else
         {
             long packed = 0;
             for (int index = 0; index < length; index++)
             {
-                final int asciiValue = UNSAFE.getByte(messageType, baseOffset + offset + index);
+                final int asciiValue = UnsafeApi.getByte(messageType, baseOffset + offset + index);
                 packed |= asciiValue << (MESSAGE_TYPE_BITSHIFT * index);
             }
             return packed;
@@ -141,10 +141,9 @@ public final class MessageTypeEncoding
      * type.
      *
      * @param packedMessageType the FIX message type in packed format.
-     * @param dest a destination byte array where the unpacked value is put, should be at least two bytes long.
-     * @throws ArrayIndexOutOfBoundsException if dest is too short.
-     *
+     * @param dest              a destination byte array where the unpacked value is put, should be at least two bytes long.
      * @return the length of the unpacked value
+     * @throws ArrayIndexOutOfBoundsException if dest is too short.
      */
     public static int unpackMessageType(final long packedMessageType, final byte[] dest)
     {

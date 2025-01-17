@@ -17,12 +17,11 @@ package uk.co.real_logic.artio;
 
 import org.agrona.BitUtil;
 import org.agrona.BufferUtil;
+import org.agrona.UnsafeApi;
 import org.openjdk.jmh.annotations.*;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
-import static org.agrona.UnsafeAccess.UNSAFE;
 
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -59,7 +58,7 @@ public class ArraysFillBenchmark
     public int[] memset()
     {
         final int[] values = this.values;
-        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET, sizeInBytes, MISSING_BYTE);
+        UnsafeApi.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET, sizeInBytes, MISSING_BYTE);
         return values;
     }
 
@@ -67,8 +66,8 @@ public class ArraysFillBenchmark
     public int[] offsetMemset()
     {
         final int[] values = this.values;
-        UNSAFE.putByte(values, BufferUtil.ARRAY_BASE_OFFSET, MISSING_BYTE);
-        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET + 1, sizeInBytes - 1, MISSING_BYTE);
+        UnsafeApi.putByte(values, BufferUtil.ARRAY_BASE_OFFSET, MISSING_BYTE);
+        UnsafeApi.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET + 1, sizeInBytes - 1, MISSING_BYTE);
         return values;
     }
 

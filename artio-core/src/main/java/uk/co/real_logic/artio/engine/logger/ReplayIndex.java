@@ -31,13 +31,13 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.logbuffer.FrameDescriptor.*;
-import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
@@ -579,7 +579,7 @@ public class ReplayIndex implements Index
             final long beginPosition = endPosition - length;
 
             beginChangeOrdered(headerBuffer, changePosition);
-            UNSAFE.storeFence();
+            VarHandle.storeStoreFence();
 
             final int segmentIndex = ReplayIndexDescriptor.segmentIndex(
                 beginChangePosition, segmentSizeBitShift, indexFileSize);

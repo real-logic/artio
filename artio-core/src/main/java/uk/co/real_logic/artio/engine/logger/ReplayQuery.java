@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.io.File;
+import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
@@ -40,7 +41,6 @@ import java.util.function.LongFunction;
 import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
-import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.DebugLogger.IS_REPLAY_ATTEMPT_ENABLED;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
@@ -284,7 +284,7 @@ public class ReplayQuery implements AutoCloseable
                 final long recordingId = indexRecord.recordingId();
                 final int readLength = indexRecord.length();
 
-                UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+                VarHandle.loadLoadFence(); // LoadLoad required so previous loads don't move past version check below.
 
                 if (log)
                 {
@@ -475,7 +475,7 @@ public class ReplayQuery implements AutoCloseable
                 final long recordingId = indexRecord.recordingId();
                 final int sequenceNumber = indexRecord.sequenceNumber();
 
-                UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+                VarHandle.loadLoadFence(); // LoadLoad required so previous loads don't move past version check below.
 
                 // if the block was read atomically with no updates
                 if (changePosition == beginChangeVolatile(headerBuffer))

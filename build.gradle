@@ -121,7 +121,7 @@ allprojects {
     configurations.configureEach {
         resolutionStrategy {
             failOnVersionConflict()
-            force "org.agrona:agrona:${libs.versions.agrona.get()}",
+            force libs.agrona,
                   libs.byteBuddy,
                   libs.byteBuddy.agent,
                   // patching conflicting Checkstyle dependencies
@@ -178,6 +178,7 @@ subprojects {
         useJUnitPlatform()
 
         jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         jvmArgs('--add-opens', 'java.base/java.util.zip=ALL-UNNAMED')
 
         if (buildJavaVersion >= 21) {
@@ -319,6 +320,7 @@ project(':artio-codecs') {
 
     tasks.register('generateMessages', JavaExec) {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         classpath = configurations.codecGeneration
         systemProperties('sbe.output.dir': generatedDir,
             'sbe.target.language': 'Java',
@@ -391,6 +393,7 @@ project(':artio-ilink3-codecs') {
 
         tasks.register('generateMessages', JavaExec) {
             mainClass.set('uk.co.real_logic.sbe.SbeTool')
+            jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
             classpath = configurations.codecGeneration
             systemProperties(
                 'sbe.output.dir': generatedDir,
@@ -472,6 +475,7 @@ project(':artio-binary-entrypoint-codecs') {
 
     tasks.register('generateMessages', JavaExec) {
         mainClass.set('uk.co.real_logic.sbe.SbeTool')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         classpath = configurations.codecGeneration
         systemProperties(
             'sbe.output.dir': generatedDir,
@@ -607,6 +611,7 @@ project(':artio-session-codecs') {
 
     tasks.register('generateCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         classpath = configurations.codecGeneration
         def dictionaryFile = 'src/main/resources/session_dictionary.xml'
         inputs.file(dictionaryFile)
@@ -617,6 +622,7 @@ project(':artio-session-codecs') {
 
     tasks.register('generateOtherCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         classpath = configurations.codecGeneration
         def dictionaryFile = 'src/main/resources/other_session_dictionary.xml'
         inputs.file(dictionaryFile)
@@ -684,6 +690,7 @@ project(':artio-session-fixt-codecs') {
 
     tasks.register('generateCodecs', JavaExec) {
         mainClass.set('uk.co.real_logic.artio.dictionary.CodecGenerationTool')
+        jvmArgs('--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED')
         classpath = configurations.codecGeneration
         systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
         args = [generatedDir, 'src/main/resources/FIXT11.xml']
