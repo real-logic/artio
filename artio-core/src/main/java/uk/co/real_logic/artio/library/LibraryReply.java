@@ -109,6 +109,11 @@ abstract class LibraryReply<T> implements Reply<T>
      */
     boolean poll(final long timeInMs)
     {
+        if (!isExecuting())
+        {
+            return true;
+        }
+
         if (requiresResend)
         {
             sendMessage();
@@ -117,11 +122,6 @@ abstract class LibraryReply<T> implements Reply<T>
         if (timeInMs >= latestReplyArrivalTimeInMs)
         {
             return onTimeout();
-        }
-
-        if (!isExecuting())
-        {
-            return false;
         }
 
         return false;
