@@ -187,7 +187,7 @@ subprojects {
 
         testClassesDirs = testing.suites.test.sources.output.classesDirs
         classpath = testing.suites.test.sources.runtimeClasspath
-        maxHeapSize("1g")
+        maxHeapSize = "1g"
         jvmArgs("-XX:MaxDirectMemorySize=1g",
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 "-XX:+CrashOnOutOfMemoryError",
@@ -279,7 +279,7 @@ subprojects {
         if (signingKey != null) {
             useInMemoryPgpKeys(signingKey, signingPassword)
         }
-        required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+        required = { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
     }
 
