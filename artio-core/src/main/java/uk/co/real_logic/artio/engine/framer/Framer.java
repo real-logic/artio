@@ -1368,6 +1368,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             DebugLogger.log(FIX_CONNECTION, connectingFormatter, host, port, libraryId);
 
+            final int outboundSessionId = header.sessionId();
+            final long outboundPositionId = header.position();
             final InetSocketAddress address = new InetSocketAddress(host, port);
             final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
             library.connectionStartsConnecting(correlationId, connectingSession);
@@ -1394,7 +1396,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         fixDictionaryClass,
                         heartbeatIntervalInS,
                         correlationId,
-                        header,
+                        outboundSessionId,
+                        outboundPositionId,
                         library,
                         address,
                         channel,
@@ -1548,7 +1551,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Class<? extends FixDictionary> fixDictionaryClass,
         final int heartbeatIntervalInS,
         final long correlationId,
-        final Header outBoundheader,
+        final int outboundSessionId,
+        final long outboundPositionId,
         final LiveLibraryInfo library,
         final InetSocketAddress address,
         final TcpChannel channel,
@@ -1607,8 +1611,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 connectionId,
                 sessionId,
                 gatewaySession,
-                outBoundheader.sessionId(),
-                outBoundheader.position(),
+                outboundSessionId,
+                outboundPositionId,
                 address.toString(),
                 INITIATOR);
         }
