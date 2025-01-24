@@ -22,6 +22,6 @@ jmh-core = { group = "org.openjdk.jmh", name = "jmh-core", version.ref = "jmh" }
 jmh-generator-annprocess = { group = "org.openjdk.jmh", name = "jmh-generator-annprocess", version.ref = "jmh" }
 
 [plugins]
-versions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
+versions = { id = "com.github.ben-manes.versions", version = "0.52.0" }
 release = { id = "net.researchgate.release", version = "3.0.2" }
 shadow = { id = "com.gradleup.shadow", version = "8.3.5" }
