@@ -1374,10 +1374,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             channelSupplier.open(address,
                 (channel, ex) ->
                 {
+                    library.connectionFinishesConnecting(correlationId);
+
                     if (ex != null)
                     {
                         fixContexts.onDisconnect(sessionContext.sessionId());
-                        library.connectionFinishesConnecting(correlationId);
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -1403,6 +1404,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final Exception ex)
         {
+            library.connectionFinishesConnecting(correlationId);
             fixContexts.onDisconnect(sessionContext.sessionId());
             return saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
         }
@@ -3709,7 +3711,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     // Need to notify the library because it doesn't know about the session yet and it will
                     // have a reply object corresponding to the initiate() method call.
-                    library.connectionFinishesConnecting(correlationId);
                     saveError(UNABLE_TO_CONNECT, libraryId, correlationId,
                         "Disconnected before session active");
                 }
@@ -3765,7 +3766,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long position = saveManageSession(inboundPublication);
             if (position > 0)
             {
-                library.connectionFinishesConnecting(correlationId);
                 gatewaySession.play();
             }
 
