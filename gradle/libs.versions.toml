@@ -1,7 +1,7 @@
 [versions]
 aeron = "1.47.0"
 agrona = "2.0.1"
-byteBuddy = "1.15.11"
+byteBuddy = "1.16.1"
 checkstyle = "10.20.1"
 junit = "5.11.4"
 jmh = "1.37"
