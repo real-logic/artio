@@ -254,7 +254,7 @@ subprojects {
         manifest.attributes(
             'Implementation-Title': 'Artio',
             'Implementation-Version': archiveVersion,
-            'Implementation-Vendor': 'Real Logic Limited'
+            'Implementation-Vendor': 'Adaptive Financial Consulting'
         )
     }
 
