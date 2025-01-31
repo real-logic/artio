@@ -48,12 +48,12 @@ def projectPom = {
     packaging = 'jar'
     description = 'High-Performance FIX Gateway'
 
-    url = 'https://github.com/real-logic/artio'
+    url = 'https://github.com/artiofix/artio'
 
     scm {
-        connection = 'scm:git:https://github.com/real-logic/artio.git'
-        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
-        url = 'https://github.com/real-logic/artio.git'
+        connection = 'scm:git:https://github.com/artiofix/artio.git'
+        developerConnection = 'scm:git:https://github.com/artiofix/artio.git'
+        url = 'https://github.com/artiofix/artio.git'
     }
 
     licenses {
@@ -254,7 +254,7 @@ subprojects {
         manifest.attributes(
             'Implementation-Title': 'Artio',
             'Implementation-Version': archiveVersion,
-            'Implementation-Vendor': 'Real Logic Limited'
+            'Implementation-Vendor': 'Adaptive Financial Consulting'
         )
     }
 

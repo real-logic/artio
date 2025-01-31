@@ -31,7 +31,7 @@ package uk.co.real_logic.artio.session;
  * the value provided in the logon message if it is specified and otherwise taking it from the acceptor engine
  * configuration.
  *
- * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+ * You can see <a href="https://github.com/artiofix/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
  * for more details around Cancel on disconnect support.
  *
  * Initiator implementations using cancel on disconnect can set the requisite logon fields using a

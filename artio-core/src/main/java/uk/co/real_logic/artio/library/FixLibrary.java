@@ -495,8 +495,8 @@ public class FixLibrary extends GatewayProcess
      *
      * @param configuration the configuration for this Session.
      * @return a reply object wrapping the Connection itself.
-     * @see <a href="https://github.com/real-logic/artio/wiki/ILink-3-Support">
-     *     https://github.com/real-logic/artio/wiki/ILink-3-Support</a>
+     * @see <a href="https://github.com/artiofix/artio/wiki/ILink-3-Support">
+     *     https://github.com/artiofix/artio/wiki/ILink-3-Support</a>
      */
     public Reply<ILink3Connection> initiate(final ILink3ConnectionConfiguration configuration)
     {

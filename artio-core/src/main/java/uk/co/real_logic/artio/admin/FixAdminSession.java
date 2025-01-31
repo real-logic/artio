@@ -167,7 +167,7 @@ public class FixAdminSession implements SessionInfo
      * Gets whether the session is slow or not. If the session is not currently connected then this method will
      * return true.
      *
-     * @see <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">
+     * @see <a href="https://github.com/artiofix/artio/wiki/Performance-and-Fairness#slow-consumer-support">
      *     Slow Consumer Support.</a>
      * @return true if slow, false otherwise.
      */

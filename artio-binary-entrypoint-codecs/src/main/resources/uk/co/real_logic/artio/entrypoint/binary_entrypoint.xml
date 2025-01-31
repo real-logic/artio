@@ -31,7 +31,7 @@ History
 ================================================================================= 
 -->
 
-<!-- Reference: https://github.com/real-logic/simple-binary-encoding -->
+<!-- Reference: https://github.com/aeron-io/simple-binary-encoding -->
 <sbe:messageSchema xmlns:ns2="http://www.fixprotocol.org/ns/simple/1.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:sbe="http://fixprotocol.io/2016/sbe"

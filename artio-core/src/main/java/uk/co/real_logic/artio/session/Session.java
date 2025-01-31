@@ -484,7 +484,7 @@ public class Session
 
     /**
      * Gets the slow consumer status for this session. See
-     * <a href="https://github.com/real-logic/artio/wiki/Performance-and-Fairness#slow-consumer-support">the wiki</a>
+     * <a href="https://github.com/artiofix/artio/wiki/Performance-and-Fairness#slow-consumer-support">the wiki</a>
      * for details on what a slow consumer is.
      *
      * @return true if the session is a slow consumer, false otherwise.
