@@ -1,12 +1,12 @@
 # Artio
 
-[![Actions Status](https://github.com/real-logic/artio/workflows/Continuous%20Integration/badge.svg)](https://github.com/real-logic/artio/actions)
-[![CodeQL Status](https://github.com/real-logic/artio/workflows/CodeQL/badge.svg)](https://github.com/real-logic/artio/actions)
-[![GitHub](https://img.shields.io/github/license/real-logic/Aeron.svg)](https://github.com/real-logic/aeron/blob/master/LICENSE)
+[![Actions Status](https://github.com/artiofix/artio/workflows/Continuous%20Integration/badge.svg)](https://github.com/artiofix/artio/actions)
+[![CodeQL Status](https://github.com/artiofix/artio/workflows/CodeQL/badge.svg)](https://github.com/artiofix/artio/actions)
+[![GitHub](https://img.shields.io/github/license/aeron-io/Aeron.svg)](https://github.com/aeron-io/aeron/blob/master/LICENSE)
 
 High-Performance FIX Gateway
 
-Please check out the [Wiki](https://github.com/real-logic/artio/wiki).
+Please check out the [Wiki](https://github.com/artiofix/artio/wiki).
 
 ## How to build
 

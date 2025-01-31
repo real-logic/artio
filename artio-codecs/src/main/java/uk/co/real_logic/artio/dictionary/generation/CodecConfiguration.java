@@ -118,7 +118,7 @@ public final class CodecConfiguration
     /**
      * Sets the parent package where classes are generated. Optional, defaults to {@link #DEFAULT_PARENT_PACKAGE}.
      * Different parent packages can be used to use multiple different fix dictionary versions, see the
-     * <a href="https://github.com/real-logic/artio/wiki/Multiple-FIX-Versions">wiki</a> for details.
+     * <a href="https://github.com/artiofix/artio/wiki/Multiple-FIX-Versions">wiki</a> for details.
      *
      * @param parentPackage the parent package where classes are generated.
      * @return this

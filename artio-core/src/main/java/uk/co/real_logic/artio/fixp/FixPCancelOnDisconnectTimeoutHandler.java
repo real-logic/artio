@@ -29,7 +29,7 @@ import uk.co.real_logic.artio.session.CancelOnDisconnectTimeoutHandler;
  *  <li>the CODTimeoutWindow also specified in the establish message must have expired without a reconnect</li>
  * </ul>.
  *
- * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+ * You can see <a href="https://github.com/artiofix/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
  * for more details around Cancel on disconnect support.
  *
  * The FIX equivalent to this interface is {@link CancelOnDisconnectTimeoutHandler}.

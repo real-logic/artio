@@ -1100,7 +1100,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets the cancel on disconnect timeout handler for FIX sessions. This is invoked when a cancel on disconnect
      * event occurs.
      *
-     * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+     * You can see <a href="https://github.com/artiofix/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
      * for more details around Cancel on disconnect support.
      *
      * @param cancelOnDisconnectTimeoutHandler the handler to be invoked when a cancel on disconnect event occurs.
@@ -1118,7 +1118,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Sets the cancel on disconnect timeout handler for FIXP connections. This is invoked when a cancel on disconnect
      * event occurs.
      *
-     * You can see <a href="https://github.com/real-logic/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
+     * You can see <a href="https://github.com/artiofix/artio/wiki/Cancel-On-Disconnect-Notification">the wiki</a>
      * for more details around Cancel on disconnect support.
      *
      * @param fixPCancelOnDisconnectTimeoutHandler the handler to be invoked when a cancel on disconnect event occurs.
