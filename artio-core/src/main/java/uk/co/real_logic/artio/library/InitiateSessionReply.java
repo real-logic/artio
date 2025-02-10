@@ -25,6 +25,7 @@ import java.util.List;
 
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
 /**
  * .
@@ -70,7 +71,7 @@ class InitiateSessionReply extends LibraryReply<Session>
 
     void onError(final GatewayError errorType, final String errorMessage)
     {
-        if (errorType == UNABLE_TO_CONNECT)
+        if (isExecuting() && (errorType == UNABLE_TO_CONNECT || errorType == UNABLE_TO_LOGON))
         {
             addressIndex++;
             register();

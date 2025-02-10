@@ -83,7 +83,7 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
         testSystem.awaitReply(failureReply);
 
         assertEquals(Reply.State.ERRORED, failureReply.state());
-        assertEquals("UNABLE_TO_LOGON: Disconnected before session active", failureReply.error().getMessage());
+        assertEquals("Unable to connect to any of the addresses specified", failureReply.error().getMessage());
     }
 
     @After

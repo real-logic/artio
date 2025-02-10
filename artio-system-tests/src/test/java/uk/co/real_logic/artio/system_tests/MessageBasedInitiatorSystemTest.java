@@ -509,7 +509,7 @@ public class MessageBasedInitiatorSystemTest
 
         final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
         assertEquals(ERRORED, reply.state());
-        assertThat(reply.error().toString(), containsString("UNABLE_TO_LOGON"));
+        assertThat(reply.error().toString(), containsString("Unable to connect to any of the addresses specified"));
     }
 
     private Session completeLogon()
