@@ -386,7 +386,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         {
             assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
             assertThat(reply.error().getMessage(),
-                containsString("Unable to connect to any of the addresses specified"));
+                containsString("UNABLE_TO_LOGON: Disconnected before session active"));
         }
     }
 
