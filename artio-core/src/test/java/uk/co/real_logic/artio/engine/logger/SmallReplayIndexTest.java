@@ -24,12 +24,14 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
+import org.agrona.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongArrayList;
 import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -89,8 +91,8 @@ public class SmallReplayIndexTest extends AbstractLogTest implements ReplayQuery
 
     private ReplayIndex replayIndex;
 
-    private final UnsafeBuffer replayPositionBuffer =
-        new UnsafeBuffer(new byte[EngineConfiguration.DEFAULT_REPLAY_POSITION_BUFFER_SIZE]);
+    private final UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(
+        EngineConfiguration.DEFAULT_REPLAY_POSITION_BUFFER_SIZE, AtomicBuffer.ALIGNMENT));
 
     private final FakeMessageHandler fakeHandler = new FakeMessageHandler();
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);

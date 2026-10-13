@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.BufferUtil;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
+import static org.agrona.concurrent.AtomicBuffer.ALIGNMENT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -60,7 +62,8 @@ public class FixContextsTest
 
     private final long time = System.currentTimeMillis();
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    private final AtomicBuffer buffer = new UnsafeBuffer(
+        BufferUtil.allocateDirectAligned(BUFFER_SIZE, ALIGNMENT));
     private final MappedFile mappedFile = mock(MappedFile.class);
     private final SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
     private FixContexts fixContexts = newSessionContexts(buffer);
@@ -175,7 +178,7 @@ public class FixContextsTest
     {
         assertThrows(IllegalArgumentException.class, () ->
         {
-            final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(1024));
+            final AtomicBuffer buffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(1024, ALIGNMENT));
             newSessionContexts(buffer);
         });
     }
@@ -305,7 +308,8 @@ public class FixContextsTest
         final int size = EngineConfiguration.DEFAULT_SESSION_ID_BUFFER_SIZE;
         final byte[] data = new byte[size];
         oldFile.read(data);
-        final UnsafeBuffer oldBuffer = new UnsafeBuffer(ByteBuffer.wrap(data));
+        final UnsafeBuffer oldBuffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(size, ALIGNMENT));
+        oldBuffer.putBytes(0, data);
 
         // Load old buffer
         final FixContexts fixContexts = newSessionContexts(oldBuffer);

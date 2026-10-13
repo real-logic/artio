@@ -23,6 +23,7 @@ import io.aeron.Subscription;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
+import org.agrona.BufferUtil;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -541,7 +542,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private UnsafeBuffer newBuffer()
     {
-        return new UnsafeBuffer(new byte[BUFFER_SIZE]);
+        return new UnsafeBuffer(BufferUtil.allocateDirectAligned(BUFFER_SIZE, AtomicBuffer.ALIGNMENT));
     }
 
     private void assertUnknownSession()

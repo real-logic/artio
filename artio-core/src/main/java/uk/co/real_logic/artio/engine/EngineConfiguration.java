@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine;
 
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
+import org.agrona.BufferUtil;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.Strings;
@@ -66,6 +67,7 @@ import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_INBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.admin.ArtioAdminConfiguration.DEFAULT_OUTBOUND_ADMIN_STREAM_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
@@ -2256,7 +2258,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sentSequenceNumberBuffer() == null)
         {
-            sentSequenceNumberBuffer = new UnsafeBuffer(new byte[sequenceNumberIndexSize]);
+            // TODO (40619): Potential Issue...
+            sentSequenceNumberBuffer = checkAligned(new UnsafeBuffer(
+                BufferUtil.allocateDirectAligned(sequenceNumberIndexSize, AtomicBuffer.ALIGNMENT)));
         }
 
         if (receivedSequenceNumberIndex() == null)
@@ -2266,7 +2270,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (receivedSequenceNumberBuffer() == null)
         {
-            receivedSequenceNumberBuffer = new UnsafeBuffer(new byte[sequenceNumberIndexSize]);
+            receivedSequenceNumberBuffer = checkAligned(new UnsafeBuffer(
+                BufferUtil.allocateDirectAligned(sequenceNumberIndexSize, AtomicBuffer.ALIGNMENT)));
         }
 
         if (sessionIdBuffer() == null)

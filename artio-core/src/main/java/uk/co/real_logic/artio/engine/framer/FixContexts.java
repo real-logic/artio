@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.CRC32;
 
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INITIAL_SEQUENCE_INDEX;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.session.SessionIdStrategy.INSUFFICIENT_SPACE;
@@ -118,7 +119,7 @@ public class FixContexts implements SessionContexts
         final SessionIdGenerator sessionIdGenerator)
     {
         this.mappedFile = mappedFile;
-        this.buffer = mappedFile.buffer();
+        this.buffer = checkAligned(mappedFile.buffer());
         this.reproductionEnabled = reproductionEnabled;
         this.byteBuffer = this.buffer.byteBuffer();
         sectorFramer = new SectorFramer(buffer.capacity());

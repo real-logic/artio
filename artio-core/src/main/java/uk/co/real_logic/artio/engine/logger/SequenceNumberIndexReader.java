@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.engine.ConnectedSessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.artio.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
@@ -59,7 +60,7 @@ public class SequenceNumberIndexReader implements AutoCloseable
         final RecordingIdLookup recordingIdLookup,
         final String metaDataDir)
     {
-        this.inMemoryBuffer = inMemoryBuffer;
+        this.inMemoryBuffer = checkAligned(inMemoryBuffer);
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
         final int positionTableOffset = positionTableOffset(inMemoryBuffer.capacity());

@@ -3322,6 +3322,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId,
         final long correlationId)
     {
+        // TODO (40619): Potential Issue...
         final DirectBuffer metaDataBuffer = new UnsafeBuffer();
         final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(sessionId, metaDataBuffer);
 
