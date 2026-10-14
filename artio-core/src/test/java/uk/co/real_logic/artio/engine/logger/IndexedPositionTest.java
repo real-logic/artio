@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.BufferUtil;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -43,7 +44,8 @@ public class IndexedPositionTest
     private static final int OTHER_RECORDING_ID = 4;
 
     private final ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private final AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
+    private final AtomicBuffer buffer = new UnsafeBuffer(
+        BufferUtil.allocateDirectAligned(2 * SECTOR_SIZE, AtomicBuffer.ALIGNMENT));
     private final IndexedPositionWriter writer = newWriter();
     private final IndexedPositionReader reader = new IndexedPositionReader(buffer);
 

@@ -2,6 +2,9 @@
 
 == Unreleased
 
+* Improve support for newer JDKs, specifically compact object headers.
+    - Check the alignment on AtomicBuffers when assigned to fields during object construction.
+    - Change the buffers in the EngineConfiguration to be off-heap aligned buffers.
 * **[Java]** Upgrade to `Gradle` 9.8.0.
 * **[Java]** Upgrade to `Mockito` 5.24.0.
 

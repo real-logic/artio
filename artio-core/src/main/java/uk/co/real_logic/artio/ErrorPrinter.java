@@ -23,6 +23,7 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import org.agrona.concurrent.errors.ErrorLogReader;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 
 public class ErrorPrinter implements MonitoringAgent
@@ -71,7 +72,7 @@ public class ErrorPrinter implements MonitoringAgent
         final ErrorConsumer customErrorConsumer,
         final EpochClock clock)
     {
-        this.errorBuffer = errorBuffer;
+        this.errorBuffer = checkAligned(errorBuffer);
         this.agentNamePrefix = agentNamePrefix;
         lastPollTimeInMs = startTimeInMs;
         this.aeronArchive = aeronArchive;

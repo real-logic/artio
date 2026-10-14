@@ -31,6 +31,7 @@ import java.nio.channels.FileChannel;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 
 public class MappedFile implements AutoCloseable
 {
@@ -73,7 +74,7 @@ public class MappedFile implements AutoCloseable
         CloseChecker.onOpen(file.getAbsolutePath(), this);
         this.file = file;
         this.fileChannel = fileChannel;
-        this.buffer = buffer;
+        this.buffer = checkAligned(buffer);
     }
 
     public AtomicBuffer buffer()

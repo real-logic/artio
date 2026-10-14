@@ -38,6 +38,7 @@ import java.util.function.LongFunction;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.logbuffer.FrameDescriptor.*;
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
@@ -118,7 +119,7 @@ public class ReplayIndex implements Index
         this.segmentSizeBitShift = Long.numberOfTrailingZeros(segmentSize);
         this.segmentCount = ReplayIndexDescriptor.segmentCount(indexFileCapacity, indexSegmentCapacity);
         this.bufferFactory = bufferFactory;
-        this.positionBuffer = positionBuffer;
+        this.positionBuffer = checkAligned(positionBuffer);
         this.errorHandler = errorHandler;
         this.recordingIdLookup = recordingIdLookup;
 
@@ -487,7 +488,14 @@ public class ReplayIndex implements Index
             positionWriter);
         fixSessionIdToIndex.values().forEach(SessionIndex::close);
         fixSessionIdToIndex.clear();
-        IoUtil.unmap(positionBuffer.byteBuffer());
+        try
+        {
+            IoUtil.unmap(positionBuffer.byteBuffer());
+        }
+        catch (final Exception ignore)
+        {
+            // May not be unmappable in some cases, e.g. tests.
+        }
     }
 
     public void readLastPosition(final IndexedPositionConsumer consumer)

@@ -23,6 +23,8 @@ import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 import java.io.File;
 import java.nio.MappedByteBuffer;
 
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
+
 /**
  * A memory mapped file that stores the error buffer.
  */
@@ -58,7 +60,7 @@ public final class MonitoringFile implements AutoCloseable
         }
 
         final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
-        errorBuffer = new UnsafeBuffer(mappedFile, 0, length);
+        errorBuffer = checkAligned(new UnsafeBuffer(mappedFile, 0, length));
     }
 
     public AtomicBuffer errorBuffer()

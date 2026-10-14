@@ -21,6 +21,8 @@ import org.agrona.concurrent.AtomicBuffer;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
+
 // TODO: optimisation: write and checksum only needed bytes
 public class ChecksumFramer extends SectorFramer
 {
@@ -42,7 +44,7 @@ public class ChecksumFramer extends SectorFramer
         final boolean indexChecksumEnabled)
     {
         super(capacity);
-        this.buffer = buffer;
+        this.buffer = checkAligned(buffer);
         saveChecksumFunc = buffer::putInt;
         this.errorHandler = errorHandler;
         this.errorReportingOffset = errorReportingOffset;

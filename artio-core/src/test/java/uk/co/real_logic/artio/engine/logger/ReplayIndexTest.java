@@ -24,6 +24,7 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
+import org.agrona.BufferUtil;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -90,8 +91,9 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private ReplayIndex replayIndex;
 
-    private final UnsafeBuffer replayPositionBuffer =
-        new UnsafeBuffer(new byte[EngineConfiguration.DEFAULT_REPLAY_POSITION_BUFFER_SIZE]);
+    private final UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(
+        EngineConfiguration.DEFAULT_REPLAY_POSITION_BUFFER_SIZE, AtomicBuffer.ALIGNMENT));
+
     private final IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private final IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
 

@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.storage.messages.FixPContextWrapperEncoder;
 import java.util.*;
 import java.util.function.Function;
 
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fixp.FixPFirstMessageResponse.*;
@@ -65,7 +66,7 @@ public class FixPContexts implements SessionContexts
     FixPContexts(final MappedFile mappedFile, final ErrorHandler errorHandler, final EpochNanoClock epochNanoClock)
     {
         this.mappedFile = mappedFile;
-        this.buffer = mappedFile.buffer();
+        this.buffer = checkAligned(mappedFile.buffer());
         this.errorHandler = errorHandler;
         this.epochNanoClock = epochNanoClock;
         loadBuffer();

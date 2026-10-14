@@ -50,6 +50,7 @@ import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static org.agrona.BitUtil.align;
+import static uk.co.real_logic.artio.AtomicBuffers.checkAligned;
 import static uk.co.real_logic.artio.CommonConfiguration.RUNNING_ON_WINDOWS;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
@@ -139,7 +140,7 @@ public class SequenceNumberIndexWriter implements Index
         final boolean logMessages)
     {
         this.sequenceNumberExtractor = sequenceNumberExtractor;
-        this.inMemoryBuffer = inMemoryBuffer;
+        this.inMemoryBuffer = checkAligned(inMemoryBuffer);
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
         this.streamId = streamId;
