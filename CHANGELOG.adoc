@@ -2,10 +2,11 @@
 
 == Unreleased
 
+== 0.186 (2026-10-20)
+
 * Fix replay gap fill for a hole after a replayed message reusing that message's MsgSeqNum. (https://github.com/artiofix/artio/pull/586[#586])
-* Check atomic buffer alignment. (https://github.com/artiofix/artio/pull/587[#587])
 * Improve support for newer JDKs, specifically compact object headers.
-    - Check the alignment on AtomicBuffers when assigned to fields during object construction.
+    - Check the alignment on AtomicBuffers when assigned to fields during object construction. (https://github.com/artiofix/artio/pull/587[#587])
     - Change the buffers in the EngineConfiguration to be off-heap aligned buffers.
 * Avoid varargs allocation in `SequenceNumberIndexWriter.rename`. (https://github.com/artiofix/artio/pull/585[#585])
 * **[Java]** Upgrade to `Gradle` 9.8.2.
