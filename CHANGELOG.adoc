@@ -7,6 +7,7 @@
     - Change the buffers in the EngineConfiguration to be off-heap aligned buffers.
 * **[Java]** Upgrade to `Gradle` 9.8.0.
 * **[Java]** Upgrade to `Mockito` 5.24.0.
+* **[Java]** Upgrade to `Versions` 0.66.0.
 
 == 0.185 (2026-09-25)
 
