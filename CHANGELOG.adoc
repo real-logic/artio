@@ -2,6 +2,10 @@
 
 == Unreleased
 
+* Upgrade to https://github.com/aeron-io/aeron/releases/tag/1.54.0[Aeron 1.54.0].
+* Upgrade to https://github.com/aeron-io/agrona/releases/tag/2.7.0[Agrona 2.7.0].
+* Upgrade to https://github.com/aeron-io/simple-binary-encoding/releases/tag/1.41.0[SBE 1.41.0].
+
 == 0.186 (2026-10-20)
 
 * Fix replay gap fill for a hole after a replayed message reusing that message's MsgSeqNum. (https://github.com/artiofix/artio/pull/586[#586])
